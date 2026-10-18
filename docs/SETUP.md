@@ -2,16 +2,37 @@
 
 Nothing here changes the public website, its Worker or its DNS records. Steps marked **approval** change production systems and wait for the owner's go-ahead.
 
-## 1. Cloudflare Access (owner, about 10 minutes)
+## 1. Cloudflare Access with Google sign-in (owner, about 15 minutes)
 
-1. Cloudflare dashboard → **Zero Trust**. If asked, pick a team name (for example `benjaire`) and the **Free** plan.
-2. **Settings → Authentication → Login methods → Add new → Google**. Follow the steps to create the Google OAuth client. Turn on 2-Step Verification on the Google account you'll sign in with.
-3. **Access → Applications → Add an application → Self-hosted**.
-   - Name: `Benjaire Ops`. Session duration: `24 hours`.
-   - Public hostname: `dashboard.benjaire.com` (it can be added before the domain is attached; nothing is reachable until step 5).
-   - Login methods: Google only.
-4. Add a policy: Action **Allow**, Include **Emails** → your Google address. No other rules.
-5. Copy the application's **Audience (AUD) tag** and your **team domain** (`<team>.cloudflareaccess.com`).
+You need two browser tabs: the Cloudflare dashboard and the Google Cloud Console, both signed in with your own accounts.
+
+**A. Find your team name (Cloudflare)**
+1. Cloudflare dashboard → **Zero Trust**. If this is your first visit, choose a team name (for example `benjaire`) and the **Free** plan.
+2. **Settings → Team name and domain**. Note the team domain, `<team>.cloudflareaccess.com`.
+
+**B. Create the Google OAuth client (Google Cloud Console, console.cloud.google.com)**
+1. Create a project, for example `Benjaire Ops`.
+2. **APIs & Services → OAuth consent screen → Get started**. App name `Benjaire Ops`, support email: your address. Audience: **External**. Contact email: your address. Agree and **Create**.
+3. **Audience → Test users → Add users**: add your own Google address. In Testing mode only listed addresses can sign in, which is what we want.
+4. **Clients → Create client**. Application type **Web application**, name `Cloudflare Access`.
+   - Authorized JavaScript origins: `https://<team>.cloudflareaccess.com`
+   - Authorized redirect URIs: `https://<team>.cloudflareaccess.com/cdn-cgi/access/callback`
+5. **Create**, then copy the **Client ID** and **Client secret**. Treat the secret like a password: paste it only into Cloudflare, never into chat or a file.
+
+**C. Add Google as a login method (Cloudflare)**
+1. **Zero Trust → Integrations → Identity providers → Add new identity provider → Google**.
+2. Paste the Client ID (shown as **App ID**) and Client secret. Turn on **PKCE**. **Save**.
+3. Select **Test** next to Google and sign in. A success page means it works.
+4. Turn on 2-Step Verification on that Google account if it isn't on already.
+
+**D. Protect the dashboard (Cloudflare)**
+1. **Zero Trust → Access controls → Applications → Create new application → Self-hosted and private**.
+2. Name `Benjaire Ops`. Add public hostname `dashboard.benjaire.com`. Session duration `24 hours`.
+3. Login methods: **Google** only (turn off the others, and turn on **Instant Auth** so it skips the chooser).
+4. Policy: name `Owner only`, Action **Allow**, Include → **Emails** → your Google address. Nothing else.
+5. **Save**. Open the application again and copy the **Application Audience (AUD) Tag**.
+
+Send Claude two things, neither of them secret: the team domain and the AUD tag. Your email address goes in as a Worker secret in step 3; it is never committed.
 
 ## 2. D1 database (approval: creates a new database, touches nothing existing)
 
