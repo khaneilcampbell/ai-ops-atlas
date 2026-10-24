@@ -1,0 +1,23 @@
+{
+  "_about": "Your accomplishment bank: reusable, evidence-backed results. Write each as Situation / Action / Result. If you don't have a real number, leave metric empty; the AI is told never to invent one.",
+  "accomplishments": [
+    {
+      "id": "acc-001",
+      "linked_to": "exp-employer-1",
+      "situation": "TODO the context or problem",
+      "action": "TODO what you specifically did",
+      "result": "TODO the outcome",
+      "metric": "",
+      "metric_source": "TODO where the number comes from (ticket reports, manager review, dashboard). Empty if no metric.",
+      "skills": ["TODO"],
+      "themes": ["customer-communication", "incident-management", "automation", "iam", "documentation", "stakeholder-management"],
+      "bullet_drafts": {
+        "ai-solutions": "",
+        "enterprise-technology": "",
+        "security-automation": ""
+      },
+      "interview_story": "TODO 3-4 sentence version you can tell out loud",
+      "verified": false
+    }
+  ]
+}

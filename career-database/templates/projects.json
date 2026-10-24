@@ -1,0 +1,19 @@
+{
+  "_about": "Independent, open-source, lab and personal projects. These are NEVER presented as employment on a resume.",
+  "projects": [
+    {
+      "id": "proj-001",
+      "name": "TODO project name",
+      "type": "independent | open-source | lab | course",
+      "status": "complete | in-progress",
+      "dates": "YYYY-MM to YYYY-MM",
+      "url": "TODO GitHub or demo link",
+      "problem": "TODO what problem it solves and for whom",
+      "what_i_built": "TODO your actual contribution",
+      "technologies": ["TODO e.g. Python", "Anthropic API", "CrewAI"],
+      "results": ["TODO only results you can demonstrate"],
+      "relevant_versions": ["ai-solutions", "security-automation"],
+      "verified": false
+    }
+  ]
+}
