@@ -57,7 +57,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npx tauri build --bundles app
+      # upload-artifact drops file permissions, which would leave the app binary
+      # non-executable, so package the bundle with ditto first.
+      - name: Zip the app bundle
+        run: ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
       - uses: actions/upload-artifact@v4
         with:
           name: AI-Ops-Atlas-macOS
-          path: src-tauri/target/release/bundle/macos/
+          path: AI-Ops-Atlas-macOS.zip
