@@ -43,6 +43,14 @@ export function SettingsView() {
             </select>
           </label>
         </div>
+        <OwnersSetting owners={settings.owners} onChange={(owners) => setSettings({ owners })} />
+        <div className="setting">
+          <div className="grow">
+            <div className="label">Include forks</div>
+            <div className="muted small">Show repositories you forked from others alongside your own.</div>
+          </div>
+          <input type="checkbox" className="toggle" checked={settings.includeForks} onChange={(e) => setSettings({ includeForks: e.target.checked })} />
+        </div>
         <div className="setting">
           <div className="grow">
             <div className="label">Refresh when the app opens</div>
@@ -180,5 +188,30 @@ function TokenSetting({ onChange }: { onChange: () => void }) {
         </div>
       )}
     </>
+  );
+}
+
+function OwnersSetting({ owners, onChange }: { owners: string[]; onChange: (o: string[]) => void }) {
+  const [value, setValue] = useState(owners.join(", "));
+  const parsed = value
+    .split(/[\s,]+/)
+    .map((v) => v.trim())
+    .filter((v) => /^[A-Za-z0-9-]{1,39}$/.test(v));
+  const changed = parsed.join(",") !== owners.join(",");
+  return (
+    <div className="setting">
+      <div className="grow">
+        <div className="label">Show every repository owned by</div>
+        <div className="muted small">
+          GitHub accounts, separated by commas. Repositories without a manifest still appear, marked as not in the catalog. Private ones need a token.
+        </div>
+      </div>
+      <label className="field">
+        <input value={value} onChange={(e) => setValue(e.target.value)} style={{ width: 180 }} aria-label="GitHub accounts" spellCheck={false} />
+      </label>
+      <button className="btn" disabled={!changed} onClick={() => onChange(parsed)}>
+        Save
+      </button>
+    </div>
   );
 }

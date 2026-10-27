@@ -1,0 +1,12 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: benjaire-strategy
+  name: Benjaire Strategy
+  summary: Private planning repository for Benjaire. Only the initial commit so far.
+  status: idle
+  repository: khaneilcampbell/benjaire-strategy
+  tags: [benjaire, planning]
+
+agents: []

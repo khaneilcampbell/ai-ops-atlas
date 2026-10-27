@@ -18,10 +18,18 @@ describe("bundled catalog", () => {
     expect(issues).toEqual([]);
   });
 
-  it("registers the three portfolio projects", () => {
+  it("registers every khaneilcampbell repository once", () => {
     expect(catalog.projects.map((p) => p.repository).sort()).toEqual([
+      "khaneilcampbell/ai-ops-atlas",
+      "khaneilcampbell/benjaire-dashboard",
+      "khaneilcampbell/benjaire-strategy",
+      "khaneilcampbell/benjaire.com",
+      "khaneilcampbell/job-applications-workflow",
+      "khaneilcampbell/khaneilcampbell",
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",
+      "khaneilcampbell/project-intelligence-hub",
+      "khaneilcampbell/service-desk-dashboard",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
   });

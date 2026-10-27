@@ -30,18 +30,22 @@ npm test                 # validates the catalog and the health/attention rules
 
 ## Add a project or agent
 
-Add or edit a YAML file in [`catalog/`](catalog/README.md). The format is documented there, and `npm test` fails on a broken manifest. The three seed manifests describe:
+Add or edit a YAML file in [`catalog/`](catalog/README.md). The format is documented there, and `npm test` fails on a broken manifest. There is one manifest for each of the 11 `khaneilcampbell` repositories, including:
 
 - **Multi-Agent Commerce Pipeline**: the autonomous loop, the six CrewAI brand-crew agents, and the Canva, Shopify, SEO and health-report stages
 - **AI-Assisted SOC Brute Force Detection Lab**: the Splunk detection search and the SOC case-note automation
 - **AI-Assisted Portfolio Website**: the Claude site assistant, the site audit script and the security-check workflow
+- **Benjaire.com**: the contact form Worker, the Benjaire Flow intake in n8n and Site CI
+- **AI Career Application Optimization System**: the three Claude prompt stages and the career database validator
 
-Statuses and last-run times in these manifests are a starting point. Correct them by hand until live sources arrive.
+Repositories with no manifest still appear. The app lists every repository owned by the accounts in **Settings → Show every repository owned by** (default `khaneilcampbell`), and shows the rest under "Not in the catalog yet" on the list and the map. Private repositories need a token.
+
+Statuses and last-run times in the manifests are a starting point. Correct them by hand until live sources arrive.
 
 ## GitHub access and secrets
 
-- All GitHub calls are `GET` requests to `api.github.com/repos/...`. The Rust side rejects any other path.
-- Without a token, public repositories load with GitHub's anonymous limit (60 requests an hour; one refresh of the three seed repos uses about 15).
+- All GitHub calls are `GET` requests to `api.github.com/repos/...`, plus the repository lists at `/users/{owner}/repos` and `/user/repos`. The Rust side rejects any other path.
+- Requests are conditional (ETags), and GitHub doesn't count unchanged 304 answers against the rate limit. Without a token, the anonymous limit is 60 requests an hour. The first full load of 11 repositories uses about 50 requests, so add a token if you refresh often.
 - With a token, private repositories work and the limit rises. Use a fine-grained token with read-only **Contents**, **Metadata** and **Actions** access. It is saved in the macOS Keychain under `com.khaneilcampbell.ai-ops-atlas`, attached to requests by the Rust side, and never returned to the web view, shown in the interface or logged.
 - Preferences and cached GitHub metadata are kept in the app's local storage on your Mac.
 

@@ -45,3 +45,11 @@ describe("attention", () => {
     expect(items.filter((i) => i.severity === "high").map((i) => i.id)).toEqual(["agent:ci:run", "repo:me/demo:ci"]);
   });
 });
+
+describe("uncataloged repositories", () => {
+  it("raise failing CI even without a manifest", () => {
+    const s = snap({ fullName: "me/other", runs: [run("CI", "failure")] });
+    const items = attentionItems({ projects: [], agents: [] }, { "me/other": { kind: "ok", data: s, stale: false } }, [], Date.now(), ["me/other"]);
+    expect(items.map((i) => i.id)).toEqual(["repo:me/other:ci"]);
+  });
+});

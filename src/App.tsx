@@ -19,8 +19,8 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 ];
 
 export default function App() {
-  const { view, setView, catalog, repos, manifestIssues, refreshing, refresh, selection } = useAtlas();
-  const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues), [catalog, repos, manifestIssues]);
+  const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
+  const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
     const times = Object.values(repos).flatMap((r) => (r.kind === "ok" ? [r.data.fetchedAt] : r.kind === "error" && r.data ? [r.data.fetchedAt] : []));
@@ -85,7 +85,7 @@ export default function App() {
 }
 
 function GlobalSearch() {
-  const { catalog, repos, filters, setFilters, select, setView, view } = useAtlas();
+  const { catalog, repos, uncataloged, filters, setFilters, select, setView, view } = useAtlas();
   const [open, setOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const q = filters.query;
@@ -107,11 +107,11 @@ function GlobalSearch() {
     const agents = catalog.agents
       .filter((a) => agentMatches(a, catalog.projects.find((p) => p.id === a.projectId), q))
       .map((a) => ({ kind: "agent" as const, id: a.id, title: a.name, meta: `Agent · ${a.framework}` }));
-    const rs = repoRows(catalog, repos)
+    const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
-      .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? ""}` }));
+      .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
     return [...agents, ...rs].slice(0, 8);
-  }, [q, catalog, repos]);
+  }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.
   const showPopover = open && q.trim() && view !== "agents" && view !== "repos";

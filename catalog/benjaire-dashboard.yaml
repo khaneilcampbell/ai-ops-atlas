@@ -1,0 +1,25 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: benjaire-ops
+  name: Benjaire Ops Dashboard
+  summary: >-
+    Private business dashboard for Benjaire: traffic, sales, inquiries, n8n
+    automation health, Cloudflare infrastructure and a manual finance ledger.
+  status: active
+  repository: khaneilcampbell/benjaire-dashboard
+  tags: [benjaire, cloudflare, d1, dashboard]
+
+agents:
+  - id: benjaire-ops-ci
+    name: Dashboard CI
+    purpose: Type checks, tests and builds the dashboard and its Worker.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push or pull request
+    source: .github/workflows/ci.yml
+    observe:
+      github_workflow: ci.yml
+    last_run: null

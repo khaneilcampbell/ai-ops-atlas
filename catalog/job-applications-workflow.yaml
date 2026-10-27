@@ -1,0 +1,65 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: career-optimizer
+  name: AI Career Application Optimization System
+  summary: >-
+    Human-in-the-loop workflow that turns a job posting into a tailored,
+    ATS-readable resume from a verified career database, and tracks every
+    application.
+  status: active
+  repository: khaneilcampbell/job-applications-workflow
+  tags: [claude, career, human-in-the-loop]
+
+agents:
+  - id: job-analyst
+    name: Job Description Analyst
+    purpose: >-
+      Breaks a job posting into required and preferred skills, gaps and a
+      match assessment against the career database.
+    framework: Claude prompt
+    model: Claude
+    runtime: Claude chat, run by hand
+    status: idle
+    trigger: Manual, per application
+    source: prompts/job-analysis.md
+    last_run: null
+
+  - id: resume-tailor
+    name: Resume Tailoring Assistant
+    purpose: >-
+      Re-angles verified facts into a tailored summary, bullets, projects and
+      skills. It may re-angle facts but never invent them.
+    framework: Claude prompt
+    model: Claude
+    runtime: Claude chat, run by hand
+    status: idle
+    trigger: Manual, after job analysis
+    source: prompts/resume-tailoring-assistant.md
+    last_run: null
+
+  - id: resume-quality-review
+    name: Quality Reviewer
+    purpose: >-
+      Checks accuracy against the career database, ATS readability, grammar
+      and formatting before human approval.
+    framework: Claude prompt
+    model: Claude
+    runtime: Claude chat, run by hand
+    status: idle
+    trigger: Manual, before the final resume
+    source: prompts/quality-review.md
+    last_run: null
+
+  - id: career-db-validator
+    name: Career Database Validator
+    purpose: >-
+      Flags invalid JSON, TODO placeholders, unverified entries and metrics
+      without a source in the career database.
+    framework: Python script
+    runtime: Local
+    status: idle
+    trigger: Manual, python scripts/validate_database.py
+    source: scripts/validate_database.py
+    last_run: null

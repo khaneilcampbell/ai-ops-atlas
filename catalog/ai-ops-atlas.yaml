@@ -1,0 +1,23 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: ai-ops-atlas
+  name: AI Ops Atlas
+  summary: This app. A read-only desktop command center for agents, projects and repositories.
+  status: active
+  repository: khaneilcampbell/ai-ops-atlas
+  tags: [tauri, react, dashboard]
+
+agents:
+  - id: atlas-ci
+    name: Atlas CI
+    purpose: Runs frontend and Rust tests, and builds the macOS app on request.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request or manual
+    source: .github/workflows/ci.yml
+    observe:
+      github_workflow: ci.yml
+    last_run: null

@@ -158,7 +158,7 @@ function RepoDetail({ name }: { name: string }) {
 
   return (
     <>
-      <Head eyebrow={`Repository · ${project?.name ?? "No project"}`} title={name.split("/")[1]}>
+      <Head eyebrow={`Repository · ${project?.name ?? "Not in the catalog yet"}`} title={name.split("/")[1]}>
         <div className="muted small" style={{ marginTop: 4 }}>
           {name}
         </div>

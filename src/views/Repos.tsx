@@ -8,8 +8,8 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 
 export function ReposView() {
-  const { catalog, repos, filters, select, selection } = useAtlas();
-  const all = useMemo(() => repoRows(catalog, repos), [catalog, repos]);
+  const { catalog, repos, uncataloged, filters, select, selection } = useAtlas();
+  const all = useMemo(() => repoRows(catalog, repos, uncataloged), [catalog, repos, uncataloged]);
   const rows = all.filter(
     (r) =>
       (!filters.project || r.project?.id === filters.project) &&
@@ -49,7 +49,7 @@ export function ReposView() {
                 <div className="grow">
                   <div className="rname">{r.name.split("/")[1]}</div>
                   <div className="muted small">
-                    {r.name.split("/")[0]} · {r.project?.name ?? "No project"}
+                    {r.name.split("/")[0]} · {r.project?.name ?? "Not in the catalog yet"}
                   </div>
                 </div>
                 {snap && <span className="chip">{snap.visibility}</span>}
@@ -91,6 +91,7 @@ export function ReposView() {
                 ))}
               </div>
               <div className="chips">
+                {!r.project && <span className="chip">Add a manifest in catalog/ to link agents</span>}
                 {r.agents.slice(0, 6).map((a) => (
                   <span key={a.id} className="chip">
                     {a.name}

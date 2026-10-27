@@ -1,0 +1,23 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: intelligence-hub
+  name: Project Intelligence Hub
+  summary: >-
+    Documentation for each engineering project: overview, deep dive, learning
+    guide, development journal and roadmap, rendered to DOCX.
+  status: active
+  repository: khaneilcampbell/project-intelligence-hub
+  tags: [documentation, claude]
+
+agents:
+  - id: docs-builder
+    name: Docs Builder
+    purpose: Renders each project's Markdown source to styled DOCX with pandoc and python-docx.
+    framework: Python script
+    runtime: Local
+    status: idle
+    trigger: Manual
+    source: "10 — System Administration/Automation Scripts/build_docs.py"
+    last_run: null

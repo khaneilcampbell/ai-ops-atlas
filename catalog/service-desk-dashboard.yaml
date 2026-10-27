@@ -1,0 +1,25 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: service-desk
+  name: Service Desk Intelligence Dashboard
+  summary: >-
+    Turns service desk ticket data into volume, backlog, SLA health, recurring
+    issue and workload insight. Early setup; the app stack is not committed yet.
+  status: active
+  repository: khaneilcampbell/service-desk-dashboard
+  tags: [itsm, dashboard]
+
+agents:
+  - id: service-desk-codeql
+    name: CodeQL Scan
+    purpose: GitHub code scanning for security issues on pushes and pull requests.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request and schedule
+    source: .github/workflows/codeql.yml
+    observe:
+      github_workflow: codeql.yml
+    last_run: null
