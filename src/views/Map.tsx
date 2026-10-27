@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Agent, Status } from "../catalog/types";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
@@ -16,7 +16,6 @@ import {
   iso,
   layoutMap,
   placeLabels,
-  textWidth,
   treeSpots,
   TW,
   type District,
@@ -27,6 +26,12 @@ import {
   type Park,
   type Walk,
 } from "./mapLayout";
+import { measure, SANS, SERIF, wrap } from "./mapText";
+import type { Map3DApi } from "./map3d/Map3D";
+import { webglAvailable } from "./map3d/webgl";
+
+// three.js only loads when the 3D map is shown.
+const Map3D = lazy(() => import("./map3d/Map3D"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -275,29 +280,6 @@ function MapDefs() {
   );
 }
 
-const SANS = "-apple-system, system-ui, sans-serif";
-const SERIF = "ui-serif, 'New York', Georgia, serif";
-let ctx2d: CanvasRenderingContext2D | null | undefined;
-/** Real text width from the browser's font metrics, so plaques fit their text exactly. */
-function measure(text: string, size: number, font: string, weight = 400) {
-  if (ctx2d === undefined) ctx2d = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
-  if (!ctx2d) return textWidth(text, size, font === SERIF);
-  ctx2d.font = `${weight} ${size}px ${font}`;
-  return ctx2d.measureText(text).width;
-}
-
-/** Breaks a name into lines no wider than max, on word boundaries; never truncates. */
-function wrap(text: string, size: number, font: string, max: number) {
-  const lines: string[] = [];
-  for (const word of text.split(/\s+/)) {
-    const last = lines[lines.length - 1];
-    if (last !== undefined && measure(`${last} ${word}`, size, font) <= max) lines[lines.length - 1] = `${last} ${word}`;
-    else lines.push(word);
-  }
-  // Keep plaques short: anything past three lines joins the third, and the plaque grows wider instead.
-  return lines.length > 3 ? [...lines.slice(0, 2), lines.slice(2).join(" ")] : lines;
-}
-
 const PILL_FONT = 12;
 const pillWidth = (text: string) => Math.max(40, measure(text, PILL_FONT, SANS, 500) + 20);
 const PILL_H = 22;
@@ -404,6 +386,15 @@ export function MapView() {
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
+  // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
+  const [mode, setModeState] = useState<"3d" | "2d">(() => (webglAvailable() ? load<"3d" | "2d">("mapMode", "3d") : "2d"));
+  const is3d = mode === "3d";
+  const map3d = useRef<Map3DApi>(null);
+  const [moved3d, setMoved3d] = useState(false);
+  const setMode = (m: "3d" | "2d") => {
+    setModeState(m);
+    save("mapMode", m);
+  };
 
   const stage = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -544,6 +535,8 @@ export function MapView() {
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
+    // The 3D map's own controls handle the wheel.
+    if (is3d) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
@@ -555,7 +548,7 @@ export function MapView() {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [zoomAt]);
+  }, [zoomAt, is3d]);
 
   // Follow selections made elsewhere (search, inspector links) so the building stays in view.
   const selKey = selection ? `${selection.kind}:${selection.id}` : null;
@@ -752,7 +745,23 @@ export function MapView() {
     const d = best.d;
     setFocus(d.project.id);
     setAnnounce(`${d.project.name}. ${d.lots.length} agents. Press Enter to inspect.`);
-    reveal(center(d));
+    if (is3d) map3d.current?.reveal(d.ox + d.size / 2, d.oy + d.size / 2);
+    else reveal(center(d));
+  };
+
+  const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
+  const fitAny = () => (is3d ? map3d.current?.fit() : fit());
+
+  /** Hover text for a building, from the same live repository data the inspector uses. */
+  const tipFor = (key: string) => {
+    if (key.startsWith("agent:")) {
+      const a = catalog.agents.find((x) => x.id === key.slice(6));
+      return a ? { title: a.name, sub: `${a.framework} · ${statusLabel(a.status)} · last run ${relative(effectiveLastRun(a, repoData(repos[a.repository]))).toLowerCase()}` } : null;
+    }
+    const name = key.slice(5);
+    const snap = repoData(repos[name]);
+    if (!catalog.projects.some((p) => p.repository === name)) return { title: name, sub: snap?.pushedAt ? `Not in the catalog yet · pushed ${relative(snap.pushedAt)}` : "Not in the catalog yet" };
+    return { title: name, sub: snap?.commits[0] ? `Latest commit ${relative(snap.commits[0].date)}: ${short(snap.commits[0].message, 40)}` : "Repository" };
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -761,14 +770,14 @@ export function MapView() {
     const dir = dirs[e.key];
     if (dir) {
       e.preventDefault();
-      if (e.shiftKey) panBy(-dir[0] * 120, -dir[1] * 120);
+      if (e.shiftKey && !is3d) panBy(-dir[0] * 120, -dir[1] * 120);
       else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (focused) select({ kind: "repo", id: focused.project.repository });
-    } else if (e.key === "+" || e.key === "=") zoomAt(1.25);
-    else if (e.key === "-" || e.key === "_") zoomAt(0.8);
-    else if (e.key === "0") fit();
+    } else if (e.key === "+" || e.key === "=") zoomBy(1.25);
+    else if (e.key === "-" || e.key === "_") zoomBy(0.8);
+    else if (e.key === "0") fitAny();
   };
 
   return (
@@ -783,7 +792,7 @@ export function MapView() {
           aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
-            if (e.button !== 0) return;
+            if (e.button !== 0 || is3d) return;
             stop();
             drag.current = { x: e.clientX, y: e.clientY, vx: cam.x, vy: cam.y, moved: false };
           }}
@@ -811,6 +820,26 @@ export function MapView() {
             if (dragging) e.stopPropagation();
           }}
         >
+          {is3d ? (
+            <Suspense fallback={null}>
+            <Map3D
+              ref={map3d}
+              layout={layout}
+              selKey={selKey}
+              selectedDistrict={selectedDistrict}
+              focus={focus}
+              showAgentLabels={settings.showMapLabels}
+              reduced={reduced}
+              tipFor={tipFor}
+              onSelect={(sel, project) => {
+                if (project) setFocus(project);
+                select(sel);
+              }}
+              onFocus={setFocus}
+              onMoved={() => setMoved3d(true)}
+            />
+            </Suspense>
+          ) : (
           <svg aria-hidden="true">
             <MapDefs />
             <g transform={`translate(${cam.x},${cam.y}) scale(${k})`}>
@@ -927,8 +956,9 @@ export function MapView() {
               {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
           </svg>
+          )}
 
-          <div className={`map-intro ${selection || k > fitK.current * 1.15 ? "faded" : ""}`}>
+          <div className={`map-intro ${selection || (is3d ? moved3d : k > fitK.current * 1.15) ? "faded" : ""}`}>
             <div className="eyebrow">Workspace map</div>
             <h1>Welcome to the neighborhood.</h1>
             <p className="lede small">Each project is a district. Its repository is the tall building in the middle and its agents are the houses around it.</p>
@@ -966,16 +996,21 @@ export function MapView() {
               </select>
             </label>
             <span className="sep" />
-            <button className="icon-btn" onClick={fit} aria-label="Fit map" title="Fit map (0)">
+            {webglAvailable() && (
+              <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
+                3D
+              </button>
+            )}
+            <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />
             </button>
             <button className={`icon-btn ${settings.showMapLabels ? "on" : ""}`} onClick={() => setSettings({ showMapLabels: !settings.showMapLabels })} aria-label="Toggle agent labels" aria-pressed={settings.showMapLabels} title="Agent labels">
               <Icon name="labels" size={17} />
             </button>
-            <button className="icon-btn" onClick={() => zoomAt(1.25)} aria-label="Zoom in" title="Zoom in (+)">
+            <button className="icon-btn" onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in (+)">
               <Icon name="plus" size={17} />
             </button>
-            <button className="icon-btn" onClick={() => zoomAt(0.8)} aria-label="Zoom out" title="Zoom out (−)">
+            <button className="icon-btn" onClick={() => zoomBy(0.8)} aria-label="Zoom out" title="Zoom out (−)">
               <Icon name="minus" size={17} />
             </button>
           </div>
