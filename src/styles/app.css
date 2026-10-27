@@ -499,3 +499,12 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .feed-more { display: flex; justify-content: center; padding: 10px; }
 .scrim { z-index: 29; }
 .panel:not(.docked) { z-index: 30; }
+
+/* Map terrain pass: soft sky behind the islands and glows on the active district. */
+.map-stage { background: radial-gradient(120% 90% at 50% 35%, #eef2e1 0%, #dfe6cf 55%, #c9d3b8 100%); }
+.sel-glow { fill: url(#aura); pointer-events: none; transform-box: fill-box; transform-origin: center; animation: glow 2.4s ease-in-out infinite; }
+.hover-glow { fill: url(#aura); opacity: 0.7; pointer-events: none; }
+.district-aura { pointer-events: none; opacity: 0.55; transition: opacity 0.2s ease; }
+.district-aura.on { opacity: 0.9; }
+@keyframes glow { 0%, 100% { opacity: 0.75; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .sel-glow { animation: none; } }
