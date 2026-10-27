@@ -5,6 +5,8 @@ type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-expli
 
 function toRun(r: J): WorkflowRun {
   return {
+    id: typeof r.id === "number" ? r.id : undefined,
+    attempt: typeof r.run_attempt === "number" ? r.run_attempt : undefined,
     name: r.name ?? r.display_title ?? "workflow",
     status: r.status,
     conclusion: r.conclusion ?? null,

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
+import { RerunButton } from "../components/RerunButton";
 import { activityFeed, type AttentionItem } from "../lib/derive";
 import { workspaceMetrics, type DayBucket } from "../lib/metrics";
 import { relative } from "../lib/time";
@@ -162,6 +163,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                     <span className="muted small nowrap" title={new Date(f.run.createdAt).toLocaleString()}>
                       {relative(f.run.createdAt)}
                     </span>
+                    <RerunButton repo={f.repo} run={f.run} />
                   </div>
                 </li>
               ))}

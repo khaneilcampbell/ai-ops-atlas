@@ -2,7 +2,7 @@
 
 A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
 
-Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. Nothing in the app can change a repository or start an external agent.
+Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. The one exception is **Re-run failed jobs** on a failed GitHub Actions run: off by default, limited to repositories you tick, approved in a macOS dialog each time, using a separate write-scoped token, and audited. See [docs/actions.md](docs/actions.md). Nothing else in the app can change a repository or start an external agent.
 
 ## What it does
 

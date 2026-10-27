@@ -38,15 +38,15 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 28 agents discoverable with no manifest problems", () => {
+  it("keeps all 11 projects and 29 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(11);
-    expect(entries).toHaveLength(28);
+    expect(entries).toHaveLength(29);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 8, B: 4, C: 10, D: 5, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 8, B: 4, C: 11, D: 5, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -65,6 +65,14 @@ describe("bundled registry", () => {
   it("does not grant execution autonomy to anything Atlas runs", () => {
     const intel = entries.find((e) => e.profile.id === "repo-intelligence")!;
     expect(intel.profile.governance.autonomy).toBe(1);
+  });
+
+  it("keeps Atlas's only write action at approval required", () => {
+    const rerun = entries.find((e) => e.profile.id === "atlas-rerun-failed")!;
+    expect(rerun.profile.governance.autonomy).toBe(2);
+    expect(rerun.profile.governance.approval).toBeTruthy();
+    expect(rerun.profile.governance.permissions.length).toBeGreaterThan(0);
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-rerun-failed"]);
   });
 });
 
@@ -219,7 +227,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(28);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(29);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
