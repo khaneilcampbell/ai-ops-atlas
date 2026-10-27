@@ -23,6 +23,7 @@ const PATHS: Record<string, string> = {
   compass: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 7.8l-2.1 6.4-6.4 2.1 2.1-6.4z",
   labels: "M4 7V4h16v3M9 20h6M12 4v16",
   lock: "M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4",
+  spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 1.7 1.7.8-1.7.8L19 20l-.8-1.7-1.7-.8 1.7-.8z",
 };
 
 export type IconName = keyof typeof PATHS;

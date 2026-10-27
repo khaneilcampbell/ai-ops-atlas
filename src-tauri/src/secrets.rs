@@ -1,18 +1,79 @@
-//! GitHub token storage in the OS credential store (the macOS Keychain on a Mac).
-//! The token is written from the settings screen and read only by the GitHub client;
-//! no command returns it to the web view.
+//! Credential storage in the OS credential store (the macOS Keychain on a Mac).
+//! The GitHub token and the Anthropic API key are written from the settings screen and
+//! read only by the Rust clients that use them; no command returns either to the web view.
 
 use keyring::Entry;
 
 const SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas";
 const ACCOUNT: &str = "github-token";
+const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
+
+fn entry_for(account: &str) -> Result<Entry, String> {
+    Entry::new(SERVICE, account).map_err(|e| format!("Keychain unavailable: {e}"))
+}
 
 fn entry() -> Result<Entry, String> {
-    Entry::new(SERVICE, ACCOUNT).map_err(|e| format!("Keychain unavailable: {e}"))
+    entry_for(ACCOUNT)
+}
+
+fn read(account: &str) -> Option<String> {
+    entry_for(account)
+        .ok()?
+        .get_password()
+        .ok()
+        .filter(|t| !t.is_empty())
+}
+
+fn clear(account: &str) -> Result<(), String> {
+    match entry_for(account)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(format!("Could not remove the credential: {e}")),
+    }
 }
 
 pub fn read_token() -> Option<String> {
-    entry().ok()?.get_password().ok().filter(|t| !t.is_empty())
+    read(ACCOUNT)
+}
+
+/// The Anthropic key, read only by the Claude client at request time.
+pub fn read_anthropic_key() -> Option<String> {
+    read(ANTHROPIC_ACCOUNT)
+}
+
+/// Anthropic API keys start with `sk-ant-`; this catches pasting the wrong thing.
+fn looks_like_anthropic_key(k: &str) -> bool {
+    k.starts_with("sk-ant-")
+        && (30..=300).contains(&k.len())
+        && k.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+pub fn anthropic_key_present() -> bool {
+    read_anthropic_key().is_some()
+}
+
+#[tauri::command]
+pub fn anthropic_key_status() -> bool {
+    anthropic_key_present()
+}
+
+#[tauri::command]
+pub fn anthropic_key_set(key: String) -> Result<(), String> {
+    let key = key.trim();
+    if !looks_like_anthropic_key(key) {
+        return Err(
+            "That doesn't look like an Anthropic API key. Expected one starting with sk-ant-."
+                .into(),
+        );
+    }
+    entry_for(ANTHROPIC_ACCOUNT)?
+        .set_password(key)
+        .map_err(|e| format!("Could not save to the Keychain: {e}"))
+}
+
+#[tauri::command]
+pub fn anthropic_key_clear() -> Result<(), String> {
+    clear(ANTHROPIC_ACCOUNT)
 }
 
 /// Accepts the documented GitHub token formats so a pasted typo fails early.
@@ -41,15 +102,12 @@ pub fn github_token_set(token: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn github_token_clear() -> Result<(), String> {
-    match entry()?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(format!("Could not remove the token: {e}")),
-    }
+    clear(ACCOUNT)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::looks_like_token;
+    use super::{looks_like_anthropic_key, looks_like_token};
 
     #[test]
     fn token_shapes() {
@@ -59,5 +117,19 @@ mod tests {
         ));
         assert!(!looks_like_token("hello"));
         assert!(!looks_like_token("ghp_has space inside_xxxxxxxxxxxxxxxx"));
+    }
+
+    #[test]
+    fn anthropic_key_shapes() {
+        assert!(looks_like_anthropic_key(
+            "sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789_-AB"
+        ));
+        assert!(!looks_like_anthropic_key(
+            "ghp_abcdefghijklmnopqrstuvwxyz0123456789"
+        ));
+        assert!(!looks_like_anthropic_key("sk-ant-short"));
+        assert!(!looks_like_anthropic_key(
+            "sk-ant-api03-abcdefghijklmnopqrstuvwxyz 0123456789"
+        ));
     }
 }
