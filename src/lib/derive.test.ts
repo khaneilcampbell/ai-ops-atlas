@@ -29,6 +29,10 @@ describe("ciHealth", () => {
   it("flags a failing workflow", () => {
     expect(ciHealth(snap({ runs: [run("Tests", "failure")] })).value).toBe("1 failing");
   });
+  it("ignores Dependabot's own update jobs", () => {
+    const dependabot = { ...run("cargo in /src-tauri for glib - Update #1658074936", "failure"), event: "dynamic" };
+    expect(ciHealth(snap({ runs: [dependabot, run("CI", "success")] })).value).toBe("Passing");
+  });
 });
 
 describe("attention", () => {
