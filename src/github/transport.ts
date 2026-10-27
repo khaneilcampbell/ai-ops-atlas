@@ -1,4 +1,4 @@
-import { isTauri } from "../lib/env";
+import { isHostedWeb, isTauri } from "../lib/env";
 import { load, save } from "../lib/storage";
 
 export interface RateLimit {
@@ -89,8 +89,9 @@ export function clearEtags() {
 
 /**
  * Read-only GitHub GET. Inside the desktop app the request goes through the Rust side,
- * which adds the Keychain token so it never reaches the web view. In a plain browser
- * (vite dev) it falls back to an unauthenticated fetch of public data.
+ * which adds the Keychain token so it never reaches the web view. The hosted web build
+ * goes through its `/api/github` function, which holds the token on the server. In a
+ * plain browser (vite dev) it falls back to an unauthenticated fetch of public data.
  */
 export async function githubGet(path: string): Promise<unknown> {
   // Don't spend requests GitHub will refuse; wait for the window to reset instead.
@@ -103,13 +104,14 @@ export async function githubGet(path: string): Promise<unknown> {
   } else {
     const headers: Record<string, string> = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
     if (cached) headers["If-None-Match"] = cached.etag;
-    const r = await fetch(`https://api.github.com${path}`, { headers });
+    const web = isHostedWeb();
+    const r = await fetch(web ? `/api/github${path}` : `https://api.github.com${path}`, { headers, credentials: web ? "same-origin" : "omit" });
     const num = (h: string) => Number(r.headers.get(h) ?? NaN);
     const limit = { limit: num("x-ratelimit-limit"), remaining: num("x-ratelimit-remaining"), reset: num("x-ratelimit-reset") };
     res = {
       status: r.status,
       etag: r.headers.get("etag"),
-      authed: false,
+      authed: r.headers.get("x-atlas-authed") === "1",
       rate: Object.values(limit).every(Number.isFinite) ? limit : null,
       body: r.status === 204 || r.status === 304 ? null : await r.json().catch(() => null),
     };
