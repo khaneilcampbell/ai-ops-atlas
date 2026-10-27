@@ -54,7 +54,9 @@ mod tests {
     #[test]
     fn token_shapes() {
         assert!(looks_like_token("ghp_abcdefghijklmnopqrstuvwxyz0123456789"));
-        assert!(looks_like_token("github_pat_11ABCDEFG0123456789_abcdefghijklmnop"));
+        assert!(looks_like_token(
+            "github_pat_11ABCDEFG0123456789_abcdefghijklmnop"
+        ));
         assert!(!looks_like_token("hello"));
         assert!(!looks_like_token("ghp_has space inside_xxxxxxxxxxxxxxxx"));
     }

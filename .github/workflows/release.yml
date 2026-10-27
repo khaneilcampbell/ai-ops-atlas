@@ -1,0 +1,49 @@
+name: Release
+
+# Push a tag like v0.2.0 on main to publish a GitHub Release with the macOS app.
+# Set the version first with `npm run version:set -- 0.2.0` and merge that change.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: Build and publish the macOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the app version
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          for v in "$(node -p 'require("./package.json").version')" \
+                   "$(node -p 'require("./src-tauri/tauri.conf.json").version')" \
+                   "$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)"; do
+            if [ "$v" != "$want" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME doesn't match version $v. Run npm run version:set -- $want first."
+              exit 1
+            fi
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: npm ci
+      - run: npm test
+      # A universal build runs on both Apple silicon and Intel Macs.
+      - run: npx tauri build --target universal-apple-darwin --bundles app
+      - name: Zip the app bundle
+        run: |
+          ditto -c -k --keepParent "src-tauri/target/universal-apple-darwin/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
+          shasum -a 256 AI-Ops-Atlas-macOS.zip > AI-Ops-Atlas-macOS.zip.sha256
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" AI-Ops-Atlas-macOS.zip AI-Ops-Atlas-macOS.zip.sha256 \
+            --title "AI Ops Atlas $GITHUB_REF_NAME" --generate-notes --verify-tag

@@ -1,6 +1,6 @@
 [package]
 name = "ai-ops-atlas"
-version = "0.1.0"
+version = "0.2.0"
 description = "A read-only command center for AI agents, projects and GitHub repositories"
 edition = "2021"
 rust-version = "1.77"

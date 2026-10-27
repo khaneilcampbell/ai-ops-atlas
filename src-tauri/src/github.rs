@@ -120,9 +120,13 @@ mod tests {
     fn allows_repo_reads() {
         assert!(allowed_path("/repos/khaneilcampbell/khaneilcampbell.com"));
         assert!(allowed_path("/repos/a/b/commits?per_page=10&sha=main"));
-        assert!(allowed_path("/repos/a/b/actions/workflows/security-check.yml/runs?per_page=5"));
+        assert!(allowed_path(
+            "/repos/a/b/actions/workflows/security-check.yml/runs?per_page=5"
+        ));
         assert!(allowed_path("/user/repos?affiliation=owner&per_page=100"));
-        assert!(allowed_path("/users/khaneilcampbell/repos?per_page=100&type=owner"));
+        assert!(allowed_path(
+            "/users/khaneilcampbell/repos?per_page=100&type=owner"
+        ));
     }
 
     #[test]
