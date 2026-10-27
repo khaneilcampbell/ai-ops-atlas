@@ -69,6 +69,24 @@ agents:
     expect(r.issues[0].message).toContain("status");
   });
 
+  it("reads declared capabilities and permissions as plain strings", () => {
+    const r = run(`
+schema: atlas/v1
+project: { id: demo, name: Demo, summary: s, status: active, repository: me/demo }
+agents:
+  - id: a1
+    name: A
+    purpose: p
+    framework: CrewAI
+    status: idle
+    capabilities: [Write listings]
+    permissions: ["Shopify: write products", 3]
+`);
+    expect(r.agents[0].capabilities).toEqual(["Write listings"]);
+    expect(r.agents[0].permissions).toEqual(["Shopify: write products"]);
+    expect(r.issues[0].message).toContain("permissions[1]");
+  });
+
   it("flags invalid YAML", () => {
     expect(run("project: [").issues[0].message).toContain("invalid YAML");
   });

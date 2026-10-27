@@ -5,7 +5,10 @@ import { useAtlas, type View } from "./state";
 import { attentionItems } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows } from "./lib/search";
 import { relative } from "./lib/time";
-import { Overview } from "./views/Overview";
+import { MissionControl } from "./views/MissionControl";
+import { GridView } from "./views/Grid";
+import { ActivityView } from "./views/Activity";
+import { ViewSwitch } from "./components/ViewSwitch";
 import { AgentsView } from "./views/Agents";
 import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
@@ -13,11 +16,12 @@ import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
-  { view: "overview", label: "Home", icon: "overview" },
-  { view: "agents", label: "Agents", icon: "agents" },
-  { view: "repos", label: "Repos", icon: "repos" },
   { view: "map", label: "Map", icon: "map" },
+  { view: "overview", label: "Mission", icon: "overview" },
+  { view: "agents", label: "Agents", icon: "agents" },
+  { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
+  { view: "repos", label: "Repos", icon: "repos" },
 ];
 
 export default function App() {
@@ -45,6 +49,7 @@ export default function App() {
           </div>
         </div>
         <div className="spacer" />
+        <ViewSwitch />
         <GlobalSearch />
         <div className="refresh" title={lastFetched ? `GitHub data fetched ${new Date(lastFetched).toLocaleString()}` : "GitHub data not fetched yet"}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
@@ -74,7 +79,9 @@ export default function App() {
       </nav>
 
       <main className="main">
-        {view === "overview" && <Overview attention={attention} />}
+        {view === "overview" && <MissionControl attention={attention} />}
+        {view === "grid" && <GridView />}
+        {view === "activity" && <ActivityView />}
         {view === "agents" && <AgentsView />}
         {view === "repos" && <ReposView />}
         {view === "map" && <MapView />}
@@ -82,7 +89,8 @@ export default function App() {
         {view === "settings" && <SettingsView />}
       </main>
 
-      {selection && <DetailPanel />}
+      {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
+      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent") && <DetailPanel />}
     </div>
   );
 }
@@ -117,7 +125,7 @@ function GlobalSearch() {
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.
-  const showPopover = open && q.trim() && view !== "agents" && view !== "repos";
+  const showPopover = open && q.trim() && view !== "agents" && view !== "repos" && view !== "grid";
 
   return (
     <div style={{ position: "relative" }}>

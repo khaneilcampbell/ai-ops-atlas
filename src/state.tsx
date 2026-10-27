@@ -7,7 +7,7 @@ import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
 
-export type View = "overview" | "agents" | "repos" | "map" | "intel" | "settings";
+export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "settings";
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
 
 export interface Settings {
@@ -86,7 +86,8 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const [usage, setUsage] = useState<AtlasState["usage"]>(() => load("usage", null));
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));
   const [refreshing, setRefreshing] = useState(false);
-  const [view, setViewState] = useState<View>(() => load<View>("view", "overview"));
+  // The map is the landing view on every launch.
+  const [view, setViewState] = useState<View>("map");
   const [selection, select] = useState<Selection>(null);
   const [filters, setFiltersState] = useState<Filters>(EMPTY_FILTERS);
   const inflight = useRef(false);
@@ -203,9 +204,10 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       refreshing,
       refresh,
       view,
+      // A selection belongs to the view it was made in.
       setView: (v) => {
         setViewState(v);
-        save("view", v === "settings" ? "overview" : v);
+        select(null);
       },
       selection,
       select,

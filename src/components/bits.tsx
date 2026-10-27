@@ -26,6 +26,18 @@ export function HealthDot({ health, label }: { health: Health; label?: string })
   );
 }
 
+const HEALTH_LABEL: Record<Health, string> = { good: "Healthy", warn: "Needs a look", bad: "Failing", unknown: "Not verified" };
+
+/** Overall repository health, worded for a badge. */
+export function HealthBadge({ health }: { health: Health }) {
+  return (
+    <span className={`health-badge hb-${health}`} title="Checked against GitHub: CI, push recency, open issues and license">
+      <i className={`h-${health}`} />
+      {HEALTH_LABEL[health]}
+    </span>
+  );
+}
+
 export function Indicator({ ind }: { ind: HealthIndicator }) {
   return (
     <span className="health" title={ind.label}>
@@ -36,7 +48,7 @@ export function Indicator({ ind }: { ind: HealthIndicator }) {
 }
 
 // GitHub linguist colors for the languages likely to appear here.
-const LANG_COLORS: Record<string, string> = {
+export const LANG_COLORS: Record<string, string> = {
   Python: "#3572A5",
   TypeScript: "#3178c6",
   JavaScript: "#f1e05a",
@@ -57,9 +69,9 @@ export function LangDot({ lang }: { lang: string | null }) {
   );
 }
 
-export function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function ExternalLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer noopener" onClick={(e) => openExternal(e, href)}>
+    <a href={href} className={className} target="_blank" rel="noreferrer noopener" onClick={(e) => openExternal(e, href)}>
       {children}
     </a>
   );

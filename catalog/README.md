@@ -28,6 +28,10 @@ agents:
     source: scripts/crew.py        # optional: path in the repository, linked on GitHub
     repository: owner/other-repo   # optional, defaults to project.repository
     last_run: 2026-10-26T06:52:28Z # ISO date or null when unknown
+    capabilities:                  # optional: what it can do, shown in Agent management
+      - Score niches by demand and competition
+    permissions:                   # optional: access it holds, shown as declared
+      - "Anthropic API: messages"
     observe:                       # optional read-only live sources
       github_workflow: ci.yml      # latest run of this workflow updates last run and health
     links: []                      # optional

@@ -22,6 +22,10 @@ export interface Agent {
   trigger?: string;
   source?: string;
   lastRun: string | null;
+  /** What the agent can do, as declared in its manifest. Empty when not declared. */
+  capabilities?: string[];
+  /** Access it holds, such as "Shopify Admin API: write products". Empty when not declared. */
+  permissions?: string[];
   history: HistoryEntry[];
   links: Link[];
   /** Read-only live sources the app may consult for this agent. */
