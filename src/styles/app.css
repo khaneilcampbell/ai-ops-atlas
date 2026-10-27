@@ -508,3 +508,29 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .district-aura.on { opacity: 0.9; }
 @keyframes glow { 0%, 100% { opacity: 0.75; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .sel-glow { animation: none; } }
+
+/* Inspector: dark forest header, section tabs, a pinned footer and insight tiles. */
+.panel.docked .panel-head { background: var(--forest-800); color: var(--on-dark); border-bottom: 0; }
+.panel.docked .panel-head .eyebrow { color: var(--gold); }
+.panel.docked .panel-head .muted, .panel.docked .panel-head .icon-btn { color: var(--on-dark-2) !important; }
+.panel.docked .panel-head .chip { background: rgba(233, 236, 223, 0.08); border-color: var(--forest-line); color: var(--on-dark); }
+.panel-tabs { display: flex; gap: 2px; padding: 0 14px; border-bottom: 1px solid var(--sage-200); flex: none; }
+.panel.docked .panel-tabs { background: var(--forest-800); border-bottom-color: var(--forest-line); }
+.panel-tabs button { border: 0; background: none; padding: 11px 10px 10px; font-size: 13px; color: var(--ink-3); border-bottom: 2px solid transparent; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.panel.docked .panel-tabs button { color: var(--on-dark-2); }
+.panel-tabs button:hover { color: var(--ink); }
+.panel.docked .panel-tabs button:hover { color: var(--on-dark); }
+.panel-tabs button.on { color: var(--ink); border-bottom-color: var(--gold); }
+.panel.docked .panel-tabs button.on { color: var(--on-dark); }
+.panel-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.panel-tabs .count { font-size: 10.5px; padding: 1px 6px; border-radius: 9px; background: var(--gold-soft); color: var(--gold); }
+.panel-body { flex: 1; }
+.panel-foot { display: flex; gap: 10px; padding: 12px 22px; border-top: 1px solid var(--sage-200); background: var(--sage-50); flex: none; }
+.panel-foot .btn { flex: 1; display: inline-flex; gap: 8px; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; color: var(--ink); }
+.panel-foot .btn.primary { color: var(--on-dark); }
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.insight { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--sage-100); border: 1px solid var(--sage-200); }
+.insight .label { font-size: 11px; color: var(--ink-3); }
+.insight .value { font-family: var(--serif); font-size: 22px; margin-top: 2px; }
+.insight .note { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.panel.docked .panel-head .status, .panel.docked .panel-head .health-badge { background: rgba(233, 236, 223, 0.1); border-color: var(--forest-line); color: var(--on-dark); }

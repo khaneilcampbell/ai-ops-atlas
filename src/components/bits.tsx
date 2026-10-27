@@ -69,9 +69,9 @@ export function LangDot({ lang }: { lang: string | null }) {
   );
 }
 
-export function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function ExternalLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer noopener" onClick={(e) => openExternal(e, href)}>
+    <a href={href} className={className} target="_blank" rel="noreferrer noopener" onClick={(e) => openExternal(e, href)}>
       {children}
     </a>
   );

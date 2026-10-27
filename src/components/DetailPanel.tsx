@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import { ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
-import { activityFeed, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
+import { activityFeed, attentionItems, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
 import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
@@ -18,7 +18,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   }, [select]);
 
   if (!selection) return null;
-  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : <RepoDetail name={selection.id} />;
+  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -157,9 +157,18 @@ function AgentDetail({ id }: { id: string }) {
 
 const CONCLUSION_HEALTH: Record<string, Health> = { success: "good", failure: "bad", timed_out: "bad", cancelled: "warn", action_required: "warn" };
 
+type RepoTab = "overview" | "agents" | "activity" | "insights";
+const REPO_TABS: { id: RepoTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "agents", label: "Agents" },
+  { id: "activity", label: "Activity" },
+  { id: "insights", label: "Insights" },
+];
+
 function RepoDetail({ name }: { name: string }) {
   const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
   const [more, setMore] = useState(false);
+  const [tab, setTab] = useState<RepoTab>("overview");
   const state = repos[name];
   const snap = repoData(state);
   const project = catalog.projects.find((p) => p.repository === name);
@@ -185,181 +194,288 @@ function RepoDetail({ name }: { name: string }) {
           {snap?.archived && <span className="chip">Archived</span>}
         </div>
       </Head>
-      <div className="panel-body selectable">
-        {state?.kind === "error" && (
-          <div className="notice">
-            <Icon name="alert" size={15} /> {state.message}
-          </div>
-        )}
-        {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
-
-        <section>
-          <div className="section-head">
-            <div className="section-title">Verified health</div>
-            <span className="source">{snap ? `GitHub · synced ${relative(snap.fetchedAt)}` : "Not synced yet"}</span>
-          </div>
-          <div className="health-grid">
-            {indicators.map((i) => (
-              <Indicator key={i.key} ind={i} />
-            ))}
-          </div>
-          {workflows.length > 0 && (
-            <ul className="runs">
-              {workflows.map((r) => (
-                <li key={r.name}>
-                  <i className={`h-${r.status !== "completed" ? "unknown" : (CONCLUSION_HEALTH[r.conclusion ?? ""] ?? "unknown")}`} />
-                  <span className="grow">
-                    <ExternalLink href={r.url}>{r.name}</ExternalLink>
-                    <span className="muted"> · {r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion}</span>
-                  </span>
-                  <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
-                    {relative(r.createdAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section>
-          <div className="section-title">Tech stack</div>
-          {total > 0 ? (
-            <>
-              <div className="lang-bar" role="img" aria-label={languages.map(([l, v]) => `${l} ${Math.round((v / total) * 100)}%`).join(", ")}>
-                {languages.map(([l, v]) => (
-                  <i key={l} style={{ flexGrow: v, background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
-                ))}
-              </div>
-              <div className="lang-legend">
-                {languages.slice(0, 5).map(([l, v]) => (
-                  <span key={l} className="health">
-                    <i className="lang-dot" style={{ background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
-                    {l} <span className="muted">{Math.round((v / total) * 100)}%</span>
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="muted small">{snap ? "GitHub reports no languages for this repository." : "Languages appear after the first sync."}</div>
-          )}
-          {(frameworks.length > 0 || models.length > 0 || (project?.tags.length ?? 0) > 0) && (
-            <div className="chips" style={{ marginTop: 10 }}>
-              {frameworks.map((f) => (
-                <span key={f} className="chip">
-                  <i className="swatch" style={{ background: frameworkColor(f) }} />
-                  {f}
-                </span>
-              ))}
-              {models.map((m) => (
-                <span key={m} className="chip">
-                  {m}
-                </span>
-              ))}
-              {project?.tags.map((t) => (
-                <span key={t} className="chip muted-chip">
-                  #{t}
-                </span>
-              ))}
+      <div className="panel-tabs" role="tablist" aria-label="Inspector sections">
+        {REPO_TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
+            {t.label}
+            {t.id === "agents" && agents.length > 0 && <span className="count">{agents.length}</span>}
+          </button>
+        ))}
+      </div>
+      <div className="panel-body selectable" role="tabpanel">
+        {tab === "overview" && (
+          <>
+          {state?.kind === "error" && (
+            <div className="notice">
+              <Icon name="alert" size={15} /> {state.message}
             </div>
           )}
-        </section>
+          {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
 
-        <section>
-          <div className="section-head">
-            <div className="section-title">Agents ({agents.length})</div>
-            <span className="source">Declared in the manifest</span>
-          </div>
-          {agents.length === 0 ? (
-            <div className="muted small">{project ? "No agents are registered for this project." : "Add a manifest in catalog/ to register this repository's agents."}</div>
-          ) : (
-            <ul className="list" style={{ padding: 0 }}>
-              {agents.map((a) => (
-                <li key={a.id}>
-                  <button className="list-row" onClick={() => select({ kind: "agent", id: a.id })}>
-                    <i className="roof" style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
-                    <span className="grow">
-                      <div className="title">{a.name}</div>
-                      <div className="meta">
-                        {a.framework}
-                        {a.trigger ? ` · ${a.trigger}` : ""}
-                      </div>
-                    </span>
-                    <StatusPill status={a.status} />
-                  </button>
-                </li>
+          <section>
+            <div className="section-head">
+              <div className="section-title">Verified health</div>
+              <span className="source">{snap ? `GitHub · synced ${relative(snap.fetchedAt)}` : "Not synced yet"}</span>
+            </div>
+            <div className="health-grid">
+              {indicators.map((i) => (
+                <Indicator key={i.key} ind={i} />
               ))}
-            </ul>
-          )}
-        </section>
-
-        <dl className="kv">
-          <dt>Default branch</dt>
-          <dd className="mono">{snap?.defaultBranch ?? "–"}</dd>
-          <dt>Last push</dt>
-          <dd>{snap?.pushedAt ? `${formatDate(snap.pushedAt)} (${relative(snap.pushedAt)})` : "–"}</dd>
-          <dt>Stars</dt>
-          <dd>{snap ? snap.stars : "–"}</dd>
-          <dt>License</dt>
-          <dd>{snap ? (snap.license ?? "None") : "–"}</dd>
-        </dl>
-        <div>
-          <div className="section-title">Links</div>
-          <div className="links">
-            <ExternalLink href={`https://github.com/${name}`}>
-              <Icon name="external" size={14} /> Open on GitHub
-            </ExternalLink>
-            {snap?.homepage && (
-              <ExternalLink href={snap.homepage}>
-                <Icon name="external" size={14} /> {snap.homepage.replace(/^https?:\/\//, "")}
-              </ExternalLink>
-            )}
-            {project?.links.map((l) => (
-              <ExternalLink key={l.url} href={l.url}>
-                <Icon name="external" size={14} /> {l.label}
-              </ExternalLink>
-            ))}
-            {project && agents.length > 0 && (
-              <button
-                className="text-btn link-row"
-                onClick={() => {
-                  clearFilters();
-                  setFilters({ project: project.id });
-                  setView("agents");
-                }}
-              >
-                <Icon name="agents" size={14} /> List these agents
-              </button>
-            )}
-            <button className="text-btn link-row" onClick={() => setView("repos")}>
-              <Icon name="repos" size={14} /> All repositories
-            </button>
-          </div>
-        </div>
-        <div>
-          <div className="section-title">Recent activity</div>
-          {history.length === 0 ? (
-            <div className="muted small">{snap ? "No commits or workflow runs in the synced window." : "Activity appears after the first sync."}</div>
-          ) : (
-            <>
-              <ul className="timeline">
-                {history.slice(0, more ? 20 : 6).map((h) => (
-                  <li key={h.id} className={`k-${h.kind}`}>
-                    <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
-                    <div className="muted small" title={new Date(h.at).toLocaleString()}>
-                      {relative(h.at)} · {h.subtitle}
-                    </div>
+            </div>
+            {workflows.length > 0 && (
+              <ul className="runs">
+                {workflows.map((r) => (
+                  <li key={r.name}>
+                    <i className={`h-${r.status !== "completed" ? "unknown" : (CONCLUSION_HEALTH[r.conclusion ?? ""] ?? "unknown")}`} />
+                    <span className="grow">
+                      <ExternalLink href={r.url}>{r.name}</ExternalLink>
+                      <span className="muted"> · {r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion}</span>
+                    </span>
+                    <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
+                      {relative(r.createdAt)}
+                    </span>
                   </li>
                 ))}
               </ul>
-              {history.length > 6 && (
-                <button className="text-btn small" onClick={() => setMore((m) => !m)}>
-                  {more ? "Show less" : `Show ${Math.min(20, history.length) - 6} more`}
+            )}
+          </section>
+
+          <section>
+            <div className="section-title">Tech stack</div>
+            {total > 0 ? (
+              <>
+                <div className="lang-bar" role="img" aria-label={languages.map(([l, v]) => `${l} ${Math.round((v / total) * 100)}%`).join(", ")}>
+                  {languages.map(([l, v]) => (
+                    <i key={l} style={{ flexGrow: v, background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
+                  ))}
+                </div>
+                <div className="lang-legend">
+                  {languages.slice(0, 5).map(([l, v]) => (
+                    <span key={l} className="health">
+                      <i className="lang-dot" style={{ background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
+                      {l} <span className="muted">{Math.round((v / total) * 100)}%</span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="muted small">{snap ? "GitHub reports no languages for this repository." : "Languages appear after the first sync."}</div>
+            )}
+            {(frameworks.length > 0 || models.length > 0 || (project?.tags.length ?? 0) > 0) && (
+              <div className="chips" style={{ marginTop: 10 }}>
+                {frameworks.map((f) => (
+                  <span key={f} className="chip">
+                    <i className="swatch" style={{ background: frameworkColor(f) }} />
+                    {f}
+                  </span>
+                ))}
+                {models.map((m) => (
+                  <span key={m} className="chip">
+                    {m}
+                  </span>
+                ))}
+                {project?.tags.map((t) => (
+                  <span key={t} className="chip muted-chip">
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <dl className="kv">
+            <dt>Default branch</dt>
+            <dd className="mono">{snap?.defaultBranch ?? "–"}</dd>
+            <dt>Last push</dt>
+            <dd>{snap?.pushedAt ? `${formatDate(snap.pushedAt)} (${relative(snap.pushedAt)})` : "–"}</dd>
+            <dt>Stars</dt>
+            <dd>{snap ? snap.stars : "–"}</dd>
+            <dt>License</dt>
+            <dd>{snap ? (snap.license ?? "None") : "–"}</dd>
+          </dl>
+          <div>
+            <div className="section-title">Links</div>
+            <div className="links">
+              <ExternalLink href={`https://github.com/${name}`}>
+                <Icon name="external" size={14} /> Open on GitHub
+              </ExternalLink>
+              {snap?.homepage && (
+                <ExternalLink href={snap.homepage}>
+                  <Icon name="external" size={14} /> {snap.homepage.replace(/^https?:\/\//, "")}
+                </ExternalLink>
+              )}
+              {project?.links.map((l) => (
+                <ExternalLink key={l.url} href={l.url}>
+                  <Icon name="external" size={14} /> {l.label}
+                </ExternalLink>
+              ))}
+              {project && agents.length > 0 && (
+                <button
+                  className="text-btn link-row"
+                  onClick={() => {
+                    clearFilters();
+                    setFilters({ project: project.id });
+                    setView("agents");
+                  }}
+                >
+                  <Icon name="agents" size={14} /> List these agents
                 </button>
               )}
-            </>
-          )}
-        </div>
+              <button className="text-btn link-row" onClick={() => setView("repos")}>
+                <Icon name="repos" size={14} /> All repositories
+              </button>
+            </div>
+          </div>
+          </>
+        )}
+        {tab === "agents" && (
+          <>
+          <section>
+            <div className="section-head">
+              <div className="section-title">Agents ({agents.length})</div>
+              <span className="source">Declared in the manifest</span>
+            </div>
+            {agents.length === 0 ? (
+              <div className="muted small">{project ? "No agents are registered for this project." : "Add a manifest in catalog/ to register this repository's agents."}</div>
+            ) : (
+              <ul className="list" style={{ padding: 0 }}>
+                {agents.map((a) => (
+                  <li key={a.id}>
+                    <button className="list-row" onClick={() => select({ kind: "agent", id: a.id })}>
+                      <i className="roof" style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
+                      <span className="grow">
+                        <div className="title">{a.name}</div>
+                        <div className="meta">
+                          {a.framework}
+                          {a.trigger ? ` · ${a.trigger}` : ""}
+                        </div>
+                      </span>
+                      <StatusPill status={a.status} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          </>
+        )}
+        {tab === "activity" && (
+          <>
+          <div>
+            <div className="section-title">Recent activity</div>
+            {history.length === 0 ? (
+              <div className="muted small">{snap ? "No commits or workflow runs in the synced window." : "Activity appears after the first sync."}</div>
+            ) : (
+              <>
+                <ul className="timeline">
+                  {history.slice(0, more ? 20 : 6).map((h) => (
+                    <li key={h.id} className={`k-${h.kind}`}>
+                      <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
+                      <div className="muted small" title={new Date(h.at).toLocaleString()}>
+                        {relative(h.at)} · {h.subtitle}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {history.length > 6 && (
+                  <button className="text-btn small" onClick={() => setMore((m) => !m)}>
+                    {more ? "Show less" : `Show ${Math.min(20, history.length) - 6} more`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          </>
+        )}
+        {tab === "insights" && <RepoInsights name={name} />}
       </div>
+      <div className="panel-foot">
+        <ExternalLink href={`https://github.com/${name}`} className="btn primary">
+          <Icon name="external" size={14} /> Open repository
+        </ExternalLink>
+        {project && agents.length > 0 ? (
+          <button className="btn" onClick={() => {
+    if (!project) return;
+    clearFilters();
+    setFilters({ project: project.id });
+    setView("agents");
+  }}>
+            <Icon name="agents" size={14} /> View agents
+          </button>
+        ) : (
+          <button className="btn" onClick={() => setView("repos")}>
+            <Icon name="repos" size={14} /> All repositories
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Facts computed from what Atlas has synced for one repository; nothing here is estimated. */
+function RepoInsights({ name }: { name: string }) {
+  const { catalog, repos, uncataloged, select } = useAtlas();
+  const snap = repoData(repos[name]);
+  const agents = catalog.agents.filter((a) => a.repository === name);
+  const flags = useMemo(
+    () => attentionItems(catalog, repos, [], Date.now(), uncataloged).filter((i) => i.target && (i.target.id === name || agents.some((a) => a.id === i.target!.id))),
+    [catalog, repos, uncataloged, name, agents],
+  );
+  if (!snap) return <div className="muted small">Insights appear after the first sync with GitHub.</div>;
+  const done = snap.runs.filter((r) => r.status === "completed");
+  const ok = done.filter((r) => r.conclusion === "success").length;
+  const since = Date.now() - 14 * 86_400_000;
+  const recentCommits = snap.commits.filter((c) => Date.parse(c.date) >= since).length;
+  const authors = new Set(snap.commits.map((c) => c.author)).size;
+  const tiles = [
+    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "–", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs" },
+    { label: "Commits, 14 days", value: String(recentCommits), note: `of the latest ${snap.commits.length} synced` },
+    { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "–", note: snap.pushedAt ? formatDate(snap.pushedAt) : "Not reported" },
+    { label: "Contributors", value: String(authors), note: "in the synced commits" },
+    { label: "Open issues + PRs", value: String(snap.openIssues), note: "Reported by GitHub" },
+    { label: "Agents", value: String(agents.length), note: `${agents.filter((a) => a.status === "active").length} active` },
+  ];
+  return (
+    <>
+      <section>
+        <div className="section-head">
+          <div className="section-title">At a glance</div>
+          <span className="source">GitHub · synced {relative(snap.fetchedAt)}</span>
+        </div>
+        <div className="insight-grid">
+          {tiles.map((t) => (
+            <div key={t.label} className="insight">
+              <div className="label">{t.label}</div>
+              <div className="value">{t.value}</div>
+              <div className="note">{t.note}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section>
+        <div className="section-title">Worth a look</div>
+        {flags.length === 0 ? (
+          <div className="muted small">Nothing flagged for this repository or its agents.</div>
+        ) : (
+          <ul className="list" style={{ padding: 0 }}>
+            {flags.map((f) => (
+              <li key={f.id}>
+                <button className="list-row" onClick={() => f.target && select(f.target)}>
+                  <i className={`sev ${f.severity}`} />
+                  <span className="grow">
+                    <div className="title">{f.title}</div>
+                    <div className="meta">{f.detail}</div>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <p className="muted small" style={{ margin: 0 }}>
+        AI analysis reports for this repository will appear here once repository intelligence is turned on.
+      </p>
     </>
   );
 }
