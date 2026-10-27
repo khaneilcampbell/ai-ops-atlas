@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
+import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
 import { useAtlas } from "../state";
 
 export function SettingsView() {
-  const { settings, setSettings, clearCache, catalog, manifestIssues, refresh } = useAtlas();
+  const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
   return (
     <div className="page" style={{ maxWidth: 860 }}>
       <div className="page-head">
@@ -22,6 +23,7 @@ export function SettingsView() {
           </span>
         </div>
         <TokenSetting onChange={() => void refresh(true)} />
+        <UsageSetting usage={usage} />
       </section>
 
       <section className="card" style={{ marginBottom: 16 }}>
@@ -102,6 +104,32 @@ export function SettingsView() {
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+function UsageSetting({ usage }: { usage: ReturnType<typeof useAtlas>["usage"] }) {
+  const rate = usage?.rate;
+  const resetsAt = rate && rate.reset * 1000 > Date.now() ? new Date(rate.reset * 1000).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : null;
+  const n = (v: number) => v.toLocaleString();
+  return (
+    <div className="setting">
+      <div className="grow">
+        <div className="label">GitHub request budget</div>
+        <div className="muted small">
+          {!usage
+            ? "Shown after the first refresh."
+            : usage.paused
+              ? `GitHub's hourly limit is used up, so the last refresh was skipped${resetsAt ? ` until ${resetsAt}` : ""}. Cached data is still shown.`
+              : `Last refresh ${relative(usage.at)}: ${n(usage.requests)} request${usage.requests === 1 ? "" : "s"}, ${n(usage.counted)} counted against your limit.${usage.skipped ? ` ${n(usage.skipped)} recently checked repositor${usage.skipped === 1 ? "y was" : "ies were"} left alone.` : ""}`}{" "}
+          Unchanged repositories reuse cached commits and languages, and the timer pauses while the window is hidden.
+        </div>
+      </div>
+      {rate && (
+        <span className="chip" title={resetsAt ? `Resets at ${resetsAt}` : undefined}>
+          {n(rate.remaining)} / {n(rate.limit)} left
+        </span>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
 import { fetchRepo } from "./github/fetchRepo";
-import { clearEtags } from "./github/transport";
+import { budgetExhausted, clearEtags, PRIVATE_OR_MISSING, rateLimit, takeUsage, type RateLimit } from "./github/transport";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
@@ -39,6 +39,8 @@ interface AtlasState {
   uncataloged: string[];
   /** Outcome of the last look for new repositories. */
   discovery: { at: string; found: number; withToken: boolean; error?: string } | null;
+  /** What the last refresh cost, and GitHub's hourly budget after it. */
+  usage: { at: string; requests: number; counted: number; skipped: number; rate: RateLimit | null; paused?: boolean } | null;
   refreshing: boolean;
   refresh: (force?: boolean) => Promise<void>;
   view: View;
@@ -64,6 +66,9 @@ function workflowsFor(repo: string): string[] {
 
 type Cache = Record<string, RepoSnapshot>;
 
+/** Without a token every request counts, so unchanged repositories check runs less often. */
+const ANON_RUNS_EVERY_MS = 3 * 3_600_000;
+
 function fromCache(cache: Cache, extra: string[], maxAgeMs: number): Record<string, RepoState> {
   const now = Date.now();
   return Object.fromEntries(
@@ -77,7 +82,8 @@ function fromCache(cache: Cache, extra: string[], maxAgeMs: number): Record<stri
 export function AtlasProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...load("settings", {}) }));
   const [uncataloged, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
-  const [discovery, setDiscovery] = useState<AtlasState["discovery"]>(null);
+  const [discovery, setDiscoveryState] = useState<AtlasState["discovery"]>(() => load("discovery", null));
+  const [usage, setUsage] = useState<AtlasState["usage"]>(() => load("usage", null));
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));
   const [refreshing, setRefreshing] = useState(false);
   const [view, setViewState] = useState<View>(() => load<View>("view", "overview"));
@@ -88,15 +94,37 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(
     async (force = false) => {
       if (inflight.current) return;
-      inflight.current = true;
-      setRefreshing(true);
       const cache = load<Cache>("repoCache", {});
       const maxAge = settings.refreshMinutes * 60_000;
+      const now = Date.now();
       let extra = load<string[]>("uncataloged", []);
+      const lastDiscovery = load<AtlasState["discovery"]>("discovery", null);
+      // When each repository was last looked at, including ones that turned out private or missing.
+      const checked = load<Record<string, string>>("checkedAt", {});
+      const lastCheck = (name: string) => Date.parse(checked[name] ?? cache[name]?.fetchedAt ?? "") || 0;
+      const isDue = (name: string) => force || now - lastCheck(name) >= maxAge;
+      const discoveryDue = force || !lastDiscovery || !!lastDiscovery.error || now - Date.parse(lastDiscovery.at) >= maxAge;
+      // Nothing is old enough to ask about: skip the round trip entirely.
+      if (!discoveryDue && !repoNames.concat(extra).some(isDue)) return;
+      if (budgetExhausted()) {
+        setUsage((u) => ({ at: new Date().toISOString(), requests: 0, counted: 0, skipped: repoNames.length + extra.length, rate: rateLimit() ?? u?.rate ?? null, paused: true }));
+        return;
+      }
+      inflight.current = true;
+      setRefreshing(true);
+      takeUsage();
+      const withToken = await tokenStore.has().catch(() => false);
+      const metas = new Map<string, Record<string, unknown>>();
+      let listedAll = false;
       if (settings.owners.length) {
-        const withToken = await tokenStore.has().catch(() => false);
+        const setDiscovery = (d: AtlasState["discovery"]) => {
+          save("discovery", d);
+          setDiscoveryState(d);
+        };
         try {
           const found = await discoverRepos(settings.owners, withToken);
+          for (const r of found) metas.set(r.fullName.toLowerCase(), r.meta);
+          listedAll = found.complete;
           extra = found
             .filter((r) => !known.has(r.fullName.toLowerCase()) && (settings.includeForks || !r.fork))
             .map((r) => r.fullName)
@@ -109,12 +137,25 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
           setDiscovery({ at: new Date().toISOString(), found: 0, withToken, error: e instanceof Error ? e.message : String(e) });
         }
       }
+      const due = repoNames.concat(extra).filter(isDue);
+      for (const name of due) checked[name] = new Date().toISOString();
+      save("checkedAt", checked);
       await Promise.all(
-        repoNames.concat(extra).map(async (name) => {
+        due.map(async (name) => {
           const cached = cache[name];
-          if (!force && cached && Date.now() - Date.parse(cached.fetchedAt) < maxAge) return;
+          const owner = name.split("/")[0].toLowerCase();
+          // Without a token, a complete public listing of the owner that lacks this repository
+          // means GitHub would answer 404, so don't spend a request finding that out.
+          if (!withToken && listedAll && !metas.has(name.toLowerCase()) && settings.owners.some((o) => o.toLowerCase() === owner)) {
+            setRepos((r) => ({ ...r, [name]: { kind: "error", message: PRIVATE_OR_MISSING, data: cached } }));
+            return;
+          }
           try {
-            const data = await fetchRepo(name, workflowsFor(name));
+            const data = await fetchRepo(name, workflowsFor(name), {
+              meta: metas.get(name.toLowerCase()),
+              prev: cached,
+              runsEveryMs: force || withToken ? 0 : ANON_RUNS_EVERY_MS,
+            });
             cache[name] = data;
             setRepos((r) => ({ ...r, [name]: { kind: "ok", data, stale: false } }));
           } catch (e) {
@@ -124,6 +165,9 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         }),
       );
       save("repoCache", cache);
+      const u = { at: new Date().toISOString(), ...takeUsage(), skipped: repoNames.length + extra.length - due.length, rate: rateLimit() };
+      save("usage", u);
+      setUsage(u);
       inflight.current = false;
       setRefreshing(false);
     },
@@ -133,8 +177,18 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (settings.refreshOnLaunch) void refresh();
     else setRepos((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.kind === "loading" ? { kind: "error", message: "Not loaded yet. Use Refresh." } : v])));
-    const t = setInterval(() => void refresh(), settings.refreshMinutes * 60_000);
-    return () => clearInterval(t);
+    // Only refresh on a timer while the window is visible; catch up when it comes back.
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, settings.refreshMinutes * 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
@@ -145,6 +199,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       repos,
       uncataloged,
       discovery,
+      usage,
       refreshing,
       refresh,
       view,
@@ -166,11 +221,13 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         }),
       clearCache: () => {
         save("repoCache", {});
+        save("discovery", null);
+        save("checkedAt", {});
         clearEtags();
         void refresh(true);
       },
     }),
-    [repos, uncataloged, discovery, refreshing, refresh, view, selection, filters, settings],
+    [repos, uncataloged, discovery, usage, refreshing, refresh, view, selection, filters, settings],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

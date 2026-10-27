@@ -20,10 +20,29 @@ impl Client {
 }
 
 #[derive(Serialize)]
+pub struct RateLimit {
+    limit: u32,
+    remaining: u32,
+    reset: u64,
+}
+
+#[derive(Serialize)]
 pub struct GithubResponse {
     status: u16,
     body: serde_json::Value,
     etag: Option<String>,
+    /// Whether a token was attached; GitHub only waives 304s for authenticated requests.
+    authed: bool,
+    rate: Option<RateLimit>,
+}
+
+fn rate_limit(headers: &reqwest::header::HeaderMap) -> Option<RateLimit> {
+    let num = |name: &str| headers.get(name)?.to_str().ok()?.parse::<u64>().ok();
+    Some(RateLimit {
+        limit: num("x-ratelimit-limit")? as u32,
+        remaining: num("x-ratelimit-remaining")? as u32,
+        reset: num("x-ratelimit-reset")?,
+    })
 }
 
 /// True for `/users/{name}/repos`, the public repository list of one account.
@@ -66,7 +85,9 @@ pub async fn github_get(
     if let Some(tag) = etag.filter(|t| t.len() < 200 && t.is_ascii()) {
         req = req.header("If-None-Match", tag);
     }
-    if let Some(token) = crate::secrets::read_token() {
+    let token = crate::secrets::read_token();
+    let authed = token.is_some();
+    if let Some(token) = token {
         req = req.bearer_auth(token);
     }
     // Map errors to plain text without the request, which would carry the auth header.
@@ -80,8 +101,15 @@ pub async fn github_get(
         .get("etag")
         .and_then(|v| v.to_str().ok())
         .map(str::to_owned);
+    let rate = rate_limit(res.headers());
     let body = res.json().await.unwrap_or(serde_json::Value::Null);
-    Ok(GithubResponse { status, body, etag })
+    Ok(GithubResponse {
+        status,
+        body,
+        etag,
+        authed,
+        rate,
+    })
 }
 
 #[cfg(test)]

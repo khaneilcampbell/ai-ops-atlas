@@ -35,6 +35,8 @@ export interface RepoSnapshot {
   /** Latest runs per workflow file the catalog asked to observe. */
   workflowRuns: Record<string, WorkflowRun[]>;
   fetchedAt: string;
+  /** When workflow runs were last asked for; older snapshots only have fetchedAt. */
+  runsCheckedAt?: string;
 }
 
 export type RepoState =
