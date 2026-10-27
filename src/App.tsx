@@ -15,6 +15,7 @@ import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { useActions } from "./actions/state";
+import { UpdateButton } from "./components/UpdateButton";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -60,6 +61,7 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
+        <UpdateButton />
         {rerunOn ? (
           <span className="pill-mode" title="Read-only, except Re-run failed jobs on the repositories ticked in Settings. Each re-run needs your approval in a macOS dialog and is written to the audit log.">
             <span className="dot" />
