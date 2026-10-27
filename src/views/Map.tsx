@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Agent, Status } from "../catalog/types";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
@@ -16,15 +16,22 @@ import {
   iso,
   layoutMap,
   placeLabels,
-  textWidth,
   treeSpots,
   TW,
   type District,
   type GroupBy,
   type LabelBox,
   type Neighborhood,
+  type Meadow,
   type Park,
+  type Walk,
 } from "./mapLayout";
+import { measure, SANS, SERIF, wrap } from "./mapText";
+import type { Map3DApi } from "./map3d/Map3D";
+import { webglAvailable } from "./map3d/webgl";
+
+// three.js only loads when the 3D map is shown.
+const Map3D = lazy(() => import("./map3d/Map3D"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -57,58 +64,95 @@ function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, o
 
   // Lit and unlit windows, decided per building so they do not flicker between renders.
   const lit = (i: number) => hash(`${id}:${i}`) > 0.55;
+  // Towers keep their ground floor for the entrance.
+  const firstRow = kind === "tower" ? 26 : 10;
   const windowRows = (a: Pt, b: Pt, face: string) => {
     if (!windows) return null;
-    const rows = Math.max(1, Math.floor((h - 14) / 13));
+    const rows = Math.max(1, Math.floor((h - firstRow - 4) / 13));
     const cols = Math.max(1, Math.floor(faceLen / 18));
     const out: React.ReactNode[] = [];
     for (let r = 0; r < rows; r++)
       for (let c = 0; c < cols; c++) {
         const u0 = (c + 0.25) / cols;
         const u1 = (c + 0.75) / cols;
-        const v0 = 10 + r * 13;
+        const v0 = firstRow + r * 13;
         out.push(<polygon key={`${face}${r}:${c}`} points={quad(a, b, u0, u1, v0, v0 + 7)} fill={lit(r * 31 + c + (face === "s" ? 500 : 0)) ? "#f6dc8f" : "rgba(52,74,62,0.55)"} />);
       }
     return out;
   };
+  // Darker band where the walls meet the ground, so buildings sit on the grass instead of floating.
+  const footing = (
+    <>
+      <polygon points={quad(A, B, 0, 1, 0, 4)} fill="rgba(40,52,32,0.16)" />
+      <polygon points={quad(B, C, 0, 1, 0, 4)} fill="rgba(40,52,32,0.24)" />
+    </>
+  );
 
   let body: React.ReactNode;
   if (kind === "house") {
-    // Gabled roof: the ridge runs along the x axis, so the gable faces the right-hand wall.
+    // Gable or hip roof, chosen per agent so a street of houses is not a row of copies.
     const rh = Math.max(10, w * 13);
-    const o = 0.08;
+    const o = 0.1;
+    const hip = hash(`${id}:roof`) > 0.5;
     const tA = up(iso(gx - o, gy + w + o), h), tB = up(iso(gx + w + o, gy + w + o), h), tC = up(iso(gx + w + o, gy - o), h), tD = up(iso(gx - o, gy - o), h);
-    const m1 = up(iso(gx - o, gy + w / 2), h + rh), m2 = up(iso(gx + w + o, gy + w / 2), h + rh);
+    const ri = hip ? w * 0.3 : -o;
+    const m1 = up(iso(gx + ri, gy + w / 2), h + rh), m2 = up(iso(gx + w - ri, gy + w / 2), h + rh);
     const g1 = up(B, h), g2 = up(C, h), gm = up(iso(gx + w, gy + w / 2), h + rh);
+    // A chimney on the front slope of gabled houses.
+    const cs = w * 0.13, cx = gx + w * 0.22, cy = gy + w * 0.62;
+    const cv0 = h + rh * 0.45, cv1 = h + rh + 4;
+    const ch = [iso(cx, cy + cs), iso(cx + cs, cy + cs), iso(cx + cs, cy)];
     body = (
       <>
         <polygon points={pts([A, B, up(B, h), up(A, h)])} fill={front} />
         <polygon points={pts([B, C, up(C, h), up(B, h)])} fill={side} />
-        <polygon points={pts([g1, g2, gm])} fill={side} />
-        <polygon points={quad(A, B, 0.42, 0.62, 0, Math.min(h - 4, 15))} fill="#6b5640" />
+        {footing}
+        {!hip && <polygon points={pts([g1, g2, gm])} fill={side} />}
+        <polygon points={quad(A, B, 0.42, 0.6, 0, Math.min(h - 4, 14))} fill="#5d4a36" />
+        <polygon points={quad(A, B, 0.38, 0.64, Math.min(h - 4, 14), Math.min(h - 4, 14) + 2.5)} fill={shade(roof, 0.85)} />
         {windows && (
-          <>
+          <g stroke="#fffaf0" strokeWidth={0.8}>
             <polygon points={quad(A, B, 0.12, 0.3, h * 0.45, h * 0.45 + 8)} fill={lit(1) ? "#f6dc8f" : "#7d9488"} />
             <polygon points={quad(A, B, 0.72, 0.9, h * 0.45, h * 0.45 + 8)} fill={lit(2) ? "#f6dc8f" : "#7d9488"} />
             <polygon points={quad(B, C, 0.35, 0.65, h * 0.45, h * 0.45 + 8)} fill={lit(3) ? "#f6dc8f" : "#7d9488"} />
-          </>
+          </g>
         )}
         <polygon points={pts([tD, tC, m2, m1])} fill={shade(roof, 0.78)} />
+        {hip && <polygon points={pts([tB, tC, m2])} fill={shade(roof, 0.68)} />}
         <polygon points={pts([tA, tB, m2, m1])} fill={roof} stroke={edge} strokeWidth={edgeW} strokeLinejoin="round" />
+        <line x1={tA.x} y1={tA.y} x2={tB.x} y2={tB.y} stroke={shade(roof, 0.6)} strokeWidth={2} strokeLinecap="round" />
         <line x1={m1.x} y1={m1.y} x2={m2.x} y2={m2.y} stroke={shade(roof, 1.25)} strokeWidth={1.5} />
+        {!hip && (
+          <>
+            <polygon points={pts([up(ch[0], cv0), up(ch[1], cv0), up(ch[1], cv1), up(ch[0], cv1)])} fill="#b9a487" />
+            <polygon points={pts([up(ch[1], cv0), up(ch[2], cv0), up(ch[2], cv1), up(ch[1], cv1)])} fill="#9a856a" />
+            <polygon points={pts([up(ch[0], cv1), up(ch[1], cv1), up(ch[2], cv1), up(iso(cx, cy), cv1)])} fill="#6b5a48" />
+          </>
+        )}
       </>
     );
   } else {
     const top = [up(D, h), up(C, h), up(B, h), up(A, h)];
     const inset = (p: Pt, f: number) => ({ x: base.x + (p.x - base.x) * f, y: base.y - h + (p.y - (base.y - h)) * f });
+    const mast = up(inset(top[0], 0.5), 9);
     body = (
       <>
         <polygon points={pts([A, B, up(B, h), up(A, h)])} fill={front} />
         <polygon points={pts([B, C, up(C, h), up(B, h)])} fill={side} />
         {kind === "tower" && <polygon points={quad(A, B, 0, 1, 0, 6)} fill={shade(wall, 0.85)} />}
         {kind === "tower" && <polygon points={quad(B, C, 0, 1, 0, 6)} fill={shade(wall, 0.7)} />}
+        {footing}
         {windowRows(A, B, "f")}
         {windowRows(B, C, "s")}
+        {kind === "tower" && (
+          <>
+            {/* Lit glass entrance under a small canopy. */}
+            <polygon points={quad(A, B, 0.37, 0.63, 0, 17)} fill="#2f4535" />
+            <polygon points={quad(A, B, 0.41, 0.59, 0, 14)} fill="#f3dc95" opacity={0.9} />
+            <polygon points={quad(A, B, 0.32, 0.68, 17, 20)} fill={shade(roof, 1.15)} />
+            <line x1={B.x} y1={B.y - 6} x2={B.x} y2={B.y - h} stroke="rgba(255,255,255,0.55)" strokeWidth={1.2} />
+          </>
+        )}
         <polygon points={pts(top)} fill={roof} stroke={edge} strokeWidth={edgeW} />
         {kind === "tower" && (
           <>
@@ -116,6 +160,12 @@ function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, o
             <polygon points={pts(top.map((p) => up(inset(p, 0.3), 9)))} fill={shade(roof, 1.2)} />
             <polygon points={pts([up(inset(top[3], 0.3), 0), up(inset(top[2], 0.3), 0), up(inset(top[2], 0.3), 9), up(inset(top[3], 0.3), 9)])} fill={shade(wall, 0.9)} />
             <polygon points={pts([up(inset(top[2], 0.3), 0), up(inset(top[1], 0.3), 0), up(inset(top[1], 0.3), 9), up(inset(top[2], 0.3), 9)])} fill={shade(wall, 0.75)} />
+            {hash(`${id}:mast`) > 0.4 && (
+              <>
+                <line x1={mast.x} y1={mast.y} x2={mast.x} y2={mast.y - 16} stroke="#46584b" strokeWidth={1.5} />
+                <circle cx={mast.x} cy={mast.y - 16} r={2} fill="#e2c27a" />
+              </>
+            )}
           </>
         )}
       </>
@@ -132,27 +182,51 @@ function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, o
   );
 }
 
+/** Round, conifer or (rarely) blossom tree, picked from its position so the choice is stable. */
 function Tree({ gx, gy, r: r0 }: { gx: number; gy: number; r: number }) {
   const p = iso(gx, gy);
   const r = r0 * 1.35;
   const t = 6 + r * 0.5;
+  const pick = hash(`${gx.toFixed(2)}:${gy.toFixed(2)}`);
+  if (pick < 0.24) {
+    const hh = r * 2.6;
+    return (
+      <g>
+        <ellipse cx={p.x + r * 0.5} cy={p.y} rx={r * 0.9} ry={r * 0.36} fill="rgba(30,52,26,0.2)" />
+        <rect x={p.x - 1.5} y={p.y - 6} width={3} height={6} fill="#6b523a" />
+        <polygon points={pts([{ x: p.x - r * 0.95, y: p.y - 5 }, { x: p.x + r * 0.95, y: p.y - 5 }, { x: p.x, y: p.y - 5 - hh * 0.62 }])} fill="#3f6b3f" />
+        <polygon points={pts([{ x: p.x - r * 0.75, y: p.y - 5 - hh * 0.32 }, { x: p.x + r * 0.75, y: p.y - 5 - hh * 0.32 }, { x: p.x, y: p.y - 5 - hh }])} fill="#55834c" />
+        <polygon points={pts([{ x: p.x, y: p.y - 5 - hh }, { x: p.x + r * 0.75, y: p.y - 5 - hh * 0.32 }, { x: p.x, y: p.y - 5 - hh * 0.32 }])} fill="rgba(20,40,20,0.18)" />
+      </g>
+    );
+  }
+  const blossom = pick > 0.95;
   return (
     <g>
       <ellipse cx={p.x + r * 0.5} cy={p.y} rx={r * 1.05} ry={r * 0.42} fill="rgba(30,52,26,0.2)" />
       <rect x={p.x - 1.8} y={p.y - t} width={3.6} height={t} rx={1} fill="#7a5f42" />
-      <circle cx={p.x} cy={p.y - t - r * 0.6} r={r} fill="url(#tree-dark)" />
-      <circle cx={p.x - r * 0.42} cy={p.y - t - r * 0.95} r={r * 0.62} fill="url(#tree-mid)" />
-      <circle cx={p.x + r * 0.32} cy={p.y - t - r * 1.2} r={r * 0.55} fill="url(#tree-light)" />
+      <circle cx={p.x} cy={p.y - t - r * 0.6} r={r} fill={blossom ? "#c99aa4" : "url(#tree-dark)"} />
+      <circle cx={p.x - r * 0.42} cy={p.y - t - r * 0.95} r={r * 0.62} fill={blossom ? "#e0b7bf" : "url(#tree-mid)"} />
+      <circle cx={p.x + r * 0.32} cy={p.y - t - r * 1.2} r={r * 0.55} fill={blossom ? "#efd3d7" : "url(#tree-light)"} />
     </g>
   );
 }
 
 function Bush({ gx, gy, r }: { gx: number; gy: number; r: number }) {
   const p = iso(gx, gy);
+  // Every third bush flowers in cream and gold.
+  const flowers = hash(`${gx.toFixed(2)}:${gy.toFixed(2)}:f`) > 0.66;
   return (
     <g>
       <ellipse cx={p.x} cy={p.y - r * 0.4} rx={r * 1.3} ry={r * 0.8} fill="#5f8b44" />
       <ellipse cx={p.x - r * 0.3} cy={p.y - r * 0.7} rx={r * 0.7} ry={r * 0.5} fill="#86b25f" />
+      {flowers && (
+        <>
+          <circle cx={p.x - r * 0.6} cy={p.y - r * 0.6} r={1.6} fill="#f6efd8" />
+          <circle cx={p.x + r * 0.2} cy={p.y - r * 0.9} r={1.6} fill="#e9c97a" />
+          <circle cx={p.x + r * 0.7} cy={p.y - r * 0.4} r={1.6} fill="#f6efd8" />
+        </>
+      )}
     </g>
   );
 }
@@ -198,45 +272,90 @@ function MapDefs() {
         <stop offset="0.55" stopColor="#efd48a" stopOpacity="0.4" />
         <stop offset="1" stopColor="#e9cf86" stopOpacity="0" />
       </radialGradient>
-      <filter id="island-shadow" x="-20%" y="-20%" width="140%" height="160%">
-        <feGaussianBlur stdDeviation="14" />
-      </filter>
+      <pattern id="grass-tex" width="26" height="13" patternUnits="userSpaceOnUse">
+        <path d="M4 9 l1 -3 M6.5 9 l-0.8 -2.6 M17 3.5 l1 -3 M19.5 3.5 l-0.8 -2.4" stroke="rgba(62,100,44,0.28)" strokeWidth="1" strokeLinecap="round" />
+        <circle cx="11" cy="11" r="0.9" fill="rgba(255,255,235,0.35)" />
+      </pattern>
     </defs>
   );
 }
 
-const pillWidth = (text: string) => Math.max(48, text.length * 8.2 + 24);
+const PILL_FONT = 12;
+const pillWidth = (text: string) => Math.max(40, measure(text, PILL_FONT, SANS, 500) + 20);
+const PILL_H = 22;
 
-function Label({ x, y, text, tone, onClick, scale = 1 }: { x: number; y: number; text: string; tone: "dark" | "light" | "gold"; onClick?: () => void; scale?: number }) {
+function Label({ x, y, text, tone, onClick, scale = 1, state = "idle" }: { x: number; y: number; text: string; tone: "dark" | "light" | "gold"; onClick?: () => void; scale?: number; state?: "idle" | "hover" | "selected" }) {
   const w = pillWidth(text);
-  const fill = tone === "dark" ? "#1d2b22" : tone === "gold" ? "#6e5323" : "#f1f2ea";
+  const fill = tone === "dark" ? "#1d2b22" : tone === "gold" ? "#6e5323" : "#f6f5ec";
   const color = tone === "light" ? "#1d2620" : "#f1f2ea";
-  const stroke = tone === "gold" ? "#c9a35a" : tone === "dark" ? "rgba(201,163,90,0.35)" : "rgba(29,43,34,0.15)";
+  const stroke = state !== "idle" || tone === "gold" ? "#c9a35a" : tone === "dark" ? "rgba(201,163,90,0.35)" : "rgba(29,43,34,0.16)";
   return (
-    <g className="map-label" transform={`translate(${x},${y}) scale(${scale})`} onClick={onClick} style={{ cursor: onClick ? "pointer" : undefined }}>
-      <rect x={-w / 2} y={-14} width={w} height={28} rx={9} fill={fill} stroke={stroke} />
-      <text textAnchor="middle" y={5} fontSize={15} fill={color} fontFamily="-apple-system, system-ui, sans-serif">
-        {text}
-      </text>
+    <g className={`map-label ${state}`} transform={`translate(${x},${y}) scale(${scale})`} onClick={onClick} style={{ cursor: onClick ? "pointer" : undefined }}>
+      <g className="lift">
+        <rect x={-w / 2} y={-PILL_H / 2 + 2} width={w} height={PILL_H} rx={PILL_H / 2} fill="rgba(22,33,26,0.16)" />
+        <rect className="plate" x={-w / 2} y={-PILL_H / 2} width={w} height={PILL_H} rx={PILL_H / 2} fill={fill} stroke={stroke} strokeWidth={state === "selected" ? 2 : 1} />
+        <text textAnchor="middle" y={4.2} fontSize={PILL_FONT} fontWeight={500} fill={color} fontFamily={SANS}>
+          {text}
+        </text>
+      </g>
     </g>
   );
 }
 
-const districtLabelWidth = (title: string, sub: string) => Math.max(textWidth(title, 16, true) * 1.1, sub.length * 6.4) + 30;
+const STATUS_DOT: Record<Status, string> = { active: "#7fbf7a", idle: "#a9b4a0", paused: "#c4b07c", attention: "#e2b55a", retired: "#7d857a" };
+const TITLE_FONT = 14;
+const TITLE_LINE = 17;
+const TITLE_MAX = 190;
 
-/** Two-line plaque above a repository building: project name, then repository and agent count. */
-function DistrictLabel({ x, y, title, sub, active, onClick, scale }: { x: number; y: number; title: string; sub: string; active: boolean; onClick: () => void; scale: number }) {
-  const w = districtLabelWidth(title, sub);
+interface Plaque {
+  lines: string[];
+  sub: string;
+  w: number;
+  /** Height of the plate, not counting the pointer below it. */
+  h: number;
+}
+
+const plaques = new Map<string, Plaque>();
+/** Plaque geometry, cached because labels are re-placed on every hover. */
+function plaque(name: string, sub: string): Plaque {
+  const key = `${name}\n${sub}`;
+  const hit = plaques.get(key);
+  if (hit) return hit;
+  const p = measurePlaque(name, sub);
+  plaques.set(key, p);
+  return p;
+}
+
+function measurePlaque(name: string, sub: string): Plaque {
+  const lines = wrap(name, TITLE_FONT, SERIF, TITLE_MAX);
+  const titleW = Math.max(...lines.map((l) => measure(l, TITLE_FONT, SERIF)));
+  const subW = measure(sub, 10.5, SANS) + 14;
+  return { lines, sub, w: Math.max(titleW, subW) + 26, h: lines.length * TITLE_LINE + 26 };
+}
+
+/** Compact plaque above a repository tower: full project name, then a status dot and agent count. The pointer tip sits at (x, y). */
+function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scale }: {
+  x: number; y: number; p: Plaque; status: Status; state: "idle" | "hover" | "selected"; onClick: () => void; onEnter: () => void; onLeave: () => void; scale: number;
+}) {
+  const y0 = -7 - p.h;
+  const subW = measure(p.sub, 10.5, SANS);
+  const subY = y0 + 8 + p.lines.length * TITLE_LINE + 9;
   return (
-    <g className="map-label" transform={`translate(${x},${y}) scale(${scale})`} onClick={onClick} style={{ cursor: "pointer" }}>
-      <path d={`M-7 21 L0 29 L7 21 Z`} fill="#1d2b22" />
-      <rect x={-w / 2} y={-21} width={w} height={42} rx={10} fill="#1d2b22" stroke={active ? "#c9a35a" : "rgba(201,163,90,0.35)"} strokeWidth={active ? 2 : 1} />
-      <text textAnchor="middle" y={-2} fontSize={16} fill="#f1f2ea" fontFamily="ui-serif, 'New York', Georgia, serif">
-        {title}
-      </text>
-      <text textAnchor="middle" y={13} fontSize={10.5} fill="#a9b3a5" fontFamily="-apple-system, system-ui, sans-serif" letterSpacing={0.4}>
-        {sub}
-      </text>
+    <g className={`map-label plaque ${state}`} transform={`translate(${x},${y}) scale(${scale})`} onClick={onClick} onMouseEnter={onEnter} onMouseLeave={onLeave} style={{ cursor: "pointer" }}>
+      <g className="lift">
+        <rect x={-p.w / 2 + 1} y={y0 + 3} width={p.w} height={p.h} rx={9} fill="rgba(22,33,26,0.22)" />
+        <path className="plate" d={`M-6 -8 L0 0 L6 -8 Z`} fill="#1d2b22" />
+        <rect className="plate" x={-p.w / 2} y={y0} width={p.w} height={p.h} rx={9} fill="#1d2b22" stroke={state === "idle" ? "rgba(201,163,90,0.3)" : "#c9a35a"} strokeWidth={state === "selected" ? 2 : 1} />
+        {p.lines.map((l, i) => (
+          <text key={i} textAnchor="middle" y={y0 + 21 + i * TITLE_LINE} fontSize={TITLE_FONT} fill="#f1f2ea" fontFamily={SERIF}>
+            {l}
+          </text>
+        ))}
+        <circle className={status === "attention" ? "dot-pulse" : undefined} cx={-subW / 2 - 4} cy={subY - 3.5} r={3.2} fill={STATUS_DOT[status]} />
+        <text textAnchor="middle" x={5} y={subY} fontSize={10.5} fill={state === "selected" ? "#e2c27a" : "#a9b3a5"} fontFamily={SANS} letterSpacing={0.2}>
+          {p.sub}
+        </text>
+      </g>
     </g>
   );
 }
@@ -267,6 +386,15 @@ export function MapView() {
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
+  // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
+  const [mode, setModeState] = useState<"3d" | "2d">(() => (webglAvailable() ? load<"3d" | "2d">("mapMode", "3d") : "2d"));
+  const is3d = mode === "3d";
+  const map3d = useRef<Map3DApi>(null);
+  const [moved3d, setMoved3d] = useState(false);
+  const setMode = (m: "3d" | "2d") => {
+    setModeState(m);
+    save("mapMode", m);
+  };
 
   const stage = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -407,6 +535,8 @@ export function MapView() {
   useEffect(() => {
     const el = stage.current;
     if (!el) return;
+    // The 3D map's own controls handle the wheel.
+    if (is3d) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const r = el.getBoundingClientRect();
@@ -418,7 +548,7 @@ export function MapView() {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [zoomAt]);
+  }, [zoomAt, is3d]);
 
   // Follow selections made elsewhere (search, inspector links) so the building stays in view.
   const selKey = selection ? `${selection.kind}:${selection.id}` : null;
@@ -477,36 +607,66 @@ export function MapView() {
     [lots, layout, strays],
   );
 
-  // Label geometry in world units, then greedy placement so nothing overlaps as repositories are added.
+  // Islands back to front, so a nearer island's soil is never painted under a farther one.
+  const islands = useMemo(
+    () =>
+      [
+        ...layout.parks.map((p) => ({ kind: "park" as const, p, ox: p.ox, oy: p.oy, w: Math.max(p.w, p.h), depth: p.ox + p.oy + (p.w + p.h) / 2 })),
+        ...layout.districts.map((d) => ({ kind: "district" as const, d, ox: d.ox, oy: d.oy, w: d.size, depth: d.ox + d.oy + d.size })),
+      ].sort((a, b) => a.depth - b.depth),
+    [layout],
+  );
+  // Where walkways leave an island (stairs down its visible faces) and where they meet each island's edge (inner paths).
+  const { ramps, exits } = useMemo(() => {
+    const ramps = new Map<string, Walk[]>();
+    const exits = new Map<string, { gx: number; gy: number }[]>();
+    const add = <T,>(m: Map<string, T[]>, k: string, v: T) => m.set(k, [...(m.get(k) ?? []), v]);
+    for (const w of layout.walks) {
+      add(ramps, w.from, w);
+      add(exits, w.from, w.a);
+      add(exits, w.to, w.b);
+    }
+    return { ramps, exits };
+  }, [layout]);
+
+  // Label geometry in world units, then greedy placement: a label moves up before it hides, so nothing overlaps.
   const labels = useMemo(() => {
-    const out: (LabelBox & { draw: () => React.ReactNode })[] = [];
+    const out: (LabelBox & { draw: (dy: number) => React.ReactNode })[] = [];
     const urgent = (key: string, district?: string) =>
-      key === selKey || key === hover ? 0 : district && (district === selectedDistrict || district === focus) ? 2 : null;
+      key === selKey || key === hover || (district && hover === `district:${district}`) ? 0 : district && (district === selectedDistrict || district === focus) ? 2 : null;
     for (const d of layout.districts) {
       const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
       const key = `repo:${d.project.repository}`;
-      const title = short(d.project.name, 34);
-      const sub = `${repoShort(d.project.repository)} · ${d.lots.length} ${d.lots.length === 1 ? "agent" : "agents"}`;
-      const y = c.y - d.hq.height - TH * d.hq.size * 0.5 - 26 * nameScale;
+      const n = d.lots.length;
+      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${n} ${n === 1 ? "agent" : "agents"}`);
+      // Pointer tip just above the tower's roof and mast.
+      const y = c.y - d.hq.height - TH * d.hq.size * 0.5 - 14;
       const u = urgent(key, d.project.id);
+      const h = (p.h + 7) * nameScale;
+      const state = key === selKey || d.project.id === selectedDistrict ? "selected" : key === hover || hover === `district:${d.project.id}` ? "hover" : "idle";
       out.push({
         id: `hq:${d.project.id}`,
         x: c.x,
-        top: y - 22 * nameScale,
-        bottom: y + 22 * nameScale,
-        w: districtLabelWidth(title, sub) * nameScale,
+        top: y - h,
+        bottom: y,
+        w: p.w * nameScale,
+        alts: [-h * 0.6, -h * 1.2],
         priority: u ?? 3 + (1 - Math.min(d.size, 15) / 15) * 0.5,
-        draw: () => (
-          <DistrictLabel
-            key={`n:${d.project.id}`}
-            x={c.x}
-            y={y}
-            scale={nameScale}
-            title={title}
-            sub={sub}
-            active={key === selKey || key === hover || d.project.id === selectedDistrict}
-            onClick={() => select({ kind: "repo", id: d.project.repository })}
-          />
+        draw: (dy) => (
+          <g key={`n:${d.project.id}`}>
+            {dy !== 0 && <line x1={c.x} y1={y + dy} x2={c.x} y2={y} stroke="rgba(29,43,34,0.45)" strokeWidth={1.2} strokeDasharray="2 3" />}
+            <DistrictLabel
+              x={c.x}
+              y={y + dy}
+              scale={nameScale}
+              p={p}
+              status={d.project.status}
+              state={state}
+              onClick={() => select({ kind: "repo", id: d.project.repository })}
+              onEnter={() => setHover(key)}
+              onLeave={() => setHover(null)}
+            />
+          </g>
         ),
       });
     }
@@ -516,16 +676,17 @@ export function MapView() {
       const key = `repo:${s.name}`;
       if (!straysShown && key !== selKey && key !== hover) continue;
       const c = iso(s.gx + s.size / 2, s.gy + s.size / 2);
-      const text = short(repoShort(s.name));
+      const text = short(repoShort(s.name), 30);
       const y = c.y - s.height - TH * s.size * 0.5 - 14 * nameScale;
       out.push({
         id: `stray:${s.name}`,
         x: c.x,
-        top: y - 14 * nameScale,
-        bottom: y + 14 * nameScale,
+        top: y - (PILL_H / 2) * nameScale,
+        bottom: y + (PILL_H / 2) * nameScale,
         w: pillWidth(text) * nameScale,
+        alts: [-PILL_H * nameScale],
         priority: urgent(key) ?? 5,
-        draw: () => <Label key={`sl:${s.name}`} x={c.x} y={y} scale={nameScale} text={text} tone="light" onClick={() => select({ kind: "repo", id: s.name })} />,
+        draw: (dy) => <Label key={`sl:${s.name}`} x={c.x} y={y + dy} scale={nameScale} text={text} tone="light" state={key === selKey ? "selected" : key === hover ? "hover" : "idle"} onClick={() => select({ kind: "repo", id: s.name })} />,
       });
     }
     for (const l of lots) {
@@ -534,21 +695,25 @@ export function MapView() {
       const u = urgent(key, l.d.project.id);
       if (!agentsShown && u !== 0) continue;
       const c = iso(l.gx + l.size / 2, l.gy + l.size / 2);
-      const text = a.status === "attention" ? `${short(a.name, 18)} · needs attention` : short(a.name);
-      const y = c.y - l.height - TH * l.size * 0.5 - 14;
+      const text = a.status === "attention" ? `${short(a.name, 22)} · needs attention` : short(a.name, 32);
+      const y = c.y - l.height - TH * l.size * 0.5 - 16;
       out.push({
         id: key,
         x: c.x,
-        top: y - 14,
-        bottom: y + 14,
+        top: y - PILL_H / 2,
+        bottom: y + PILL_H / 2,
         w: pillWidth(text),
+        alts: [-PILL_H - 2, PILL_H + 2],
         priority: u === 0 ? 0.5 : u === 2 ? 2.5 : 6,
-        draw: () => <Label key={`l:${a.id}`} x={c.x} y={y} text={text} tone={a.status === "attention" ? "gold" : "light"} onClick={() => select({ kind: "agent", id: a.id })} />,
+        draw: (dy) => <Label key={`l:${a.id}`} x={c.x} y={y + dy} text={text} tone={a.status === "attention" ? "gold" : "light"} state={key === selKey ? "selected" : key === hover ? "hover" : "idle"} onClick={() => select({ kind: "agent", id: a.id })} />,
       });
     }
     const shown = placeLabels(out);
     // Draw back to front so the most important labels end up on top.
-    return out.filter((b) => shown.has(b.id)).sort((a, b) => b.priority - a.priority);
+    return out
+      .filter((b) => shown.has(b.id))
+      .map((b) => ({ ...b, dy: shown.get(b.id)! }))
+      .sort((a, b) => b.priority - a.priority);
   }, [layout, lots, strays, k, nameScale, agentsShown, selKey, hover, selectedDistrict, focus, select]);
 
   const usedFrameworks = FRAMEWORK_COLORS.filter(([re]) => catalog.agents.some((a) => re.test(a.framework)));
@@ -580,7 +745,23 @@ export function MapView() {
     const d = best.d;
     setFocus(d.project.id);
     setAnnounce(`${d.project.name}. ${d.lots.length} agents. Press Enter to inspect.`);
-    reveal(center(d));
+    if (is3d) map3d.current?.reveal(d.ox + d.size / 2, d.oy + d.size / 2);
+    else reveal(center(d));
+  };
+
+  const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
+  const fitAny = () => (is3d ? map3d.current?.fit() : fit());
+
+  /** Hover text for a building, from the same live repository data the inspector uses. */
+  const tipFor = (key: string) => {
+    if (key.startsWith("agent:")) {
+      const a = catalog.agents.find((x) => x.id === key.slice(6));
+      return a ? { title: a.name, sub: `${a.framework} · ${statusLabel(a.status)} · last run ${relative(effectiveLastRun(a, repoData(repos[a.repository]))).toLowerCase()}` } : null;
+    }
+    const name = key.slice(5);
+    const snap = repoData(repos[name]);
+    if (!catalog.projects.some((p) => p.repository === name)) return { title: name, sub: snap?.pushedAt ? `Not in the catalog yet · pushed ${relative(snap.pushedAt)}` : "Not in the catalog yet" };
+    return { title: name, sub: snap?.commits[0] ? `Latest commit ${relative(snap.commits[0].date)}: ${short(snap.commits[0].message, 40)}` : "Repository" };
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -589,14 +770,14 @@ export function MapView() {
     const dir = dirs[e.key];
     if (dir) {
       e.preventDefault();
-      if (e.shiftKey) panBy(-dir[0] * 120, -dir[1] * 120);
+      if (e.shiftKey && !is3d) panBy(-dir[0] * 120, -dir[1] * 120);
       else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (focused) select({ kind: "repo", id: focused.project.repository });
-    } else if (e.key === "+" || e.key === "=") zoomAt(1.25);
-    else if (e.key === "-" || e.key === "_") zoomAt(0.8);
-    else if (e.key === "0") fit();
+    } else if (e.key === "+" || e.key === "=") zoomBy(1.25);
+    else if (e.key === "-" || e.key === "_") zoomBy(0.8);
+    else if (e.key === "0") fitAny();
   };
 
   return (
@@ -611,7 +792,7 @@ export function MapView() {
           aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
-            if (e.button !== 0) return;
+            if (e.button !== 0 || is3d) return;
             stop();
             drag.current = { x: e.clientX, y: e.clientY, vx: cam.x, vy: cam.y, moved: false };
           }}
@@ -639,31 +820,55 @@ export function MapView() {
             if (dragging) e.stopPropagation();
           }}
         >
+          {is3d ? (
+            <Suspense fallback={null}>
+            <Map3D
+              ref={map3d}
+              layout={layout}
+              selKey={selKey}
+              selectedDistrict={selectedDistrict}
+              focus={focus}
+              showAgentLabels={settings.showMapLabels}
+              reduced={reduced}
+              tipFor={tipFor}
+              onSelect={(sel, project) => {
+                if (project) setFocus(project);
+                select(sel);
+              }}
+              onFocus={setFocus}
+              onMoved={() => setMoved3d(true)}
+            />
+            </Suspense>
+          ) : (
           <svg aria-hidden="true">
             <MapDefs />
             <g transform={`translate(${cam.x},${cam.y}) scale(${k})`}>
               {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
-              {layout.parks.map((p, i) =>
-                rectVisible(p.ox, p.oy, p.w, p.h) ? <ParkTile key={i} p={p} textScale={nameScale} trees={detail} /> : null,
-              )}
-              {layout.districts.map((d) =>
-                rectVisible(d.ox, d.oy, d.size, d.size) ? (
+              <Meadows meadows={layout.meadows} walks={layout.walks} visible={rectVisible} texture={detail} />
+              {islands.map((it) => {
+                if (!rectVisible(it.ox, it.oy, it.w, it.w)) return null;
+                if (it.kind === "park") return <ParkTile key={it.p.id} p={it.p} ramps={ramps.get(it.p.id)} textScale={nameScale} trees={detail} />;
+                const d = it.d;
+                return (
                   <Ground
                     key={d.project.id}
                     d={d}
+                    ramps={ramps.get(d.project.id)}
                     focused={d === focused}
                     selected={isSelected("repo", d.project.repository) || (selection?.kind === "agent" && d.lots.some((l) => l.agent.id === selection.id))}
-                    hovered={!!hover && where.get(hover)?.district === d.project.id}
+                    hovered={!!hover && (hover === `district:${d.project.id}` || where.get(hover)?.district === d.project.id)}
                     detail={detail}
                     onFocus={() => setFocus(d.project.id)}
+                    onEnter={() => setHover(`district:${d.project.id}`)}
+                    onLeave={() => setHover((h) => (h === `district:${d.project.id}` ? null : h))}
                   />
-                ) : null,
-              )}
+                );
+              })}
               {detail &&
                 layout.districts
                   .filter((d) => rectVisible(d.ox, d.oy, d.size, d.size))
                   .flatMap((d) => [
-                  <Connections key={`c:${d.project.id}`} d={d} />,
+                  <Connections key={`c:${d.project.id}`} d={d} exits={exits.get(d.project.id)} />,
                   ...treeSpots(`${d.project.id}:bush`, d.ox, d.oy, d.size, Math.round(d.size * 1.2)).map((t, i) => <Bush key={`${d.project.id}:b${i}`} gx={t.gx} gy={t.gy} r={t.r * 0.7} />),
                   ...treeSpots(d.project.id, d.ox, d.oy, d.size, Math.round(d.size * 3)).map((t, i) => <Tree key={`${d.project.id}:${i}`} {...t} />),
                 ])}
@@ -747,12 +952,13 @@ export function MapView() {
                   />
                 );
               })}
-              {labels.filter((b) => ptVisible({ x: b.x, y: b.top })).map((b) => b.draw())}
+              {labels.filter((b) => ptVisible({ x: b.x, y: b.top + b.dy })).map((b) => b.draw(b.dy))}
               {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
           </svg>
+          )}
 
-          <div className={`map-intro ${selection || k > fitK.current * 1.15 ? "faded" : ""}`}>
+          <div className={`map-intro ${selection || (is3d ? moved3d : k > fitK.current * 1.15) ? "faded" : ""}`}>
             <div className="eyebrow">Workspace map</div>
             <h1>Welcome to the neighborhood.</h1>
             <p className="lede small">Each project is a district. Its repository is the tall building in the middle and its agents are the houses around it.</p>
@@ -790,16 +996,21 @@ export function MapView() {
               </select>
             </label>
             <span className="sep" />
-            <button className="icon-btn" onClick={fit} aria-label="Fit map" title="Fit map (0)">
+            {webglAvailable() && (
+              <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
+                3D
+              </button>
+            )}
+            <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />
             </button>
             <button className={`icon-btn ${settings.showMapLabels ? "on" : ""}`} onClick={() => setSettings({ showMapLabels: !settings.showMapLabels })} aria-label="Toggle agent labels" aria-pressed={settings.showMapLabels} title="Agent labels">
               <Icon name="labels" size={17} />
             </button>
-            <button className="icon-btn" onClick={() => zoomAt(1.25)} aria-label="Zoom in" title="Zoom in (+)">
+            <button className="icon-btn" onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in (+)">
               <Icon name="plus" size={17} />
             </button>
-            <button className="icon-btn" onClick={() => zoomAt(0.8)} aria-label="Zoom out" title="Zoom out (−)">
+            <button className="icon-btn" onClick={() => zoomBy(0.8)} aria-label="Zoom out" title="Zoom out (−)">
               <Icon name="minus" size={17} />
             </button>
           </div>
@@ -828,20 +1039,105 @@ export function MapView() {
   );
 }
 
-function Ground({ d, focused, hovered, selected, detail, onFocus }: { d: District; focused: boolean; hovered: boolean; selected: boolean; detail: boolean; onFocus: () => void }) {
-  // A raised grass island: soil on the two visible sides, a soft shadow beneath and a glow when active.
+/** Islands stand this far above the meadow. */
+const ISLAND = 26;
+/** The meadow surface sits this far below the island tops, so islands keep a strip of soil above it. */
+const DROP = 20;
+const PATH_HW = 0.15;
+const RAMP = 0.7;
+const below = (p: Pt, h = DROP) => ({ x: p.x, y: p.y + h });
+
+/** One low landmass under every island in a neighborhood, with stone walkways between the islands. */
+function Meadows({ meadows, walks, visible, texture }: { meadows: Meadow[]; walks: Walk[]; visible: (ox: number, oy: number, w: number, h: number) => boolean; texture: boolean }) {
+  const shown = meadows.filter((m) => visible(m.ox, m.oy, m.w, m.h));
+  const top = (m: Meadow) => [iso(m.ox, m.oy), iso(m.ox + m.w, m.oy), iso(m.ox + m.w, m.oy + m.h), iso(m.ox, m.oy + m.h)].map((p) => below(p));
+  const SOIL = 30;
+  return (
+    <g pointerEvents="none">
+      {/* Sides first, then every top: a side only shows where no neighboring patch covers it, which is the shoreline. */}
+      {shown.map((m, i) => {
+        const t = top(m);
+        return (
+          <g key={`s${i}`}>
+            <polygon points={pts([t[3], t[2], below(t[2], SOIL), below(t[3], SOIL)])} fill="url(#soil-l)" />
+            <polygon points={pts([t[2], t[1], below(t[1], SOIL), below(t[2], SOIL)])} fill="url(#soil-r)" />
+          </g>
+        );
+      })}
+      {shown.map((m, i) => (
+        <polygon key={`t${i}`} points={pts(top(m))} fill="#9fbd79" stroke="#9fbd79" strokeWidth={1.5} strokeLinejoin="round" />
+      ))}
+      {texture && shown.map((m, i) => <polygon key={`x${i}`} points={pts(top(m))} fill="url(#grass-tex)" />)}
+      {walks.map((w, i) => {
+        const along = w.axis === "x";
+        const a = along ? { gx: w.a.gx + RAMP, gy: w.a.gy } : { gx: w.a.gx, gy: w.a.gy + RAMP };
+        if (!visible(Math.min(a.gx, w.b.gx) - 1, Math.min(a.gy, w.b.gy) - 1, 2 + Math.abs(w.b.gx - a.gx), 2 + Math.abs(w.b.gy - a.gy))) return null;
+        const q = along
+          ? [iso(a.gx, a.gy - PATH_HW), iso(w.b.gx, a.gy - PATH_HW), iso(w.b.gx, a.gy + PATH_HW), iso(a.gx, a.gy + PATH_HW)]
+          : [iso(a.gx - PATH_HW, a.gy), iso(a.gx + PATH_HW, a.gy), iso(a.gx + PATH_HW, w.b.gy), iso(a.gx - PATH_HW, w.b.gy)];
+        const mid = iso((a.gx + w.b.gx) / 2, (a.gy + w.b.gy) / 2);
+        return (
+          <g key={`w${i}`}>
+            <polygon points={pts(q.map((p) => below(p, DROP + 2)))} fill="rgba(60,80,45,0.22)" />
+            <polygon points={pts(q.map((p) => below(p)))} fill="#ece5cf" stroke="#c8bd9b" strokeWidth={1} strokeLinejoin="round" />
+            {/* A lamp post halfway along each walk. */}
+            {texture && (
+              <g>
+                <line x1={mid.x + 14} y1={mid.y + DROP - 2} x2={mid.x + 14} y2={mid.y + DROP - 20} stroke="#3c4c40" strokeWidth={1.4} />
+                <circle cx={mid.x + 14} cy={mid.y + DROP - 21} r={2.4} fill="#f3dc95" />
+              </g>
+            )}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Stone steps from an island's edge down to the meadow, on the two faces the viewer can see. */
+function Ramps({ ramps, m }: { ramps?: Walk[]; m: number }) {
+  if (!ramps?.length) return null;
+  return (
+    <g pointerEvents="none">
+      {ramps.map((w, i) => {
+        const x = w.axis === "x";
+        // u runs across the stair, v down it; corners at the island top (v=0) and on the meadow (v=1).
+        const at = (u: number, v: number) => {
+          const p = x ? iso(w.a.gx + m + v * (RAMP - m), w.a.gy + u) : iso(w.a.gx + u, w.a.gy + m + v * (RAMP - m));
+          return below(p, v * DROP);
+        };
+        const hw = PATH_HW;
+        const steps = [0.25, 0.5, 0.75];
+        return (
+          <g key={i}>
+            <polygon points={pts([at(hw, 0), at(hw, 1), below(at(hw, 1), 6), below(at(hw, 0), ISLAND - 2)])} fill="#9b8a6d" />
+            <polygon points={pts([at(-hw, 0), at(hw, 0), at(hw, 1), at(-hw, 1)])} fill="#e4dcc4" stroke="#b3a684" strokeWidth={1} strokeLinejoin="round" />
+            {steps.map((v) => {
+              const p = at(-hw, v), q = at(hw, v);
+              return <line key={v} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#b3a684" strokeWidth={1} />;
+            })}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+function Ground({ d, ramps, focused, hovered, selected, detail, onFocus, onEnter, onLeave }: {
+  d: District; ramps?: Walk[]; focused: boolean; hovered: boolean; selected: boolean; detail: boolean; onFocus: () => void; onEnter: () => void; onLeave: () => void;
+}) {
+  // A raised grass plateau on the meadow: soil on the two visible sides, a contact shadow and a glow when active.
   const m = 0.45;
   const top = [iso(d.ox - m, d.oy - m), iso(d.ox + d.size + m, d.oy - m), iso(d.ox + d.size + m, d.oy + d.size + m), iso(d.ox - m, d.oy + d.size + m)];
-  const depth = 26;
   const c = iso(d.ox + d.size / 2, d.oy + d.size / 2);
   const span = (d.size + 2 * m) * TW;
   const lit = selected || hovered || focused;
   return (
-    <g onClick={onFocus} className="ground">
-      {detail && <ellipse cx={c.x + 18} cy={c.y + depth + 30} rx={span * 0.95} ry={span * 0.42} fill="rgba(40,60,34,0.32)" filter="url(#island-shadow)" />}
+    <g onClick={onFocus} onMouseEnter={onEnter} onMouseLeave={onLeave} className={`ground ${hovered ? "hover" : ""}`}>
+      <polygon points={pts(top.map((p) => ({ x: p.x + 16, y: p.y + DROP + 4 })))} fill="rgba(38,60,30,0.22)" />
       {lit && <ellipse className={selected ? "district-aura on" : "district-aura"} cx={c.x} cy={c.y} rx={span * 1.15} ry={span * 0.6} fill="url(#aura)" />}
-      <polygon points={pts([top[3], top[2], up(top[2], -depth), up(top[3], -depth)])} fill="url(#soil-l)" />
-      <polygon points={pts([top[2], top[1], up(top[1], -depth), up(top[2], -depth)])} fill="url(#soil-r)" />
+      <polygon points={pts([top[3], top[2], up(top[2], -ISLAND), up(top[3], -ISLAND)])} fill="url(#soil-l)" />
+      <polygon points={pts([top[2], top[1], up(top[1], -ISLAND), up(top[2], -ISLAND)])} fill="url(#soil-r)" />
       <polygon
         points={pts(top)}
         fill={lit ? "url(#grass-hot)" : "url(#grass)"}
@@ -849,22 +1145,33 @@ function Ground({ d, focused, hovered, selected, detail, onFocus }: { d: Distric
         strokeWidth={selected || focused ? 3 : hovered ? 2 : 1}
         strokeLinejoin="round"
       />
+      {detail && <polygon points={pts(top)} fill="url(#grass-tex)" pointerEvents="none" />}
       {detail &&
         treeSpots(`${d.project.id}:tuft`, d.ox, d.oy, d.size, Math.round(d.size * 3)).map((t, i) => {
           const q = iso(t.gx, t.gy);
           return <ellipse key={i} cx={q.x} cy={q.y} rx={t.r * 1.4} ry={t.r * 0.5} fill={i % 2 ? "rgba(255,255,230,0.14)" : "rgba(70,110,50,0.14)"} />;
         })}
+      <Ramps ramps={ramps} m={m} />
     </g>
   );
 }
 
-function Connections({ d }: { d: District }) {
-  // Pale stone paths from the repository HQ to each agent house.
+function Connections({ d, exits }: { d: District; exits?: { gx: number; gy: number }[] }) {
+  // Pale stone paths from the repository HQ to each agent house, and out to the walkways at the island's edge.
   const hc = { gx: d.hq.gx + d.hq.size / 2, gy: d.hq.gy + d.hq.size / 2 };
   const lines = d.lots.map((l) => {
     const lc = { gx: l.gx + l.size / 2, gy: l.gy + l.size / 2 };
     return { id: l.agent.id, p: pts([iso(hc.gx, hc.gy), iso(lc.gx, hc.gy), iso(lc.gx, lc.gy)]) };
   });
+  // Clamp to the island top (which overhangs the lot by its margin) so paths meet the steps.
+  const m = 0.45;
+  const clamp = (v: number, lo: number) => Math.min(lo + d.size + m, Math.max(lo - m, v));
+  for (const [i, e] of (exits ?? []).entries()) {
+    const ex = { gx: clamp(e.gx, d.ox), gy: clamp(e.gy, d.oy) };
+    const onX = e.gx <= d.ox || e.gx >= d.ox + d.size;
+    const corner = onX ? iso(hc.gx, ex.gy) : iso(ex.gx, hc.gy);
+    lines.push({ id: `exit${i}`, p: pts([iso(hc.gx, hc.gy), corner, iso(ex.gx, ex.gy)]) });
+  }
   return (
     <g pointerEvents="none" fill="none" strokeLinecap="round" strokeLinejoin="round">
       {lines.map((l) => <polyline key={`u${l.id}`} points={l.p} stroke="#b9b29a" strokeWidth={13} />)}
@@ -873,7 +1180,7 @@ function Connections({ d }: { d: District }) {
   );
 }
 
-function ParkTile({ p, textScale, trees }: { p: Park; textScale: number; trees: boolean }) {
+function ParkTile({ p, ramps, textScale, trees }: { p: Park; ramps?: Walk[]; textScale: number; trees: boolean }) {
   const { ox, oy, w, h } = p;
   const hasStrays = p.strays.length > 0;
   const ground = [iso(ox, oy), iso(ox + w, oy), iso(ox + w, oy + h), iso(ox, oy + h)];
@@ -881,22 +1188,21 @@ function ParkTile({ p, textScale, trees }: { p: Park; textScale: number; trees: 
   const front = iso(ox + w, oy + h);
   return (
     <g pointerEvents="none">
-      <polygon points={pts([ground[3], ground[2], up(ground[2], -18), up(ground[3], -18)])} fill="url(#soil-l)" />
-      <polygon points={pts([ground[2], ground[1], up(ground[1], -18), up(ground[2], -18)])} fill="url(#soil-r)" />
+      <polygon points={pts(ground.map((q) => ({ x: q.x + 16, y: q.y + DROP + 4 })))} fill="rgba(38,60,30,0.22)" />
+      <polygon points={pts([ground[3], ground[2], up(ground[2], -ISLAND), up(ground[3], -ISLAND)])} fill="url(#soil-l)" />
+      <polygon points={pts([ground[2], ground[1], up(ground[1], -ISLAND), up(ground[2], -ISLAND)])} fill="url(#soil-r)" />
       <polygon points={pts(ground)} fill="url(#grass)" />
+      {trees && <polygon points={pts(ground)} fill="url(#grass-tex)" />}
       {!hasStrays && <polygon points={pts(pond)} fill="#8fb3a8" stroke="#a9c7bc" strokeWidth={3} />}
+      <Ramps ramps={ramps} m={0} />
       {trees && treeSpots(`park:${ox}:${oy}`, ox, oy, w, Math.min(40, Math.round((w + h) * 0.9)), h).map((t, i) => <Tree key={i} {...t} />)}
-      <text
-        x={front.x}
-        y={front.y + (hasStrays ? 44 + 28 * textScale : 52)}
-        textAnchor="middle"
-        fontFamily="ui-serif, 'New York', Georgia, serif"
-        fontSize={(hasStrays ? 26 : 20) * textScale}
-        fill={hasStrays ? "#1d2b22" : "#47524a"}
-        opacity={hasStrays ? 1 : 0.8}
-      >
-        {hasStrays ? `Not in the catalog yet (${p.strays.length})` : "Room for the next project"}
-      </text>
+      {hasStrays ? (
+        <text x={front.x} y={front.y + DROP + 40 + 26 * textScale} textAnchor="middle" fontFamily={SERIF} fontSize={26 * textScale} fill="#1d2b22">
+          {`Not in the catalog yet (${p.strays.length})`}
+        </text>
+      ) : (
+        <Label x={iso(ox + w / 2, oy + h / 2).x} y={iso(ox + w / 2, oy + h / 2).y} text="Room for the next project" tone="light" scale={textScale} />
+      )}
     </g>
   );
 }

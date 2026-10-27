@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { GAP, layoutMap, placeLabels, type Layout } from "./mapLayout";
 
 function rects(layout: Layout) {
   return [...layout.districts.map((d) => ({ id: d.project.id, x: d.ox, y: d.oy, w: d.size, h: d.size })), ...layout.parks.map((p, i) => ({ id: `park${i}`, x: p.ox, y: p.oy, w: p.w, h: p.h }))];
@@ -75,7 +75,7 @@ describe("layoutMap", () => {
       const layout = layoutMap(big, extra, g);
       expect(performance.now() - t).toBeLessThan(200);
       expect(layout.districts).toHaveLength(300);
-      expect(overlaps(layout, 3)).toEqual([]);
+      expect(overlaps(layout, GAP - 0.01)).toEqual([]);
       // Packed, not strung out: the map stays roughly as wide as it is deep.
       const w = layout.bounds.maxX - layout.bounds.minX;
       const h = layout.bounds.maxY - layout.bounds.minY;
@@ -101,6 +101,23 @@ describe("placeLabels", () => {
       { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
       { id: "far", x: 400, top: 0, bottom: 20, w: 80, priority: 6 },
     ]);
-    expect([...shown].sort()).toEqual(["far", "repo"]);
+    expect([...shown.keys()].sort()).toEqual(["far", "repo"]);
+  });
+
+  it("moves a label to an alternative spot before hiding it", () => {
+    const shown = placeLabels([
+      { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
+      { id: "agent", x: 10, top: 0, bottom: 20, w: 80, priority: 6, alts: [-10, 40] },
+    ]);
+    expect(shown.get("agent")).toBe(40);
+  });
+});
+
+describe("walkways", () => {
+  it("connects every island in the default map to the street grid", () => {
+    const layout = layoutMap(catalog);
+    const linked = new Set(layout.walks.flatMap((w) => [w.from, w.to]));
+    for (const d of layout.districts) expect(linked.has(d.project.id)).toBe(true);
+    for (const w of layout.walks) expect(w.b.gx - w.a.gx + w.b.gy - w.a.gy).toBeGreaterThan(0);
   });
 });
