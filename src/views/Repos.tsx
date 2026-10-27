@@ -8,7 +8,7 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 
 export function ReposView() {
-  const { catalog, repos, uncataloged, filters, select, selection } = useAtlas();
+  const { catalog, repos, uncataloged, discovery, settings, refresh, refreshing, filters, select, selection } = useAtlas();
   const all = useMemo(() => repoRows(catalog, repos, uncataloged), [catalog, repos, uncataloged]);
   const rows = all.filter(
     (r) =>
@@ -36,6 +36,26 @@ export function ReposView() {
           { key: "framework", label: "Agent framework", options: uniqueOptions(catalog.agents.map((a) => a.framework)) },
         ]}
       />
+      <div className="muted small" style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+        <span>
+          {discovery
+            ? discovery.error
+              ? null
+              : `Checked ${settings.owners.join(", ")} for new repositories ${relative(discovery.at)}: ${discovery.found} found, ${uncataloged.length} not in the catalog.${discovery.withToken ? "" : " Without a token, only public repositories are found."}`
+            : `Looking for new repositories owned by ${settings.owners.join(", ") || "nobody (set accounts in Settings)"}…`}
+        </span>
+        <button className="text-btn small" onClick={() => void refresh(true)} disabled={refreshing}>
+          {refreshing ? "Checking…" : "Check now"}
+        </button>
+      </div>
+      {discovery?.error && (
+        <div className="notice" style={{ marginBottom: 14 }}>
+          <Icon name="alert" size={15} />
+          <span>
+            Couldn't check GitHub for new repositories: {discovery.error}. Adding a token in Settings raises GitHub's limit and includes your private repositories.
+          </span>
+        </div>
+      )}
       {rows.length === 0 && <div className="card empty">No repositories match these filters.</div>}
       <div className="grid two">
         {rows.map((r) => {

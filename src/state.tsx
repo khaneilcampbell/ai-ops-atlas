@@ -37,6 +37,8 @@ interface AtlasState {
   repos: Record<string, RepoState>;
   /** Repositories found on GitHub that no manifest mentions. */
   uncataloged: string[];
+  /** Outcome of the last look for new repositories. */
+  discovery: { at: string; found: number; withToken: boolean; error?: string } | null;
   refreshing: boolean;
   refresh: (force?: boolean) => Promise<void>;
   view: View;
@@ -75,6 +77,7 @@ function fromCache(cache: Cache, extra: string[], maxAgeMs: number): Record<stri
 export function AtlasProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...load("settings", {}) }));
   const [uncataloged, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
+  const [discovery, setDiscovery] = useState<AtlasState["discovery"]>(null);
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));
   const [refreshing, setRefreshing] = useState(false);
   const [view, setViewState] = useState<View>(() => load<View>("view", "overview"));
@@ -91,16 +94,19 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       const maxAge = settings.refreshMinutes * 60_000;
       let extra = load<string[]>("uncataloged", []);
       if (settings.owners.length) {
+        const withToken = await tokenStore.has().catch(() => false);
         try {
-          const found = await discoverRepos(settings.owners, await tokenStore.has().catch(() => false));
+          const found = await discoverRepos(settings.owners, withToken);
           extra = found
             .filter((r) => !known.has(r.fullName.toLowerCase()) && (settings.includeForks || !r.fork))
             .map((r) => r.fullName)
             .sort((a, b) => a.localeCompare(b));
           save("uncataloged", extra);
           setUncataloged(extra);
-        } catch {
-          /* discovery is best effort; cataloged repositories still load */
+          setDiscovery({ at: new Date().toISOString(), found: found.length, withToken });
+        } catch (e) {
+          // Cataloged repositories still load; the Repositories view shows why discovery failed.
+          setDiscovery({ at: new Date().toISOString(), found: 0, withToken, error: e instanceof Error ? e.message : String(e) });
         }
       }
       await Promise.all(
@@ -138,6 +144,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       manifestIssues,
       repos,
       uncataloged,
+      discovery,
       refreshing,
       refresh,
       view,
@@ -163,7 +170,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         void refresh(true);
       },
     }),
-    [repos, uncataloged, refreshing, refresh, view, selection, filters, settings],
+    [repos, uncataloged, discovery, refreshing, refresh, view, selection, filters, settings],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
