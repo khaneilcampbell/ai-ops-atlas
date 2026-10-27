@@ -22,9 +22,12 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "server",
+    "functions"
   ],
   "exclude": [
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "server/**/*.test.ts"
   ]
 }

@@ -16,6 +16,7 @@ import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
+import { PHONE_QUERY, useMedia } from "./lib/media";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -30,6 +31,7 @@ export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
+  const phone = useMedia(PHONE_QUERY);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -102,7 +104,7 @@ export default function App() {
       </main>
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
-      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent") && <DetailPanel />}
+      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
   );
 }
