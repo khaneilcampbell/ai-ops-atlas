@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+import type { Catalog } from "../catalog/types";
+import type { RepoSnapshot } from "../github/types";
+import { attentionItems, ciHealth, effectiveLastRun } from "./derive";
+
+const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
+  fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
+  defaultBranch: "main", pushedAt: new Date().toISOString(), stars: 0, openIssues: 0, license: "MIT", archived: false,
+  commits: [], runs: [], workflowRuns: {}, fetchedAt: new Date().toISOString(), ...over,
+});
+
+const run = (name: string, conclusion: string | null, createdAt = "2026-10-20T00:00:00Z") => ({
+  name, status: "completed", conclusion, branch: "main", event: "push", createdAt, url: `u:${name}:${createdAt}`,
+});
+
+const catalog: Catalog = {
+  projects: [{ id: "demo", name: "Demo", summary: "", status: "active", repository: "me/demo", tags: [], links: [], agentIds: ["ci", "loop"] }],
+  agents: [
+    { id: "ci", name: "CI", purpose: "", framework: "GitHub Actions", status: "active", lastRun: null, history: [], links: [], projectId: "demo", repository: "me/demo", observe: { githubWorkflow: "ci.yml" } },
+    { id: "loop", name: "Loop", purpose: "", framework: "Shell", status: "active", lastRun: null, history: [], links: [], projectId: "demo", repository: "me/demo" },
+  ],
+};
+
+describe("ciHealth", () => {
+  it("uses only the latest run of each workflow", () => {
+    const s = snap({ runs: [run("Tests", "success", "2026-10-21T00:00:00Z"), run("Tests", "failure"), run("Lint", "success")] });
+    expect(ciHealth(s).health).toBe("good");
+  });
+  it("flags a failing workflow", () => {
+    expect(ciHealth(snap({ runs: [run("Tests", "failure")] })).value).toBe("1 failing");
+  });
+});
+
+describe("attention", () => {
+  it("prefers an observed workflow run over a missing manifest last_run", () => {
+    const s = snap({ workflowRuns: { "ci.yml": [run("Security", "success", new Date().toISOString())] } });
+    expect(effectiveLastRun(catalog.agents[0], s)).not.toBeNull();
+    const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: s, stale: false } }, []);
+    expect(items.map((i) => i.id)).toEqual(["agent:loop:norun"]);
+  });
+
+  it("raises failed observed runs and failing CI as high severity", () => {
+    const s = snap({ runs: [run("Security", "failure")], workflowRuns: { "ci.yml": [run("Security", "failure")] } });
+    const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: s, stale: false } }, []);
+    expect(items.filter((i) => i.severity === "high").map((i) => i.id)).toEqual(["agent:ci:run", "repo:me/demo:ci"]);
+  });
+});
