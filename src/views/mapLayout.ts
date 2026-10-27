@@ -4,8 +4,8 @@ import type { Agent, Catalog, Project, Status } from "../catalog/types";
 export const TW = 48;
 export const TH = 24;
 /** Grid units between neighboring districts, and between neighborhoods. */
-const GAP = 3.5;
-const GROUP_GAP = 7;
+export const GAP = 2.25;
+const GROUP_GAP = 4.5;
 /** Grid units per lot in the area for repositories without a manifest. */
 const STRAY_STEP = 3;
 
@@ -43,6 +43,8 @@ export interface Stray {
 
 /** Open ground: either the lot for repositories with no manifest, or an empty park. */
 export interface Park {
+  /** Walkway id, shared with {@link Walk.from} and {@link Walk.to}. */
+  id: string;
   ox: number;
   oy: number;
   w: number;
@@ -62,10 +64,30 @@ export interface Neighborhood {
   h: number;
 }
 
+/** A walkway on the meadow between two neighboring islands, along one grid axis. */
+export interface Walk {
+  from: string;
+  to: string;
+  axis: "x" | "y";
+  /** Start (on the near island's edge) and end (on the far island's edge) in grid units. */
+  a: { gx: number; gy: number };
+  b: { gx: number; gy: number };
+}
+
+/** A patch of the low meadow that islands sit on. Patches in one neighborhood touch, so they read as one landmass. */
+export interface Meadow {
+  ox: number;
+  oy: number;
+  w: number;
+  h: number;
+}
+
 export interface Layout {
   districts: District[];
   parks: Park[];
   neighborhoods: Neighborhood[];
+  walks: Walk[];
+  meadows: Meadow[];
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
@@ -110,18 +132,24 @@ interface Box {
  * roughly equal width, so any number of districts forms a compact diamond. Within a row,
  * smaller boxes sit toward the front, nearest the viewer.
  */
-function shelf<T extends Box>(items: T[], gap: number): { placed: (T & { x: number; y: number })[]; w: number; h: number } {
+type Placed<T> = T & { x: number; y: number; cy: number; ch: number };
+
+function shelf<T extends Box>(items: T[], gap: number): { placed: Placed<T>[]; w: number; h: number } {
   if (!items.length) return { placed: [], w: 0, h: 0 };
   const area = items.reduce((s, b) => s + (b.w + gap) * (b.h + gap), 0);
   const target = Math.max(Math.sqrt(area) * 1.05, ...items.map((b) => b.w));
-  const placed: (T & { x: number; y: number })[] = [];
+  const placed: Placed<T>[] = [];
   let x = 0;
   let y = 0;
   let rowH = 0;
-  let row: (T & { x: number; y: number })[] = [];
+  let row: Placed<T>[] = [];
   let width = 0;
   const closeRow = () => {
-    for (const p of row) p.y = y + (rowH - p.h);
+    for (const p of row) {
+      p.y = y + (rowH - p.h);
+      p.cy = y;
+      p.ch = rowH;
+    }
     y += rowH + gap;
     row = [];
     x = 0;
@@ -129,7 +157,7 @@ function shelf<T extends Box>(items: T[], gap: number): { placed: (T & { x: numb
   };
   for (const b of items) {
     if (row.length && x + b.w > target) closeRow();
-    const p = { ...b, x, y: 0 };
+    const p = { ...b, x, y: 0, cy: 0, ch: 0 };
     row.push(p);
     placed.push(p);
     x += b.w + gap;
@@ -177,7 +205,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // Largest first packs tighter; ties keep catalog order.
       .sort((a, c) => c.w - a.w);
     // An empty park keeps the "room for the next project" corner of the original map.
-    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 7.5, h: 7.5 });
+    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 6, h: 6 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };
   });
@@ -193,13 +221,18 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const districts: District[] = [];
   const parks: Park[] = [];
   const neighborhoods: Neighborhood[] = [];
+  const meadows: Meadow[] = [];
+  const walks: Walk[] = [];
+  const g2 = GAP / 2;
 
   for (const blk of outer.placed) {
     neighborhoods.push({ key: blk.key, label: blk.label, count: blk.count, ox: blk.x, oy: blk.y, w: blk.w, h: blk.h });
     if (blk.strays) {
+      meadows.push({ ox: blk.x - g2, oy: blk.y - g2, w: blk.w + GAP, h: blk.h + GAP });
       const cols = Math.max(1, Math.round(blk.w / STRAY_STEP));
       const size = STRAY_STEP * 0.42;
       parks.push({
+        id: `strays:${blk.key}`,
         ox: blk.x,
         oy: blk.y,
         w: blk.w,
@@ -214,11 +247,14 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       });
       continue;
     }
+    // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
+    for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
+    walks.push(...walkways(blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }))));
     for (const it of blk.inner.placed) {
       const ox = blk.x + it.x;
       const oy = blk.y + it.y;
       if (it.park) {
-        parks.push({ ox, oy, w: it.w, h: it.h, strays: [] });
+        parks.push({ id: `park:${blk.key}`, ox, oy, w: it.w, h: it.h, strays: [] });
         continue;
       }
       const project = it.project!;
@@ -233,7 +269,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         ox,
         oy,
         size,
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: 78 },
+        // Taller towers for busier projects, from the real agent count.
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: 64 + Math.min(agents.length, 12) * 3 },
         lots: (agents.length ? slots(m, size) : []).slice(0, agents.length).map((s, k) => ({
           agent: agents[k],
           gx: ox + s.gx - lotSize / 2,
@@ -245,7 +282,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
   }
 
-  const rects = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks];
+  const rects = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = rects.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
   const xs = corners.map((c) => c.x);
   const ys = corners.map((c) => c.y);
@@ -253,8 +290,36 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     districts,
     parks,
     neighborhoods,
+    walks,
+    meadows,
     bounds: xs.length ? { minX: Math.min(...xs), minY: Math.min(...ys) - 120, maxX: Math.max(...xs), maxY: Math.max(...ys) + 90 } : { minX: -200, minY: -200, maxX: 200, maxY: 200 },
   };
+}
+
+/**
+ * Joins each island to its nearest neighbor down-right on screen (+x) and down-left (+y), when the two
+ * share enough edge for a path. That gives every neighborhood a connected street grid without crossings.
+ */
+function walkways(rs: { id: string; x: number; y: number; w: number; h: number }[]): Walk[] {
+  const out: Walk[] = [];
+  const MIN = 1.2;
+  for (const a of rs) {
+    type Near = { r: (typeof rs)[number]; gap: number; mid: number };
+    let bx: Near | null = null;
+    let by: Near | null = null;
+    for (const r of rs) {
+      if (r === a) continue;
+      const oy = Math.min(a.y + a.h, r.y + r.h) - Math.max(a.y, r.y);
+      const gx = r.x - (a.x + a.w);
+      if (gx >= 0 && oy >= MIN && (!bx || gx < bx.gap)) bx = { r, gap: gx, mid: Math.max(a.y, r.y) + oy / 2 };
+      const ox = Math.min(a.x + a.w, r.x + r.w) - Math.max(a.x, r.x);
+      const gy = r.y - (a.y + a.h);
+      if (gy >= 0 && ox >= MIN && (!by || gy < by.gap)) by = { r, gap: gy, mid: Math.max(a.x, r.x) + ox / 2 };
+    }
+    if (bx) out.push({ from: a.id, to: bx.r.id, axis: "x", a: { gx: a.x + a.w, gy: bx.mid }, b: { gx: bx.r.x, gy: bx.mid } });
+    if (by) out.push({ from: a.id, to: by.r.id, axis: "y", a: { gx: by.mid, gy: a.y + a.h }, b: { gx: by.mid, gy: by.r.y } });
+  }
+  return out;
 }
 
 /** Deterministic tree spots along a lot's edges, away from the building ring. */
@@ -299,16 +364,19 @@ export interface LabelBox {
   w: number;
   /** Lower draws first and wins collisions. */
   priority: number;
+  /** Vertical offsets to try, in order, when the preferred spot is taken. */
+  alts?: number[];
 }
 
 /**
- * Greedy placement: labels are taken in priority order and any label that would overlap one
- * already placed is hidden. A coarse grid keeps this near linear for hundreds of labels.
+ * Greedy placement: labels are taken in priority order. Each tries its preferred spot, then its
+ * alternatives, and is hidden only when every spot overlaps a label already placed. A coarse grid
+ * keeps this near linear for hundreds of labels. Returns the chosen vertical offset per shown label.
  */
-export function placeLabels(boxes: LabelBox[], pad = 4): Set<string> {
+export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
   const CELL = 160;
   const grid = new Map<string, LabelBox[]>();
-  const shown = new Set<string>();
+  const shown = new Map<string, number>();
   const cells = (b: LabelBox) => {
     const out: string[] = [];
     for (let cx = Math.floor((b.x - b.w / 2 - pad) / CELL); cx <= Math.floor((b.x + b.w / 2 + pad) / CELL); cx++)
@@ -318,10 +386,14 @@ export function placeLabels(boxes: LabelBox[], pad = 4): Set<string> {
   const hits = (a: LabelBox, b: LabelBox) =>
     Math.abs(a.x - b.x) * 2 < a.w + b.w + pad * 2 && a.top < b.bottom + pad && b.top < a.bottom + pad;
   for (const b of [...boxes].sort((p, q) => p.priority - q.priority)) {
-    const keys = cells(b);
-    if (keys.some((k) => grid.get(k)?.some((o) => hits(b, o)))) continue;
-    shown.add(b.id);
-    for (const k of keys) grid.set(k, [...(grid.get(k) ?? []), b]);
+    for (const dy of [0, ...(b.alts ?? [])]) {
+      const c = { ...b, top: b.top + dy, bottom: b.bottom + dy };
+      const keys = cells(c);
+      if (keys.some((k) => grid.get(k)?.some((o) => hits(c, o)))) continue;
+      shown.set(b.id, dy);
+      for (const k of keys) grid.set(k, [...(grid.get(k) ?? []), c]);
+      break;
+    }
   }
   return shown;
 }

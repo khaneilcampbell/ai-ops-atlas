@@ -571,3 +571,18 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); margin-top: 10px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--gold); }
 .obs.plain { list-style: none; padding-left: 0; }
+
+/* ── Map: plaques, hover and selection ───────────── */
+.map-stage .map-label .lift { transition: transform 0.16s ease; }
+.map-stage .map-label .plate { transition: fill 0.16s ease, stroke 0.16s ease; }
+.map-stage .map-label:hover .lift, .map-stage .map-label.hover .lift { transform: translateY(-3px); }
+.map-stage .map-label:hover .plate { stroke: var(--gold); }
+.map-stage .map-label.plaque.hover .plate, .map-stage .map-label.plaque:hover .plate { fill: var(--forest-700); }
+.map-stage .map-label.plaque.selected .plate { fill: var(--forest-700); }
+.map-stage .ground .district-aura { transition: opacity 0.2s ease; }
+.dot-pulse { animation: dot-pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes dot-pulse { 50% { transform: scale(1.45); opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) {
+  .map-stage .map-label .lift, .map-stage .bldg { transition: none; }
+  .dot-pulse, .sel-ring { animation: none; }
+}
