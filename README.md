@@ -28,6 +28,16 @@ npm run dev              # browser-only preview at http://localhost:1420 (public
 npm test                 # validates the catalog and the health/attention rules
 ```
 
+## Install and update
+
+Download `AI-Ops-Atlas-macOS.zip` from the [latest release](https://github.com/khaneilcampbell/ai-ops-atlas/releases/latest), unzip it and move **AI Ops Atlas** into Applications. The app isn't signed by Apple, so open it the first time with right-click → Open. To update, download the newer release and replace the app; your token and settings stay. With the GitHub CLI: `gh release download -R khaneilcampbell/ai-ops-atlas -p '*.zip'`.
+
+To publish a release: run `npm run version:set -- 0.3.0`, merge that change, then tag `v0.3.0` on `main` and push the tag. The Release workflow builds a universal (Apple silicon and Intel) app and attaches it.
+
+## Contributing
+
+`main` only takes pull requests that pass CI. Before pushing, run `npm run lint`, `npm test`, and in `src-tauri/`, `cargo fmt` and `cargo clippy --all-targets -- -D warnings`. Dependabot opens weekly update PRs, and CodeQL scans every PR. See [SECURITY.md](SECURITY.md) for how secrets are handled.
+
 ## Add a project or agent
 
 Add or edit a YAML file in [`catalog/`](catalog/README.md). The format is documented there, and `npm test` fails on a broken manifest. There is one manifest for each of the 11 `khaneilcampbell` repositories, including:
