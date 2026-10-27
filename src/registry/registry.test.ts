@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildCatalog, parseManifest } from "../catalog/parse";
-import type { Agent, ManifestIssue } from "../catalog/types";
+import { SCHEMAS, type Agent, type ManifestIssue } from "../catalog/types";
+import { AUTONOMY_LEVELS, CATEGORIES, CLASSIFICATIONS, CONFIDENCES, KPI_MEASURES, RISK_LEVELS, SENSITIVITIES, TRIGGER_TYPES } from "./types";
 import type { RepoSnapshot, RepoState, WorkflowRun } from "../github/types";
 import type { AgentStatus, Run } from "../intel/types";
 import { documentationScore, toProfile } from "./profile";
@@ -233,5 +234,39 @@ describe("directory", () => {
     const flow = s.needsReview.find((e) => e.profile.id === "benjaire-flow-intake");
     expect(flow?.review).toContain("Classification is provisional");
     expect(s.observable).toBe(6);
+  });
+});
+
+describe("JSON Schema for editors", () => {
+  const schema = JSON.parse(readFileSync(join(dir, "schema/atlas-v2.schema.json"), "utf8"));
+  const reg = schema.properties.agents.items.properties.registry;
+
+  it("matches the enums the parser accepts", () => {
+    expect(schema.properties.schema.enum).toEqual([...SCHEMAS]);
+    expect(reg.properties.category.enum).toEqual([...CATEGORIES]);
+    expect(reg.properties.classification.properties.type.enum).toEqual([...CLASSIFICATIONS]);
+    expect(reg.properties.classification.properties.confidence.enum).toEqual([...CONFIDENCES]);
+    expect(reg.properties.execution.properties.trigger_type.enum).toEqual([...TRIGGER_TYPES]);
+    expect(reg.properties.governance.properties.autonomy.enum).toEqual([...AUTONOMY_LEVELS]);
+    expect(reg.properties.governance.properties.risk.enum).toEqual([...RISK_LEVELS]);
+    expect(reg.properties.governance.properties.data_sensitivity.enum).toEqual([...SENSITIVITIES]);
+    expect(reg.properties.goals.properties.kpis.items.properties.measure.enum).toEqual([...KPI_MEASURES]);
+  });
+
+  it("lists exactly the registry fields the parser reads", () => {
+    const r = parse(`
+schema: atlas/v2
+project: { id: demo, name: Demo, summary: s, status: active, repository: me/demo }
+agents:
+  - id: a1
+    name: A
+    purpose: p
+    framework: f
+    status: idle
+    registry: { ${Object.keys(reg.properties)
+      .map((k) => `${k}: null`)
+      .join(", ")} }
+`);
+    expect(r.issues).toEqual([]);
   });
 });

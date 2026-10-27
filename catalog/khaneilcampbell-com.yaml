@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
@@ -41,7 +42,7 @@ agents:
         evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that KC merges
       mission:
         problem: Keeps the portfolio site current without hand-editing every page.
-        outcomes: [Reviewed pull requests for copy, design and link changes]
+        outcomes: ["Reviewed pull requests for copy, design and link changes"]
         beneficiaries: [KC, Site visitors]
       responsibilities:
         tasks: [Draft page copy and design changes, Open pull requests for review]

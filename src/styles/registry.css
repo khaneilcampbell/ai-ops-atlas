@@ -1,0 +1,94 @@
+/* ── Agent registry ─────────────────────────────────
+   Builds on the agent management styles in app.css; same tokens, same surfaces. */
+
+/* Unavailable values use the shared .na pill from app.css. */
+.reg-field .na, .kv .na, .ess .na { display: inline-block; }
+
+.class-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+.class-badge i { width: 17px; height: 17px; border-radius: 5px; display: inline-grid; place-items: center; color: #fff; font-style: normal; font-size: 10px; font-weight: 600; }
+.class-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: 1px; }
+
+.op-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 8px; border-radius: 999px; font-size: 11.5px; white-space: nowrap; border: 1px solid transparent; }
+.op-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.op-verified { color: #2f5b33; background: rgba(79, 122, 82, 0.14); }
+.op-failing { color: var(--bad); background: rgba(164, 72, 58, 0.12); }
+.op-configured { color: var(--ink-2); background: transparent; border-color: var(--sage-300); }
+.op-planned { color: var(--ink-3); background: transparent; border-style: dashed; border-color: var(--sage-300); }
+
+.risk-pill { font-size: 11px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--sage-200); color: var(--ink-3); }
+.risk-high { color: var(--bad); border-color: rgba(164, 72, 58, 0.35); }
+.risk-medium { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
+.risk-low { color: #2f5b33; border-color: rgba(79, 122, 82, 0.35); }
+.risk-none { border-style: dashed; }
+
+.conf { font-size: 11px; padding: 1px 8px; border-radius: 999px; text-transform: capitalize; }
+.conf-verified { background: rgba(79, 122, 82, 0.14); color: #2f5b33; }
+.conf-provisional { background: var(--gold-soft); color: var(--gold-deep); }
+.conf-unverified { background: var(--sage-200); color: var(--ink-2); }
+
+.autonomy { display: inline-flex; align-items: center; gap: 8px; }
+.autonomy-steps { display: inline-flex; gap: 2px; }
+.autonomy-steps i { width: 10px; height: 10px; border-radius: 2px; background: var(--sage-200); }
+.autonomy-steps i.on { background: var(--forest-600); }
+.autonomy-steps i.on:nth-child(n + 3) { background: var(--gold); }
+
+/* Directory list */
+.agents-split:has(.reg-inspector) { grid-template-columns: minmax(340px, 430px) minmax(0, 1fr); }
+.reg-list-pane ul { list-style: none; margin: 0; padding: 0; }
+.reg-group { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); padding: 12px 10px 6px; display: flex; align-items: center; gap: 8px; }
+.reg-list-pane section:first-child .reg-group { padding-top: 6px; }
+.reg-row .right { gap: 5px; }
+.reg-row-chips { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.page-head .seg { align-self: flex-end; }
+.seg button.on { background: var(--forest-700); color: var(--on-dark); }
+
+/* Inspector */
+.essentials { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1280px) { .essentials { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ess { background: var(--sage-100); border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: 12px 14px; min-width: 0; }
+.ess p { margin: 0 0 4px; font-size: 13px; }
+.ess .section-title { margin-bottom: 6px; }
+.reg-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1180px) { .reg-cols { grid-template-columns: 1fr; } }
+.reg-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.reg-cols .kv { grid-template-columns: 130px 1fr; }
+.reg-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.reg-list.compact { font-size: 12.5px; gap: 2px; }
+.stages { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.stages li::marker { color: var(--gold-deep); }
+.doc-checks { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.doc-checks li { display: flex; align-items: center; gap: 8px; }
+.doc-checks li.ok svg { color: var(--good); }
+.doc-checks li.gap svg { color: var(--sage-400); }
+.kpi-met { color: #2f5b33; font-weight: 500; }
+.kpi-missed { color: var(--bad); font-weight: 500; }
+.trend { font-size: 11.5px; }
+.trend-up { color: #2f5b33; }
+.trend-down { color: var(--bad); }
+
+/* Portfolio */
+.grid.tiles.reg-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.reg-tiles .tile .num { font-size: 30px; }
+.op-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--sage-200); }
+.op-bar span { height: 100%; border: 0; border-radius: 0; }
+.op-bar .op-verified { background: var(--good); }
+.op-bar .op-failing { background: var(--bad); }
+.op-bar .op-configured { background: var(--sage-400); }
+.op-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); }
+.op-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.op-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 0; }
+.op-legend i.op-verified { background: var(--good); }
+.op-legend i.op-failing { background: var(--bad); }
+.op-legend i.op-configured { background: var(--sage-400); }
+.cat-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.cat-bars li { display: flex; align-items: center; gap: 10px; }
+.cat-bars .grow { flex: 1; min-width: 0; }
+.cat-bars .bar { width: 40%; height: 8px; background: var(--sage-200); border-radius: 999px; overflow: hidden; }
+.cat-bars .bar i { display: block; height: 100%; background: var(--forest-600); }
+.cat-bars .n { width: 24px; text-align: right; font-variant-numeric: tabular-nums; }
+.portfolio .list-row { align-items: center; }
+
+/* Goals & performance */
+.goals-table td { vertical-align: top; }
+.goals-table .title { font-weight: 500; }
+.goals-table .meta { color: var(--ink-3); font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 3px; }

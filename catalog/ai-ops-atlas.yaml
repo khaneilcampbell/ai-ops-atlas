@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
@@ -31,7 +32,7 @@ agents:
         evidence: .github/workflows/ci.yml runs lint, tests, Rust checks and dependency audits; no AI model
       mission:
         problem: Keeps main releasable now that branch protection requires green checks.
-        outcomes: [Every pull request is linted, tested and audited before merge]
+        outcomes: ["Every pull request is linted, tested and audited before merge"]
         beneficiaries: [KC, Atlas contributors]
       responsibilities:
         tasks: [Lint and test the frontend, Build the web bundle, "Rust fmt, clippy and tests", npm and cargo dependency audits, Optional macOS app bundle on manual dispatch]

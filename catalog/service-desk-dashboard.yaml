@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 

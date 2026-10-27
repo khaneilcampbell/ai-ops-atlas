@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
@@ -41,7 +42,7 @@ agents:
         problem: Runs the commerce pipeline unattended on a VPS.
         outcomes: [Each cycle runs the right phases for the week's publish budget]
       responsibilities:
-        tasks: [Preflight credential check, Choose build, design or maintain mode, Run phases 1 to 7, Log failures]
+        tasks: [Preflight credential check, "Choose build, design or maintain mode", Run phases 1 to 7, Log failures]
         tools: [Bash, systemd]
         inputs: [.env settings, SQLite queue, outputs folder]
         outputs: [logs/loop.log, logs/loop_errors.log]

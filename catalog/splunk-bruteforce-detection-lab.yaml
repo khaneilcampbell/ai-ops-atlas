@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
@@ -80,7 +81,7 @@ agents:
         tasks: [Flag repeated failed SMB logons from one source]
         tools: [Splunk SPL]
         inputs: [WinEventLog:Security in index main]
-        outputs: [Rows with account, source address, count and severity]
+        outputs: ["Rows with account, source address, count and severity"]
       execution:
         trigger_type: manual
         environment: Splunk Enterprise (lab)

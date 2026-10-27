@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
@@ -62,7 +63,7 @@ agents:
         evidence: Private repository; manifest says a Claude prompt run by hand
       responsibilities:
         inputs: [Job analysis, Career database]
-        outputs: [Tailored summary, bullets, projects and skills]
+        outputs: ["Tailored summary, bullets, projects and skills"]
         dependencies: [job-analyst]
         limitations: [May re-angle verified facts but never invent them]
       execution:
@@ -93,7 +94,7 @@ agents:
         evidence: Private repository; manifest says a Claude prompt run by hand
       responsibilities:
         inputs: [Tailored resume, Career database]
-        outputs: [Accuracy, ATS, grammar and formatting review]
+        outputs: ["Accuracy, ATS, grammar and formatting review"]
         dependencies: [resume-tailor]
       execution:
         trigger_type: manual
@@ -122,7 +123,7 @@ agents:
         evidence: Private repository; manifest says a Python script that flags invalid entries
       responsibilities:
         inputs: [Career database JSON]
-        outputs: [List of invalid JSON, TODOs, unverified entries and unsourced metrics]
+        outputs: ["List of invalid JSON, TODOs, unverified entries and unsourced metrics"]
       execution:
         trigger_type: manual
         environment: Local
