@@ -3,7 +3,7 @@ import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
 import { anthropicKey } from "../intel/api";
 import { useIntel } from "../intel/state";
-import { usd } from "../intel/format";
+import { DAY_NAMES, scheduleLabel, usd } from "../intel/format";
 import type { AgentConfig, Depth } from "../intel/types";
 
 const DEPTHS: { id: Depth; label: string; hint: string }[] = [
@@ -228,24 +228,35 @@ function ConfigForm({ config }: { config: AgentConfig }) {
         <div className="grow">
           <div className="label">Scheduled analysis</div>
           <div className="muted small">
-            Re-checks assigned repositories on an interval, <b>only while the app is open</b>. Unchanged repositories are reused without a Claude call; new data costs up to {usd(draft.max_run_usd)} per repository, within the monthly budget.
+            Re-checks assigned repositories on the chosen days at the chosen time on this Mac, <b>only while the app is open</b>. A run missed while the app was closed happens once when you open it. Unchanged repositories are reused without a Claude call; new data costs up to {usd(draft.max_run_usd)} per repository, within the monthly budget.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <div className="seg" role="group" aria-label="Days">
+              {DAY_NAMES.map((name, d) => {
+                const on = draft.schedule.days.includes(d);
+                return (
+                  <button
+                    key={name}
+                    className={on ? "on" : ""}
+                    aria-pressed={on}
+                    onClick={() => set({ schedule: { ...draft.schedule, days: on ? draft.schedule.days.filter((x) => x !== d) : [...draft.schedule.days, d].sort((a, b) => a - b) } })}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="field">
+              <input type="time" value={draft.schedule.at} onChange={(e) => e.target.value && set({ schedule: { ...draft.schedule, at: e.target.value.slice(0, 5) } })} aria-label="Time" />
+            </label>
           </div>
         </div>
-        <label className="field">
-          <select value={draft.schedule.interval_hours} onChange={(e) => set({ schedule: { ...draft.schedule, interval_hours: Number(e.target.value) } })}>
-            {[6, 12, 24, 72, 168].map((h) => (
-              <option key={h} value={h}>
-                every {h < 24 ? `${h} h` : `${h / 24} day${h > 24 ? "s" : ""}`}
-              </option>
-            ))}
-          </select>
-        </label>
         <input
           type="checkbox"
           className="toggle"
           checked={draft.schedule.enabled}
           onChange={(e) => {
-            if (e.target.checked) setConsenting(true);
+            if (e.target.checked && draft.schedule.days.length > 0) setConsenting(true);
             else set({ schedule: { ...draft.schedule, enabled: false, consent_at: null } });
           }}
           aria-label="Scheduled analysis"
@@ -255,7 +266,7 @@ function ConfigForm({ config }: { config: AgentConfig }) {
         <div className="setting">
           <div className="notice grow">
             <span>
-              Turn on unattended runs for {draft.assigned.length} assigned repositor{draft.assigned.length === 1 ? "y" : "ies"} every {draft.schedule.interval_hours} hours? They send repository data to Anthropic and spend API credit without asking each time.
+              Turn on unattended runs for {draft.assigned.length} assigned repositor{draft.assigned.length === 1 ? "y" : "ies"} ({scheduleLabel(draft.schedule)})? They send repository data to Anthropic and spend API credit without asking each time.
             </span>
           </div>
           <button

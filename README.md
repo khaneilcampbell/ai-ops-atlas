@@ -73,7 +73,7 @@ The agent needs an Anthropic API key. Create one at [console.anthropic.com](http
 
 - Spending is capped per run (default $0.40) and per month (default $5.00). The worst case is checked before anything is sent.
 - If nothing in a repository changed since the last analysis, the saved one is reused without calling Claude.
-- Scheduled analysis is off until you turn it on and confirm it, and it only runs while the app is open.
+- Scheduled analysis (chosen days and time, preset to Mon, Wed and Fri at 08:00) is off until you turn it on and confirm it, and it only runs while the app is open.
 - Costs shown are estimates from Anthropic's reported token counts. The Anthropic Console has the billed amounts.
 
 The full guide, including what is sent to Anthropic, is in [docs/repository-intelligence.md](docs/repository-intelligence.md).

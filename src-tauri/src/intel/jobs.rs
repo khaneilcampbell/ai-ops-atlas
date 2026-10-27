@@ -108,8 +108,12 @@ pub fn validate_config(c: &AgentConfig) -> Result<(), String> {
     if !(1..=6).contains(&c.max_attempts) {
         return Err("Attempts must be between 1 and 6.".into());
     }
-    if !(6..=720).contains(&c.schedule.interval_hours) {
-        return Err("The schedule interval must be between 6 and 720 hours.".into());
+    let s = &c.schedule;
+    if s.days.iter().any(|d| *d > 6) || s.time_of_day().is_none() {
+        return Err("The schedule needs valid days and a time like 08:00.".into());
+    }
+    if s.enabled && s.days.is_empty() {
+        return Err("Choose at least one day for scheduled analysis.".into());
     }
     if c.schedule.enabled && c.schedule.consent_at.is_none() {
         return Err(
@@ -801,20 +805,23 @@ impl Agent {
         {
             return vec![];
         }
-        let every = chrono::Duration::hours(s.interval_hours as i64);
+        let Some(slot) = s.latest_slot(&now.with_timezone(&chrono::Local)) else {
+            return vec![];
+        };
         g.config
             .assigned
             .iter()
             .filter(|repo| !g.active.iter().any(|a| a.repo.eq_ignore_ascii_case(repo)))
             .filter(|repo| {
-                // Any attempt counts, so a failing repository waits a full interval too.
+                // Any attempt since the latest slot counts, so a failing repository waits for
+                // the next slot. A slot missed while the app was closed runs once on launch.
                 let last = g
                     .runs
                     .iter()
                     .filter(|r| r.repo.eq_ignore_ascii_case(repo))
                     .filter_map(|r| DateTime::parse_from_rfc3339(&r.queued_at).ok())
                     .max();
-                last.map_or(true, |t| now - t.with_timezone(&Utc) >= every)
+                last.map_or(true, |t| t.with_timezone(&Utc) < slot)
             })
             .cloned()
             .collect()
@@ -1287,9 +1294,46 @@ pub mod tests {
             r.agent.schedule_tick(Utc::now()).is_empty(),
             "not due again until the interval passes"
         );
-        let later = Utc::now() + chrono::Duration::hours(25);
+        let later = Utc::now() + chrono::Duration::days(8);
         assert_eq!(r.agent.due(later), vec!["o/r".to_string()]);
         assert_eq!(last(&r.agent).trigger, Trigger::Scheduled);
+    }
+
+    #[test]
+    fn schedule_slots_follow_days_and_time() {
+        use chrono::TimeZone;
+        let s = Schedule::default(); // Mon, Wed, Fri at 08:00
+        let tz = chrono::FixedOffset::west_opt(5 * 3600).unwrap();
+        let at = |d, h, m| tz.with_ymd_and_hms(2026, 10, d, h, m, 0).unwrap();
+        let utc = |t: chrono::DateTime<chrono::FixedOffset>| t.with_timezone(&Utc);
+        // 2026-10-26 is a Monday.
+        assert_eq!(s.latest_slot(&at(26, 8, 5)), Some(utc(at(26, 8, 0))));
+        assert_eq!(
+            s.latest_slot(&at(26, 7, 59)),
+            Some(utc(at(23, 8, 0))),
+            "Friday before"
+        );
+        assert_eq!(
+            s.latest_slot(&at(27, 12, 0)),
+            Some(utc(at(26, 8, 0))),
+            "Tuesday"
+        );
+        assert_eq!(
+            s.latest_slot(&at(28, 8, 0)),
+            Some(utc(at(28, 8, 0))),
+            "Wednesday"
+        );
+        let none = Schedule {
+            days: vec![],
+            ..Schedule::default()
+        };
+        assert_eq!(none.latest_slot(&at(26, 9, 0)), None);
+        let mut c = AgentConfig::default();
+        c.schedule.at = "8am".into();
+        assert!(validate_config(&c).is_err());
+        c.schedule.at = "08:00".into();
+        c.schedule.days = vec![7];
+        assert!(validate_config(&c).is_err());
     }
 
     #[test]

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
-import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, tokens, usd } from "../intel/format";
+import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, scheduleLabel, tokens, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
 import type { AgentStatus, Run } from "../intel/types";
 
@@ -90,7 +90,7 @@ function Inspector({ status }: { status: AgentStatus }) {
               {usd(c.max_run_usd, 2)} per run · {usd(c.monthly_budget_usd, 2)} per month · {c.max_attempts} attempts · {c.timeout_secs}s timeout
             </dd>
             <dt>Schedule</dt>
-            <dd>{c.schedule.enabled ? `Every ${c.schedule.interval_hours} h while the app is open` : "Off (manual runs only)"}</dd>
+            <dd>{c.schedule.enabled ? `${scheduleLabel(c.schedule)}, while the app is open` : "Off (manual runs only)"}</dd>
             <dt>Last success</dt>
             <dd>{lastSuccess ? `${formatDate(lastSuccess.finished_at)} (${relative(lastSuccess.finished_at)}) · ${lastSuccess.repo} · ${duration(lastSuccess.duration_ms)}` : <span className="muted">None yet</span>}</dd>
             <dt>Last error</dt>

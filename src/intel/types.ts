@@ -19,7 +19,8 @@ export interface AgentConfig {
   timeout_secs: number;
   max_attempts: number;
   refusal_fallback: boolean;
-  schedule: { enabled: boolean; interval_hours: number; consent_at: string | null };
+  /** days: 0 = Monday … 6 = Sunday; at: local "HH:MM". */
+  schedule: { enabled: boolean; days: number[]; at: string; consent_at: string | null };
   assigned: string[];
 }
 

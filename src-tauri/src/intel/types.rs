@@ -105,7 +105,10 @@ impl Models {
 #[serde(default)]
 pub struct Schedule {
     pub enabled: bool,
-    pub interval_hours: u32,
+    /// Days to run on, 0 = Monday to 6 = Sunday, in the Mac's local time.
+    pub days: Vec<u8>,
+    /// Local time of day to run, "HH:MM".
+    pub at: String,
     /// When the user confirmed unattended runs. Enabling without consent is refused.
     pub consent_at: Option<String>,
 }
@@ -114,9 +117,40 @@ impl Default for Schedule {
     fn default() -> Self {
         Self {
             enabled: false,
-            interval_hours: 24,
+            days: vec![0, 2, 4],
+            at: "08:00".into(),
             consent_at: None,
         }
+    }
+}
+
+impl Schedule {
+    pub fn time_of_day(&self) -> Option<chrono::NaiveTime> {
+        chrono::NaiveTime::parse_from_str(&self.at, "%H:%M").ok()
+    }
+
+    /// The most recent scheduled moment at or before `now`, in `now`'s time zone.
+    pub fn latest_slot<Tz: chrono::TimeZone>(
+        &self,
+        now: &chrono::DateTime<Tz>,
+    ) -> Option<chrono::DateTime<chrono::Utc>> {
+        use chrono::Datelike;
+        let at = self.time_of_day()?;
+        let today = now.date_naive();
+        (0..8i64).find_map(|back| {
+            let day = today - chrono::Duration::days(back);
+            if !self
+                .days
+                .contains(&(day.weekday().num_days_from_monday() as u8))
+            {
+                return None;
+            }
+            let slot = day
+                .and_time(at)
+                .and_local_timezone(now.timezone())
+                .earliest()?;
+            (slot <= *now).then(|| slot.with_timezone(&chrono::Utc))
+        })
     }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duration, lastRuns, rollup, runTone, usd } from "./format";
+import { duration, lastRuns, rollup, runTone, scheduleLabel, usd } from "./format";
 import type { Run } from "./types";
 
 function run(p: Partial<Run>): Run {
@@ -74,5 +74,13 @@ describe("formatting", () => {
     expect(l.latest?.id).toBe("3");
     expect(l.lastSuccess?.id).toBe("1");
     expect(l.lastFailure?.id).toBe("3");
+  });
+});
+
+describe("scheduleLabel", () => {
+  it("names the days in order with the time", () => {
+    expect(scheduleLabel({ enabled: true, days: [4, 0, 2], at: "08:00", consent_at: null })).toBe("Mon, Wed and Fri at 08:00");
+    expect(scheduleLabel({ enabled: true, days: [6], at: "21:30", consent_at: null })).toBe("Sun at 21:30");
+    expect(scheduleLabel({ enabled: false, days: [], at: "08:00", consent_at: null })).toBe("No days chosen");
   });
 });

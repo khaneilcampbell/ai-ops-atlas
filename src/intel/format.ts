@@ -1,4 +1,4 @@
-import type { AiState, Run, RunStatus } from "./types";
+import type { AgentConfig, AiState, Run, RunStatus } from "./types";
 
 export function usd(v: number | null | undefined, digits?: number): string {
   if (v == null || !Number.isFinite(v)) return "–";
@@ -112,4 +112,14 @@ export function lastRuns(runs: Run[]) {
     lastSuccess: runs.find((r) => r.status === "succeeded"),
     lastFailure: runs.find((r) => r.status === "failed" || r.status === "interrupted"),
   };
+}
+
+export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** "Mon, Wed and Fri at 08:00" */
+export function scheduleLabel(s: AgentConfig["schedule"]): string {
+  const days = [...s.days].sort((a, b) => a - b).map((d) => DAY_NAMES[d] ?? "?");
+  if (days.length === 0) return "No days chosen";
+  const list = days.length === 7 ? "Every day" : days.length === 1 ? days[0] : `${days.slice(0, -1).join(", ")} and ${days[days.length - 1]}`;
+  return `${list} at ${s.at}`;
 }
