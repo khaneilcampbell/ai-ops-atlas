@@ -7,6 +7,7 @@ import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
 import { IntelPanel } from "./IntelPanel";
+import { RerunButton } from "./RerunButton";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -235,6 +236,7 @@ function RepoDetail({ name }: { name: string }) {
                     <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
                       {relative(r.createdAt)}
                     </span>
+                    <RerunButton repo={name} run={r} />
                   </li>
                 ))}
               </ul>

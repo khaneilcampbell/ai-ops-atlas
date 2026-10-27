@@ -16,7 +16,7 @@ The Agents page is a registry of every agent, automation and pipeline in the cat
 
 **Titles are display only.** A registry `title` replaces the display name everywhere in the app. The agent `id`, manifest `name` (kept as *Manifest name*), source paths and workflow names never change, so discovery and live sources are unaffected.
 
-**Autonomy is a label.** Levels 0 to 4 describe what each agent may do in its own environment. Atlas has no controls to start, approve or change agents at any level.
+**Autonomy is a label.** Levels 0 to 4 describe what each agent may do in its own environment. Atlas has no controls to start, approve or change agents, with one exception: the Failed Workflow Re-run action (level 2), which re-runs a failed GitHub Actions run after KC approves it. See [actions.md](actions.md).
 
 **Validation.** `src/catalog/parse.ts` and `src/registry/manifest.ts` validate manifests and report problems instead of throwing. `catalog/schema/atlas-v2.schema.json` gives editors the same rules; a test keeps its enums and fields in line with the parser.
 

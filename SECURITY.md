@@ -1,6 +1,6 @@
 # Security
 
-AI Ops Atlas is a read-only desktop app. It never changes repositories or starts external agents. Its built-in Repository Intelligence Agent only reads GitHub and sends a summary of the selected repository to Anthropic.
+AI Ops Atlas is a read-only desktop app with one opt-in exception: it can re-run the failed jobs of a failed GitHub Actions run, off by default, only on repositories you enable, after a native confirmation each time, with a separate fine-grained token (Actions: write) and an audit log ([docs/actions.md](docs/actions.md)). It never otherwise changes repositories or starts external agents. Its built-in Repository Intelligence Agent only reads GitHub and sends a summary of the selected repository to Anthropic.
 
 ## How secrets are handled
 

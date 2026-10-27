@@ -14,6 +14,7 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { useActions } from "./actions/state";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -26,6 +27,8 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 
 export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
+  const actionsStatus = useActions().status;
+  const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -57,10 +60,17 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
-        <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
-          <span className="dot" />
-          Read-only
-        </span>
+        {rerunOn ? (
+          <span className="pill-mode" title="Read-only, except Re-run failed jobs on the repositories ticked in Settings. Each re-run needs your approval in a macOS dialog and is written to the audit log.">
+            <span className="dot" />
+            Read-only + re-runs
+          </span>
+        ) : (
+          <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
+            <span className="dot" />
+            Read-only
+          </span>
+        )}
       </header>
 
       <nav className="sidebar" aria-label="Sections">

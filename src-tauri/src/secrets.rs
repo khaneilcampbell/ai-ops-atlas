@@ -1,12 +1,15 @@
 //! Credential storage in the OS credential store (the macOS Keychain on a Mac).
 //! The GitHub token and the Anthropic API key are written from the settings screen and
 //! read only by the Rust clients that use them; no command returns either to the web view.
+//! The Actions token (the only credential that can write) has its own Keychain entry and is
+//! read only by `actions::client`; the read-only GitHub client never touches it.
 
 use keyring::Entry;
 
 const SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas";
 const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
+const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
 
 fn entry_for(account: &str) -> Result<Entry, String> {
     Entry::new(SERVICE, account).map_err(|e| format!("Keychain unavailable: {e}"))
@@ -33,6 +36,37 @@ fn clear(account: &str) -> Result<(), String> {
 
 pub fn read_token() -> Option<String> {
     read(ACCOUNT)
+}
+
+/// The write-scoped Actions token. Read only by the actions client at request time.
+pub fn read_actions_token() -> Option<String> {
+    read(ACTIONS_ACCOUNT)
+}
+
+/// Checks an Actions token's shape. Only fine-grained tokens are accepted, because classic
+/// tokens can't be limited to selected repositories, and it must differ from the read token.
+pub fn check_actions_token(token: &str, read_token: Option<&str>) -> Result<(), String> {
+    if !(token.starts_with("github_pat_") && looks_like_token(token)) {
+        return Err("Use a fine-grained token (starting with github_pat_) limited to the repositories you want to re-run.".into());
+    }
+    if read_token == Some(token) {
+        return Err(
+            "That's the read-only token. Create a separate token with Actions: Read and write."
+                .into(),
+        );
+    }
+    Ok(())
+}
+
+pub fn set_actions_token(token: &str) -> Result<(), String> {
+    check_actions_token(token, read_token().as_deref())?;
+    entry_for(ACTIONS_ACCOUNT)?
+        .set_password(token)
+        .map_err(|e| format!("Could not save to the Keychain: {e}"))
+}
+
+pub fn clear_actions_token() -> Result<(), String> {
+    clear(ACTIONS_ACCOUNT)
 }
 
 /// The Anthropic key, read only by the Claude client at request time.
@@ -107,7 +141,20 @@ pub fn github_token_clear() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{looks_like_anthropic_key, looks_like_token};
+    use super::{check_actions_token, looks_like_anthropic_key, looks_like_token};
+
+    #[test]
+    fn actions_token_must_be_fine_grained_and_separate() {
+        let pat = "github_pat_11ABCDEFG0123456789_abcdefghijklmnop";
+        assert!(check_actions_token(pat, None).is_ok());
+        assert!(check_actions_token(pat, Some("ghp_other")).is_ok());
+        assert!(
+            check_actions_token(pat, Some(pat)).is_err(),
+            "same as read token"
+        );
+        assert!(check_actions_token("ghp_abcdefghijklmnopqrstuvwxyz0123456789", None).is_err());
+        assert!(check_actions_token("github_pat_short", None).is_err());
+    }
 
     #[test]
     fn token_shapes() {
