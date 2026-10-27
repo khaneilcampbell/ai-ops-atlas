@@ -1,8 +1,10 @@
 import type { Catalog } from "../catalog/types";
 import type { RepoState, WorkflowRun } from "../github/types";
 import { repoData } from "./derive";
+import type { Run as IntelRun } from "../intel/types";
+import { RUN_LABEL, usd } from "../intel/format";
 
-export type EventKind = "commit" | "ci" | "agent" | "manifest";
+export type EventKind = "commit" | "ci" | "agent" | "intel" | "manifest";
 export type EventResult = "success" | "failure" | "running" | "other";
 
 export interface AtlasEvent {
@@ -29,7 +31,14 @@ export function runResult(r: WorkflowRun): EventResult {
  * Every event Atlas has actually seen: commits and workflow runs from the GitHub snapshots,
  * runs of workflows that agents declare as their live source, and history written in manifests.
  */
-export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = []): AtlasEvent[] {
+export function intelResult(r: IntelRun): EventResult {
+  if (r.status === "queued" || r.status === "running") return "running";
+  if (r.status === "succeeded" || r.status === "reused") return "success";
+  if (r.status === "failed" || r.status === "interrupted" || r.status === "blocked") return "failure";
+  return "other";
+}
+
+export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = []): AtlasEvent[] {
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
   const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
@@ -74,6 +83,21 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
     for (const h of a.history) {
       out.push({ id: `hist:${a.id}:${h.at}:${h.event}`, at: h.at, kind: "manifest", title: h.event, detail: `${a.name} · recorded in the manifest`, repo: a.repository, projectId: a.projectId, agentId: a.id });
     }
+  }
+  // Runs of the repository intelligence agent, recorded by the desktop app.
+  for (const r of intelRuns) {
+    const project = projectByRepo.get(r.repo);
+    const cost = r.cost_usd != null ? ` · ${usd(r.cost_usd)}` : "";
+    out.push({
+      id: `intel:${r.id}`,
+      at: r.started_at ?? r.queued_at,
+      kind: "intel",
+      result: intelResult(r),
+      title: `Repository intelligence: ${RUN_LABEL[r.status]}`,
+      detail: `${label(r.repo)} · ${r.trigger} · ${r.model}${cost}`,
+      repo: r.repo,
+      projectId: project?.id,
+    });
   }
   return out.sort((x, y) => y.at.localeCompare(x.at));
 }

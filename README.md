@@ -2,7 +2,7 @@
 
 A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
 
-This first release is a **read-only catalog**. It reads project manifests and public GitHub data. Nothing in the app can start an agent or change a repository.
+Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. Nothing in the app can change a repository or start an external agent.
 
 ## What it does
 
@@ -14,7 +14,8 @@ This first release is a **read-only catalog**. It reads project manifests and pu
 | Workspace map | An isometric map: each project is a district, its repository is the HQ in the middle and its agents are the houses around it. Pan, zoom, hover and click |
 | Details | A side panel for any agent or repository with its description, links, status and activity history |
 | Search | `⌘K` searches agents and repositories from anywhere |
-| Settings | Refresh interval, cache, map labels, and an optional GitHub token stored in the macOS Keychain |
+| Repository intelligence | Pick a repository and the agent reads it from GitHub, asks Claude for a structured assessment and saves a report. Verified facts are kept apart from Claude's unverified recommendations. **Intel** shows the agent's configuration, every run with its trace, and token and cost totals. See [docs/repository-intelligence.md](docs/repository-intelligence.md) |
+| Settings | Refresh interval, cache, map labels, an optional GitHub token, and the Anthropic key, budgets and schedule for the intelligence agent. Keys are stored in the macOS Keychain |
 
 ## Run it
 
@@ -66,6 +67,17 @@ Statuses and last-run times in the manifests are a starting point. Correct them 
 - With a token, private repositories work and the limit rises. Use a fine-grained token with read-only **Contents**, **Metadata** and **Actions** access. It is saved in the macOS Keychain under `com.khaneilcampbell.ai-ops-atlas`, attached to requests by the Rust side, and never returned to the web view, shown in the interface or logged.
 - Preferences and cached GitHub metadata are kept in the app's local storage on your Mac.
 
+## Repository intelligence
+
+The agent needs an Anthropic API key. Create one at [console.anthropic.com](https://console.anthropic.com/settings/keys) (ideally in its own workspace with a spend limit), then paste it in **Settings → Repository intelligence**. It is stored in the Keychain and only the Rust side reads it.
+
+- Spending is capped per run (default $0.40) and per month (default $5.00). The worst case is checked before anything is sent.
+- If nothing in a repository changed since the last analysis, the saved one is reused without calling Claude.
+- Scheduled analysis (chosen days and time, preset to Mon, Wed and Fri at 08:00) is off until you turn it on and confirm it, and it only runs while the app is open.
+- Costs shown are estimates from Anthropic's reported token counts. The Anthropic Console has the billed amounts.
+
+The full guide, including what is sent to Anthropic, is in [docs/repository-intelligence.md](docs/repository-intelligence.md).
+
 ## Layout
 
 ```
@@ -75,11 +87,15 @@ src/github/         read-only GitHub client and snapshot types
 src/lib/            health, attention and activity rules; search; time; storage
 src/views/          Overview, Agents, Repositories, Map, Settings
 src/components/     detail panel, filters, icons, status pills
-src-tauri/          desktop shell: read-only GitHub proxy and Keychain token storage
+src/intel/          intelligence agent bridge, types and formatting
+src-tauri/          desktop shell: read-only GitHub proxy and Keychain storage
+src-tauri/src/intel/  Repository Intelligence Agent: collection, prompt, Claude client, validation, budgets, jobs
 ```
 
 ## Roadmap
 
-1. **Now:** read-only catalog, GitHub data, lists, details, search and the map.
-2. **Next:** live n8n visibility (workflow executions and failures), filling in `last_run` and history automatically.
-3. **Later:** small project-specific adapters for CrewAI and local agents, and a local database if run history outgrows the cache.
+1. **Done:** read-only catalog, GitHub data, lists, details, search and the map.
+2. **Now:** the Repository Intelligence Agent.
+3. **Next:** a persistent background worker for scheduled analysis, and a CI failure triage agent (see the [agent roadmap](docs/repository-intelligence.md#10-roadmap-for-the-next-autonomous-agent)).
+4. **Then:** live n8n visibility (workflow executions and failures), filling in `last_run` and history automatically.
+5. **Later:** small project-specific adapters for CrewAI and local agents, and a local database if run history outgrows the cache.

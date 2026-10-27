@@ -13,12 +13,14 @@ import { AgentsView } from "./views/Agents";
 import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
+import { IntelligenceView } from "./views/Intelligence";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
   { view: "overview", label: "Mission", icon: "overview" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "activity", label: "Activity", icon: "pulse" },
+  { view: "intel", label: "Intel", icon: "spark" },
   { view: "repos", label: "Repos", icon: "repos" },
 ];
 
@@ -55,7 +57,7 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
-        <span className="pill-mode" title="This release only reads data. Nothing in the app can start agents or change repositories.">
+        <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
           <span className="dot" />
           Read-only
         </span>
@@ -83,6 +85,7 @@ export default function App() {
         {view === "agents" && <AgentsView />}
         {view === "repos" && <ReposView />}
         {view === "map" && <MapView />}
+        {view === "intel" && <IntelligenceView />}
         {view === "settings" && <SettingsView />}
       </main>
 

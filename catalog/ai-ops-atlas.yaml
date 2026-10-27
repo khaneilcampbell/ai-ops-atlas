@@ -21,3 +21,14 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+
+  - id: repo-intelligence
+    name: Repository Intelligence Agent
+    purpose: Reads one selected repository from GitHub (read-only) and asks Claude for a structured health report with verified facts kept separate from AI recommendations.
+    framework: Claude API (Messages, structured output)
+    model: claude-sonnet-5-5 by default; haiku-5-5 quick, opus-5-5 deep
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Manual from a repository's panel; optional schedule, off by default
+    source: src-tauri/src/intel/mod.rs
+    last_run: null

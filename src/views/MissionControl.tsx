@@ -5,12 +5,17 @@ import { activityFeed, type AttentionItem } from "../lib/derive";
 import { workspaceMetrics, type DayBucket } from "../lib/metrics";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
+import { useIntel } from "../intel/state";
+import { rollup, usd } from "../intel/format";
 
 const WINDOW = 14;
 
 /** The analytics layout: one click from the map, counted only from manifests and GitHub. */
 export function MissionControl({ attention }: { attention: AttentionItem[] }) {
   const { catalog, repos, uncataloged, usage, select, setView, setFilters, clearFilters } = useAtlas();
+  const intel = useIntel();
+  const intelRuns = intel.status?.runs;
+  const spend = useMemo(() => (intelRuns ? rollup(intelRuns) : null), [intelRuns]);
   const m = useMemo(() => workspaceMetrics(catalog, repos, uncataloged, Date.now(), WINDOW), [catalog, repos, uncataloged]);
   const activity = useMemo(() => activityFeed(catalog, repos).slice(0, 10), [catalog, repos]);
   const toAgents = (status?: string) => {
@@ -100,11 +105,31 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
             )}
             <div className="api-row">
               <div className="grow">
-                <div className="title">Model API spend</div>
-                <div className="meta">No cost source is connected yet. Spend appears here once an agent reports its usage to Atlas.</div>
+                <div className="title">Model API spend this month</div>
+                <div className="meta">
+                  {intel.status
+                    ? `Repository intelligence · ${spend?.runsWithCost ?? 0} priced runs · estimated from reported tokens`
+                    : "Appears once repository intelligence has run in the desktop app."}
+                </div>
               </div>
-              <span className="na">Not available</span>
+              {intel.status ? (
+                <button className="api-num text-btn" onClick={() => setView("intel")} title="Open Intel">
+                  {usd(intel.status.month_spent_usd, 2)}
+                  {intel.status.config.monthly_budget_usd > 0 && <span className="muted"> / {usd(intel.status.config.monthly_budget_usd, 0)}</span>}
+                </button>
+              ) : (
+                <span className="na">Not available</span>
+              )}
             </div>
+            {intel.status && intel.status.config.monthly_budget_usd > 0 && (
+              <div
+                className="meter"
+                role="img"
+                aria-label={`${usd(intel.status.month_spent_usd, 2)} of ${usd(intel.status.config.monthly_budget_usd, 0)} monthly model budget used`}
+              >
+                <i style={{ width: `${Math.min(100, Math.round((intel.status.month_spent_usd / intel.status.config.monthly_budget_usd) * 100))}%`, background: "var(--gold)" }} />
+              </div>
+            )}
           </div>
         </section>
       </div>

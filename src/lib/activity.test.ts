@@ -55,3 +55,16 @@ describe("workspaceEvents", () => {
     expect(filterEvents(events, { ...base, query: "fix" }, now)).toHaveLength(1);
   });
 });
+
+describe("intelligence runs", () => {
+  it("adds repository intelligence runs with their result and cost", () => {
+    const run = {
+      id: "r1", repo: "me/p", trigger: "manual", depth: "standard", model: "claude-x", force: false, status: "failed",
+      queued_at: "2026-10-26T13:00:00Z", started_at: "2026-10-26T13:00:01Z", finished_at: null, duration_ms: null, error: null,
+      attempts: 1, github_requests: 3, usage: null, estimate: null, cost_usd: 0.0123, trace: [],
+    } as const;
+    const e = workspaceEvents(catalog, repos, [], [run]).find((x) => x.kind === "intel")!;
+    expect(e).toMatchObject({ result: "failure", projectId: "p", at: "2026-10-26T13:00:01Z" });
+    expect(e.detail).toContain("$0.012");
+  });
+});

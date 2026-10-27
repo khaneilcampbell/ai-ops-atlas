@@ -216,7 +216,7 @@ table.table { width: 100%; border-collapse: collapse; }
 /* ── Detail panel ────────────────────────────────── */
 .scrim { position: fixed; inset: 64px 0 0 76px; background: rgba(22, 33, 26, 0.18); animation: fade 0.15s ease; }
 .panel {
-  position: fixed; top: 64px; right: 0; bottom: 0; width: min(480px, 92vw); background: var(--sage-50);
+  position: fixed; top: 64px; right: 0; bottom: 0; width: min(560px, 94vw); background: var(--sage-50);
   box-shadow: -12px 0 40px rgba(22, 33, 26, 0.2); display: flex; flex-direction: column; animation: slide 0.18s ease;
 }
 .panel-head { padding: 20px 22px 16px; border-bottom: 1px solid var(--sage-200); display: flex; gap: 12px; align-items: flex-start; }
@@ -534,3 +534,40 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .insight .value { font-family: var(--serif); font-size: 22px; margin-top: 2px; }
 .insight .note { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .panel.docked .panel-head .status, .panel.docked .panel-head .health-badge { background: rgba(233, 236, 223, 0.1); border-color: var(--forest-line); color: var(--on-dark); }
+
+/* ── Repository intelligence ─────────────────────── */
+.intel { display: flex; flex-direction: column; gap: 12px; }
+.intel-head { display: flex; align-items: center; gap: 8px; }
+.intel-head .grow { flex: 1; }
+.intel-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.intel-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.intel-confirm { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--radius-sm); background: var(--sage-100); border: 1px solid var(--sage-200); }
+.intel-running { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--sage-100); }
+.intel-running .grow { flex: 1; min-width: 0; }
+.notice.bad { background: rgba(164, 72, 58, 0.1); color: var(--bad); }
+.chip-warn { color: var(--gold-deep); background: var(--gold-soft); border-color: rgba(201, 163, 90, 0.5); }
+.chip-gold { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
+.chip-x { border: 0; background: none; padding: 0 0 0 2px; color: var(--ink-3); display: inline-flex; }
+.chip-x:hover { color: var(--bad); }
+.verified-box, .ai-box { border-radius: var(--radius-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; }
+.verified-box { background: var(--sage-100); border: 1px solid var(--sage-200); }
+.ai-box { background: #f6f2e6; border: 1px solid rgba(201, 163, 90, 0.45); border-left: 3px solid var(--gold); }
+.box-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
+.ai-box .box-label { color: var(--gold-deep); }
+.findings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.findings li { display: flex; gap: 8px; }
+.findings .grow { flex: 1; min-width: 0; }
+.sev.critical { background: var(--bad); }
+.obs, .recs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.ref { display: inline-block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: rgba(29, 43, 34, 0.06); border-radius: 4px; padding: 0 4px; margin-left: 3px; }
+.ref.ungrounded { font-family: var(--sans); font-style: italic; background: none; }
+.prio { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--sage-200); color: var(--ink-2); }
+.prio.p-high { background: rgba(164, 72, 58, 0.14); color: var(--bad); }
+.prio.p-medium { background: var(--gold-soft); color: var(--gold-deep); }
+.seg { display: inline-flex; background: var(--sage-50); border-radius: 10px; padding: 3px; box-shadow: var(--shadow); }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 8px; color: var(--ink-2); }
+.seg button.on { background: var(--forest-700); color: var(--on-dark); }
+.timeline li.k-bad::before { background: var(--bad); }
+.bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); margin-top: 10px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--gold); }
+.obs.plain { list-style: none; padding-left: 0; }

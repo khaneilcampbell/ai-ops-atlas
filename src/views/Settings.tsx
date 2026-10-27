@@ -3,6 +3,7 @@ import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
 import { useAtlas } from "../state";
+import { IntelSettings } from "./IntelSettings";
 
 export function SettingsView() {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
@@ -25,6 +26,8 @@ export function SettingsView() {
         <TokenSetting onChange={() => void refresh(true)} />
         <UsageSetting usage={usage} />
       </section>
+
+      <IntelSettings />
 
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">

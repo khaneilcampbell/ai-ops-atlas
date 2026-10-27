@@ -6,6 +6,7 @@ import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
+import { IntelPanel } from "./IntelPanel";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -422,7 +423,13 @@ function RepoInsights({ name }: { name: string }) {
     () => attentionItems(catalog, repos, [], Date.now(), uncataloged).filter((i) => i.target && (i.target.id === name || agents.some((a) => a.id === i.target!.id))),
     [catalog, repos, uncataloged, name, agents],
   );
-  if (!snap) return <div className="muted small">Insights appear after the first sync with GitHub.</div>;
+  if (!snap)
+    return (
+      <>
+        <div className="muted small">Insights appear after the first sync with GitHub.</div>
+        <IntelPanel repo={name} />
+      </>
+    );
   const done = snap.runs.filter((r) => r.status === "completed");
   const ok = done.filter((r) => r.conclusion === "success").length;
   const since = Date.now() - 14 * 86_400_000;
@@ -473,9 +480,7 @@ function RepoInsights({ name }: { name: string }) {
           </ul>
         )}
       </section>
-      <p className="muted small" style={{ margin: 0 }}>
-        AI analysis reports for this repository will appear here once repository intelligence is turned on.
-      </p>
+      <IntelPanel repo={name} />
     </>
   );
 }
