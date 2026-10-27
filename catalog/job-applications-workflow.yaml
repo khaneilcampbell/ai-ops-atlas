@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: career-optimizer
@@ -25,6 +26,21 @@ agents:
     trigger: Manual, per application
     source: prompts/job-analysis.md
     last_run: null
+    registry:
+      title: Job Requirements Analyst
+      category: career
+      subcategory: Job description analysis
+      classification:
+        type: B
+        confidence: unverified
+        evidence: Private repository; manifest says a Claude prompt run by hand
+      responsibilities:
+        inputs: [Job posting, Career database]
+        outputs: [Required and preferred skills, Gaps, Match assessment]
+      execution:
+        trigger_type: manual
+      governance:
+        autonomy: 1
 
   - id: resume-tailor
     name: Resume Tailoring Assistant
@@ -38,6 +54,23 @@ agents:
     trigger: Manual, after job analysis
     source: prompts/resume-tailoring-assistant.md
     last_run: null
+    registry:
+      category: career
+      subcategory: Resume optimization
+      classification:
+        type: B
+        confidence: unverified
+        evidence: Private repository; manifest says a Claude prompt run by hand
+      responsibilities:
+        inputs: [Job analysis, Career database]
+        outputs: ["Tailored summary, bullets, projects and skills"]
+        dependencies: [job-analyst]
+        limitations: [May re-angle verified facts but never invent them]
+      execution:
+        trigger_type: manual
+      governance:
+        autonomy: 1
+        approval: KC approves the final resume
 
   - id: resume-quality-review
     name: Quality Reviewer
@@ -51,6 +84,23 @@ agents:
     trigger: Manual, before the final resume
     source: prompts/quality-review.md
     last_run: null
+    registry:
+      title: Application Quality Reviewer
+      category: career
+      subcategory: Application quality review
+      classification:
+        type: B
+        confidence: unverified
+        evidence: Private repository; manifest says a Claude prompt run by hand
+      responsibilities:
+        inputs: [Tailored resume, Career database]
+        outputs: ["Accuracy, ATS, grammar and formatting review"]
+        dependencies: [resume-tailor]
+      execution:
+        trigger_type: manual
+      governance:
+        autonomy: 1
+        approval: Human approval before the resume is used
 
   - id: career-db-validator
     name: Career Database Validator
@@ -63,3 +113,19 @@ agents:
     trigger: Manual, python scripts/validate_database.py
     source: scripts/validate_database.py
     last_run: null
+    registry:
+      title: Career Data Quality Validator
+      category: career
+      subcategory: Data validation
+      classification:
+        type: C
+        confidence: unverified
+        evidence: Private repository; manifest says a Python script that flags invalid entries
+      responsibilities:
+        inputs: [Career database JSON]
+        outputs: ["List of invalid JSON, TODOs, unverified entries and unsourced metrics"]
+      execution:
+        trigger_type: manual
+        environment: Local
+      governance:
+        autonomy: 0

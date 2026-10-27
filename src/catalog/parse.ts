@@ -1,104 +1,7 @@
 import yaml from "js-yaml";
-import { STATUSES, type Agent, type Catalog, type HistoryEntry, type Link, type ManifestIssue, type Project, type Status } from "./types";
-
-const REPO_RE = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
-const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
-
-type Raw = Record<string, unknown>;
-
-class Reader {
-  constructor(
-    private file: string,
-    private issues: ManifestIssue[],
-  ) {}
-
-  fail(path: string, message: string) {
-    this.issues.push({ file: this.file, message: `${path}: ${message}` });
-  }
-
-  obj(v: unknown, path: string): Raw | null {
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as Raw;
-    this.fail(path, "expected a mapping");
-    return null;
-  }
-
-  str(o: Raw, key: string, path: string, required = true): string | undefined {
-    const v = o[key];
-    if (v === undefined || v === null) {
-      if (required) this.fail(`${path}.${key}`, "is required");
-      return undefined;
-    }
-    if (typeof v !== "string" || !v.trim()) {
-      this.fail(`${path}.${key}`, "must be a non-empty string");
-      return undefined;
-    }
-    return v.trim();
-  }
-
-  id(o: Raw, path: string): string | undefined {
-    const v = this.str(o, "id", path);
-    if (v && !ID_RE.test(v)) this.fail(`${path}.id`, "use lowercase letters, digits and dashes");
-    return v;
-  }
-
-  status(o: Raw, path: string): Status {
-    const v = this.str(o, "status", path);
-    if (v && (STATUSES as readonly string[]).includes(v)) return v as Status;
-    if (v) this.fail(`${path}.status`, `must be one of ${STATUSES.join(", ")}`);
-    return "idle";
-  }
-
-  date(o: Raw, key: string, path: string): string | null {
-    const v = o[key];
-    if (v === undefined || v === null) return null;
-    // YAML parses bare timestamps into Date objects.
-    if (v instanceof Date) return v.toISOString();
-    if (typeof v === "string" && !Number.isNaN(Date.parse(v))) return new Date(v).toISOString();
-    this.fail(`${path}.${key}`, "must be an ISO date or null");
-    return null;
-  }
-
-  list(o: Raw, key: string, path: string): unknown[] {
-    const v = o[key];
-    if (v === undefined || v === null) return [];
-    if (Array.isArray(v)) return v;
-    this.fail(`${path}.${key}`, "expected a list");
-    return [];
-  }
-
-  links(o: Raw, path: string): Link[] {
-    return this.list(o, "links", path).flatMap((l, i) => {
-      const lo = this.obj(l, `${path}.links[${i}]`);
-      if (!lo) return [];
-      const label = this.str(lo, "label", `${path}.links[${i}]`);
-      const url = this.str(lo, "url", `${path}.links[${i}]`);
-      if (!label || !url) return [];
-      if (!/^https:\/\//.test(url)) {
-        this.fail(`${path}.links[${i}].url`, "must be an https URL");
-        return [];
-      }
-      return [{ label, url }];
-    });
-  }
-
-  strings(o: Raw, key: string, path: string): string[] {
-    return this.list(o, key, path).flatMap((v, i) => {
-      if (typeof v === "string" && v.trim()) return [v.trim()];
-      this.fail(`${path}.${key}[${i}]`, "must be a non-empty string");
-      return [];
-    });
-  }
-
-  history(o: Raw, path: string): HistoryEntry[] {
-    return this.list(o, "history", path).flatMap((h, i) => {
-      const ho = this.obj(h, `${path}.history[${i}]`);
-      if (!ho) return [];
-      const at = this.date(ho, "at", `${path}.history[${i}]`);
-      const event = this.str(ho, "event", `${path}.history[${i}]`);
-      return at && event ? [{ at, event }] : [];
-    });
-  }
-}
+import { parseRegistry } from "../registry/manifest";
+import { REPO_RE, Reader } from "./reader";
+import { SCHEMAS, type Agent, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
 export function parseManifest(file: string, text: string, issues: ManifestIssue[]): Catalog {
@@ -112,7 +15,8 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
   }
   const root = r.obj(doc, "file");
   if (!root) return { projects: [], agents: [] };
-  if (root.schema !== "atlas/v1") r.fail("schema", 'must be "atlas/v1"');
+  const schema = (SCHEMAS as readonly unknown[]).includes(root.schema) ? (root.schema as (typeof SCHEMAS)[number]) : null;
+  if (!schema) r.fail("schema", `must be one of ${SCHEMAS.map((v) => `"${v}"`).join(", ")}`);
 
   const p = r.obj(root.project, "project");
   if (!p) return { projects: [], agents: [] };
@@ -132,10 +36,19 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     if (!id || !name || !purpose || !framework) return [];
     const observe = ao.observe ? r.obj(ao.observe, `${path}.observe`) : null;
     const agentRepo = r.str(ao, "repository", path, false) ?? repository;
+    let registry = undefined;
+    if (ao.registry !== undefined && ao.registry !== null) {
+      if (schema === "atlas/v1") r.fail(`${path}.registry`, 'needs schema "atlas/v2"');
+      else registry = parseRegistry(r, ao.registry, `${path}.registry`);
+    }
+    // A registry title is a display name only: the id, source paths and workflow names stay as they are.
+    const title = registry?.title;
     return [
       {
         id,
-        name,
+        name: title ?? name,
+        originalName: title && title !== name ? name : undefined,
+        registry,
         purpose,
         framework,
         model: r.str(ao, "model", path, false),
@@ -148,7 +61,9 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         permissions: r.strings(ao, "permissions", path),
         history: r.history(ao, path),
         links: r.links(ao, path),
-        observe: observe ? { githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false) } : undefined,
+        observe: observe
+          ? { githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false), atlasIntel: r.bool(observe, "atlas_intel", `${path}.observe`) }
+          : undefined,
         projectId,
         repository: agentRepo,
       },

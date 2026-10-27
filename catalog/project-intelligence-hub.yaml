@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: intelligence-hub
@@ -21,3 +22,23 @@ agents:
     trigger: Manual
     source: "10 — System Administration/Automation Scripts/build_docs.py"
     last_run: null
+    registry:
+      title: Project Documentation Builder
+      category: engineering
+      subcategory: Documentation
+      classification:
+        type: C
+        confidence: verified
+        evidence: build_docs.py renders Markdown to DOCX with pandoc and python-docx and reads no network resources
+      responsibilities:
+        tasks: [Render each project's Markdown sources to styled DOCX]
+        tools: [pandoc, python-docx]
+        inputs: [Source/project.json and Source/*.md]
+        outputs: [One DOCX per Markdown file]
+      execution:
+        trigger_type: manual
+        environment: Local
+      governance:
+        autonomy: 0
+        data_sensitivity: internal
+        risk: low

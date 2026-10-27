@@ -3,7 +3,7 @@
 Each YAML file in this folder registers one project, its repository and the agents that belong to it. The app bundles every `*.yaml` file here at build time, and `npm test` validates them.
 
 ```yaml
-schema: atlas/v1
+schema: atlas/v2                   # atlas/v1 still works; v2 adds the registry block
 
 project:
   id: commerce-pipeline            # lowercase letters, digits and dashes; unique across files
@@ -34,11 +34,99 @@ agents:
       - "Anthropic API: messages"
     observe:                       # optional read-only live sources
       github_workflow: ci.yml      # latest run of this workflow updates last run and health
+      atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
     links: []                      # optional
     history:                       # optional notable events, newest first
       - at: 2026-10-12
         event: What happened
 ```
+
+## Agent registry block (atlas/v2)
+
+Each agent may carry a `registry` block. Every field is optional: anything left out shows as **Not documented** in the app, never as a guess. Editors that understand `yaml-language-server` validate against [`schema/atlas-v2.schema.json`](schema/atlas-v2.schema.json); `npm test` runs the real validator.
+
+```yaml
+    registry:
+      title: Website Quality Auditor     # display title; id, name, source and workflow names stay as they are
+      category: engineering              # engineering | security | business | data | career | infrastructure
+      subcategory: Code quality
+      classification:
+        type: C                          # see "Agent types" below
+        confidence: verified             # verified | provisional | unverified
+        evidence: scripts/site_audit.py uses no AI model
+      mission:
+        purpose: Defaults to the agent's purpose
+        problem: The problem it solves
+        outcomes: [Expected outcome]
+        beneficiaries: [Who it serves]
+      responsibilities:
+        tasks: [What it does]
+        tools: [Services and libraries it uses]
+        inputs: [What it consumes]
+        outputs: [What it produces]
+        dependencies: [other-agent-id]   # agent ids become links in the app
+        limitations: [Known limits]
+      goals:
+        objective: Primary objective
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability            # reliability | quality | cost | throughput | other
+            target: At least 95% of runs succeed
+            target_value: 95             # optional number, needs direction
+            direction: min               # min | max
+            basis: Why this target
+            measure: run_success_rate    # optional: run_success_rate | runs_last_30d | avg_duration_minutes | month_spend_usd
+      execution:
+        trigger_type: event              # manual | scheduled | event | continuous
+        schedule: Daily at 06:00
+        environment: GitHub-hosted runner
+        stages: [Step one, Step two]
+      governance:
+        autonomy: 0                      # 0 to 4, see "Autonomy levels"
+        autonomy_note: Why this level
+        data_sensitivity: public         # public | internal | confidential | restricted
+        approval: Who approves what
+        credential_owner: Who holds the keys
+        risk: low                        # low | medium | high
+        audit_log: Where runs are recorded
+      cost:
+        budget: Spending limit, in words
+        notes: How cost is incurred
+      docs:
+        technical: docs/how-it-works.md  # repository path or https URL
+        runbook: docs/runbook.md
+        known_issues: []
+        improvements: []
+        last_review: 2026-10-27
+```
+
+Tool permissions stay in the agent's existing `permissions` list, so there is one place for them.
+
+**Targets versus observations.** A KPI's `target` is written by a person. Its observed value is computed by the app from a live source named by `measure` and `observe`, and is never stored in YAML. Without a live source the app shows **Not connected**.
+
+### Agent types
+
+| Type | Meaning |
+|---|---|
+| `A` AI Agent | Uses an AI model to interpret inputs, reason about tasks or select actions within defined boundaries. |
+| `B` AI-Assisted Workflow | Uses an AI model inside a predefined workflow. |
+| `C` Deterministic Automation | Performs predefined steps without AI-driven decisions. |
+| `D` CI/CD Pipeline | Runs tests, builds, validation or deployment. |
+| `E` Utility or Integration | Provides a capability or connects systems without its own agent mission. |
+| `F` Planned Agent | Proposed, not implemented. |
+
+### Autonomy levels
+
+Levels describe what the agent is permitted to do in its own environment, not how capable its model is. Atlas itself is read-only at every level.
+
+| Level | Name | Meaning |
+|---|---|---|
+| 0 | Observe | Read-only data collection and monitoring. |
+| 1 | Recommend | Insights and proposed actions, no external changes. |
+| 2 | Approval required | Prepares actions a person authorizes before they run. |
+| 3 | Limited autonomous execution | Narrowly scoped actions with predefined controls. |
+| 4 | Advanced orchestration | Coordinates agents under explicit policies and audit controls. |
 
 ## Status meanings
 
