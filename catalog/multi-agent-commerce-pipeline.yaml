@@ -1,5 +1,5 @@
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: commerce-pipeline
@@ -29,6 +29,45 @@ agents:
     history:
       - at: 2026-10-12
         event: Service paths aligned with the project rename
+    registry:
+      title: Commerce Pipeline Orchestrator
+      category: infrastructure
+      subcategory: Workflow orchestration
+      classification:
+        type: C
+        confidence: verified
+        evidence: loop.sh is a Bash loop that picks build, design or maintain mode from counters and runs each phase script
+      mission:
+        problem: Runs the commerce pipeline unattended on a VPS.
+        outcomes: [Each cycle runs the right phases for the week's publish budget]
+      responsibilities:
+        tasks: [Preflight credential check, Choose build, design or maintain mode, Run phases 1 to 7, Log failures]
+        tools: [Bash, systemd]
+        inputs: [.env settings, SQLite queue, outputs folder]
+        outputs: [logs/loop.log, logs/loop_errors.log]
+        dependencies: [niche-scout, canva-mockups, shopify-publisher, seo-maintainer, health-report]
+      goals:
+        objective: Publish within the weekly limit and keep listings maintained.
+        kpis:
+          - name: Listings published per week
+            kind: throughput
+            target: At most 5
+            basis: WEEKLY_PUBLISH_LIMIT default in loop.sh
+          - name: Hours between publishes
+            kind: other
+            target: At least 24
+            basis: PUBLISH_COOLDOWN_HOURS default in loop.sh
+      execution:
+        trigger_type: continuous
+        schedule: Hourly cycle (SLEEP 3600); maintain mode sleeps until Monday 00:00 UTC
+        environment: Linux VPS (systemd shopify-pipeline service)
+        stages: [Preflight, Phase 1 brand (weekly), Phase 2 listings (weekly), Phase 3 design, Phase 5 publish, Phase 6 SEO, Phase 7 health]
+      governance:
+        autonomy: 3
+        autonomy_note: Publishes to a live store without per-item approval, bounded by the weekly limit and cooldown.
+        data_sensitivity: confidential
+        risk: high
+        audit_log: logs/loop.log and the SQLite run_log on the VPS (not connected to Atlas)
 
   - id: niche-scout
     name: Shopify Niche Scout
@@ -42,6 +81,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Market research
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+      responsibilities:
+        tools: [CrewAI, Claude API, Serper search]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: market-analyst
     name: Market Research Analyst
@@ -55,6 +112,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Market research
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+      responsibilities:
+        tools: [CrewAI, Claude API, Serper search]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: brand-strategist
     name: Brand Strategist
@@ -68,6 +143,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Product validation
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+      responsibilities:
+        tools: [CrewAI, Claude API]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: visual-director
     name: Visual Identity Director
@@ -80,6 +173,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Product validation
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+      responsibilities:
+        tools: [CrewAI, Claude API]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: copy-strategist
     name: Copywriter and SEO Strategist
@@ -93,6 +204,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Product validation
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+      responsibilities:
+        tools: [CrewAI, Claude API]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: launch-planner
     name: Launch Asset Planner
@@ -106,6 +235,24 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/shopify_brand_crew.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Product validation
+      classification:
+        type: A
+        confidence: verified
+        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+      responsibilities:
+        tools: [CrewAI, Claude API]
+        outputs: [Contribution to outputs/brand_guide.md]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 1, at most once every 7 days
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only the local brand guide that later phases read.
+        credential_owner: KC (.env on the VPS)
 
   - id: canva-mockups
     name: Canva Mockup Generator
@@ -119,6 +266,28 @@ agents:
     trigger: Phase 3, every build or design cycle
     source: scripts/canva_image_generator.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: B
+        confidence: verified
+        evidence: scripts/canva_image_generator.py makes a fixed Anthropic API call (claude-opus-4-5) with the Canva remote MCP server
+      responsibilities:
+        tasks: [Design six product images per listing in Canva, Export them as JPEG, Queue the product for build]
+        tools: [Anthropic Messages API, Canva remote MCP]
+        inputs: [Next undesigned product from outputs/master.txt]
+        outputs: [Mockup images, Queue row]
+        dependencies: [commerce-loop]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 3, every build or design cycle
+        environment: Linux VPS
+      governance:
+        autonomy: 3
+        autonomy_note: Creates designs in the connected Canva account.
+        credential_owner: KC (.env on the VPS)
+        risk: medium
 
   - id: shopify-publisher
     name: Shopify Publisher
@@ -131,6 +300,29 @@ agents:
     trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
     source: scripts/shopify_uploader.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/shopify_uploader.py posts products to the Shopify Admin REST API; no AI model
+      responsibilities:
+        tasks: [Load the ready listing, Create the Shopify product with images, Log to SQLite and mark the queue row published]
+        tools: [Shopify Admin REST API, SQLite]
+        inputs: [listing.json and images in 04_Assets/ReadyToUpload]
+        outputs: [Live Shopify product, run_log and listings rows]
+        dependencies: [canva-mockups]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 5, gated by WEEKLY_PUBLISH_LIMIT and PUBLISH_COOLDOWN_HOURS
+        environment: Linux VPS
+      governance:
+        autonomy: 3
+        autonomy_note: Publishes live products without per-item approval.
+        data_sensitivity: confidential
+        credential_owner: KC (SHOPIFY_ACCESS_TOKEN in .env on the VPS)
+        risk: high
 
   - id: seo-maintainer
     name: SEO Maintainer
@@ -143,6 +335,28 @@ agents:
     trigger: Phase 6, every maintain cycle
     source: scripts/seo_analyzer.py
     last_run: null
+    registry:
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/seo_analyzer.py uses Serper keyword results and fixed rules, then PUTs tags and metafields to Shopify; no AI model
+      responsibilities:
+        tasks: [Compare live tags with competitor keywords, Apply an optimised tag set, Update SEO title and description metafields]
+        tools: [Serper API, Shopify Admin API, SQLite]
+        inputs: [Published product name]
+        outputs: [Updated Shopify tags and metafields, seo_review row]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 6, every maintain cycle
+        environment: Linux VPS
+      governance:
+        autonomy: 3
+        autonomy_note: Changes live listings automatically unless run with --analyze-only.
+        data_sensitivity: confidential
+        credential_owner: KC (.env on the VPS)
+        risk: medium
 
   - id: health-report
     name: Health Dashboard Report
@@ -155,3 +369,24 @@ agents:
     trigger: Phase 7, daily via n8n
     source: scripts/health_dashboard.py
     last_run: null
+    registry:
+      title: Commerce Pipeline Health Reporter
+      category: infrastructure
+      subcategory: System health checks
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/health_dashboard.py queries SQLite and prints a summary; no AI model
+      responsibilities:
+        tasks: [Count listings published this week, Failure rate and average run duration, Flag queue rows stuck over 48 hours]
+        tools: [SQLite]
+        inputs: [outputs/pipeline.db]
+        outputs: [Plain-text summary captured by n8n]
+      execution:
+        trigger_type: scheduled
+        schedule: Phase 7, daily via an n8n summary workflow
+        environment: Linux VPS
+      governance:
+        autonomy: 0
+        data_sensitivity: internal
+        risk: low
