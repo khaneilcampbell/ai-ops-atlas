@@ -34,5 +34,11 @@
     "shortDescription": "AI agents, projects and repositories in one place",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "macOS": { "minimumSystemVersion": "12.0" }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5RTcxQjBCMjA5REI3MDkKUldRSnQ1MGdDeHZuS1Uzbk43eHBVdFp6dG1qZDRkRkYvaW5qMmdNbnJQNTZDQmU1YjNGNHlmY1EK",
+      "endpoints": ["https://github.com/khaneilcampbell/ai-ops-atlas/releases/download/main-build/latest.json"]
+    }
   }
 }

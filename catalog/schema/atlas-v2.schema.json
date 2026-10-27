@@ -1,0 +1,549 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "atlas-v2.schema.json",
+  "title": "AI Ops Atlas catalog manifest (atlas/v1 and atlas/v2)",
+  "description": "Editor validation for catalog/*.yaml. The TypeScript parser in src/catalog is the enforcing validator; npm test keeps the two in sync.",
+  "type": "object",
+  "required": [
+    "schema",
+    "project"
+  ],
+  "properties": {
+    "schema": {
+      "enum": [
+        "atlas/v1",
+        "atlas/v2"
+      ]
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "summary",
+        "status",
+        "repository"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "active",
+            "idle",
+            "paused",
+            "attention",
+            "retired"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "url"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https://"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "purpose",
+          "framework",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "framework": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtime": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "active",
+              "idle",
+              "paused",
+              "attention",
+              "retired"
+            ]
+          },
+          "trigger": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repository": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"
+          },
+          "last_run": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "observe": {
+            "type": "object",
+            "properties": {
+              "github_workflow": {
+                "type": "string",
+                "minLength": 1
+              },
+              "atlas_intel": {
+                "type": "boolean"
+              }
+            }
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label",
+                "url"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "at",
+                "event"
+              ],
+              "properties": {
+                "at": {
+                  "type": "string"
+                },
+                "event": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "registry": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Hand-maintained registry profile (atlas/v2). Runtime telemetry is never written here.",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Display title. The agent id and manifest name stay unchanged."
+              },
+              "suggested_title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "category": {
+                "enum": [
+                  "engineering",
+                  "security",
+                  "business",
+                  "data",
+                  "career",
+                  "infrastructure"
+                ]
+              },
+              "subcategory": {
+                "type": "string",
+                "minLength": 1
+              },
+              "classification": {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "A",
+                      "B",
+                      "C",
+                      "D",
+                      "E",
+                      "F"
+                    ],
+                    "description": "A AI agent, B AI-assisted workflow, C deterministic automation, D CI/CD pipeline, E utility or integration, F planned"
+                  },
+                  "confidence": {
+                    "enum": [
+                      "verified",
+                      "provisional",
+                      "unverified"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mission": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "purpose": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "problem": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "outcomes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "beneficiaries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "responsibilities": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "tasks": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "tools": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "outputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "limitations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "goals": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "objective": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "review_frequency": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kpis": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "kind": {
+                          "enum": [
+                            "reliability",
+                            "quality",
+                            "cost",
+                            "throughput",
+                            "other"
+                          ]
+                        },
+                        "target": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "target_value": {
+                          "type": "number"
+                        },
+                        "direction": {
+                          "enum": [
+                            "min",
+                            "max"
+                          ]
+                        },
+                        "basis": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "measure": {
+                          "enum": [
+                            "run_success_rate",
+                            "runs_last_30d",
+                            "avg_duration_minutes",
+                            "month_spend_usd"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "execution": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "trigger_type": {
+                    "enum": [
+                      "manual",
+                      "scheduled",
+                      "event",
+                      "continuous"
+                    ]
+                  },
+                  "schedule": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "environment": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "stages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "governance": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "autonomy": {
+                    "enum": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4
+                    ],
+                    "description": "0 observe, 1 recommend, 2 approval required, 3 limited autonomous execution, 4 advanced orchestration"
+                  },
+                  "autonomy_note": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "data_sensitivity": {
+                    "enum": [
+                      "public",
+                      "internal",
+                      "confidential",
+                      "restricted"
+                    ]
+                  },
+                  "approval": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "credential_owner": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "risk": {
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high"
+                    ]
+                  },
+                  "audit_log": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "cost": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "budget": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "notes": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "docs": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "technical": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "runbook": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "known_issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "improvements": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "last_review": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

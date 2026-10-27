@@ -1,3 +1,8 @@
+import type { RegistryManifest } from "../registry/types";
+
+/** Manifest versions. atlas/v2 adds the optional per-agent `registry` block. */
+export const SCHEMAS = ["atlas/v1", "atlas/v2"] as const;
+
 export const STATUSES = ["active", "idle", "paused", "attention", "retired"] as const;
 export type Status = (typeof STATUSES)[number];
 
@@ -13,7 +18,10 @@ export interface HistoryEntry {
 
 export interface Agent {
   id: string;
+  /** Display name: the registry title when one is set, otherwise the manifest name. */
   name: string;
+  /** The manifest `name`, kept when a registry title replaces it for display. */
+  originalName?: string;
   purpose: string;
   framework: string;
   model?: string;
@@ -29,7 +37,9 @@ export interface Agent {
   history: HistoryEntry[];
   links: Link[];
   /** Read-only live sources the app may consult for this agent. */
-  observe?: { githubWorkflow?: string };
+  observe?: { githubWorkflow?: string; atlasIntel?: boolean };
+  /** Hand-maintained registry profile (atlas/v2). Absent on atlas/v1 agents. */
+  registry?: RegistryManifest;
   projectId: string;
   repository: string;
 }

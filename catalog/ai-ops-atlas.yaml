@@ -1,10 +1,11 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: ai-ops-atlas
   name: AI Ops Atlas
-  summary: This app. A read-only desktop command center for agents, projects and repositories.
+  summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
   status: active
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
@@ -21,6 +22,39 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    registry:
+      title: Atlas Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/ci.yml runs lint, tests, Rust checks and dependency audits; no AI model
+      mission:
+        problem: Keeps main releasable now that branch protection requires green checks.
+        outcomes: ["Every pull request is linted, tested and audited before merge"]
+        beneficiaries: [KC, Atlas contributors]
+      responsibilities:
+        tasks: [Lint and test the frontend, Build the web bundle, "Rust fmt, clippy and tests", npm and cargo dependency audits, Optional macOS app bundle on manual dispatch]
+        tools: [GitHub Actions, npm, cargo]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request, macOS app artifact when requested]
+      goals:
+        objective: Block merges that break the app.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)
 
   - id: repo-intelligence
     name: Repository Intelligence Agent
@@ -31,4 +65,102 @@ agents:
     status: idle
     trigger: Manual from a repository's panel; optional schedule, off by default
     source: src-tauri/src/intel/mod.rs
+    observe:
+      atlas_intel: true
     last_run: null
+    registry:
+      title: Repository Intelligence Analyst
+      category: data
+      subcategory: Repository intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: src-tauri/src/intel sends collected repository facts to Claude and validates a structured report
+      mission:
+        problem: Repository health is spread across commits, CI, issues and alerts; this condenses it for one repository at a time.
+        outcomes: [A health report with verified facts kept separate from AI recommendations]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Collect repository facts from GitHub read-only, Ask Claude for a structured assessment, Validate citations and drop ungrounded claims]
+        tools: [GitHub REST API (read-only), Anthropic Messages API]
+        inputs: [One selected repository, GitHub token from Keychain, Anthropic API key from Keychain]
+        outputs: [Saved report shown in the Intel view]
+        limitations: [Reads one repository per run, Sends repository data to Anthropic when run]
+      goals:
+        objective: Accurate, grounded repository reports within the spending limits.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from the app's run log
+          - name: Average run duration
+            kind: quality
+            measure: avg_duration_minutes
+            basis: Observed from the app's run log
+          - name: Spend this month
+            kind: cost
+            target: Within the monthly budget set in Intel settings
+            measure: month_spend_usd
+            basis: Budget and spend come from the app's settings and run log
+      execution:
+        trigger_type: manual
+        schedule: Optional, off by default; runs only while the app is open
+        environment: Inside the desktop app (Rust side)
+        stages: [Collect facts, Estimate cost and check budget, Call Claude, Validate output, Save report]
+      governance:
+        autonomy: 1
+        autonomy_note: Writes nothing to GitHub; produces recommendations only.
+        data_sensitivity: internal
+        approval: Each run is started by KC, or by a schedule KC consented to
+        credential_owner: KC (macOS Keychain)
+        risk: low
+        audit_log: Per-run trace in the app's run log
+      cost:
+        budget: Per-run and monthly limits in Intel settings
+      docs:
+        technical: docs/repository-intelligence.md
+
+  - id: atlas-rerun-failed
+    name: Re-run Failed Jobs
+    purpose: Re-runs the failed jobs of a failed GitHub Actions run, only on repositories KC has switched on and only after KC approves each run in a native macOS dialog.
+    framework: Atlas desktop action (Rust)
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Manual button next to a failed run; off by default
+    source: src-tauri/src/actions/mod.rs
+    last_run: null
+    permissions: [Actions write on repositories selected in the token and in Settings]
+    registry:
+      title: Failed Workflow Re-run
+      category: engineering
+      subcategory: CI/CD operations
+      classification:
+        type: C
+        confidence: verified
+        evidence: src-tauri/src/actions sends one fixed request (rerun-failed-jobs) after pre-flight checks and native approval; no AI model
+      mission:
+        problem: Flaky CI failures need a re-run, which otherwise means leaving Atlas for GitHub.
+        outcomes: [A failed run can be retried from Atlas with an audit record of who did it and what GitHub answered]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Re-read the run and refuse if it is unfinished, not failed, re-run already or older than 30 days, Ask for approval in a native dialog, Log the attempt and the result, Send one re-run request with no retries]
+        tools: [GitHub REST API (one write endpoint), macOS Keychain, macOS dialog]
+        inputs: [A failed run KC chose, Actions token from Keychain, Repository list in Settings]
+        outputs: [A new run attempt on GitHub, Audit records in the Activity Center]
+        limitations: [Off by default, Desktop only, At most one re-run per run every 10 minutes and 10 an hour]
+      goals:
+        objective: Retry flaky failures safely, with every write approved and recorded.
+      execution:
+        trigger_type: manual
+        environment: Inside the desktop app (Rust side)
+        stages: [Check switch and token, Re-read the run, Native approval, Audit, Send once, Audit result]
+      governance:
+        autonomy: 2
+        autonomy_note: Prepares the re-run; nothing is sent until KC approves that specific run.
+        data_sensitivity: internal
+        approval: Native macOS confirmation for every re-run
+        credential_owner: KC (separate fine-grained token in the macOS Keychain)
+        risk: medium
+        audit_log: audit.jsonl in the app data folder, shown in the Activity Center
+      docs:
+        technical: docs/actions.md

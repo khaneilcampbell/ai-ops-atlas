@@ -1,370 +1,200 @@
-import { useMemo, useRef, useState } from "react";
-import { STATUSES, type Agent } from "../catalog/types";
-import { FilterBar, uniqueOptions } from "../components/Filters";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
-import { ExternalLink, StatusPill, statusLabel } from "../components/bits";
-import { runResult } from "../lib/activity";
-import { attentionItems, effectiveLastRun, observedRun, repoData } from "../lib/derive";
-import { agentMatches } from "../lib/search";
-import { formatDate, relative } from "../lib/time";
+import { relative, formatDate } from "../lib/time";
+import { load, save } from "../lib/storage";
+import { useIntel } from "../intel/state";
+import { buildRegistry, filterEntries, GROUP_LABEL, groupEntries, runtimeOf, SORT_LABEL, sortEntries, summarize, type GroupKey, type RegistryEntry, type SortKey } from "../registry/registry";
+import { OPERATIONAL_LABEL } from "../registry/telemetry";
+import { CATEGORIES, CATEGORY_LABEL, CLASSIFICATION_INFO, CLASSIFICATIONS, type Operational } from "../registry/types";
 import { useAtlas } from "../state";
-import { frameworkColor } from "./mapLayout";
+import { Goals } from "./agents/Goals";
+import { Inspector } from "./agents/Inspector";
+import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
+import { Portfolio } from "./agents/Portfolio";
+import "../styles/registry.css";
 
-type Tab = "config" | "capabilities" | "executions" | "monitoring";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "config", label: "Configuration" },
-  { id: "capabilities", label: "Capabilities" },
-  { id: "executions", label: "Executions" },
-  { id: "monitoring", label: "Monitoring" },
+type Sub = "directory" | "portfolio" | "goals";
+const SUBS: { id: Sub; label: string }[] = [
+  { id: "directory", label: "Directory" },
+  { id: "portfolio", label: "Portfolio" },
+  { id: "goals", label: "Goals & performance" },
 ];
 
-/** Agent management: every manifest agent, with its configuration, access and run history. Read-only. */
-export function AgentsView() {
-  const { catalog, repos, filters, select, selection } = useAtlas();
-  const projectName = (id: string) => catalog.projects.find((p) => p.id === id)?.name ?? id;
-  const list = useRef<HTMLUListElement>(null);
+interface Prefs {
+  sub: Sub;
+  group: GroupKey;
+  sort: SortKey;
+  category: string;
+  classification: string;
+  operational: string;
+  runtime: string;
+}
+const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
 
+/** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
+export function AgentsView() {
+  const { catalog, repos, filters, setFilters, select, selection } = useAtlas();
+  const { status: intel } = useIntel();
+  const [prefs, setPrefs] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...load<Partial<Prefs>>("registry-prefs", {}) }));
+  const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
+  useEffect(() => save("registry-prefs", prefs), [prefs]);
+  const list = useRef<HTMLDivElement>(null);
+
+  const entries = useMemo(() => buildRegistry(catalog, repos, intel), [catalog, repos, intel]);
+  const summary = useMemo(() => summarize(entries), [entries]);
   const rows = useMemo(
-    () =>
-      catalog.agents.filter(
-        (a) =>
-          (!filters.project || a.projectId === filters.project) &&
-          (!filters.framework || a.framework === filters.framework) &&
-          (!filters.status || a.status === filters.status) &&
-          (!filters.language || repoData(repos[a.repository])?.language === filters.language) &&
-          agentMatches(a, catalog.projects.find((p) => p.id === a.projectId), filters.query),
-      ),
-    [catalog, repos, filters],
+    () => sortEntries(filterEntries(entries, { query: filters.query, project: filters.project, category: prefs.category, classification: prefs.classification, operational: prefs.operational, runtime: prefs.runtime }), prefs.sort),
+    [entries, filters.query, filters.project, prefs],
   );
-  const current = (selection?.kind === "agent" && rows.find((a) => a.id === selection.id)) || rows[0];
-  const byStatus = STATUSES.map((s) => ({ s, n: catalog.agents.filter((a) => a.status === s).length })).filter((x) => x.n);
+  const groups = useMemo(() => groupEntries(rows, prefs.group), [rows, prefs.group]);
+  const flat = groups.flatMap((g) => g.entries);
+  const current = (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
+
+  const open = (id: string) => {
+    select({ kind: "agent", id });
+    set({ sub: "directory" });
+  };
 
   const onListKey = (e: React.KeyboardEvent) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     e.preventDefault();
-    const i = rows.findIndex((a) => a.id === current?.id);
-    const next = rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))];
+    const i = flat.findIndex((x) => x.profile.id === current?.profile.id);
+    const next = flat[Math.max(0, Math.min(flat.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))];
     if (!next) return;
-    select({ kind: "agent", id: next.id });
-    list.current?.querySelector<HTMLButtonElement>(`[data-id="${next.id}"]`)?.focus();
+    select({ kind: "agent", id: next.profile.id });
+    list.current?.querySelector<HTMLButtonElement>(`[data-id="${next.profile.id}"]`)?.focus();
   };
+
+  const anyFilter = filters.query || filters.project || prefs.category || prefs.classification || prefs.operational || prefs.runtime;
+  const b = summary.byClass;
 
   return (
     <div className="page wide">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Agent management · read-only</div>
+          <div className="eyebrow">Agent registry · read-only</div>
           <h1>Agents</h1>
           <p className="lede">
-            {catalog.agents.length} agents registered in project manifests.{" "}
-            {byStatus.map((x, i) => (
-              <span key={x.s}>
-                {i > 0 && " · "}
-                {x.n} {statusLabel(x.s).toLowerCase()}
-              </span>
-            ))}
+            {summary.total} registered items: {b.A} AI agents, {b.B} AI-assisted workflows, {b.C} automations, {b.D} CI/CD pipelines
+            {b.E ? `, ${b.E} integration${b.E > 1 ? "s" : ""}` : ""}
+            {b.F ? `, ${b.F} planned` : ""}. {summary.operational.verified} verified running from live data.
           </p>
         </div>
-      </div>
-      <FilterBar
-        noun="agents"
-        count={rows.length}
-        defs={[
-          { key: "project", label: "Project", options: catalog.projects.map((p) => ({ value: p.id, label: p.name })) },
-          { key: "framework", label: "Framework", options: uniqueOptions(catalog.agents.map((a) => a.framework)) },
-          { key: "status", label: "Status", options: STATUSES.map((s) => ({ value: s, label: statusLabel(s) })) },
-          { key: "language", label: "Language", options: uniqueOptions(Object.values(repos).map((r) => repoData(r)?.language)) },
-        ]}
-      />
-      {rows.length === 0 ? (
-        <div className="card empty">No agents match these filters.</div>
-      ) : (
-        <div className="agents-split">
-          <ul className="card agent-list" ref={list} onKeyDown={onListKey} aria-label="Agents">
-            {rows.map((a) => {
-              const last = effectiveLastRun(a, repoData(repos[a.repository]));
-              const on = a.id === current?.id;
-              return (
-                <li key={a.id}>
-                  <button data-id={a.id} className={`agent-row ${on ? "on" : ""}`} aria-current={on || undefined} onClick={() => select({ kind: "agent", id: a.id })}>
-                    <i className="roof" style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
-                    <span className="grow">
-                      <span className="title">{a.name}</span>
-                      <span className="meta">
-                        {projectName(a.projectId)} · {a.framework}
-                      </span>
-                    </span>
-                    <span className="right">
-                      <StatusPill status={a.status} />
-                      <span className="muted small" title={last ? formatDate(last) : undefined}>
-                        {last ? relative(last) : "No run recorded"}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {current && <AgentProfile key={current.id} agent={current} />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AgentProfile({ agent }: { agent: Agent }) {
-  const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
-  const [tab, setTab] = useState<Tab>("config");
-  const project = catalog.projects.find((p) => p.id === agent.projectId);
-  const snap = repoData(repos[agent.repository]);
-  const last = effectiveLastRun(agent, snap);
-  const run = observedRun(agent, snap);
-  const wf = agent.observe?.githubWorkflow;
-  const runs = (wf && snap?.workflowRuns[wf]) || [];
-  const branch = snap?.defaultBranch ?? "HEAD";
-  const source = agent.source ? `https://github.com/${agent.repository}/blob/${branch}/${agent.source}` : undefined;
-  const flags = useMemo(
-    () => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged).filter((i) => i.target?.kind === "agent" && i.target.id === agent.id),
-    [catalog, repos, manifestIssues, uncataloged, agent.id],
-  );
-
-  const onTabKey = (e: React.KeyboardEvent) => {
-    const i = TABS.findIndex((t) => t.id === tab);
-    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!d) return;
-    e.preventDefault();
-    const next = TABS[(i + d + TABS.length) % TABS.length];
-    setTab(next.id);
-    document.getElementById(`agent-tab-${next.id}`)?.focus();
-  };
-
-  return (
-    <section className="card agent-profile" aria-label={agent.name}>
-      <header className="ap-head">
-        <span className="ap-badge" style={{ background: frameworkColor(agent.framework) }}>
-          <Icon name="agents" size={20} />
-        </span>
-        <div className="grow">
-          <div className="eyebrow">
-            {project?.name ?? agent.projectId} · {agent.repository}
-          </div>
-          <h2>{agent.name}</h2>
-          <div className="chips" style={{ marginTop: 8 }}>
-            <StatusPill status={agent.status} />
-            <span className="chip">
-              <i className="swatch" style={{ background: frameworkColor(agent.framework) }} />
-              {agent.framework}
-            </span>
-            {agent.model && <span className="chip">{agent.model}</span>}
-            <span className="chip">{wf ? `Watched via ${wf}` : "Manifest only"}</span>
-          </div>
-        </div>
-        <div className="ap-last">
-          <div className="eyebrow">Last run</div>
-          <div className="v">{last ? relative(last) : "Not recorded"}</div>
-          <div className="muted small">{run ? `GitHub Actions: ${run.conclusion ?? run.status}` : last ? "From the manifest" : "No live source"}</div>
-        </div>
-      </header>
-      <p className="ap-purpose selectable">{agent.purpose}</p>
-
-      <div className="tabs" role="tablist" aria-label="Agent details" onKeyDown={onTabKey}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            id={`agent-tab-${t.id}`}
-            role="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`agent-panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            className={tab === t.id ? "on" : ""}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-            {t.id === "executions" && runs.length > 0 && <span className="count-pill">{runs.length}</span>}
-            {t.id === "monitoring" && flags.length > 0 && <span className="count-pill warn">{flags.length}</span>}
-          </button>
-        ))}
-      </div>
-
-      <div className="ap-body selectable" role="tabpanel" id={`agent-panel-${tab}`} aria-labelledby={`agent-tab-${tab}`}>
-        {tab === "config" && (
-          <>
-            <dl className="kv">
-              <dt>Framework</dt>
-              <dd>{agent.framework}</dd>
-              <dt>Model</dt>
-              <dd>{agent.model ?? <span className="muted">Not declared</span>}</dd>
-              <dt>Runtime</dt>
-              <dd>{agent.runtime ?? <span className="muted">Not declared</span>}</dd>
-              <dt>Trigger</dt>
-              <dd>{agent.trigger ?? <span className="muted">Not declared</span>}</dd>
-              <dt>Source</dt>
-              <dd className="mono">{source ? <ExternalLink href={source}>{agent.source}</ExternalLink> : <span className="muted">Not declared</span>}</dd>
-              <dt>Repository</dt>
-              <dd>
-                <button className="text-btn inline" onClick={() => select({ kind: "repo", id: agent.repository })}>
-                  {agent.repository}
-                </button>
-              </dd>
-              <dt>Live source</dt>
-              <dd>{wf ? <span className="mono">{wf}</span> : <span className="muted">None declared</span>}</dd>
-              <dt>Agent id</dt>
-              <dd className="mono">{agent.id}</dd>
-            </dl>
-            {agent.links.length > 0 && (
-              <div className="links" style={{ marginTop: 16 }}>
-                {agent.links.map((l) => (
-                  <ExternalLink key={l.url} href={l.url}>
-                    <Icon name="external" size={14} /> {l.label}
-                  </ExternalLink>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "capabilities" && (
-          <div className="cap-grid">
-            <Declared title="Capabilities" items={agent.capabilities} hint="capabilities" example="- Score niches by demand and competition" />
-            <Declared title="Permissions" items={agent.permissions} hint="permissions" example={'- "Shopify Admin API: write products"'} />
-          </div>
-        )}
-
-        {tab === "executions" && (
-          <>
-            {runs.length > 0 ? (
-              <table className="table runs-table">
-                <thead>
-                  <tr>
-                    <th>Result</th>
-                    <th>Run</th>
-                    <th>Trigger</th>
-                    <th>Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((r) => {
-                    const res = runResult(r);
-                    return (
-                      <tr key={r.url}>
-                        <td>
-                          <span className={`result r-${res}`}>{res === "success" ? "Succeeded" : res === "failure" ? "Failed" : res === "running" ? "Running" : (r.conclusion ?? r.status)}</span>
-                        </td>
-                        <td>
-                          <ExternalLink href={r.url}>{r.name}</ExternalLink>
-                        </td>
-                        <td className="small">
-                          {r.event} on <span className="mono">{r.branch}</span>
-                        </td>
-                        <td className="small nowrap" title={new Date(r.createdAt).toLocaleString()}>
-                          {relative(r.createdAt)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <div className="na-block">
-                <strong>No execution history available.</strong>
-                <span>
-                  {wf
-                    ? "GitHub has not returned runs for this workflow yet. Refresh, or add a token if the repository is private."
-                    : `${agent.framework} runs are not reported to Atlas yet. Declare observe.github_workflow in the manifest if a workflow runs this agent; n8n and CrewAI adapters come later.`}
-                </span>
-              </div>
-            )}
-            {agent.history.length > 0 && (
-              <div style={{ marginTop: 18 }}>
-                <div className="section-title">Recorded in the manifest</div>
-                <ul className="timeline">
-                  {agent.history.map((h) => (
-                    <li key={`${h.at}:${h.event}`} className="k-agent">
-                      <div className="small">{h.event}</div>
-                      <div className="muted small">{formatDate(h.at)}</div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === "monitoring" && (
-          <>
-            <div className="mon-grid">
-              <Monitor label="Live source" value={wf ? "GitHub Actions" : "None"} sub={wf ? wf : "Status and runs come from the manifest"} health={wf ? "good" : "unknown"} />
-              <Monitor
-                label="Latest run"
-                value={run ? (run.conclusion ?? run.status) : "Not available"}
-                sub={run ? relative(run.createdAt) : "No observed runs"}
-                health={!run ? "unknown" : runResult(run) === "failure" ? "bad" : runResult(run) === "success" ? "good" : "warn"}
-              />
-              <Monitor label="Repository sync" value={snap ? relative(snap.fetchedAt) : "Not synced"} sub={agent.repository} health={snap ? "good" : "unknown"} />
-            </div>
-            <div className="section-title" style={{ marginTop: 18 }}>
-              Checks
-            </div>
-            {flags.length === 0 ? (
-              <div className="muted small">Nothing flagged for this agent.</div>
-            ) : (
-              <ul className="list" style={{ padding: 0 }}>
-                {flags.map((f) => (
-                  <li key={f.id} className="list-row">
-                    <span className={`sev ${f.severity}`} aria-label={`${f.severity} severity`} />
-                    <span className="grow">
-                      <div className="title">{f.detail}</div>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="muted small" style={{ marginTop: 14 }}>
-              Atlas only reads. It cannot start, stop or reconfigure agents.
-            </p>
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function Declared({ title, items, hint, example }: { title: string; items?: string[]; hint: string; example: string }) {
-  return (
-    <div>
-      <div className="section-title">{title}</div>
-      {items && items.length ? (
-        <ul className="declared">
-          {items.map((c) => (
-            <li key={c}>
-              <Icon name="check" size={13} /> {c}
-            </li>
+        <div className="seg" role="tablist" aria-label="Registry views">
+          {SUBS.map((s) => (
+            <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
+              {s.label}
+            </button>
           ))}
-        </ul>
-      ) : (
-        <div className="na-block">
-          <strong>Not declared in the manifest.</strong>
-          <span>
-            Add a <code>{hint}</code> list to this agent, for example:
-          </span>
-          <pre>
-            {hint}:{"\n  "}
-            {example}
-          </pre>
         </div>
+      </div>
+
+      {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
+      {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
+
+      {prefs.sub === "directory" && (
+        <>
+          <div className="filters" role="search">
+            <label className="field">
+              <Icon name="search" size={14} />
+              <input value={filters.query} onChange={(e) => setFilters({ query: e.target.value })} placeholder="Search agents, tools, functions" aria-label="Search agents" />
+            </label>
+            <Select label="Project" value={filters.project} onChange={(v) => setFilters({ project: v })} options={catalog.projects.filter((p) => p.agentIds.length).map((p) => ({ value: p.id, label: p.name }))} />
+            <Select label="Function" value={prefs.category} onChange={(v) => set({ category: v })} options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))} />
+            <Select label="Type" value={prefs.classification} onChange={(v) => set({ classification: v })} options={CLASSIFICATIONS.map((c) => ({ value: c, label: `${c} · ${CLASSIFICATION_INFO[c].label}` }))} />
+            <Select
+              label="Status"
+              value={prefs.operational}
+              onChange={(v) => set({ operational: v })}
+              options={(Object.keys(OPERATIONAL_LABEL) as Operational[]).map((o) => ({ value: o, label: OPERATIONAL_LABEL[o] }))}
+            />
+            <Select label="Runtime" value={prefs.runtime} onChange={(v) => set({ runtime: v })} options={[...new Set(entries.map(runtimeOf))].sort().map((r) => ({ value: r, label: r }))} />
+            <Select label="Group" value={prefs.group} all={false} onChange={(v) => set({ group: v as GroupKey })} options={(Object.keys(GROUP_LABEL) as GroupKey[]).map((g) => ({ value: g, label: GROUP_LABEL[g] }))} />
+            <Select label="Sort" value={prefs.sort} all={false} onChange={(v) => set({ sort: v as SortKey })} options={(Object.keys(SORT_LABEL) as SortKey[]).map((s) => ({ value: s, label: SORT_LABEL[s] }))} />
+            {anyFilter && (
+              <button
+                className="text-btn"
+                onClick={() => {
+                  setFilters({ query: "", project: "" });
+                  set({ category: "", classification: "", operational: "", runtime: "" });
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+            <span className="count">{rows.length} agents</span>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="card empty">No agents match these filters.</div>
+          ) : (
+            <div className="agents-split">
+              <div className="card agent-list reg-list-pane" ref={list} onKeyDown={onListKey} aria-label="Agents">
+                {groups.map((g) => (
+                  <section key={g.key}>
+                    {prefs.group !== "none" && (
+                      <div className="reg-group">
+                        {prefs.group === "operational" ? OPERATIONAL_LABEL[g.key as Operational] : g.label} <span className="count-pill">{g.entries.length}</span>
+                      </div>
+                    )}
+                    <ul>
+                      {g.entries.map((e) => (
+                        <li key={e.profile.id}>
+                          <Row e={e} on={e.profile.id === current?.profile.id} onClick={() => select({ kind: "agent", id: e.profile.id })} />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+              {current && <Inspector key={current.profile.id} entry={current} />}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function Monitor({ label, value, sub, health }: { label: string; value: string; sub: string; health: "good" | "warn" | "bad" | "unknown" }) {
+function Row({ e, on, onClick }: { e: RegistryEntry; on: boolean; onClick: () => void }) {
+  const p = e.profile;
+  const last = e.telemetry.lastVerifiedRun;
   return (
-    <div className="mon">
-      <div className="eyebrow">{label}</div>
-      <div className="v">
-        <i className={`h-${health}`} /> {value}
-      </div>
-      <div className="muted small">{sub}</div>
-    </div>
+    <button data-id={p.id} className={`agent-row reg-row ${on ? "on" : ""}`} aria-current={on || undefined} onClick={onClick}>
+      <i className="roof" style={{ background: CLASS_COLOR[p.classification] }} />
+      <span className="grow">
+        <span className="title">{p.title}</span>
+        <span className="meta">
+          {p.project.name} · {CATEGORY_LABEL[p.category]}
+        </span>
+        <span className="reg-row-chips">
+          <ClassBadge c={p.classification} />
+          <span className="muted small">{p.framework}</span>
+        </span>
+      </span>
+      <span className="right">
+        <OperationalPill op={e.operational} />
+        <span className="muted small" title={last ? formatDate(last.at) : undefined}>
+          {last ? `Verified ${relative(last.at)}` : e.telemetry.source ? "No verified run" : "Not connected"}
+        </span>
+        <RiskPill risk={p.governance.risk} />
+      </span>
+    </button>
+  );
+}
+
+function Select({ label, value, onChange, options, all = true }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; all?: boolean }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        {all && <option value="">All</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

@@ -15,7 +15,7 @@ export function matches(query: string, ...fields: (string | undefined | null)[])
 }
 
 export function agentMatches(a: Agent, project: Project | undefined, q: string) {
-  return matches(q, a.name, a.purpose, a.framework, a.model, a.runtime, a.status, a.trigger, a.source, project?.name, a.repository);
+  return matches(q, a.name, a.originalName, a.purpose, a.framework, a.model, a.runtime, a.status, a.trigger, a.source, project?.name, a.repository);
 }
 
 export interface RepoRow {

@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: benjaire-site
@@ -26,6 +27,34 @@ agents:
     trigger: POST /api/contact
     source: site/worker/index.ts
     last_run: null
+    registry:
+      title: Benjaire Contact and Checkout Gateway
+      category: business
+      subcategory: Customer inquiry processing
+      classification:
+        type: E
+        confidence: verified
+        evidence: site/worker/index.ts validates the form, sends email, forwards to n8n and creates Stripe checkout sessions; no AI model
+      mission:
+        problem: Receives website inquiries and checkout requests safely without a separate backend.
+        outcomes: [Valid inquiries reach the right inbox and Benjaire Flow, Spam and abuse are rejected]
+        beneficiaries: [Benjaire customers, KC]
+      responsibilities:
+        tasks: [Check origin and rate limit, Verify Turnstile, Email the inquiry to the category recipient, Forward the inquiry to Benjaire Flow, Create Stripe checkout sessions]
+        tools: [Cloudflare Workers, Cloudflare Turnstile, Cloudflare Email, Stripe API, n8n webhook]
+        inputs: [Contact form POST, Checkout request]
+        outputs: [Email to Benjaire, Webhook call to n8n, Stripe checkout redirect]
+        dependencies: [benjaire-flow-intake]
+      execution:
+        trigger_type: event
+        environment: Cloudflare Workers
+      governance:
+        autonomy: 3
+        autonomy_note: Acts on each request within fixed rules (rate limit, allowed hosts, configured price tiers).
+        data_sensitivity: confidential
+        risk: medium
+      docs:
+        known_issues: [The manifest purpose did not mention Stripe checkout]
 
   - id: benjaire-flow-intake
     name: Benjaire Flow Intake
@@ -37,6 +66,21 @@ agents:
     status: active
     trigger: Webhook from the contact Worker
     last_run: null
+    registry:
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: provisional
+        evidence: The n8n workflow is not in any repository; whether it uses an AI step is not verified
+      responsibilities:
+        inputs: [Inquiry webhook from the contact Worker]
+        dependencies: [benjaire-contact-worker]
+      execution:
+        trigger_type: event
+        environment: n8n
+      docs:
+        known_issues: [Workflow definition is not version-controlled]
 
   - id: benjaire-site-ci
     name: Site CI
@@ -49,3 +93,31 @@ agents:
     observe:
       github_workflow: site-ci.yml
     last_run: null
+    registry:
+      title: Benjaire Site Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/site-ci.yml runs astro check, worker tests, build, link, SEO and accessibility checks
+      responsibilities:
+        tasks: [Type check the Astro site, Test the Worker, Build, Check links and SEO, Accessibility checks with Playwright]
+        tools: [GitHub Actions, npm, Playwright]
+        inputs: [Pushes and pull requests to main]
+        outputs: [Check results]
+      goals:
+        objective: Block site changes that break the build, links, SEO or accessibility.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history

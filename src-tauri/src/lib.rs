@@ -1,3 +1,4 @@
+mod actions;
 mod github;
 mod intel;
 mod secrets;
@@ -5,8 +6,14 @@ mod secrets;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(github::Client::new())
-        .setup(|app| intel::setup(app))
+        .setup(|app| {
+            intel::setup(app)?;
+            actions::setup(app)
+        })
         .invoke_handler(tauri::generate_handler![
             github::github_get,
             secrets::github_token_status,
@@ -22,6 +29,12 @@ pub fn run() {
             intel::intel_cancel,
             intel::intel_config_set,
             intel::intel_estimate,
+            actions::actions_status,
+            actions::actions_audit,
+            actions::actions_settings_set,
+            actions::actions_token_set,
+            actions::actions_token_clear,
+            actions::action_rerun_failed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AI Ops Atlas");

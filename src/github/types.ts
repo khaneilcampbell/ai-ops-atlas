@@ -7,6 +7,10 @@ export interface Commit {
 }
 
 export interface WorkflowRun {
+  /** GitHub's run id. Snapshots cached before it was stored only have it in `url`. */
+  id?: number;
+  /** Which attempt this is; 1 unless the run was re-run. */
+  attempt?: number;
   name: string;
   status: string;
   conclusion: string | null;

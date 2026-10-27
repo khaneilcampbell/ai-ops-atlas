@@ -2,14 +2,14 @@
 
 A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
 
-Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. Nothing in the app can change a repository or start an external agent.
+Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. The one exception is **Re-run failed jobs** on a failed GitHub Actions run: off by default, limited to repositories you tick, approved in a macOS dialog each time, using a separate write-scoped token, and audited. See [docs/actions.md](docs/actions.md). Nothing else in the app can change a repository or start an external agent.
 
 ## What it does
 
 | Area | What you see |
 |---|---|
 | Overview | Agent and repository totals, items needing attention, recent commits, CI runs and agent history, and a card per project |
-| Agents | Every agent with its purpose, project, framework, status and last run; filter by project, framework, status or language |
+| Agents | The agent registry. **Directory**: every agent classified (AI agent, AI-assisted workflow, automation, CI/CD, integration, planned) with function, project, operational status, last verified run and risk; search, filter, sort and group. A six-tab inspector (Overview, Goals, Workflow, Operations, Governance, Documentation). **Portfolio**: counts by type, configured versus verified, missing documentation and items needing review. **Goals & performance**: KPI targets against observed values. See [docs/agent-registry.md](docs/agent-registry.md) |
 | Repositories | Description, language, latest commit, health indicators (CI, last push, open issues, license, linked agents) and linked agents |
 | Workspace map | An isometric map: each project is a district, its repository is the HQ in the middle and its agents are the houses around it. Pan, zoom, hover and click |
 | Details | A side panel for any agent or repository with its description, links, status and activity history |
@@ -87,6 +87,7 @@ src/github/         read-only GitHub client and snapshot types
 src/lib/            health, attention and activity rules; search; time; storage
 src/views/          Overview, Agents, Repositories, Map, Settings
 src/components/     detail panel, filters, icons, status pills
+src/registry/       agent registry: profiles, migration, telemetry, directory logic
 src/intel/          intelligence agent bridge, types and formatting
 src-tauri/          desktop shell: read-only GitHub proxy and Keychain storage
 src-tauri/src/intel/  Repository Intelligence Agent: collection, prompt, Claude client, validation, budgets, jobs

@@ -4,6 +4,7 @@ import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
 import { isHostedWeb } from "../lib/env";
 import { useAtlas } from "../state";
+import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 
 export function SettingsView() {
@@ -29,6 +30,8 @@ export function SettingsView() {
       </section>
 
       <IntelSettings />
+
+      <ActionsSettings />
 
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">

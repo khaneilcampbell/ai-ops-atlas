@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: benjaire-ops
@@ -23,3 +24,23 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    registry:
+      title: Benjaire Dashboard Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: unverified
+        evidence: Private repository; classified from the manifest only
+      goals:
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        audit_log: GitHub Actions run history

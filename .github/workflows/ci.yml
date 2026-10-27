@@ -66,8 +66,21 @@ jobs:
 
   macos:
     name: macOS app bundle
-    if: github.event_name == 'workflow_dispatch' && inputs.macos
+    # Every merge to main builds the app, so an install never waits on a separate dispatch.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.macos)
     runs-on: macos-latest
+    permissions:
+      contents: write
+    # Builds from main publish in order, so the update feed never goes backwards.
+    concurrency:
+      group: macos-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      # Builds from main are signed for the in-app updater and published to the
+      # rolling main-build release that installed copies of Atlas check.
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,8 +88,25 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      # Reuses compiled dependencies between builds; a cold build recompiles all of Tauri.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: macos-app
       - run: npm ci
-      - run: npx tauri build --bundles app
+      # The updater installs any build with a higher version, so each main build
+      # gets the run number as its patch version (0.2.0 -> 0.2.<run>).
+      - name: Build
+        run: |
+          if [ "$PUBLISH" = "true" ] && [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            base=$(node -p 'require("./src-tauri/tauri.conf.json").version.split(".").slice(0, 2).join(".")')
+            version="$base.$GITHUB_RUN_NUMBER"
+            echo "VERSION=$version" >> "$GITHUB_ENV"
+            npx tauri build --bundles app --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":true}}"
+          else
+            if [ "$PUBLISH" = "true" ]; then echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set, so this build is not published for the in-app updater."; fi
+            npx tauri build --bundles app
+          fi
       # upload-artifact drops file permissions, which would leave the app binary
       # non-executable, so package the bundle with ditto first.
       - name: Zip the app bundle
@@ -85,3 +115,27 @@ jobs:
         with:
           name: AI-Ops-Atlas-macOS
           path: AI-Ops-Atlas-macOS.zip
+      - name: Publish to the in-app updater
+        if: env.VERSION != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dir="src-tauri/target/release/bundle/macos"
+          cp "$dir/AI Ops Atlas.app.tar.gz" AI-Ops-Atlas.app.tar.gz
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/main-build/AI-Ops-Atlas.app.tar.gz"
+          node -e '
+            const fs = require("fs");
+            const [version, sigFile, url, sha] = process.argv.slice(1);
+            const feed = {
+              version,
+              notes: `Built from main at ${sha.slice(0, 7)}.`,
+              pub_date: new Date().toISOString(),
+              platforms: { "darwin-aarch64": { signature: fs.readFileSync(sigFile, "utf8").trim(), url } },
+            };
+            fs.writeFileSync("latest.json", JSON.stringify(feed, null, 2));
+          ' "$VERSION" "$dir/AI Ops Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA"
+          gh release view main-build >/dev/null 2>&1 || gh release create main-build --prerelease --target "$GITHUB_SHA" \
+            --title "Latest main build" --notes "Rolling build of main that installed copies of AI Ops Atlas update from. Not a versioned release."
+          # The archive goes up before the feed that points at it.
+          gh release upload main-build AI-Ops-Atlas.app.tar.gz --clobber
+          gh release upload main-build latest.json --clobber

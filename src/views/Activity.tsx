@@ -6,12 +6,14 @@ import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
+import { useActions } from "../actions/state";
 
 const KINDS: { kind: EventKind; label: string; icon: IconName }[] = [
   { kind: "commit", label: "Commits", icon: "commit" },
   { kind: "ci", label: "CI runs", icon: "play" },
   { kind: "agent", label: "Agent runs", icon: "agents" },
   { kind: "intel", label: "Intelligence runs", icon: "spark" },
+  { kind: "action", label: "Actions", icon: "refresh" },
   { kind: "manifest", label: "Manifest history", icon: "tag" },
 ];
 const RANGES: { label: string; ms: number | null }[] = [
@@ -47,10 +49,11 @@ export function ActivityView() {
   };
 
   const intelRuns = useIntel().status?.runs;
-  const all = useMemo(() => workspaceEvents(catalog, repos, uncataloged, intelRuns), [catalog, repos, uncataloged, intelRuns]);
+  const actionLog = useActions().audit;
+  const all = useMemo(() => workspaceEvents(catalog, repos, uncataloged, intelRuns, actionLog), [catalog, repos, uncataloged, intelRuns, actionLog]);
   const events = useMemo(() => filterEvents(all, { kinds, project, result, sinceMs: RANGES[range]?.ms ?? null, query }), [all, kinds, project, result, range, query]);
   const counts = useMemo(() => {
-    const c: Record<EventKind, number> = { commit: 0, ci: 0, agent: 0, intel: 0, manifest: 0 };
+    const c: Record<EventKind, number> = { commit: 0, ci: 0, agent: 0, intel: 0, action: 0, manifest: 0 };
     for (const e of filterEvents(all, { kinds: [], project, result: "", sinceMs: RANGES[range]?.ms ?? null, query })) c[e.kind]++;
     return c;
   }, [all, project, range, query]);
@@ -74,7 +77,7 @@ export function ActivityView() {
         <div className="grow">
           <div className="eyebrow">Activity Center</div>
           <h1>What happened, and when.</h1>
-          <p className="lede">Commits and CI results read from GitHub, runs of the workflows your agents report through, repository intelligence runs, and history written in manifests.</p>
+          <p className="lede">Commits and CI results read from GitHub, runs of the workflows your agents report through, repository intelligence runs, approval-required actions, and history written in manifests.</p>
         </div>
       </div>
 

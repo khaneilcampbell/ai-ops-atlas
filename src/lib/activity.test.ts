@@ -68,3 +68,22 @@ describe("intelligence runs", () => {
     expect(e.detail).toContain("$0.012");
   });
 });
+
+describe("approval-required actions", () => {
+  it("shows each press once, with its latest outcome", () => {
+    const base = {
+      id: "x1", action: "rerun_failed_jobs", actor: "kc (Atlas desktop)", github_login: "kc", repo: "me/p", run_id: 42, workflow: "CI", run_number: 7,
+      attempt_before: 1, head_sha: "abc", branch: "main", reason: null, http_status: null, request_id: null, message: null,
+    };
+    const log = [
+      { ...base, at: "2026-10-26T14:00:00Z", stage: "attempted" as const },
+      { ...base, at: "2026-10-26T14:00:01Z", stage: "started" as const, http_status: 201 },
+      { ...base, id: "x2", at: "2026-10-26T15:00:00Z", stage: "cancelled" as const, message: "Cancelled. Nothing was sent to GitHub." },
+    ];
+    const events = workspaceEvents(catalog, repos, [], [], log).filter((x) => x.kind === "action");
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({ title: "Re-run failed jobs: Cancelled", result: "other" });
+    expect(events[1]).toMatchObject({ title: "Re-run failed jobs: Started", result: "success", projectId: "p", url: "https://github.com/me/p/actions/runs/42" });
+    expect(events[1].detail).toContain("CI #7");
+  });
+});

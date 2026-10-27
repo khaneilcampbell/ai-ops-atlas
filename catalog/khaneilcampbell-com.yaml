@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: portfolio-site
@@ -31,6 +32,33 @@ agents:
         event: Updated GitHub links to the khaneilcampbell username (#45)
       - at: 2026-10-24
         event: Rewrote home, About, Work and Contact copy (#36 to #43)
+    registry:
+      title: Portfolio Engineering Assistant
+      category: engineering
+      subcategory: Repository maintenance
+      classification:
+        type: A
+        confidence: verified
+        evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that KC merges
+      mission:
+        problem: Keeps the portfolio site current without hand-editing every page.
+        outcomes: ["Reviewed pull requests for copy, design and link changes"]
+        beneficiaries: [KC, Site visitors]
+      responsibilities:
+        tasks: [Draft page copy and design changes, Open pull requests for review]
+        tools: [Claude Code, Git, GitHub]
+        inputs: [KC's request]
+        outputs: [Pull requests]
+      execution:
+        trigger_type: manual
+        environment: Claude Code sessions
+      governance:
+        autonomy: 2
+        autonomy_note: Changes reach the live site only after KC merges the pull request.
+        approval: KC reviews and merges every pull request
+        data_sensitivity: public
+        risk: low
+        audit_log: Pull request history on GitHub
 
   - id: site-audit
     name: Site Audit
@@ -43,6 +71,26 @@ agents:
     trigger: Manual, python scripts/site_audit.py
     source: scripts/site_audit.py
     last_run: null
+    registry:
+      title: Website Quality Auditor
+      category: engineering
+      subcategory: Code quality
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/site_audit.py checks headers, accessibility, links and credential-shaped strings; no AI model
+      responsibilities:
+        tasks: [Check required security headers, Accessibility and link hygiene checks, Flag credential-shaped values]
+        tools: [Python standard library]
+        inputs: [Site root folder]
+        outputs: [Audit findings and an exit code]
+      execution:
+        trigger_type: manual
+        environment: Local
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
 
   - id: security-check
     name: Security Check Workflow
@@ -57,3 +105,31 @@ agents:
     observe:
       github_workflow: security-check.yml
     last_run: null
+    registry:
+      title: Portfolio Security Policy Check
+      category: security
+      subcategory: Security configuration auditing
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/security-check.yml checks CSP and HTML security rules on push and pull request
+      responsibilities:
+        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules]
+        tools: [GitHub Actions, shell]
+        inputs: [Pushes and pull requests to main]
+        outputs: [Check results]
+      goals:
+        objective: No page ships without its security policy.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history

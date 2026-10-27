@@ -5,7 +5,6 @@ import { useAtlas, type View } from "./state";
 import { attentionItems } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows } from "./lib/search";
 import { relative } from "./lib/time";
-import { PHONE_QUERY, useMedia } from "./lib/media";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
@@ -15,6 +14,9 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { useActions } from "./actions/state";
+import { UpdateButton } from "./components/UpdateButton";
+import { PHONE_QUERY, useMedia } from "./lib/media";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -27,6 +29,8 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 
 export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
+  const actionsStatus = useActions().status;
+  const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
   const phone = useMedia(PHONE_QUERY);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
@@ -59,10 +63,18 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
-        <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
-          <span className="dot" />
-          Read-only
-        </span>
+        <UpdateButton />
+        {rerunOn ? (
+          <span className="pill-mode" title="Read-only, except Re-run failed jobs on the repositories ticked in Settings. Each re-run needs your approval in a macOS dialog and is written to the audit log.">
+            <span className="dot" />
+            Read-only + re-runs
+          </span>
+        ) : (
+          <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
+            <span className="dot" />
+            Read-only
+          </span>
+        )}
       </header>
 
       <nav className="sidebar" aria-label="Sections">
@@ -91,7 +103,7 @@ export default function App() {
         {view === "settings" && <SettingsView />}
       </main>
 
-      {/* The map docks its own inspector, and Agents shows the selected agent inline (on a phone, in a sheet). */}
+      {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
       {selection && view !== "map" && !(view === "agents" && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
   );

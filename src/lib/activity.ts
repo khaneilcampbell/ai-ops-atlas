@@ -3,8 +3,10 @@ import type { RepoState, WorkflowRun } from "../github/types";
 import { repoData } from "./derive";
 import type { Run as IntelRun } from "../intel/types";
 import { RUN_LABEL, usd } from "../intel/format";
+import type { AuditRecord } from "../actions/types";
+import { latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
 
-export type EventKind = "commit" | "ci" | "agent" | "intel" | "manifest";
+export type EventKind = "commit" | "ci" | "agent" | "intel" | "action" | "manifest";
 export type EventResult = "success" | "failure" | "running" | "other";
 
 export interface AtlasEvent {
@@ -38,7 +40,7 @@ export function intelResult(r: IntelRun): EventResult {
   return "other";
 }
 
-export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = []): AtlasEvent[] {
+export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = [], actionLog: AuditRecord[] = []): AtlasEvent[] {
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
   const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
@@ -97,6 +99,21 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
       detail: `${label(r.repo)} · ${r.trigger} · ${r.model}${cost}`,
       repo: r.repo,
       projectId: project?.id,
+    });
+  }
+  // Presses of an approval-required action, from the desktop app's audit log.
+  for (const r of latestPerAttempt(actionLog)) {
+    const run = `${r.workflow ?? "Workflow run"}${r.run_number ? ` #${r.run_number}` : ""}`;
+    out.push({
+      id: `action:${r.id}`,
+      at: r.at,
+      kind: "action",
+      result: r.stage === "started" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other",
+      title: `Re-run failed jobs: ${STAGE_LABEL[r.stage]}`,
+      detail: `${label(r.repo)} · ${run} · ${r.actor}${r.message && r.stage !== "started" ? ` · ${r.message}` : ""}`,
+      repo: r.repo,
+      projectId: projectByRepo.get(r.repo)?.id,
+      url: `https://github.com/${r.repo}/actions/runs/${r.run_id}`,
     });
   }
   return out.sort((x, y) => y.at.localeCompare(x.at));

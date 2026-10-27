@@ -1,5 +1,6 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: soc-lab
@@ -31,6 +32,31 @@ agents:
     history:
       - at: 2026-10-11
         event: Automation script restored to the repository
+    registry:
+      title: SOC Case Note Generator
+      category: security
+      subcategory: Detection analysis
+      classification:
+        type: C
+        confidence: verified
+        evidence: soc_automation.py calls the Splunk REST API and formats a Markdown note; no AI model is called
+      responsibilities:
+        tasks: [Authenticate to the Splunk REST API, Run the brute-force search, Write a structured case note]
+        tools: [Splunk REST API, Python requests]
+        inputs: [SPLUNK_USER and SPLUNK_PASS environment variables]
+        outputs: [Markdown case note in notes/]
+        dependencies: [bruteforce-detection]
+        limitations: [Lab only; Splunk at https://localhost:8089 with TLS verification disabled]
+      execution:
+        trigger_type: manual
+        environment: Lab VM
+      governance:
+        autonomy: 0
+        data_sensitivity: internal
+        risk: low
+      docs:
+        technical: WALKTHROUGH.md
+        known_issues: [The project name says AI-assisted, which refers to how the lab was built, not to this script]
 
   - id: bruteforce-detection
     name: Brute Force Detection Search
@@ -43,3 +69,25 @@ agents:
     trigger: Splunk search or alert
     source: queries/brute_force_detection.spl
     last_run: null
+    registry:
+      title: SMB Brute Force Detection Rule
+      category: security
+      subcategory: Detection analysis
+      classification:
+        type: C
+        confidence: verified
+        evidence: queries/brute_force_detection.spl flags 10 or more EventCode 4625 failures per account and source in 5 minutes
+      responsibilities:
+        tasks: [Flag repeated failed SMB logons from one source]
+        tools: [Splunk SPL]
+        inputs: [WinEventLog:Security in index main]
+        outputs: ["Rows with account, source address, count and severity"]
+      execution:
+        trigger_type: manual
+        environment: Splunk Enterprise (lab)
+      governance:
+        autonomy: 0
+        data_sensitivity: internal
+        risk: low
+      docs:
+        known_issues: [Whether it runs as a scheduled Splunk alert is not in the repository]
