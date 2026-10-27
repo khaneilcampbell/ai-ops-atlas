@@ -45,7 +45,14 @@ Statuses and last-run times in the manifests are a starting point. Correct them 
 ## GitHub access and secrets
 
 - All GitHub calls are `GET` requests to `api.github.com/repos/...`, plus the repository lists at `/users/{owner}/repos` and `/user/repos`. The Rust side rejects any other path.
-- Requests are conditional (ETags), and GitHub doesn't count unchanged 304 answers against the rate limit. Without a token, the anonymous limit is 60 requests an hour. The first full load of 11 repositories uses about 50 requests, so add a token if you refresh often.
+- The app keeps GitHub usage low:
+  - Repository details come from the one repository list used to find new repositories, instead of one request per repository.
+  - Commits and languages are fetched again only when a repository's last push changes. Workflow runs are checked on each refresh with a token, or every 3 hours without one, and always while a run is still in progress.
+  - One run list per repository covers both CI and the workflows agents observe.
+  - Requests are conditional (ETags). With a token, GitHub doesn't count unchanged 304 answers against the limit; without one, every request counts.
+  - Repositories checked within the refresh interval are left alone, the timer pauses while the window is hidden, and refreshes stop when the hourly limit is spent until it resets.
+  - **Settings → GitHub request budget** shows what the last refresh cost and how much of the hour's limit is left.
+- Without a token the limit is 60 requests an hour. A first load of 11 repositories takes about 20 requests and a quiet refresh about 1.
 - With a token, private repositories work and the limit rises. Use a fine-grained token with read-only **Contents**, **Metadata** and **Actions** access. It is saved in the macOS Keychain under `com.khaneilcampbell.ai-ops-atlas`, attached to requests by the Rust side, and never returned to the web view, shown in the interface or logged.
 - Preferences and cached GitHub metadata are kept in the app's local storage on your Mac.
 
