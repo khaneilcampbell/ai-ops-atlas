@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, effectiveLastRun } from "./derive";
+import { attentionItems, ciHealth, effectiveLastRun, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -32,6 +32,21 @@ describe("ciHealth", () => {
   it("ignores Dependabot's own update jobs", () => {
     const dependabot = { ...run("cargo in /src-tauri for glib - Update #1658074936", "failure"), event: "dynamic" };
     expect(ciHealth(snap({ runs: [dependabot, run("CI", "success")] })).value).toBe("Passing");
+  });
+});
+
+describe("verifiedState", () => {
+  it("separates not yet verified, unavailable, failing, passing and no CI", () => {
+    expect(verifiedState(undefined).kind).toBe("unverified");
+    expect(verifiedState({ kind: "loading" }).kind).toBe("unverified");
+    expect(verifiedState({ kind: "error", message: "404" }).kind).toBe("unavailable");
+    expect(verifiedState({ kind: "ok", stale: false, data: snap({ runs: [run("Tests", "failure")] }) })).toEqual({ kind: "failing", label: "CI 1 failing now", stale: false });
+    expect(verifiedState({ kind: "ok", stale: false, data: snap({ runs: [run("Tests", "success")] }) }).kind).toBe("passing");
+    expect(verifiedState({ kind: "ok", stale: false, data: snap() }).kind).toBe("no-ci");
+  });
+  it("marks data kept from an earlier sync", () => {
+    const v = verifiedState({ kind: "error", message: "rate limited", data: snap({ runs: [run("Tests", "success")] }) });
+    expect(v).toEqual({ kind: "passing", label: "CI passing · last known", stale: true });
   });
 });
 

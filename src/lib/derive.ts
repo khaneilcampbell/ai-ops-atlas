@@ -122,7 +122,9 @@ export function attentionItems(
     }
     const run = observedRun(a, snap);
     if (run && (run.conclusion === "failure" || run.conclusion === "timed_out")) {
-      items.push({ id: `agent:${a.id}:run`, severity: "high", title: a.name, detail: `Latest ${run.name} run failed`, target });
+      // Observed workflows include runs on any branch, so say which one: a failed pull request
+      // run is not the same as the default branch failing.
+      items.push({ id: `agent:${a.id}:run`, severity: "high", title: a.name, detail: `Latest ${run.name} run failed on ${run.branch}`, target });
     }
     if (a.status === "active") {
       const last = effectiveLastRun(a, snap);
@@ -214,4 +216,22 @@ export function activityFeed(catalog: Catalog, repos: Record<string, RepoState>,
 
 export function projectOf(catalog: Catalog, id: string): Project | undefined {
   return catalog.projects.find((p) => p.id === id);
+}
+
+/**
+ * What the map can honestly say about a repository's checks: failing now, passing, no CI,
+ * data unavailable (GitHub refused or the repository is private or missing), or not verified
+ * yet (still loading, or never synced). `stale` marks data kept from an earlier sync.
+ */
+export type Verified = "failing" | "passing" | "no-ci" | "unavailable" | "unverified";
+
+export function verifiedState(state: RepoState | undefined): { kind: Verified; label: string; stale: boolean } {
+  if (!state || state.kind === "loading") return { kind: "unverified", label: "Not verified yet", stale: false };
+  const snap = repoData(state);
+  if (!snap) return { kind: "unavailable", label: "GitHub data unavailable", stale: false };
+  const stale = state.kind === "error" || state.stale;
+  const ci = ciHealth(snap);
+  const kind: Verified = ci.health === "bad" ? "failing" : ci.value === "No workflows" ? "no-ci" : "passing";
+  const label = kind === "failing" ? `CI ${ci.value} now` : kind === "no-ci" ? "No CI workflows" : `CI ${ci.value.toLowerCase()}`;
+  return { kind, label: stale ? `${label} · last known` : label, stale };
 }
