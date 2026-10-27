@@ -1,12 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
-import { ExternalLink, Indicator, LangDot, StatusPill } from "./bits";
-import { activityFeed, effectiveLastRun, observedRun, repoData, repoHealth } from "../lib/derive";
+import { ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
+import { activityFeed, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
+import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
 
-export function DetailPanel() {
+/** Details for the current selection: an overlay on list views, or docked beside the map. */
+export function DetailPanel({ docked = false }: { docked?: boolean }) {
   const { selection, select } = useAtlas();
 
   useEffect(() => {
@@ -16,11 +18,18 @@ export function DetailPanel() {
   }, [select]);
 
   if (!selection) return null;
+  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : <RepoDetail name={selection.id} />;
+  if (docked)
+    return (
+      <aside className="panel docked" aria-label="Inspector">
+        {body}
+      </aside>
+    );
   return (
     <>
       <div className="scrim" onClick={() => select(null)} />
       <aside className="panel" role="dialog" aria-label="Details">
-        {selection.kind === "agent" ? <AgentDetail id={selection.id} /> : <RepoDetail name={selection.id} />}
+        {body}
       </aside>
     </>
   );
@@ -146,21 +155,34 @@ function AgentDetail({ id }: { id: string }) {
   );
 }
 
+const CONCLUSION_HEALTH: Record<string, Health> = { success: "good", failure: "bad", timed_out: "bad", cancelled: "warn", action_required: "warn" };
+
 function RepoDetail({ name }: { name: string }) {
-  const { catalog, repos, select } = useAtlas();
+  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
+  const [more, setMore] = useState(false);
   const state = repos[name];
   const snap = repoData(state);
   const project = catalog.projects.find((p) => p.repository === name);
   const agents = catalog.agents.filter((a) => a.repository === name);
   const history = useMemo(() => activityFeed(catalog, repos, { repo: name }), [catalog, repos, name]);
-  const languages = snap ? Object.entries(snap.languages) : [];
+  const indicators = repoHealth(snap, agents.length);
+  const workflows = snap ? latestPerWorkflow(snap.runs) : [];
+  const languages = snap ? Object.entries(snap.languages).sort((a, b) => b[1] - a[1]) : [];
   const total = languages.reduce((s, [, v]) => s + v, 0);
+  const frameworks = [...new Set(agents.map((a) => a.framework))];
+  const models = [...new Set(agents.flatMap((a) => (a.model ? [a.model] : [])))];
 
   return (
     <>
-      <Head eyebrow={`Repository · ${project?.name ?? "Not in the catalog yet"}`} title={name.split("/")[1]}>
-        <div className="muted small" style={{ marginTop: 4 }}>
+      <Head eyebrow={project ? "Project" : "Repository · Not in the catalog yet"} title={project?.name ?? name.split("/")[1]}>
+        <div className="mono muted" style={{ marginTop: 4 }}>
           {name}
+        </div>
+        <div className="chips" style={{ marginTop: 10 }}>
+          {project && <StatusPill status={project.status} />}
+          <HealthBadge health={snap ? overallHealth(indicators) : "unknown"} />
+          {snap && <span className="chip">{snap.visibility}</span>}
+          {snap?.archived && <span className="chip">Archived</span>}
         </div>
       </Head>
       <div className="panel-body selectable">
@@ -169,35 +191,116 @@ function RepoDetail({ name }: { name: string }) {
             <Icon name="alert" size={15} /> {state.message}
           </div>
         )}
-        <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>
-        <div className="chips">
-          {repoHealth(snap, agents.length).map((i) => (
-            <span key={i.key} className="chip">
-              <Indicator ind={i} />
-            </span>
-          ))}
-        </div>
-        <dl className="kv">
-          <dt>Language</dt>
-          <dd>
-            <LangDot lang={snap?.language ?? null} />
-            {total > 0 && (
-              <div className="muted small">
-                {languages
-                  .slice(0, 4)
-                  .map(([l, v]) => `${l} ${Math.round((v / total) * 100)}%`)
-                  .join(" · ")}
+        {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
+
+        <section>
+          <div className="section-head">
+            <div className="section-title">Verified health</div>
+            <span className="source">{snap ? `GitHub · synced ${relative(snap.fetchedAt)}` : "Not synced yet"}</span>
+          </div>
+          <div className="health-grid">
+            {indicators.map((i) => (
+              <Indicator key={i.key} ind={i} />
+            ))}
+          </div>
+          {workflows.length > 0 && (
+            <ul className="runs">
+              {workflows.map((r) => (
+                <li key={r.name}>
+                  <i className={`h-${r.status !== "completed" ? "unknown" : (CONCLUSION_HEALTH[r.conclusion ?? ""] ?? "unknown")}`} />
+                  <span className="grow">
+                    <ExternalLink href={r.url}>{r.name}</ExternalLink>
+                    <span className="muted"> · {r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion}</span>
+                  </span>
+                  <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
+                    {relative(r.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <div className="section-title">Tech stack</div>
+          {total > 0 ? (
+            <>
+              <div className="lang-bar" role="img" aria-label={languages.map(([l, v]) => `${l} ${Math.round((v / total) * 100)}%`).join(", ")}>
+                {languages.map(([l, v]) => (
+                  <i key={l} style={{ flexGrow: v, background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
+                ))}
               </div>
-            )}
-          </dd>
+              <div className="lang-legend">
+                {languages.slice(0, 5).map(([l, v]) => (
+                  <span key={l} className="health">
+                    <i className="lang-dot" style={{ background: LANG_COLORS[l] ?? "var(--sage-400)" }} />
+                    {l} <span className="muted">{Math.round((v / total) * 100)}%</span>
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="muted small">{snap ? "GitHub reports no languages for this repository." : "Languages appear after the first sync."}</div>
+          )}
+          {(frameworks.length > 0 || models.length > 0 || (project?.tags.length ?? 0) > 0) && (
+            <div className="chips" style={{ marginTop: 10 }}>
+              {frameworks.map((f) => (
+                <span key={f} className="chip">
+                  <i className="swatch" style={{ background: frameworkColor(f) }} />
+                  {f}
+                </span>
+              ))}
+              {models.map((m) => (
+                <span key={m} className="chip">
+                  {m}
+                </span>
+              ))}
+              {project?.tags.map((t) => (
+                <span key={t} className="chip muted-chip">
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <div className="section-head">
+            <div className="section-title">Agents ({agents.length})</div>
+            <span className="source">Declared in the manifest</span>
+          </div>
+          {agents.length === 0 ? (
+            <div className="muted small">{project ? "No agents are registered for this project." : "Add a manifest in catalog/ to register this repository's agents."}</div>
+          ) : (
+            <ul className="list" style={{ padding: 0 }}>
+              {agents.map((a) => (
+                <li key={a.id}>
+                  <button className="list-row" onClick={() => select({ kind: "agent", id: a.id })}>
+                    <i className="roof" style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
+                    <span className="grow">
+                      <div className="title">{a.name}</div>
+                      <div className="meta">
+                        {a.framework}
+                        {a.trigger ? ` · ${a.trigger}` : ""}
+                      </div>
+                    </span>
+                    <StatusPill status={a.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <dl className="kv">
           <dt>Default branch</dt>
           <dd className="mono">{snap?.defaultBranch ?? "–"}</dd>
           <dt>Last push</dt>
           <dd>{snap?.pushedAt ? `${formatDate(snap.pushedAt)} (${relative(snap.pushedAt)})` : "–"}</dd>
-          <dt>Visibility</dt>
-          <dd>{snap?.visibility ?? "–"}</dd>
-          <dt>Synced</dt>
-          <dd>{snap ? relative(snap.fetchedAt) : "Not yet"}</dd>
+          <dt>Stars</dt>
+          <dd>{snap ? snap.stars : "–"}</dd>
+          <dt>License</dt>
+          <dd>{snap ? (snap.license ?? "None") : "–"}</dd>
         </dl>
         <div>
           <div className="section-title">Links</div>
@@ -215,39 +318,45 @@ function RepoDetail({ name }: { name: string }) {
                 <Icon name="external" size={14} /> {l.label}
               </ExternalLink>
             ))}
+            {project && agents.length > 0 && (
+              <button
+                className="text-btn link-row"
+                onClick={() => {
+                  clearFilters();
+                  setFilters({ project: project.id });
+                  setView("agents");
+                }}
+              >
+                <Icon name="agents" size={14} /> List these agents
+              </button>
+            )}
+            <button className="text-btn link-row" onClick={() => setView("repos")}>
+              <Icon name="repos" size={14} /> All repositories
+            </button>
           </div>
         </div>
         <div>
-          <div className="section-title">Linked agents ({agents.length})</div>
-          <ul className="list" style={{ padding: 0 }}>
-            {agents.map((a) => (
-              <li key={a.id}>
-                <button className="list-row" onClick={() => select({ kind: "agent", id: a.id })}>
-                  <span className="grow">
-                    <div className="title">{a.name}</div>
-                    <div className="meta">{a.framework}</div>
-                  </span>
-                  <StatusPill status={a.status} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="section-title">Activity history</div>
+          <div className="section-title">Recent activity</div>
           {history.length === 0 ? (
-            <div className="muted small">No activity loaded yet.</div>
+            <div className="muted small">{snap ? "No commits or workflow runs in the synced window." : "Activity appears after the first sync."}</div>
           ) : (
-            <ul className="timeline">
-              {history.slice(0, 20).map((h) => (
-                <li key={h.id} className={`k-${h.kind}`}>
-                  <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
-                  <div className="muted small">
-                    {formatDate(h.at)} · {h.subtitle}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="timeline">
+                {history.slice(0, more ? 20 : 6).map((h) => (
+                  <li key={h.id} className={`k-${h.kind}`}>
+                    <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
+                    <div className="muted small" title={new Date(h.at).toLocaleString()}>
+                      {relative(h.at)} · {h.subtitle}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {history.length > 6 && (
+                <button className="text-btn small" onClick={() => setMore((m) => !m)}>
+                  {more ? "Show less" : `Show ${Math.min(20, history.length) - 6} more`}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

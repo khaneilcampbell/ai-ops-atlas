@@ -79,7 +79,8 @@ export default function App() {
         {view === "settings" && <SettingsView />}
       </main>
 
-      {selection && <DetailPanel />}
+      {/* The map docks its own inspector beside the neighborhood. */}
+      {selection && view !== "map" && <DetailPanel />}
     </div>
   );
 }
