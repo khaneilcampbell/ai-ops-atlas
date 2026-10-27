@@ -7,7 +7,7 @@ import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
 
-export type View = "overview" | "agents" | "repos" | "map" | "grid" | "settings";
+export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "settings";
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
 
 export interface Settings {
@@ -204,7 +204,11 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       refreshing,
       refresh,
       view,
-      setView: setViewState,
+      // A selection belongs to the view it was made in.
+      setView: (v) => {
+        setViewState(v);
+        select(null);
+      },
       selection,
       select,
       filters,

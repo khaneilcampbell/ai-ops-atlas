@@ -23,6 +23,7 @@ const PATHS: Record<string, string> = {
   compass: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 7.8l-2.1 6.4-6.4 2.1 2.1-6.4z",
   labels: "M4 7V4h16v3M9 20h6M12 4v16",
   lock: "M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4",
+  pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
 };
 

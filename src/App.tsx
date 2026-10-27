@@ -7,6 +7,7 @@ import { agentMatches, repoMatches, repoRows } from "./lib/search";
 import { relative } from "./lib/time";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
+import { ActivityView } from "./views/Activity";
 import { ViewSwitch } from "./components/ViewSwitch";
 import { AgentsView } from "./views/Agents";
 import { ReposView } from "./views/Repos";
@@ -17,6 +18,7 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
   { view: "overview", label: "Mission", icon: "overview" },
   { view: "agents", label: "Agents", icon: "agents" },
+  { view: "activity", label: "Activity", icon: "pulse" },
   { view: "repos", label: "Repos", icon: "repos" },
 ];
 
@@ -77,14 +79,15 @@ export default function App() {
       <main className="main">
         {view === "overview" && <MissionControl attention={attention} />}
         {view === "grid" && <GridView />}
+        {view === "activity" && <ActivityView />}
         {view === "agents" && <AgentsView />}
         {view === "repos" && <ReposView />}
         {view === "map" && <MapView />}
         {view === "settings" && <SettingsView />}
       </main>
 
-      {/* The map docks its own inspector beside the neighborhood. */}
-      {selection && view !== "map" && <DetailPanel />}
+      {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
+      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent") && <DetailPanel />}
     </div>
   );
 }

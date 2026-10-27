@@ -81,6 +81,14 @@ class Reader {
     });
   }
 
+  strings(o: Raw, key: string, path: string): string[] {
+    return this.list(o, key, path).flatMap((v, i) => {
+      if (typeof v === "string" && v.trim()) return [v.trim()];
+      this.fail(`${path}.${key}[${i}]`, "must be a non-empty string");
+      return [];
+    });
+  }
+
   history(o: Raw, path: string): HistoryEntry[] {
     return this.list(o, "history", path).flatMap((h, i) => {
       const ho = this.obj(h, `${path}.history[${i}]`);
@@ -136,6 +144,8 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         trigger: r.str(ao, "trigger", path, false),
         source: r.str(ao, "source", path, false),
         lastRun: r.date(ao, "last_run", path),
+        capabilities: r.strings(ao, "capabilities", path),
+        permissions: r.strings(ao, "permissions", path),
         history: r.history(ao, path),
         links: r.links(ao, path),
         observe: observe ? { githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false) } : undefined,
