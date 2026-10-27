@@ -17,10 +17,19 @@ export function repoData(state: RepoState | undefined): RepoSnapshot | undefined
   return state.kind === "ok" ? state.data : state.kind === "error" ? state.data : undefined;
 }
 
-/** The latest completed run of each workflow on the default branch. */
+/**
+ * Dependabot's own update jobs ("cargo in /src-tauri for glib - Update #123") run as
+ * "dynamic" events on the default branch. Each has a unique name, and a failed one only
+ * means Dependabot could not open a PR, so it says nothing about the repository's CI.
+ */
+export function isDependabotJob(r: WorkflowRun): boolean {
+  return r.event === "dynamic" && / - Update #\d+$/.test(r.name);
+}
+
+/** The latest run of each of the repository's own workflows on the default branch. */
 export function latestPerWorkflow(runs: WorkflowRun[]): WorkflowRun[] {
   const seen = new Map<string, WorkflowRun>();
-  for (const r of runs) if (!seen.has(r.name)) seen.set(r.name, r);
+  for (const r of runs) if (!isDependabotJob(r) && !seen.has(r.name)) seen.set(r.name, r);
   return [...seen.values()];
 }
 
