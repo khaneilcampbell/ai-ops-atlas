@@ -66,7 +66,8 @@ jobs:
 
   macos:
     name: macOS app bundle
-    if: github.event_name == 'workflow_dispatch' && inputs.macos
+    # Every merge to main builds the app, so an install never waits on a separate dispatch.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.macos)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +76,11 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      # Reuses compiled dependencies between builds; a cold build recompiles all of Tauri.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: macos-app
       - run: npm ci
       - run: npx tauri build --bundles app
       # upload-artifact drops file permissions, which would leave the app binary
