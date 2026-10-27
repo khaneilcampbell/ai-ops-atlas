@@ -153,12 +153,18 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
+    // Neighborhood names when the map is grouped, at the back corner of each landmass.
+    for (const n of layout.neighborhoods) {
+      if (!n.label || layout.neighborhoods.length < 2) continue;
+      const text = `${n.label.toUpperCase()} · ${n.count}`;
+      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: "m3-pill hood", node: text });
+    }
     for (const p of scene.parks) {
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 1.1, p.z + p.d / 2), w: measure(p.label, 11.5, SANS, 500) + 22, h: 28, priority: 7, className: "m3-pill quiet", node: p.label });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect]);
+  }, [scene, layout, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -193,6 +199,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     <div className="map3d" ref={wrapEl}>
       <Canvas shadows dpr={[1, 2]} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <World
+          hoods={layout.neighborhoods.length}
           scene={scene}
           anchors={anchors}
           labels={labels}
@@ -245,6 +252,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 });
 
 function World({
+  hoods,
   scene,
   anchors,
   labels,
@@ -260,6 +268,7 @@ function World({
   onNear,
   onMoved,
 }: {
+  hoods: number;
   scene: Scene3D;
   anchors: ReturnType<typeof anchorsOf>;
   labels: LabelSpec[];
@@ -357,7 +366,8 @@ function World({
     controls.maxDistance = fitDist.current * 1.8;
     controls.minDistance = 4;
     // Frame the heart of the map, the way the reference crops its coastline, rather than every corner.
-    goto(center, fitDist.current * 0.7, instant);
+    // Grouped maps keep every neighborhood in view.
+    goto(center, fitDist.current * (hoods > 1 ? 0.9 : 0.7), instant);
   };
 
   // Fit on first show and when the layout changes; refit on resize until the person moves the camera.
