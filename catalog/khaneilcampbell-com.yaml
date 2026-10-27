@@ -1,0 +1,59 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: portfolio-site
+  name: AI-Assisted Portfolio Website
+  summary: >-
+    Static portfolio at khaneilcampbell.com, served by GitHub Pages and built
+    with Claude as a working partner.
+  status: active
+  repository: khaneilcampbell/khaneilcampbell.com
+  tags: [portfolio, static-site, github-pages, claude]
+  links:
+    - label: Live site
+      url: https://khaneilcampbell.com
+
+agents:
+  - id: site-builder
+    name: Claude Site Assistant
+    purpose: >-
+      Drafts page copy, design changes and pull requests that KC reviews
+      before merging.
+    framework: Claude Code
+    model: Claude
+    runtime: Claude Code sessions
+    status: active
+    trigger: On request, through pull requests
+    last_run: 2026-10-26T06:52:28Z
+    history:
+      - at: 2026-10-26
+        event: Updated GitHub links to the khaneilcampbell username (#45)
+      - at: 2026-10-24
+        event: Rewrote home, About, Work and Contact copy (#36 to #43)
+
+  - id: site-audit
+    name: Site Audit
+    purpose: >-
+      Audits static HTML pages for security headers, accessibility and link
+      hygiene.
+    framework: Python script
+    runtime: Local
+    status: idle
+    trigger: Manual, python scripts/site_audit.py
+    source: scripts/site_audit.py
+    last_run: null
+
+  - id: security-check
+    name: Security Check Workflow
+    purpose: >-
+      Checks every page for a Content Security Policy and other HTML security
+      rules on each push and pull request.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push or pull request to main
+    source: .github/workflows/security-check.yml
+    observe:
+      github_workflow: security-check.yml
+    last_run: null

@@ -1,0 +1,45 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: soc-lab
+  name: AI-Assisted SOC Brute Force Detection Lab
+  summary: >-
+    Simulates SMB brute-force activity in an isolated lab, detects it in
+    Splunk and generates SOC case notes through the Splunk REST API.
+  status: active
+  repository: khaneilcampbell/splunk-bruteforce-detection-lab
+  tags: [splunk, detection-engineering, python, soc]
+  links:
+    - label: Case study
+      url: https://khaneilcampbell.com/soc-automation-lab.html
+    - label: Project docs
+      url: https://github.com/khaneilcampbell/project-intelligence-hub
+
+agents:
+  - id: soc-case-notes
+    name: SOC Case Note Automation
+    purpose: >-
+      Authenticates to the Splunk REST API, runs the brute-force search,
+      parses results and writes a structured Markdown case note for review.
+    framework: Python script
+    runtime: Lab VM (manual)
+    status: idle
+    trigger: Manual, python3 soc_automation.py
+    source: soc_automation.py
+    last_run: null
+    history:
+      - at: 2026-10-11
+        event: Automation script restored to the repository
+
+  - id: bruteforce-detection
+    name: Brute Force Detection Search
+    purpose: >-
+      SPL search over Windows Security EventCode 4625 that flags repeated
+      failed SMB logons from one source.
+    framework: Splunk SPL
+    runtime: Splunk Enterprise (lab)
+    status: idle
+    trigger: Splunk search or alert
+    source: queries/brute_force_detection.spl
+    last_run: null

@@ -1,0 +1,157 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: commerce-pipeline
+  name: Multi-Agent Commerce Pipeline
+  summary: >-
+    Autonomous pipeline that researches a niche, builds digital products with
+    Canva, publishes them to Shopify, syncs sales and keeps listing SEO fresh.
+  status: active
+  repository: khaneilcampbell/multi-agent-commerce-pipeline
+  tags: [crewai, claude, shopify, canva, automation]
+  links:
+    - label: Case study
+      url: https://khaneilcampbell.com/commerce-pipeline.html
+
+agents:
+  - id: commerce-loop
+    name: Autonomous Loop
+    purpose: >-
+      Orchestrates each cycle in build, design or maintain mode, running the
+      phases below on a Linux VPS under the shopify-pipeline systemd service.
+    framework: Shell + systemd
+    runtime: Linux VPS
+    status: active
+    trigger: loop.sh (systemd, hourly cycle)
+    source: loop.sh
+    last_run: null
+    history:
+      - at: 2026-10-12
+        event: Service paths aligned with the project rename
+
+  - id: niche-scout
+    name: Shopify Niche Scout
+    purpose: >-
+      Finds the single highest-opportunity niche for a new digital product
+      store from market size, competition, buyer intent and profit potential.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: market-analyst
+    name: Market Research Analyst
+    purpose: >-
+      Synthesizes top-selling stores, visual styles, price points, buyer
+      language and keyword whitespace for the chosen niche.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: brand-strategist
+    name: Brand Strategist
+    purpose: >-
+      Defines the store foundation: niche, store name, buyer persona,
+      positioning statement and brand tone.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: visual-director
+    name: Visual Identity Director
+    purpose: >-
+      Recommends the palette, type pairing and logo direction for the brand.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: copy-strategist
+    name: Copywriter and SEO Strategist
+    purpose: >-
+      Writes the brand voice system: tagline, title formula, listing template
+      and Shopify SEO tags.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: launch-planner
+    name: Launch Asset Planner
+    purpose: >-
+      Compiles the brand guide and a 30-day launch checklist for storefront,
+      listings and social traffic.
+    framework: CrewAI
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 1, at most every 7 days
+    source: scripts/shopify_brand_crew.py
+    last_run: null
+
+  - id: canva-mockups
+    name: Canva Mockup Generator
+    purpose: >-
+      Generates six conversion-focused product images per listing through
+      the Canva remote MCP server and queues the product for build.
+    framework: Anthropic API + MCP
+    model: Claude (Anthropic API)
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 3, every build or design cycle
+    source: scripts/canva_image_generator.py
+    last_run: null
+
+  - id: shopify-publisher
+    name: Shopify Publisher
+    purpose: >-
+      Validates assets and publishes products through the Shopify Admin API,
+      gated by the weekly publish limit and cooldown.
+    framework: Python script
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
+    source: scripts/shopify_uploader.py
+    last_run: null
+
+  - id: seo-maintainer
+    name: SEO Maintainer
+    purpose: >-
+      Compares live tags with competitor keywords and applies an optimised
+      tag set and SEO metafields to published listings.
+    framework: Python script
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 6, every maintain cycle
+    source: scripts/seo_analyzer.py
+    last_run: null
+
+  - id: health-report
+    name: Health Dashboard Report
+    purpose: >-
+      Daily summary of publishes, failure rate, run duration and stuck queue
+      rows. Picked up by an n8n daily summary workflow.
+    framework: Python + n8n
+    runtime: Linux VPS
+    status: idle
+    trigger: Phase 7, daily via n8n
+    source: scripts/health_dashboard.py
+    last_run: null
