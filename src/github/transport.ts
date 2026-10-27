@@ -16,6 +16,8 @@ export class GithubError extends Error {
   }
 }
 
+export const PRIVATE_OR_MISSING = "Private or not found. Add a GitHub token in Settings to load private repositories.";
+
 type EtagCache = Record<string, { etag: string; body: unknown }>;
 
 // Conditional requests: GitHub answers 304 for unchanged data, and 304s don't count
@@ -61,7 +63,7 @@ export async function githubGet(path: string): Promise<unknown> {
     return res.body;
   }
   const msg = (res.body as { message?: string } | null)?.message;
-  if (res.status === 404) throw new GithubError("Not found, or private and no token is set", 404);
+  if (res.status === 404) throw new GithubError(PRIVATE_OR_MISSING, 404);
   if (res.status === 403 || res.status === 429) throw new GithubError(msg ?? "Rate limited by GitHub", res.status);
   if (res.status === 401) throw new GithubError("The saved GitHub token was rejected", 401);
   throw new GithubError(msg ?? `GitHub returned ${res.status}`, res.status);

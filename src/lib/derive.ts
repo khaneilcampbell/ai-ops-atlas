@@ -1,5 +1,6 @@
 import type { Agent, Catalog, ManifestIssue, Project } from "../catalog/types";
 import type { RepoSnapshot, RepoState, WorkflowRun } from "../github/types";
+import { PRIVATE_OR_MISSING } from "../github/transport";
 import { daysSince } from "./time";
 
 export type Health = "good" | "warn" | "bad" | "unknown";
@@ -128,7 +129,9 @@ export function attentionItems(
     const state = repos[p.repository];
     const target = { kind: "repo" as const, id: p.repository };
     if (state?.kind === "error") {
-      items.push({ id: `repo:${p.repository}:error`, severity: "medium", title: p.repository, detail: state.message, target });
+      // A private repository without a token is expected, not a fault in the repository.
+      const severity = state.message === PRIVATE_OR_MISSING ? "low" : "medium";
+      items.push({ id: `repo:${p.repository}:error`, severity, title: p.repository, detail: state.message, target });
     }
     const snap = repoData(state);
     if (!snap) continue;
