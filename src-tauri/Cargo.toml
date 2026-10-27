@@ -27,7 +27,8 @@ base64 = "0.22"
 sha2 = "0.10"
 rand = "0.8"
 tauri-plugin-dialog = "2"
-tauri-plugin-updater = "2"
+# Without the default `zip` feature: macOS updates are .tar.gz, and zip 4.x has open advisories.
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
 
 [dev-dependencies]
