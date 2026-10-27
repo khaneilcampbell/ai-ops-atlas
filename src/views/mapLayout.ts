@@ -4,7 +4,7 @@ import type { Agent, Catalog, Project } from "../catalog/types";
 export const TW = 48;
 export const TH = 24;
 export const DISTRICT = 10;
-const GAP = 4;
+const GAP = 5;
 
 export function iso(gx: number, gy: number) {
   return { x: (gx - gy) * TW, y: (gx + gy) * TH };
@@ -31,6 +31,8 @@ export interface Park {
   ox: number;
   oy: number;
   size: number;
+  /** Repositories with no manifest, shown as plain buildings in this lot. */
+  strays: { name: string; gx: number; gy: number; size: number; height: number }[];
 }
 
 export interface Layout {
@@ -58,8 +60,9 @@ function hash(s: string) {
   return (h >>> 0) / 4294967295;
 }
 
-export function layoutMap(catalog: Catalog): Layout {
-  const n = Math.max(catalog.projects.length, 1);
+export function layoutMap(catalog: Catalog, uncataloged: string[] = []): Layout {
+  // One extra cell holds the repositories that have no manifest yet.
+  const n = Math.max(catalog.projects.length + (uncataloged.length ? 1 : 0), 1);
   const cols = Math.ceil(Math.sqrt(n));
   const rows = Math.ceil(n / cols);
   const districts: District[] = [];
@@ -101,7 +104,19 @@ export function layoutMap(catalog: Catalog): Layout {
   });
 
   for (let i = catalog.projects.length; i < cols * rows || i < 2; i++) {
-    parks.push({ ox: (i % cols) * (cell + GAP), oy: Math.floor(i / cols) * (cell + GAP), size: cell });
+    parks.push({ ox: (i % cols) * (cell + GAP), oy: Math.floor(i / cols) * (cell + GAP), size: cell, strays: [] });
+  }
+  if (uncataloged.length) {
+    const p = parks[0];
+    const m = Math.ceil(Math.sqrt(uncataloged.length));
+    const step = p.size / m;
+    p.strays = uncataloged.map((name, k) => ({
+      name,
+      gx: p.ox + ((k % m) + 0.5) * step - step * 0.2,
+      gy: p.oy + (Math.floor(k / m) + 0.5) * step - step * 0.2,
+      size: step * 0.4,
+      height: 30 + Math.round(hash(name) * 20),
+    }));
   }
 
   const corners = [...districts, ...parks].flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.size, d.oy), iso(d.ox, d.oy + d.size), iso(d.ox + d.size, d.oy + d.size)]);

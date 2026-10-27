@@ -25,8 +25,8 @@ export interface RepoRow {
   state: RepoState | undefined;
 }
 
-export function repoRows(catalog: Catalog, repos: Record<string, RepoState>): RepoRow[] {
-  const names = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository)))];
+export function repoRows(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = []): RepoRow[] {
+  const names = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   return names.map((name) => ({
     name,
     project: catalog.projects.find((p) => p.repository === name),

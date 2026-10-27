@@ -58,13 +58,13 @@ function Tree({ gx, gy, r }: { gx: number; gy: number; r: number }) {
   );
 }
 
-function Label({ x, y, text, tone, onClick }: { x: number; y: number; text: string; tone: "dark" | "light" | "gold"; onClick?: () => void }) {
+function Label({ x, y, text, tone, onClick, scale = 1 }: { x: number; y: number; text: string; tone: "dark" | "light" | "gold"; onClick?: () => void; scale?: number }) {
   const w = Math.max(48, text.length * 8.2 + 24);
   const fill = tone === "dark" ? "#1d2b22" : tone === "gold" ? "#6e5323" : "#f1f2ea";
   const color = tone === "light" ? "#1d2620" : "#f1f2ea";
   const stroke = tone === "gold" ? "#c9a35a" : tone === "dark" ? "rgba(201,163,90,0.35)" : "rgba(29,43,34,0.15)";
   return (
-    <g transform={`translate(${x},${y})`} onClick={onClick} style={{ cursor: onClick ? "pointer" : undefined }}>
+    <g transform={`translate(${x},${y}) scale(${scale})`} onClick={onClick} style={{ cursor: onClick ? "pointer" : undefined }}>
       <rect x={-w / 2} y={-14} width={w} height={28} rx={9} fill={fill} stroke={stroke} />
       <text textAnchor="middle" y={5} fontSize={15} fill={color} fontFamily="-apple-system, system-ui, sans-serif">
         {text}
@@ -77,8 +77,8 @@ const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", 
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 export function MapView() {
-  const { catalog, repos, select, selection, settings, setSettings, setView } = useAtlas();
-  const layout = useMemo(() => layoutMap(catalog), [catalog]);
+  const { catalog, repos, uncataloged, select, selection, settings, setSettings, setView } = useAtlas();
+  const layout = useMemo(() => layoutMap(catalog, uncataloged), [catalog, uncataloged]);
   const stage = useRef<HTMLDivElement>(null);
   const [view, setViewBox] = useState({ x: 0, y: 0, k: 1 });
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
@@ -136,14 +136,19 @@ export function MapView() {
     setTip({ x: e.clientX - r.left, y: e.clientY - r.top, title, sub });
   };
 
-  const agentsShown = settings.showMapLabels || view.k > 1.15;
+  // Agent labels need room: show them once zoomed in far enough, earlier if "always show" is on.
+  const agentsShown = view.k >= (settings.showMapLabels ? 0.5 : 0.9);
+  // Repository and district names grow as you zoom out so they stay readable.
+  const nameScale = Math.min(1.8, Math.max(1, 0.75 / view.k));
   const focused = layout.districts.find((d) => d.project.id === focus) ?? layout.districts[0];
   const isSelected = (kind: "agent" | "repo", id: string) => selection?.kind === kind && selection.id === id;
 
   const lots = layout.districts.flatMap((d) => d.lots.map((l) => ({ ...l, d })));
+  const strays = layout.parks.flatMap((p) => p.strays);
   const drawables = [
     ...lots.map((l) => ({ depth: l.gx + l.gy + l.size * 2, kind: "lot" as const, l })),
     ...layout.districts.map((d) => ({ depth: d.hq.gx + d.hq.gy + d.hq.size * 2, kind: "hq" as const, d })),
+    ...strays.map((s) => ({ depth: s.gx + s.gy + s.size * 2, kind: "stray" as const, s })),
   ].sort((a, b) => a.depth - b.depth);
 
   const usedFrameworks = FRAMEWORK_COLORS.filter(([re]) => catalog.agents.some((a) => re.test(a.framework)));
@@ -182,7 +187,7 @@ export function MapView() {
         <svg role="img" aria-label="Workspace map of projects, repositories and agents">
           <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
             {layout.parks.map((p, i) => (
-              <ParkTile key={i} ox={p.ox} oy={p.oy} size={p.size} />
+              <ParkTile key={i} ox={p.ox} oy={p.oy} size={p.size} hasStrays={p.strays.length > 0} textScale={nameScale} />
             ))}
             {layout.districts.map((d) => (
               <Ground key={d.project.id} d={d} focused={d === focused} onFocus={() => setFocus(d.project.id)} />
@@ -191,6 +196,26 @@ export function MapView() {
               <Tree key={i} {...t} />
             ))}
             {drawables.map((it) => {
+              if (it.kind === "stray") {
+                const s = it.s;
+                const snap = repoData(repos[s.name]);
+                return (
+                  <Box
+                    key={`stray:${s.name}`}
+                    gx={s.gx}
+                    gy={s.gy}
+                    w={s.size}
+                    h={s.height}
+                    wall="#e4e1d4"
+                    roof="#7f8a7c"
+                    windows
+                    highlight={isSelected("repo", s.name)}
+                    onClick={() => select({ kind: "repo", id: s.name })}
+                    onEnter={(e) => showTip(e, s.name, snap?.pushedAt ? `Not in the catalog yet · pushed ${relative(snap.pushedAt)}` : "Not in the catalog yet")}
+                    onLeave={() => setTip(null)}
+                  />
+                );
+              }
               if (it.kind === "hq") {
                 const d = it.d;
                 const snap = repoData(repos[d.project.repository]);
@@ -251,13 +276,17 @@ export function MapView() {
                   />
                 );
               })}
+            {strays.map((s) => {
+              const c = iso(s.gx + s.size / 2, s.gy + s.size / 2);
+              return <Label key={`sl:${s.name}`} x={c.x} y={c.y - s.height - TH * s.size * 0.5 - 14 * nameScale} scale={nameScale} text={short(s.name.split("/")[1])} tone="light" onClick={() => select({ kind: "repo", id: s.name })} />;
+            })}
             {layout.districts.map((d) => {
               const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
               const front = iso(d.ox + d.size, d.oy + d.size);
               return (
                 <g key={`n:${d.project.id}`}>
-                  <Label x={c.x} y={c.y - d.hq.height - TH * d.hq.size * 0.5 - 16} text={d.project.repository.split("/")[1]} tone="dark" onClick={() => select({ kind: "repo", id: d.project.repository })} />
-                  <text x={front.x} y={front.y + 72} textAnchor="middle" fontFamily="ui-serif, 'New York', Georgia, serif" fontSize={26} fill="#1d2b22" style={{ cursor: "pointer" }} onClick={() => setFocus(d.project.id)}>
+                  <Label x={c.x} y={c.y - d.hq.height - TH * d.hq.size * 0.5 - 16 * nameScale} scale={nameScale} text={d.project.repository.split("/")[1]} tone="dark" onClick={() => select({ kind: "repo", id: d.project.repository })} />
+                  <text x={front.x} y={front.y + 44 + 28 * nameScale} textAnchor="middle" fontFamily="ui-serif, 'New York', Georgia, serif" fontSize={26 * nameScale} fill="#1d2b22" style={{ cursor: "pointer" }} onClick={() => setFocus(d.project.id)}>
                     {d.project.name}
                   </text>
                 </g>
@@ -343,18 +372,26 @@ function Connections({ d }: { d: District }) {
   );
 }
 
-function ParkTile({ ox, oy, size }: { ox: number; oy: number; size: number }) {
+function ParkTile({ ox, oy, size, hasStrays, textScale }: { ox: number; oy: number; size: number; hasStrays: boolean; textScale: number }) {
   const ground = [iso(ox, oy), iso(ox + size, oy), iso(ox + size, oy + size), iso(ox, oy + size)];
   const pond = [iso(ox + size * 0.35, oy + size * 0.3), iso(ox + size * 0.75, oy + size * 0.3), iso(ox + size * 0.75, oy + size * 0.7), iso(ox + size * 0.35, oy + size * 0.7)];
   return (
     <g pointerEvents="none">
       <polygon points={pts(ground)} fill="#cdd3a3" opacity={0.85} />
-      <polygon points={pts(pond)} fill="#8fb3a8" stroke="#a9c7bc" strokeWidth={3} />
+      {!hasStrays && <polygon points={pts(pond)} fill="#8fb3a8" stroke="#a9c7bc" strokeWidth={3} />}
       {treeSpots(`park:${ox}:${oy}`, ox, oy, size, 14).map((t, i) => (
         <Tree key={i} {...t} />
       ))}
-      <text x={iso(ox + size * 0.75, oy + size * 0.75).x} y={iso(ox + size * 0.75, oy + size * 0.75).y + 40} textAnchor="middle" fontFamily="ui-serif, Georgia, serif" fontSize={20} fill="#47524a" opacity={0.8}>
-        Room for the next project
+      <text
+        x={iso(ox + size, oy + size).x}
+        y={iso(ox + size, oy + size).y + (hasStrays ? 44 + 28 * textScale : -40)}
+        textAnchor="middle"
+        fontFamily="ui-serif, 'New York', Georgia, serif"
+        fontSize={(hasStrays ? 26 : 20) * textScale}
+        fill={hasStrays ? "#1d2b22" : "#47524a"}
+        opacity={hasStrays ? 1 : 0.8}
+      >
+        {hasStrays ? "Not in the catalog yet" : "Room for the next project"}
       </text>
     </g>
   );

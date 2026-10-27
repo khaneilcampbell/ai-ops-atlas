@@ -1,0 +1,51 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: benjaire-site
+  name: Benjaire.com
+  summary: >-
+    Website for Benjaire, an Astro site on Cloudflare Workers with a contact
+    Worker that forwards inquiries to the Benjaire Flow intake in n8n.
+  status: active
+  repository: khaneilcampbell/benjaire.com
+  tags: [benjaire, astro, cloudflare, n8n]
+  links:
+    - label: Live site
+      url: https://benjaire.com
+
+agents:
+  - id: benjaire-contact-worker
+    name: Contact Form Worker
+    purpose: >-
+      Validates contact form submissions (Turnstile, rate limit) and forwards
+      valid inquiries to the Benjaire Flow intake in n8n.
+    framework: Cloudflare Worker
+    runtime: Cloudflare Workers
+    status: active
+    trigger: POST /api/contact
+    source: site/worker/index.ts
+    last_run: null
+
+  - id: benjaire-flow-intake
+    name: Benjaire Flow Intake
+    purpose: >-
+      n8n workflow that receives inquiries from the contact Worker. Live
+      execution status arrives with the n8n adapter in the next milestone.
+    framework: n8n
+    runtime: n8n
+    status: active
+    trigger: Webhook from the contact Worker
+    last_run: null
+
+  - id: benjaire-site-ci
+    name: Site CI
+    purpose: Builds and tests the Astro site on every pull request and push to main.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push or pull request to main
+    source: .github/workflows/site-ci.yml
+    observe:
+      github_workflow: site-ci.yml
+    last_run: null

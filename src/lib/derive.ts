@@ -1,5 +1,6 @@
 import type { Agent, Catalog, ManifestIssue, Project } from "../catalog/types";
 import type { RepoSnapshot, RepoState, WorkflowRun } from "../github/types";
+import { PRIVATE_OR_MISSING } from "../github/transport";
 import { daysSince } from "./time";
 
 export type Health = "good" | "warn" | "bad" | "unknown";
@@ -59,7 +60,8 @@ export function repoHealth(snap: RepoSnapshot | undefined, linkedAgents: number)
       key: "agents",
       label: "Linked agents",
       value: String(linkedAgents),
-      health: linkedAgents ? "good" : "warn",
+      // Plenty of repositories have no agents, so zero is neutral rather than a warning.
+      health: linkedAgents ? "good" : "unknown",
     },
   ];
 }
@@ -67,7 +69,7 @@ export function repoHealth(snap: RepoSnapshot | undefined, linkedAgents: number)
 export function overallHealth(ind: HealthIndicator[]): Health {
   if (ind.some((i) => i.health === "bad")) return "bad";
   if (ind.some((i) => i.health === "warn")) return "warn";
-  if (ind.every((i) => i.health === "unknown")) return "unknown";
+  if (ind.filter((i) => i.key !== "agents").every((i) => i.health === "unknown")) return "unknown";
   return "good";
 }
 
@@ -97,6 +99,7 @@ export function attentionItems(
   repos: Record<string, RepoState>,
   issues: ManifestIssue[],
   now = Date.now(),
+  uncataloged: string[] = [],
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
   for (const i of issues) {
@@ -126,7 +129,9 @@ export function attentionItems(
     const state = repos[p.repository];
     const target = { kind: "repo" as const, id: p.repository };
     if (state?.kind === "error") {
-      items.push({ id: `repo:${p.repository}:error`, severity: "medium", title: p.repository, detail: state.message, target });
+      // A private repository without a token is expected, not a fault in the repository.
+      const severity = state.message === PRIVATE_OR_MISSING ? "low" : "medium";
+      items.push({ id: `repo:${p.repository}:error`, severity, title: p.repository, detail: state.message, target });
     }
     const snap = repoData(state);
     if (!snap) continue;
@@ -139,6 +144,10 @@ export function attentionItems(
     if (snap.archived && p.status === "active") {
       items.push({ id: `repo:${p.repository}:archived`, severity: "medium", title: p.repository, detail: "Repository is archived but the project is active", target });
     }
+  }
+  for (const name of uncataloged) {
+    const ci = ciHealth(repoData(repos[name]));
+    if (ci.health === "bad") items.push({ id: `repo:${name}:ci`, severity: "high", title: name, detail: `CI: ${ci.value}`, target: { kind: "repo", id: name } });
   }
   const order = { high: 0, medium: 1, low: 2 };
   return items.sort((a, b) => order[a.severity] - order[b.severity]);

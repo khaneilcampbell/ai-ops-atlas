@@ -1,0 +1,15 @@
+# AI Ops Atlas manifest. Format: catalog/README.md
+schema: atlas/v1
+
+project:
+  id: github-profile
+  name: GitHub Profile
+  summary: The profile README shown on github.com/khaneilcampbell.
+  status: active
+  repository: khaneilcampbell/khaneilcampbell
+  tags: [profile]
+  links:
+    - label: GitHub profile
+      url: https://github.com/khaneilcampbell
+
+agents: []

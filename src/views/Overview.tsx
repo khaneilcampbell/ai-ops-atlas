@@ -6,11 +6,11 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 
 export function Overview({ attention }: { attention: AttentionItem[] }) {
-  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
+  const { catalog, repos, uncataloged, select, setView, setFilters, clearFilters } = useAtlas();
   const activity = useMemo(() => activityFeed(catalog, repos).slice(0, 12), [catalog, repos]);
   const active = catalog.agents.filter((a) => a.status === "active").length;
   const frameworks = new Set(catalog.agents.map((a) => a.framework)).size;
-  const repoCount = new Set(catalog.projects.map((p) => p.repository)).size;
+  const repoCount = new Set(catalog.projects.map((p) => p.repository)).size + uncataloged.length;
   const loaded = Object.values(repos).filter((r) => r.kind === "ok").length;
 
   return (
@@ -31,7 +31,7 @@ export function Overview({ attention }: { attention: AttentionItem[] }) {
       <div className="grid tiles" style={{ marginBottom: 16 }}>
         <Tile label="Agents" value={catalog.agents.length} sub={`${frameworks} frameworks`} onClick={() => { clearFilters(); setView("agents"); }} />
         <Tile label="Active agents" value={active} sub={`${catalog.agents.length - active} idle, paused or retired`} onClick={() => { clearFilters(); setFilters({ status: "active" }); setView("agents"); }} />
-        <Tile label="Repositories" value={repoCount} sub={`${loaded} synced from GitHub`} onClick={() => { clearFilters(); setView("repos"); }} />
+        <Tile label="Repositories" value={repoCount} sub={uncataloged.length ? `${loaded} synced · ${uncataloged.length} not in the catalog` : `${loaded} synced from GitHub`} onClick={() => { clearFilters(); setView("repos"); }} />
         <Tile label="Needs attention" value={attention.length} sub={attention.length ? "See the list below" : "All clear"} accent />
       </div>
 
