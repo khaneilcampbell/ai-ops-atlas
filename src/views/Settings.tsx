@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
+import { isHostedWeb } from "../lib/env";
 import { useAtlas } from "../state";
 import { IntelSettings } from "./IntelSettings";
 
@@ -151,7 +152,11 @@ function TokenSetting({ onChange }: { onChange: () => void }) {
     return (
       <div className="setting">
         <div className="grow muted small">
-          Running in a browser preview. Public repositories load without a token; open the desktop app to add a Keychain-stored token for private repositories and higher rate limits.
+          {isHostedWeb()
+            ? has
+              ? "This web version reads GitHub with a read-only token kept on the server. It never reaches this browser. Change it in the Cloudflare dashboard."
+              : "This web version has no GitHub token yet, so only public repositories load. Add one as the GITHUB_TOKEN secret in Cloudflare."
+            : "Running in a browser preview. Public repositories load without a token; open the desktop app to add a Keychain-stored token for private repositories and higher rate limits."}
         </div>
       </div>
     );

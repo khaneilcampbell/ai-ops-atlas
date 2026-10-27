@@ -4,6 +4,7 @@ import App from "./App";
 import { AtlasProvider } from "./state";
 import { IntelProvider } from "./intel/state";
 import "./styles/app.css";
+import "./styles/mobile.css";
 import { isTauri } from "./lib/env";
 
 // The macOS window uses an overlay title bar, so the header leaves room for the traffic lights.

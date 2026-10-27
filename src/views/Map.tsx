@@ -379,6 +379,18 @@ export function MapView() {
     });
   }, []);
 
+  // Touch: every finger on the stage, and the last pinch (finger midpoint and spread).
+  const fingers = useRef(new Map<number, Pt>());
+  const pinch = useRef<{ x: number; y: number; d: number } | null>(null);
+  const endPointer = (id: number) => {
+    fingers.current.delete(id);
+    if (fingers.current.size < 2) pinch.current = null;
+    if (fingers.current.size === 0) {
+      drag.current = null;
+      setDragging(false);
+    }
+  };
+
   const panBy = (dx: number, dy: number) => {
     stop();
     touched.current = true;
@@ -613,9 +625,35 @@ export function MapView() {
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             stop();
+            fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (fingers.current.size === 2) {
+              // A second finger turns the drag into a pinch.
+              capture(e);
+              drag.current = null;
+              pinch.current = pinchOf(fingers.current);
+              touched.current = true;
+              setDragging(true);
+              setTip(null);
+              return;
+            }
             drag.current = { x: e.clientX, y: e.clientY, vx: cam.x, vy: cam.y, moved: false };
           }}
           onPointerMove={(e) => {
+            if (fingers.current.has(e.pointerId)) fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            const p = pinch.current;
+            if (p && fingers.current.size === 2) {
+              const next = pinchOf(fingers.current);
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const mx = next.x - r.left;
+              const my = next.y - r.top;
+              setCam((v) => {
+                const k = Math.min(3, Math.max(kMin(), v.k * (next.d / p.d)));
+                const f = k / v.k;
+                return { k, x: mx - (mx - v.x - (next.x - p.x)) * f, y: my - (my - v.y - (next.y - p.y)) * f };
+              });
+              pinch.current = next;
+              return;
+            }
             const d = drag.current;
             if (!d) return;
             const dx = e.clientX - d.x;
@@ -625,15 +663,13 @@ export function MapView() {
               d.moved = true;
               touched.current = true;
               setDragging(true);
-              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+              capture(e);
             }
             setTip(null);
             setCam((v) => ({ ...v, x: d.vx + dx, y: d.vy + dy }));
           }}
-          onPointerUp={() => {
-            drag.current = null;
-            setDragging(false);
-          }}
+          onPointerUp={(e) => endPointer(e.pointerId)}
+          onPointerCancel={(e) => endPointer(e.pointerId)}
           onClickCapture={(e) => {
             // A drag that ends over a building must not count as a click on it.
             if (dragging) e.stopPropagation();
@@ -968,4 +1004,18 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
       </div>
     </div>
   );
+}
+
+function capture(e: React.PointerEvent) {
+  // Throws for a pointer the browser no longer tracks (e.g. a touch cancelled by the system).
+  try {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  } catch {
+    /* nothing to capture */
+  }
+}
+
+function pinchOf(points: Map<number, Pt>) {
+  const [a, b] = [...points.values()];
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
 }

@@ -5,6 +5,7 @@ import { useAtlas, type View } from "./state";
 import { attentionItems } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows } from "./lib/search";
 import { relative } from "./lib/time";
+import { PHONE_QUERY, useMedia } from "./lib/media";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
@@ -26,6 +27,7 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 
 export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
+  const phone = useMedia(PHONE_QUERY);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -89,8 +91,8 @@ export default function App() {
         {view === "settings" && <SettingsView />}
       </main>
 
-      {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
-      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent") && <DetailPanel />}
+      {/* The map docks its own inspector, and Agents shows the selected agent inline (on a phone, in a sheet). */}
+      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
   );
 }
