@@ -5,7 +5,7 @@ schema: atlas/v2
 project:
   id: ai-ops-atlas
   name: AI Ops Atlas
-  summary: This app. A read-only desktop command center for agents, projects and repositories.
+  summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
   status: active
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
@@ -119,3 +119,48 @@ agents:
         budget: Per-run and monthly limits in Intel settings
       docs:
         technical: docs/repository-intelligence.md
+
+  - id: atlas-rerun-failed
+    name: Re-run Failed Jobs
+    purpose: Re-runs the failed jobs of a failed GitHub Actions run, only on repositories KC has switched on and only after KC approves each run in a native macOS dialog.
+    framework: Atlas desktop action (Rust)
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Manual button next to a failed run; off by default
+    source: src-tauri/src/actions/mod.rs
+    last_run: null
+    permissions: [Actions write on repositories selected in the token and in Settings]
+    registry:
+      title: Failed Workflow Re-run
+      category: engineering
+      subcategory: CI/CD operations
+      classification:
+        type: C
+        confidence: verified
+        evidence: src-tauri/src/actions sends one fixed request (rerun-failed-jobs) after pre-flight checks and native approval; no AI model
+      mission:
+        problem: Flaky CI failures need a re-run, which otherwise means leaving Atlas for GitHub.
+        outcomes: [A failed run can be retried from Atlas with an audit record of who did it and what GitHub answered]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Re-read the run and refuse if it is unfinished, not failed, re-run already or older than 30 days, Ask for approval in a native dialog, Log the attempt and the result, Send one re-run request with no retries]
+        tools: [GitHub REST API (one write endpoint), macOS Keychain, macOS dialog]
+        inputs: [A failed run KC chose, Actions token from Keychain, Repository list in Settings]
+        outputs: [A new run attempt on GitHub, Audit records in the Activity Center]
+        limitations: [Off by default, Desktop only, At most one re-run per run every 10 minutes and 10 an hour]
+      goals:
+        objective: Retry flaky failures safely, with every write approved and recorded.
+      execution:
+        trigger_type: manual
+        environment: Inside the desktop app (Rust side)
+        stages: [Check switch and token, Re-read the run, Native approval, Audit, Send once, Audit result]
+      governance:
+        autonomy: 2
+        autonomy_note: Prepares the re-run; nothing is sent until KC approves that specific run.
+        data_sensitivity: internal
+        approval: Native macOS confirmation for every re-run
+        credential_owner: KC (separate fine-grained token in the macOS Keychain)
+        risk: medium
+        audit_log: audit.jsonl in the app data folder, shown in the Activity Center
+      docs:
+        technical: docs/actions.md

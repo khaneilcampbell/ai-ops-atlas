@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AtlasProvider } from "./state";
 import { IntelProvider } from "./intel/state";
+import { ActionsProvider } from "./actions/state";
 import "./styles/app.css";
 import { isTauri } from "./lib/env";
 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AtlasProvider>
       <IntelProvider>
-        <App />
+        <ActionsProvider>
+          <App />
+        </ActionsProvider>
       </IntelProvider>
     </AtlasProvider>
   </React.StrictMode>,

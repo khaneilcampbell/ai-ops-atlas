@@ -26,6 +26,7 @@ uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
 sha2 = "0.10"
 rand = "0.8"
+tauri-plugin-dialog = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["sync", "time", "macros", "rt", "rt-multi-thread", "test-util"] }
