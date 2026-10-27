@@ -5,6 +5,7 @@ import { activityFeed, effectiveLastRun, observedRun, repoData, repoHealth } fro
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
+import { IntelPanel } from "./IntelPanel";
 
 export function DetailPanel() {
   const { selection, select } = useAtlas();
@@ -199,6 +200,7 @@ function RepoDetail({ name }: { name: string }) {
           <dt>Synced</dt>
           <dd>{snap ? relative(snap.fetchedAt) : "Not yet"}</dd>
         </dl>
+        <IntelPanel repo={name} />
         <div>
           <div className="section-title">Links</div>
           <div className="links">

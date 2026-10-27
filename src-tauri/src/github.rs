@@ -68,13 +68,10 @@ pub fn allowed_path(path: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || "/-_.?=&%".contains(c))
 }
 
-#[tauri::command]
-pub async fn github_get(
-    path: String,
-    etag: Option<String>,
-    client: tauri::State<'_, Client>,
-) -> Result<GithubResponse, String> {
-    if !allowed_path(&path) {
+/// One read-only GET. Every caller (the web view's proxy and the intelligence agent) goes
+/// through here, so the path allowlist and the GET-only rule apply to both.
+async fn get(client: &Client, path: &str, etag: Option<String>) -> Result<GithubResponse, String> {
+    if !allowed_path(path) {
         return Err("Blocked: only read-only repository requests are allowed".into());
     }
     let mut req = client
@@ -110,6 +107,32 @@ pub async fn github_get(
         authed,
         rate,
     })
+}
+
+#[tauri::command]
+pub async fn github_get(
+    path: String,
+    etag: Option<String>,
+    client: tauri::State<'_, Client>,
+) -> Result<GithubResponse, String> {
+    get(&client, &path, etag).await
+}
+
+#[async_trait::async_trait]
+impl crate::intel::collect::GithubApi for Client {
+    async fn get(&self, path: &str) -> Result<crate::intel::collect::GhResponse, String> {
+        let r = get(self, path, None).await?;
+        Ok(crate::intel::collect::GhResponse {
+            status: r.status,
+            body: r.body,
+            rate_remaining: r.rate.as_ref().map(|x| x.remaining),
+            rate_reset: r.rate.as_ref().map(|x| x.reset),
+        })
+    }
+
+    async fn has_token(&self) -> bool {
+        crate::secrets::read_token().is_some()
+    }
 }
 
 #[cfg(test)]

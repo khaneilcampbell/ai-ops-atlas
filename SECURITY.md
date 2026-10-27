@@ -1,11 +1,14 @@
 # Security
 
-AI Ops Atlas is a read-only desktop app. It never changes repositories or starts agents.
+AI Ops Atlas is a read-only desktop app. It never changes repositories or starts external agents. Its built-in Repository Intelligence Agent only reads GitHub and sends a summary of the selected repository to Anthropic.
 
 ## How secrets are handled
 
 - The optional GitHub token is stored in the macOS Keychain (service `com.khaneilcampbell.ai-ops-atlas`). The Rust side attaches it to requests, and it never reaches the web view, the interface or logs.
 - The Rust side only sends `GET` requests to `api.github.com`, and only to an allowlist of repository paths (`src-tauri/src/github.rs`).
+- The optional Anthropic API key is stored in the Keychain under the same service (account `anthropic-api-key`). The Rust side reads it for each request to `api.anthropic.com`; it is never returned to the web view, written to disk or logged.
+- For a repository you choose to analyze, the agent sends Anthropic its metadata, root file names, README and root manifest excerpts, recent commit messages, open issue and PR titles, release tags, workflow results and alert summaries. Nothing else is sent, and no other service receives repository content. See [docs/repository-intelligence.md](docs/repository-intelligence.md#5-security-and-read-only-guarantees).
+- Repository content is treated as untrusted: it is fenced and sanitized in the prompt, the model has no tools, and its answer must match a fixed schema. Claude's output is always labeled as unverified.
 - The web view runs under a strict Content Security Policy and can only open `https://` links in your browser.
 
 ## Reporting a problem
