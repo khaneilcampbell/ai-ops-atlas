@@ -30,9 +30,12 @@ import {
 import { measure, SANS, SERIF, wrap } from "./mapText";
 import type { Map3DApi } from "./map3d/Map3D";
 import { webglAvailable } from "./map3d/webgl";
+import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
 const Map3D = lazy(() => import("./map3d/Map3D"));
+// The virtual office loads only when a building is entered.
+const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -395,6 +398,8 @@ export function MapView() {
     save("mapLight", l);
   };
   const is3d = mode === "3d";
+  const office = useOffice();
+  useEffect(() => () => leaveBuilding(true), []);
   const map3d = useRef<Map3DApi>(null);
   const [moved3d, setMoved3d] = useState(false);
   const setMode = (m: "3d" | "2d") => {
@@ -805,6 +810,11 @@ export function MapView() {
 
   return (
     <div className={`map-wrap ${selection ? "inspecting" : ""}`}>
+      {office.projectId && (
+        <Suspense fallback={null}>
+          <OfficeLayer light={light} />
+        </Suspense>
+      )}
       <div className="map-col">
         <div
           ref={stage}

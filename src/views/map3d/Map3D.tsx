@@ -11,6 +11,7 @@ import { clip, measure, SANS, wrap } from "../mapText";
 import { time } from "./materials";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -243,10 +244,12 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     document.addEventListener("visibilitychange", on);
     return () => document.removeEventListener("visibilitychange", on);
   }, []);
+  // The map is fully covered while a building's office is open, so it stops rendering then.
+  const officePhase = useOffice().phase;
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={[1, 2]} frameloop={visible ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={[1, 2]} frameloop={visible && officePhase !== "inside" ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <World
           light={props.light}
           health={health}
@@ -476,6 +479,33 @@ function World({
     if (framing.current) frame(framing.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selKey, anchors]);
+
+  // Entering a building: remember the view, glide in toward its headquarters, and glide back to
+  // the same view on the way out.
+  const office = useOffice();
+  const saved = useRef<[THREE.Vector3, THREE.Vector3] | null>(null);
+  useEffect(() => {
+    const { phase, projectId } = office;
+    if ((phase === "entering" || phase === "inside") && projectId && !saved.current) {
+      saved.current = [controls.target.clone(), camera.position.clone()];
+      framing.current = null;
+      const t = scene.towers.find((x) => x.projectId === projectId);
+      const a = t && anchors.get(t.key);
+      if (a && phase === "entering") {
+        const h = a.y1 - a.y0;
+        goto(new THREE.Vector3(a.x, a.y0 + h * 0.35, a.z), Math.max(h * 1.3, a.w * 2.4), false, ENTER_MS);
+      }
+    } else if ((phase === "leaving" || !phase) && saved.current) {
+      const to = saved.current;
+      saved.current = null;
+      if (reduced || !phase) {
+        controls.target.copy(to[0]);
+        camera.position.copy(to[1]);
+        anim.current = null;
+      } else anim.current = { t0: performance.now(), ms: LEAVE_MS + 300, from: [controls.target.clone(), camera.position.clone()], to };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [office.phase, office.projectId]);
 
   // Light and shadows sized to the whole map.
   const light = useRef<THREE.DirectionalLight>(null);

@@ -1,0 +1,63 @@
+/* Virtual office: a project's headquarters interior, shown over the map. */
+.office-layer {
+  position: absolute; inset: 0; z-index: 8; display: flex;
+  background: radial-gradient(120% 90% at 60% 30%, #eef2e6 0%, #cfdccb 60%, #b8c8b2 100%);
+}
+.office-layer.night { background: radial-gradient(120% 90% at 60% 30%, #2a3a4a 0%, #18232c 65%, #10181e 100%); }
+.office-layer.phase-entering { animation: office-in 560ms ease 340ms both; }
+.office-layer.phase-leaving { animation: office-out 420ms ease both; pointer-events: none; }
+@keyframes office-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes office-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .office-layer.phase-entering, .office-layer.phase-leaving { animation: none; } }
+.office-stage { flex: 1; position: relative; min-width: 0; }
+.office-stage canvas { touch-action: none; }
+
+.office-head { position: absolute; left: 20px; top: 18px; display: flex; gap: 14px; align-items: center; pointer-events: none; }
+.office-head > * { pointer-events: auto; }
+.office-head > div { background: rgba(241, 242, 234, 0.82); backdrop-filter: blur(6px); border-radius: 12px; padding: 6px 14px 8px; }
+.office-layer.night .office-head > div { background: rgba(22, 33, 26, 0.72); }
+.office-head h2 { margin: 2px 0 0; font-family: var(--serif, Georgia, serif); font-size: 24px; color: var(--ink); }
+.office-layer.night .office-head h2 { color: var(--on-dark); }
+.office-head .eyebrow { color: var(--gold-deep); }
+.office-layer.night .office-head .eyebrow { color: var(--gold); }
+.office-back {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 12px; border-radius: 999px;
+  border: 0; background: var(--forest-800); color: var(--on-dark); font-weight: 600; font-size: 13.5px; cursor: pointer; box-shadow: var(--shadow);
+}
+.office-back span { color: var(--gold); font-size: 20px; line-height: 1; margin-top: -2px; }
+.office-back:hover { background: var(--forest-700); }
+.office-back:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.office-controls { z-index: 2; }
+.office-controls .icon-btn span { font-size: 17px; line-height: 1; }
+
+.office-roster { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 340px); }
+.office-roster button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--sage-200);
+  background: var(--sage-50); color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer; box-shadow: var(--shadow);
+}
+.office-roster button.on { background: var(--forest-800); color: var(--on-dark); border-color: var(--gold); }
+.office-roster i, .office-legend i, .office-state i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+.office-legend { position: absolute; left: 20px; bottom: 22px; display: flex; gap: 12px; font-size: 11.5px; color: var(--ink-2); }
+.office-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.office-layer.night .office-legend { color: var(--on-dark-2); }
+
+.office-empty {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 360px; text-align: center;
+  background: var(--sage-50); border-radius: var(--radius); padding: 18px 22px; box-shadow: var(--shadow);
+}
+.office-empty h3 { margin: 0 0 6px; }
+.office-empty p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+
+.office-panel { animation: fade 0.18s ease; }
+.office-panel .office-profile { align-self: flex-start; color: var(--gold-deep); border-color: var(--gold); }
+.enter-building { margin-top: 12px; }
+
+@media (max-width: 900px) {
+  .office-roster { max-width: calc(100% - 32px); bottom: 70px; }
+  .office-legend { display: none; }
+  .office-head { left: 12px; top: 12px; }
+  .office-head h2 { font-size: 19px; }
+}
+.office-panel .panel-head .op-pill { color: var(--on-dark); border-color: var(--forest-line); }
