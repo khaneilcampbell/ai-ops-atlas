@@ -43,6 +43,27 @@ export const STAGE_LABEL: Record<Stage, string> = {
   cancelled: "Cancelled",
   attempted: "Sent",
   started: "Started",
+  merged: "Merged",
   failed: "Failed",
   unknown: "Outcome unknown",
 };
+
+/** How the activity feed, the office and Settings name one audit record. */
+export function describeRecord(r: AuditRecord): { title: string; subject: string; url: string; result: "success" | "failure" | "running" | "other" } {
+  const result = r.stage === "started" || r.stage === "merged" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
+  if (r.action === "merge_pull_request") {
+    const n = r.pull_number ?? 0;
+    return {
+      title: `Merge pull request: ${STAGE_LABEL[r.stage]}`,
+      subject: `#${n}${r.title ? ` ${r.title}` : ""}`,
+      url: `https://github.com/${r.repo}/pull/${n}`,
+      result,
+    };
+  }
+  return {
+    title: `Re-run failed jobs: ${STAGE_LABEL[r.stage]}`,
+    subject: `${r.workflow ?? "Workflow run"}${r.run_number ? ` #${r.run_number}` : ""}`,
+    url: `https://github.com/${r.repo}/actions/runs/${r.run_id}`,
+    result,
+  };
+}

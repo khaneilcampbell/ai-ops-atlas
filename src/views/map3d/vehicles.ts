@@ -161,7 +161,8 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     if (lane < t.size / 2 + CLEAR) return [];
     const g: Ring = { x0: t.x - lane, z0: t.z - lane, x1: t.x + lane, z1: t.z + lane };
     const stairs = { x: t.x, z: t.z + t.size / 2 + ENTRANCE / 2, w: t.size, d: ENTRANCE };
-    // A path that runs past another house's walls (some do, to reach the house behind) is skipped.
+    const stalls = scene.kiosks.filter((k) => k.projectId === t.projectId).map((k) => ({ x: k.x, z: k.z, w: k.size, d: k.size }));
+    // A path that runs past another house's or a kiosk's walls (some do, to reach the house behind) is skipped.
     const clear = (pts: Pt[]) =>
       pts.every((p, k) => {
         if (!k) return true;
@@ -170,7 +171,7 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
         for (let j = 0; j <= n; j++) {
           const x = a[0] + ((p[0] - a[0]) * j) / n;
           const z = a[1] + ((p[1] - a[1]) * j) / n;
-          if ([...houses, stairs].some((h) => Math.abs(x - h.x) < h.w / 2 + CLEAR && Math.abs(z - h.z) < h.d / 2 + CLEAR)) return false;
+          if ([...houses, ...stalls, stairs].some((h) => Math.abs(x - h.x) < h.w / 2 + CLEAR && Math.abs(z - h.z) < h.d / 2 + CLEAR)) return false;
         }
         return true;
       });

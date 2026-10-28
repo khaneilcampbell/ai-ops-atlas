@@ -38,15 +38,15 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 10 projects and 35 agents discoverable with no manifest problems", () => {
+  it("keeps all 10 projects and 36 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(10);
-    expect(entries).toHaveLength(35);
+    expect(entries).toHaveLength(36);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 4, C: 11, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 4, C: 12, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -67,12 +67,14 @@ describe("bundled registry", () => {
     expect(intel.profile.governance.autonomy).toBe(1);
   });
 
-  it("keeps Atlas's only write action at approval required", () => {
-    const rerun = entries.find((e) => e.profile.id === "atlas-rerun-failed")!;
-    expect(rerun.profile.governance.autonomy).toBe(2);
-    expect(rerun.profile.governance.approval).toBeTruthy();
-    expect(rerun.profile.governance.permissions.length).toBeGreaterThan(0);
-    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-rerun-failed"]);
+  it("keeps Atlas's write actions at approval required", () => {
+    for (const id of ["atlas-rerun-failed", "atlas-merge-pr"]) {
+      const action = entries.find((e) => e.profile.id === id)!;
+      expect(action.profile.governance.autonomy).toBe(2);
+      expect(action.profile.governance.approval).toBeTruthy();
+      expect(action.profile.governance.permissions.length).toBeGreaterThan(0);
+    }
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-rerun-failed", "atlas-merge-pr"]);
   });
 });
 
@@ -242,7 +244,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(35);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(36);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {

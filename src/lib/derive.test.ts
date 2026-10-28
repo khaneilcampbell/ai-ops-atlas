@@ -55,7 +55,21 @@ describe("attention", () => {
     const s = snap({ workflowRuns: { "ci.yml": [run("Security", "success", new Date().toISOString())] } });
     expect(effectiveLastRun(catalog.agents[0], s)).not.toBeNull();
     const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: s, stale: false } }, []);
-    expect(items.map((i) => i.id)).toEqual(["agent:loop:norun"]);
+    expect(items.map((i) => i.id)).toEqual([]);
+  });
+
+  it("raises a missing run only for agents with a live source", () => {
+    const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: snap(), stale: false } }, []);
+    expect(items.map((i) => i.id)).toEqual(["agent:ci:norun"]);
+  });
+
+  it("doesn't call an event-driven agent stale when its event hasn't happened", () => {
+    const s = snap({ workflowRuns: { "ci.yml": [run("CI", "success", "2026-10-01T00:00:00Z")] } });
+    const now = Date.parse("2026-10-28T00:00:00Z");
+    const state = { "me/demo": { kind: "ok" as const, data: s, stale: false } };
+    expect(attentionItems(catalog, state, [], now).map((i) => i.id)).toEqual(["agent:ci:stale"]);
+    const event = { ...catalog, agents: [{ ...catalog.agents[0], registry: { execution: { triggerType: "event" as const, stages: [] } } }, catalog.agents[1]] };
+    expect(attentionItems(event as Catalog, state, [], now)).toEqual([]);
   });
 
   it("raises failed observed runs and failing CI as high severity", () => {

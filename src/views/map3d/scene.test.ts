@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isAiAgent } from "../../catalog/roles";
 import { catalog } from "../../catalog";
 import type { Catalog } from "../../catalog/types";
 import { layoutMap } from "../mapLayout";
@@ -22,10 +23,19 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("buildScene", () => {
-  it("gives every project a tower and every agent a house", () => {
+  it("gives every project a tower and every automation a house", () => {
     const s = buildScene(layoutMap(catalog));
     expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.map((p) => p.id).sort());
-    expect(s.houses.map((h) => h.agent.id).sort()).toEqual(catalog.agents.map((a) => a.id).sort());
+    expect(s.houses.map((h) => h.agent.id).sort()).toEqual(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id).sort());
+    expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.length);
+  });
+
+  it("keeps kiosks clear of houses, towers and each other", () => {
+    const s = buildScene(layoutMap(catalog));
+    expect(s.kiosks.length).toBeGreaterThan(0);
+    const boxes = [...s.houses.map((h) => ({ k: h.key, x: h.x, z: h.z, w: h.w, d: h.d })), ...s.towers.map((t) => ({ k: t.key, x: t.x, z: t.z, w: t.size, d: t.size })), ...s.kiosks.map((k) => ({ k: k.key, x: k.x, z: k.z, w: k.size, d: k.size }))];
+    for (const k of s.kiosks)
+      for (const b of boxes) if (b.k !== k.key) expect(Math.abs(k.x - b.x) < (k.size + b.w) / 2 && Math.abs(k.z - b.z) < (k.size + b.d) / 2, `${k.key} hits ${b.k}`).toBe(false);
   });
 
   it("produces finite geometry and is deterministic", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
+import { isAiAgent } from "../catalog/roles";
 import { GAP, layoutMap, placeLabels, type Layout } from "./mapLayout";
 
 function rects(layout: Layout) {
@@ -48,10 +49,22 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("layoutMap", () => {
-  it("gives every agent its own lot", () => {
+  it("gives every automation a house and seats every AI agent inside its headquarters", () => {
     const layout = layoutMap(catalog);
-    const ids = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
-    expect(ids.sort()).toEqual(catalog.agents.map((a) => a.id).sort());
+    const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
+    const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
+    expect([...housed, ...inside].sort()).toEqual(catalog.agents.map((a) => a.id).sort());
+    expect(inside.every((id) => isAiAgent(catalog.agents.find((a) => a.id === id)!))).toBe(true);
+    expect(housed.some((id) => isAiAgent(catalog.agents.find((a) => a.id === id)!))).toBe(false);
+  });
+
+  it("puts a kiosk only for services a manifest names", () => {
+    const layout = layoutMap(catalog);
+    for (const d of layout.districts)
+      for (const k of d.kiosks) {
+        expect(k.service.users.length).toBeGreaterThan(0);
+        for (const a of k.service.users) expect(a.projectId).toBe(d.project.id);
+      }
   });
 
   it("puts repositories without a manifest in their own lot", () => {

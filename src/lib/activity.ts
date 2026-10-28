@@ -4,7 +4,7 @@ import { repoData } from "./derive";
 import type { Run as IntelRun } from "../intel/types";
 import { RUN_LABEL, usd } from "../intel/format";
 import type { AuditRecord } from "../actions/types";
-import { latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
+import { describeRecord, latestPerAttempt } from "../actions/rerun";
 import { isReviewRun, REVIEW_AGENT_ID } from "../intel/ecosystem";
 
 export type EventKind = "commit" | "ci" | "agent" | "intel" | "action" | "manifest";
@@ -116,17 +116,17 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
   }
   // Presses of an approval-required action, from the desktop app's audit log.
   for (const r of latestPerAttempt(actionLog)) {
-    const run = `${r.workflow ?? "Workflow run"}${r.run_number ? ` #${r.run_number}` : ""}`;
+    const d = describeRecord(r);
     out.push({
       id: `action:${r.id}`,
       at: r.at,
       kind: "action",
-      result: r.stage === "started" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other",
-      title: `Re-run failed jobs: ${STAGE_LABEL[r.stage]}`,
-      detail: `${label(r.repo)} · ${run} · ${r.actor}${r.message && r.stage !== "started" ? ` · ${r.message}` : ""}`,
+      result: d.result,
+      title: d.title,
+      detail: `${label(r.repo)} · ${d.subject} · ${r.actor}${r.message && d.result !== "success" ? ` · ${r.message}` : ""}`,
       repo: r.repo,
       projectId: projectByRepo.get(r.repo)?.id,
-      url: `https://github.com/${r.repo}/actions/runs/${r.run_id}`,
+      url: d.url,
     });
   }
   return out.sort((x, y) => y.at.localeCompare(x.at));

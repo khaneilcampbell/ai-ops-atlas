@@ -22,7 +22,10 @@ export interface Proposal {
   at: string;
 }
 
-/** Which agent proposes each action. */
+/**
+ * Which agent proposes each action. Merging pull requests is deliberately absent: a merge
+ * can't be undone, so it is never proposed, queued or approved from here, only pressed by KC.
+ */
 export const PROPOSER: Record<Proposal["action"], string> = { rerun_failed_jobs: "atlas-rerun-failed" };
 
 /**

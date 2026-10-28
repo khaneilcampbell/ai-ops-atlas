@@ -226,3 +226,48 @@ agents:
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
       docs:
         technical: docs/actions.md
+
+  - id: atlas-merge-pr
+    name: Merge Pull Request
+    purpose: Merges a pull request from Atlas only when GitHub reports it ready (open, not a draft, no changes requested, mergeable and clean, every required check green), on repositories KC has switched on, after KC approves it in a native macOS dialog and with Touch ID.
+    framework: Atlas desktop action (Rust)
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Manual Merge button in a repository's PRs tab; off by default
+    source: src-tauri/src/actions/merge.rs
+    last_run: null
+    permissions: [Pull requests and Contents write on one repository per token, for repositories ticked in Settings]
+    registry:
+      title: Pull Request Merge
+      category: engineering
+      subcategory: Code review and release
+      classification:
+        type: C
+        confidence: verified
+        evidence: src-tauri/src/actions/merge.rs sends one fixed request (squash merge pinned to the approved head commit) after read-only readiness checks, native approval and Touch ID; no AI model
+      mission:
+        problem: Merging a reviewed, green pull request otherwise means leaving Atlas for GitHub.
+        outcomes: [A ready pull request can be merged from Atlas with an audit record of who merged what and what GitHub answered]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Re-read the pull request, reviews, checks and base branch rules and refuse unless GitHub reports it ready, Ask for approval in a native dialog, Ask for Touch ID, Log the attempt and the result, Send one squash merge pinned to the head commit with no retries]
+        tools: [GitHub REST API (one write endpoint), macOS Keychain, macOS dialog, Touch ID]
+        inputs: [An open pull request KC chose, That repository's merge token from Keychain, Repository list in Settings]
+        outputs: [A merged pull request on GitHub, Audit records in the Activity Center]
+        limitations: [Off by default, Desktop only, Never on the website or iPhone, No override of checks or reviews, Never proposed or approved automatically, At most one merge per pull request every 10 minutes and 5 an hour]
+      goals:
+        objective: Merge ready pull requests safely, with every merge approved by KC and recorded.
+      execution:
+        trigger_type: manual
+        environment: Inside the desktop app (Rust side)
+        stages: [Check switch and token, Re-read pull request reviews checks and rules, Native approval, Touch ID, Audit, Send once, Audit result]
+      governance:
+        autonomy: 2
+        autonomy_note: Stays at level 2 permanently. Merges are irreversible, so nothing proposes, queues or approves them; KC presses Merge and confirms every one.
+        data_sensitivity: internal
+        approval: Native macOS confirmation and Touch ID for every merge
+        credential_owner: KC (one fine-grained token per repository in the macOS Keychain)
+        risk: high
+        audit_log: audit.jsonl in the app data folder, shown in the Activity Center
+      docs:
+        technical: docs/actions.md
