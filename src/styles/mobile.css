@@ -6,6 +6,8 @@
 .map-stage { touch-action: none; }
 
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  /* Copy buttons next to values get a finger-sized hit area. */
+  .copy-btn.compact { padding: 6px 8px; }
   html, body { overscroll-behavior: none; }
   body { -webkit-text-size-adjust: 100%; }
   /* Safari zooms the page into any focused field under 16px. */

@@ -38,14 +38,21 @@ body {
   color: var(--ink);
   background: var(--forest-800);
   -webkit-font-smoothing: antialiased;
-  user-select: none;
-  -webkit-user-select: none;
 }
 input, select, button, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 ::selection { background: var(--gold-soft); }
+/* Text anywhere in the app can be highlighted and copied (desktop, browser and iPhone).
+   Only controls and the drag-to-pan map/office surfaces opt out, so a drag there moves the
+   camera instead of painting a selection. */
 .selectable { user-select: text; -webkit-user-select: text; }
+button, [role="tab"], [role="button"], .sidebar, .header, .view-switch, .map-stage, canvas {
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+/* Readable panels inside the map overlay stay selectable. */
+.map-stage .selectable { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
+input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-select: text; }
 
 /* ── Shell ───────────────────────────────────────── */
 .shell { display: grid; grid-template-columns: 76px 1fr; grid-template-rows: 64px 1fr; height: 100%; }
@@ -749,3 +756,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .copy-btn.done, .copy-btn.compact.done { color: var(--forest-700); }
 .ai-box .section-head { margin-bottom: 8px; align-items: center; }
 .rec-head .copy-btn { align-self: center; }
+.copy-value { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.copy-value > .selectable { overflow-wrap: anywhere; }
+.copy-value .copy-btn.compact { flex-shrink: 0; color: inherit; opacity: 0.75; }
+.copy-value .copy-btn.compact:hover, .copy-value .copy-btn.compact:focus-visible { opacity: 1; }

@@ -6,7 +6,7 @@ import type { MergeCheck } from "../actions/types";
 import { fetchOpenPulls, type PullSummary } from "../github/pulls";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
-import { ExternalLink } from "./bits";
+import { CopyButton, ExternalLink } from "./bits";
 import { Icon } from "./Icon";
 
 /** Readiness checks per page load; each one is a handful of GitHub reads. */
@@ -114,6 +114,7 @@ export function PullRequests({ repo }: { repo: string }) {
                   <ExternalLink href={p.url}>
                     #{p.number} {p.title}
                   </ExternalLink>
+                  <CopyButton compact text={() => p.url} title="Copy pull request link" />
                   <div className="muted small">
                     <span className="mono">{p.head}</span> into <span className="mono">{p.base}</span>
                     {p.author ? ` · ${p.author}` : ""} · {relative(p.updatedAt)}

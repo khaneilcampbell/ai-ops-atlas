@@ -87,6 +87,16 @@ export function openExternal(e: React.MouseEvent, href: string) {
   void import("@tauri-apps/plugin-opener").then((m) => m.openUrl(href));
 }
 
+/** A value (id, repo name, path, link, error) shown as selectable text with a small copy button. */
+export function CopyValue({ value, children, title, mono }: { value: string; children?: React.ReactNode; title?: string; mono?: boolean }) {
+  return (
+    <span className={`copy-value${mono ? " mono" : ""}`}>
+      <span className="selectable">{children ?? value}</span>
+      <CopyButton compact text={() => value} title={title ?? `Copy ${value}`} />
+    </span>
+  );
+}
+
 /**
  * Copies `text()` to the clipboard and says so for a moment. The text is built on click so a
  * long review isn't turned into Markdown on every render.
