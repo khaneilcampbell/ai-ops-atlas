@@ -24,15 +24,34 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: Benjaire Dashboard Continuous Integration
       category: engineering
       subcategory: CI/CD
       classification:
         type: D
-        confidence: unverified
-        evidence: Private repository; classified from the manifest only
+        confidence: verified
+        evidence: .github/workflows/ci.yml runs npm run ci, local D1 migrations and Playwright accessibility tests; no AI model
+      mission:
+        problem: Stops dashboard changes that break types, tests, the build or accessibility, or that commit a secret.
+        outcomes:
+          - Every pull request is tested before merge
+        beneficiaries: [KC]
+      responsibilities:
+        tasks:
+          - Worker types and unit tests
+          - Build
+          - Secret scan of the build and sources
+          - Apply D1 migrations locally
+          - Accessibility and layout tests in light, dark, desktop and phone
+        tools: [GitHub Actions, npm, Wrangler, Playwright]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request]
       goals:
+        objective: Block merges that break the dashboard.
         kpis:
           - name: Run success rate
             kind: reliability
@@ -43,4 +62,17 @@ agents:
         environment: GitHub-hosted runner
       governance:
         autonomy: 0
+        data_sensitivity: internal
+        credential_owner: KC (GitHub repository settings)
+        risk: low
         audit_log: GitHub Actions run history
+      docs:
+        technical: docs/SETUP.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-dashboard.md#dashboard-ci
+        known_issues:
+          - setup-node has no check-latest, which Benjaire Site CI needed when the cached Node 22 was older than its dependencies required
+          - Actions are pinned by major version tag, not commit
+        improvements:
+          - 'Add check-latest: true to setup-node'
+          - Pin actions to commit SHAs
+        last_review: 2026-10-28

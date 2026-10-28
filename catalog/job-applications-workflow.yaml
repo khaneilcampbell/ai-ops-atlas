@@ -20,27 +20,51 @@ agents:
       Breaks a job posting into required and preferred skills, gaps and a
       match assessment against the career database.
     framework: Claude prompt
-    model: Claude
-    runtime: Claude chat, run by hand
+    model: claude-opus-5-5 by default (JOBFLOW_MODEL)
+    runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, per application
     source: prompts/job-analysis.md
     last_run: null
+    permissions:
+      - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
+      - Reads private/career-database
+      - Writes private/applications/<slug>/ and the tracker
     registry:
       title: Job Requirements Analyst
       category: career
       subcategory: Job description analysis
       classification:
         type: B
-        confidence: unverified
-        evidence: Private repository; manifest says a Claude prompt run by hand
+        confidence: verified
+        evidence: jobflow/llm.py sends this prompt's task with the career database to the Anthropic API and gets a structured JobAnalysis back; the prompt can also be run by hand
+      mission:
+        problem: Deciding whether a job is worth tailoring for means reading the posting against the whole career history.
+        outcomes:
+          - A match score, gaps and a recommended resume version for each job
       responsibilities:
+        tasks:
+          - Extract the posting's requirements
+          - Match each requirement to career database evidence by id
+          - Score the match and recommend a resume version
         inputs: [Job posting, Career database]
         outputs: [Required and preferred skills, Gaps, Match assessment]
       execution:
         trigger_type: manual
       governance:
         autonomy: 1
+        data_sensitivity: confidential
+        credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
+        risk: low
+      docs:
+        technical: docs/automation.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
+        known_issues:
+          - No KPI is defined yet
+          - Runs leave files in private/ only; Atlas has no run data
+        improvements:
+          - Log each jobflow run (command, model, tokens, result) so Atlas can show runs and cost
+        last_review: 2026-10-28
 
   - id: resume-tailor
     name: Resume Tailoring Assistant
@@ -48,20 +72,32 @@ agents:
       Re-angles verified facts into a tailored summary, bullets, projects and
       skills. It may re-angle facts but never invent them.
     framework: Claude prompt
-    model: Claude
-    runtime: Claude chat, run by hand
+    model: claude-opus-5-5 by default (JOBFLOW_MODEL)
+    runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, after job analysis
     source: prompts/resume-tailoring-assistant.md
     last_run: null
+    permissions:
+      - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
+      - Reads private/career-database
+      - Writes private/applications/<slug>/ and the tracker
     registry:
       category: career
       subcategory: Resume optimization
       classification:
         type: B
-        confidence: unverified
-        evidence: Private repository; manifest says a Claude prompt run by hand
+        confidence: verified
+        evidence: jobflow/llm.py asks the Anthropic API for a structured TailoredResume; jobflow/verify.py then checks it against the career database in code
+      mission:
+        problem: Tailoring a resume for each job by hand is slow and invites claims that aren't in the record.
+        outcomes:
+          - A tailored resume built only from verified facts, ready for KC's review
       responsibilities:
+        tasks:
+          - Rewrite the summary, bullets, projects and skills for the job
+          - Flag items KC must confirm
+          - Pass the code fact check before rendering
         inputs: [Job analysis, Career database]
         outputs: ["Tailored summary, bullets, projects and skills"]
         dependencies: [job-analyst]
@@ -70,7 +106,19 @@ agents:
         trigger_type: manual
       governance:
         autonomy: 1
+        data_sensitivity: confidential
         approval: KC approves the final resume
+        credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
+        risk: low
+      docs:
+        technical: docs/automation.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
+        known_issues:
+          - No KPI is defined yet
+          - The code fact check covers titles, employers, dates, numbers, skills and projects; reworded claims rely on the quality review and KC
+        improvements:
+          - Track how often the fact check blocks a draft (exit code 2) as a quality KPI
+        last_review: 2026-10-28
 
   - id: resume-quality-review
     name: Quality Reviewer
@@ -78,21 +126,32 @@ agents:
       Checks accuracy against the career database, ATS readability, grammar
       and formatting before human approval.
     framework: Claude prompt
-    model: Claude
-    runtime: Claude chat, run by hand
+    model: claude-opus-5-5 by default (JOBFLOW_MODEL)
+    runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, before the final resume
     source: prompts/quality-review.md
     last_run: null
+    permissions:
+      - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
+      - Reads private/career-database
+      - Writes private/applications/<slug>/ and the tracker
     registry:
       title: Application Quality Reviewer
       category: career
       subcategory: Application quality review
       classification:
         type: B
-        confidence: unverified
-        evidence: Private repository; manifest says a Claude prompt run by hand
+        confidence: verified
+        evidence: jobflow/llm.py asks the Anthropic API for a structured QualityReview of the tailored resume
+      mission:
+        problem: A tailored resume can drift from verified facts or read badly to an ATS before anyone notices.
+        outcomes:
+          - Unsupported claims, items to confirm and writing fixes listed before approval
       responsibilities:
+        tasks:
+          - Check each claim against the career database
+          - Check ATS readability, grammar and formatting
         inputs: [Tailored resume, Career database]
         outputs: ["Accuracy, ATS, grammar and formatting review"]
         dependencies: [resume-tailor]
@@ -100,7 +159,19 @@ agents:
         trigger_type: manual
       governance:
         autonomy: 1
+        data_sensitivity: confidential
         approval: Human approval before the resume is used
+        credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
+        risk: low
+      docs:
+        technical: docs/automation.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
+        known_issues:
+          - No KPI is defined yet
+          - Its findings are advisory; only the code fact check blocks a resume
+        improvements:
+          - Record how many review findings KC accepts, to see whether the review earns its cost
+        last_review: 2026-10-28
 
   - id: career-db-validator
     name: Career Database Validator
@@ -113,15 +184,25 @@ agents:
     trigger: Manual, python scripts/validate_database.py
     source: scripts/validate_database.py
     last_run: null
+    permissions:
+      - Reads the career database folder; writes nothing and makes no network calls
     registry:
       title: Career Data Quality Validator
       category: career
       subcategory: Data validation
       classification:
         type: C
-        confidence: unverified
-        evidence: Private repository; manifest says a Python script that flags invalid entries
+        confidence: verified
+        evidence: scripts/validate_database.py parses the JSON files and applies fixed checks; no AI model
+      mission:
+        problem: A tailored resume is only as accurate as the career database it draws from.
+        outcomes:
+          - A career database with no invalid JSON, placeholders, unverified entries or unsourced metrics
       responsibilities:
+        tasks:
+          - Parse each JSON file
+          - Find TODO placeholders and unverified entries
+          - Find metrics with no source and broken id references
         inputs: [Career database JSON]
         outputs: ["List of invalid JSON, TODOs, unverified entries and unsourced metrics"]
       execution:
@@ -129,6 +210,18 @@ agents:
         environment: Local
       governance:
         autonomy: 0
+        data_sensitivity: confidential
+        credential_owner: None needed (reads local files only)
+        risk: low
+      docs:
+        technical: docs/workflow.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#career-database-validator
+        known_issues:
+          - jobflow does not run it before tailoring; it runs only when started by hand
+          - No KPI is defined yet
+        improvements:
+          - Run it at the start of jobflow tailor and stop on problems
+        last_review: 2026-10-28
 
   - id: career-ci
     name: Career Workflow CI
@@ -141,6 +234,9 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: Career Workflow Continuous Integration
       category: engineering
@@ -174,3 +270,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: docs/automation.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#career-workflow-ci
+        known_issues:
+          - Actions are pinned by major version tag (checkout@v4, setup-python@v5), not commit
+        improvements:
+          - Pin actions to commit SHAs and let Dependabot bump them
+        last_review: 2026-10-28

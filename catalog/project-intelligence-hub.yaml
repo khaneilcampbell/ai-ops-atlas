@@ -22,6 +22,8 @@ agents:
     trigger: Manual
     source: "10 — System Administration/Automation Scripts/build_docs.py"
     last_run: null
+    permissions:
+      - Reads Source/ and writes DOCX files in the project folder; no network
     registry:
       title: Project Documentation Builder
       category: engineering
@@ -30,6 +32,10 @@ agents:
         type: C
         confidence: verified
         evidence: build_docs.py renders Markdown to DOCX with pandoc and python-docx and reads no network resources
+      mission:
+        problem: Keeps each project's documents readable as styled DOCX without formatting them by hand.
+        outcomes:
+          - One styled DOCX per Markdown source, beside Source/
       responsibilities:
         tasks: [Render each project's Markdown sources to styled DOCX]
         tools: [pandoc, python-docx]
@@ -41,7 +47,18 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: internal
+        credential_owner: None needed (local files only)
         risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#docs-builder
+        known_issues:
+          - Styles use macOS fonts (Helvetica Neue, Avenir Next, Menlo); other systems substitute them
+          - Nothing checks that the committed DOCX files match their sources
+          - No KPI is defined yet
+        improvements:
+          - Fail CI when a rendered document differs from the committed one
+        last_review: 2026-10-28
 
   - id: hub-ci
     name: Hub CI
@@ -54,6 +71,9 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: Project Intelligence Hub Continuous Integration
       category: engineering
@@ -87,3 +107,13 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#hub-ci
+        known_issues:
+          - It proves the sources render but not that the committed DOCX are current
+          - Actions are pinned by major version tag, not commit
+        improvements:
+          - Compare rendered documents with the committed ones
+          - Pin actions to commit SHAs
+        last_review: 2026-10-28

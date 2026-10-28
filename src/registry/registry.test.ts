@@ -46,7 +46,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 8, B: 4, C: 16, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 8, B: 5, C: 15, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -256,8 +256,11 @@ describe("directory", () => {
 
   it("lists items that need review with a reason", () => {
     const s = summarize(entries);
-    const flow = s.needsReview.find((e) => e.profile.id === "benjaire-flow-intake");
-    expect(flow?.review).toContain("Classification is provisional");
+    const loop = s.needsReview.find((e) => e.profile.id === "commerce-loop");
+    expect(loop?.review).toContain("High risk");
+    // Every classification is verified and every agent that acts on external systems documents its permissions.
+    const reasons = s.needsReview.flatMap((e) => e.review);
+    expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
     expect(s.observable).toBe(11);
   });
 });

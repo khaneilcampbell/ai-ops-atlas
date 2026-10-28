@@ -20,8 +20,7 @@ agents:
   - id: commerce-loop
     name: Autonomous Loop
     purpose: >-
-      Orchestrates each cycle in build, design or maintain mode, running the
-      phases below on a Linux VPS under the shopify-pipeline systemd service.
+      Orchestrates each cycle in build, design or maintain mode, running the phases below on a Linux VPS under the commerce-pipeline systemd service.
     framework: Shell + systemd
     runtime: Linux VPS
     status: active
@@ -31,6 +30,10 @@ agents:
     history:
       - at: 2026-10-12
         event: Service paths aligned with the project rename
+    permissions:
+      - 'Every credential in .env on the VPS: Anthropic, Serper, Canva, Stripe and SMTP'
+      - Storefront deploy key with write access to the storefront repository
+      - Runs as root in the documented setup
     registry:
       title: Commerce Pipeline Orchestrator
       category: infrastructure
@@ -62,7 +65,7 @@ agents:
       execution:
         trigger_type: continuous
         schedule: Hourly cycle (SLEEP 3600); maintain mode sleeps until Monday 00:00 UTC
-        environment: Linux VPS (systemd shopify-pipeline service)
+        environment: Linux VPS (systemd commerce-pipeline service)
         stages: [Preflight, Phase 1 brand (weekly), Phase 2 listings (weekly), Phase 3 design, Phase 5 publish, Phase 6 SEO, Phase 7 health]
       governance:
         autonomy: 3
@@ -72,8 +75,22 @@ agents:
           storefront deploys and buyer emails run without approval. Bounded by the weekly limit,
           the cooldown and a product being dropped after 3 failed attempts.
         data_sensitivity: confidential
+        credential_owner: KC (.env on the VPS)
         risk: high
         audit_log: logs/loop.log and the SQLite run_log on the VPS (not connected to Atlas)
+      docs:
+        technical: docs/threat-model.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#autonomous-loop
+        known_issues:
+          - The manifest named the old shopify-pipeline service; the unit is commerce-pipeline.service
+          - Runs as root in the documented setup
+          - Backups stay on the same VPS
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+        improvements:
+          - Run under a dedicated user, as the service file recommends
+          - Copy backups off the VPS
+          - Send phase results to Atlas
+        last_review: 2026-10-28
 
   - id: niche-scout
     name: Shopify Niche Scout
@@ -87,6 +104,10 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Serper search (SERPER_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Market research
@@ -94,8 +115,17 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+      mission:
+        problem: Picking a niche without data risks building products nobody searches for.
+        outcomes:
+          - One chosen niche with the reasons for it
       responsibilities:
+        tasks:
+          - Search the web for candidate niches
+          - Weigh market size, competition, buyer intent and profit potential
+          - Pick one niche
         tools: [CrewAI, Claude API, Serper search]
+        inputs: [Serper search results]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -104,7 +134,20 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - The catalog name still says Shopify; the pipeline sells through Stripe since commit 0f38931
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: market-analyst
     name: Market Research Analyst
@@ -118,6 +161,10 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Serper search (SERPER_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Market research
@@ -125,8 +172,17 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+      mission:
+        problem: A niche alone doesn't say what sells, at what price or in which words buyers search.
+        outcomes:
+          - Research on the niche's best sellers, styles, prices and buyer language
       responsibilities:
+        tasks:
+          - Research top-selling shops in the niche
+          - Summarize visual styles, price points and buyer language
+          - Find keyword gaps
         tools: [CrewAI, Claude API, Serper search]
+        inputs: [The chosen niche, Serper search results]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -135,7 +191,19 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: brand-strategist
     name: Brand Strategist
@@ -149,6 +217,9 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Product validation
@@ -156,8 +227,16 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
+      mission:
+        problem: Products need a consistent store name, buyer persona and positioning before anything is designed.
+        outcomes:
+          - Store name, buyer persona, positioning and tone
       responsibilities:
+        tasks:
+          - Define the niche, store name and buyer persona
+          - Write the positioning statement and brand tone
         tools: [CrewAI, Claude API]
+        inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -166,7 +245,19 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: visual-director
     name: Visual Identity Director
@@ -179,6 +270,9 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Product validation
@@ -186,8 +280,17 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
+      mission:
+        problem: Mockups and listings need one palette, type pairing and logo direction to look like one brand.
+        outcomes:
+          - Palette with hex codes, font pairing and logo direction
       responsibilities:
+        tasks:
+          - Choose the color palette and usage rules
+          - Pair display and body fonts
+          - Describe the logo direction
         tools: [CrewAI, Claude API]
+        inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -196,7 +299,19 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: copy-strategist
     name: Copywriter and SEO Strategist
@@ -210,6 +325,9 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Product validation
@@ -217,8 +335,17 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
+      mission:
+        problem: Listings need one voice and a repeatable title and tag formula for search.
+        outcomes:
+          - Tagline, tone guide, title formula, listing template and SEO tags
       responsibilities:
+        tasks:
+          - Write the tagline and tone guide
+          - Write the title formula and listing template
+          - Choose the SEO tags
         tools: [CrewAI, Claude API]
+        inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -227,7 +354,19 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: launch-planner
     name: Launch Asset Planner
@@ -241,6 +380,9 @@ agents:
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Writes outputs/brand_guide.md
     registry:
       category: business
       subcategory: Product validation
@@ -248,8 +390,16 @@ agents:
         type: A
         confidence: verified
         evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
+      mission:
+        problem: The brand work needs to end in one guide and a concrete launch plan the later phases can follow.
+        outcomes:
+          - outputs/brand_guide.md with a 30-day launch checklist
       responsibilities:
+        tasks:
+          - Compile the crew's work into the brand guide
+          - Add a 30-day launch checklist
         tools: [CrewAI, Claude API]
+        inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
       execution:
         trigger_type: scheduled
@@ -258,7 +408,19 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
+        data_sensitivity: internal
         credential_owner: KC (.env on the VPS)
+        risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Runs only with the whole crew (./run.sh phase1)
+          - No KPI is defined yet
+        improvements:
+          - Check the brand guide's structure before Phase 2 reads it
+        last_review: 2026-10-28
 
   - id: canva-mockups
     name: Canva Mockup Generator
@@ -272,6 +434,9 @@ agents:
     trigger: Phase 3, every build or design cycle
     source: scripts/canva_image_generator.py
     last_run: null
+    permissions:
+      - Anthropic API (ANTHROPIC_API_KEY)
+      - Canva account through the Canva MCP server (CANVA_MCP_TOKEN)
     registry:
       category: business
       subcategory: Workflow automation
@@ -279,6 +444,10 @@ agents:
         type: B
         confidence: verified
         evidence: scripts/canva_image_generator.py makes a fixed Anthropic API call (claude-opus-4-5) with the Canva remote MCP server
+      mission:
+        problem: Each listing needs six product images, which otherwise means designing them by hand in Canva.
+        outcomes:
+          - Six product images per listing, and the product queued for build
       responsibilities:
         tasks: [Design six product images per listing in Canva, Export them as JPEG, Queue the product for build]
         tools: [Anthropic Messages API, Canva remote MCP]
@@ -294,6 +463,16 @@ agents:
         autonomy_note: Creates designs in the connected Canva account.
         credential_owner: KC (.env on the VPS)
         risk: medium
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#canva-mockup-generator
+        known_issues:
+          - Creates designs in the connected Canva account with no review step
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - No KPI is defined yet
+        improvements:
+          - Send results to Atlas
+        last_review: 2026-10-28
 
   - id: shopify-publisher
     name: Stripe Publisher
@@ -306,6 +485,9 @@ agents:
     trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
     source: scripts/stripe_publisher.py
     last_run: null
+    permissions:
+      - 'Stripe secret key (STRIPE_SECRET_KEY): products, prices and payment links'
+      - Writes listings and run_log in SQLite
     registry:
       category: business
       subcategory: Workflow automation
@@ -313,6 +495,10 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/stripe_publisher.py creates a Stripe product and price and records a draft listing; scripts/approve_listing.py makes it live; no AI model
+      mission:
+        problem: Creating each Stripe product, price and listing by hand is slow and easy to get wrong.
+        outcomes:
+          - Each ready product saved in Stripe as a draft for KC's review
       responsibilities:
         tasks: [Load the ready listing, Refuse to publish without a template link, Create the Stripe product and price, Save storefront images, Record a draft listing in SQLite]
         tools: [Stripe API, SQLite]
@@ -333,6 +519,16 @@ agents:
         data_sensitivity: confidential
         credential_owner: KC (STRIPE_SECRET_KEY in .env on the VPS)
         risk: medium
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#stripe-publisher
+        known_issues:
+          - The agent id still says shopify-publisher
+          - The threat model notes a full sk_live_ key gives wide account access
+          - No KPI is defined yet
+        improvements:
+          - Use a restricted Stripe key, as the threat model recommends
+        last_review: 2026-10-28
 
   - id: seo-maintainer
     name: SEO Maintainer
@@ -345,6 +541,10 @@ agents:
     trigger: Phase 6, every maintain cycle
     source: scripts/seo_analyzer.py
     last_run: null
+    permissions:
+      - Serper API (SERPER_API_KEY)
+      - Writes listing tags and seo_review rows in SQLite
+      - Storefront deploy key, through the loop's storefront deploy
     registry:
       category: business
       subcategory: Workflow automation
@@ -352,6 +552,10 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/seo_analyzer.py uses Serper keyword results and fixed rules, then updates the listing row that scripts/storefront.py builds into the static site; no AI model
+      mission:
+        problem: Listing search text goes stale as competitor keywords change.
+        outcomes:
+          - Published listings carry current tags, titles and meta descriptions
       responsibilities:
         tasks: [Compare tags with competitor keywords, Save an optimised tag set, Save an SEO title and meta description]
         tools: [Serper API, SQLite]
@@ -369,6 +573,16 @@ agents:
         data_sensitivity: confidential
         credential_owner: KC (.env on the VPS)
         risk: medium
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#seo-maintainer
+        known_issues:
+          - Without SERPER_API_KEY it skips competitor research
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - No KPI is defined yet
+        improvements:
+          - A daily cap on listings changed, with a change log, before it runs at level 3 for good
+        last_review: 2026-10-28
 
   - id: health-report
     name: Health Dashboard Report
@@ -381,6 +595,8 @@ agents:
     trigger: Phase 7, daily via n8n
     source: scripts/health_dashboard.py
     last_run: null
+    permissions:
+      - Reads outputs/pipeline.db; writes nothing
     registry:
       title: Commerce Pipeline Health Reporter
       category: infrastructure
@@ -389,6 +605,9 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/health_dashboard.py queries SQLite and prints a summary; no AI model
+      mission:
+        problem: Pipeline health is spread across SQLite tables; this condenses it into one daily summary.
+        outcomes: [A plain-text daily health summary]
       responsibilities:
         tasks: [Count listings published this week, Failure rate and average run duration, Flag queue rows stuck over 48 hours]
         tools: [SQLite]
@@ -401,7 +620,17 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: internal
+        credential_owner: None needed (reads the local database)
         risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#health-dashboard-report
+        known_issues:
+          - The n8n daily summary workflow that captures it is not in the repository
+          - No KPI is defined yet
+        improvements:
+          - Keep the n8n workflow export in the repository
+        last_review: 2026-10-28
 
   - id: order-delivery
     name: Order Delivery
@@ -414,6 +643,10 @@ agents:
     trigger: Every loop cycle and every 10 minutes while the loop sleeps
     source: scripts/order_delivery.py
     last_run: null
+    permissions:
+      - 'Stripe secret key: reads checkout sessions'
+      - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
+      - Writes deliveries rows in SQLite
     registry:
       category: business
       subcategory: Order fulfillment
@@ -421,6 +654,10 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/order_delivery.py reads paid checkouts from Stripe and sends email over SMTP; no AI model
+      mission:
+        problem: A buyer must get their template link soon after paying, without KC sending it.
+        outcomes:
+          - Every paid checkout line is emailed once
       responsibilities:
         tasks: [Find paid checkouts from the last 7 days, Group undelivered products per checkout, Email the buyer the template links, Record each delivery]
         tools: [Stripe API, SMTP, SQLite]
@@ -441,6 +678,16 @@ agents:
         credential_owner: KC (STRIPE_SECRET_KEY and SMTP password in .env on the VPS)
         risk: medium
         audit_log: deliveries table in outputs/pipeline.db on the VPS (not connected to Atlas)
+      docs:
+        technical: docs/threat-model.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#order-delivery
+        known_issues:
+          - If email fails, a buyer who has paid waits until the next successful run
+          - A buyer can forward their template link; Canva links can't be limited to one person
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+        improvements:
+          - Report deliveries to Atlas so an undelivered order shows on the overview
+        last_review: 2026-10-28
 
   - id: sales-sync
     name: Sales Sync
@@ -451,6 +698,9 @@ agents:
     trigger: Daily, first cycle of the UTC day
     source: scripts/sales_tracker.py
     last_run: null
+    permissions:
+      - 'Stripe secret key: reads checkout sessions'
+      - Writes sales rows in SQLite
     registry:
       category: business
       subcategory: Sales reporting
@@ -458,8 +708,17 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/sales_tracker.py reads Stripe checkout sessions into SQLite; no AI model
+      mission:
+        problem: Revenue lives in Stripe; the digest and dashboard need it in the local database.
+        outcomes:
+          - Every paid checkout line in the sales table with its net revenue
       responsibilities:
+        tasks:
+          - Read paid Stripe checkout sessions
+          - Match line items to listings
+          - Store revenue with the actual Stripe fee when known
         tools: [Stripe API, SQLite]
+        inputs: [Paid Stripe checkout sessions, listings table]
         outputs: [sales rows in outputs/pipeline.db]
       execution:
         trigger_type: scheduled
@@ -468,7 +727,17 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: confidential
+        credential_owner: KC (STRIPE_SECRET_KEY in .env on the VPS)
         risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - No KPI is defined yet
+        improvements:
+          - Send results to Atlas
+        last_review: 2026-10-28
 
   - id: email-digest
     name: Daily Email Digest
@@ -479,6 +748,9 @@ agents:
     trigger: Daily, first cycle of the UTC day
     source: scripts/email_digest.py
     last_run: null
+    permissions:
+      - Reads outputs/pipeline.db
+      - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
     registry:
       category: business
       subcategory: Sales reporting
@@ -486,8 +758,17 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/email_digest.py builds an HTML summary from SQLite and sends it to KC; no AI model
+      mission:
+        problem: KC needs one daily email with product ideas to design, the brand summary, pipeline health, queue state and sales, without logging in to the VPS.
+        outcomes: [One email to KC each day]
       responsibilities:
+        tasks:
+          - Collect product ideas from outputs/master.txt
+          - Summarize the brand guide
+          - Add pipeline health, queue and sales figures
+          - Send the email
         tools: [SQLite, SMTP]
+        inputs: [outputs/master.txt, outputs/brand_guide.md, outputs/pipeline.db]
         outputs: [Daily email to KC]
       execution:
         trigger_type: scheduled
@@ -497,7 +778,17 @@ agents:
         autonomy: 1
         autonomy_note: Reports to KC only; changes nothing.
         data_sensitivity: internal
+        credential_owner: KC (SMTP password in .env on the VPS)
         risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
+        known_issues:
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - No KPI is defined yet
+        improvements:
+          - Send results to Atlas
+        last_review: 2026-10-28
 
   - id: db-backup
     name: Database Backup
@@ -508,6 +799,9 @@ agents:
     trigger: Daily, first cycle of the UTC day
     source: scripts/backup_db.py
     last_run: null
+    permissions:
+      - Reads outputs/pipeline.db
+      - Writes and deletes dated copies in backups/
     registry:
       category: infrastructure
       subcategory: Backups
@@ -515,8 +809,16 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/backup_db.py uses the SQLite backup API; no AI model
+      mission:
+        problem: The pipeline's queue, listings, sales and deliveries live in one SQLite file.
+        outcomes:
+          - A dated, consistent copy of the database every day, 14 days kept
       responsibilities:
+        tasks:
+          - Copy the database with the SQLite backup API
+          - Delete backups older than BACKUP_KEEP_DAYS
         tools: [SQLite]
+        inputs: [outputs/pipeline.db]
         outputs: [Dated copy of outputs/pipeline.db]
       execution:
         trigger_type: scheduled
@@ -525,7 +827,17 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: confidential
+        credential_owner: None needed (local files only)
         risk: low
+      docs:
+        technical: docs/threat-model.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
+        known_issues:
+          - Backups stay on the same VPS (14 days kept)
+          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+        improvements:
+          - Copy backups off the VPS
+        last_review: 2026-10-28
 
   - id: commerce-tests
     name: Pipeline Tests
@@ -538,6 +850,9 @@ agents:
     observe:
       github_workflow: tests.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: Commerce Pipeline Continuous Integration
       category: engineering
@@ -571,3 +886,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#pipeline-tests
+        known_issues:
+          - security.yml (gitleaks and pip-audit) also runs in this repository but is not in the catalog
+        improvements:
+          - Add security.yml to the catalog
+        last_review: 2026-10-28
