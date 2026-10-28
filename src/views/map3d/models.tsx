@@ -217,12 +217,12 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
           return { p: [f.x + (f.axis === "x" ? out : across), WATER_Y + 0.02, f.z + (f.axis === "x" ? across : out)], s: [0.14, 0.07, 0.14] } as Inst;
         }),
       ),
-      fountains: scene.fountains.flatMap((f) => [
-        { p: [f.x, top, f.z], s: [0.95, 0.14, 0.95], c: "#cfc4ab" } as Inst,
-        { p: [f.x, top + 0.14, f.z], s: [0.08, 0.34, 0.08], c: "#cfc4ab" } as Inst,
-        { p: [f.x, top + 0.42, f.z], s: [0.3, 0.06, 0.3], c: "#cfc4ab" } as Inst,
+      fountains: scene.fountains.flatMap(({ x, z, k = 1 }) => [
+        { p: [x, top, z], s: [0.95 * k, 0.14, 0.95 * k], c: "#cfc4ab" } as Inst,
+        { p: [x, top + 0.14, z], s: [0.08, 0.34 * k, 0.08], c: "#cfc4ab" } as Inst,
+        { p: [x, top + 0.14 + 0.28 * k, z], s: [0.3 * k, 0.06, 0.3 * k], c: "#cfc4ab" } as Inst,
       ]),
-      fountainWater: scene.fountains.map((f) => ({ p: [f.x, top + 0.1, f.z], s: [0.8, 0.06, 0.8] }) as Inst),
+      fountainWater: scene.fountains.map(({ x, z, k = 1 }) => ({ p: [x, top + 0.1, z], s: [0.8 * k, 0.06, 0.8 * k] }) as Inst),
     };
   }, [scene]);
   const ext = scene.bounds;

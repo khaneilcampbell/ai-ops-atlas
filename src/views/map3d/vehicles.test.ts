@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../../catalog";
 import { layoutMap } from "../mapLayout";
-import { buildScene, TERRACE_H } from "./scene";
+import { buildScene, FOUNTAIN_R, TERRACE_H } from "./scene";
 import { MAX_VEHICLES, planVehicles, vehicleAt } from "./vehicles";
 
 const scene = buildScene(layoutMap(catalog));
@@ -24,7 +24,16 @@ describe("decorative vehicles", () => {
         for (const h of scene.houses) expect(inside({ x: h.x - h.w / 2, z: h.z - h.d / 2, w: h.w, d: h.d }, x, z, 0.08), `${v.id} inside ${h.key} at ${x},${z}`).toBe(false);
         // Towers, with their entrance stairs out front.
         for (const w of scene.towers) expect(inside({ x: w.x - w.size / 2, z: w.z - w.size / 2, w: w.size, d: w.size + 0.24 }, x, z, 0.08), `${v.id} inside a tower`).toBe(false);
-        for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(0.5);
+        for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
+      }
+  });
+
+  it("keeps fountains clear of the towers", () => {
+    for (const f of scene.fountains)
+      for (const w of scene.towers) {
+        const dx = Math.max(0, Math.abs(f.x - w.x) - w.size / 2);
+        const dz = Math.max(0, Math.abs(f.z - w.z) - w.size / 2);
+        expect(Math.hypot(dx, dz)).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1));
       }
   });
 
