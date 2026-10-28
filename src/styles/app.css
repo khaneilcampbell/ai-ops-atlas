@@ -364,8 +364,6 @@ table.table { width: 100%; border-collapse: collapse; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   .sel-ring { animation: none; opacity: 0.8; }
 }
-.map-intro { transition: opacity 0.2s ease; }
-.map-intro.faded { opacity: 0; }
 
 /* ── View switch ─────────────────────────────────── */
 .view-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--forest-900); border: 1px solid var(--forest-line); }
@@ -605,8 +603,6 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .map3d canvas { display: block; }
 .map-stage:has(.map3d) .map-intro { z-index: 3; padding: 6px 10px 10px 0; }
 .map3d .m3-labels { z-index: 2; }
-.map-stage:has(.map3d)::before { transition: opacity 0.3s ease; }
-.map-stage:has(.map-intro.faded)::before { opacity: 0; }
 .map-stage:has(.map3d)::before {
   content: ""; position: absolute; left: 0; top: 0; width: 640px; height: 260px; pointer-events: none; z-index: 1;
   background: radial-gradient(ellipse at 0 0, rgba(241, 242, 234, 0.92) 0%, rgba(241, 242, 234, 0.6) 45%, rgba(241, 242, 234, 0) 72%);

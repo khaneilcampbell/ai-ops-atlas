@@ -452,7 +452,6 @@ export function MapView() {
     const c = connections.find((x) => x.id === id);
     return c ? { title: c.relation, sub: `${CONNECTION_LABEL[c.type]} · ${CONNECTION_STATUS_LABEL[c.status]} · click to inspect` } : null;
   };
-  const [moved3d, setMoved3d] = useState(false);
   const setMode = (m: "3d" | "2d") => {
     setModeState(m);
     save("mapMode", m);
@@ -945,7 +944,6 @@ export function MapView() {
                 select(sel);
               }}
               onFocus={setFocus}
-              onMoved={() => setMoved3d(true)}
               links={mapLinks}
               linkSel={pickedLink ? pickedLink.id : null}
               onLinkSelect={(id) => {
@@ -1077,7 +1075,7 @@ export function MapView() {
           </svg>
           )}
 
-          <div className={`map-intro ${selection || pickedLink || (is3d ? moved3d : k > fitK.current * 1.15) ? "faded" : ""}`}>
+          <div className="map-intro">
             <div className="eyebrow">Workspace map</div>
             <h1>Welcome to the neighborhood.</h1>
             <p className="lede small">Each project is a district. Its repository is the tall building in the middle and its agents are the houses around it.</p>
