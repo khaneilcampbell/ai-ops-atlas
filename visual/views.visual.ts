@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { goTo, openAtlas, selectBuilding, settle } from "./atlas";
+import { goTo, openAtlas, selectBuilding, settle, waitForScene } from "./atlas";
 
 // Each key view, compared against visual/baselines/<local|ci>/<name>.png.
 // SHOTS=1 skips the comparison and writes the screenshots to visual/out/ instead, for looking at.
@@ -27,12 +27,14 @@ async function check(page: Page, name: string) {
 test("map, day", async ({ page }) => {
   await openAtlas(page, { light: "day" });
   await expect(page.locator("canvas").first()).toBeVisible();
+  await waitForScene(page);
   await check(page, "map-day");
 });
 
 test("map, night", async ({ page }) => {
   await openAtlas(page, { light: "night" });
   await expect(page.locator("canvas").first()).toBeVisible();
+  await waitForScene(page);
   await check(page, "map-night");
 });
 
@@ -47,6 +49,7 @@ test("office", async ({ page }) => {
   await selectBuilding(page, "AI Ops Atlas");
   await page.getByRole("button", { name: "Enter building" }).click();
   await settle(page, 4);
+  await waitForScene(page);
   await check(page, "office");
 });
 

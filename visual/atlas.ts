@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { PNG } from "pngjs";
 import { answer, NOW } from "./github";
 
 export interface Prep {
@@ -62,4 +63,35 @@ export async function goTo(page: Page, label: string) {
 export async function selectBuilding(page: Page, name: string) {
   await page.locator(".m3-plaque", { hasText: name }).first().dispatchEvent("click");
   await settle(page, 4);
+}
+
+/**
+ * Keeps stepping until the middle of the view shows a drawn scene rather than a flat
+ * background. A slow machine can need more frames before an on-demand scene (the office)
+ * first draws; once drawn it holds still, so waiting longer doesn't change the picture.
+ */
+export async function waitForScene(page: Page, tries = 20) {
+  const vp = page.viewportSize()!;
+  const clip = { x: vp.width / 2 - 200, y: vp.height / 2 - 150, width: 400, height: 300 };
+  for (let i = 0; i < tries; i++) {
+    const png = PNG.sync.read(await page.screenshot({ clip, animations: "disabled" }));
+    if (spread(png.data) > 20) return;
+    await page.waitForTimeout(500);
+    await settle(page, 2);
+  }
+  throw new Error("The scene never drew: the middle of the view stayed one flat color.");
+}
+
+/** Standard deviation of brightness over an RGBA buffer. */
+function spread(d: Buffer): number {
+  let sum = 0;
+  let sq = 0;
+  const n = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = (d[i] + d[i + 1] + d[i + 2]) / 3;
+    sum += v;
+    sq += v * v;
+  }
+  const mean = sum / n;
+  return Math.sqrt(Math.max(0, sq / n - mean * mean));
 }
