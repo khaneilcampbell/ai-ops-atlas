@@ -219,7 +219,7 @@ function MergeSettings({ allRepos }: { allRepos: string[] }) {
             </div>
           </div>
           <div className="setting">
-            <select value={repo} onChange={(e) => setRepo(e.target.value)} aria-label="Repository for the merge token" disabled={busy}>
+            <select className="btn" value={repo} onChange={(e) => setRepo(e.target.value)} aria-label="Repository for the merge token" disabled={busy}>
               <option value="">Repository…</option>
               {allRepos.map((r) => (
                 <option key={r} value={r}>
