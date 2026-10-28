@@ -6,3 +6,6 @@ src-tauri/gen/
 .DS_Store
 .env
 *.tsbuildinfo
+test-results/
+playwright-report/
+visual/out/

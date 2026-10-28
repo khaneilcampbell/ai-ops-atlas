@@ -1,0 +1,50 @@
+name: Visual checks
+
+# Screenshots of the map, office and Mission Control compared with visual/baselines/ci.
+# Not a required check: it runs only when a pull request touches what it draws, or by hand.
+on:
+  pull_request:
+    paths:
+      - "src/views/**"
+      - "src/styles/**"
+      - "src/components/**"
+      - "visual/**"
+      - ".github/workflows/visual.yml"
+  workflow_dispatch:
+    inputs:
+      update:
+        description: Replace the baselines with this run's screenshots (download them from the run's artifact)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Visual checks (screenshots)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Missing baselines are written, not failed, so a new view only needs its first run.
+      - run: npx playwright test -c visual --update-snapshots=${{ inputs.update && 'all' || 'missing' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-results
+          path: |
+            visual/baselines/ci/
+            test-results/
+            playwright-report/
+          retention-days: 14
