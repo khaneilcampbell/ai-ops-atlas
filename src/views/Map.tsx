@@ -399,6 +399,12 @@ export function MapView() {
     setLightState(l);
     save("mapLight", l);
   };
+  // Decorative vehicles on the 3D map; on unless switched off.
+  const [traffic, setTrafficState] = useState(() => load<boolean>("mapTraffic", true));
+  const setTraffic = (on: boolean) => {
+    setTrafficState(on);
+    save("mapTraffic", on);
+  };
   const is3d = mode === "3d";
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
@@ -948,6 +954,7 @@ export function MapView() {
               }}
               linkTip={linkTip}
               linkFocus={linkPrefs.focus}
+              traffic={traffic}
               linksMoving={!linkPrefs.paused}
             />
             </Suspense>
@@ -1122,6 +1129,11 @@ export function MapView() {
                 title={light === "night" ? "Switch to day" : "Switch to night"}
               >
                 <Icon name={light === "night" ? "moon" : "sun"} size={17} />
+              </button>
+            )}
+            {is3d && (
+              <button className={`icon-btn ${traffic ? "on" : ""}`} onClick={() => setTraffic(!traffic)} aria-pressed={traffic} aria-label="Traffic" title={traffic ? "Hide the little vehicles" : "Show the little vehicles"}>
+                <Icon name="car" size={17} />
               </button>
             )}
             {is3d && (

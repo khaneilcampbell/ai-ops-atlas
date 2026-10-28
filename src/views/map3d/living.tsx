@@ -5,9 +5,10 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { night } from "./materials";
+import { focusable, night } from "./materials";
 import type { useGeometries, useMaterials } from "./models";
-import { WATER_Y, type Scene3D } from "./scene";
+import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { planVehicles, vehicleAt, type VehicleKind } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -236,4 +237,152 @@ export function Bloom() {
     composer.c.render();
   }, 1);
   return null;
+}
+
+/** One box of a vehicle, in its own frame: forward is +x, up is +y, bottom-anchored. */
+type Part = { at: [number, number, number]; size: [number, number, number]; color: string | null };
+
+/** Models are drawn at this size; the path lanes leave room for it. */
+const SCALE = 1.35;
+const TIRE = "#262b2e";
+const GLASS = "#3d4d55";
+const TRIM = "#ece3cc";
+const wheels = (dx: number): Part[] =>
+  [-1, 1].flatMap((f) => [-1, 1].map((sd) => ({ at: [f * dx, 0, sd * 0.045], size: [0.044, 0.04, 0.022], color: TIRE }) as Part));
+
+/** Low-poly models; null color means the vehicle's own paint. */
+const MODELS: Record<VehicleKind, { parts: Part[]; nose: number; lightY: number }> = {
+  sedan: {
+    parts: [
+      ...wheels(0.06),
+      { at: [0, 0.014, 0], size: [0.2, 0.044, 0.1], color: null },
+      { at: [-0.012, 0.058, 0], size: [0.11, 0.038, 0.088], color: GLASS },
+      { at: [-0.012, 0.096, 0], size: [0.096, 0.008, 0.078], color: null },
+    ],
+    nose: 0.1,
+    lightY: 0.036,
+  },
+  van: {
+    parts: [
+      ...wheels(0.075),
+      { at: [0, 0.014, 0], size: [0.24, 0.098, 0.106], color: null },
+      { at: [0.106, 0.064, 0], size: [0.03, 0.036, 0.098], color: GLASS },
+      { at: [0.065, 0.068, 0], size: [0.05, 0.03, 0.109], color: GLASS },
+      { at: [-0.04, 0.05, 0], size: [0.12, 0.012, 0.109], color: TRIM },
+    ],
+    nose: 0.12,
+    lightY: 0.04,
+  },
+  service: {
+    parts: [
+      ...wheels(0.08),
+      { at: [0.07, 0.014, 0], size: [0.1, 0.088, 0.106], color: null },
+      { at: [0.098, 0.064, 0], size: [0.046, 0.03, 0.109], color: GLASS },
+      { at: [-0.056, 0.014, 0], size: [0.15, 0.05, 0.106], color: TRIM },
+      { at: [-0.056, 0.064, 0], size: [0.11, 0.03, 0.08], color: "#7f8a83" },
+      { at: [0.07, 0.102, 0], size: [0.026, 0.014, 0.05], color: "#c9a35a" },
+    ],
+    nose: 0.12,
+    lightY: 0.04,
+  },
+};
+
+/**
+ * Miniature sedans, vans and service vehicles touring the districts' stone paths, with headlights
+ * and taillights at night. Decorative only: their routes come from the map's paths, never from
+ * project data or agent activity. Frozen in place when motion is off.
+ */
+export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
+  const plans = useMemo(() => planVehicles(scene), [scene]);
+  const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
+  const mats = useMemo(
+    () => ({
+      head: focusable(new THREE.MeshStandardMaterial({ color: "#f3ead4", emissive: "#fff1d2", emissiveIntensity: 0, roughness: 0.4 })),
+      tail: focusable(new THREE.MeshStandardMaterial({ color: "#7a2c27", emissive: "#ff4434", emissiveIntensity: 0, roughness: 0.5 })),
+    }),
+    [],
+  );
+  useEffect(() => () => Object.values(mats).forEach((x) => x.dispose()), [mats]);
+  const body = useRef<THREE.InstancedMesh>(null);
+  const heads = useRef<THREE.InstancedMesh>(null);
+  const tails = useRef<THREE.InstancedMesh>(null);
+  const pools = useRef<THREE.InstancedMesh>(null);
+  const o = useMemo(() => new THREE.Object3D(), []);
+  const clock = useRef(0);
+  const yaw = useRef<number[]>([]);
+  const y0 = TERRACE_H + 0.03;
+
+  const place = (dt: number) => {
+    const b = body.current;
+    const h = heads.current;
+    const t = tails.current;
+    const pl = pools.current;
+    if (!b || !h || !t || !pl) return;
+    const pose = plans.map((v, i) => {
+      const at = vehicleAt(v, clock.current);
+      const want = Math.atan2(-at.dz, at.dx);
+      // Turn smoothly toward the way ahead; snap when there is no time step (first frame, frozen).
+      let cur = yaw.current[i] ?? want;
+      const diff = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+      cur = dt > 0 ? cur + diff * (1 - Math.exp(-dt * 7)) : want;
+      yaw.current[i] = cur;
+      return { x: at.x, z: at.z, cos: Math.cos(cur), sin: Math.sin(cur), yaw: cur };
+    });
+    const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
+      const p = pose[i];
+      fx *= SCALE;
+      y *= SCALE;
+      sz *= SCALE;
+      sx *= SCALE;
+      sy *= SCALE;
+      szz *= SCALE;
+      o.position.set(p.x + fx * p.cos + sz * p.sin, y0 + y, p.z - fx * p.sin + sz * p.cos);
+      o.rotation.set(0, p.yaw, 0);
+      o.scale.set(sx, sy, szz);
+      o.updateMatrix();
+      mesh.setMatrixAt(k, o.matrix);
+    };
+    parts.forEach(({ v, p }, k) => put(b, k, v, p.at[0], p.at[1], p.at[2], p.size[0], p.size[1], p.size[2]));
+    plans.forEach((v, i) => {
+      const md = MODELS[v.kind];
+      for (const sd of [0, 1]) {
+        const z = sd ? 0.032 : -0.032;
+        put(h, i * 2 + sd, i, md.nose, md.lightY, z, 0.012, 0.012, 0.012);
+        put(t, i * 2 + sd, i, -md.nose - 0.002, md.lightY - 0.006, z, 0.006, 0.012, 0.02);
+      }
+      // A soft pool of headlight on the paving ahead, only visible at night.
+      put(pl, i, i, md.nose + 0.13, 0.004, 0, 0.26, 0.003, 0.15);
+    });
+    b.instanceMatrix.needsUpdate = h.instanceMatrix.needsUpdate = t.instanceMatrix.needsUpdate = pl.instanceMatrix.needsUpdate = true;
+  };
+
+  useEffect(() => {
+    const col = new THREE.Color();
+    parts.forEach(({ color }, k) => body.current?.setColorAt(k, col.set(color)));
+    if (body.current?.instanceColor) body.current.instanceColor.needsUpdate = true;
+    yaw.current = [];
+    place(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parts]);
+
+  useFrame((_, delta) => {
+    const k = night.value;
+    // Restrained: a warm glow at night, nothing by day.
+    mats.head.emissiveIntensity = k * 2.2;
+    mats.tail.emissiveIntensity = k * 1.3;
+    if (!moving) return;
+    const dt = Math.min(delta, 0.1);
+    clock.current += dt;
+    place(dt);
+  });
+
+  if (!plans.length) return null;
+  return (
+    <group>
+      <instancedMesh ref={body} args={[g.box, m.plain, parts.length]} castShadow frustumCulled={false} raycast={() => null} />
+      <instancedMesh ref={heads} args={[g.ball, mats.head, plans.length * 2]} frustumCulled={false} raycast={() => null} />
+      <instancedMesh ref={tails} args={[g.box, mats.tail, plans.length * 2]} frustumCulled={false} raycast={() => null} />
+      <instancedMesh ref={pools} args={[g.cyl, m.pool, plans.length]} frustumCulled={false} raycast={() => null} />
+    </group>
+  );
 }
