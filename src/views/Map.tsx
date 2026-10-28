@@ -406,13 +406,13 @@ export function MapView() {
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
   const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
-    const saved = load<Partial<LinkPrefs>>(LINK_KEY, {});
+    const saved = load<Partial<LinkPrefs>>("mapLinks3", {});
     return { ...LINK_DEFAULTS, ...saved, types: { ...LINK_DEFAULTS.types, ...saved.types } };
   });
   const setLinkPrefs = (p: Partial<LinkPrefs>) =>
     setLinkPrefsState((v) => {
       const next = { ...v, ...p };
-      save(LINK_KEY, next);
+      save("mapLinks3", next);
       return next;
     });
   const [linksMenu, setLinksMenu] = useState(false);
@@ -421,13 +421,15 @@ export function MapView() {
   const linkCounts = useMemo(() => Object.fromEntries(CONNECTION_TYPES.map((t) => [t, connections.filter((c) => c.type === t).length])) as Record<ConnectionType, number>, [connections]);
   const mapLinks = useMemo<MapLink[]>(
     () =>
-      connections.flatMap((c) => {
-        const a = endpointKey(catalog, c.source);
-        const b = endpointKey(catalog, c.target);
-        if (!a || !b || !linkPrefs.types[c.type]) return [];
-        return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
-      }),
-    [connections, catalog, linkPrefs.types],
+      !linkPrefs.on
+        ? []
+        : connections.flatMap((c) => {
+            const a = endpointKey(catalog, c.source);
+            const b = endpointKey(catalog, c.target);
+            if (!a || !b || !linkPrefs.types[c.type]) return [];
+            return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
+          }),
+    [connections, catalog, linkPrefs],
   );
   const pickedLink = linkSel && is3d && mapLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
   // A building selection replaces a connection selection, wherever it was made.
@@ -939,7 +941,6 @@ export function MapView() {
               onFocus={setFocus}
               onMoved={() => setMoved3d(true)}
               links={mapLinks}
-              linksAll={linkPrefs.on}
               linkSel={pickedLink ? pickedLink.id : null}
               onLinkSelect={(id) => {
                 select(null);
@@ -1210,8 +1211,6 @@ interface LinkPrefs {
   focus: boolean;
   paused: boolean;
 }
-/** Version 2: connections are hidden at rest by default, so earlier saved choices start over. */
-const LINK_KEY = "mapLinks2";
 const LINK_DEFAULTS: LinkPrefs = { on: false, types: { github: true, agent: true, n8n: true, dependency: true }, focus: true, paused: false };
 
 /** The toolbar's Connections popover: what to draw, focus mode and animation. */
@@ -1239,35 +1238,31 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
     <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
       <label className="row strong">
         <input type="checkbox" checked={prefs.on} onChange={(e) => onChange({ on: e.target.checked })} />
-        Show all connections
+        Show connections
       </label>
       <div className="group">
         {CONNECTION_TYPES.map((t) => (
-          <label key={t} className="row">
-            <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
+          <label key={t} className={`row ${prefs.on ? "" : "off"}`}>
+            <input type="checkbox" disabled={!prefs.on} checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
             <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
             {CONNECTION_LABEL[t]}
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
         ))}
       </div>
-      <label className="row">
-        <input type="checkbox" checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
+      <label className={`row ${prefs.on ? "" : "off"}`}>
+        <input type="checkbox" disabled={!prefs.on} checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
         Selected building only
       </label>
-      <label className="row">
-        <input type="checkbox" checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
+      <label className={`row ${prefs.on ? "" : "off"}`}>
+        <input type="checkbox" disabled={!prefs.on} checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
         Pause animation
       </label>
       <button className="text-btn" disabled={!picked} onClick={onClear}>
         Clear connection selection
       </button>
-      <span className="row legend">
-        <i className="swatch" style={{ background: LINK_COLORS.unhealthy.day }} />
-        Verified failure, any kind
-      </span>
       <p className="note">
-        Hover or select a building to see its connections. Drawn only from catalog manifests and GitHub data; colors show the kind of link, and moving signals mean recently verified activity. Red needs a real failure.
+        Drawn only from catalog manifests and GitHub data. Moving dots mean recently verified activity; faint lines have no live data. Red needs a real failure.
         {missing.length > 0 &&
           ` Not declared yet: ${missing.map((t) => CONNECTION_LABEL[t]).join(", ")}. To add one, list agent ids under registry.responsibilities.dependencies, or add connections to a project, in catalog/*.yaml.`}
       </p>

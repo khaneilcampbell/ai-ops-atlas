@@ -207,8 +207,8 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
 }
 
 /**
- * A light bloom at night, only on what is brighter than the scene: lit windows, path lights and the
- * connection traces. By day, and while the bloom is off, the map renders directly.
+ * A light bloom at night, only on what is brighter than the scene: lit windows, path lights and
+ * connections. By day, and while the bloom is off, the map renders directly.
  */
 export function Bloom() {
   const { gl, scene, camera, size } = useThree();
