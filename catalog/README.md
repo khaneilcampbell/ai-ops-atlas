@@ -128,6 +128,25 @@ Levels describe what the agent is permitted to do in its own environment, not ho
 | 3 | Limited autonomous execution | Narrowly scoped actions with predefined controls. |
 | 4 | Advanced orchestration | Coordinates agents under explicit policies and audit controls. |
 
+## Connections on the map
+
+The 3D map draws a connection only where a manifest or GitHub data states it. Shared technology never counts. Today it reads:
+
+- **GitHub**: a repository and the agents whose `source` or `observe.github_workflow` it holds, and AI Ops Atlas reading each cataloged repository.
+- **AI agents** and **n8n**: agent ids listed under `registry.responsibilities.dependencies`. A link is n8n when either agent's framework or runtime is n8n.
+- **Dependencies**: dependencies between agents of different projects, and anything a project declares:
+
+```yaml
+project:
+  connections:                     # optional; each target must be a project or agent id
+    - to: benjaire-flow-intake
+      type: n8n                    # github | agent | n8n | dependency
+      direction: outbound          # optional: outbound | inbound; leave out when unknown
+      note: What the relationship is and how it was verified.
+```
+
+A connection turns red only when an observed workflow run on the default branch failed. Moving dots mean a run or sync verified it in the last 14 days.
+
 ## Status meanings
 
 | Status | Use it when |

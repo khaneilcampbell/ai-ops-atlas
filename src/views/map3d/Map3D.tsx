@@ -8,7 +8,10 @@ import { Sky, Traffic, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
 import { clip, measure, SANS, wrap } from "../mapText";
-import { time } from "./materials";
+import type { ConnectionStatus } from "../../lib/connections";
+import type { ConnectionType } from "../../catalog/types";
+import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
+import { Network, type NetLink } from "./network";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 
@@ -20,6 +23,19 @@ export interface Map3DApi {
 }
 
 type Sel = { kind: "repo" | "agent"; id: string };
+
+/** A connection as the map needs it: the building keys and projects at both ends. */
+export interface MapLink {
+  id: string;
+  type: ConnectionType;
+  status: ConnectionStatus;
+  directed: boolean;
+  /** Building keys (repo:… or agent:…) and the projects they belong to. */
+  a: string;
+  b: string;
+  pa?: string;
+  pb?: string;
+}
 
 interface Props {
   layout: Layout;
@@ -36,6 +52,15 @@ interface Props {
   /** Day or night lighting. */
   light: LightMode;
   onMoved: () => void;
+  /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
+  links: MapLink[];
+  linkSel: string | null;
+  onLinkSelect: (id: string) => void;
+  linkTip: (id: string) => { title: string; sub: string } | null;
+  /** Selecting a building shows only its connections and fades the rest of the map. */
+  linkFocus: boolean;
+  /** Connection particles move; off when paused in the toolbar or for reduced motion. */
+  linksMoving: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -73,7 +98,7 @@ function anchorsOf(scene: Scene3D) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor } = props;
+  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const anchors = useMemo(() => anchorsOf(scene), [scene]);
   const [hover, setHover] = useState<string | null>(null);
@@ -94,6 +119,43 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     onSelect(selOf(key), a?.project);
   };
   const hoverDistrict = hover?.startsWith("district:") ? hover.slice(9) : hover ? anchors.get(hover)?.project : undefined;
+  const [hoverLink, setHoverLink] = useState<string | null>(null);
+
+  // Which connections show, and how strongly. A selected connection wins; then a selected
+  // building, whose own connections light up while the rest fade or hide.
+  const net = useMemo(() => {
+    const touches = (l: MapLink) =>
+      !!selKey && (l.a === selKey || l.b === selKey || (selKey.startsWith("repo:") && !!selectedDistrict && (l.pa === selectedDistrict || l.pb === selectedDistrict)));
+    const placed = links.filter((l) => anchors.has(l.a) && anchors.has(l.b));
+    const picked = linkSel ? placed.find((l) => l.id === linkSel) : undefined;
+    const inHand = (p?: string) => !!p && (p === selectedDistrict || p === hoverDistrict);
+    const shown: { l: MapLink; level: NetLink["level"] }[] = [];
+    for (const l of placed) {
+      if (picked) {
+        if (l === picked) shown.push({ l, level: "selected" });
+        else if (!linkFocus) shown.push({ l, level: "dim" });
+        continue;
+      }
+      if (selKey) {
+        if (touches(l)) shown.push({ l, level: "strong" });
+        else if (!linkFocus) shown.push({ l, level: "dim" });
+        continue;
+      }
+      // Links inside one project only up close, or around the project in hand.
+      if (l.pa === l.pb && near === "far" && !inHand(l.pa)) continue;
+      shown.push({ l, level: l.status === "active" || l.status === "unhealthy" ? "strong" : "weak" });
+    }
+    // Many links at once: keep only failures at full strength so the map stays readable.
+    if (!picked && !selKey && shown.length > 24) for (const s of shown) if (s.level === "strong" && s.l.status !== "unhealthy") s.level = "weak";
+    // The projects in focus: both ends of the picked link, or the selected building's project and its partners.
+    let focusSet: Set<string> | null = null;
+    if (picked) focusSet = new Set([picked.pa, picked.pb].filter((p): p is string => !!p));
+    else if (selKey && linkFocus && links.length) {
+      focusSet = new Set(selectedDistrict ? [selectedDistrict] : []);
+      for (const s of shown) for (const p of [s.l.pa, s.l.pb]) if (p) focusSet.add(p);
+    }
+    return { shown, picked, focusSet };
+  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus]);
 
   // Labels: project plaques always, agent pills once zoomed in (or for the hovered or selected agent).
   const labels = useMemo(() => {
@@ -116,7 +178,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           w: measure(name, 12, SANS, 600) + 40,
           h: 34,
           priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents),
-          className: "m3-plaque compact",
+          className: `m3-plaque compact${net.focusSet && !net.focusSet.has(t.projectId) ? " dim" : ""}`,
           onClick: () => select(t.key),
           title: `${t.name} · ${health.label}`,
           node: (
@@ -173,7 +235,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         w: measure(text, 11.5, SANS, 500) + 22,
         h: 28,
         priority: urgent ? 0.5 : h.projectId === hoverDistrict || h.projectId === selectedDistrict ? 2.5 : 6,
-        className: `m3-pill ${a.status === "attention" ? "gold" : ""} ${h.key === selKey ? "selected" : h.key === hover ? "hover" : ""}`,
+        className: `m3-pill ${a.status === "attention" ? "gold" : ""} ${h.key === selKey ? "selected" : h.key === hover ? "hover" : ""}${net.focusSet && !net.focusSet.has(h.projectId) ? " dim" : ""}`,
         onClick: () => select(h.key),
         node: text,
       });
@@ -203,7 +265,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor]);
+  }, [scene, layout, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -250,6 +312,17 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <World
           light={props.light}
           health={health}
+          net={net}
+          hoverLink={hoverLink}
+          linksMoving={props.linksMoving}
+          onLinkHover={(id, e) => {
+            setHoverLink(id);
+            const t = id ? props.linkTip(id) : null;
+            if (!t || !e) return setTip(null);
+            const r = wrapEl.current!.getBoundingClientRect();
+            setTip({ x: e.nativeEvent.clientX - r.left, y: e.nativeEvent.clientY - r.top, ...t });
+          }}
+          onLinkPick={props.onLinkSelect}
           hoods={layout.neighborhoods.length}
           scene={scene}
           anchors={anchors}
@@ -306,6 +379,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 function World({
   light: lightMode,
   health,
+  net,
+  hoverLink,
+  linksMoving,
+  onLinkHover,
+  onLinkPick,
   hoods,
   scene,
   anchors,
@@ -324,6 +402,11 @@ function World({
 }: {
   light: LightMode;
   health: Map<string, Health>;
+  net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
+  hoverLink: string | null;
+  linksMoving: boolean;
+  onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
+  onLinkPick: (id: string) => void;
   hoods: number;
   scene: Scene3D;
   anchors: ReturnType<typeof anchorsOf>;
@@ -566,6 +649,59 @@ function World({
     }
   });
 
+  // Focus mode fades everything outside the terraces in focus; the shader reads these rectangles.
+  const focusTarget = net.focusSet ? 1 : 0;
+  useEffect(() => {
+    const ts = net.focusSet ? scene.terraces.filter((t) => net.focusSet!.has(t.id)).slice(0, FOCUS_MAX) : [];
+    ts.forEach((t, i) => focusRects.value[i].set(t.x - 0.2, t.z - 0.2, t.x + t.w + 0.2, t.z + t.d + 0.2));
+    if (ts.length) focusCount.value = ts.length;
+  }, [net.focusSet, scene]);
+  useEffect(() => () => void (focusLevel.value = 0), []);
+  useFrame((_, delta) => {
+    const f = focusLevel.value;
+    if (f === focusTarget) return;
+    focusLevel.value = reduced ? focusTarget : THREE.MathUtils.clamp(f + Math.sign(focusTarget - f) * delta * 3.5, 0, 1);
+  });
+
+  const netLinks = useMemo<NetLink[]>(() => {
+    const at = (k: string) => {
+      const a = anchors.get(k)!;
+      return new THREE.Vector3(a.x, a.y1 + 0.04, a.z);
+    };
+    // Highest headquarters roof near the straight line between the ends, for the arc to clear.
+    const clearance = (p: THREE.Vector3, q: THREE.Vector3) => {
+      let h = 0;
+      const seg = new THREE.Line3(new THREE.Vector3(p.x, 0, p.z), new THREE.Vector3(q.x, 0, q.z));
+      const c = new THREE.Vector3();
+      for (const t of scene.towers) {
+        const o = new THREE.Vector3(t.x, 0, t.z);
+        if (o.distanceTo(seg.start) < 0.1 || o.distanceTo(seg.end) < 0.1) continue;
+        seg.closestPointToPoint(o, true, c);
+        if (c.distanceTo(o) < t.size * 0.8) h = Math.max(h, towerTop(t) + 0.6);
+      }
+      return Math.round(h * 100) / 100;
+    };
+    return net.shown.map(({ l, level }) => {
+      const from = at(l.a);
+      const to = at(l.b);
+      return { id: l.id, type: l.type, status: l.status, from, to, clear: clearance(from, to), level, flow: l.directed && l.status === "active" && level !== "dim" };
+    });
+  }, [net, anchors, scene]);
+
+  // Frame both ends of a selected connection.
+  useEffect(() => {
+    const l = net.picked;
+    const a = l && anchors.get(l.a);
+    const b = l && anchors.get(l.b);
+    if (!a || !b) return;
+    framing.current = null;
+    touched.current = true;
+    const span = Math.hypot(a.x - b.x, a.z - b.z);
+    const dist = THREE.MathUtils.clamp(span * 1.7 + Math.max(a.y1, b.y1) * 2, controls.minDistance, fitDist.current * 0.8);
+    goto(new THREE.Vector3((a.x + b.x) / 2, TERRACE_H + 0.5, (a.z + b.z) / 2), dist, false, 900);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [net.picked?.id]);
+
   const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
   const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
   return (
@@ -579,6 +715,9 @@ function World({
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />
+      {net.picked && <Outline a={hl(net.picked.a)} color="#c9a35a" />}
+      {net.picked && <Outline a={hl(net.picked.b)} color="#c9a35a" />}
+      {netLinks.length > 0 && <Network links={netLinks} hover={hoverLink} moving={linksMoving && !reduced} onHover={onLinkHover} onPick={onLinkPick} />}
       <TerraceGlow t={terraceOf(selectedDistrict)} strong />
       {hoverDistrict !== selectedDistrict && <TerraceGlow t={terraceOf(hoverDistrict)} />}
     </>

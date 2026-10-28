@@ -44,6 +44,21 @@ export interface Agent {
   repository: string;
 }
 
+/** Kinds of relationship the map draws between buildings. */
+export const CONNECTION_TYPES = ["github", "agent", "n8n", "dependency"] as const;
+export type ConnectionType = (typeof CONNECTION_TYPES)[number];
+
+/** A relationship a manifest states outright, from this project to another project or agent. */
+export interface DeclaredConnection {
+  /** Project id or agent id. */
+  to: string;
+  type: ConnectionType;
+  /** Which way data or control flows; left out when it is not known. */
+  direction?: "outbound" | "inbound";
+  /** What the relationship is and how it was verified. */
+  note: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -53,6 +68,10 @@ export interface Project {
   tags: string[];
   links: Link[];
   agentIds: string[];
+  /** Relationships the manifest declares; empty when none. */
+  connections?: DeclaredConnection[];
+  /** Manifest file name, for citing evidence. */
+  file?: string;
 }
 
 export interface Catalog {
