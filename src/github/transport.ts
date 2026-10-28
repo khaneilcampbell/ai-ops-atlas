@@ -31,6 +31,8 @@ export class GithubError extends Error {
   }
 }
 
+const TIMEOUT_MS = 20_000;
+
 export const PRIVATE_OR_MISSING = "Private or not found. Add a GitHub token in Settings to load private repositories.";
 
 type EtagCache = Record<string, { etag: string; body: unknown }>;
@@ -105,16 +107,35 @@ export async function githubGet(path: string): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
     if (cached) headers["If-None-Match"] = cached.etag;
     const web = isHostedWeb();
-    const r = await fetch(web ? `/api/github${path}` : `https://api.github.com${path}`, { headers, credentials: web ? "same-origin" : "omit" });
-    const num = (h: string) => Number(r.headers.get(h) ?? NaN);
-    const limit = { limit: num("x-ratelimit-limit"), remaining: num("x-ratelimit-remaining"), reset: num("x-ratelimit-reset") };
-    res = {
-      status: r.status,
-      etag: r.headers.get("etag"),
-      authed: r.headers.get("x-atlas-authed") === "1",
-      rate: Object.values(limit).every(Number.isFinite) ? limit : null,
-      body: r.status === 204 || r.status === 304 ? null : await r.json().catch(() => null),
-    };
+    // The desktop app's Rust client gives up after the same time, so a hung request can't
+    // hold a refresh open forever in the browser either.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+    try {
+      const r = await fetch(web ? `/api/github${path}` : `https://api.github.com${path}`, { headers, credentials: web ? "same-origin" : "omit", signal: abort.signal });
+      const num = (h: string) => Number(r.headers.get(h) ?? NaN);
+      const limit = { limit: num("x-ratelimit-limit"), remaining: num("x-ratelimit-remaining"), reset: num("x-ratelimit-reset") };
+      const body = r.status === 204 || r.status === 304 ? null : await r.json().catch(() => null);
+      // The site's proxy marks every answer it relays from GitHub. One without the mark came
+      // from the site itself (sign-in check, allowlist, outage), so its own message applies.
+      if (web && !r.headers.has("x-atlas-authed") && !r.ok) {
+        const msg = (body as { message?: string } | null)?.message;
+        throw new GithubError(msg ? `The site refused the request: ${msg}` : `The site's GitHub proxy returned ${r.status}.`, r.status);
+      }
+      res = {
+        status: r.status,
+        etag: r.headers.get("etag"),
+        authed: r.headers.get("x-atlas-authed") === "1",
+        rate: Object.values(limit).every(Number.isFinite) ? limit : null,
+        body,
+      };
+    } catch (e) {
+      if (e instanceof GithubError) throw e;
+      if (abort.signal.aborted) throw new GithubError(`GitHub didn't answer within ${TIMEOUT_MS / 1000} seconds.`, 0);
+      throw new GithubError(web ? "Couldn't reach the site's GitHub proxy. Check the connection, or reload to sign in again." : "Couldn't reach GitHub. Check the connection.", 0);
+    } finally {
+      clearTimeout(timer);
+    }
   }
   track(res);
   if (res.status === 304 && cached) return cached.body;
