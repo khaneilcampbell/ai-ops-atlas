@@ -35,6 +35,14 @@ describe("verifyAccess", () => {
     expect(await verifyAccess(await sign(good), env, NOW, certs)).toEqual({ ok: true, email: "kc@example.com" });
   });
 
+  it("fails closed with a clear answer when the signing keys can't be fetched", async () => {
+    const { sign } = await setup();
+    const down = async () => {
+      throw new Error("certs 502");
+    };
+    expect(await verifyAccess(await sign(good), env, NOW, down)).toMatchObject({ ok: false, status: 503 });
+  });
+
   it("fails closed when Access isn't configured", async () => {
     const { sign, certs } = await setup();
     expect(await verifyAccess(await sign(good), {}, NOW, certs)).toMatchObject({ ok: false, status: 503 });

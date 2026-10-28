@@ -45,10 +45,22 @@ export async function verifyAccess(token: string | null, env: AccessEnv, now = D
   }
   if (header.alg !== "RS256") return { ok: false, status: 401, reason: "Unexpected token algorithm." };
 
-  const { keys } = await certs(`${team}/cdn-cgi/access/certs`);
+  // Still closed when Cloudflare's signing keys can't be fetched, but with a clear answer
+  // instead of the platform's error page.
+  let keys: Jwk[];
+  try {
+    ({ keys } = await certs(`${team}/cdn-cgi/access/certs`));
+  } catch {
+    return { ok: false, status: 503, reason: "Couldn't reach Cloudflare Access to check the sign-in. Try again shortly." };
+  }
   const jwk = keys.find((k) => k.kid === header.kid);
   if (!jwk) return { ok: false, status: 401, reason: "Unknown signing key." };
-  const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  } catch {
+    return { ok: false, status: 401, reason: "Unusable signing key." };
+  }
   const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(parts[2]), new TextEncoder().encode(`${parts[0]}.${parts[1]}`));
   if (!valid) return { ok: false, status: 401, reason: "Invalid token signature." };
 
