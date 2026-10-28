@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
 import { fetchRepo } from "./github/fetchRepo";
-import { budgetExhausted, clearEtags, PRIVATE_OR_MISSING, rateLimit, takeUsage, type RateLimit } from "./github/transport";
+import { budgetExhausted, clearEtags, GithubError, PRIVATE_OR_MISSING, rateLimit, takeUsage, type RateLimit } from "./github/transport";
+import { liveCatalog, type HiddenRepo } from "./lib/live";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
@@ -32,7 +33,12 @@ export interface Filters {
 const EMPTY_FILTERS: Filters = { query: "", project: "", framework: "", status: "", language: "" };
 
 interface AtlasState {
+  /** The catalog minus projects whose repository GitHub reports deleted or archived. */
   catalog: Catalog;
+  /** Cataloged repositories left out of `catalog`, and why. */
+  hidden: HiddenRepo[];
+  /** Cataloged repository -> the name GitHub now has for it, when it was renamed there. */
+  renamed: Record<string, string>;
   manifestIssues: ManifestIssue[];
   repos: Record<string, RepoState>;
   /** Repositories found on GitHub that no manifest mentions. */
@@ -86,6 +92,8 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const [usage, setUsage] = useState<AtlasState["usage"]>(() => load("usage", null));
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));
   const [refreshing, setRefreshing] = useState(false);
+  // Cataloged repositories GitHub has confirmed no longer exist, with when that was seen.
+  const [deleted, setDeleted] = useState<Record<string, string>>(() => load("deletedRepos", {}));
   // The map is the landing view on every launch.
   const [view, setViewState] = useState<View>("map");
   const [selection, select] = useState<Selection>(null);
@@ -126,8 +134,10 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
           const found = await discoverRepos(settings.owners, withToken);
           for (const r of found) metas.set(r.fullName.toLowerCase(), r.meta);
           listedAll = found.complete;
+          // A cataloged repository renamed on GitHub is listed under its new name; it isn't new.
+          const renamedTo = new Set(repoNames.map((n) => cache[n]?.fullName?.toLowerCase()).filter((n): n is string => !!n && !known.has(n)));
           extra = found
-            .filter((r) => !known.has(r.fullName.toLowerCase()) && (settings.includeForks || !r.fork))
+            .filter((r) => !known.has(r.fullName.toLowerCase()) && !renamedTo.has(r.fullName.toLowerCase()) && !r.archived && (settings.includeForks || !r.fork))
             .map((r) => r.fullName)
             .sort((a, b) => a.localeCompare(b));
           save("uncataloged", extra);
@@ -139,6 +149,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         }
       }
       const due = repoNames.concat(extra).filter(isDue);
+      const gone = load<Record<string, string>>("deletedRepos", {});
       for (const name of due) checked[name] = new Date().toISOString();
       save("checkedAt", checked);
       await Promise.all(
@@ -158,14 +169,21 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
               runsEveryMs: force || withToken ? 0 : ANON_RUNS_EVERY_MS,
             });
             cache[name] = data;
+            delete gone[name];
             setRepos((r) => ({ ...r, [name]: { kind: "ok", data, stale: false } }));
           } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
+            // With a token that sees every repository the owner has, a 404 for one missing from
+            // the complete listing means it was deleted (or transferred away), not that it's private.
+            if (e instanceof GithubError && e.status === 404 && withToken && listedAll && !metas.has(name.toLowerCase()) && settings.owners.some((o) => o.toLowerCase() === owner))
+              gone[name] ??= new Date().toISOString();
             setRepos((r) => ({ ...r, [name]: { kind: "error", message, data: cached } }));
           }
         }),
       );
       save("repoCache", cache);
+      save("deletedRepos", gone);
+      setDeleted({ ...gone });
       const u = { at: new Date().toISOString(), ...takeUsage(), skipped: repoNames.length + extra.length - due.length, rate: rateLimit() };
       save("usage", u);
       setUsage(u);
@@ -193,9 +211,13 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
+  const live = useMemo(() => liveCatalog(catalog, repos, deleted), [repos, deleted]);
+
   const value = useMemo<AtlasState>(
     () => ({
-      catalog,
+      catalog: live.catalog,
+      hidden: live.hidden,
+      renamed: live.renamed,
       manifestIssues,
       repos,
       uncataloged,
@@ -225,11 +247,13 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         save("repoCache", {});
         save("discovery", null);
         save("checkedAt", {});
+        save("deletedRepos", {});
+        setDeleted({});
         clearEtags();
         void refresh(true);
       },
     }),
-    [repos, uncataloged, discovery, usage, refreshing, refresh, view, selection, filters, settings],
+    [live, repos, uncataloged, discovery, usage, refreshing, refresh, view, selection, filters, settings],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

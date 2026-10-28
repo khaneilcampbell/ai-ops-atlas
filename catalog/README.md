@@ -160,3 +160,12 @@ Connections follow the map's paths, steps and bridges between buildings, like di
 ## What comes next
 
 `last_run` and `history` are filled in by hand for now. The next milestone adds live sources (n8n executions first, then project-specific adapters for CrewAI and local scripts) that fill these in automatically. The `observe` block is where those sources will be declared.
+
+## When GitHub changes
+
+Atlas follows GitHub on every refresh, on the desktop app and the iPhone web build alike:
+
+- **Deleted repository.** With a token, a cataloged repository that GitHub answers 404 for and that is missing from the owner's full repository list is hidden from the map and every list. The Repositories page names it, so delete its manifest here to drop it for good. Without a token Atlas can't tell deleted from private, so it keeps showing it as unavailable.
+- **Archived repository.** Hidden the same way, and back as soon as it is unarchived.
+- **Renamed repository.** GitHub redirects the old name, so the project keeps working, and the new name isn't listed a second time as uncataloged. The Repositories page suggests updating the manifest.
+- **New repository.** Owner discovery lists it as uncataloged until it gets a manifest.
