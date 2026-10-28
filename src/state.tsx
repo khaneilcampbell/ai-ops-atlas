@@ -72,6 +72,9 @@ function workflowsFor(repo: string): string[] {
 
 type Cache = Record<string, RepoSnapshot>;
 
+/** How often repositories with agents are checked for runs in progress. */
+const LIVE_MS = 60_000;
+
 /** Without a token every request counts, so unchanged repositories check runs less often. */
 const ANON_RUNS_EVERY_MS = 3 * 3_600_000;
 
@@ -101,7 +104,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const inflight = useRef(false);
 
   const refresh = useCallback(
-    async (force = false) => {
+    async (force = false, live = false) => {
       if (inflight.current) return;
       const cache = load<Cache>("repoCache", {});
       const maxAge = settings.refreshMinutes * 60_000;
@@ -111,8 +114,9 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       // When each repository was last looked at, including ones that turned out private or missing.
       const checked = load<Record<string, string>>("checkedAt", {});
       const lastCheck = (name: string) => Date.parse(checked[name] ?? cache[name]?.fetchedAt ?? "") || 0;
-      const isDue = (name: string) => force || now - lastCheck(name) >= maxAge;
-      const discoveryDue = force || !lastDiscovery || !!lastDiscovery.error || now - Date.parse(lastDiscovery.at) >= maxAge;
+      // A live check looks only at repositories with agents, to catch their runs while they happen.
+      const isDue = (name: string) => (live ? workflowsFor(name).length > 0 : force || now - lastCheck(name) >= maxAge);
+      const discoveryDue = !live && (force || !lastDiscovery || !!lastDiscovery.error || now - Date.parse(lastDiscovery.at) >= maxAge);
       // Nothing is old enough to ask about: skip the round trip entirely.
       if (!discoveryDue && !repoNames.concat(extra).some(isDue)) return;
       if (budgetExhausted()) {
@@ -120,9 +124,14 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
         return;
       }
       inflight.current = true;
-      setRefreshing(true);
-      takeUsage();
       const withToken = await tokenStore.has().catch(() => false);
+      // Without a token every request counts against 60 an hour, too few to check every minute.
+      if (live && !withToken) {
+        inflight.current = false;
+        return;
+      }
+      if (!live) setRefreshing(true);
+      takeUsage();
       const metas = new Map<string, Record<string, unknown>>();
       let listedAll = false;
       if (settings.owners.length) {
@@ -200,12 +209,18 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
     const t = setInterval(() => {
       if (document.visibilityState === "visible") void refresh();
     }, settings.refreshMinutes * 60_000);
+    // Agent runs often take a minute or two, far shorter than the refresh interval, so check the
+    // repositories with agents every minute. Unchanged answers come back as free 304s.
+    const live = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh(false, true);
+    }, LIVE_MS);
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(t);
+      clearInterval(live);
       document.removeEventListener("visibilitychange", onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
