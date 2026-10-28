@@ -27,6 +27,8 @@ agents:
     status: active
     trigger: POST /api/contact
     source: site/worker/index.ts
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Cloudflare Email Routing: send to verified destination addresses only'
@@ -67,7 +69,7 @@ agents:
           - The manifest purpose did not mention Stripe checkout
           - The forward to Benjaire Flow is tried once with a 10 second timeout and only logged on failure
           - Pull request previews email the same inbox as production
-          - No KPI is defined yet, and Atlas has no live data for it
+          - No KPI is defined yet; Atlas sees each request's result through the run feed once ATLAS_FEED_URL and ATLAS_FEED_TOKEN are set
         improvements:
           - Retry the Flow forward on 429 and 5xx with an inquiry id so n8n can drop duplicates
         last_review: 2026-10-28
@@ -81,6 +83,8 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the contact Worker
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Resend API: sending on benjaire.com only'
