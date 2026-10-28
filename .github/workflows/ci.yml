@@ -14,10 +14,17 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request stops its older run. Every other run (main, dispatch) gets its
+# own group, so builds of main and their macOS publish are never cancelled or queued.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   web:
     name: Frontend (types, tests, build)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +39,7 @@ jobs:
   rust:
     name: Desktop shell (Rust tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install Tauri system libraries
@@ -52,6 +60,7 @@ jobs:
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
