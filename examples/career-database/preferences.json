@@ -1,0 +1,27 @@
+{
+  "target_roles": [
+    "IT Support Engineer"
+  ],
+  "target_industries": [
+    "Technology"
+  ],
+  "locations": {
+    "preferred": "New York City",
+    "work_arrangement": [
+      "hybrid",
+      "remote"
+    ],
+    "preferred_arrangement": "hybrid",
+    "willing_to_relocate": false
+  },
+  "compensation": {
+    "currency": "USD",
+    "minimum_base": 90000,
+    "target_base": 110000
+  },
+  "priority_rules": {
+    "apply_if_match_score_at_least": 70,
+    "high_priority_if_match_score_at_least": 80,
+    "dealbreakers": []
+  }
+}

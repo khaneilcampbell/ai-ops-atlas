@@ -1,0 +1,23 @@
+{
+  "projects": [
+    {
+      "id": "proj-lab",
+      "name": "Home SOC Lab",
+      "type": "lab",
+      "status": "complete",
+      "dates": "2025-01 to 2025-03",
+      "url": "github.com/example/soc-lab",
+      "problem": "Practice detection",
+      "what_i_built": "Splunk alerts for failed logons",
+      "technologies": [
+        "Splunk",
+        "Python"
+      ],
+      "results": [],
+      "relevant_versions": [
+        "security-automation"
+      ],
+      "verified": true
+    }
+  ]
+}

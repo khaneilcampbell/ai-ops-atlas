@@ -61,7 +61,10 @@ Every resume claim must trace back to a verified entry in a structured career da
 | `tracker/application_tracker_template.xlsx` | Application tracker with dropdowns, follow-up highlighting, and a dashboard (volume, interview conversion, target salary, resume-version performance) |
 | `scripts/` | `init_private.py` (set up your private workspace), `validate_database.py` (find unfinished or unverified entries), `build_tracker.py` (regenerate the tracker) |
 | `docs/workflow.md` | Step-by-step guide to running the workflow |
-| `docs/roadmap.md` | Phases, including the planned n8n + Python automation |
+| `jobflow/` | Python pipeline: fetch a posting, score it, tailor and fact-check a resume, render DOCX/PDF, update the tracker ([docs/automation.md](docs/automation.md)) |
+| `n8n/` | Importable n8n workflow that sends job links into the pipeline |
+| `examples/` | Fictional career database and posting used by the tests |
+| `docs/roadmap.md` | Phases and what is done |
 
 ## Quick start
 
@@ -72,8 +75,16 @@ python scripts/init_private.py        # creates private/ (gitignored)
 python scripts/validate_database.py   # repeat until clean
 ```
 
-Then follow [docs/workflow.md](docs/workflow.md) to configure the Claude Project and
-run your first application.
+Then follow [docs/workflow.md](docs/workflow.md) to run your first application by hand, or
+use the automated pipeline:
+
+```bash
+export ANTHROPIC_API_KEY=...
+python -m jobflow analyze https://job-boards.greenhouse.io/<company>/jobs/<id>
+python -m jobflow tailor <slug>      # resume + fact check; you approve it
+```
+
+See [docs/automation.md](docs/automation.md).
 
 ## Privacy
 
@@ -84,16 +95,16 @@ so it can be shared publicly as a portfolio project.
 ## Competencies demonstrated
 
 Business process mapping · AI workflow orchestration · Prompt design with structured
-output · API integration (planned) · Document automation · Human-in-the-loop approvals ·
+output · API integration (Anthropic API, structured outputs) · Document automation · Human-in-the-loop approvals ·
 Data modeling and validation
 
 ## Tech stack
 
 | Component | Technology |
 |---|---|
-| AI analysis | Claude (Claude Projects; Anthropic API in Phase 3) |
-| Workflow automation | n8n (Phase 3) |
-| Resume generation | Python |
+| AI analysis | Claude (Anthropic API with structured outputs and prompt caching) |
+| Workflow automation | n8n (self-hosted) |
+| Resume generation | Python (python-docx, LibreOffice for PDF) |
 | Career database | Structured JSON + Markdown |
 | Application tracker | Excel (openpyxl) |
 | Document storage | Google Drive or local folders |

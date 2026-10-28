@@ -1,0 +1,21 @@
+{
+  "degrees": [
+    {
+      "institution": "State University",
+      "degree": "B.S.",
+      "field": "Information Technology",
+      "graduation": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "CompTIA Security+",
+      "issuer": "CompTIA",
+      "earned": "2024-05",
+      "expires": "2027-05",
+      "credential_url": "",
+      "status": "earned"
+    }
+  ],
+  "training": []
+}

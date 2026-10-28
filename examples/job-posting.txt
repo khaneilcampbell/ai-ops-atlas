@@ -1,0 +1,20 @@
+IT Support Engineer — Example Corp (fictional posting for demos)
+New York, NY · Hybrid (3 days in office) · $95,000 – $120,000
+
+About the role
+Example Corp is hiring an IT Support Engineer to run our service desk and automate the repetitive parts of it.
+
+Responsibilities
+- Resolve hardware, software and access requests in ServiceNow
+- Manage identity and access in Okta and Active Directory
+- Write scripts that automate onboarding and common fixes
+- Maintain knowledge base articles
+
+Requirements
+- 4+ years of IT support experience
+- ServiceNow, Okta, Active Directory
+- Scripting in Python or PowerShell
+
+Nice to have
+- Experience with AI tools such as Claude
+- Jamf or Intune
