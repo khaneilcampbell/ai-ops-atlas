@@ -7,10 +7,11 @@ project:
   name: Multi-Agent Commerce Pipeline
   summary: >-
     Autonomous pipeline that researches a niche, builds digital products with
-    Canva, publishes them to Shopify, syncs sales and keeps listing SEO fresh.
+    Canva, sells them through Stripe on a static storefront, emails buyers
+    their templates, syncs sales and keeps listing SEO fresh.
   status: active
   repository: khaneilcampbell/multi-agent-commerce-pipeline
-  tags: [crewai, claude, shopify, canva, automation]
+  tags: [crewai, claude, stripe, canva, automation]
   links:
     - label: Case study
       url: https://khaneilcampbell.com/commerce-pipeline.html
@@ -46,7 +47,7 @@ agents:
         tools: [Bash, systemd]
         inputs: [.env settings, SQLite queue, outputs folder]
         outputs: [logs/loop.log, logs/loop_errors.log]
-        dependencies: [niche-scout, canva-mockups, shopify-publisher, seo-maintainer, health-report]
+        dependencies: [niche-scout, canva-mockups, shopify-publisher, seo-maintainer, order-delivery, health-report]
       goals:
         objective: Publish within the weekly limit and keep listings maintained.
         kpis:
@@ -65,7 +66,11 @@ agents:
         stages: [Preflight, Phase 1 brand (weekly), Phase 2 listings (weekly), Phase 3 design, Phase 5 publish, Phase 6 SEO, Phase 7 health]
       governance:
         autonomy: 3
-        autonomy_note: Publishes to a live store without per-item approval, bounded by the weekly limit and cooldown.
+        autonomy_note: >-
+          Runs every phase unattended. New products are saved as drafts and go live only after
+          ./run.sh approve (STORE_PUBLISH_STATUS=draft, the default since 2026-10-28); SEO edits,
+          storefront deploys and buyer emails run without approval. Bounded by the weekly limit,
+          the cooldown and a product being dropped after 3 failed attempts.
         data_sensitivity: confidential
         risk: high
         audit_log: logs/loop.log and the SQLite run_log on the VPS (not connected to Atlas)
@@ -80,7 +85,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -88,7 +93,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
       responsibilities:
         tools: [CrewAI, Claude API, Serper search]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -111,7 +116,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -119,7 +124,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5 and the Serper search tool
       responsibilities:
         tools: [CrewAI, Claude API, Serper search]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -142,7 +147,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -150,7 +155,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
       responsibilities:
         tools: [CrewAI, Claude API]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -172,7 +177,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -180,7 +185,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
       responsibilities:
         tools: [CrewAI, Claude API]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -203,7 +208,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -211,7 +216,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
       responsibilities:
         tools: [CrewAI, Claude API]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -234,7 +239,7 @@ agents:
     runtime: Linux VPS
     status: idle
     trigger: Phase 1, at most every 7 days
-    source: scripts/shopify_brand_crew.py
+    source: scripts/brand_crew.py
     last_run: null
     registry:
       category: business
@@ -242,7 +247,7 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: CrewAI Agent in scripts/shopify_brand_crew.py with llm claude-haiku-4-5, no tools
+        evidence: CrewAI Agent in scripts/brand_crew.py with llm claude-haiku-4-5, no tools
       responsibilities:
         tools: [CrewAI, Claude API]
         outputs: [Contribution to outputs/brand_guide.md]
@@ -291,15 +296,15 @@ agents:
         risk: medium
 
   - id: shopify-publisher
-    name: Shopify Publisher
+    name: Stripe Publisher
     purpose: >-
-      Validates assets and publishes products through the Shopify Admin API,
-      gated by the weekly publish limit and cooldown.
+      Creates the Stripe product and price for each staged listing and saves it
+      as a draft for KC to review, gated by the weekly publish limit and cooldown.
     framework: Python script
     runtime: Linux VPS
     status: idle
     trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
-    source: scripts/shopify_uploader.py
+    source: scripts/stripe_publisher.py
     last_run: null
     registry:
       category: business
@@ -307,29 +312,33 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/shopify_uploader.py posts products to the Shopify Admin REST API; no AI model
+        evidence: scripts/stripe_publisher.py creates a Stripe product and price and records a draft listing; scripts/approve_listing.py makes it live; no AI model
       responsibilities:
-        tasks: [Load the ready listing, Create the Shopify product with images, Log to SQLite and mark the queue row published]
-        tools: [Shopify Admin REST API, SQLite]
+        tasks: [Load the ready listing, Refuse to publish without a template link, Create the Stripe product and price, Save storefront images, Record a draft listing in SQLite]
+        tools: [Stripe API, SQLite]
         inputs: [listing.json and images in 04_Assets/ReadyToUpload]
-        outputs: [Live Shopify product, run_log and listings rows]
+        outputs: [Draft listing with a Stripe product and price, run_log and listings rows]
+        limitations: ["With STORE_PUBLISH_STATUS=active it also creates the payment link and the product goes live without review"]
         dependencies: [canva-mockups]
       execution:
         trigger_type: scheduled
         schedule: Phase 5, gated by WEEKLY_PUBLISH_LIMIT and PUBLISH_COOLDOWN_HOURS
         environment: Linux VPS
       governance:
-        autonomy: 3
-        autonomy_note: Publishes live products without per-item approval.
+        autonomy: 2
+        autonomy_note: >-
+          Prepares each product as a draft with no payment link; KC makes it live with
+          ./run.sh approve. Level 2 only while the VPS keeps STORE_PUBLISH_STATUS=draft.
+        approval: KC runs ./run.sh approve "<product>" after previewing the draft
         data_sensitivity: confidential
-        credential_owner: KC (SHOPIFY_ACCESS_TOKEN in .env on the VPS)
-        risk: high
+        credential_owner: KC (STRIPE_SECRET_KEY in .env on the VPS)
+        risk: medium
 
   - id: seo-maintainer
     name: SEO Maintainer
     purpose: >-
-      Compares live tags with competitor keywords and applies an optimised
-      tag set and SEO metafields to published listings.
+      Compares a listing's tags with competitor keywords and saves an optimised
+      tag set, SEO title and meta description for the next storefront build.
     framework: Python script
     runtime: Linux VPS
     status: idle
@@ -342,19 +351,21 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/seo_analyzer.py uses Serper keyword results and fixed rules, then PUTs tags and metafields to Shopify; no AI model
+        evidence: scripts/seo_analyzer.py uses Serper keyword results and fixed rules, then updates the listing row that scripts/storefront.py builds into the static site; no AI model
       responsibilities:
-        tasks: [Compare live tags with competitor keywords, Apply an optimised tag set, Update SEO title and description metafields]
-        tools: [Serper API, Shopify Admin API, SQLite]
+        tasks: [Compare tags with competitor keywords, Save an optimised tag set, Save an SEO title and meta description]
+        tools: [Serper API, SQLite]
         inputs: [Published product name]
-        outputs: [Updated Shopify tags and metafields, seo_review row]
+        outputs: [Updated listing tags and meta text, seo_review row, Storefront rebuild on gh-pages]
       execution:
         trigger_type: scheduled
         schedule: Phase 6, every maintain cycle
         environment: Linux VPS
       governance:
         autonomy: 3
-        autonomy_note: Changes live listings automatically unless run with --analyze-only.
+        autonomy_note: >-
+          Changes storefront search text automatically unless run with --analyze-only. Each
+          deploy is a commit on the storefront's gh-pages branch, so a change can be reverted.
         data_sensitivity: confidential
         credential_owner: KC (.env on the VPS)
         risk: medium
@@ -390,6 +401,130 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: internal
+        risk: low
+
+  - id: order-delivery
+    name: Order Delivery
+    purpose: >-
+      Emails each buyer of a paid Stripe checkout the Canva template link for
+      what they bought. It is the only way buyers receive their product.
+    framework: Python script
+    runtime: Linux VPS
+    status: active
+    trigger: Every loop cycle and every 10 minutes while the loop sleeps
+    source: scripts/order_delivery.py
+    last_run: null
+    registry:
+      category: business
+      subcategory: Order fulfillment
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/order_delivery.py reads paid checkouts from Stripe and sends email over SMTP; no AI model
+      responsibilities:
+        tasks: [Find paid checkouts from the last 7 days, Group undelivered products per checkout, Email the buyer the template links, Record each delivery]
+        tools: [Stripe API, SMTP, SQLite]
+        inputs: [Paid Stripe checkout sessions, listings with template links]
+        outputs: [Buyer email, deliveries row]
+        dependencies: [shopify-publisher]
+        limitations: [Template links are private; a wrong link sent cannot be recalled]
+      execution:
+        trigger_type: continuous
+        schedule: Every cycle in every mode, and every DELIVERY_INTERVAL (600 s) while idle
+        environment: Linux VPS
+      governance:
+        autonomy: 3
+        autonomy_note: >-
+          Sends buyer emails without approval, because a paid order must not wait for a
+          person. Each checkout line is delivered once (deliveries table); failed sends retry.
+        data_sensitivity: confidential
+        credential_owner: KC (STRIPE_SECRET_KEY and SMTP password in .env on the VPS)
+        risk: medium
+        audit_log: deliveries table in outputs/pipeline.db on the VPS (not connected to Atlas)
+
+  - id: sales-sync
+    name: Sales Sync
+    purpose: Pulls paid Stripe checkouts into the local sales table once a day.
+    framework: Python script
+    runtime: Linux VPS
+    status: active
+    trigger: Daily, first cycle of the UTC day
+    source: scripts/sales_tracker.py
+    last_run: null
+    registry:
+      category: business
+      subcategory: Sales reporting
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/sales_tracker.py reads Stripe checkout sessions into SQLite; no AI model
+      responsibilities:
+        tools: [Stripe API, SQLite]
+        outputs: [sales rows in outputs/pipeline.db]
+      execution:
+        trigger_type: scheduled
+        schedule: Once per UTC day from loop.sh
+        environment: Linux VPS
+      governance:
+        autonomy: 0
+        data_sensitivity: confidential
+        risk: low
+
+  - id: email-digest
+    name: Daily Email Digest
+    purpose: Emails KC a daily summary of publishes, failures, queue state and sales.
+    framework: Python script
+    runtime: Linux VPS
+    status: active
+    trigger: Daily, first cycle of the UTC day
+    source: scripts/email_digest.py
+    last_run: null
+    registry:
+      category: business
+      subcategory: Sales reporting
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/email_digest.py builds an HTML summary from SQLite and sends it to KC; no AI model
+      responsibilities:
+        tools: [SQLite, SMTP]
+        outputs: [Daily email to KC]
+      execution:
+        trigger_type: scheduled
+        schedule: Once per UTC day from loop.sh
+        environment: Linux VPS
+      governance:
+        autonomy: 1
+        autonomy_note: Reports to KC only; changes nothing.
+        data_sensitivity: internal
+        risk: low
+
+  - id: db-backup
+    name: Database Backup
+    purpose: Copies the pipeline database to a dated backup once a day.
+    framework: Python script
+    runtime: Linux VPS
+    status: active
+    trigger: Daily, first cycle of the UTC day
+    source: scripts/backup_db.py
+    last_run: null
+    registry:
+      category: infrastructure
+      subcategory: Backups
+      classification:
+        type: C
+        confidence: verified
+        evidence: scripts/backup_db.py uses the SQLite backup API; no AI model
+      responsibilities:
+        tools: [SQLite]
+        outputs: [Dated copy of outputs/pipeline.db]
+      execution:
+        trigger_type: scheduled
+        schedule: Once per UTC day from loop.sh
+        environment: Linux VPS
+      governance:
+        autonomy: 0
+        data_sensitivity: confidential
         risk: low
 
   - id: commerce-tests
