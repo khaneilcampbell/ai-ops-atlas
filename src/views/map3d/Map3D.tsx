@@ -15,6 +15,8 @@ import { Network, type NetLink } from "./network";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
+import { useBuildingActivity, type Illumination } from "../office/activity";
+import { ActivityGlow } from "./activity";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -308,6 +310,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   }, []);
   // The map is fully covered while a building's office is open, so it stops rendering then.
   const officePhase = useOffice().phase;
+  // Buildings light up while their agents are observed working.
+  const activity = useBuildingActivity();
 
   return (
     <div className="map3d" ref={wrapEl}>
@@ -339,6 +343,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           pick={pick}
           terracePick={terracePick}
           reduced={props.reduced}
+          activity={activity}
           onNear={setNear}
           onMoved={() => {
             setTip(null);
@@ -400,6 +405,7 @@ function World({
   pick,
   terracePick,
   reduced,
+  activity,
   onNear,
   onMoved,
 }: {
@@ -423,6 +429,7 @@ function World({
   pick: PickHandlerSet;
   terracePick: Pick;
   reduced: boolean;
+  activity: Map<string, Illumination>;
   onNear: (near: "far" | "mid" | "near") => void;
   onMoved: () => void;
 }) {
@@ -744,6 +751,7 @@ function World({
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
+      <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />
       {net.picked && <Outline a={hl(net.picked.a)} color="#c9a35a" />}
