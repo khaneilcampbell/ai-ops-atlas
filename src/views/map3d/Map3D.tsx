@@ -24,6 +24,8 @@ export interface Map3DApi {
   fit: () => void;
   /** Glide to a grid point, optionally zooming in to at least neighborhood level. */
   reveal: (gx: number, gz: number, closer?: boolean) => void;
+  /** Turn the view around its center by this many degrees, counterclockwise seen from above. */
+  rotate: (deg: number) => void;
 }
 
 type Sel = { kind: "repo" | "agent"; id: string };
@@ -122,6 +124,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     zoom: (f) => api.current?.zoom(f),
     fit: () => api.current?.fit(),
     reveal: (x, z, c) => api.current?.reveal(x, z, c),
+    rotate: (deg) => api.current?.rotate(deg),
   }));
 
   const select = (key: string) => {
@@ -257,7 +260,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: k.key,
         key: k.key,
-        pos: new THREE.Vector3(k.x, TERRACE_H + 0.78, k.z),
+        pos: new THREE.Vector3(k.x, TERRACE_H + 0.95, k.z),
         w: measure(k.name, 11.5, SANS, 500) + 22,
         h: 28,
         priority: urgent ? 0.5 : 6.5,
@@ -481,7 +484,12 @@ function World({
   const m = useMaterials();
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
-    c.enableRotate = false;
+    // Turn all the way around (right drag, two fingers, or Shift with the left button), but stay
+    // above the ground and short of straight down.
+    c.enableRotate = true;
+    c.rotateSpeed = 0.6;
+    c.minPolarAngle = (12 * Math.PI) / 180;
+    c.maxPolarAngle = (72 * Math.PI) / 180;
     c.enableDamping = true;
     c.dampingFactor = 0.14;
     c.zoomToCursor = true;
@@ -545,8 +553,11 @@ function World({
     return hi;
   };
 
-  const goto = (target: THREE.Vector3, dist: number, instant = false, ms = 420) => {
-    const to: [THREE.Vector3, THREE.Vector3] = [target.clone(), target.clone().addScaledVector(DIR, dist)];
+  /** The way the camera looks from, so moves keep whatever angle the person turned to. */
+  const viewDir = () => camera.position.clone().sub(controls.target).normalize();
+
+  const goto = (target: THREE.Vector3, dist: number, instant = false, ms = 420, dir = viewDir()) => {
+    const to: [THREE.Vector3, THREE.Vector3] = [target.clone(), target.clone().addScaledVector(dir, dist)];
     if (instant || reduced) {
       controls.target.copy(to[0]);
       camera.position.copy(to[1]);
@@ -562,7 +573,7 @@ function World({
     controls.minDistance = 4;
     // Frame the heart of the map, the way the reference crops its coastline, rather than every corner.
     // Grouped maps keep every neighborhood in view.
-    goto(center, fitDist.current * (hoods > 1 ? 0.9 : 0.7), instant);
+    goto(center, fitDist.current * (hoods > 1 ? 0.9 : 0.7), instant, 420, DIR);
   };
 
   // Fit on first show and when the layout changes; refit on resize until the person moves the camera.
@@ -587,6 +598,11 @@ function World({
     fit: () => {
       touched.current = false;
       fitNow();
+    },
+    rotate: (deg) => {
+      touched.current = true;
+      const d = camera.position.distanceTo(controls.target);
+      goto(controls.target, d, false, 520, viewDir().applyAxisAngle(new THREE.Vector3(0, 1, 0), (deg * Math.PI) / 180));
     },
     reveal: (x, z, closer) => {
       touched.current = true;

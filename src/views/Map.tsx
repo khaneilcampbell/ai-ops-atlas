@@ -859,6 +859,7 @@ export function MapView() {
     } else if (e.key === "+" || e.key === "=") zoomBy(1.25);
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
+    else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
   };
 
   return (
@@ -1160,6 +1161,11 @@ export function MapView() {
                   />
                 )}
               </div>
+            )}
+            {is3d && (
+              <button className="icon-btn" onClick={() => map3d.current?.rotate(-45)} aria-label="Rotate view" title="Rotate view (Q, E). Or drag with the right button, two fingers, or Shift held">
+                <Icon name="rotate" size={17} />
+              </button>
             )}
             <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />

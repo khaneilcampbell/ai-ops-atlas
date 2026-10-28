@@ -343,40 +343,39 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
   );
 }
 
-/** Market kiosks for outside services: a counter, four posts, a tilted canopy and a sign. */
+/** Market kiosks for outside services: a booth with a counter, a striped canopy and a sign. */
 export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
   const items = useMemo(() => {
     const y0 = TERRACE_H + 0.03;
+    const H = 0.5;
     const plain: Inst[] = [];
-    const canopy: Inst[] = [];
-    const canopyKeys: string[] = [];
-    const counter: Inst[] = [];
-    const counterKeys: string[] = [];
+    const body: Inst[] = [];
+    const bodyKeys: string[] = [];
     const lamps: Inst[] = [];
     for (const k of kiosks) {
       const w = k.size;
-      const d = k.size * 0.72;
-      counter.push({ p: [k.x, y0, k.z + d * 0.12], s: [w * 0.86, 0.2, d * 0.5], c: "#efe6d2" });
-      counterKeys.push(k.key);
-      // A counter top in the canopy's color, and four slim posts.
-      plain.push({ p: [k.x, y0 + 0.2, k.z + d * 0.12], s: [w * 0.92, 0.025, d * 0.56], c: k.canopy });
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) plain.push({ p: [k.x + sx * w * 0.44, y0, k.z + sz * d * 0.44], s: [0.03, 0.44, 0.03], c: "#6a4e36" });
-      // Canopy tilts down toward the front, in two stripes.
-      for (const [i, c] of [k.canopy, "#f6f1e6"].entries()) {
-        canopy.push({ p: [k.x, y0 + 0.44 + 0.02 * (1 - i), k.z + (i ? 0.02 : 0)], s: [w * (1.04 - i * 0.5), 0.035, d * 1.02], rx: 0.16, c });
-        canopyKeys.push(k.key);
-      }
-      // Sign board above the back of the canopy.
-      plain.push({ p: [k.x, y0 + 0.5, k.z - d * 0.46], s: [w * 0.78, 0.15, 0.025], c: k.canopy });
-      plain.push({ p: [k.x, y0 + 0.53, k.z - d * 0.46 + 0.015], s: [w * 0.66, 0.09, 0.012], c: "#f6f1e6" });
-      lamps.push({ p: [k.x, y0 + 0.36, k.z + d * 0.1], s: [0.05, 0.05, 0.05] });
+      const d = k.size * 0.8;
+      const front = k.z + d / 2;
+      // Booth: back wall and sides in cream, a counter across the open front.
+      body.push({ p: [k.x, y0, k.z - d * 0.4], s: [w, H, d * 0.2], c: "#efe6d2" });
+      for (const sx of [-1, 1]) body.push({ p: [k.x + sx * w * 0.45, y0, k.z], s: [w * 0.1, H, d], c: "#efe6d2" });
+      body.push({ p: [k.x, y0, front - d * 0.1], s: [w * 0.8, 0.24, d * 0.2], c: k.canopy });
+      bodyKeys.push(k.key, k.key, k.key, k.key);
+      plain.push({ p: [k.x, y0 + 0.24, front - d * 0.1], s: [w * 0.86, 0.025, d * 0.26], c: "#f6f1e6" });
+      // Canopy reaching past the counter, in alternating stripes, tilted down toward the front.
+      const n = 5;
+      for (let i = 0; i < n; i++)
+        plain.push({ p: [k.x - w * 0.55 + (w * 1.1 * (i + 0.5)) / n, y0 + H, k.z + d * 0.08], s: [(w * 1.1) / n, 0.04, d * 1.2], rx: 0.22, c: i % 2 ? "#f6f1e6" : k.canopy });
+      // Sign on the roof.
+      plain.push({ p: [k.x, y0 + H + 0.06, k.z - d * 0.38], s: [w * 0.9, 0.2, 0.04], c: k.canopy });
+      plain.push({ p: [k.x, y0 + H + 0.1, k.z - d * 0.38 + 0.025], s: [w * 0.74, 0.11, 0.012], c: "#f6f1e6" });
+      lamps.push({ p: [k.x, y0 + H - 0.08, k.z + d * 0.05], s: [0.045, 0.045, 0.045] });
     }
-    return { plain, canopy, canopyKeys, counter, counterKeys, lamps };
+    return { plain, body, bodyKeys, lamps };
   }, [kiosks]);
   return (
     <group>
-      <Instanced items={items.counter} geometry={g.box} material={m.plain} pick={pick.of(items.counterKeys)} />
-      <Instanced items={items.canopy} geometry={g.box} material={m.plain} pick={pick.of(items.canopyKeys)} />
+      <Instanced items={items.body} geometry={g.box} material={m.plain} pick={pick.of(items.bodyKeys)} />
       <Instanced items={items.plain} geometry={g.box} material={m.plain} />
       <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
     </group>

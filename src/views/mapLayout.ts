@@ -304,7 +304,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         // Kiosks take the slots after the houses, and a smaller footprint.
         kiosks: services.map((service, k) => {
           const s = spots[houses.length + k];
-          const ks = lotSize * 0.6;
+          const ks = lotSize * 0.72;
           return { service, gx: ox + s.gx - ks / 2, gy: oy + s.gy - ks / 2, size: ks };
         }),
       });

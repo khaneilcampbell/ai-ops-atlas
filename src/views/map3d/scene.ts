@@ -236,7 +236,7 @@ export function buildScene(layout: Layout): Scene3D {
         users: k.service.users.map((a) => a.name),
         x: kx,
         z: kz,
-        size: Math.min(k.size, 0.62),
+        size: Math.min(k.size, 0.9),
         canopy: CANOPIES[Math.floor(hash(k.service.id) * CANOPIES.length)],
       });
     }
