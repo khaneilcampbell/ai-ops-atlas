@@ -81,6 +81,11 @@ jobs:
       PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+      # A self-signed code-signing certificate (scripts/macos-signing-cert.sh). Signing every
+      # build with the same one keeps the app's identity stable across self-updates, so the
+      # Keychain's "Always Allow" keeps working. Without it builds are ad-hoc signed.
+      MACOS_SIGNING_CERT: ${{ secrets.MACOS_SIGNING_CERT }}
+      MACOS_SIGNING_CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -106,6 +111,13 @@ jobs:
           else
             if [ "$PUBLISH" = "true" ]; then echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set, so this build is not published for the in-app updater."; fi
             npx tauri build --bundles app
+          fi
+      - name: Sign with the Atlas certificate
+        run: |
+          if [ -n "$MACOS_SIGNING_CERT" ]; then
+            scripts/macos-resign.sh
+          else
+            echo "::warning::MACOS_SIGNING_CERT is not set, so this build is ad-hoc signed and the Keychain will ask again after updating."
           fi
       # upload-artifact drops file permissions, which would leave the app binary
       # non-executable, so package the bundle with ditto first.

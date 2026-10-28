@@ -83,6 +83,16 @@ a { color: inherit; }
 .pill-mode.update { background: rgba(201, 163, 90, 0.18); border-color: var(--gold); font: inherit; font-size: 12.5px; cursor: pointer; }
 .pill-mode.update:hover:not(:disabled) { background: rgba(201, 163, 90, 0.3); }
 .pill-mode.update:disabled { cursor: default; opacity: 0.85; }
+
+/* Launch lock screen while Touch ID unlocks the saved keys. */
+.vault-lock { position: fixed; inset: 0; display: grid; place-items: center; background: var(--forest-800); color: var(--on-dark); padding: 16px; -webkit-app-region: drag; }
+.vault-card { width: min(380px, 100%); text-align: center; display: grid; justify-items: center; gap: 10px; -webkit-app-region: no-drag; }
+.vault-card h1 { font-family: var(--serif); font-weight: 500; font-size: 26px; margin: 6px 0 0; }
+.vault-card p { margin: 0; color: var(--on-dark-2); }
+.vault-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.vault-actions .btn.primary { background: var(--gold); border-color: var(--gold); color: var(--forest-900); }
+.vault-actions .btn.primary:hover { background: #d6b26c; }
+.vault-note { font-size: 12px; max-width: 320px; }
 .icon-btn {
   display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; border: 1px solid transparent;
   background: transparent; color: inherit;

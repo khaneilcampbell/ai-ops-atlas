@@ -7,18 +7,21 @@ import { ActionsProvider } from "./actions/state";
 import "./styles/app.css";
 import "./styles/mobile.css";
 import { isTauri } from "./lib/env";
+import { VaultGate } from "./components/VaultGate";
 
 // The macOS window uses an overlay title bar, so the header leaves room for the traffic lights.
 if (isTauri() && /Mac/.test(navigator.userAgent)) document.documentElement.classList.add("mac-app");
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AtlasProvider>
-      <IntelProvider>
-        <ActionsProvider>
-          <App />
-        </ActionsProvider>
-      </IntelProvider>
-    </AtlasProvider>
+    <VaultGate>
+      <AtlasProvider>
+        <IntelProvider>
+          <ActionsProvider>
+            <App />
+          </ActionsProvider>
+        </IntelProvider>
+      </AtlasProvider>
+    </VaultGate>
   </React.StrictMode>,
 );
