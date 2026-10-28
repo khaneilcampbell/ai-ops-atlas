@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { ProjectAgents } from "../features/agent-command-center/ProjectAgents";
 import { Icon } from "./Icon";
 import { ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
 import { activityFeed, attentionItems, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
@@ -217,7 +216,6 @@ function RepoDetail({ name }: { name: string }) {
         ))}
       </div>
       <div className="panel-body selectable" role="tabpanel">
-        {project && <ProjectAgents projectId={project.id} />}
         {tab === "overview" && (
           <>
           {state?.kind === "error" && (
