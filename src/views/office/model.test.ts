@@ -48,7 +48,10 @@ describe("runtime state", () => {
     expect(runtimeFor(agent, tel()).state).toBe("idle");
     expect(runtimeFor(agent, tel({ source: null, loaded: false })).state).toBe("unknown");
     expect(runtimeFor(agent, tel({ loaded: false })).state).toBe("unknown");
-    expect(runtimeFor(agent, tel({ executions: [run("2026-10-28T02:00:00Z", "running")] })).state).toBe("working");
+    const now = Date.parse("2026-10-28T03:00:00Z");
+    expect(runtimeFor(agent, tel({ executions: [run("2026-10-28T02:00:00Z", "running")] }), undefined, 0, now).state).toBe("working");
+    // A run still marked in progress long after GitHub would have stopped it is a stale record.
+    expect(runtimeFor(agent, tel({ executions: [run("2026-10-27T12:00:00Z", "running")] }), undefined, 0, now).state).toBe("idle");
   });
 
   it("reports the latest completed run's failure, and a later success clears it", () => {

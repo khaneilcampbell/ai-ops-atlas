@@ -39,7 +39,14 @@ export function ActivityGlow({ towers, houses, states, g, m, reduced }: { towers
 }
 
 const EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
-/** A flat disc on the ground, lifted so it sits just above the terrace. */
+/**
+ * The glow shells share faces with the plinth, paving and roof they sit on; pulling them a hair
+ * toward the camera stops those coplanar faces from flickering as the depth test flips.
+ */
+const AHEAD = { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 };
+/** Above the plaza paving (0.03 thick), so the halo never shares a depth with it and flickers. */
+const HALO_Y = TERRACE_H + 0.05;
+/** A flat disc on the ground. */
 const HALO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 /** Soft round falloff for the ground halo, drawn once. */
 const HALO_TEX = (() => {
@@ -60,11 +67,11 @@ const HALO_TEX = (() => {
 function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House; tower: boolean; mask: THREE.Texture | null; state: Illumination; g: G; reduced: boolean }) {
   const mats = useMemo(
     () => ({
-      win: new THREE.MeshBasicMaterial({ map: mask, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+      win: new THREE.MeshBasicMaterial({ map: mask, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, ...AHEAD }),
       edge: new THREE.LineBasicMaterial({ color: "#000000", transparent: true, opacity: 0, toneMapped: false }),
       // A wash over the whole facade, so the change reads in daylight where the glass is already pale blue.
-      tint: new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
-      halo: new THREE.MeshBasicMaterial({ map: HALO_TEX, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+      tint: new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, ...AHEAD }),
+      halo: new THREE.MeshBasicMaterial({ map: HALO_TEX, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, ...AHEAD }),
     }),
     [mask],
   );
@@ -110,7 +117,7 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
       ))}
       <mesh geometry={g.box} material={mats.tint} position={[bx, by, bz]} scale={[bw, bh, bd]} raycast={noRaycast} renderOrder={2} />
       <lineSegments geometry={EDGES} material={mats.edge} position={[bx, by + bh / 2, bz]} scale={[bw, bh, bd]} raycast={noRaycast} />
-      <mesh geometry={HALO} material={mats.halo} position={[bx, TERRACE_H + 0.02, bz]} scale={[Math.max(bw, bd) * 2.6, 1, Math.max(bw, bd) * 2.6]} raycast={noRaycast} renderOrder={1} />
+      <mesh geometry={HALO} material={mats.halo} position={[bx, HALO_Y, bz]} scale={[Math.max(bw, bd) * 2.6, 1, Math.max(bw, bd) * 2.6]} raycast={noRaycast} renderOrder={1} />
     </group>
   );
 }
