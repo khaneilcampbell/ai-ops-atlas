@@ -7,12 +7,15 @@ on:
     tags: ["v*.*.*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   macos:
     name: Build and publish the macOS app
     runs-on: macos-latest
+    # Only this job can write, and only to publish the release.
+    permissions:
+      contents: write
     # Release builds start without a Rust cache, so they run longer than CI.
     timeout-minutes: 60
     steps:

@@ -90,13 +90,8 @@ jobs:
       # Builds from main are signed for the in-app updater and published to the
       # rolling main-build release that installed copies of Atlas check.
       PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-      # A self-signed code-signing certificate (scripts/macos-signing-cert.sh). Signing every
-      # build with the same one keeps the app's identity stable across self-updates, so the
-      # Keychain's "Always Allow" keeps working. Without it builds are ad-hoc signed.
-      MACOS_SIGNING_CERT: ${{ secrets.MACOS_SIGNING_CERT }}
-      MACOS_SIGNING_CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+    # The signing secrets are set only on the two steps that sign, so third-party code in
+    # the actions and npm install steps never runs with them in its environment.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -113,6 +108,9 @@ jobs:
       # The updater installs any build with a higher version, so each main build
       # gets the run number as its patch version (0.2.0 -> 0.2.<run>).
       - name: Build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
           if [ "$PUBLISH" = "true" ] && [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             base=$(node -p 'require("./src-tauri/tauri.conf.json").version.split(".").slice(0, 2).join(".")')
@@ -124,6 +122,15 @@ jobs:
             npx tauri build --bundles app
           fi
       - name: Sign with the Atlas certificate
+        # A self-signed code-signing certificate (scripts/macos-signing-cert.sh). Signing every
+        # build with the same one keeps the app's identity stable across self-updates, so the
+        # Keychain's "Always Allow" keeps working. Without it builds are ad-hoc signed.
+        env:
+          MACOS_SIGNING_CERT: ${{ secrets.MACOS_SIGNING_CERT }}
+          MACOS_SIGNING_CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+          # Re-signing changes the app, so the updater archive is signed again too.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
           if [ -n "$MACOS_SIGNING_CERT" ]; then
             scripts/macos-resign.sh
