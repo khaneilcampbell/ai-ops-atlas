@@ -6,6 +6,7 @@ import { isHostedWeb } from "../lib/env";
 import { useAtlas } from "../state";
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
+import { SyncSettings } from "./SyncSettings";
 
 export function SettingsView() {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
@@ -30,6 +31,8 @@ export function SettingsView() {
       </section>
 
       <IntelSettings />
+
+      <SyncSettings />
 
       <ActionsSettings />
 

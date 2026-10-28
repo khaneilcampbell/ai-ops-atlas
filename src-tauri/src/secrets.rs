@@ -10,6 +10,7 @@ const SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas";
 const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
 const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
+const USAGE_SYNC_ACCOUNT: &str = "usage-sync-key";
 
 fn entry_for(account: &str) -> Result<Entry, String> {
     Entry::new(SERVICE, account).map_err(|e| format!("Keychain unavailable: {e}"))
@@ -67,6 +68,21 @@ pub fn set_actions_token(token: &str) -> Result<(), String> {
 
 pub fn clear_actions_token() -> Result<(), String> {
     clear(ACTIONS_ACCOUNT)
+}
+
+/// The shared secret for pushing usage records to the hosted site. Read only by `usage_sync`.
+pub fn read_usage_sync_key() -> Option<String> {
+    read(USAGE_SYNC_ACCOUNT)
+}
+
+pub fn set_usage_sync_key(key: &str) -> Result<(), String> {
+    entry_for(USAGE_SYNC_ACCOUNT)?
+        .set_password(key)
+        .map_err(|e| format!("Could not save to the Keychain: {e}"))
+}
+
+pub fn clear_usage_sync_key() -> Result<(), String> {
+    clear(USAGE_SYNC_ACCOUNT)
 }
 
 /// The Anthropic key, read only by the Claude client at request time.

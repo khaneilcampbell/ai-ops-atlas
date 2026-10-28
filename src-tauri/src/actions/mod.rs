@@ -226,6 +226,11 @@ mod tests {
                     !code.contains("github.com"),
                     "the Anthropic client must not talk to GitHub"
                 ),
+                // Writes only the usage snapshot to the user's own site, never to GitHub.
+                "usage_sync.rs" => assert!(
+                    !code.contains("github.com") && !code.contains("read_token"),
+                    "the usage sync must not talk to GitHub or read a GitHub token"
+                ),
                 _ => assert!(
                     !writes,
                     "{rel} sends a write request; GitHub writes belong in actions/client.rs"
