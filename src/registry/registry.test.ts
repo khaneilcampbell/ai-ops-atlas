@@ -38,15 +38,15 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 10 projects and 34 agents discoverable with no manifest problems", () => {
+  it("keeps all 10 projects and 35 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(10);
-    expect(entries).toHaveLength(34);
+    expect(entries).toHaveLength(35);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 8, B: 4, C: 11, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 4, C: 11, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -242,7 +242,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(34);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(35);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -256,7 +256,7 @@ describe("directory", () => {
     const s = summarize(entries);
     const flow = s.needsReview.find((e) => e.profile.id === "benjaire-flow-intake");
     expect(flow?.review).toContain("Classification is provisional");
-    expect(s.observable).toBe(11);
+    expect(s.observable).toBe(12);
   });
 });
 

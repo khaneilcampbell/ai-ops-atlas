@@ -189,6 +189,9 @@
               },
               "atlas_intel": {
                 "type": "boolean"
+              },
+              "atlas_intel_runs": {
+                "enum": ["repository", "ecosystem"]
               }
             }
           },

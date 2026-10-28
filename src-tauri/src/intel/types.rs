@@ -172,6 +172,31 @@ pub struct AgentConfig {
     pub schedule: Schedule,
     /// Repositories the agent may analyze. Only these are ever scheduled.
     pub assigned: Vec<String>,
+    /// The Senior Engineering Reviewer, which shares models, prices and the monthly budget.
+    pub review: ReviewConfig,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(default)]
+pub struct ReviewConfig {
+    pub depth: Depth,
+    /// Its own per-run cap: a review covers every repository, so it is larger than one analysis.
+    pub max_run_usd: f64,
+    pub schedule: Schedule,
+}
+
+impl Default for ReviewConfig {
+    fn default() -> Self {
+        Self {
+            depth: Depth::Standard,
+            max_run_usd: 0.60,
+            // Weekly, Monday 08:00, off until KC turns it on.
+            schedule: Schedule {
+                days: vec![0],
+                ..Schedule::default()
+            },
+        }
+    }
 }
 
 impl Default for AgentConfig {
@@ -207,6 +232,7 @@ impl Default for AgentConfig {
             refusal_fallback: true,
             schedule: Schedule::default(),
             assigned: Vec::new(),
+            review: ReviewConfig::default(),
         }
     }
 }
@@ -594,9 +620,21 @@ pub struct TraceStep {
     pub ms: Option<u64>,
 }
 
+/// Which pipeline a run went through. Older run records have no kind and are repository runs.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RunKind {
+    #[default]
+    Repository,
+    Ecosystem,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Run {
     pub id: String,
+    #[serde(default)]
+    pub kind: RunKind,
+    /// `owner/name`, or "ecosystem" for a Senior Engineering Review.
     pub repo: String,
     pub trigger: Trigger,
     pub depth: Depth,
