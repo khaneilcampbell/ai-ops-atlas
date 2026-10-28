@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
-import { Bloom, Sky, Traffic, type LightMode } from "./living";
+import { Bloom, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
 import { clip, measure, SANS, wrap } from "../mapText";
@@ -64,6 +64,8 @@ interface Props {
   linkFocus: boolean;
   /** Connection particles move; off when paused in the toolbar or for reduced motion. */
   linksMoving: boolean;
+  /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
+  traffic: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -322,6 +324,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           net={net}
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
+          traffic={props.traffic}
           onLinkHover={(id, e) => {
             setHoverLink(id);
             const t = id ? props.linkTip(id) : null;
@@ -390,6 +393,7 @@ function World({
   net,
   hoverLink,
   linksMoving,
+  traffic,
   onLinkHover,
   onLinkPick,
   hoods,
@@ -414,6 +418,7 @@ function World({
   net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
   hoverLink: string | null;
   linksMoving: boolean;
+  traffic: boolean;
   onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
   onLinkPick: (id: string) => void;
   hoods: number;
@@ -746,6 +751,7 @@ function World({
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
       <Bloom />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
+      {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Landscape scene={scene} g={g} m={m} />

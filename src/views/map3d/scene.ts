@@ -15,6 +15,8 @@ const PATH_W = 0.55;
 const INNER_PATH_W = 0.32;
 const BROOK_W = 0.55;
 export const FLOOR_H = 0.32;
+/** A fountain's basin radius at full size. */
+export const FOUNTAIN_R = 0.475;
 
 export interface Rect {
   x: number;
@@ -105,7 +107,8 @@ export interface Scene3D {
   bridges: (Rect & { axis: "x" | "z" })[];
   ponds: { x: number; y: number; z: number; r: number }[];
   falls: Fall[];
-  fountains: { x: number; z: number }[];
+  /** k scales the fountain down from its full size (1) where room is tight. */
+  fountains: { x: number; z: number; k?: number }[];
   /** Low path lights along each district's footpaths. */
   bollards: Point[];
   /** Walkways between terraces at meadow level, end to end, for strollers. */
@@ -214,9 +217,13 @@ export function buildScene(layout: Layout): Scene3D {
       const half = d.hq.size * 0.62 + 0.45;
       paving.push({ x: cx - half, z: cz - half, w: half * 2, d: half * 2, y: top, h: 0.02 });
       const clear = (x: number, z: number, r: number) => !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + r && Math.abs(h.z - z) < h.d / 2 + r);
-      const fx = cx + half - 0.5;
-      const fz = cz + half - 0.5;
-      if (clear(fx, fz, 0.55)) fountains.push({ x: fx, z: fz });
+      // In the plaza's front-left corner, so it stands beside the tower rather than in front of it
+      // from the map's viewpoint, as large as fits between the tower's corner and the plaza's edge:
+      // inset o from the edge, it clears the tower by o * sqrt(2) on the diagonal.
+      const room = half - size / 2 - 0.03;
+      const r = Math.min(FOUNTAIN_R, (room * Math.SQRT2 - 0.06) / (1 + Math.SQRT2));
+      const at = size / 2 + room - r;
+      if (r > 0.2 && clear(cx - at, cz + at, r + 0.08)) fountains.push({ x: cx - at, z: cz + at, k: r / FOUNTAIN_R });
     }
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
     const blocked = (x: number, z: number) =>
