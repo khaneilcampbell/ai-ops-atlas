@@ -391,3 +391,48 @@ agents:
         autonomy: 0
         data_sensitivity: internal
         risk: low
+
+  - id: commerce-tests
+    name: Pipeline Tests
+    purpose: Compiles, lints and tests the pipeline scripts and checks the shell scripts parse.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push or pull request
+    source: .github/workflows/tests.yml
+    observe:
+      github_workflow: tests.yml
+    last_run: null
+    registry:
+      title: Commerce Pipeline Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/tests.yml runs compileall, ruff, bash -n and pytest; no AI model
+      mission:
+        problem: Keeps the pipeline scripts from breaking before they reach the VPS.
+        outcomes: ["Every pull request is linted and tested before merge"]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Compile the scripts, Lint with ruff, Check shell scripts parse, Run pytest]
+        tools: [GitHub Actions, ruff, pytest]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request]
+      goals:
+        objective: Block merges that break the pipeline.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)
