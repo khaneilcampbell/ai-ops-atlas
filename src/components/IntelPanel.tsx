@@ -262,7 +262,7 @@ function Verified({ report }: { report: Report }) {
   );
 }
 
-function Refs({ refs, grounded }: { refs: string[]; grounded: boolean }) {
+export function Refs({ refs, grounded }: { refs: string[]; grounded: boolean }) {
   if (!grounded) return <span className="ref ungrounded">no supporting reference</span>;
   return (
     <>

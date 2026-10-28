@@ -5,6 +5,7 @@ import type { Run as IntelRun } from "../intel/types";
 import { RUN_LABEL, usd } from "../intel/format";
 import type { AuditRecord } from "../actions/types";
 import { describeRecord, latestPerAttempt } from "../actions/rerun";
+import { isReviewRun, REVIEW_AGENT_ID } from "../intel/ecosystem";
 
 export type EventKind = "commit" | "ci" | "agent" | "intel" | "action" | "manifest";
 export type EventResult = "success" | "failure" | "running" | "other";
@@ -90,6 +91,18 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
   for (const r of intelRuns) {
     const project = projectByRepo.get(r.repo);
     const cost = r.cost_usd != null ? ` · ${usd(r.cost_usd)}` : "";
+    if (isReviewRun(r)) {
+      out.push({
+        id: `intel:${r.id}`,
+        at: r.started_at ?? r.queued_at,
+        kind: "intel",
+        result: intelResult(r),
+        title: `Engineering review: ${RUN_LABEL[r.status]}`,
+        detail: `All catalog repositories · ${r.trigger} · ${r.model}${cost}`,
+        agentId: REVIEW_AGENT_ID,
+      });
+      continue;
+    }
     out.push({
       id: `intel:${r.id}`,
       at: r.started_at ?? r.queued_at,

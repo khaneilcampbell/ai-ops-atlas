@@ -706,3 +706,15 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .panel.docked .panel-head .chip.link-active { color: #9fd3a8; }
 .panel.docked .panel-head .chip.link-unhealthy { color: #f0a097; }
 .evidence { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); font-family: var(--mono, ui-monospace, monospace); font-size: 12px; overflow-wrap: anywhere; }
+
+/* Intel → Engineering review */
+.review { display: flex; flex-direction: column; gap: 14px; }
+.review-head { display: flex; align-items: flex-start; gap: 12px; }
+.review-head .grow { flex: 1; min-width: 0; }
+.scorecard { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.score { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(201, 163, 90, 0.25); }
+.recs > li { display: flex; flex-direction: column; gap: 4px; }
+.rec-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rec-head .grow { flex: 1; min-width: 12ch; }
+.table-wrap { overflow-x: auto; margin: 0 -4px; }
+.table.compact th, .table.compact td { padding: 8px 10px; }

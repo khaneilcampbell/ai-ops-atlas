@@ -73,6 +73,14 @@ impl Store {
         self.write(&path, r)
     }
 
+    pub fn load_review(&self) -> Option<super::review::EcoReport> {
+        self.read(&self.dir.join("ecosystem.json"))
+    }
+
+    pub fn save_review(&self, r: &super::review::EcoReport) -> Result<(), String> {
+        self.write(&self.dir.join("ecosystem.json"), r)
+    }
+
     pub fn list_reports(&self) -> Vec<Report> {
         let Ok(entries) = fs::read_dir(self.dir.join("reports")) else {
             return vec![];

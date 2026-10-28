@@ -21,6 +21,15 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 - **When it fails:** read the run's trace in Intel → Activity. `401` means the Anthropic key is wrong or revoked (replace it in Settings → Repository intelligence). A run shown as **Blocked** would have gone over the per-run or monthly limit; raise it or wait for the new month. GitHub sections shown as *not assessed* need more token permissions (Settings → GitHub access).
 - **Stop it:** cancel the job in Intel → Activity, turn the schedule off in Settings, or remove the Anthropic key. A request already in flight may still be billed.
 
+## Senior Engineering Reviewer
+
+`src-tauri/src/intel/review.rs`. Reviews every catalog repository and agent at once and recommends only. Details in [docs/engineering-review.md](../engineering-review.md).
+
+- **Healthy:** Intel → Engineering review shows a recent review, and Intel → Activity shows the run as succeeded or reused.
+- **Run it:** Intel → Engineering review → **Run review**, check the worst-case cost, confirm.
+- **When it fails:** read the run's trace in Intel → Activity. It shares the Anthropic key, queue and monthly budget with Repository Intelligence, so a missing key or a used-up budget blocks both. A **Blocked** run would have gone over its own per-review limit ($0.60 default) or the monthly budget. Branch rules shown as *not assessed* usually need admin access the token doesn't have.
+- **Stop it:** cancel the job in Intel → Activity, turn the schedule off in Settings → Repository intelligence → Engineering review, or remove the Anthropic key.
+
 ## Re-run Failed Jobs
 
 `src-tauri/src/actions/rerun.rs`. Re-runs the failed jobs of one failed run after a native approval. Details in [docs/actions.md](../actions.md).

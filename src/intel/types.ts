@@ -19,9 +19,18 @@ export interface AgentConfig {
   timeout_secs: number;
   max_attempts: number;
   refusal_fallback: boolean;
-  /** days: 0 = Monday … 6 = Sunday; at: local "HH:MM". */
-  schedule: { enabled: boolean; days: number[]; at: string; consent_at: string | null };
+  schedule: Schedule;
   assigned: string[];
+  /** The Senior Engineering Reviewer: its own depth, per-run cap and weekly schedule. */
+  review: { depth: Depth; max_run_usd: number; schedule: Schedule };
+}
+
+/** days: 0 = Monday … 6 = Sunday; at: local "HH:MM". */
+export interface Schedule {
+  enabled: boolean;
+  days: number[];
+  at: string;
+  consent_at: string | null;
 }
 
 export type Assessed<T> = { state: "assessed"; data: T } | { state: "not_assessed"; reason: string };
@@ -170,6 +179,9 @@ export interface TraceStep {
 
 export interface Run {
   id: string;
+  /** Missing on runs recorded before the engineering review existed. */
+  kind?: "repository" | "ecosystem";
+  /** owner/name, or "ecosystem" for an engineering review. */
   repo: string;
   trigger: "manual" | "scheduled";
   depth: Depth;
@@ -204,4 +216,99 @@ export interface AgentStatus {
 export interface RepoContext {
   project?: string | null;
   agents?: string[];
+}
+
+// ---------- Senior Engineering Reviewer (mirrors src-tauri/src/intel/review.rs) ----------
+
+export interface EcoContext {
+  projects: { id: string; name: string; repository: string; status: string }[];
+  agents: {
+    id: string;
+    name: string;
+    project: string;
+    repository: string;
+    kind: string | null;
+    autonomy: number | null;
+    autonomy_note: string | null;
+    trigger: string | null;
+    permissions: string[];
+    telemetry: boolean;
+    status: string;
+    approval: string | null;
+    risk: string | null;
+  }[];
+}
+
+export interface WorkflowScan {
+  file: string;
+  top_level_permissions: boolean;
+  job_permissions: boolean;
+  write_scopes: string[];
+  pull_request_target: boolean;
+  unpinned_actions: string[];
+  timeouts: boolean;
+  concurrency: boolean;
+  schedules: number;
+  uses_secrets: boolean;
+  url: string | null;
+}
+
+export interface RepoChecks {
+  dependabot_config: Assessed<boolean>;
+  renovate_config: boolean;
+  codeowners: Assessed<boolean>;
+  branch_rules: Assessed<{ protected: boolean; requires_pull_request: boolean; required_checks: string[]; required_approvals: number | null; blocks_force_push: boolean; source: string }>;
+  workflows: Assessed<WorkflowScan[]>;
+  workflow_files: number;
+  github_requests: number;
+}
+
+export interface RepoEntry {
+  repo: string;
+  source: "intel_report" | "collected" | "unavailable";
+  facts: Facts | null;
+  checks: RepoChecks | null;
+  findings: Finding[];
+  error: string | null;
+}
+
+export type ReviewArea = "security" | "reliability" | "testing" | "dependencies" | "autonomy" | "observability" | "cost" | "documentation" | "tooling";
+
+export interface EcoReview {
+  summary: string;
+  scorecard: { area: ReviewArea; rating: Rating; rationale: string; evidence: string[]; grounded: boolean }[];
+  top_risks: { title: string; severity: "critical" | "high" | "medium" | "low"; why: string; repos: string[]; evidence: string[]; grounded: boolean }[];
+  recommendations: {
+    priority: "now" | "next" | "later";
+    category: ReviewArea;
+    title: string;
+    rationale: string;
+    first_step: string;
+    effort: "hours" | "a_day" | "a_week";
+    repos: string[];
+    evidence: string[];
+    grounded: boolean;
+  }[];
+  tools: { name: string; purpose: string; why: string; cost: "free" | "paid"; repos: string[] }[];
+  autonomy_notes: { agent: string; current_level: number; suggested_level: number; reason: string; evidence: string[]; grounded: boolean }[];
+  quick_wins: string[];
+  data_gaps: string[];
+}
+
+export interface EcoReport {
+  repos: RepoEntry[];
+  context: EcoContext;
+  review: EcoReview | null;
+  state: AiState;
+  analyzed_at: string | null;
+  analysis_run_id: string | null;
+  model: string | null;
+  depth: Depth;
+  fingerprint: string;
+  validation: { dropped_refs: number; ungrounded_items: number; trimmed_fields: number; unknown_names: number } | null;
+  updated_at: string;
+  run_id: string;
+  github_requests: number;
+  reused_facts: number;
+  note: string | null;
 }

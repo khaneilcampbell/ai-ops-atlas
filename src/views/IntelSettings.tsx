@@ -124,11 +124,14 @@ function ConfigForm({ config }: { config: AgentConfig }) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [consenting, setConsenting] = useState(false);
+  const [reviewConsenting, setReviewConsenting] = useState(false);
   const changed = JSON.stringify(draft) !== JSON.stringify(config);
   const set = (p: Partial<AgentConfig>) => {
     setSaved(false);
     setDraft((d) => ({ ...d, ...p }));
   };
+  const review = draft.review;
+  const setReview = (p: Partial<AgentConfig["review"]>) => set({ review: { ...review, ...p } });
   const setModel = (depth: Depth, model: string) => set({ models: { ...draft.models, [depth]: model.trim() } });
   const setPrice = (model: string, k: "input" | "output", v: number) => set({ pricing: { ...draft.pricing, [model]: { ...(draft.pricing[model] ?? { input: 0, output: 0 }), [k]: v } } });
   const save = async (next = draft) => {
@@ -302,6 +305,83 @@ function ConfigForm({ config }: { config: AgentConfig }) {
           </div>
         </div>
       </div>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Engineering review</div>
+          <div className="muted small">The Senior Engineering Reviewer reviews every catalog repository in one run. It uses the models and prices above and shares the monthly budget, with its own per-review limit.</div>
+        </div>
+        <label className="field">
+          <label>Depth</label>
+          <select value={review.depth} onChange={(e) => setReview({ depth: e.target.value as Depth })}>
+            <option value="quick">Quick</option>
+            <option value="standard">Standard</option>
+            <option value="deep">Deep</option>
+          </select>
+        </label>
+        <label className="field">
+          <label>Per review $</label>
+          <input type="number" min={0.01} step={0.05} value={review.max_run_usd} onChange={(e) => setReview({ max_run_usd: num(e.target.value, review.max_run_usd) })} style={{ width: 64 }} />
+        </label>
+      </div>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Scheduled review</div>
+          <div className="muted small">
+            Reviews the catalog as of the last manual review on the chosen days, <b>only while the app is open</b>. Unchanged data is reused without a Claude call; otherwise up to {usd(review.max_run_usd)} per review.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+            <div className="seg" role="group" aria-label="Review days">
+              {DAY_NAMES.map((name, d) => {
+                const on = review.schedule.days.includes(d);
+                return (
+                  <button
+                    key={name}
+                    className={on ? "on" : ""}
+                    aria-pressed={on}
+                    onClick={() => setReview({ schedule: { ...review.schedule, days: on ? review.schedule.days.filter((x) => x !== d) : [...review.schedule.days, d].sort((a, b) => a - b) } })}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="field">
+              <input type="time" value={review.schedule.at} onChange={(e) => e.target.value && setReview({ schedule: { ...review.schedule, at: e.target.value.slice(0, 5) } })} aria-label="Review time" />
+            </label>
+          </div>
+        </div>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={review.schedule.enabled}
+          onChange={(e) => {
+            if (e.target.checked && review.schedule.days.length > 0) setReviewConsenting(true);
+            else setReview({ schedule: { ...review.schedule, enabled: false, consent_at: null } });
+          }}
+          aria-label="Scheduled review"
+        />
+      </div>
+      {reviewConsenting && (
+        <div className="setting">
+          <div className="notice grow">
+            <span>Turn on unattended engineering reviews ({scheduleLabel(review.schedule)})? They send facts about every catalog repository to Anthropic and spend API credit without asking each time.</span>
+          </div>
+          <button
+            className="btn primary"
+            onClick={() => {
+              const next = { ...draft, review: { ...review, schedule: { ...review.schedule, enabled: true, consent_at: new Date().toISOString() } } };
+              setDraft(next);
+              setReviewConsenting(false);
+              void save(next);
+            }}
+          >
+            Turn on
+          </button>
+          <button className="text-btn" onClick={() => setReviewConsenting(false)}>
+            Cancel
+          </button>
+        </div>
+      )}
       <div className="setting">
         <div className="grow">{error ? <div className="notice bad">{error}</div> : <span className="muted small">{saved ? "Saved." : changed ? "Unsaved changes." : "Settings are stored on this Mac."}</span>}</div>
         <button className="btn" disabled={!changed} onClick={() => setDraft(config)}>

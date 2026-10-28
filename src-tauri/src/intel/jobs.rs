@@ -7,6 +7,7 @@ use super::claude::{self, cancelled, step, InferError, ModelApi, RetryPolicy};
 use super::collect::{self, valid_repo, GithubApi};
 use super::cost;
 use super::prompt;
+use super::review::{self, EcoContext, EcoReport, REVIEW_KEY};
 use super::store::{recover_interrupted, Store};
 use super::types::*;
 use super::validate;
@@ -124,7 +125,31 @@ pub fn validate_config(c: &AgentConfig) -> Result<(), String> {
     if c.assigned.len() > 50 || c.assigned.iter().any(|r| !valid_repo(r)) {
         return Err("The assigned repositories list is invalid.".into());
     }
+    let r = &c.review;
+    if !(r.max_run_usd.is_finite() && r.max_run_usd > 0.0 && r.max_run_usd <= 50.0) {
+        return Err("The engineering review's per-run limit must be between $0 and $50.".into());
+    }
+    if r.schedule.days.iter().any(|d| *d > 6) || r.schedule.time_of_day().is_none() {
+        return Err("The review schedule needs valid days and a time like 08:00.".into());
+    }
+    if r.schedule.enabled && r.schedule.days.is_empty() {
+        return Err("Choose at least one day for the scheduled review.".into());
+    }
+    if r.schedule.enabled && r.schedule.consent_at.is_none() {
+        return Err(
+            "The scheduled review needs your explicit confirmation before it can be turned on."
+                .into(),
+        );
+    }
     Ok(())
+}
+
+/// The shared configuration with the review's own per-run cap.
+fn review_config(c: &AgentConfig) -> AgentConfig {
+    AgentConfig {
+        max_run_usd: c.review.max_run_usd,
+        ..c.clone()
+    }
 }
 
 fn clean_context(ctx: RepoContext) -> RepoContext {
@@ -181,6 +206,8 @@ struct Job {
     model: String,
     force: bool,
     ctx: RepoContext,
+    /// Set for a Senior Engineering Review, which runs the ecosystem pipeline.
+    eco: Option<EcoContext>,
 }
 
 impl Agent {
@@ -284,32 +311,76 @@ impl Agent {
         if !valid_repo(repo) {
             return Err("That isn't a valid owner/name repository.".into());
         }
+        Ok(self.start(repo, trigger, depth, force, clean_context(ctx), None))
+    }
+
+    /// Queues a Senior Engineering Review of every repository in the catalog context.
+    pub fn enqueue_review(
+        self: &Arc<Self>,
+        trigger: Trigger,
+        depth: Option<Depth>,
+        force: bool,
+        eco: EcoContext,
+    ) -> Result<EnqueueResult, String> {
+        let eco = eco.cleaned();
+        if eco.repos().is_empty() {
+            return Err("The catalog has no repositories to review.".into());
+        }
+        Ok(self.start(
+            REVIEW_KEY,
+            trigger,
+            depth,
+            force,
+            RepoContext::default(),
+            Some(eco),
+        ))
+    }
+
+    fn start(
+        self: &Arc<Self>,
+        key: &str,
+        trigger: Trigger,
+        depth: Option<Depth>,
+        force: bool,
+        ctx: RepoContext,
+        eco: Option<EcoContext>,
+    ) -> EnqueueResult {
         let (rx, run, job) = {
             let mut g = self.lock();
-            if let Some(a) = g.active.iter().find(|a| a.repo.eq_ignore_ascii_case(repo)) {
-                return Ok(EnqueueResult {
+            if let Some(a) = g.active.iter().find(|a| a.repo.eq_ignore_ascii_case(key)) {
+                return EnqueueResult {
                     run_id: a.run_id.clone(),
                     duplicate: true,
-                });
+                };
             }
             // Selecting a repository for a manual run is what assigns it to the agent.
-            if trigger == Trigger::Manual
+            if eco.is_none()
+                && trigger == Trigger::Manual
                 && !g
                     .config
                     .assigned
                     .iter()
-                    .any(|r| r.eq_ignore_ascii_case(repo))
+                    .any(|r| r.eq_ignore_ascii_case(key))
                 && g.config.assigned.len() < 50
             {
-                g.config.assigned.push(repo.to_string());
+                g.config.assigned.push(key.to_string());
                 self.store.save_config(&g.config).ok();
             }
-            let depth = depth.unwrap_or(g.config.depth);
+            let depth = depth.unwrap_or(if eco.is_some() {
+                g.config.review.depth
+            } else {
+                g.config.depth
+            });
             let model = g.config.models.for_depth(depth).to_string();
             let run_id = format!("run_{}", uuid::Uuid::new_v4().simple());
             let run = Run {
                 id: run_id.clone(),
-                repo: repo.to_string(),
+                kind: if eco.is_some() {
+                    RunKind::Ecosystem
+                } else {
+                    RunKind::Repository
+                },
+                repo: key.to_string(),
                 trigger,
                 depth,
                 model: model.clone(),
@@ -329,7 +400,7 @@ impl Agent {
             };
             let (tx, rx) = watch::channel(false);
             g.active.push(Active {
-                repo: repo.to_string(),
+                repo: key.to_string(),
                 run_id: run_id.clone(),
                 cancel: tx,
             });
@@ -337,24 +408,24 @@ impl Agent {
             let excess = g.runs.len().saturating_sub(2 * super::store::MAX_RUNS);
             g.runs.drain(..excess);
             self.store.save_runs(&g.runs).ok();
-            let ctx = clean_context(ctx);
             let job = Job {
                 run_id,
-                repo: repo.to_string(),
+                repo: key.to_string(),
                 depth,
                 model,
                 force,
                 ctx,
+                eco,
             };
             (rx, run, job)
         };
         (self.notify)();
         let me = self.clone();
         (self.spawner)(Box::pin(async move { me.execute(job, rx).await }));
-        Ok(EnqueueResult {
+        EnqueueResult {
             run_id: run.id,
             duplicate: false,
-        })
+        }
     }
 
     pub fn cancel(&self, run_id: &str) -> bool {
@@ -400,7 +471,11 @@ impl Agent {
                 r.started_at = Some(now_iso());
             });
             (self.notify)();
-            self.pipeline(&job, &mut rx, &mut trace).await
+            if job.eco.is_some() {
+                self.review_pipeline(&job, &mut rx, &mut trace).await
+            } else {
+                self.pipeline(&job, &mut rx, &mut trace).await
+            }
         };
         drop(permit);
         {
@@ -799,6 +874,353 @@ impl Agent {
         out
     }
 
+    pub fn review_report(&self) -> Option<EcoReport> {
+        self.store.load_review()
+    }
+
+    /// Worst-case cost of one engineering review at the given depth, from configuration alone.
+    pub fn review_estimate(&self, depth: Option<Depth>) -> Result<CostEstimate, String> {
+        let g = self.lock();
+        let d = depth.unwrap_or(g.config.review.depth);
+        let l = review::limits(d);
+        let spent = cost::month_spend(&g.runs, Utc::now());
+        match cost::check(
+            &review_config(&g.config),
+            g.config.models.for_depth(d),
+            l.input_tokens,
+            l.max_tokens,
+            spent,
+        ) {
+            Ok(e) | Err((_, Some(e))) => Ok(e),
+            Err((m, None)) => Err(m),
+        }
+    }
+
+    /// Keeps the last good review, marked as not current, with this run's fresh facts.
+    fn save_review_facts(&self, base: EcoReport, note: String) {
+        let prev = self.store.load_review().filter(|p| p.review.is_some());
+        let r = match prev {
+            Some(p) => EcoReport {
+                review: p.review,
+                state: AiState::Stale,
+                analyzed_at: p.analyzed_at,
+                analysis_run_id: p.analysis_run_id,
+                model: p.model,
+                validation: p.validation,
+                note: Some(note),
+                ..base
+            },
+            None => EcoReport {
+                note: Some(note),
+                ..base
+            },
+        };
+        self.store.save_review(&r).ok();
+    }
+
+    async fn review_pipeline(
+        &self,
+        job: &Job,
+        rx: &mut watch::Receiver<bool>,
+        trace: &mut Vec<TraceStep>,
+    ) -> Outcome {
+        let eco = job.eco.clone().unwrap_or_default();
+        let limits = review::limits(job.depth);
+        let now = Utc::now();
+        let mut out = Outcome::new(RunStatus::Failed);
+        let cancel_out = |o: Outcome, trace: &mut Vec<TraceStep>, at: &str| {
+            step(trace, at, false, "Cancelled.".into(), None);
+            o.fail(
+                RunStatus::Cancelled,
+                "cancelled",
+                "Cancelled by you.".into(),
+                false,
+            )
+        };
+
+        // 1. Facts for every catalog repository, reusing saved reports where fresh.
+        let repos = eco.repos();
+        let t = Instant::now();
+        let gathered = tokio::select! {
+            r = review::gather(&*self.gh, &self.store, &repos, now) => r,
+            _ = cancelled(rx) => return cancel_out(out, trace, "collect"),
+        };
+        let g = match gathered {
+            Ok(g) => g,
+            Err(e) => {
+                let err = e.to_run_error();
+                step(
+                    trace,
+                    "collect",
+                    false,
+                    err.message.clone(),
+                    Some(t.elapsed().as_millis() as u64),
+                );
+                out.error = Some(err);
+                return out;
+            }
+        };
+        out.github_requests = g.github_requests;
+        let unavailable = g.entries.iter().filter(|e| e.facts.is_none()).count();
+        step(
+            trace,
+            "collect",
+            true,
+            format!(
+                "{} repositories: {} from saved reports, {} GitHub requests (GET only){}",
+                g.entries.len(),
+                g.reused,
+                g.github_requests,
+                if unavailable > 0 {
+                    format!(", {unavailable} not readable")
+                } else {
+                    String::new()
+                }
+            ),
+            Some(t.elapsed().as_millis() as u64),
+        );
+        let findings: usize = g.entries.iter().map(|e| e.findings.len()).sum();
+        step(
+            trace,
+            "facts",
+            true,
+            format!("{findings} verified findings computed from GitHub data"),
+            None,
+        );
+
+        // 2. Prompt.
+        let p = review::build(
+            &eco,
+            &g.entries,
+            &limits,
+            &job.model,
+            job.depth,
+            &now.format("%Y-%m-%d").to_string(),
+        );
+        step(
+            trace,
+            "prompt",
+            true,
+            format!(
+                "About {} input tokens estimated, {} citable references{}",
+                p.input_tokens_est,
+                p.refs.len(),
+                if p.trimmed {
+                    ", detail reduced to fit"
+                } else {
+                    ""
+                }
+            ),
+            None,
+        );
+        let base = EcoReport {
+            repos: g.entries,
+            context: eco,
+            review: None,
+            state: AiState::NotAssessed,
+            analyzed_at: None,
+            analysis_run_id: None,
+            model: None,
+            depth: job.depth,
+            fingerprint: p.fingerprint.clone(),
+            validation: None,
+            updated_at: now_iso(),
+            run_id: job.run_id.clone(),
+            github_requests: g.github_requests,
+            reused_facts: g.reused,
+            note: None,
+        };
+
+        // 3. Reuse when nothing that feeds the review changed.
+        let prev = self.store.load_review();
+        if let Some(prev) = prev
+            .as_ref()
+            .filter(|r| !job.force && r.review.is_some() && r.fingerprint == p.fingerprint)
+        {
+            let r = EcoReport {
+                review: prev.review.clone(),
+                state: AiState::Reused,
+                analyzed_at: prev.analyzed_at.clone(),
+                analysis_run_id: prev.analysis_run_id.clone(),
+                model: prev.model.clone(),
+                validation: prev.validation.clone(),
+                ..base
+            };
+            self.store.save_review(&r).ok();
+            step(
+                trace,
+                "cache",
+                true,
+                format!(
+                    "Nothing changed since the review of {}; reused it without calling Claude.",
+                    prev.analyzed_at.as_deref().unwrap_or("earlier")
+                ),
+                None,
+            );
+            out.status = RunStatus::Reused;
+            return out;
+        }
+        if *rx.borrow() {
+            return cancel_out(out, trace, "prompt");
+        }
+
+        // 4. Credentials and budget, before anything is sent.
+        if !(self.key_present)() {
+            let e = InferError::NoKey;
+            step(trace, "credentials", false, e.message(), None);
+            self.save_review_facts(base, e.message());
+            return out.fail(RunStatus::Blocked, e.kind(), e.message(), false);
+        }
+        let (config, spent) = {
+            let g = self.lock();
+            (g.config.clone(), cost::month_spend(&g.runs, now))
+        };
+        match cost::check(
+            &review_config(&config),
+            &job.model,
+            p.input_tokens_est,
+            limits.max_tokens,
+            spent,
+        ) {
+            Ok(est) => {
+                step(
+                    trace,
+                    "budget",
+                    true,
+                    format!(
+                        "Worst case ${:.3} (limit ${:.2}); ${:.3} of ${:.2} used this month",
+                        est.worst_case_usd,
+                        est.max_run_usd,
+                        est.month_spent_usd,
+                        est.monthly_budget_usd
+                    ),
+                    None,
+                );
+                out.estimate = Some(est);
+            }
+            Err((msg, est)) => {
+                step(trace, "budget", false, msg.clone(), None);
+                out.estimate = est;
+                self.save_review_facts(base, msg.clone());
+                return out.fail(RunStatus::Blocked, "budget", msg, false);
+            }
+        }
+
+        // 5. One Claude request, with bounded retries.
+        let fallback = config.refusal_fallback && prompt::supports_fallback(&job.model);
+        let body = review::request_body(&p, &job.model, &limits, fallback);
+        let betas: Vec<&str> = if fallback {
+            vec![prompt::FALLBACK_BETA]
+        } else {
+            vec![]
+        };
+        let policy = RetryPolicy {
+            max_attempts: config.max_attempts,
+            base_delay: self.base_delay,
+            max_delay: Duration::from_secs(60),
+            // A whole-ecosystem answer is longer than one repository's.
+            timeout: Duration::from_secs(config.timeout_secs.max(180)),
+        };
+        self.update_run(&job.run_id, |r| r.estimate = out.estimate.clone());
+        let inf = match claude::infer(&*self.model, &body, &betas, policy, rx, trace).await {
+            Ok(i) => i,
+            Err((e, attempts, usage)) => {
+                out.attempts = attempts;
+                if let Some(u) = usage {
+                    out.cost = cost::cost_of_response(&config, &job.model, &u, &[]);
+                    out.usage = Some(u);
+                }
+                let status = if e == InferError::Cancelled {
+                    RunStatus::Cancelled
+                } else {
+                    RunStatus::Failed
+                };
+                if status == RunStatus::Failed {
+                    self.save_review_facts(
+                        base,
+                        format!("The latest review failed: {}", e.message()),
+                    );
+                }
+                return out.fail(status, e.kind(), e.message(), e.retryable());
+            }
+        };
+        out.attempts = inf.attempts;
+        out.cost = cost::cost_of_response(&config, &job.model, &inf.usage, &inf.iterations);
+        out.usage = Some(inf.usage.clone());
+
+        // 6. Validate.
+        let (rev, summary) = match review::validate(&inf.text, &p) {
+            Ok(v) => v,
+            Err(e) => {
+                step(trace, "validate", false, e.clone(), None);
+                self.save_review_facts(
+                    base,
+                    "The latest review returned an invalid answer and was discarded.".into(),
+                );
+                return out.fail(RunStatus::Failed, "invalid_response", e, false);
+            }
+        };
+        step(
+            trace,
+            "validate",
+            true,
+            format!(
+                "Schema valid. {} unknown citations removed, {} unknown repositories or agents removed, {} items without supporting references",
+                summary.dropped_refs, summary.unknown_names, summary.ungrounded_items
+            ),
+            None,
+        );
+
+        // 7. Save.
+        let at = now_iso();
+        let report = EcoReport {
+            review: Some(rev),
+            state: AiState::Analyzed,
+            analyzed_at: Some(at.clone()),
+            analysis_run_id: Some(job.run_id.clone()),
+            model: inf.usage.served_by.clone().or(Some(job.model.clone())),
+            validation: Some(summary),
+            updated_at: at,
+            ..base
+        };
+        if let Err(e) = self.store.save_review(&report) {
+            step(trace, "save", false, e.clone(), None);
+            return out.fail(RunStatus::Failed, "storage", e, true);
+        }
+        step(
+            trace,
+            "save",
+            true,
+            "Review saved on this Mac.".into(),
+            None,
+        );
+        out.status = RunStatus::Succeeded;
+        out
+    }
+
+    /// Whether the weekly review is due: scheduled with consent, within budget, not already
+    /// running, and not attempted since the latest slot.
+    pub fn review_due(&self, now: DateTime<Utc>) -> bool {
+        let g = self.lock();
+        let s = &g.config.review.schedule;
+        if !s.enabled
+            || s.consent_at.is_none()
+            || cost::month_spend(&g.runs, now) >= g.config.monthly_budget_usd
+            || g.active.iter().any(|a| a.repo == REVIEW_KEY)
+        {
+            return false;
+        }
+        let Some(slot) = s.latest_slot(&now.with_timezone(&chrono::Local)) else {
+            return false;
+        };
+        g.runs
+            .iter()
+            .filter(|r| r.kind == RunKind::Ecosystem)
+            .filter_map(|r| DateTime::parse_from_rfc3339(&r.queued_at).ok())
+            .max()
+            .map_or(true, |t| t.with_timezone(&Utc) < slot)
+    }
+
     /// Repositories due for an unattended run. Nothing is due unless scheduling was turned
     /// on with consent, and nothing is started once the monthly budget is used up.
     pub fn due(&self, now: DateTime<Utc>) -> Vec<String> {
@@ -843,6 +1265,16 @@ impl Agent {
             if let Ok(r) = self.enqueue(&repo, Trigger::Scheduled, None, false, ctx) {
                 if !r.duplicate {
                     started.push(r.run_id);
+                }
+            }
+        }
+        // The scheduled review uses the catalog as it was at the last review.
+        if self.review_due(now) {
+            if let Some(ctx) = self.store.load_review().map(|r| r.context) {
+                if let Ok(r) = self.enqueue_review(Trigger::Scheduled, None, false, ctx) {
+                    if !r.duplicate {
+                        started.push(r.run_id);
+                    }
                 }
             }
         }
@@ -1105,6 +1537,7 @@ pub mod tests {
         let store = Store::new(dir.path().to_path_buf()).unwrap();
         let mut run = Run {
             id: "run_x".into(),
+            kind: RunKind::Repository,
             repo: "o/r".into(),
             trigger: Trigger::Manual,
             depth: Depth::Standard,
@@ -1355,5 +1788,136 @@ pub mod tests {
             ..Default::default()
         };
         assert!(validate_config(&c).is_err());
+    }
+
+    fn review_rig(model: FakeModel) -> Rig {
+        rig_with(
+            crate::intel::review::tests::with_checks(FakeGithub::healthy("o/r")),
+            model,
+            true,
+            None,
+        )
+    }
+
+    async fn review(r: &Rig, force: bool) -> Run {
+        r.agent
+            .enqueue_review(
+                Trigger::Manual,
+                None,
+                force,
+                crate::intel::review::tests::ctx(),
+            )
+            .unwrap();
+        idle(&r.agent).await;
+        last(&r.agent)
+    }
+
+    fn good_review() -> Result<claude::HttpReply, NetError> {
+        ok_reply(&crate::intel::review::tests::sample().to_string())
+    }
+
+    #[tokio::test]
+    async fn ecosystem_review_runs_once_and_reuses() {
+        let r = review_rig(FakeModel::new(vec![good_review(), good_review()]));
+        let run = review(&r, false).await;
+        assert_eq!(
+            run.status,
+            RunStatus::Succeeded,
+            "{:?} {:?}",
+            run.error,
+            run.trace
+        );
+        assert_eq!(run.kind, RunKind::Ecosystem);
+        assert_eq!(run.repo, REVIEW_KEY);
+        assert!(run.cost_usd.unwrap() > 0.0);
+        let rep = r.agent.review_report().unwrap();
+        assert_eq!(rep.state, AiState::Analyzed);
+        assert_eq!(rep.repos.len(), 1);
+        assert!(
+            rep.repos[0].findings.iter().any(|f| f.id == "prt:ci.yml"),
+            "{:?} {:?}",
+            rep.repos[0].findings,
+            rep.repos[0].checks
+        );
+        let rv = rep.review.unwrap();
+        assert_eq!(rv.recommendations[0].title, "Pin actions");
+        assert!(
+            r.agent.status().config.assigned.is_empty(),
+            "a review doesn't assign repositories to the repository agent"
+        );
+        let body = r.model.bodies.lock().unwrap()[0].clone();
+        assert!(body.get("tools").is_none());
+        assert!(body["system"]
+            .as_str()
+            .unwrap()
+            .contains("Senior Engineering Reviewer"));
+        // Every GitHub read stayed inside the catalog repository, and only GETs exist.
+        for p in r.gh.calls() {
+            assert!(p.starts_with("/repos/o/r"), "{p}");
+        }
+        let again = review(&r, false).await;
+        assert_eq!(again.status, RunStatus::Reused);
+        assert_eq!(r.model.calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn review_reuses_fresh_repository_reports() {
+        let r = review_rig(FakeModel::new(vec![good(), good_review()]));
+        analyze(&r, false).await;
+        let before = r.gh.calls().len();
+        let run = review(&r, false).await;
+        assert_eq!(run.status, RunStatus::Succeeded, "{:?}", run.error);
+        let calls = &r.gh.calls()[before..];
+        assert!(
+            !calls.iter().any(|p| p == "/repos/o/r"),
+            "facts came from the saved report: {calls:?}"
+        );
+        assert_eq!(r.agent.review_report().unwrap().reused_facts, 1);
+    }
+
+    #[tokio::test]
+    async fn review_respects_its_cap_and_keeps_the_old_review() {
+        let r = review_rig(FakeModel::new(vec![good_review()]));
+        review(&r, false).await;
+        let mut c = r.agent.status().config;
+        c.review.max_run_usd = 0.01;
+        r.agent.set_config(c).unwrap();
+        let run = review(&r, true).await;
+        assert_eq!(run.status, RunStatus::Blocked);
+        assert_eq!(run.error.unwrap().kind, "budget");
+        assert_eq!(r.model.calls(), 1, "nothing sent over the cap");
+        let rep = r.agent.review_report().unwrap();
+        assert_eq!(rep.state, AiState::Stale);
+        assert!(rep.review.is_some(), "the last good review is kept");
+        assert!(r.agent.review_estimate(None).unwrap().worst_case_usd > 0.01);
+    }
+
+    #[tokio::test]
+    async fn review_schedule_is_off_by_default_and_needs_consent() {
+        let r = review_rig(FakeModel::new(vec![good_review(), good_review()]));
+        review(&r, false).await;
+        let mut c = r.agent.status().config;
+        assert!(!c.review.schedule.enabled);
+        assert!(!r.agent.review_due(Utc::now() + chrono::Duration::days(8)));
+        c.review.schedule.enabled = true;
+        assert!(
+            r.agent.set_config(c.clone()).is_err(),
+            "no consent, no schedule"
+        );
+        c.review.schedule.consent_at = Some(now_iso());
+        c.review.schedule.days = vec![0, 1, 2, 3, 4, 5, 6];
+        r.agent.set_config(c).unwrap();
+        assert!(r.agent.review_due(Utc::now() + chrono::Duration::days(2)));
+        assert!(
+            r.agent
+                .enqueue_review(
+                    Trigger::Manual,
+                    None,
+                    false,
+                    crate::intel::review::EcoContext::default()
+                )
+                .is_err(),
+            "an empty catalog is refused"
+        );
     }
 }
