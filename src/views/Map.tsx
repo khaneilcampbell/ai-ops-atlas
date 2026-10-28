@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { residentsLabel } from "../catalog/roles";
+import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
 import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
@@ -392,6 +392,14 @@ function anchors(districts: District[], parks: Park[]) {
 
 export function MapView() {
   const { catalog, repos, uncataloged, select, selection, settings, setSettings, setView } = useAtlas();
+  const infrastructureMetrics = useMemo(() => {
+    const aiAgents = catalog.agents.filter(isAiAgent).length;
+    return [
+      { label: "Projects", count: catalog.projects.length },
+      { label: "AI Agents", count: aiAgents },
+      { label: "Automations", count: catalog.agents.length - aiAgents },
+    ];
+  }, [catalog]);
   const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapGroupBy", "none"));
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
@@ -1079,11 +1087,20 @@ export function MapView() {
           </svg>
           )}
 
-          <div className="map-intro">
-            <div className="eyebrow">Workspace map</div>
-            <h1>Welcome to the neighborhood.</h1>
-            <p className="lede small">Each project is a district. Its AI agents work inside the tall building, which lights up while they run. Houses are its automations, and kiosks are the outside services they use.</p>
-          </div>
+          <section className="map-intro" aria-labelledby="workspace-map-title">
+            <div className="eyebrow">WORKSPACE / INFRASTRUCTURE</div>
+            <h1 id="workspace-map-title">Your Digital Infrastructure.</h1>
+            <p className="map-intro-subheading">One connected ecosystem.</p>
+            <p className="map-intro-description">Explore the projects, agents, and automated systems powering your digital environment.</p>
+            <dl className="map-intro-metrics" aria-label="Infrastructure inventory">
+              {infrastructureMetrics.map(({ label, count }) => (
+                <div key={label}>
+                  <dt><i aria-hidden="true" />{label}</dt>
+                  <dd>{count.toLocaleString()}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
           {tip && (
             <div className="map-tip" style={{ left: tip.x, top: tip.y }}>
