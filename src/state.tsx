@@ -8,7 +8,7 @@ import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
 
-export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "settings";
+export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
 
 export interface Settings {

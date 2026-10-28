@@ -14,6 +14,7 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { UsageView } from "./views/Usage";
 import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { PHONE_QUERY, useMedia } from "./lib/media";
@@ -24,6 +25,7 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
+  { view: "usage", label: "API Usage", icon: "usage" },
   { view: "repos", label: "Repos", icon: "repos" },
 ];
 
@@ -100,6 +102,7 @@ export default function App() {
         {view === "repos" && <ReposView />}
         {view === "map" && <MapView />}
         {view === "intel" && <IntelligenceView />}
+        {view === "usage" && <UsageView />}
         {view === "settings" && <SettingsView />}
       </main>
 

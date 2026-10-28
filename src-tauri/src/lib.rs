@@ -23,6 +23,7 @@ pub fn run() {
             secrets::anthropic_key_set,
             secrets::anthropic_key_clear,
             intel::intel_status,
+            intel::intel_runs,
             intel::intel_report,
             intel::intel_reports,
             intel::intel_analyze,

@@ -233,6 +233,11 @@ impl Agent {
         }
     }
 
+    /// Every run still held, oldest first, for local usage totals.
+    pub fn runs(&self) -> Vec<Run> {
+        self.lock().runs.clone()
+    }
+
     pub fn report(&self, repo: &str) -> Option<Report> {
         self.store.load_report(repo)
     }
