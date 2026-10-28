@@ -1,0 +1,645 @@
+{
+  "name": "Flow · 2 Status updates",
+  "nodes": [
+    {
+      "id": "41586b49-06ab-4e2a-92e5-413029405f89",
+      "name": "Status Link Opened",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "flow-status",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "51766eb7-9586-411a-b15e-2c0d91e03b6f"
+    },
+    {
+      "id": "add6d0b1-5514-4bb5-aafa-81fd3645679b",
+      "name": "Render Confirm Page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const q = $json.query || {};\nconst ref = String(q.ref || '');\nconst t = String(q.t || '');\nconst s = String(q.s || '');\nconst labels = { replied: 'Mark as replied?', won: 'Mark as a new client?', lost: 'Close this inquiry?' };\nconst notes = { replied: 'This stops the reminders. Nothing is sent to them.', won: 'They will receive your welcome and onboarding email.', lost: 'Use this for no reply, went elsewhere, or a test. Nothing is sent to them.' };\nconst ok = /^INQ-[0-9]{6}-[A-F0-9]{6}$/.test(ref) && /^[a-f0-9]{48}$/.test(t) && Object.prototype.hasOwnProperty.call(labels, s);\nconst body = ok\n  ? '<h1>' + labels[s] + '</h1><p>Inquiry ' + ref + '</p><p>' + notes[s] + '</p><form method=\"post\" action=\"/webhook/flow-status-confirm\"><input type=\"hidden\" name=\"ref\" value=\"' + ref + '\"><input type=\"hidden\" name=\"t\" value=\"' + t + '\"><input type=\"hidden\" name=\"s\" value=\"' + s + '\"><button type=\"submit\">Confirm</button></form>'\n  : '<h1>This link is not valid</h1><p>Open the latest alert email for this inquiry and try again.</p>';\nreturn { json: { html: body } };"
+      }
+    },
+    {
+      "id": "c585eb6f-6798-4652-abc2-777d2d52f0dc",
+      "name": "Show Confirm Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main>{{ $json.html }}<p><small>Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "X-Frame-Options",
+                "value": "DENY"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "588562fa-6e73-460e-a702-84a954fadb96",
+      "name": "Status Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        360
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flow-status-confirm",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "8118709a-b22b-43da-916f-c2bc7efe14f8"
+    },
+    {
+      "id": "9c34ad59-b2a3-46f6-8be5-cf81fbe19c56",
+      "name": "Read Status Form",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        360
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-ref",
+              "name": "ref",
+              "value": "={{ /^INQ-[0-9]{6}-[A-F0-9]{6}$/.test(String($json.body?.ref ?? '')) ? $json.body.ref : 'invalid' }}",
+              "type": "string"
+            },
+            {
+              "id": "f-t",
+              "name": "t",
+              "value": "={{ /^[a-f0-9]{48}$/.test(String($json.body?.t ?? '')) ? $json.body.t : 'invalid' }}",
+              "type": "string"
+            },
+            {
+              "id": "f-s",
+              "name": "s",
+              "value": "={{ ['replied', 'won', 'lost'].includes(String($json.body?.s ?? '')) ? $json.body.s : 'invalid' }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9d55a71f-a539-4c74-bd64-d9ea9214d442",
+      "name": "Find Inquiry",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        360
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_ref",
+              "condition": "eq",
+              "keyValue": "={{ $json.ref }}"
+            },
+            {
+              "keyName": "action_token",
+              "condition": "eq",
+              "keyValue": "={{ $json.t }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "b1183359-2df4-4302-97c2-2b2d90064c33",
+      "name": "Link Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.inquiry_ref ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "={{ $(\"Read Status Form\").item.json.ref }}"
+            },
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.s }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "invalid"
+            },
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.t }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "invalid"
+            },
+            {
+              "id": "c61556de-2130-4421-8f37-5e59c4e3f72b",
+              "leftValue": "={{ $json.token_expires_at ? new Date($json.token_expires_at).getTime() > Date.now() : true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8759d61d-4845-42f9-85f4-9046db0257af",
+      "name": "Update Status",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_ref",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Read Status Form\").item.json.ref }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $(\"Read Status Form\").item.json.s }}",
+            "status_changed_at": "={{ $now.toISO() }}",
+            "reminded": true
+          }
+        }
+      }
+    },
+    {
+      "id": "2f57eb15-55dc-4e16-ab1f-2ad29ef32c81",
+      "name": "Log Status Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $(\"Read Status Form\").item.json.ref }}",
+            "event": "=status_{{ $(\"Read Status Form\").item.json.s }}",
+            "detail": "=from {{ $(\"Find Inquiry\").item.json.status }} to {{ $(\"Read Status Form\").item.json.s }}",
+            "at": "={{ $now.toISO() }}"
+          }
+        }
+      }
+    },
+    {
+      "id": "4bb2a5c3-ef06-43c9-93d9-c5da903170c0",
+      "name": "Newly Won?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.s }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "won"
+            },
+            {
+              "leftValue": "={{ $(\"Find Inquiry\").item.json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "won"
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "1fe72b6e-0ea5-43ef-a995-c6302c1db67c",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "034bae77-ea60-4eb3-b7bd-5d7622009205",
+      "name": "Compose Welcome Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const inq = $('Find Inquiry').item.json;\nconst s = $json;\nconst esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); };\nconst HEADER = function () { return s.logo_url ? '<img src=\"' + esc(s.logo_url) + '\" width=\"' + (Number(s.logo_width) || 152) + '\" height=\"' + (Number(s.logo_height) || 24) + '\" alt=\"' + esc(s.firm_name) + '\" style=\"display:block;border:0;outline:none;color:#f3f3f1;font:600 14px/24px Arial,sans-serif;letter-spacing:3px\">' : '<span style=\"font:600 14px/24px Arial,sans-serif;letter-spacing:3px;color:#f3f3f1\">' + esc(String(s.firm_name || '').toUpperCase()) + '</span>'; };\nconst FONT = \"Inter,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif\";\nconst MONO = \"'IBM Plex Mono',Menlo,Consolas,monospace\";\nconst P = function (t) { return '<p style=\"margin:0 0 14px\">' + t + '</p>'; };\nconst button = function (url, label) { return '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 10px\"><tr><td style=\"background:#1f2124;border-radius:999px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:12px 22px;font:500 14px/1 ' + FONT + ';color:#ffffff;text-decoration:none;border-radius:999px\">' + label + '</a></td></tr></table>'; };\nconst shell = function (inner, footExtra) {\n  return '<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"></head><body style=\"margin:0;padding:0;background:#f3f3f1\">' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f3f1\"><tr><td align=\"center\" style=\"padding:24px 12px\">' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;background:#ffffff;border:1px solid #dcdddb;border-radius:12px;border-collapse:separate;overflow:hidden\">' +\n  '<tr><td style=\"background:#121315;padding:22px 28px;border-radius:12px 12px 0 0\">' + HEADER() + '</td></tr>' +\n  '<tr><td style=\"padding:28px;font:15px/1.6 ' + FONT + ';color:#1f2124\">' + inner + '</td></tr>' +\n  '<tr><td style=\"background:#f3f3f1;border-top:1px solid #dcdddb;padding:20px 28px;font:12px/1.7 ' + FONT + ';color:#565b62;border-radius:0 0 12px 12px\">' +\n  '<div style=\"font-family:' + MONO + ';font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#6f747b\">' + esc(s.firm_name) + (s.brand_address ? ' &middot; ' + esc(s.brand_address) : '') + '</div>' +\n  '<div>' + (s.website_url ? '<a href=\"' + esc(s.website_url) + '\" style=\"color:#565b62\">' + esc(String(s.website_url).replace(/^https?:\\/\\//, '').replace(/\\/$/, '')) + '</a> &middot; ' : '') + esc(s.public_email || s.reply_to_email || '') + '</div>' +\n  (footExtra ? '<div>' + footExtra + '</div>' : '') +\n  '</td></tr></table></td></tr></table></body></html>';\n};\nconst first = String(inq.name || '').trim().split(/\\s+/)[0] || 'there';\nconst docs = String(s.onboarding_docs || '').split(';').map(function (d) { return d.trim(); }).filter(Boolean);\nconst step = function (n, title, body) { return '<tr><td width=\"36\" valign=\"top\" style=\"padding:0 0 14px\"><div style=\"width:24px;height:24px;border:1px solid #dcdddb;border-radius:50%;text-align:center;font:12px/24px ' + MONO + ';color:#565b62\">' + n + '</div></td><td valign=\"top\" style=\"padding:0 0 14px\"><div style=\"font-weight:600;color:#1f2124\">' + title + '</div><div style=\"font-size:14px;color:#565b62\">' + body + '</div></td></tr>'; };\nconst docsBody = docs.length ? 'Please send us: ' + docs.map(esc).join('; ') + '.' : 'Anything that shows how you handle inquiries and onboarding today.';\nlet n = 1;\nconst steps = step(n++, 'Send us a few things', docsBody) +\n  (s.booking_link ? step(n++, 'Book the kickoff call', 'Choose a time to map your process and agree on what we automate first.') : '') +\n  step(n++, 'Review your first workflow', 'We&rsquo;ll send it to you for testing before anything goes live.');\nconst html = shell(\n  P('Hi ' + esc(first) + ',') +\n  P('Welcome to ' + esc(s.firm_name) + '. We&rsquo;re glad to be working with ' + esc(inq.company || 'you') + '. Here&rsquo;s how we&rsquo;ll get started.') +\n  '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:6px 0 6px\">' + steps + '</table>' +\n  (s.booking_link ? button(s.booking_link, 'Choose a kickoff time') : '') +\n  P('Reply to this email with any questions.') +\n  '<p style=\"margin:0\"><b style=\"font-weight:600\">The ' + esc(s.firm_name) + ' team</b><br><span style=\"font-size:14px;color:#565b62\">' + esc(s.public_email || s.reply_to_email || '') + '</span></p>'\n);\nreturn { json: { to: inq.email, subject: 'Welcome to ' + s.firm_name + ': your next steps', html: html, firm_name: s.firm_name, owner_email: s.owner_email } };\n"
+      }
+    },
+    {
+      "id": "76c2af1d-0205-4e24-87ab-a78b42000141",
+      "name": "Show Won Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2200,
+        200
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>Marked as a new client</h1><p>{{ $json.id ? \"The welcome and onboarding email is on its way to the client.\" : \"The status is saved, but the welcome email could not be sent. Please send it yourself.\" }}</p><p><small>Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "6f9a6cf5-eeb6-400f-b6a1-e48bca8811d0",
+      "name": "Show Updated Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1540,
+        420
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>Status saved</h1><p>Inquiry {{ $(\"Read Status Form\").item.json.ref }} is now {{ ({ replied: \"marked as replied\", won: \"marked as a client\", lost: \"closed: no deal\" })[$(\"Read Status Form\").item.json.s] }}. Nothing was sent to them.</p><p><small>Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "e07ef43b-62a4-459e-a7e2-442e222e4dae",
+      "name": "Show Invalid Link",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        560
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>This link is not valid</h1><p>Open the latest alert email for this inquiry and try again.</p><p><small>Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 404,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "b6cc13de-7f04-4ffd-96dc-4317bffedf82",
+      "name": "Sticky Note f505ac3e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "content": "## Flow · Status updates\nThe owner alert links to GET /webhook/flow-status. That only shows a confirm page, so email link scanners cannot change anything. The Confirm button POSTs to /webhook/flow-status-confirm, which checks the reference and its one time token, updates the status, logs it, and on a first win sends the client the welcome and onboarding email.\n\nLinks stop working after token_ttl_days (30 by default).",
+        "color": 7,
+        "width": 560,
+        "height": 240
+      }
+    },
+    {
+      "id": "b1249c4f-4809-4c06-b235-bccc61af0a66",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "contentType": "json",
+        "genericAuthType": "httpBearerAuth",
+        "jsonBody": "={{ JSON.stringify({ from: $('Load Client Settings').first().json.from_address, to: [$json.to], reply_to: $('Load Client Settings').first().json.reply_to_email, subject: $json.subject, html: $json.html }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.resend.com/emails"
+      },
+      "notes": "Welcome and onboarding email from contact@ through Resend.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Status Link Opened": {
+      "main": [
+        [
+          {
+            "node": "Render Confirm Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Confirm Page": {
+      "main": [
+        [
+          {
+            "node": "Show Confirm Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Read Status Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Status Form": {
+      "main": [
+        [
+          {
+            "node": "Find Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Link Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Valid?": {
+      "main": [
+        [
+          {
+            "node": "Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Invalid Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status": {
+      "main": [
+        [
+          {
+            "node": "Log Status Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Status Event": {
+      "main": [
+        [
+          {
+            "node": "Newly Won?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newly Won?": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Updated Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Compose Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Show Won Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

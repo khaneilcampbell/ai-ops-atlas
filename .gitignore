@@ -3,3 +3,6 @@ dist/
 .wrangler/
 .dev.vars
 worker/worker-configuration.d.ts
+
+# The Flow kit zip is the shipped product, so keep it
+!products/flow/dist/
