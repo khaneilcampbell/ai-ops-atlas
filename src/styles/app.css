@@ -666,6 +666,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
   .m3-plaque, .m3-pill { transition: none; }
 }
 .m3-pill.hood { background: rgba(29, 43, 34, 0.82); color: #e9e6d4; border-color: rgba(201, 163, 90, 0.4); letter-spacing: 0.12em; font-size: 10.5px; cursor: default; }
+.m3-pill.hood.district { background: rgba(29, 43, 34, 0.6); border-color: transparent; color: #e7d6a8; letter-spacing: 0.18em; font-size: 10px; font-weight: 600; box-shadow: none; }
 
 /* Approval-required actions */
 .btn.small { padding: 3px 9px; font-size: 11.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -736,3 +737,4 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .rec-head .grow { flex: 1; min-width: 12ch; }
 .table-wrap { overflow-x: auto; margin: 0 -4px; }
 .table.compact th, .table.compact td { padding: 8px 10px; }
+.map-legend .lens-note b { font-weight: 600; }

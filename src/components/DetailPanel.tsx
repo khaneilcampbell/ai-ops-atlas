@@ -12,6 +12,7 @@ import { PullRequests } from "./PullRequests";
 import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
+import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -85,6 +86,7 @@ function AgentDetail({ id }: { id: string }) {
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>
+          <AgentOrganizationRows id={agent.id} />
           <dt>Repository</dt>
           <dd>
             <button className="text-btn" style={{ padding: 0 }} onClick={() => select({ kind: "repo", id: agent.repository })}>
@@ -225,6 +227,8 @@ function RepoDetail({ name }: { name: string }) {
           )}
           {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
 
+          {project && <ProjectOrganization project={project} agents={agents} latest={history[0]} />}
+
           <section>
             <div className="section-head">
               <div className="section-title">Verified health</div>
@@ -344,34 +348,14 @@ function RepoDetail({ name }: { name: string }) {
         )}
         {tab === "agents" && (
           <>
-          <section>
-            <div className="section-head">
-              <div className="section-title">Agents ({agents.length})</div>
-              <span className="source">Declared in the manifest</span>
-            </div>
             {agents.length === 0 ? (
-              <div className="muted small">{project ? "No agents are registered for this project." : "Add a manifest in catalog/ to register this repository's agents."}</div>
+              <section>
+                <div className="section-title">Agents (0)</div>
+                <div className="muted small">{project ? "No agents are registered for this project." : "Add a manifest in catalog/ to register this repository's agents."}</div>
+              </section>
             ) : (
-              <ul className="list" style={{ padding: 0 }}>
-                {agents.map((a) => (
-                  <li key={a.id}>
-                    <button className="list-row" onClick={() => select({ kind: "agent", id: a.id })}>
-                      <i className="roof" style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
-                      <span className="grow">
-                        <div className="title">{a.name}</div>
-                        <div className="meta">
-                          {a.framework}
-                          {a.trigger ? ` · ${a.trigger}` : ""}
-                        </div>
-                      </span>
-                      <StatusPill status={a.status} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <GroupedAgents agents={agents} onPick={(id) => select({ kind: "agent", id })} />
             )}
-          </section>
-
           </>
         )}
         {tab === "activity" && (

@@ -11,6 +11,7 @@ project:
   status: active
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
+  district: business-operations
   links:
     - label: Live site
       url: https://benjaire.com

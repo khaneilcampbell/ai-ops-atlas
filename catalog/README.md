@@ -172,3 +172,18 @@ Atlas follows GitHub on every refresh, on the desktop app and the iPhone web bui
 - **Archived repository.** Hidden the same way, and back as soon as it is unarchived.
 - **Renamed repository.** GitHub redirects the old name, so the project keeps working, and the new name isn't listed a second time as uncataloged. The Repositories page suggests updating the manifest.
 - **New repository.** Owner discovery lists it as uncataloged until it gets a manifest.
+
+## Districts, tiers and automation categories
+
+The map groups projects into five infrastructure districts, and the inspector shows each item's tier and function. All three can be declared; anything left out is worked out by fixed rules in `src/catalog/organization.ts` (no model), and the app says which it is. Details: [docs/organization.md](../docs/organization.md).
+
+```yaml
+project:
+  district: ai-operations          # ai-operations | business-operations | ai-engineering | security-infrastructure | career-portfolio
+
+agents:
+  - id: commerce-loop
+    registry:
+      tier: coordinator            # central | coordinator | specialized
+      automation_category: business  # ci | security | monitoring | business | intelligence | maintenance
+```

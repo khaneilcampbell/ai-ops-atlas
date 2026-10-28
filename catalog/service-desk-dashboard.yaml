@@ -10,6 +10,7 @@ project:
   status: active
   repository: khaneilcampbell/service-desk-dashboard
   tags: [itsm, dashboard]
+  district: security-infrastructure
 
 agents:
   - id: service-desk-codeql
