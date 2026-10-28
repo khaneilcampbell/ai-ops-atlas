@@ -6,8 +6,7 @@ project:
   id: service-desk
   name: Service Desk Intelligence Dashboard
   summary: >-
-    Turns service desk ticket data into volume, backlog, SLA health, recurring
-    issue and workload insight. Early setup; the app stack is not committed yet.
+    Streamlit dashboard that turns service desk ticket data into volume, backlog, SLA health, recurring issue and workload insight. Runs on synthetic tickets.
   status: active
   repository: khaneilcampbell/service-desk-dashboard
   tags: [itsm, dashboard]
@@ -24,15 +23,30 @@ agents:
     observe:
       github_workflow: codeql.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: security-events write (upload results), actions read, contents read'
+      - No repository secrets
     registry:
       title: Service Desk CodeQL Scan
       category: security
       subcategory: Vulnerability assessment
       classification:
         type: D
-        confidence: unverified
-        evidence: Private repository; classified from the manifest only
+        confidence: verified
+        evidence: .github/workflows/codeql.yml runs CodeQL security-extended queries on actions and python; no AI model
+      mission:
+        problem: Finds security issues in the Python app and the workflows before they merge.
+        outcomes:
+          - Code scanning alerts for every pull request and weekly
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Analyze the Python code, Analyze the GitHub Actions workflows, Upload results to code scanning]
+        tools: [GitHub Actions, CodeQL]
+        inputs:
+          - Pushes to main, pull requests, weekly schedule
+        outputs: [Code scanning alerts, Check results]
       goals:
+        objective: Catch security issues before merge.
         kpis:
           - name: Run success rate
             kind: reliability
@@ -40,7 +54,19 @@ agents:
             basis: Observed from GitHub Actions; no target agreed yet
       execution:
         trigger_type: event
+        schedule: Pull requests, pushes to main, and Mondays at 06:23 UTC
         environment: GitHub-hosted runner
       governance:
         autonomy: 0
+        data_sensitivity: public
+        credential_owner: KC (GitHub repository settings)
+        risk: low
         audit_log: GitHub Actions run history
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/service-desk-dashboard.md#codeql-scan
+        known_issues:
+          - ci.yml (lint, tests, container smoke test, secret scan, dependency review) also runs but is not in the catalog
+        improvements:
+          - Add ci.yml to the catalog
+        last_review: 2026-10-28

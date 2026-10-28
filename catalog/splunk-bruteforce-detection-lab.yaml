@@ -32,6 +32,9 @@ agents:
     history:
       - at: 2026-10-11
         event: Automation script restored to the repository
+    permissions:
+      - Splunk REST API with the lab account in SPLUNK_USER and SPLUNK_PASS
+      - Writes Markdown notes to notes/
     registry:
       title: SOC Case Note Generator
       category: security
@@ -40,6 +43,10 @@ agents:
         type: C
         confidence: verified
         evidence: soc_automation.py calls the Splunk REST API and formats a Markdown note; no AI model is called
+      mission:
+        problem: Writing a case note from search results by hand is slow and inconsistent.
+        outcomes:
+          - A Markdown case note per run listing each alert with account, source and severity
       responsibilities:
         tasks: [Authenticate to the Splunk REST API, Run the brute-force search, Write a structured case note]
         tools: [Splunk REST API, Python requests]
@@ -53,10 +60,22 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: internal
+        credential_owner: KC (lab Splunk account, set as environment variables)
         risk: low
       docs:
         technical: WALKTHROUGH.md
-        known_issues: [The project name says AI-assisted, which refers to how the lab was built, not to this script]
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#soc-case-note-automation
+        known_issues:
+          - The project name says AI-assisted, which refers to how the lab was built, not to this script
+          - TLS verification is off (verify=False) for the lab's self-signed certificate
+          - 'Its built-in search differs from queries/brute_force_detection.spl: it rates 20 or more failures High and 10 to 19 Medium, while the file rates every hit High'
+          - The search sets no time range, so it scans all indexed data
+          - No KPI is defined yet
+        improvements:
+          - Load the search from queries/ so the two can't drift
+          - Add a time range
+          - Clear exit codes and a retry on network errors
+        last_review: 2026-10-28
 
   - id: bruteforce-detection
     name: Brute Force Detection Search
@@ -69,6 +88,8 @@ agents:
     trigger: Splunk search or alert
     source: queries/brute_force_detection.spl
     last_run: null
+    permissions:
+      - Splunk search on index main (WinEventLog:Security)
     registry:
       title: SMB Brute Force Detection Rule
       category: security
@@ -77,6 +98,10 @@ agents:
         type: C
         confidence: verified
         evidence: queries/brute_force_detection.spl flags 10 or more EventCode 4625 failures per account and source in 5 minutes
+      mission:
+        problem: Repeated failed SMB logons from one source are a brute-force signal buried in Windows Security logs.
+        outcomes:
+          - One row per account and source over the threshold, rated by severity
       responsibilities:
         tasks: [Flag repeated failed SMB logons from one source]
         tools: [Splunk SPL]
@@ -88,9 +113,18 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: internal
+        credential_owner: KC (lab Splunk account)
         risk: low
       docs:
-        known_issues: [Whether it runs as a scheduled Splunk alert is not in the repository]
+        technical: WALKTHROUGH.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#brute-force-detection-search
+        known_issues:
+          - Whether it runs as a scheduled Splunk alert is not in the repository
+          - Fixed 5 minute buckets can split one burst across two buckets and miss it
+          - No KPI is defined yet
+        improvements:
+          - Use a sliding window (streamstats) and save it as a scheduled alert
+        last_review: 2026-10-28
 
   - id: soc-lab-ci
     name: SOC Lab CI
@@ -103,6 +137,9 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: SOC Lab Continuous Integration
       category: engineering
@@ -136,3 +173,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#soc-lab-ci
+        known_issues:
+          - security-guardrails.yml (gitleaks and inline secret checks) also runs but is not in the catalog
+        improvements:
+          - Add security-guardrails.yml to the catalog
+        last_review: 2026-10-28

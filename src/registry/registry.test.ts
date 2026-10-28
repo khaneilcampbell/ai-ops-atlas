@@ -38,15 +38,15 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 10 projects and 36 agents discoverable with no manifest problems", () => {
+  it("keeps all 10 projects and 40 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(10);
-    expect(entries).toHaveLength(36);
+    expect(entries).toHaveLength(40);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 4, C: 12, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 5, C: 15, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -244,7 +244,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(36);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(40);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -256,8 +256,11 @@ describe("directory", () => {
 
   it("lists items that need review with a reason", () => {
     const s = summarize(entries);
-    const flow = s.needsReview.find((e) => e.profile.id === "benjaire-flow-intake");
-    expect(flow?.review).toContain("Classification is provisional");
+    const loop = s.needsReview.find((e) => e.profile.id === "commerce-loop");
+    expect(loop?.review).toContain("High risk");
+    // Every classification is verified and every agent that acts on external systems documents its permissions.
+    const reasons = s.needsReview.flatMap((e) => e.review);
+    expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
     expect(s.observable).toBe(12);
   });
 });
