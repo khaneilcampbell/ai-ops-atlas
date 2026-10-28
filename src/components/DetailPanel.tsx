@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
-import { ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
+import { CopyValue, ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
 import { activityFeed, attentionItems, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
 import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
@@ -114,7 +114,9 @@ function AgentDetail({ id }: { id: string }) {
           {agent.source && (
             <>
               <dt>Source</dt>
-              <dd className="mono">{agent.source}</dd>
+              <dd className="mono">
+                <CopyValue value={agent.source} title="Copy source path" />
+              </dd>
             </>
           )}
           <dt>Last run</dt>
@@ -195,7 +197,7 @@ function RepoDetail({ name }: { name: string }) {
     <>
       <Head eyebrow={project ? "Project" : "Repository · Not in the catalog yet"} title={project?.name ?? name.split("/")[1]}>
         <div className="mono muted" style={{ marginTop: 4 }}>
-          {name}
+          <CopyValue value={name} title="Copy repository name" />
         </div>
         <div className="chips" style={{ marginTop: 10 }}>
           {project && <StatusPill status={project.status} />}
@@ -222,7 +224,7 @@ function RepoDetail({ name }: { name: string }) {
           <>
           {state?.kind === "error" && (
             <div className="notice">
-              <Icon name="alert" size={15} /> {state.message}
+              <Icon name="alert" size={15} /> <CopyValue value={state.message} title="Copy error" />
             </div>
           )}
           {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}

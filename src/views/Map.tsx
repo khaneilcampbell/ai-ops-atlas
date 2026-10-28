@@ -1110,7 +1110,7 @@ export function MapView() {
           </svg>
           )}
 
-          <section className="map-intro" aria-labelledby="workspace-map-title">
+          <section className="map-intro selectable" aria-labelledby="workspace-map-title">
             <div className="eyebrow">WORKSPACE / INFRASTRUCTURE</div>
             <h1 id="workspace-map-title">Your Digital Infrastructure.</h1>
             <p className="map-intro-subheading">One connected ecosystem.</p>

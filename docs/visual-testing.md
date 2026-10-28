@@ -34,6 +34,10 @@ in `playwright-report/`.
 Mission Control Active agents tab is on main). The list is in `visual/views.visual.ts`;
 a new view is one more test there.
 
+`visual/copy.visual.ts` has no screenshots: it checks that text can be selected in every
+view (desktop and phone), that the map stage and nav stay unselectable so drags still pan,
+and that the inspector's copy button puts the repository name on the clipboard.
+
 ## How it works
 
 - **No desktop parts.** In a browser the app already skips Tauri: no Keychain, vault,

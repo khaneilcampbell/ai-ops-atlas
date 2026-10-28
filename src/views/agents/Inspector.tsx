@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Icon } from "../../components/Icon";
-import { ExternalLink, StatusPill } from "../../components/bits";
+import { CopyButton, ExternalLink, StatusPill } from "../../components/bits";
 import { attentionItems, repoData } from "../../lib/derive";
 import { formatDate, relative } from "../../lib/time";
 import type { RegistryEntry } from "../../registry/registry";
@@ -279,9 +279,19 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
                 <dt>Repository</dt>
                 <dd>
                   <ExternalLink href={p.repositoryUrl}>{p.repository}</ExternalLink>
+                  <CopyButton compact text={() => p.repository} title="Copy repository name" />
                 </dd>
                 <dt>Source</dt>
-                <dd className="mono">{p.docs.source ? <ExternalLink href={sourceUrl(p.docs.source)}>{p.docs.source}</ExternalLink> : <NA />}</dd>
+                <dd className="mono">
+                  {p.docs.source ? (
+                    <>
+                      <ExternalLink href={sourceUrl(p.docs.source)}>{p.docs.source}</ExternalLink>
+                      <CopyButton compact text={() => p.docs.source!} title="Copy source path" />
+                    </>
+                  ) : (
+                    <NA />
+                  )}
+                </dd>
                 <dt>Technical notes</dt>
                 <dd className="mono">{p.docs.technical ? <DocLink href={p.docs.technical} url={sourceUrl} /> : <NA />}</dd>
                 <dt>Runbook</dt>
