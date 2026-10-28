@@ -77,6 +77,43 @@
             },
             "additionalProperties": false
           }
+        },
+        "connections": {
+          "type": "array",
+          "description": "Relationships to other projects or agents, stated only when verified. The map draws each one.",
+          "items": {
+            "type": "object",
+            "required": [
+              "to",
+              "type",
+              "note"
+            ],
+            "properties": {
+              "to": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "type": {
+                "enum": [
+                  "github",
+                  "agent",
+                  "n8n",
+                  "dependency"
+                ]
+              },
+              "direction": {
+                "enum": [
+                  "outbound",
+                  "inbound"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
         }
       }
     },

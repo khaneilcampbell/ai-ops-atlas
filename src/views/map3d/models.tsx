@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
-import { billboardTexture, facadeTexture, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, windowLights } from "./materials";
+import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, windowLights } from "./materials";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -141,7 +141,7 @@ export function useMaterials() {
   return useMemo(() => {
     const cliff = patterned("#b39874", "cliff");
     const wall = patterned("#d6cbb2", "wall");
-    return {
+    const set = {
       land: [cliff, cliff, patterned("#7aae4f", "grass"), cliff, cliff, cliff],
       terrace: [wall, wall, patterned("#86b958", "grass"), wall, wall, wall],
       sand: patterned("#e4d3a3", "sand"),
@@ -173,6 +173,8 @@ export function useMaterials() {
       // Ground glow under lamps; its opacity follows the night (see the lighting in Map3D).
       pool: new THREE.MeshBasicMaterial({ color: "#ffc874", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, visible: false }),
     };
+    for (const v of Object.values(set)) (v instanceof THREE.Material ? [v] : Object.values(v)).forEach(focusable);
+    return set;
   }, []);
 }
 
@@ -636,7 +638,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
 }
 
 const signMaterial = (map: THREE.Texture, opts: THREE.MeshStandardMaterialParameters = {}) =>
-  new THREE.MeshStandardMaterial({ map, emissiveMap: map, emissive: "#ffffff", emissiveIntensity: 0.55, roughness: 0.45, ...opts });
+  focusable(new THREE.MeshStandardMaterial({ map, emissiveMap: map, emissive: "#ffffff", emissiveIntensity: 0.55, roughness: 0.45, ...opts }));
 
 /**
  * A headquarters' identity: its symbol on raised, lit signs on the two faces the camera sees,
@@ -646,7 +648,7 @@ function BuildingIdentitySigns({ t, g }: { t: Tower; g: G }) {
   const { identity: id } = t;
   const mats = useMemo(() => {
     const sign = signMaterial(signTexture(id, t.name), id.style === "secure" ? { transparent: true, alphaTest: 0.4 } : {});
-    const frame = new THREE.MeshStandardMaterial({ color: id.accent, roughness: 0.5, metalness: 0.2 });
+    const frame = focusable(new THREE.MeshStandardMaterial({ color: id.accent, roughness: 0.5, metalness: 0.2 }));
     const [owner] = t.repository.split("/");
     const board =
       id.style === "timber"
@@ -689,5 +691,5 @@ function BuildingIdentitySigns({ t, g }: { t: Tower; g: G }) {
   );
 }
 
-const woodMaterial = new THREE.MeshStandardMaterial({ color: "#8f6640", roughness: 0.8 });
-const darkMaterial = new THREE.MeshStandardMaterial({ color: "#2a3138", roughness: 0.6 });
+const woodMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#8f6640", roughness: 0.8 }));
+const darkMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#2a3138", roughness: 0.6 }));

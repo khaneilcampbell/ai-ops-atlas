@@ -1,7 +1,7 @@
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader } from "./reader";
-import { SCHEMAS, type Agent, type Catalog, type ManifestIssue, type Project } from "./types";
+import { CONNECTION_TYPES, SCHEMAS, type Agent, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
 export function parseManifest(file: string, text: string, issues: ManifestIssue[]): Catalog {
@@ -79,6 +79,18 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
     links: r.links(p, "project"),
     agentIds: agents.map((a) => a.id),
+    connections: r.list(p, "connections", "project").flatMap((c, i): DeclaredConnection[] => {
+      const path = `project.connections[${i}]`;
+      const co = r.obj(c, path);
+      if (!co) return [];
+      const to = r.str(co, "to", path);
+      const type = r.oneOf(co, "type", path, CONNECTION_TYPES);
+      if (co.type === undefined) r.fail(`${path}.type`, "is required");
+      const note = r.str(co, "note", path);
+      const direction = r.oneOf(co, "direction", path, ["outbound", "inbound"] as const);
+      return to && type && note ? [{ to, type, note, ...(direction ? { direction } : {}) }] : [];
+    }),
+    file: file.split("/").pop(),
   };
   return { projects: [project], agents };
 }
@@ -108,5 +120,9 @@ export function buildCatalog(files: Record<string, string>): { catalog: Catalog;
       catalog.agents.push(a);
     }
   }
+  // A declared connection must point at something in the catalog; it is never guessed.
+  for (const p of catalog.projects)
+    for (const c of p.connections ?? [])
+      if (!seenProjects.has(c.to) && !seenAgents.has(c.to)) issues.push({ file: p.file ?? p.id, message: `project.connections: "${c.to}" is not a project or agent id` });
   return { catalog, issues };
 }
