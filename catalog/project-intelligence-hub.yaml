@@ -11,6 +11,7 @@ project:
   status: active
   repository: khaneilcampbell/project-intelligence-hub
   tags: [documentation, claude]
+  district: ai-engineering
 
 agents:
   - id: docs-builder

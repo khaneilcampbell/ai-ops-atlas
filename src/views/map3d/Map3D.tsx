@@ -67,6 +67,8 @@ interface Props {
   linkTip: (id: string) => { title: string; sub: string } | null;
   /** Selecting a building shows only its connections and fades the rest of the map. */
   linkFocus: boolean;
+  /** Draw links inside one project even when zoomed out (the Agent network and Automation flow views). */
+  showLocal?: boolean;
   /** Connection particles move; off when paused in the toolbar or for reduced motion. */
   linksMoving: boolean;
   /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
@@ -120,7 +122,7 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus } = props;
+  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
@@ -166,7 +168,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         continue;
       }
       // Links inside one project only up close, or around the project in hand.
-      if (l.pa === l.pb && near === "far" && !inHand(l.pa)) continue;
+      if (!showLocal && l.pa === l.pb && near === "far" && !inHand(l.pa)) continue;
       shown.push({ l, level: l.status === "active" || l.status === "unhealthy" ? "strong" : "weak" });
     }
     // Many links at once: keep only failures at full strength so the map stays readable.
@@ -179,7 +181,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       for (const s of shown) for (const p of [s.l.pa, s.l.pb]) if (p) focusSet.add(p);
     }
     return { shown, picked, focusSet };
-  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus]);
+  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus, showLocal]);
 
   // Labels: project plaques always, agent pills once zoomed in (or for the hovered or selected agent).
   const labels = useMemo(() => {
@@ -296,8 +298,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // Neighborhood names when the map is grouped, at the back corner of each landmass.
     for (const n of layout.neighborhoods) {
       if (!n.label || layout.neighborhoods.length < 2) continue;
-      const text = `${n.label.toUpperCase()} · ${n.count}`;
-      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: "m3-pill hood", node: text });
+      // Districts are a fixed set, so their names stand alone; other groupings show how many they hold.
+      const district = n.key.startsWith("d:");
+      const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
+      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
     for (const p of scene.parks) {
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 1.1, p.z + p.d / 2), w: measure(p.label, 11.5, SANS, 500) + 22, h: 28, priority: 7, className: "m3-pill quiet", node: p.label });

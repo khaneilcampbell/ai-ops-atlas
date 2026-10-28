@@ -9,6 +9,7 @@ project:
   status: active
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
+  district: ai-operations
 
 agents:
   - id: atlas-ci

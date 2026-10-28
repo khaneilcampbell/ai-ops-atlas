@@ -2,6 +2,8 @@
 // `RegistryManifest`; everything observed at runtime lives in `Telemetry` and is never
 // written back to a manifest. `null` always means "nobody has documented this".
 
+import type { AgentTier, AutomationCategory } from "../catalog/taxonomy";
+
 export const CLASSIFICATIONS = ["A", "B", "C", "D", "E", "F"] as const;
 export type Classification = (typeof CLASSIFICATIONS)[number] | "unclassified";
 
@@ -81,6 +83,10 @@ export interface RegistryManifest {
   category?: Category;
   subcategory?: string;
   classification?: { type: Classification; confidence: Confidence; evidence?: string };
+  /** Declared agent tier; Atlas infers one when this is absent. */
+  tier?: AgentTier;
+  /** Declared automation category; Atlas infers one when this is absent. */
+  automationCategory?: AutomationCategory;
   version?: string;
   mission?: { purpose?: string; problem?: string; outcomes: string[]; beneficiaries: string[] };
   responsibilities?: { tasks: string[]; tools: string[]; inputs: string[]; outputs: string[]; dependencies: string[]; limitations: string[] };

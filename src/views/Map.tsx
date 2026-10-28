@@ -8,6 +8,7 @@ import { StatusPill, statusLabel } from "../components/bits";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
+import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
@@ -371,7 +372,7 @@ function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scal
 const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", paused: "pause", attention: "alert", retired: "close" };
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const repoShort = (name: string) => name.split("/")[1] ?? name;
-const GROUP_LABEL: Record<GroupBy, string> = { none: "No grouping", status: "By status", tag: "By tag" };
+const GROUP_LABEL: Record<GroupBy, string> = { district: "By district", none: "No grouping", status: "By status", tag: "By tag" };
 
 /** Where things sit in world space, for camera moves, hit lookups and keyboard navigation. */
 function anchors(districts: District[], parks: Park[]) {
@@ -401,7 +402,8 @@ export function MapView() {
       { label: "Automations", count: catalog.agents.length - aiAgents },
     ];
   }, [catalog]);
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapGroupBy", "none"));
+  // Districts are the default layout; a new key so earlier saved groupings don't hide them.
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapGroupBy2", "district"));
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -439,19 +441,28 @@ export function MapView() {
   const [linkSel, setLinkSel] = useState<string | null>(null);
   const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
   const linkCounts = useMemo(() => Object.fromEntries(CONNECTION_TYPES.map((t) => [t, connections.filter((c) => c.type === t).length])) as Record<ConnectionType, number>, [connections]);
-  const mapLinks = useMemo<MapLink[]>(
+  // Every connection placed on the map; the view (lens) below decides which are drawn.
+  const allLinks = useMemo<MapLink[]>(
     () =>
-      !linkPrefs.on
-        ? []
-        : connections.flatMap((c) => {
-            const a = endpointKey(catalog, c.source);
-            const b = endpointKey(catalog, c.target);
-            if (!a || !b || !linkPrefs.types[c.type]) return [];
-            return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
-          }),
-    [connections, catalog, linkPrefs],
+      connections.flatMap((c) => {
+        const a = endpointKey(catalog, c.source);
+        const b = endpointKey(catalog, c.target);
+        if (!a || !b) return [];
+        return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
+      }),
+    [connections, catalog],
   );
-  const pickedLink = linkSel && is3d && mapLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
+  const [lens, setLensState] = useState<MapLens>(() => {
+    const saved = load<MapLens>("mapLens", "infrastructure");
+    return MAP_LENSES.includes(saved) ? saved : "infrastructure";
+  });
+  const setLens = (l: MapLens) => {
+    setLensState(l);
+    save("mapLens", l);
+    setLinkSel(null);
+  };
+  const automationIds = useMemo(() => new Set(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id)), [catalog]);
+  const pickedLink = linkSel && is3d && allLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
   // A building selection replaces a connection selection, wherever it was made.
   useEffect(() => {
     if (selection) setLinkSel(null);
@@ -672,6 +683,13 @@ export function MapView() {
   const focused = layout.districts.find((d) => d.project.id === focus) ?? layout.districts[0];
   const isSelected = (kind: "agent" | "repo", id: string) => selection?.kind === kind && selection.id === id;
   const selectedDistrict = selKey ? where.get(selKey)?.district : undefined;
+  const selProject = selection?.kind === "repo" ? catalog.projects.find((p) => p.repository === selection.id)?.id : undefined;
+  const mapLinks = useMemo(
+    () => lensLinks(allLinks, lens, { showAll: linkPrefs.on, types: linkPrefs.types, selKey, selProject, automations: automationIds }),
+    [allLinks, lens, linkPrefs.on, linkPrefs.types, selKey, selProject, automationIds],
+  );
+  // Lines that appear only because a building is selected stay with it, without fading the rest of the map.
+  const selectionOnly = lens === "infrastructure" && !linkPrefs.on;
 
   // Visible world rectangle, padded so tall buildings and labels do not pop at the edges.
   const vis = useMemo(() => {
@@ -806,7 +824,7 @@ export function MapView() {
 
   const setGroupBy = (g: GroupBy) => {
     setGroupByState(g);
-    save("mapGroupBy", g);
+    save("mapGroupBy2", g);
   };
 
   /** Arrow keys move between districts in the direction pressed, measured on screen. */
@@ -967,7 +985,8 @@ export function MapView() {
                 setLinkSel(id);
               }}
               linkTip={linkTip}
-              linkFocus={linkPrefs.focus}
+              linkFocus={linkPrefs.focus && !selectionOnly}
+              showLocal={lens !== "infrastructure"}
               traffic={traffic}
               linksMoving={!linkPrefs.paused}
             />
@@ -1114,6 +1133,11 @@ export function MapView() {
           )}
 
           <div className="map-legend" aria-label="Roof colors by framework">
+            {is3d && lens !== "infrastructure" && (
+              <span className="health lens-note">
+                <b>{LENS_INFO[lens].label}</b> · {mapLinks.length ? `${mapLinks.length} ${mapLinks.length === 1 ? "link" : "links"} from manifests` : LENS_INFO[lens].empty}
+              </span>
+            )}
             {usedFrameworks.map(([re, color, label]) => (
               <span key={String(re)} className="health">
                 <i style={{ background: color, borderRadius: 2 }} />
@@ -1127,7 +1151,19 @@ export function MapView() {
           </div>
 
           <div className="map-controls">
-            <label className="map-group" title="Group projects into neighborhoods">
+            {is3d && (
+              <label className="map-group" title={LENS_INFO[lens].hint}>
+                <span className="sr-only">Map view</span>
+                <select value={lens} onChange={(e) => setLens(e.target.value as MapLens)}>
+                  {MAP_LENSES.map((l) => (
+                    <option key={l} value={l}>
+                      {LENS_INFO[l].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="map-group" title="Group projects into districts or neighborhoods">
               <span className="sr-only">Group projects</span>
               <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
                 {(Object.keys(GROUP_LABEL) as GroupBy[]).map((g) => (
