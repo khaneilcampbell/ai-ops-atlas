@@ -19,7 +19,8 @@ describe("identityFor", () => {
     expect(of("service-desk").symbol).toBe("chart");
     expect(of("benjaire-site")).toMatchObject({ symbol: "monogram", style: "classic" });
     expect(of("benjaire-ops").symbol).toBe("chart");
-    expect(of("benjaire-strategy").symbol).toBe("compass");
+    const planning = { ...catalog.projects.find((p) => p.id === "benjaire-site")!, id: "benjaire-plans", tags: ["benjaire", "planning"] };
+    expect(identityFor(planning).symbol).toBe("compass");
   });
 
   it("has exactly one landmark, and a fallback for unknown projects", () => {

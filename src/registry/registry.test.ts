@@ -38,9 +38,9 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 29 agents discoverable with no manifest problems", () => {
+  it("keeps all 10 projects and 29 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(11);
+    expect(catalog.projects).toHaveLength(10);
     expect(entries).toHaveLength(29);
   });
 

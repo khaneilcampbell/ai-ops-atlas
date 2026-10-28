@@ -8,7 +8,7 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 
 export function ReposView() {
-  const { catalog, repos, uncataloged, discovery, settings, refresh, refreshing, filters, select, selection } = useAtlas();
+  const { catalog, hidden, renamed, repos, uncataloged, discovery, settings, refresh, refreshing, filters, select, selection } = useAtlas();
   const all = useMemo(() => repoRows(catalog, repos, uncataloged), [catalog, repos, uncataloged]);
   const rows = all.filter(
     (r) =>
@@ -54,6 +54,21 @@ export function ReposView() {
           <span>
             Couldn't check GitHub for new repositories: {discovery.error}. Adding a token in Settings raises GitHub's limit and includes your private repositories.
           </span>
+        </div>
+      )}
+      {(hidden.length > 0 || Object.keys(renamed).length > 0) && (
+        <div className="notice" style={{ marginBottom: 14, flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+          {hidden.map((h) => (
+            <span key={h.repository}>
+              <Icon name="alert" size={15} /> {h.projects.join(", ")} ({h.repository}) is hidden: the repository was {h.reason === "deleted" ? "deleted on GitHub" : "archived on GitHub"}.
+              {h.reason === "deleted" ? " Remove its catalog file to drop it for good." : " Unarchive it on GitHub to bring it back."}
+            </span>
+          ))}
+          {Object.entries(renamed).map(([from, to]) => (
+            <span key={from}>
+              <Icon name="alert" size={15} /> {from} was renamed on GitHub to {to}. Atlas follows it; update the catalog file's repository to match.
+            </span>
+          ))}
         </div>
       )}
       {rows.length === 0 && <div className="card empty">No repositories match these filters.</div>}

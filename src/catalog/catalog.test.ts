@@ -22,7 +22,6 @@ describe("bundled catalog", () => {
     expect(catalog.projects.map((p) => p.repository).sort()).toEqual([
       "khaneilcampbell/ai-ops-atlas",
       "khaneilcampbell/benjaire-dashboard",
-      "khaneilcampbell/benjaire-strategy",
       "khaneilcampbell/benjaire.com",
       "khaneilcampbell/job-applications-workflow",
       "khaneilcampbell/khaneilcampbell",
