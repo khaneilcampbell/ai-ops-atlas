@@ -288,7 +288,7 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = [
-      ...scene.lamps.map((l) => ({ p: [l.x, l.y + 0.035, l.z], s: [0.95, 0.004, 0.95] }) as Inst),
+      ...scene.lamps.map((l) => ({ p: [l.x, l.y + 0.035, l.z], s: [1.3, 0.004, 1.3] }) as Inst),
       ...scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst),
     ];
     return { trunks, blobs, cones, bushes, flowers, rocks, poles, bulbs, bollards, caps, pools };

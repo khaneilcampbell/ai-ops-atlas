@@ -138,6 +138,8 @@ export function patterned(color: string, pattern: Pattern, opts: THREE.MeshStand
   m.onBeforeCompile = (sh) => {
     worldPos(sh);
     let frag = sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>\n${PATTERNS[pattern]}`);
+    // Deep, dark water at night so the lit island stands out against it.
+    if (pattern === "water") frag = frag.replace("#include <emissivemap_fragment>", "diffuseColor.rgb *= mix(1.0, 0.5, uNight);\n#include <emissivemap_fragment>");
     if (pattern === "water") frag = frag.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(0.55, 0.7, 0.95) * ATLAS_GLINT * uNight * 0.35;");
     if (nightGlow) frag = frag.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uNight * ${nightGlow.toFixed(3)};`);
     sh.fragmentShader = `varying vec3 vSeed;\n${NOISE}${frag}`;
@@ -161,8 +163,9 @@ export function windowLights(m: THREE.MeshStandardMaterial, glow: THREE.Texture,
       "#include <emissivemap_fragment>",
       `#include <emissivemap_fragment>
       float win = floor((vEmissiveMapUv.x * 512.0 - ${offset.toFixed(1)}) / ${spacing.toFixed(1)});
-      float lit = step(${(1 - share).toFixed(2)}, litHash(vec3(win, vSeed.y * 3.13 + vSeed.x, vSeed.z * 1.7 + vSeed.x * 0.37)));
-      totalEmissiveRadiance *= uNight * (0.06 + 0.8 * lit);`,
+      float lit = step(${(1 - Math.min(0.88, share + 0.22)).toFixed(2)}, litHash(vec3(win, vSeed.y * 3.13 + vSeed.x, vSeed.z * 1.7 + vSeed.x * 0.37)));
+      // Most windows warm at night, a few dim; unlit glass keeps a faint glow so facades never go flat.
+      totalEmissiveRadiance *= uNight * (0.1 + 0.9 * lit);`,
     );
   };
   m.customProgramCacheKey = () => `atlas-windows-${offset}-${spacing}-${share}`;

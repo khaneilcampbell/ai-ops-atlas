@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { night } from "./materials";
 import type { useGeometries, useMaterials } from "./models";
 import { WATER_Y, type Scene3D } from "./scene";
@@ -11,7 +15,7 @@ export type LightMode = "day" | "night";
 
 const c = (hex: string) => new THREE.Color(hex);
 const DAY = { bg: c("#d3e4de"), sky: c("#fff7e6"), ground: c("#6b8456"), hemi: 1.35, amb: c("#ffffff"), ambI: 0.2, sun: c("#fff0d2"), sunI: 2.5 };
-const NIGHT = { bg: c("#17263f"), sky: c("#8ea2d6"), ground: c("#2a3a4a"), hemi: 0.72, amb: c("#6f86c0"), ambI: 0.22, sun: c("#a9bcff"), sunI: 0.55 };
+const NIGHT = { bg: c("#0f1a2e"), sky: c("#8ea2d6"), ground: c("#24323f"), hemi: 0.52, amb: c("#6f86c0"), ambI: 0.16, sun: c("#a9bcff"), sunI: 0.45 };
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 /**
@@ -20,6 +24,7 @@ const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
  */
 export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: boolean; m: M; sun: React.RefObject<THREE.DirectionalLight>; fog: THREE.Fog }) {
   const hemi = useRef<THREE.HemisphereLight>(null);
+  const moon = useRef<THREE.DirectionalLight>(null);
   const amb = useRef<THREE.AmbientLight>(null);
   const { scene } = useThree();
   const bg = useMemo(() => DAY.bg.clone(), []);
@@ -40,7 +45,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     first.current = false;
     if (Math.abs(night.value - target) < 0.002) night.value = target;
     const k = night.value;
-    if (k === last.current || !hemi.current || !amb.current || !sun.current) return;
+    if (k === last.current || !hemi.current || !amb.current || !sun.current || !moon.current) return;
     last.current = k;
     bg.lerpColors(DAY.bg, NIGHT.bg, k);
     fog.color.copy(bg);
@@ -51,15 +56,19 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     amb.current.intensity = lerp(DAY.ambI, NIGHT.ambI, k);
     sun.current.color.lerpColors(DAY.sun, NIGHT.sun, k);
     sun.current.intensity = lerp(DAY.sunI, NIGHT.sunI, k);
-    m.glass.emissiveIntensity = lerp(0.35, 1.5, k);
-    m.lamp.emissiveIntensity = lerp(0.8, 3, k);
-    m.pool.opacity = k * 0.5;
+    // A cool moonlight from the side, so the faces of each building read apart at night.
+    moon.current.intensity = k * 0.5;
+    moon.current.visible = k > 0.01;
+    m.glass.emissiveIntensity = lerp(0.35, 1.7, k);
+    m.lamp.emissiveIntensity = lerp(0.8, 3.4, k);
+    m.pool.opacity = k * 0.62;
     m.pool.visible = k > 0.02;
   });
   return (
     <>
       <hemisphereLight ref={hemi} args={[DAY.sky, DAY.ground, DAY.hemi]} />
       <ambientLight ref={amb} intensity={DAY.ambI} />
+      <directionalLight ref={moon} position={[60, 45, -25]} color="#9fb6ff" intensity={0} />
     </>
   );
 }
@@ -195,4 +204,36 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
       )}
     </group>
   );
+}
+
+/**
+ * A light bloom at night, only on what is brighter than the scene: lit windows, lamps and the
+ * connection traces. By day, and while the bloom is off, the map renders directly.
+ */
+export function Bloom() {
+  const { gl, scene, camera, size } = useThree();
+  const composer = useMemo(() => {
+    const c = new EffectComposer(gl);
+    c.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0, 0.35, 0.9);
+    c.addPass(bloom);
+    c.addPass(new OutputPass());
+    return { c, bloom };
+  }, [gl, scene, camera]);
+  useEffect(() => {
+    const dpr = gl.getPixelRatio();
+    composer.c.setPixelRatio(dpr);
+    composer.c.setSize(size.width, size.height);
+    // Half resolution is plenty for a soft glow and keeps it cheap.
+    composer.bloom.resolution.set((size.width * dpr) / 2, (size.height * dpr) / 2);
+  }, [composer, gl, size]);
+  useEffect(() => () => composer.c.dispose(), [composer]);
+  // Priority 1 takes over rendering from the default loop.
+  useFrame(() => {
+    const k = night.value;
+    if (k < 0.02) return gl.render(scene, camera);
+    composer.bloom.strength = k * 0.32;
+    composer.c.render();
+  }, 1);
+  return null;
 }
