@@ -45,7 +45,7 @@ Add or edit a YAML file in [`catalog/`](catalog/README.md). The format is docume
 
 - **Multi-Agent Commerce Pipeline**: the autonomous loop, the six CrewAI brand-crew agents, and the Canva, Shopify, SEO and health-report stages
 - **AI-Assisted SOC Brute Force Detection Lab**: the Splunk detection search and the SOC case-note automation
-- **AI-Assisted Portfolio Website**: the Claude site assistant, the site audit script and the security-check workflow
+- **khaneilcampbell.com**: the Claude site assistant, the site audit script and the security-check workflow
 - **Benjaire.com**: the contact form Worker, the Benjaire Flow intake in n8n and Site CI
 - **AI Career Application Optimization System**: the three Claude prompt stages and the career database validator
 
