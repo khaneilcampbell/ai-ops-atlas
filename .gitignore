@@ -9,3 +9,13 @@ src-tauri/gen/
 test-results/
 playwright-report/
 visual/out/
+
+# Local credentials and signing material
+.env.*
+!.env.example
+!.env.*.example
+.dev.vars
+.dev.vars.*
+*.p12
+*.pfx
+*.key
