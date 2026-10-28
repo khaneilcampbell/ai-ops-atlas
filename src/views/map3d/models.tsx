@@ -191,7 +191,7 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 // ── Terrain ─────────────────────────────────────────
 
 /** Ground-level walkways between terraces are the streets; paths up on the terraces stay stone. */
-const isStreet = (p: Slab) => p.y === 0 && Math.min(p.w, p.d) > 0.4;
+const isStreet = (p: Slab) => !!p.street;
 const CURB = 0.045;
 
 /** Pale curbs along both sides of a street, broken where a walkway crosses it. */

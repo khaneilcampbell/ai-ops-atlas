@@ -61,7 +61,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     moon.current.visible = k > 0.01;
     m.glass.emissiveIntensity = lerp(0.35, 1.7, k);
     m.lamp.emissiveIntensity = lerp(0.8, 3.4, k);
-    m.pool.opacity = k * 0.62;
+    m.pool.opacity = k * 0.42;
     m.pool.visible = k > 0.02;
   });
   return (

@@ -120,7 +120,9 @@ export function makeRouter(scene: Scene3D) {
     if (s >= 0 && t >= 0) {
       const ti = t % W;
       const tj = Math.floor(t / W);
-      const g = new Float32Array(W * H).fill(Infinity);
+      // Float64: Float32 rounding lets the same cell "improve" forever on long routes.
+      const g = new Float64Array(W * H).fill(Infinity);
+      const done = new Uint8Array(W * H);
       const prev = new Int32Array(W * H).fill(-1);
       const heap = new Heap();
       const h = (k: number) => {
@@ -133,6 +135,9 @@ export function makeRouter(scene: Scene3D) {
       while (heap.size) {
         const k = heap.pop();
         if (k === t) break;
+        // Skip stale heap entries for cells already expanded.
+        if (done[k]) continue;
+        done[k] = 1;
         const i = k % W;
         const j = Math.floor(k / W);
         for (const [di, dj, len] of DIRS) {
