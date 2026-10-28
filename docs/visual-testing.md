@@ -20,7 +20,7 @@ app, with sample GitHub data and a frozen clock, so every run draws the same sce
 | Command | What it does |
 | --- | --- |
 | `npm run visual` | Screenshots each view and compares it with its baseline. Fails if more than 1% of pixels changed. |
-| `npm run visual:update` | Replaces the baselines with new screenshots. Use after an intended visual change. |
+| `npm run visual:update` | Replaces the baselines with new screenshots (one capture each). Use after an intended visual change. |
 | `npm run visual:shots` | Screenshots only, into `visual/out/`. No comparison. |
 | `npm run visual:compare -- a.png b.png [out.png]` | Side by side plus a pixel diff of any two PNGs. |
 
@@ -55,9 +55,9 @@ a new view is one more test there.
 `.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
 touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
 a required check. Every run uploads its screenshots, diffs and report as the
-`visual-results` artifact. A view with no CI baseline yet gets one written on its first run.
-To accept an intended change in CI, run the workflow by hand with **update** ticked, then
-commit the PNGs from the artifact's `visual/baselines/ci/` folder.
+`visual-results` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
+To set or accept CI baselines, run the workflow by hand with **update** ticked: it pushes
+the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from.
 
 Playwright is a dev dependency only. Nothing under `visual/` is imported by the app, so it
 never reaches the desktop bundle or the Pages build.
