@@ -133,3 +133,48 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
+
+  - id: site-ci
+    name: Site CI
+    purpose: Audits every page and the site scripts, and packages the site on request.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request or manual
+    source: .github/workflows/site-ci.yml
+    observe:
+      github_workflow: site-ci.yml
+    last_run: null
+    registry:
+      title: khaneilcampbell.com Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/site-ci.yml runs scripts/site_audit.py, site_inventory.py and ruff; no AI model
+      mission:
+        problem: Keeps headers, accessibility basics and internal links correct on every change.
+        outcomes: ["Every pull request passes the site audit before merge"]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Run the site audit, Build the page inventory, Lint the Python scripts, Optional site bundle on manual dispatch]
+        tools: [GitHub Actions, Python, ruff]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request, Site zip and inventory when requested]
+      goals:
+        objective: Block merges that break the published site.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)

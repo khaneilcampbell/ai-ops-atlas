@@ -91,3 +91,48 @@ agents:
         risk: low
       docs:
         known_issues: [Whether it runs as a scheduled Splunk alert is not in the repository]
+
+  - id: soc-lab-ci
+    name: SOC Lab CI
+    purpose: Lints and tests the SOC automation script against a mocked Splunk API.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request or manual
+    source: .github/workflows/ci.yml
+    observe:
+      github_workflow: ci.yml
+    last_run: null
+    registry:
+      title: SOC Lab Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/ci.yml runs ruff, compileall and pytest with Splunk mocked; no AI model
+      mission:
+        problem: Keeps the detection query and case note generator from breaking silently.
+        outcomes: ["Every pull request is linted and tested before merge"]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Lint soc_automation.py, Test the SPL detection logic, Test Splunk REST calls with a mocked API, Test case note output]
+        tools: [GitHub Actions, ruff, pytest]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request]
+      goals:
+        objective: Catch broken detection or reporting logic before merge.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)
