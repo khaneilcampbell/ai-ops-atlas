@@ -283,12 +283,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
-    // Neighborhood names when the map is grouped, at the back corner of each landmass.
-    for (const n of layout.neighborhoods) {
-      if (!n.label || layout.neighborhoods.length < 2) continue;
-      const text = `${n.label.toUpperCase()} · ${n.count}`;
-      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: "m3-pill hood", node: text });
-    }
     for (const p of scene.parks) {
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 1.1, p.z + p.d / 2), w: measure(p.label, 11.5, SANS, 500) + 22, h: 28, priority: 7, className: "m3-pill quiet", node: p.label });
     }
