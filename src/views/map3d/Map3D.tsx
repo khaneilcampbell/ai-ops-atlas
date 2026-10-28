@@ -54,7 +54,6 @@ interface Props {
   healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean; health: Health };
   /** Day or night lighting. */
   light: LightMode;
-  onMoved: () => void;
   /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
   links: MapLink[];
   linkSel: string | null;
@@ -348,10 +347,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           reduced={props.reduced}
           activity={activity}
           onNear={setNear}
-          onMoved={() => {
-            setTip(null);
-            props.onMoved();
-          }}
+          onMoved={() => setTip(null)}
         />
       </Canvas>
       <div
