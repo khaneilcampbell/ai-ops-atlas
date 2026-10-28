@@ -3,7 +3,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import type { Status } from "../../catalog/types";
-import type { Verified } from "../../lib/derive";
+import type { Health, Verified } from "../../lib/derive";
+import { Sky, Traffic, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
 import { clip, measure, SANS, wrap } from "../mapText";
@@ -31,7 +32,9 @@ interface Props {
   onFocus: (projectId: string) => void;
   tipFor: (key: string) => { title: string; sub: string } | null;
   /** Verified repository health, for the discreet mark on each nameplate. */
-  healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean };
+  healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean; health: Health };
+  /** Day or night lighting. */
+  light: LightMode;
   onMoved: () => void;
 }
 
@@ -231,10 +234,22 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     },
   };
 
+  // Health accents on each headquarters, from the same verified data as the inspector.
+  const health = useMemo(() => new Map(scene.towers.map((t) => [t.key, healthFor(t.repository).health])), [scene, healthFor]);
+  // Stop rendering while the window is hidden; nothing on the map needs to move then.
+  const [visible, setVisible] = useState(() => document.visibilityState !== "hidden");
+  useEffect(() => {
+    const on = () => setVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, []);
+
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={[1, 2]} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={[1, 2]} frameloop={visible ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <World
+          light={props.light}
+          health={health}
           hoods={layout.neighborhoods.length}
           scene={scene}
           anchors={anchors}
@@ -289,6 +304,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 });
 
 function World({
+  light: lightMode,
+  health,
   hoods,
   scene,
   anchors,
@@ -305,6 +322,8 @@ function World({
   onNear,
   onMoved,
 }: {
+  light: LightMode;
+  health: Map<string, Health>;
   hoods: number;
   scene: Scene3D;
   anchors: ReturnType<typeof anchorsOf>;
@@ -551,14 +570,13 @@ function World({
   const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
   return (
     <>
-      <color attach="background" args={["#d3e4de"]} />
-      <hemisphereLight args={["#fff7e6", "#6b8456", 1.35]} />
-      <ambientLight intensity={0.2} />
+      <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
+      <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
-      <Towers towers={scene.towers} strays={scene.strays} g={g} m={m} pick={pick} />
+      <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />
       <TerraceGlow t={terraceOf(selectedDistrict)} strong />

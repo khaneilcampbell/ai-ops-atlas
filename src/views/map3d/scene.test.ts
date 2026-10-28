@@ -41,6 +41,13 @@ describe("buildScene", () => {
     for (const t of s.trees) for (const h of s.houses) expect(Math.abs(t.x - h.x) < h.w / 2 && Math.abs(t.z - h.z) < h.d / 2).toBe(false);
   });
 
+  it("lights every footpath bend and keeps strollers off the steps", () => {
+    const s = buildScene(layoutMap(catalog));
+    expect(s.bollards.length).toBeGreaterThan(s.houses.length / 2);
+    for (const b of s.bollards) for (const h of s.houses) expect(Math.abs(b.x - h.x) < h.w / 2 && Math.abs(b.z - h.z) < h.d / 2).toBe(false);
+    for (const w of s.walks) expect(Math.hypot(w.x1 - w.x0, w.z1 - w.z0)).toBeGreaterThan(0);
+  });
+
   it("builds hundreds of repositories quickly", () => {
     const layout = layoutMap(bigCatalog(300), Array.from({ length: 60 }, (_, i) => `me/stray-${i}`));
     const t = performance.now();

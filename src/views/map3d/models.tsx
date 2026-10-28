@@ -1,9 +1,10 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
+import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
-import { billboardTexture, facadeTexture, houseWallTexture, nameBoardTexture, patterned, signTexture } from "./materials";
+import { billboardTexture, facadeTexture, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, windowLights } from "./materials";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -131,6 +132,11 @@ export function useGeometries() {
   );
 }
 
+/** A textured material whose windows light up at night. */
+function lit(map: THREE.Texture, opts: THREE.MeshStandardMaterialParameters, offset: number, spacing: number, share?: number) {
+  return windowLights(new THREE.MeshStandardMaterial({ map, ...opts }), glowTexture(map), offset, spacing, share);
+}
+
 export function useMaterials() {
   return useMemo(() => {
     const cliff = patterned("#b39874", "cliff");
@@ -143,17 +149,18 @@ export function useMaterials() {
       water: patterned("#4e9fb7", "water", { roughness: 0.35, metalness: 0.05 }),
       brook: patterned("#5aaac0", "water", { roughness: 0.3 }),
       falls: patterned("#ffffff", "falls", { transparent: true, opacity: 0.92, roughness: 0.4, side: THREE.DoubleSide }),
-      stone: patterned("#e6d6b4", "stone"),
+      stone: patterned("#e6d6b4", "stone", {}, 0.07),
       step: patterned("#d9ceb4", "stone"),
       plain: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.85 }),
       roof: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.75, flatShading: true }),
-      houseWall: new THREE.MeshStandardMaterial({ map: houseWallTexture(), roughness: 0.9 }),
+      houseWall: lit(houseWallTexture(), { roughness: 0.9 }, 0, 256, 0.5),
+      // Window positions (offset and spacing in texture pixels) match facadeTexture's layouts.
       facades: {
-        tech: new THREE.MeshStandardMaterial({ map: facadeTexture("tech", 3), roughness: 0.35, metalness: 0.2 }),
-        secure: new THREE.MeshStandardMaterial({ map: facadeTexture("secure", 5), roughness: 0.6 }),
-        timber: new THREE.MeshStandardMaterial({ map: facadeTexture("timber", 11), roughness: 0.6 }),
-        classic: new THREE.MeshStandardMaterial({ map: facadeTexture("classic", 9), roughness: 0.65 }),
-        glass: new THREE.MeshStandardMaterial({ map: facadeTexture("glass", 7), roughness: 0.55 }),
+        tech: lit(facadeTexture("tech", 3), { roughness: 0.35, metalness: 0.2 }, 8, 63),
+        secure: lit(facadeTexture("secure", 5), { roughness: 0.6 }, 16, 70),
+        timber: lit(facadeTexture("timber", 11), { roughness: 0.6 }, 16, 80),
+        classic: lit(facadeTexture("classic", 9), { roughness: 0.65 }, 16, 82),
+        glass: lit(facadeTexture("glass", 7), { roughness: 0.55 }, 8, 488 / 6),
       } satisfies Record<BuildingStyle, THREE.Material>,
       metal: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.35, metalness: 0.65 }),
       glow: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
@@ -163,6 +170,8 @@ export function useMaterials() {
       solar: new THREE.MeshStandardMaterial({ color: "#2e4660", roughness: 0.25, metalness: 0.4 }),
       foliage: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 }),
       lamp: new THREE.MeshStandardMaterial({ color: "#fbe7a6", emissive: "#f3cf73", emissiveIntensity: 0.8 }),
+      // Ground glow under lamps; its opacity follows the night (see the lighting in Map3D).
+      pool: new THREE.MeshBasicMaterial({ color: "#ffc874", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, visible: false }),
     };
   }, []);
 }
@@ -273,7 +282,14 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     const poles: Inst[] = scene.lamps.map((l) => ({ p: [l.x, l.y, l.z], s: [0.03, 0.42, 0.03], c: "#3c4c40" }));
     const bulbs: Inst[] = scene.lamps.map((l) => ({ p: [l.x, l.y + 0.45, l.z], s: [0.045, 0.045, 0.045] }));
-    return { trunks, blobs, cones, bushes, flowers, rocks, poles, bulbs };
+    // Low path lights, and pools of light on the ground that fade in at night.
+    const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
+    const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
+    const pools: Inst[] = [
+      ...scene.lamps.map((l) => ({ p: [l.x, l.y + 0.035, l.z], s: [0.95, 0.004, 0.95] }) as Inst),
+      ...scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst),
+    ];
+    return { trunks, blobs, cones, bushes, flowers, rocks, poles, bulbs, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
@@ -284,6 +300,9 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.poles} geometry={g.cyl} material={m.plain} />
+      <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
+      <Instanced items={items.caps} geometry={g.ball} material={m.lamp} shadow={false} />
+      <Instanced items={items.pools} geometry={g.cyl} material={m.pool} shadow={false} />
       <Instanced items={items.bulbs} geometry={g.ball} material={m.lamp} shadow={false} />
     </group>
   );
@@ -573,8 +592,21 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
   return P;
 }
 
-export function Towers({ towers, strays, g, m, pick }: { towers: Tower[]; strays: StrayBuilding[]; g: G; m: M; pick: PickHandlerSet }) {
+/** Restrained accents for verified health; unknown health gets none. */
+const HEALTH_ACCENT: Partial<Record<Health, string>> = { good: "#6fbf7f", warn: "#d9a84a", bad: "#c8584b" };
+
+export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]; strays: StrayBuilding[]; health: Map<string, Health>; g: G; m: M; pick: PickHandlerSet }) {
   const P = useMemo(() => towerParts(towers, strays), [towers, strays]);
+  // A thin lit band around each plinth carries the repository's verified health, apart from the
+  // decorative lighting above it.
+  const status = useMemo(
+    () =>
+      towers.flatMap((t) => {
+        const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
+        return c ? [{ p: [t.x, TERRACE_H + 0.15, t.z], s: [t.size * 1.16, 0.022, t.size * 1.16], c } as Inst] : [];
+      }),
+    [towers, health],
+  );
   return (
     <group>
       {STYLES.map((st) => (
@@ -590,6 +622,7 @@ export function Towers({ towers, strays, g, m, pick }: { towers: Tower[]; strays
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
+      <Instanced items={status} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.shrubs} geometry={g.blob} material={m.foliage} />
       <Instanced items={P.flowers} geometry={g.ball} material={m.foliage} shadow={false} />
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
