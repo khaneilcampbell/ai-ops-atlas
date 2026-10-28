@@ -671,6 +671,7 @@ impl Merger {
             http_status: None,
             request_id: None,
             message: None,
+            detail: None,
         }
     }
 

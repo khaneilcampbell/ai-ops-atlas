@@ -1,13 +1,27 @@
 // Mirrors src-tauri/src/actions: the approval-required actions (re-run failed jobs, merge a
-// pull request), their switches and the audit log.
+// pull request, and the everyday workflow and pull request changes), their switches, the local
+// catalog edits and the audit log.
 
-export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "failed" | "unknown";
+export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "done" | "failed" | "unknown";
+
+/** The switches added after re-runs and merges. */
+export type Group = "cancel_runs" | "run_workflows" | "pause_workflows" | "pull_request_changes";
+
+export interface ActionSwitch {
+  enabled: boolean;
+  repos: string[];
+}
 
 export interface ActionsConfig {
   rerun_failed_jobs: { enabled: boolean; repos: string[] };
   token_login: string | null;
   /** Missing in builds from before merging existed. */
   merge_pull_requests?: { enabled: boolean; repos: string[]; token_logins: Record<string, string> };
+  /** Missing in builds from before the everyday actions existed. */
+  cancel_runs?: ActionSwitch;
+  run_workflows?: ActionSwitch;
+  pause_workflows?: ActionSwitch;
+  pull_request_changes?: ActionSwitch;
 }
 
 export interface ActionsStatus {
@@ -40,6 +54,8 @@ export interface AuditRecord {
   http_status: number | null;
   request_id: string | null;
   message: string | null;
+  /** A comment's text, or the catalog fields an edit changed. */
+  detail?: string | null;
 }
 
 export interface Outcome {
@@ -73,4 +89,32 @@ export interface MergeCheck {
   reason: string | null;
   message: string;
   preview: MergePreview | null;
+}
+
+/** One everyday change, as the Rust side's `ops::Op`. */
+export type Op =
+  | { kind: "cancel_run"; run_id: number }
+  | { kind: "run_workflow"; workflow: string }
+  | { kind: "pause_workflow"; workflow: string }
+  | { kind: "resume_workflow"; workflow: string }
+  | { kind: "close_pull"; number: number }
+  | { kind: "reopen_pull"; number: number }
+  | { kind: "comment_pull"; number: number; body: string };
+
+/** A workflow as GitHub reports it. Read-only. */
+export interface WorkflowInfo {
+  name: string;
+  /** "active", "disabled_manually", "disabled_inactivity", … */
+  state: string;
+  dispatchable: boolean;
+  default_branch: string | null;
+  url: string | null;
+}
+
+/** A local edit to how an agent is shown. Missing fields come from the manifest. */
+export interface CatalogEdit {
+  name?: string | null;
+  owner?: string | null;
+  note?: string | null;
+  autonomy?: number | null;
 }

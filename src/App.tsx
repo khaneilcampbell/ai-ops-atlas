@@ -37,7 +37,17 @@ export default function App() {
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
   const mergeOn = !!actionsStatus?.config.merge_pull_requests?.enabled && actionsStatus.config.merge_pull_requests.repos.length > 0;
-  const writes = [rerunOn && "re-runs", mergeOn && "merges"].filter(Boolean).join(" + ");
+  const on = (sw?: { enabled: boolean; repos: string[] }) => !!sw?.enabled && sw.repos.length > 0;
+  const c = actionsStatus?.config;
+  const writes = [
+    rerunOn && "re-runs",
+    mergeOn && "merges",
+    on(c?.cancel_runs) && "cancels",
+    on(c?.run_workflows) && "runs",
+    on(c?.pause_workflows) && "pause/resume",
+    on(c?.pull_request_changes) && "PR changes",
+  ].filter(Boolean) as string[];
+  const writeLabel = writes.length > 2 ? `${writes.length} actions` : writes.join(" + ");
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
@@ -73,10 +83,13 @@ export default function App() {
         </div>
         <VaultLockedPill />
         <UpdateButton />
-        {writes ? (
-          <span className="pill-mode" title="Read-only, except the actions switched on for the repositories ticked in Settings. Each one needs your approval in a macOS dialog (merges also need Touch ID) and is written to the audit log.">
+        {writes.length ? (
+          <span
+            className="pill-mode"
+            title={`Read-only, except the actions switched on for the repositories ticked in Settings: ${writes.join(", ")}. Each one needs your approval in a macOS dialog (and Touch ID for everything but re-runs) and is written to the audit log.`}
+          >
             <span className="dot" />
-            Read-only + {writes}
+            {writes.length > 2 ? `Write: ${writeLabel}` : `Read-only + ${writeLabel}`}
           </span>
         ) : (
           <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">

@@ -1,6 +1,10 @@
 import type { WorkflowRun } from "../github/types";
 import type { ActionsStatus, AuditRecord, Stage } from "./types";
 
+/** Atlas's own repository: re-running or starting its workflows publishes a release, so the app never offers either. */
+export const SELF_REPO = "khaneilcampbell/ai-ops-atlas";
+export const isSelfRepo = (repo: string) => repo.toLowerCase() === SELF_REPO;
+
 /** GitHub only re-runs workflow runs from the last 30 days. */
 export const RERUN_WINDOW_MS = 30 * 86_400_000;
 
@@ -21,6 +25,7 @@ export function rerunAvailability(run: WorkflowRun, repo: string, status: Action
   const failed = run.status === "completed" && (run.conclusion === "failure" || run.conclusion === "timed_out");
   if (!status || !status.config.rerun_failed_jobs.enabled || !failed) return { show: false };
   const off = (reason: string): Availability => ({ show: true, enabled: false, reason });
+  if (isSelfRepo(repo)) return off("Atlas doesn't re-run its own workflows: a new run publishes a release");
   if (!status.token) return off("Add an Actions token in Settings");
   if (!status.config.rerun_failed_jobs.repos.some((r) => r.toLowerCase() === repo.toLowerCase())) return off("Not enabled for this repository in Settings");
   if (now - Date.parse(run.createdAt) > RERUN_WINDOW_MS) return off("GitHub only re-runs runs from the last 30 days");
@@ -44,13 +49,32 @@ export const STAGE_LABEL: Record<Stage, string> = {
   attempted: "Sent",
   started: "Started",
   merged: "Merged",
+  done: "Done",
   failed: "Failed",
   unknown: "Outcome unknown",
 };
 
 /** How the activity feed, the office and Settings name one audit record. */
 export function describeRecord(r: AuditRecord): { title: string; subject: string; url: string; result: "success" | "failure" | "running" | "other" } {
-  const result = r.stage === "started" || r.stage === "merged" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
+  const result = r.stage === "started" || r.stage === "merged" || r.stage === "done" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
+  const op = OP_LABEL[r.action];
+  if (op) {
+    const pr = r.pull_number != null;
+    const run = r.run_id > 0;
+    return {
+      title: `${op}: ${STAGE_LABEL[r.stage]}`,
+      subject: pr ? `#${r.pull_number}${r.title ? ` ${r.title}` : ""}` : run ? `${r.workflow ?? "Workflow run"}${r.run_number ? ` #${r.run_number}` : ""}` : (r.workflow ?? "Workflow"),
+      url: pr
+        ? `https://github.com/${r.repo}/pull/${r.pull_number}`
+        : run
+          ? `https://github.com/${r.repo}/actions/runs/${r.run_id}`
+          : `https://github.com/${r.repo}/actions${r.workflow?.endsWith(".yml") || r.workflow?.endsWith(".yaml") ? `/workflows/${r.workflow}` : ""}`,
+      result,
+    };
+  }
+  if (r.action === "edit_catalog") {
+    return { title: `Catalog edit: ${STAGE_LABEL[r.stage]}`, subject: r.repo.replace(/^catalog\//, ""), url: "", result };
+  }
   if (r.action === "merge_pull_request") {
     const n = r.pull_number ?? 0;
     return {
@@ -67,3 +91,14 @@ export function describeRecord(r: AuditRecord): { title: string; subject: string
     result,
   };
 }
+
+/** How the audit log names the everyday actions. */
+export const OP_LABEL: Record<string, string> = {
+  cancel_run: "Cancel run",
+  run_workflow: "Run workflow",
+  pause_workflow: "Pause workflow",
+  resume_workflow: "Resume workflow",
+  close_pull_request: "Close pull request",
+  reopen_pull_request: "Reopen pull request",
+  comment_pull_request: "Comment on pull request",
+};

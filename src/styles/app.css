@@ -718,3 +718,23 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .rec-head .grow { flex: 1; min-width: 12ch; }
 .table-wrap { overflow-x: auto; margin: 0 -4px; }
 .table.compact th, .table.compact td { padding: 8px 10px; }
+
+/* Everyday write actions: workflow controls, catalog edits, pull request changes. */
+.agent-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 16px; margin-top: 10px; }
+.workflow-controls { display: flex; flex-direction: column; gap: 6px; }
+.workflow-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.workflow-buttons .rerun { align-items: flex-start; }
+.workflow-buttons .rerun-note { text-align: left; }
+.local-note { margin-top: 8px; color: var(--ink-2); display: flex; gap: 6px; align-items: baseline; white-space: pre-wrap; }
+.input { background: var(--sage-50); border: 1px solid var(--sage-300); border-radius: 8px; padding: 6px 8px; color: var(--ink); width: 100%; }
+.input:focus { outline: 0; border-color: var(--gold); }
+.catalog-editor { display: grid; gap: 8px; width: min(420px, 100%); padding: 10px; border: 1px solid var(--sage-300); border-radius: 10px; }
+.catalog-editor label { display: grid; gap: 4px; }
+.pull-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: flex-start; }
+.pull-comment { display: flex; gap: 8px; margin-top: 6px; align-items: flex-start; }
+.pull-comment textarea { flex: 1; }
+.op-matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+.op-matrix th, .op-matrix td { padding: 6px 8px; border-bottom: 1px solid var(--sage-200); text-align: center; }
+.op-matrix th:first-child, .op-matrix td:first-child { text-align: left; }
+.op-matrix th { font-weight: 600; vertical-align: bottom; }
+.op-matrix th label { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }

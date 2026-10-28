@@ -5,7 +5,7 @@ schema: atlas/v2
 project:
   id: ai-ops-atlas
   name: AI Ops Atlas
-  summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
+  summary: This app. A desktop command center for agents, projects and repositories. Read-only, except approval-required actions (re-runs, merges, cancels, manual runs, pause/resume, PR changes) that are off by default and each need a native confirmation.
   status: active
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
