@@ -157,7 +157,7 @@ function AgentCard({ row, branch, open }: { row: ActiveRow; branch: string; open
         <dt>When it runs</dt>
         <dd>
           {schedule ?? <NA />}
-          {schedule && <span className="muted"> · next run not computed, the schedule is documented as text</span>}
+          {schedule && <span className="muted" title="Schedules are written as text in the manifests, so Atlas does not compute a next run time."> · as documented</span>}
         </dd>
         <dt>Runs on</dt>
         <dd>{[p.execution.environment, p.model].filter(Boolean).join(" · ") || <NA />}</dd>
