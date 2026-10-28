@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -24,10 +24,13 @@ import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 
+const CommandCenter = lazy(() => import("./features/agent-command-center/CommandCenter"));
+
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
   { view: "overview", label: "Mission", icon: "overview" },
   { view: "agents", label: "Agents", icon: "agents" },
+  { view: "command", label: "Command", icon: "agents" },
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
@@ -112,6 +115,7 @@ export default function App() {
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView />}
+          {view === "command" && <Suspense fallback={<p>Loading Command Center…</p>}><CommandCenter /></Suspense>}
           {view === "repos" && <ReposView />}
           {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
