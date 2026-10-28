@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -10,7 +10,7 @@ import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
 import { ViewSwitch } from "./components/ViewSwitch";
-import { AgentsView } from "./views/Agents";
+import { AgentsHub } from "./views/AgentsHub";
 import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
@@ -24,13 +24,10 @@ import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 
-const CommandCenter = lazy(() => import("./features/agent-command-center/CommandCenter"));
-
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
   { view: "overview", label: "Mission", icon: "overview" },
   { view: "agents", label: "Agents", icon: "agents" },
-  { view: "command", label: "Command", icon: "agents" },
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
@@ -95,7 +92,7 @@ export default function App() {
 
       <nav className="sidebar" aria-label="Sections">
         {NAV.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${(view === n.view || (n.view === "agents" && view === "command")) ? "active" : ""}`} onClick={() => setView(n.view === "agents" ? "command" : n.view)} aria-current={view === n.view || (n.view === "agents" && view === "command") ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
             {n.view === "overview" && attention.length > 0 && <span className="badge">{attention.length}</span>}
@@ -114,8 +111,7 @@ export default function App() {
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
-          {view === "agents" && <AgentsView />}
-          {view === "command" && <Suspense fallback={<p>Loading Command Center…</p>}><CommandCenter /></Suspense>}
+          {(view === "agents" || view === "command") && <AgentsHub />}
           {view === "repos" && <ReposView />}
           {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
