@@ -137,7 +137,7 @@ function UsageSetting({ usage }: { usage: ReturnType<typeof useAtlas>["usage"] }
       </div>
       {rate && (
         <span className="chip" title={resetsAt ? `Resets at ${resetsAt}` : undefined}>
-          {n(rate.remaining)} / {n(rate.limit)} left
+          {n(Math.max(0, rate.limit - rate.remaining))} used of {n(rate.limit)}
         </span>
       )}
     </div>

@@ -7,10 +7,13 @@ import { useActions } from "../actions/state";
 import { useProposals } from "../approvals/state";
 import { activityFeed, type AttentionItem } from "../lib/derive";
 import { workspaceMetrics, type DayBucket } from "../lib/metrics";
-import { relative } from "../lib/time";
+import { relative, resetsIn } from "../lib/time";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { rollup, usd } from "../intel/format";
+
+/** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
+const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
 
 const WINDOW = 14;
 
@@ -101,20 +104,20 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
             <div className="api-row">
               <div className="grow">
                 <div className="title">GitHub API</div>
-                <div className="meta">{usage?.rate ? `Resets ${relative(new Date(usage.rate.reset * 1000).toISOString()).replace(" ago", "")}` : "Budget appears after the first refresh"}</div>
+                <div className="meta">{usage?.rate ? `Hourly limit · ${resetsIn(usage.rate.reset)}` : "Budget appears after the first refresh"}</div>
               </div>
               {usage?.rate ? (
                 <div className="api-num">
-                  {usage.rate.remaining.toLocaleString()}
-                  <span className="muted"> / {usage.rate.limit.toLocaleString()}</span>
+                  {used(usage.rate).toLocaleString()}
+                  <span className="muted"> used of {usage.rate.limit.toLocaleString()}</span>
                 </div>
               ) : (
                 <span className="na">Not available</span>
               )}
             </div>
             {usage?.rate && (
-              <div className="meter" role="img" aria-label={`${usage.rate.remaining} of ${usage.rate.limit} GitHub requests left this hour`}>
-                <i style={{ width: `${Math.round((usage.rate.remaining / Math.max(1, usage.rate.limit)) * 100)}%` }} />
+              <div className="meter" role="img" aria-label={`${used(usage.rate)} of ${usage.rate.limit} GitHub requests used this hour`}>
+                <i style={{ width: `${Math.min(100, Math.round((used(usage.rate) / Math.max(1, usage.rate.limit)) * 100))}%` }} />
               </div>
             )}
             {usage && (
