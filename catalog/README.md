@@ -104,6 +104,8 @@ Each agent may carry a `registry` block. Every field is optional: anything left 
 
 Tool permissions stay in the agent's existing `permissions` list, so there is one place for them.
 
+Runbooks for cataloged agents live in [`docs/runbooks/`](../docs/runbooks), one file per project with a section per agent. Agents in other repositories link to them by full URL. Set `last_review` only when someone has checked the entry against the code.
+
 **Targets versus observations.** A KPI's `target` is written by a person. Its observed value is computed by the app from a live source named by `measure` and `observe`, and is never stored in YAML. Without a live source the app shows **Not connected**.
 
 ### Agent types

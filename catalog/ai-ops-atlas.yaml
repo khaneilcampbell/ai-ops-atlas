@@ -13,7 +13,7 @@ project:
 agents:
   - id: atlas-ci
     name: Atlas CI
-    purpose: Runs frontend and Rust tests, and builds the macOS app on request.
+    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Every push to main also builds, signs and publishes the macOS app that installed copies update from.
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
@@ -22,6 +22,10 @@ agents:
     observe:
       github_workflow: ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read for the test and audit jobs'
+      - 'GITHUB_TOKEN: contents write in the macOS job, to publish the main-build release'
+      - 'Secrets: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
       title: Atlas Continuous Integration
       category: engineering
@@ -35,10 +39,17 @@ agents:
         outcomes: ["Every pull request is linted, tested and audited before merge"]
         beneficiaries: [KC, Atlas contributors]
       responsibilities:
-        tasks: [Lint and test the frontend, Build the web bundle, "Rust fmt, clippy and tests", npm and cargo dependency audits, Optional macOS app bundle on manual dispatch]
+        tasks:
+          - Lint and test the frontend
+          - Build the web bundle
+          - Rust fmt, clippy and tests
+          - npm and cargo dependency audits
+          - Build, sign and publish the macOS app on every push to main
         tools: [GitHub Actions, npm, cargo]
         inputs: [Pushes and pull requests]
-        outputs: [Check results on the pull request, macOS app artifact when requested]
+        outputs:
+          - Check results on the pull request
+          - Signed macOS app on the main-build release (from main) or as an artifact (manual dispatch)
       goals:
         objective: Block merges that break the app.
         kpis:
@@ -55,6 +66,17 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: README.md
+        runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
+        known_issues:
+          - 'Autonomy 0 and low risk understate it: every push to main publishes a signed build that installed copies of Atlas offer as an update'
+          - Re-running a main run publishes the build again, so this repository should stay off the re-run list
+          - codeql.yml and release.yml also run in this repository but are not in the catalog
+        improvements:
+          - Add codeql.yml and release.yml to the catalog
+          - Agree a run success target for the KPI
+        last_review: 2026-10-28
 
   - id: repo-intelligence
     name: Repository Intelligence Agent
@@ -68,6 +90,10 @@ agents:
     observe:
       atlas_intel: true
     last_run: null
+    permissions:
+      - 'GitHub REST API: GET only, allowlisted paths, the selected repository only'
+      - Anthropic Messages API (key in the macOS Keychain)
+      - Reads and writes JSON files in the app data folder
     registry:
       title: Repository Intelligence Analyst
       category: data
@@ -119,6 +145,17 @@ agents:
         budget: Per-run and monthly limits in Intel settings
       docs:
         technical: docs/repository-intelligence.md
+        runbook: docs/runbooks/ai-ops-atlas.md#repository-intelligence
+        known_issues:
+          - The schedule runs only while the app is open
+          - Only manifests at the repository root are read, so monorepos get a thinner stack picture
+          - Only the latest report per repository is kept, and run history keeps the latest 300 runs
+          - Costs are estimates from hand-entered prices; the Anthropic Console has billed figures
+        improvements:
+          - A launchd worker so scheduled runs happen while the app is closed
+          - Batch scheduled runs through the Message Batches API at half price
+          - A Rust agent trait so the next agent reuses the queue, budgets and traces
+        last_review: 2026-10-28
 
   - id: atlas-engineering-review
     name: Senior Engineering Reviewer
@@ -181,6 +218,14 @@ agents:
         budget: Own per-run cap ($0.60 default) and the shared monthly budget in Intel settings
       docs:
         technical: docs/engineering-review.md
+        runbook: docs/runbooks/ai-ops-atlas.md#senior-engineering-reviewer
+        known_issues:
+          - The schedule runs only while the app is open, using the catalog as it was at the last manual review
+          - Reads at most 30 repositories and 6 workflow files each
+          - Classic branch protection usually needs admin access, so it often shows as not assessed
+        improvements:
+          - Run scheduled reviews from the same launchd worker proposed for Repository Intelligence
+        last_review: 2026-10-28
 
   - id: atlas-rerun-failed
     name: Re-run Failed Jobs
@@ -189,7 +234,7 @@ agents:
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Manual button next to a failed run; off by default
-    source: src-tauri/src/actions/mod.rs
+    source: src-tauri/src/actions/rerun.rs
     last_run: null
     permissions: [Actions write on repositories selected in the token and in Settings]
     registry:
@@ -226,6 +271,13 @@ agents:
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
       docs:
         technical: docs/actions.md
+        runbook: docs/runbooks/ai-ops-atlas.md#re-run-failed-jobs
+        known_issues:
+          - No KPI is defined yet
+          - Re-running a main run of ai-ops-atlas ci.yml publishes a release, so that repository should not be ticked
+        improvements:
+          - Measure approved re-runs that ended green, from audit.jsonl
+        last_review: 2026-10-28
 
   - id: atlas-merge-pr
     name: Merge Pull Request
@@ -271,3 +323,11 @@ agents:
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
       docs:
         technical: docs/actions.md
+        runbook: docs/runbooks/ai-ops-atlas.md#merge-pull-request
+        known_issues:
+          - No KPI is defined yet
+          - Squash merge only; a repository with squash merging off answers 405
+          - A base branch with no required checks is always refused
+        improvements:
+          - Count merges and refusals by reason from audit.jsonl
+        last_review: 2026-10-28

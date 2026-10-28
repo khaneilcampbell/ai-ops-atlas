@@ -32,6 +32,8 @@ agents:
         event: Updated GitHub links to the khaneilcampbell username (#45)
       - at: 2026-10-24
         event: Rewrote home, About, Work and Contact copy (#36 to #43)
+    permissions:
+      - 'GitHub: push branches and open pull requests through Claude Code; only KC merges'
     registry:
       title: Portfolio Engineering Assistant
       category: engineering
@@ -57,8 +59,18 @@ agents:
         autonomy_note: Changes reach the live site only after KC merges the pull request.
         approval: KC reviews and merges every pull request
         data_sensitivity: public
+        credential_owner: KC (Claude's GitHub access to the repository)
         risk: low
         audit_log: Pull request history on GitHub
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#claude-site-assistant
+        known_issues:
+          - "Recent pull request titles (#20 to #45) don't use the Conventional Commits format that CONTRIBUTING.md asks for"
+          - No KPI is defined yet
+        improvements:
+          - Use Conventional Commits titles on its pull requests
+        last_review: 2026-10-28
 
   - id: site-audit
     name: Site Audit
@@ -71,6 +83,8 @@ agents:
     trigger: Manual, python scripts/site_audit.py
     source: scripts/site_audit.py
     last_run: null
+    permissions:
+      - Reads the site folder; writes nothing and makes no network calls
     registry:
       title: Website Quality Auditor
       category: engineering
@@ -79,6 +93,10 @@ agents:
         type: C
         confidence: verified
         evidence: scripts/site_audit.py checks headers, accessibility, links and credential-shaped strings; no AI model
+      mission:
+        problem: Catches missing security headers, accessibility basics, broken internal links and credential-shaped strings before a page ships.
+        outcomes:
+          - Findings per page and an exit code CI can block on
       responsibilities:
         tasks: [Check required security headers, Accessibility and link hygiene checks, Flag credential-shaped values]
         tools: [Python standard library]
@@ -90,7 +108,17 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: public
+        credential_owner: None needed (reads local files only)
         risk: low
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#site-audit
+        known_issues:
+          - It checks the _headers file, which GitHub Pages ignores; the CSP meta tags are what is in force on the live site
+          - No KPI is defined yet
+        improvements:
+          - Check the headers the live site actually sends
+        last_review: 2026-10-28
 
   - id: security-check
     name: Security Check Workflow
@@ -105,6 +133,9 @@ agents:
     observe:
       github_workflow: security-check.yml
     last_run: null
+    permissions:
+      - GITHUB_TOKEN with the repository's default permissions (the workflow sets none)
+      - No repository secrets
     registry:
       title: Portfolio Security Policy Check
       category: security
@@ -113,6 +144,10 @@ agents:
         type: D
         confidence: verified
         evidence: .github/workflows/security-check.yml checks CSP and HTML security rules on push and pull request
+      mission:
+        problem: No page should ship without its Content Security Policy and basic HTML security rules.
+        outcomes:
+          - A failed check whenever a page misses its policy
       responsibilities:
         tasks: [Check every page for a Content Security Policy, Enforce HTML security rules]
         tools: [GitHub Actions, shell]
@@ -131,8 +166,21 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: public
+        credential_owner: KC (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#security-check-workflow
+        known_issues:
+          - No permissions block, so the token gets the repository default
+          - Checks only pages at the repository root
+          - Requires _headers although GitHub Pages ignores that file
+          - Inline event handlers only warn
+        improvements:
+          - 'Add permissions: contents: read'
+          - Move these checks into scripts/site_audit.py so one script owns them
+        last_review: 2026-10-28
 
   - id: site-ci
     name: Site CI
@@ -145,6 +193,9 @@ agents:
     observe:
       github_workflow: site-ci.yml
     last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - No repository secrets
     registry:
       title: khaneilcampbell.com Continuous Integration
       category: engineering
@@ -178,3 +229,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
+      docs:
+        technical: README.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#site-ci
+        known_issues:
+          - Actions are pinned by major version tag (checkout@v4, setup-python@v5), not commit
+        improvements:
+          - Pin actions to commit SHAs and let Dependabot bump them
+        last_review: 2026-10-28
