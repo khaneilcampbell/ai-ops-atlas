@@ -146,6 +146,7 @@ export function useMaterials() {
       terrace: [wall, wall, patterned("#86b958", "grass"), wall, wall, wall],
       sand: patterned("#e4d3a3", "sand"),
       foam: new THREE.MeshStandardMaterial({ color: "#d9eee8", roughness: 1 }),
+      surf: patterned("#e8f6f2", "foam", { roughness: 1, transparent: true, depthWrite: false }),
       water: patterned("#4e9fb7", "water", { roughness: 0.35, metalness: 0.05 }),
       brook: patterned("#5aaac0", "water", { roughness: 0.3 }),
       falls: patterned("#ffffff", "falls", { transparent: true, opacity: 0.92, roughness: 0.4, side: THREE.DoubleSide }),
@@ -263,7 +264,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
         <planeGeometry args={[400, 400]} />
       </mesh>
-      <Instanced items={items.foam} geometry={g.box} material={m.foam} shadow={false} />
+      <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
       <Instanced items={items.terraces} geometry={g.box} material={m.terrace} pick={onTerrace} />

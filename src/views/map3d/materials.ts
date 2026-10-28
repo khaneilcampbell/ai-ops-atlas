@@ -103,8 +103,14 @@ const PATTERNS = {
     float c = smoothstep(0.66, 0.82, fbm(vWPos.xz * 0.9 - vec2(uTime * 0.06, uTime * 0.03)));
     // Fine glints drifting the other way: sunlight by day, a cool moonlit shimmer at night.
     float g = smoothstep(0.78, 0.9, fbm(vWPos.xz * 2.6 + vec2(uTime * 0.05, -uTime * 0.07)));
-    diffuseColor.rgb = mix(diffuseColor.rgb * 0.88, diffuseColor.rgb * 1.08, w) + c * 0.05 + g * 0.06;
+    // Long, slow swells rolling in, bent by the noise so they never read as stripes.
+    float swell = sin(dot(vWPos.xz, vec2(0.55, 0.35)) * 2.2 - uTime * 0.9 + fbm(vWPos.xz * 0.35) * 4.0);
+    diffuseColor.rgb = mix(diffuseColor.rgb * 0.88, diffuseColor.rgb * 1.08, w) * (1.0 + 0.05 * swell) + c * 0.05 + g * 0.06;
     #define ATLAS_GLINT g`,
+  foam: /* glsl */ `
+    // Surf that comes and goes along the shore.
+    float f = fbm(vWPos.xz * 2.4 + vec2(uTime * 0.12, -uTime * 0.09));
+    diffuseColor.a *= smoothstep(0.32, 0.7, f) * (0.65 + 0.35 * sin(uTime * 0.8 + vWPos.x * 0.7 + vWPos.z * 0.5));`,
   falls: /* glsl */ `
     float s = fbm(vec2((vWPos.x + vWPos.z) * 9.0, vWPos.y * 2.5 + uTime * 2.2));
     diffuseColor.rgb = mix(vec3(0.5, 0.74, 0.82), vec3(0.96, 0.99, 1.0), smoothstep(0.35, 0.72, s));`,
