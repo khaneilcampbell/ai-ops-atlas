@@ -132,9 +132,13 @@ export function attentionItems(
     if (a.status === "active") {
       const last = effectiveLastRun(a, snap);
       const d = daysSince(last, now);
+      // Without a live source, a missing run only means nobody filled in last_run by hand.
+      const observed = !!a.observe?.githubWorkflow;
+      // An event-driven agent runs when its event happens, so a quiet stretch is normal.
+      const eventDriven = a.registry?.execution?.triggerType === "event";
       if (d === null) {
-        items.push({ id: `agent:${a.id}:norun`, severity: "low", title: a.name, detail: "Active, but no run is recorded yet", target });
-      } else if (d > 7) {
+        if (observed) items.push({ id: `agent:${a.id}:norun`, severity: "low", title: a.name, detail: "Active, but no run is recorded yet", target });
+      } else if (d > 7 && !eventDriven) {
         items.push({ id: `agent:${a.id}:stale`, severity: "medium", title: a.name, detail: `Active, but last run was ${d} days ago`, target });
       }
     }
