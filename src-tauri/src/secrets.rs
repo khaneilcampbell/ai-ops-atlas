@@ -350,9 +350,7 @@ mod auth {
             ctx.evaluatePolicy_localizedReason_reply(policy, &reason, &reply);
             match rx.recv() {
                 Ok(true) => Ok(()),
-                _ => Err(
-                    "Touch ID was cancelled, so your saved keys are still locked.".into(),
-                ),
+                _ => Err("Touch ID was cancelled, so your saved keys are still locked.".into()),
             }
         }
     }
