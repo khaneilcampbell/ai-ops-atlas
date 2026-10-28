@@ -1,6 +1,6 @@
 import type { Agent, Project } from "../../catalog/types";
 import type { AuditRecord, ActionsStatus } from "../../actions/types";
-import { latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
+import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
 import { mainline } from "../../registry/telemetry";
 
@@ -85,7 +85,12 @@ export function planOffice(project: Pick<Project, "id" | "repository">, agents: 
  * Agents whose live record is the desktop app's action audit log rather than a workflow or
  * run log. Keyed by agent id, valued by the audit `action` name.
  */
-export const ACTION_AGENTS: Record<string, string> = { "atlas-rerun-failed": "rerun_failed_jobs" };
+export const ACTION_AGENTS: Record<string, string> = { "atlas-rerun-failed": "rerun_failed_jobs", "atlas-merge-pr": "merge_pull_request" };
+
+/** Whether an action's switch is on in Settings. */
+function actionEnabled(action: string, status: ActionsStatus): boolean {
+  return action === "merge_pull_request" ? !!status.config.merge_pull_requests?.enabled : status.config.rerun_failed_jobs.enabled;
+}
 
 export interface ActionData {
   /** False on the web build and in browsers: the actions live in the desktop app. */
@@ -96,13 +101,10 @@ export interface ActionData {
 
 /** Executions from the action audit log, one per button press, newest first. */
 export function actionExecutions(action: string, audit: AuditRecord[]): ExecutionRecord[] {
-  return latestPerAttempt(audit.filter((r) => r.action === action)).map((r) => ({
-    at: r.at,
-    result: r.stage === "started" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other",
-    label: `${STAGE_LABEL[r.stage]} · ${r.workflow ?? "run"} ${r.run_number ? `#${r.run_number}` : ""} on ${r.repo}`.replace(/\s+/g, " "),
-    url: `https://github.com/${r.repo}/actions/runs/${r.run_id}`,
-    source: "github" as const,
-  }));
+  return latestPerAttempt(audit.filter((r) => r.action === action)).map((r) => {
+    const d = describeRecord(r);
+    return { at: r.at, result: d.result, label: `${STAGE_LABEL[r.stage]} · ${d.subject} on ${r.repo}`, url: d.url, source: "github" as const };
+  });
 }
 
 /** The longest a run can really be in progress (GitHub's job limit). */
@@ -128,7 +130,7 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
     source = "Atlas action audit log";
     if (!actions.available) return { state: "unknown", reason: "Runs only in the desktop app; its audit log is not visible here.", basis: null, source };
     if (!actions.status) return { state: "unknown", reason: "The action switch and audit log have not loaded.", basis: null, source };
-    if (!actions.status.config.rerun_failed_jobs.enabled) return { state: "offline", reason: "Switched off in Settings, so it cannot run.", basis: null, source };
+    if (!actionEnabled(action, actions.status)) return { state: "offline", reason: "Switched off in Settings, so it cannot run.", basis: null, source };
     executions = actionExecutions(action, actions.audit);
     loaded = true;
   }

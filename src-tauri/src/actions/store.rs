@@ -1,19 +1,25 @@
-//! The action switch (`actions.json`) and the append-only audit log (`audit.jsonl`), both
+//! The action switches (`actions.json`) and the append-only audit log (`audit.jsonl`), both
 //! in the app's data folder. The audit log is never trimmed or rewritten; it is small (one
 //! line per button press) and is the record of every write Atlas attempted.
 
 use crate::intel::collect::valid_repo;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 
 pub const ACTION_RERUN: &str = "rerun_failed_jobs";
+pub const ACTION_MERGE: &str = "merge_pull_request";
 /// The same run can't be re-run again from Atlas within this window.
 pub const PER_RUN_COOLDOWN_MINUTES: i64 = 10;
 /// Re-runs Atlas will start across all repositories in any rolling hour.
 pub const MAX_PER_HOUR: usize = 10;
+/// The same pull request can't be merged again from Atlas within this window.
+pub const MERGE_COOLDOWN_MINUTES: i64 = 10;
+/// Merges Atlas will send across all repositories in any rolling hour.
+pub const MAX_MERGES_PER_HOUR: usize = 5;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -23,12 +29,25 @@ pub struct RerunSwitch {
     pub repos: Vec<String>,
 }
 
+/// Merging pull requests. Each repository also needs its own merge token in the Keychain.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MergeSwitch {
+    pub enabled: bool,
+    /// Repositories (owner/name) Atlas may merge in. Empty means none.
+    pub repos: Vec<String>,
+    /// The GitHub account each repository's merge token belongs to, keyed by lowercase
+    /// owner/name. A repository is listed here only while its token is saved.
+    pub token_logins: BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ActionsConfig {
     pub rerun_failed_jobs: RerunSwitch,
     /// The GitHub account the write token belongs to, read once when it is saved.
     pub token_login: Option<String>,
+    pub merge_pull_requests: MergeSwitch,
 }
 
 impl ActionsConfig {
@@ -36,6 +55,15 @@ impl ActionsConfig {
         self.rerun_failed_jobs.enabled
             && self
                 .rerun_failed_jobs
+                .repos
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(repo))
+    }
+
+    pub fn allows_merge(&self, repo: &str) -> bool {
+        self.merge_pull_requests.enabled
+            && self
+                .merge_pull_requests
                 .repos
                 .iter()
                 .any(|r| r.eq_ignore_ascii_case(repo))
@@ -51,6 +79,8 @@ pub enum Stage {
     Cancelled,
     Attempted,
     Started,
+    /// A pull request GitHub reports as merged.
+    Merged,
     Failed,
     Unknown,
 }
@@ -64,7 +94,18 @@ pub struct AuditRecord {
     pub actor: String,
     pub github_login: Option<String>,
     pub repo: String,
+    /// The workflow run a re-run targets; 0 for merges.
+    #[serde(default)]
     pub run_id: u64,
+    /// The pull request a merge targets.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pull_number: Option<u64>,
+    /// The pull request's title, for merges.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// The branch a merge lands on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base: Option<String>,
     pub workflow: Option<String>,
     pub run_number: Option<u64>,
     pub attempt_before: Option<u32>,
@@ -184,6 +225,35 @@ pub fn rate_block(
     None
 }
 
+/// Why Atlas's own limits block a merge right now, if they do. Counts merge requests that
+/// were sent (`Attempted`), whatever their outcome.
+pub fn merge_rate_block(
+    log: &[AuditRecord],
+    repo: &str,
+    number: u64,
+    now: DateTime<Utc>,
+) -> Option<String> {
+    let sent = log
+        .iter()
+        .filter(|r| r.stage == Stage::Attempted && r.action == ACTION_MERGE);
+    let cooldown = now - Duration::minutes(MERGE_COOLDOWN_MINUTES);
+    if sent.clone().any(|r| {
+        r.pull_number == Some(number) && r.repo.eq_ignore_ascii_case(repo) && r.at > cooldown
+    }) {
+        return Some(
+            "Atlas sent a merge for this pull request a moment ago. Refresh to see whether it landed."
+                .into(),
+        );
+    }
+    let hour = now - Duration::hours(1);
+    if sent.filter(|r| r.at > hour).count() >= MAX_MERGES_PER_HOUR {
+        return Some(format!(
+            "Atlas merges at most {MAX_MERGES_PER_HOUR} pull requests an hour. Try again later."
+        ));
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,6 +267,9 @@ mod tests {
             github_login: None,
             repo: repo.into(),
             run_id,
+            pull_number: None,
+            title: None,
+            base: None,
             workflow: None,
             run_number: None,
             attempt_before: None,
@@ -287,5 +360,54 @@ mod tests {
             "10 sent within the hour"
         );
         assert!(rate_block(&log, "o/r", 7, now + Duration::minutes(45)).is_none());
+    }
+
+    #[test]
+    fn merge_switch_is_separate_from_reruns() {
+        let mut c = ActionsConfig::default();
+        c.rerun_failed_jobs.enabled = true;
+        c.rerun_failed_jobs.repos = vec!["o/r".into()];
+        assert!(!c.allows_merge("o/r"), "re-run switch doesn't allow merges");
+        c.merge_pull_requests.repos = vec!["O/R".into()];
+        assert!(!c.allows_merge("o/r"), "off switch wins");
+        c.merge_pull_requests.enabled = true;
+        assert!(c.allows_merge("o/r"));
+        assert!(!c.allows_merge("o/other"));
+    }
+
+    #[test]
+    fn older_audit_lines_and_configs_still_load() {
+        let old = r#"{"id":"a","at":"2026-10-27T10:00:00Z","action":"rerun_failed_jobs","actor":"kc","github_login":null,"repo":"o/r","run_id":5,"workflow":null,"run_number":null,"attempt_before":null,"head_sha":null,"branch":null,"stage":"started","reason":null,"http_status":null,"request_id":null,"message":null}"#;
+        let r: AuditRecord = serde_json::from_str(old).unwrap();
+        assert_eq!((r.run_id, r.pull_number), (5, None));
+        let c: ActionsConfig =
+            serde_json::from_str(r#"{"rerun_failed_jobs":{"enabled":true,"repos":["o/r"]}}"#)
+                .unwrap();
+        assert!(!c.merge_pull_requests.enabled);
+    }
+
+    #[test]
+    fn merge_cooldown_and_hourly_cap() {
+        let now = Utc::now();
+        let merge = |n: u64, at| AuditRecord {
+            action: ACTION_MERGE.into(),
+            run_id: 0,
+            pull_number: Some(n),
+            ..record(Stage::Attempted, "o/r", 0, at)
+        };
+        let mut log = vec![merge(7, now - Duration::minutes(2))];
+        assert!(merge_rate_block(&log, "o/r", 7, now).is_some());
+        assert!(merge_rate_block(&log, "o/r", 8, now).is_none());
+        // Re-runs don't count towards merges.
+        log.push(record(Stage::Attempted, "o/r", 8, now));
+        assert!(merge_rate_block(&log, "o/r", 8, now).is_none());
+        for n in 20..24 {
+            log.push(merge(n, now - Duration::minutes(30)));
+        }
+        assert!(
+            merge_rate_block(&log, "o/r", 9, now).is_some(),
+            "5 within the hour"
+        );
+        assert!(merge_rate_block(&log, "o/r", 9, now + Duration::minutes(31)).is_none());
     }
 }

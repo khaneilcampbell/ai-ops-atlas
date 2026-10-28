@@ -352,6 +352,11 @@ table.table { width: 100%; border-collapse: collapse; }
 .runs .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runs a { color: var(--ink); text-decoration: none; }
 .runs a:hover { color: var(--gold-deep); text-decoration: underline; }
+.runs.pulls { gap: 10px; }
+.runs.pulls li { align-items: flex-start; }
+.runs.pulls li > i { margin-top: 5px; }
+.runs.pulls .grow { white-space: normal; }
+.runs.pulls .grow > a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lang-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--sage-200); }
 .lang-bar i { display: block; min-width: 3px; }
 .lang-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
