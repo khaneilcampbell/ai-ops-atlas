@@ -8,6 +8,9 @@ import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
 import { IntelPanel } from "./IntelPanel";
 import { RerunButton } from "./RerunButton";
+import { useReducedMotion } from "../lib/motion";
+import { webglAvailable } from "../views/map3d/webgl";
+import { enterBuilding } from "../views/office/store";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -168,7 +171,8 @@ const REPO_TABS: { id: RepoTab; label: string }[] = [
 ];
 
 function RepoDetail({ name }: { name: string }) {
-  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
+  const { catalog, repos, select, view, setView, setFilters, clearFilters } = useAtlas();
+  const reduced = useReducedMotion();
   const [more, setMore] = useState(false);
   const [tab, setTab] = useState<RepoTab>("overview");
   const state = repos[name];
@@ -195,6 +199,11 @@ function RepoDetail({ name }: { name: string }) {
           {snap && <span className="chip">{snap.visibility}</span>}
           {snap?.archived && <span className="chip">Archived</span>}
         </div>
+        {project && view === "map" && webglAvailable() && (
+          <button className="ghost-btn enter-building" onClick={() => enterBuilding(project.id, reduced)}>
+            <Icon name="agents" size={15} /> Enter building
+          </button>
+        )}
       </Head>
       <div className="panel-tabs" role="tablist" aria-label="Inspector sections">
         {REPO_TABS.map((t) => (
