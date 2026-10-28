@@ -5,7 +5,7 @@ import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -339,6 +339,46 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
       <Instanced items={items.stoops} geometry={g.box} material={m.plain} shadow={false} />
       <Instanced items={items.chimneys} geometry={g.box} material={m.plain} />
       <Instanced items={items.solar} geometry={g.box} material={m.solar} />
+    </group>
+  );
+}
+
+/** Market kiosks for outside services: a counter, four posts, a tilted canopy and a sign. */
+export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
+  const items = useMemo(() => {
+    const y0 = TERRACE_H + 0.03;
+    const plain: Inst[] = [];
+    const canopy: Inst[] = [];
+    const canopyKeys: string[] = [];
+    const counter: Inst[] = [];
+    const counterKeys: string[] = [];
+    const lamps: Inst[] = [];
+    for (const k of kiosks) {
+      const w = k.size;
+      const d = k.size * 0.72;
+      counter.push({ p: [k.x, y0, k.z + d * 0.12], s: [w * 0.86, 0.2, d * 0.5], c: "#efe6d2" });
+      counterKeys.push(k.key);
+      // A counter top in the canopy's color, and four slim posts.
+      plain.push({ p: [k.x, y0 + 0.2, k.z + d * 0.12], s: [w * 0.92, 0.025, d * 0.56], c: k.canopy });
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) plain.push({ p: [k.x + sx * w * 0.44, y0, k.z + sz * d * 0.44], s: [0.03, 0.44, 0.03], c: "#6a4e36" });
+      // Canopy tilts down toward the front, in two stripes.
+      for (const [i, c] of [k.canopy, "#f6f1e6"].entries()) {
+        canopy.push({ p: [k.x, y0 + 0.44 + 0.02 * (1 - i), k.z + (i ? 0.02 : 0)], s: [w * (1.04 - i * 0.5), 0.035, d * 1.02], rx: 0.16, c });
+        canopyKeys.push(k.key);
+      }
+      // Sign board above the back of the canopy.
+      plain.push({ p: [k.x, y0 + 0.5, k.z - d * 0.46], s: [w * 0.78, 0.15, 0.025], c: k.canopy });
+      plain.push({ p: [k.x, y0 + 0.53, k.z - d * 0.46 + 0.015], s: [w * 0.66, 0.09, 0.012], c: "#f6f1e6" });
+      lamps.push({ p: [k.x, y0 + 0.36, k.z + d * 0.1], s: [0.05, 0.05, 0.05] });
+    }
+    return { plain, canopy, canopyKeys, counter, counterKeys, lamps };
+  }, [kiosks]);
+  return (
+    <group>
+      <Instanced items={items.counter} geometry={g.box} material={m.plain} pick={pick.of(items.counterKeys)} />
+      <Instanced items={items.canopy} geometry={g.box} material={m.plain} pick={pick.of(items.canopyKeys)} />
+      <Instanced items={items.plain} geometry={g.box} material={m.plain} />
+      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
     </group>
   );
 }

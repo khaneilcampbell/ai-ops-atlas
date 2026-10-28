@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
+import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
 import { Bloom, Sky, Traffic, Vehicles, type LightMode } from "./living";
@@ -12,7 +13,7 @@ import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
 import { Network, type NetLink } from "./network";
-import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
@@ -93,9 +94,14 @@ const selOf = (key: string): Sel => {
 };
 
 /** Where each clickable thing sits and how big it is, for highlights, labels and camera moves. */
-function anchorsOf(scene: Scene3D) {
+function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  // AI agents work inside their headquarters, so they share its anchor.
+  for (const d of layout.districts) {
+    const hq = m.get(`repo:${d.project.repository}`);
+    if (hq) for (const a of d.crew) m.set(`agent:${a.id}`, hq);
+  }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const s of scene.strays) m.set(s.key, { x: s.x, z: s.z, y0: 0, y1: Math.max(2, Math.round(s.height / 0.3)) * 0.3 + 0.06, w: s.size, d: s.size });
   return m;
@@ -104,7 +110,7 @@ function anchorsOf(scene: Scene3D) {
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
-  const anchors = useMemo(() => anchorsOf(scene), [scene]);
+  const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
@@ -130,7 +136,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const net = useMemo(() => {
     const touches = (l: MapLink) =>
       !!selKey && (l.a === selKey || l.b === selKey || (selKey.startsWith("repo:") && !!selectedDistrict && (l.pa === selectedDistrict || l.pb === selectedDistrict)));
-    const placed = links.filter((l) => anchors.has(l.a) && anchors.has(l.b));
+    // A link between a headquarters and an AI agent inside it has nowhere to run.
+    const placed = links.filter((l) => anchors.has(l.a) && anchors.has(l.b) && anchors.get(l.a) !== anchors.get(l.b));
     const picked = linkSel ? placed.find((l) => l.id === linkSel) : undefined;
     const inHand = (p?: string) => !!p && (p === selectedDistrict || p === hoverDistrict);
     const shown: { l: MapLink; level: NetLink["level"] }[] = [];
@@ -196,7 +203,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
-      const sub = `${t.agents} ${t.agents === 1 ? "agent" : "agents"} · ${statusLabel(t.status)}`;
+      const sub = `${residentsLabel(t.agents, t.automations)} · ${statusLabel(t.status)}`;
       const w = Math.max(...lines.map((l) => measure(l, 13, SANS, 600)), measure(sub, 11, SANS) + 14, measure(health.label, 11, SANS) + 14) + 26;
       const h = lines.length * 17 + 48;
       out.push({
@@ -244,6 +251,21 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
+    for (const k of scene.kiosks) {
+      const urgent = k.key === hover;
+      if (!urgent && !(agentsNear && (showAgentLabels || inHand(k.projectId)))) continue;
+      out.push({
+        id: k.key,
+        key: k.key,
+        pos: new THREE.Vector3(k.x, TERRACE_H + 0.78, k.z),
+        w: measure(k.name, 11.5, SANS, 500) + 22,
+        h: 28,
+        priority: urgent ? 0.5 : 6.5,
+        className: `m3-pill quiet ${urgent ? "hover" : ""}${net.focusSet && !net.focusSet.has(k.projectId) ? " dim" : ""}`,
+        onClick: () => props.onFocus(k.projectId),
+        node: k.name,
+      });
+    }
     for (const s of scene.strays) {
       const text = s.name.split("/")[1] ?? s.name;
       out.push({
@@ -287,6 +309,23 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       click: (k, e) => {
         if (e.delta > 4) return;
         select(k);
+      },
+    }),
+  };
+  // Kiosks aren't selectable; hovering names the service and what uses it, a click focuses the project.
+  const kioskBy = useMemo(() => new Map(scene.kiosks.map((k) => [k.key, k])), [scene]);
+  const kioskPick: PickHandlerSet = {
+    of: (keys) => ({
+      ...pick.of(keys),
+      over: (k, e) => {
+        setHover(k);
+        const q = kioskBy.get(k);
+        const r = wrapEl.current!.getBoundingClientRect();
+        setTip(q ? { x: e.nativeEvent.clientX - r.left, y: e.nativeEvent.clientY - r.top, title: q.name, sub: `Outside service · used by ${q.users.join(", ")}` } : null);
+      },
+      click: (k, e) => {
+        const q = kioskBy.get(k);
+        if (e.delta <= 4 && q) props.onFocus(q.projectId);
       },
     }),
   };
@@ -343,6 +382,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
+          kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}
           activity={activity}
@@ -403,6 +443,7 @@ function World({
   selectedDistrict,
   api,
   pick,
+  kioskPick,
   terracePick,
   reduced,
   activity,
@@ -428,6 +469,7 @@ function World({
   selectedDistrict?: string;
   api: React.MutableRefObject<Map3DApi | null>;
   pick: PickHandlerSet;
+  kioskPick: PickHandlerSet;
   terracePick: Pick;
   reduced: boolean;
   activity: Map<string, Illumination>;
@@ -752,6 +794,7 @@ function World({
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
+      <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />

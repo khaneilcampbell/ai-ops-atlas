@@ -1,3 +1,4 @@
+import { isAiAgent, servicesOf, type ServiceUse } from "../catalog/roles";
 import type { Agent, Catalog, Project, Status } from "../catalog/types";
 
 // Isometric projection: one grid unit is TW px across and TH px down per axis.
@@ -23,6 +24,14 @@ export interface Lot {
   height: number;
 }
 
+/** A kiosk for an outside service that the project's manifests name. */
+export interface Kiosk {
+  service: ServiceUse;
+  gx: number;
+  gy: number;
+  size: number;
+}
+
 export interface District {
   project: Project;
   group: string;
@@ -30,7 +39,11 @@ export interface District {
   oy: number;
   size: number;
   hq: { gx: number; gy: number; size: number; height: number };
+  /** Automations: each has a house on the district. */
   lots: Lot[];
+  /** AI agents: they work at desks inside the headquarters and have no house. */
+  crew: Agent[];
+  kiosks: Kiosk[];
 }
 
 export interface Stray {
@@ -117,9 +130,14 @@ function ringFor(count: number) {
   return m;
 }
 
-/** A district is sized for its own agents, so small projects stay compact. */
-export function districtSize(agentCount: number) {
-  return agentCount === 0 ? 5 : ringFor(agentCount) * 2.5;
+/** A district is sized for the houses and kiosks around its headquarters, so small projects stay compact. */
+export function districtSize(lotCount: number) {
+  return lotCount === 0 ? 5 : ringFor(lotCount) * 2.5;
+}
+
+/** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
+function residents(agents: Agent[]) {
+  return { crew: agents.filter(isAiAgent), houses: agents.filter((a) => !isAiAgent(a)), services: servicesOf(agents) };
 }
 
 interface Box {
@@ -199,7 +217,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b]) => {
     const items: Item[] = b.projects
       .map((project) => {
-        const s = districtSize(agentsByProject.get(project.id)?.length ?? 0);
+        const r = residents(agentsByProject.get(project.id) ?? []);
+        const s = districtSize(r.houses.length + r.services.length);
         return { project, w: s, h: s };
       })
       // Largest first packs tighter; ties keep catalog order.
@@ -259,10 +278,13 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       }
       const project = it.project!;
       const agents = agentsByProject.get(project.id) ?? [];
+      const { crew, houses, services } = residents(agents);
+      const n = houses.length + services.length;
       const size = it.w;
-      const m = agents.length ? ringFor(agents.length) : 2;
-      const hqSize = agents.length ? size * 0.26 : size * 0.34;
+      const m = n ? ringFor(n) : 2;
+      const hqSize = n ? size * 0.26 : size * 0.34;
       const lotSize = (size / m) * 0.52;
+      const spots = n ? slots(m, size).slice(0, n) : [];
       districts.push({
         project,
         group: blk.key,
@@ -271,13 +293,20 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         size,
         // Taller towers for busier projects, from the real agent count.
         hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: 64 + Math.min(agents.length, 12) * 3 },
-        lots: (agents.length ? slots(m, size) : []).slice(0, agents.length).map((s, k) => ({
-          agent: agents[k],
-          gx: ox + s.gx - lotSize / 2,
-          gy: oy + s.gy - lotSize / 2,
+        lots: houses.map((a, k) => ({
+          agent: a,
+          gx: ox + spots[k].gx - lotSize / 2,
+          gy: oy + spots[k].gy - lotSize / 2,
           size: lotSize,
-          height: 26 + Math.round(hash(agents[k].id) * 22),
+          height: 26 + Math.round(hash(a.id) * 22),
         })),
+        crew,
+        // Kiosks take the slots after the houses, and a smaller footprint.
+        kiosks: services.map((service, k) => {
+          const s = spots[houses.length + k];
+          const ks = lotSize * 0.6;
+          return { service, gx: ox + s.gx - ks / 2, gy: oy + s.gy - ks / 2, size: ks };
+        }),
       });
     }
   }

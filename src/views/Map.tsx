@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { residentsLabel } from "../catalog/roles";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
 import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
@@ -376,7 +377,10 @@ function anchors(districts: District[], parks: Park[]) {
   const m = new Map<string, Pt & { district?: string }>();
   for (const d of districts) {
     const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
-    m.set(`repo:${d.project.repository}`, { x: c.x, y: c.y - d.hq.height / 2, district: d.project.id });
+    const hq = { x: c.x, y: c.y - d.hq.height / 2, district: d.project.id };
+    m.set(`repo:${d.project.repository}`, hq);
+    // AI agents work inside the headquarters.
+    for (const a of d.crew) m.set(`agent:${a.id}`, hq);
     for (const l of d.lots) {
       const p = iso(l.gx + l.size / 2, l.gy + l.size / 2);
       m.set(`agent:${l.agent.id}`, { x: p.x, y: p.y - l.height / 2, district: d.project.id });
@@ -710,8 +714,7 @@ export function MapView() {
     for (const d of layout.districts) {
       const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
       const key = `repo:${d.project.repository}`;
-      const n = d.lots.length;
-      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${n} ${n === 1 ? "agent" : "agents"}`);
+      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${residentsLabel(d.crew.length, d.lots.length)}`);
       // Pointer tip just above the tower's roof and mast.
       const y = c.y - d.hq.height - TH * d.hq.size * 0.5 - 14;
       const u = urgent(key, d.project.id);
@@ -817,7 +820,7 @@ export function MapView() {
     if (!best) return;
     const d = best.d;
     setFocus(d.project.id);
-    setAnnounce(`${d.project.name}. ${d.lots.length} agents. Press Enter to inspect.`);
+    setAnnounce(`${d.project.name}. ${residentsLabel(d.crew.length, d.lots.length)}. Press Enter to inspect.`);
     if (is3d) map3d.current?.reveal(d.ox + d.size / 2, d.oy + d.size / 2);
     else reveal(center(d));
   };
@@ -972,7 +975,7 @@ export function MapView() {
                     d={d}
                     ramps={ramps.get(d.project.id)}
                     focused={d === focused}
-                    selected={isSelected("repo", d.project.repository) || (selection?.kind === "agent" && d.lots.some((l) => l.agent.id === selection.id))}
+                    selected={isSelected("repo", d.project.repository) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
                     hovered={!!hover && (hover === `district:${d.project.id}` || where.get(hover)?.district === d.project.id)}
                     detail={detail}
                     onFocus={() => setFocus(d.project.id)}
@@ -1078,7 +1081,7 @@ export function MapView() {
           <div className="map-intro">
             <div className="eyebrow">Workspace map</div>
             <h1>Welcome to the neighborhood.</h1>
-            <p className="lede small">Each project is a district. Its repository is the tall building in the middle and its agents are the houses around it.</p>
+            <p className="lede small">Each project is a district. Its AI agents work inside the tall building, which lights up while they run. Houses are its automations, and kiosks are the outside services they use.</p>
           </div>
 
           {tip && (
@@ -1182,7 +1185,7 @@ export function MapView() {
           {layout.districts.map((d) => (
             <li key={d.project.id}>
               <button tabIndex={-1} onClick={() => select({ kind: "repo", id: d.project.repository })}>
-                {d.project.name}, {d.lots.length} agents
+                {d.project.name}, {residentsLabel(d.crew.length, d.lots.length)}
               </button>
             </li>
           ))}
@@ -1465,7 +1468,7 @@ function NeighborhoodLabel({ n, scale }: { n: Neighborhood; scale: number }) {
 
 function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) {
   const { repos, select, setFilters, clearFilters } = useAtlas();
-  const agents: Agent[] = d.lots.map((l) => l.agent);
+  const agents: Agent[] = [...d.crew, ...d.lots.map((l) => l.agent)];
   const snap = repoData(repos[d.project.repository]);
   const health = overallHealth(repoHealth(snap, agents.length));
   return (
@@ -1476,7 +1479,7 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
         </span>
         <div>
           <div className="eyebrow">
-            {d.project.repository} · {agents.length} agents
+            {d.project.repository} · {residentsLabel(d.crew.length, d.lots.length)}
           </div>
           <h3>{d.project.name}</h3>
         </div>

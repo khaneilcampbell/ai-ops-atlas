@@ -18,6 +18,7 @@ import type { Proposal } from "../../approvals/proposals";
 import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
 import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
 import { leaveBuilding, useOffice } from "./store";
+import { isAiAgent } from "../../catalog/roles";
 import { STATE_COLOR } from "./textures";
 import "../../styles/office.css";
 
@@ -38,7 +39,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
-  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId), [catalog, projectId]);
+  // Only AI agents have desks; automations have their own houses outside.
+  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId && isAiAgent(a)), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
 
   const rows = useMemo(() => {
@@ -121,8 +123,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length === 0 && (
           <div className="office-empty">
-            <h3>No agents work here yet</h3>
-            <p>This project has no agents registered in its manifest, so the office has no desks.</p>
+            <h3>No AI agents work here yet</h3>
+            <p>This project's manifest registers no AI agents, so the office has no desks. Its automations have houses outside.</p>
           </div>
         )}
 
