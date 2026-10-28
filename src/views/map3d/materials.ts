@@ -17,6 +17,27 @@ export const focusRects = { value: Array.from({ length: FOCUS_MAX }, () => new T
 export const focusCount = { value: 0 };
 
 /** Lets any material take part in focus mode. Keeps whatever patch the material already has. */
+/** Foliage sways gently in the breeze, more at the top than the trunk end. Decorative only. */
+export function swaying(m: THREE.MeshStandardMaterial) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = time;
+    sh.vertexShader = `uniform float uTime;\n${sh.vertexShader}`.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec3 swayAt = instanceMatrix[3].xyz;
+      #else
+        vec3 swayAt = vec3(0.0);
+      #endif
+      float bend = max(transformed.y, 0.0);
+      transformed.x += sin(uTime * 1.3 + swayAt.x * 0.7 + swayAt.z * 0.4) * 0.05 * bend;
+      transformed.z += cos(uTime * 1.1 + swayAt.z * 0.6 + swayAt.x * 0.3) * 0.035 * bend;`,
+    );
+  };
+  m.customProgramCacheKey = () => "atlas-sway";
+  return m;
+}
+
 export function focusable<T extends THREE.Material>(m: T): T {
   if (m.userData.focusable) return m;
   m.userData.focusable = true;

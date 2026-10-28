@@ -4,7 +4,7 @@ import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
-import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, windowLights } from "./materials";
+import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type Slab, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -172,7 +172,7 @@ export function useMaterials() {
       lawn: patterned("#7fb356", "grass"),
       glass: new THREE.MeshStandardMaterial({ color: "#f3dc95", emissive: "#e9c46a", emissiveIntensity: 0.35, roughness: 0.3 }),
       solar: new THREE.MeshStandardMaterial({ color: "#2e4660", roughness: 0.25, metalness: 0.4 }),
-      foliage: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 }),
+      foliage: swaying(new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 })),
       lamp: new THREE.MeshStandardMaterial({ color: "#fbe7a6", emissive: "#f3cf73", emissiveIntensity: 0.8 }),
       // Ground glow under lamps; its opacity follows the night (see the lighting in Map3D).
       pool: new THREE.MeshBasicMaterial({ color: "#ffc874", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, visible: false }),
