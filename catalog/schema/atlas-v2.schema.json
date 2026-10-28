@@ -192,6 +192,10 @@
               },
               "atlas_intel_runs": {
                 "enum": ["repository", "ecosystem"]
+              },
+              "agent_feed": {
+                "type": "boolean",
+                "description": "The agent's pipeline reports its runs to Atlas at /api/hooks/agents."
               }
             }
           },

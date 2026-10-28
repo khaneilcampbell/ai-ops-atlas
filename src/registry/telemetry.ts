@@ -1,6 +1,7 @@
 import type { Agent } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
 import type { Run } from "../intel/types";
+import type { AgentRun } from "../live/apply";
 import { runResult } from "../lib/activity";
 import type { ExecutionRecord, KpiMeasure, Kpi, Operational, Telemetry } from "./types";
 import type { AgentProfile } from "./profile";
@@ -17,12 +18,15 @@ function intelResult(r: Run): ExecutionRecord["result"] {
   return "other";
 }
 
+const FEED_RESULT: Record<AgentRun["status"], ExecutionRecord["result"]> = { ok: "success", failed: "failure", skipped: "other", paused: "other" };
+
 /**
  * Execution telemetry for one agent, from the live sources its manifest declares: GitHub
- * workflow runs, or the app's own run log for agents that run inside Atlas. Manifest
+ * workflow runs, the app's own run log for agents that run inside Atlas, or the phase results
+ * a pipeline outside Atlas reports to the live feed. Manifest
  * `last_run` and `history` are hand-written records, not telemetry, and are not used here.
  */
-export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null): Telemetry {
+export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null, agentRuns: AgentRun[] | null = null): Telemetry {
   let executions: ExecutionRecord[] = [];
   let source: Telemetry["source"] = null;
   let loaded = false;
@@ -52,6 +56,15 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
       durationMs: r.duration_ms,
       costUsd: r.cost_usd,
       source: "atlas-intel" as const,
+    }));
+  } else if (agent.observe?.agentFeed) {
+    source = "agent-feed";
+    loaded = agentRuns !== null;
+    executions = (agentRuns ?? []).filter((r) => r.agents.includes(agent.id)).map((r) => ({
+      at: r.at,
+      result: FEED_RESULT[r.status],
+      label: r.detail ? `${r.phase} · ${r.status} · ${r.detail}` : `${r.phase} · ${r.status}`,
+      source: "agent-feed" as const,
     }));
   }
   executions.sort((a, b) => b.at.localeCompare(a.at));

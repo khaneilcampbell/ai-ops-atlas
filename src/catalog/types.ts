@@ -37,7 +37,7 @@ export interface Agent {
   history: HistoryEntry[];
   links: Link[];
   /** Read-only live sources the app may consult for this agent. */
-  observe?: { githubWorkflow?: string; atlasIntel?: boolean; atlasIntelRuns?: "repository" | "ecosystem" };
+  observe?: { githubWorkflow?: string; atlasIntel?: boolean; atlasIntelRuns?: "repository" | "ecosystem"; agentFeed?: boolean };
   /** Hand-maintained registry profile (atlas/v2). Absent on atlas/v1 agents. */
   registry?: RegistryManifest;
   projectId: string;
