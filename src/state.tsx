@@ -10,7 +10,7 @@ import { load, save } from "./lib/storage";
 import { applyGithubEvent } from "./live/apply";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
-export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+export type View = "command" | "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
 
 export interface Settings {

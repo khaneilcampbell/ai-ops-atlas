@@ -10,7 +10,7 @@ import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
 import { ViewSwitch } from "./components/ViewSwitch";
-import { AgentsView } from "./views/Agents";
+import { AgentsHub } from "./views/AgentsHub";
 import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
@@ -92,7 +92,7 @@ export default function App() {
 
       <nav className="sidebar" aria-label="Sections">
         {NAV.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${(view === n.view || (n.view === "agents" && view === "command")) ? "active" : ""}`} onClick={() => setView(n.view === "agents" ? "command" : n.view)} aria-current={view === n.view || (n.view === "agents" && view === "command") ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
             {n.view === "overview" && attention.length > 0 && <span className="badge">{attention.length}</span>}
@@ -111,7 +111,7 @@ export default function App() {
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
-          {view === "agents" && <AgentsView />}
+          {(view === "agents" || view === "command") && <AgentsHub />}
           {view === "repos" && <ReposView />}
           {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
