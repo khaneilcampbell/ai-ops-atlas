@@ -35,6 +35,7 @@ agents:
     observe:                       # optional read-only live sources
       github_workflow: ci.yml      # latest run of this workflow updates last run and health
       atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
+      atlas_intel_runs: ecosystem  # optional with atlas_intel: which runs count (repository, the default, or ecosystem)
     links: []                      # optional
     history:                       # optional notable events, newest first
       - at: 2026-10-12
@@ -151,7 +152,7 @@ A connection turns red only when an observed workflow run on the default branch 
 
 | Status | Use it when |
 |---|---|
-| `active` | It runs on a schedule or is in regular use. Active agents with no run in 7 days are flagged. |
+| `active` | It runs on a schedule or is in regular use. Active agents with no run in 7 days are flagged, unless `trigger_type` is `event` (they run only when their event happens). An active agent with an observed workflow and no run at all is flagged too. |
 | `idle` | It runs on demand and nothing is expected. |
 | `paused` | Deliberately switched off for now. |
 | `attention` | Something is wrong and you want it on the overview until you fix it. |

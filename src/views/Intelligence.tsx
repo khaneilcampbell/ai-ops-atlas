@@ -5,9 +5,12 @@ import { useIntel } from "../intel/state";
 import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, scheduleLabel, tokens, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
 import type { AgentStatus, Run } from "../intel/types";
+import { EngineeringReview } from "./EngineeringReview";
+import { isReviewRun } from "../intel/ecosystem";
 
 const TABS = [
   { id: "inspector", label: "Agent inspector" },
+  { id: "review", label: "Engineering review" },
   { id: "activity", label: "Activity" },
   { id: "costs", label: "Costs" },
 ] as const;
@@ -39,6 +42,8 @@ export function IntelligenceView() {
         <div className="card empty">{intel.error ?? "Loading…"}</div>
       ) : tab === "inspector" ? (
         <Inspector status={intel.status} />
+      ) : tab === "review" ? (
+        <EngineeringReview />
       ) : tab === "activity" ? (
         <Activity runs={intel.status.runs} />
       ) : (
@@ -167,7 +172,7 @@ function RunTable({ runs, compact, onPick, picked }: { runs: Run[]; compact?: bo
         {runs.map((r) => (
           <tr key={r.id} className={picked === r.id ? "selected" : undefined} onClick={() => onPick?.(r.id)} style={onPick ? undefined : { cursor: "default" }}>
             <td>
-              <div className="name">{r.repo}</div>
+              <div className="name">{isReviewRun(r) ? "Engineering review · all repositories" : r.repo}</div>
               <div className="desc mono">
                 {r.id} · {r.trigger} · {r.depth}
               </div>

@@ -38,6 +38,8 @@ export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
+  const mergeOn = !!actionsStatus?.config.merge_pull_requests?.enabled && actionsStatus.config.merge_pull_requests.repos.length > 0;
+  const writes = [rerunOn && "re-runs", mergeOn && "merges"].filter(Boolean).join(" + ");
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
@@ -75,10 +77,10 @@ export default function App() {
         <LivePill />
         <VaultLockedPill />
         <UpdateButton />
-        {rerunOn ? (
-          <span className="pill-mode" title="Read-only, except Re-run failed jobs on the repositories ticked in Settings. Each re-run needs your approval in a macOS dialog and is written to the audit log.">
+        {writes ? (
+          <span className="pill-mode" title="Read-only, except the actions switched on for the repositories ticked in Settings. Each one needs your approval in a macOS dialog (merges also need Touch ID) and is written to the audit log.">
             <span className="dot" />
-            Read-only + re-runs
+            Read-only + {writes}
           </span>
         ) : (
           <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Runtime, RuntimeState } from "./model";
-import { buildingStates, justCompleted } from "./activity";
+import type { RepoSnapshot } from "../../github/types";
+import { buildingStates, isFresh, justCompleted } from "./activity";
 
 const rt = (state: RuntimeState, result?: "success" | "failure"): Runtime => ({ state, reason: "", source: "GitHub Actions", basis: result ? { at: "2026-10-28T06:00:00Z", result, label: "CI", source: "github" } : null });
 const agents = [
@@ -28,5 +29,13 @@ describe("building illumination", () => {
     const next = new Map([["ci", rt("idle", "success")], ["intel", rt("failed", "failure")], ["site", rt("idle", "success")]]);
     expect(justCompleted(prev, next)).toEqual(["ci"]);
     expect(buildingStates(agents, next, new Set(["ci"])).get("agent:ci")).toBe("completed");
+  });
+
+  it("uses only GitHub data synced within the refresh interval", () => {
+    const data = {} as RepoSnapshot;
+    expect(isFresh({ kind: "ok", data, stale: false })).toBe(true);
+    expect(isFresh({ kind: "ok", data, stale: true })).toBe(false);
+    expect(isFresh({ kind: "error", message: "rate limited", data })).toBe(false);
+    expect(isFresh(undefined)).toBe(false);
   });
 });

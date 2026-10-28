@@ -1,7 +1,8 @@
 import type { Agent, Project } from "../../catalog/types";
 import type { AuditRecord, ActionsStatus } from "../../actions/types";
-import { latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
+import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
+import { mainline } from "../../registry/telemetry";
 
 /**
  * The data behind a virtual office: which project and building it belongs to, one workstation
@@ -84,7 +85,12 @@ export function planOffice(project: Pick<Project, "id" | "repository">, agents: 
  * Agents whose live record is the desktop app's action audit log rather than a workflow or
  * run log. Keyed by agent id, valued by the audit `action` name.
  */
-export const ACTION_AGENTS: Record<string, string> = { "atlas-rerun-failed": "rerun_failed_jobs" };
+export const ACTION_AGENTS: Record<string, string> = { "atlas-rerun-failed": "rerun_failed_jobs", "atlas-merge-pr": "merge_pull_request" };
+
+/** Whether an action's switch is on in Settings. */
+function actionEnabled(action: string, status: ActionsStatus): boolean {
+  return action === "merge_pull_request" ? !!status.config.merge_pull_requests?.enabled : status.config.rerun_failed_jobs.enabled;
+}
 
 export interface ActionData {
   /** False on the web build and in browsers: the actions live in the desktop app. */
@@ -95,14 +101,14 @@ export interface ActionData {
 
 /** Executions from the action audit log, one per button press, newest first. */
 export function actionExecutions(action: string, audit: AuditRecord[]): ExecutionRecord[] {
-  return latestPerAttempt(audit.filter((r) => r.action === action)).map((r) => ({
-    at: r.at,
-    result: r.stage === "started" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other",
-    label: `${STAGE_LABEL[r.stage]} · ${r.workflow ?? "run"} ${r.run_number ? `#${r.run_number}` : ""} on ${r.repo}`.replace(/\s+/g, " "),
-    url: `https://github.com/${r.repo}/actions/runs/${r.run_id}`,
-    source: "github" as const,
-  }));
+  return latestPerAttempt(audit.filter((r) => r.action === action)).map((r) => {
+    const d = describeRecord(r);
+    return { at: r.at, result: d.result, label: `${STAGE_LABEL[r.stage]} · ${d.subject} on ${r.repo}`, url: d.url, source: "github" as const };
+  });
 }
+
+/** The longest a run can really be in progress (GitHub's job limit). */
+const MAX_RUN_MS = 6 * 3_600_000;
 
 const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -111,11 +117,12 @@ const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "sh
  * working: only an execution observed in progress does. With no live source, or one that has
  * not loaded, the state is "unknown" rather than a guess.
  */
-export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0): Runtime {
+export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0, now = Date.now()): Runtime {
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
-  let executions = t.executions;
+  // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
+  let executions = mainline(t.executions);
   let loaded = t.loaded;
   let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : null;
   const action = ACTION_AGENTS[agent.id];
@@ -123,14 +130,15 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
     source = "Atlas action audit log";
     if (!actions.available) return { state: "unknown", reason: "Runs only in the desktop app; its audit log is not visible here.", basis: null, source };
     if (!actions.status) return { state: "unknown", reason: "The action switch and audit log have not loaded.", basis: null, source };
-    if (!actions.status.config.rerun_failed_jobs.enabled) return { state: "offline", reason: "Switched off in Settings, so it cannot run.", basis: null, source };
+    if (!actionEnabled(action, actions.status)) return { state: "offline", reason: "Switched off in Settings, so it cannot run.", basis: null, source };
     executions = actionExecutions(action, actions.audit);
     loaded = true;
   }
   if (!source) return { state: "unknown", reason: "No live telemetry source is declared for this agent.", basis: null, source: null };
   if (!loaded) return { state: "unknown", reason: `${source} data has not loaded${t.source === "atlas-intel" ? "; it is only available in the desktop app" : ""}.`, basis: null, source };
   const latest = executions[0];
-  if (latest?.result === "running") return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
+  // GitHub stops any job after 6 hours, so a run "in progress" older than that is a stale record.
+  if (latest?.result === "running" && now - Date.parse(latest.at) < MAX_RUN_MS) return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
   // Proposed actions waiting for a person outrank the last result: the agent is blocked on KC.
   if (pending > 0) return { state: "awaiting", reason: `${pending} proposed ${pending === 1 ? "action is" : "actions are"} waiting for your approval.`, basis: latest ?? null, source };
   if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };

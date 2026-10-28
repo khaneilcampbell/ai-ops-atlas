@@ -49,13 +49,29 @@ export interface House {
   chimney: boolean;
   solar: boolean;
 }
+/** A small market kiosk for an outside service named in the project's manifests. */
+export interface Kiosk {
+  key: string;
+  projectId: string;
+  name: string;
+  /** Names of the items that use it. */
+  users: string[];
+  x: number;
+  z: number;
+  /** Footprint, square. */
+  size: number;
+  /** Canopy color. */
+  canopy: string;
+}
 export interface Tower {
   key: string;
   projectId: string;
   repository: string;
   name: string;
   status: Status;
+  /** AI agents at desks inside, and automations in houses around it. */
   agents: number;
+  automations: number;
   identity: BuildingIdentity;
   x: number;
   z: number;
@@ -115,6 +131,7 @@ export interface Scene3D {
   walks: { x0: number; z0: number; x1: number; z1: number }[];
   parks: Park[];
   houses: House[];
+  kiosks: Kiosk[];
   towers: Tower[];
   strays: StrayBuilding[];
   trees: Tree[];
@@ -123,6 +140,8 @@ export interface Scene3D {
   bounds: { x0: number; z0: number; x1: number; z1: number };
 }
 
+/** Atlas's own palette: forest green, sage, gold, terracotta. */
+const CANOPIES = ["#2f4a3a", "#8fa58a", "#c9a35a", "#b8735a"];
 const WALLS = ["#f3eadb", "#efe6d2", "#f6f1e6", "#e9dfca"];
 
 function inRect(r: Rect, x: number, z: number, pad = 0) {
@@ -142,6 +161,7 @@ export function buildScene(layout: Layout): Scene3D {
   const paving: Slab[] = [];
   const steps: Slab[] = [];
   const houses: House[] = [];
+  const kiosks: Kiosk[] = [];
   const towers: Tower[] = [];
   const strays: StrayBuilding[] = [];
   const trees: Tree[] = [];
@@ -156,7 +176,7 @@ export function buildScene(layout: Layout): Scene3D {
 
   for (const d of layout.districts) {
     terraces.push({ id: d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
-    const agents = d.lots.length;
+    const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
     const floors = identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
@@ -169,7 +189,8 @@ export function buildScene(layout: Layout): Scene3D {
       repository: d.project.repository,
       name: d.project.name,
       status: d.project.status,
-      agents,
+      agents: d.crew.length,
+      automations: d.lots.length,
       identity,
       x: cx,
       z: cz,
@@ -204,19 +225,37 @@ export function buildScene(layout: Layout): Scene3D {
         solar: hash(`${a.id}:sol`) > 0.6,
       });
     }
+    for (const k of d.kiosks) {
+      const kx = k.gx + k.size / 2;
+      const kz = k.gy + k.size / 2;
+      paving.push(strip(cx, cz, kx, cz, INNER_PATH_W, top), strip(kx, cz, kx, kz, INNER_PATH_W, top));
+      kiosks.push({
+        key: `service:${d.project.id}:${k.service.id}`,
+        projectId: d.project.id,
+        name: k.service.name,
+        users: k.service.users.map((a) => a.name),
+        x: kx,
+        z: kz,
+        size: Math.min(k.size, 0.9),
+        canopy: CANOPIES[Math.floor(hash(k.service.id) * CANOPIES.length)],
+      });
+    }
     // A path light at each bend, on the outside corner, unless a house stands there.
     for (const l of d.lots) {
       const lx = l.gx + l.size / 2;
       const lz = l.gy + l.size / 2;
       const b = { x: lx + Math.sign(lx - cx || 1) * (INNER_PATH_W / 2 + 0.07), y: top, z: cz - Math.sign(lz - cz || 1) * (INNER_PATH_W / 2 + 0.07), s: 1 };
-      const clear = !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - b.x) < h.w / 2 + 0.05 && Math.abs(h.z - b.z) < h.d / 2 + 0.05);
+      const clear =
+        !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - b.x) < h.w / 2 + 0.05 && Math.abs(h.z - b.z) < h.d / 2 + 0.05) &&
+        !kiosks.some((k) => k.projectId === d.project.id && Math.abs(k.x - b.x) < k.size / 2 + 0.05 && Math.abs(k.z - b.z) < k.size / 2 + 0.05);
       if (clear && !bollards.some((o) => Math.hypot(o.x - b.x, o.z - b.z) < 0.3)) bollards.push(b);
     }
     // The landmark stands on a wider civic plaza with a fountain, wherever the houses leave room.
     if (identity.landmark) {
       const half = d.hq.size * 0.62 + 0.45;
       paving.push({ x: cx - half, z: cz - half, w: half * 2, d: half * 2, y: top, h: 0.02 });
-      const clear = (x: number, z: number, r: number) => !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + r && Math.abs(h.z - z) < h.d / 2 + r);
+      const clear = (x: number, z: number, r: number) =>
+        ![...houses, ...kiosks.map((k) => ({ ...k, w: k.size, d: k.size }))].some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + r && Math.abs(h.z - z) < h.d / 2 + r);
       // In the plaza's front-left corner, so it stands beside the tower rather than in front of it
       // from the map's viewpoint, as large as fits between the tower's corner and the plaza's edge:
       // inset o from the edge, it clears the tower by o * sqrt(2) on the diagonal.
@@ -228,6 +267,7 @@ export function buildScene(layout: Layout): Scene3D {
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
     const blocked = (x: number, z: number) =>
       houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + 0.35 && Math.abs(h.z - z) < h.d / 2 + 0.35) ||
+      kiosks.some((k) => k.projectId === d.project.id && Math.abs(k.x - x) < k.size / 2 + 0.3 && Math.abs(k.z - z) < k.size / 2 + 0.3) ||
       paving.some((p) => inRect(p, x, z, 0.22)) ||
       Math.hypot(x - cx, z - cz) < d.hq.size * 0.9;
     for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(d.size * 3.4))) {
@@ -395,6 +435,7 @@ export function buildScene(layout: Layout): Scene3D {
     walks,
     parks,
     houses,
+    kiosks,
     towers,
     strays,
     trees,

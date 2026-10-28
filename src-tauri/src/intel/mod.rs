@@ -8,6 +8,7 @@
 //! - `validate`: strict parsing and citation checks of the model output
 //! - `cost`: pricing, estimates, per-run and monthly limits
 //! - `store`: JSON files in the app data folder
+//! - `review`: the Senior Engineering Reviewer, one review across every catalog repository
 //! - `jobs`: queueing, de-duplication, cancellation, the pipeline and the scheduler
 
 pub mod claude;
@@ -15,6 +16,7 @@ pub mod collect;
 pub mod cost;
 pub mod jobs;
 pub mod prompt;
+pub mod review;
 pub mod store;
 pub mod types;
 pub mod validate;
@@ -112,4 +114,28 @@ pub fn intel_estimate(
     agent: tauri::State<'_, AgentState>,
 ) -> Result<CostEstimate, String> {
     agent.estimate(depth)
+}
+
+#[tauri::command]
+pub fn review_report(agent: tauri::State<'_, AgentState>) -> Option<review::EcoReport> {
+    agent.review_report()
+}
+
+/// Starts a Senior Engineering Review of the catalog the web view passes in.
+#[tauri::command]
+pub fn review_run(
+    force: bool,
+    depth: Option<Depth>,
+    context: review::EcoContext,
+    agent: tauri::State<'_, AgentState>,
+) -> Result<EnqueueResult, String> {
+    agent.enqueue_review(Trigger::Manual, depth, force, context)
+}
+
+#[tauri::command]
+pub fn review_estimate(
+    depth: Option<Depth>,
+    agent: tauri::State<'_, AgentState>,
+) -> Result<CostEstimate, String> {
+    agent.review_estimate(depth)
 }

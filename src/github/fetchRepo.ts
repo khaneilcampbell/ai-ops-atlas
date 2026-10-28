@@ -59,6 +59,12 @@ export function syncPlan(prev: RepoSnapshot | undefined, meta: J, opts: SyncOpti
 
 const workflowPath = (w: string) => (r: J) => r.path === `.github/workflows/${w}` || String(r.path ?? "").endsWith(`/${w}`);
 
+function withMainline(runs: J[], branch: string): J[] {
+  const top = runs.slice(0, 5);
+  const main = runs.find((r) => r.head_branch === branch);
+  return main && !top.includes(main) ? [...top, main] : top;
+}
+
 /**
  * One repository-wide run list covers both the default branch's CI and the workflows agents
  * observe. Dedicated requests are made only for what that list doesn't show.
@@ -80,7 +86,9 @@ async function fetchRuns(base: string, branch: string, workflows: string[]) {
   );
   return {
     runs: onBranch.slice(0, 10).map(toRun),
-    workflowRuns: Object.fromEntries(workflows.map((w, i) => [w, observed[i].slice(0, 5).map(toRun)])),
+    // The five newest runs, plus the newest one on the default branch when pull request runs
+    // crowd it out, since that run decides the agent's status.
+    workflowRuns: Object.fromEntries(workflows.map((w, i) => [w, withMainline(observed[i], branch).map(toRun)])),
   };
 }
 

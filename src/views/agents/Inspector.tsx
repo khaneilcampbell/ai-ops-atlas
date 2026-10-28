@@ -5,7 +5,7 @@ import { attentionItems, repoData } from "../../lib/derive";
 import { formatDate, relative } from "../../lib/time";
 import type { RegistryEntry } from "../../registry/registry";
 import { documentationChecks } from "../../registry/profile";
-import { meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
+import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
 import { useAtlas } from "../../state";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
@@ -411,7 +411,7 @@ function OperationsTab({
         <Mon
           label="Reliability"
           value={t.successRate === null ? "Not verified" : `${Math.round(t.successRate * 100)}% succeeded`}
-          sub={`${t.executions.length} observed run${t.executions.length === 1 ? "" : "s"} · ${t.failures} failed`}
+          sub={`${mainline(t.executions).length} counted run${mainline(t.executions).length === 1 ? "" : "s"} · ${t.failures} failed`}
           health={t.successRate === null ? "unknown" : t.successRate >= 0.9 ? "good" : t.successRate >= 0.6 ? "warn" : "bad"}
         />
         <Mon
@@ -441,7 +441,10 @@ function OperationsTab({
                 <td>
                   <span className={`result r-${r.result}`}>{r.result === "success" ? "Succeeded" : r.result === "failure" ? "Failed" : r.result === "running" ? "Running" : "Other"}</span>
                 </td>
-                <td>{r.url ? <ExternalLink href={r.url}>{r.label}</ExternalLink> : r.label}</td>
+                <td>
+                  {r.url ? <ExternalLink href={r.url}>{r.label}</ExternalLink> : r.label}
+                  {r.offMainline && <div className="muted small">Pull request branch, not counted in the status</div>}
+                </td>
                 <td className="small">{r.durationMs != null ? `${(r.durationMs / 1000).toFixed(0)} s` : "–"}</td>
                 <td className="small nowrap" title={new Date(r.at).toLocaleString()}>
                   {relative(r.at)}

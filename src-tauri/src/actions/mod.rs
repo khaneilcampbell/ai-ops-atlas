@@ -1,18 +1,23 @@
-//! Approval-required actions (autonomy level 2). Atlas can make exactly one change on
-//! GitHub: re-run the failed jobs of a failed workflow run, on a repository the person has
-//! switched on, after they approve it in a native dialog. Every press is audited.
+//! Approval-required actions (autonomy level 2). Atlas can make exactly two changes on
+//! GitHub, each on a repository the person has switched on and only after they approve that
+//! one change in a native dialog: re-run the failed jobs of a failed workflow run, and merge
+//! a pull request GitHub reports as ready (which also asks for Touch ID). Every press is
+//! audited. Nothing proposes or approves a merge on its own.
 //!
-//! - `store`: the off switch (`actions.json`) and the audit log (`audit.jsonl`)
-//! - `rerun`: pre-flight checks, approval, audit and the single request
+//! - `store`: the off switches (`actions.json`) and the audit log (`audit.jsonl`)
+//! - `rerun`: pre-flight checks, approval, audit and the single re-run request
+//! - `merge`: readiness checks, approval, Touch ID, audit and the single merge request
 //! - `client`: the write-scoped HTTP client; the only code that sends a GitHub write
 //!
 //! Reads, including the pre-flight check of the run, still go through the read-only
 //! client in `github.rs` and its GET allowlist, which this module leaves untouched.
 
 pub mod client;
+pub mod merge;
 pub mod rerun;
 pub mod store;
 
+use merge::{MergeApprover, MergeCheck, MergeOutcome, MergePreview, Merger};
 use rerun::{Approver, Outcome, Preview, Rerunner};
 use serde::Serialize;
 use std::sync::Arc;
@@ -24,6 +29,7 @@ pub struct Actions {
     store: Arc<Store>,
     client: Arc<client::WriteClient>,
     rerunner: Rerunner,
+    merger: Merger,
 }
 
 /// Native confirmation, drawn by macOS rather than the web view, so nothing running in the
@@ -56,6 +62,40 @@ impl Approver for NativeApprover {
     }
 }
 
+#[async_trait::async_trait]
+impl MergeApprover for NativeApprover {
+    async fn approve(&self, p: &MergePreview) -> bool {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let mut dialog = self
+            .app
+            .dialog()
+            .message(merge::dialog_text(p))
+            .title(format!("Merge pull request #{}?", p.number))
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Merge".into(),
+                "Cancel".into(),
+            ));
+        if let Some(w) = self.app.get_webview_window("main") {
+            dialog = dialog.parent(&w);
+        }
+        dialog.show(move |ok| {
+            let _ = tx.send(ok);
+        });
+        rx.await.unwrap_or(false)
+    }
+
+    async fn confirm_owner(&self, p: &MergePreview) -> Result<(), String> {
+        let reason = format!(
+            "merge pull request #{} into {} on {}",
+            p.number, p.base, p.repo
+        );
+        tauri::async_runtime::spawn_blocking(move || crate::secrets::confirm_owner(&reason))
+            .await
+            .map_err(|e| e.to_string())?
+    }
+}
+
 fn actor() -> String {
     let user = std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
@@ -66,13 +106,22 @@ fn actor() -> String {
 pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let store = Arc::new(Store::new(app.path().app_data_dir()?.join("actions"))?);
     let client = Arc::new(client::WriteClient::new());
+    let approver = Arc::new(NativeApprover {
+        app: app.handle().clone(),
+    });
     let rerunner = Rerunner::new(
         store.clone(),
         Arc::new(crate::github::Client::new()),
         client.clone(),
-        Arc::new(NativeApprover {
-            app: app.handle().clone(),
-        }),
+        approver.clone(),
+        actor(),
+        Box::new(chrono::Utc::now),
+    );
+    let merger = Merger::new(
+        store.clone(),
+        Arc::new(crate::github::Client::new()),
+        client.clone(),
+        approver,
         actor(),
         Box::new(chrono::Utc::now),
     );
@@ -80,6 +129,7 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store,
         client,
         rerunner,
+        merger,
     });
     Ok(())
 }
@@ -88,12 +138,15 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 pub struct ActionsStatus {
     config: ActionsConfig,
     token: bool,
+    /// Repositories (lowercase owner/name) with a merge token saved. Never the tokens.
+    merge_tokens: Vec<String>,
 }
 
 fn status(a: &Actions) -> ActionsStatus {
     ActionsStatus {
         config: a.store.load_config(),
         token: crate::secrets::read_actions_token().is_some(),
+        merge_tokens: crate::secrets::merge_token_repos(),
     }
 }
 
@@ -174,6 +227,97 @@ pub async fn action_rerun_failed(
     Ok(outcome)
 }
 
+/// Merging needs a token per repository, so only repositories with one can be listed.
+#[tauri::command]
+pub fn actions_merge_settings_set(
+    enabled: bool,
+    repos: Vec<String>,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    let repos = clean_repos(&repos)?;
+    let saved = crate::secrets::merge_token_repos();
+    if let Some(r) = repos
+        .iter()
+        .find(|r| !saved.contains(&r.to_ascii_lowercase()))
+    {
+        return Err(format!("Save a merge token for {r} before enabling it."));
+    }
+    let mut c = actions.store.load_config();
+    c.merge_pull_requests.enabled = enabled;
+    c.merge_pull_requests.repos = repos;
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+#[tauri::command]
+pub async fn merge_token_set(
+    repo: String,
+    token: String,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    let repo = clean_repos(std::slice::from_ref(&repo))?
+        .pop()
+        .ok_or("Choose a repository.")?;
+    let token = token.trim();
+    crate::secrets::check_merge_token(token, &[])?;
+    let login = actions.client.token_login(token).await?;
+    actions.client.token_sees_repo(token, &repo).await?;
+    crate::secrets::set_merge_token(&repo, token)?;
+    let mut c = actions.store.load_config();
+    c.merge_pull_requests
+        .token_logins
+        .insert(repo.to_ascii_lowercase(), login);
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+/// Removing a repository's merge token also takes it off the merge list.
+#[tauri::command]
+pub fn merge_token_clear(
+    repo: String,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    crate::secrets::clear_merge_token(&repo)?;
+    let mut c = actions.store.load_config();
+    c.merge_pull_requests
+        .token_logins
+        .remove(&repo.to_ascii_lowercase());
+    c.merge_pull_requests
+        .repos
+        .retain(|r| !r.eq_ignore_ascii_case(&repo));
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+/// Whether a pull request is ready to merge from Atlas. Read-only; nothing is logged.
+#[tauri::command]
+pub async fn action_merge_check(
+    repo: String,
+    number: u64,
+    actions: tauri::State<'_, Actions>,
+) -> Result<MergeCheck, String> {
+    Ok(actions.merger.check(&repo, number).await)
+}
+
+#[tauri::command]
+pub async fn action_merge_pr(
+    repo: String,
+    number: u64,
+    seen_sha: Option<String>,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<MergeOutcome, String> {
+    let outcome = actions.merger.run(&repo, number, seen_sha.as_deref()).await;
+    app.emit("actions-changed", ()).ok();
+    Ok(outcome)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -240,6 +384,12 @@ mod tests {
                     !writes,
                     "{rel} sends a write request; GitHub writes belong in actions/client.rs"
                 ),
+            }
+            if code.contains("read_merge_token") {
+                assert!(
+                    matches!(rel.as_str(), "actions/client.rs" | "secrets.rs"),
+                    "{rel} reads a merge token"
+                );
             }
             if code.contains("read_actions_token") {
                 assert!(

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import type { Agent } from "../../catalog/types";
+import type { RepoState } from "../../github/types";
 import { useIntel } from "../../intel/state";
 import { buildRegistry } from "../../registry/registry";
 import { useAtlas } from "../../state";
@@ -41,6 +42,11 @@ export function justCompleted(prev: Map<string, Runtime>, next: Map<string, Runt
   return out;
 }
 
+/** A GitHub snapshot synced within the refresh interval. */
+export function isFresh(state: RepoState | undefined): boolean {
+  return state?.kind === "ok" && !state.stale;
+}
+
 /** Live illumination for every building, from the catalog, GitHub snapshots and the app's own logs. */
 export function useBuildingActivity(): Map<string, Illumination> {
   const { catalog, repos } = useAtlas();
@@ -64,5 +70,8 @@ export function useBuildingActivity(): Map<string, Illumination> {
     return () => clearTimeout(t);
   }, [runtimes]);
 
-  return useMemo(() => buildingStates(catalog.agents, runtimes, completed), [catalog.agents, runtimes, completed]);
+  // A building is lit only from current data: an agent read from a GitHub snapshot that is out of
+  // date (a failed or skipped sync) stays unlit rather than showing what was true hours ago.
+  const live = useMemo(() => catalog.agents.filter((a) => !a.observe?.githubWorkflow || isFresh(repos[a.repository])), [catalog.agents, repos]);
+  return useMemo(() => buildingStates(live, runtimes, completed), [live, runtimes, completed]);
 }

@@ -360,6 +360,11 @@ table.table { width: 100%; border-collapse: collapse; }
 .runs .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .runs a { color: var(--ink); text-decoration: none; }
 .runs a:hover { color: var(--gold-deep); text-decoration: underline; }
+.runs.pulls { gap: 10px; }
+.runs.pulls li { align-items: flex-start; }
+.runs.pulls li > i { margin-top: 5px; }
+.runs.pulls .grow { white-space: normal; }
+.runs.pulls .grow > a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lang-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--sage-200); }
 .lang-bar i { display: block; min-width: 3px; }
 .lang-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
@@ -372,8 +377,6 @@ table.table { width: 100%; border-collapse: collapse; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   .sel-ring { animation: none; opacity: 0.8; }
 }
-.map-intro { transition: opacity 0.2s ease; }
-.map-intro.faded { opacity: 0; }
 
 /* ── View switch ─────────────────────────────────── */
 .view-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--forest-900); border: 1px solid var(--forest-line); }
@@ -613,8 +616,6 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .map3d canvas { display: block; }
 .map-stage:has(.map3d) .map-intro { z-index: 3; padding: 6px 10px 10px 0; }
 .map3d .m3-labels { z-index: 2; }
-.map-stage:has(.map3d)::before { transition: opacity 0.3s ease; }
-.map-stage:has(.map-intro.faded)::before { opacity: 0; }
 .map-stage:has(.map3d)::before {
   content: ""; position: absolute; left: 0; top: 0; width: 640px; height: 260px; pointer-events: none; z-index: 1;
   background: radial-gradient(ellipse at 0 0, rgba(241, 242, 234, 0.92) 0%, rgba(241, 242, 234, 0.6) 45%, rgba(241, 242, 234, 0) 72%);
@@ -713,3 +714,15 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .panel.docked .panel-head .chip.link-active { color: #9fd3a8; }
 .panel.docked .panel-head .chip.link-unhealthy { color: #f0a097; }
 .evidence { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); font-family: var(--mono, ui-monospace, monospace); font-size: 12px; overflow-wrap: anywhere; }
+
+/* Intel → Engineering review */
+.review { display: flex; flex-direction: column; gap: 14px; }
+.review-head { display: flex; align-items: flex-start; gap: 12px; }
+.review-head .grow { flex: 1; min-width: 0; }
+.scorecard { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.score { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(201, 163, 90, 0.25); }
+.recs > li { display: flex; flex-direction: column; gap: 4px; }
+.rec-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rec-head .grow { flex: 1; min-width: 12ch; }
+.table-wrap { overflow-x: auto; margin: 0 -4px; }
+.table.compact th, .table.compact td { padding: 8px 10px; }

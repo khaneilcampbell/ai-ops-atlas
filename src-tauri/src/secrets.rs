@@ -2,7 +2,8 @@
 //! The GitHub token and the Anthropic API key are written from the settings screen and
 //! read only by the Rust clients that use them; no command returns either to the web view.
 //! The Actions token (the only credential that can write) has its own slot and is
-//! read only by `actions::client`; the read-only GitHub client never touches it.
+//! read only by `actions::client`; the read-only GitHub client never touches it. Merge tokens
+//! are the same, one per repository, each in its own slot.
 //!
 //! All four secrets live in one Keychain item and are read once per launch, after a Touch ID
 //! check (or the Mac's password if Touch ID isn't available), then kept in memory until Atlas
@@ -21,6 +22,8 @@ const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
 const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
 const USAGE_SYNC_ACCOUNT: &str = "usage-sync-key";
+/// One slot per repository: `github-merge-token:owner/name`, lowercase.
+const MERGE_PREFIX: &str = "github-merge-token:";
 /// The single item holding all of the above as JSON.
 const VAULT_ACCOUNT: &str = "vault";
 /// The separate items older versions wrote, moved into the vault on first unlock.
@@ -242,6 +245,62 @@ pub fn clear_actions_token() -> Result<(), String> {
     clear(ACTIONS_ACCOUNT)
 }
 
+fn merge_account(repo: &str) -> String {
+    format!("{MERGE_PREFIX}{}", repo.to_ascii_lowercase())
+}
+
+/// The merge token for one repository. Read only by the actions client at request time.
+pub fn read_merge_token(repo: &str) -> Option<String> {
+    read(&merge_account(repo))
+}
+
+/// Repositories (lowercase owner/name) with a merge token saved.
+pub fn merge_token_repos() -> Vec<String> {
+    with_secrets(|s| {
+        s.keys()
+            .filter_map(|k| k.strip_prefix(MERGE_PREFIX).map(str::to_owned))
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+/// Checks a merge token's shape: fine-grained only, and not any other token Atlas holds, so
+/// each repository's merge rights stay separate from reads, re-runs and other repositories.
+pub fn check_merge_token(token: &str, others: &[String]) -> Result<(), String> {
+    if !(token.starts_with("github_pat_") && looks_like_token(token)) {
+        return Err(
+            "Use a fine-grained token (starting with github_pat_) limited to this one repository."
+                .into(),
+        );
+    }
+    if others.iter().any(|o| o == token) {
+        return Err("That token is already saved for something else in Atlas. Create a separate token for this repository, with Pull requests and Contents: Read and write only.".into());
+    }
+    Ok(())
+}
+
+pub fn set_merge_token(repo: &str, token: &str) -> Result<(), String> {
+    let mine = merge_account(repo);
+    let others: Vec<String> = with_secrets(|s| {
+        s.iter()
+            .filter(|(k, _)| **k != mine)
+            .map(|(_, v)| v.clone())
+            .collect()
+    })?;
+    check_merge_token(token, &others)?;
+    write(&mine, Some(token))
+}
+
+pub fn clear_merge_token(repo: &str) -> Result<(), String> {
+    clear(&merge_account(repo))
+}
+
+/// A fresh Touch ID check (or the Mac's password) for one irreversible action, on top of the
+/// unlock at launch.
+pub fn confirm_owner(reason: &str) -> Result<(), String> {
+    auth::confirm(reason)
+}
+
 /// The shared secret for pushing usage records to the hosted site. Read only by `usage_sync`.
 pub fn read_usage_sync_key() -> Option<String> {
     read(USAGE_SYNC_ACCOUNT)
@@ -333,6 +392,12 @@ mod auth {
     use objc2_local_authentication::{LAContext, LAPolicy};
 
     pub fn verify() -> Result<(), String> {
+        confirm("unlock the GitHub and Anthropic keys it has saved").map_err(|_| {
+            String::from("Touch ID was cancelled, so your saved keys are still locked.")
+        })
+    }
+
+    pub fn confirm(reason: &str) -> Result<(), String> {
         let policy = LAPolicy::DeviceOwnerAuthentication;
         // SAFETY: plain LocalAuthentication calls; the reply block only sends on a channel.
         unsafe {
@@ -346,11 +411,11 @@ mod auth {
             let reply = RcBlock::new(move |ok: Bool, _err: *mut NSError| {
                 let _ = tx.send(ok.as_bool());
             });
-            let reason = NSString::from_str("unlock the GitHub and Anthropic keys it has saved");
+            let reason = NSString::from_str(reason);
             ctx.evaluatePolicy_localizedReason_reply(policy, &reason, &reply);
             match rx.recv() {
                 Ok(true) => Ok(()),
-                _ => Err("Touch ID was cancelled, so your saved keys are still locked.".into()),
+                _ => Err("Touch ID was cancelled.".into()),
             }
         }
     }
@@ -360,6 +425,10 @@ mod auth {
 #[cfg(not(target_os = "macos"))]
 mod auth {
     pub fn verify() -> Result<(), String> {
+        Ok(())
+    }
+
+    pub fn confirm(_reason: &str) -> Result<(), String> {
         Ok(())
     }
 }
@@ -460,6 +529,18 @@ mod tests {
         );
         assert!(check_actions_token("ghp_abcdefghijklmnopqrstuvwxyz0123456789", None).is_err());
         assert!(check_actions_token("github_pat_short", None).is_err());
+    }
+
+    #[test]
+    fn merge_tokens_are_fine_grained_and_not_reused() {
+        let t = "github_pat_11ABCDEFG0123456789_abcdefghijklmnop";
+        assert!(check_merge_token(t, &[]).is_ok());
+        assert!(
+            check_merge_token(t, &[t.to_string()]).is_err(),
+            "same as another saved token"
+        );
+        assert!(check_merge_token("ghp_abcdefghijklmnopqrstuvwxyz0123456789", &[]).is_err());
+        assert_eq!(merge_account("Owner/Repo"), "github-merge-token:owner/repo");
     }
 
     #[test]

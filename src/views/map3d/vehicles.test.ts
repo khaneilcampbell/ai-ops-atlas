@@ -15,7 +15,7 @@ describe("decorative vehicles", () => {
     expect(new Set(plans.map((p) => p.id)).size).toBe(plans.length);
   });
 
-  it("stays on the paved paths and clear of every building", () => {
+  it("stays on the paved paths and clear of every building and kiosk", () => {
     const paths = scene.paving.filter((p) => p.y === TERRACE_H);
     for (const v of plans)
       for (let t = 0; t < v.period; t += 0.05) {
@@ -24,6 +24,7 @@ describe("decorative vehicles", () => {
         for (const h of scene.houses) expect(inside({ x: h.x - h.w / 2, z: h.z - h.d / 2, w: h.w, d: h.d }, x, z, 0.08), `${v.id} inside ${h.key} at ${x},${z}`).toBe(false);
         // Towers, with their entrance stairs out front.
         for (const w of scene.towers) expect(inside({ x: w.x - w.size / 2, z: w.z - w.size / 2, w: w.size, d: w.size + 0.24 }, x, z, 0.08), `${v.id} inside a tower`).toBe(false);
+        for (const k of scene.kiosks) expect(inside({ x: k.x - k.size / 2, z: k.z - k.size / 2, w: k.size, d: k.size }, x, z, 0.08), `${v.id} inside ${k.key}`).toBe(false);
         for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
       }
   });

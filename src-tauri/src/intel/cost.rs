@@ -109,6 +109,7 @@ mod tests {
     fn run_at(at: &str, cost: f64) -> Run {
         Run {
             id: "r".into(),
+            kind: RunKind::Repository,
             repo: "o/r".into(),
             trigger: Trigger::Manual,
             depth: Depth::Standard,

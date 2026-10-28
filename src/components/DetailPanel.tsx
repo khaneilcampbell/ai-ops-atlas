@@ -8,6 +8,7 @@ import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
 import { IntelPanel } from "./IntelPanel";
 import { RerunButton } from "./RerunButton";
+import { PullRequests } from "./PullRequests";
 import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
@@ -162,9 +163,10 @@ function AgentDetail({ id }: { id: string }) {
 
 const CONCLUSION_HEALTH: Record<string, Health> = { success: "good", failure: "bad", timed_out: "bad", cancelled: "warn", action_required: "warn" };
 
-type RepoTab = "overview" | "agents" | "activity" | "insights";
+type RepoTab = "overview" | "pulls" | "agents" | "activity" | "insights";
 const REPO_TABS: { id: RepoTab; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "pulls", label: "PRs" },
   { id: "agents", label: "Agents" },
   { id: "activity", label: "Activity" },
   { id: "insights", label: "Insights" },
@@ -400,6 +402,7 @@ function RepoDetail({ name }: { name: string }) {
           </div>
           </>
         )}
+        {tab === "pulls" && <PullRequests repo={name} />}
         {tab === "insights" && <RepoInsights name={name} />}
       </div>
       <div className="panel-foot">

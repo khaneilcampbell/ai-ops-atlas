@@ -39,6 +39,11 @@ function set(patch: Partial<LiveStatus>) {
   watchers.forEach((w) => w());
 }
 
+/** Whether the feed is answering, so slower GitHub polling for runs can stand down. */
+export function liveFeedOn(): boolean {
+  return status.state === "live";
+}
+
 /** Called with every batch of new events, oldest first. */
 export function onLiveEvents(fn: (events: LiveEvent[], gap: boolean) => void): () => void {
   listeners.add(fn);

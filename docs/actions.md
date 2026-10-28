@@ -1,6 +1,6 @@
 # Approval-required actions
 
-Atlas is read-only with one exception: **Re-run failed jobs** on a failed GitHub Actions run. It is autonomy level 2 (approval required): Atlas prepares the action and KC approves each run. It ships switched off.
+Atlas is read-only with two exceptions: **Re-run failed jobs** on a failed GitHub Actions run, and **Merge pull request** on a pull request GitHub reports ready. Both are autonomy level 2 (approval required): Atlas prepares the action and KC approves each one. Both ship switched off, and both exist only in the Mac app; the website and iPhone build stay GET-only.
 
 ## How a re-run happens
 
@@ -37,17 +37,62 @@ A separate fine-grained personal access token, stored in the Keychain under `git
 
 Atlas rejects classic `ghp_` tokens and the read-only token in this slot, and checks the token with `GET /user` before saving it. The read-only client in `github.rs` never reads it. Removing the token in Settings also switches the action off.
 
+## Merging a pull request
+
+Merging is the riskier action (it can't be undone), so it has stricter rules than re-runs and no override of any kind.
+
+1. Settings → Actions → **Merge pull requests** switches it on. Each repository needs **its own** fine-grained token (below) before it can be ticked.
+2. A repository's inspector has a **PRs** tab listing its open pull requests (read-only; this list also works on the website). In the Mac app, with merging on for that repository, Atlas checks each non-draft pull request (up to 10) with `action_merge_check`, which is read-only and not logged. The **Merge** button appears only on pull requests that pass every check below; the others show why.
+3. Pressing Merge calls `action_merge_pr(repo, number, seen_sha)`. The Rust side (`src-tauri/src/actions/merge.rs`) checks, in order: no other merge in flight, valid repository, switch on, repository ticked, merge token saved for it. Then it reads with the **read-only** client and refuses unless:
+   - the pull request belongs to that repository, is open, not merged, **not a draft**, and its head is still the commit the button was shown for;
+   - GitHub reports `mergeable: true` and `mergeable_state: "clean"` (so `blocked`, `behind`, `dirty`, `unstable` and `unknown` all refuse);
+   - no reviewer's latest review is **changes requested**;
+   - every check run on the head commit is completed and `success`, `neutral` or `skipped`, every commit status is `success`, and there is at least one;
+   - the base branch **requires** status checks (classic branch protection or a ruleset), and every required check is among those that passed. A base branch with no required checks is refused, so GitHub's own protection always backs the merge.
+   Atlas's own limits apply: one merge per pull request every 10 minutes and 5 an hour.
+4. A **native macOS dialog** names the pull request, branches, author, size, head commit, required checks and approvals.
+5. **Touch ID** (or the Mac's password) is asked for again, for this one merge. This is on top of the vault unlock at launch.
+6. An `attempted` record is appended to the audit log. If that write fails, nothing is sent.
+7. One `PUT /repos/{owner}/{repo}/pulls/{number}/merge` is sent with that repository's merge token, `merge_method: "squash"` and `sha` set to the approved head commit, so GitHub refuses (409) if anything was pushed after the dialog. It is never retried.
+8. The result is appended to the audit log and shown under the pull request and in the Activity Center.
+
+Nothing proposes merges: the approval queue only ever holds re-runs, and the Merge Pull Request agent stays at level 2 permanently.
+
+| GitHub answer | Shown as |
+|---|---|
+| 200 | Merged; Atlas refreshes the repository |
+| 401 | Token expired or revoked: replace it in Settings |
+| 403 | Refused; usually the token lacks Pull requests or Contents: write |
+| 404 | The token can't see the repository or pull request |
+| 405 | GitHub won't merge it (for example a rule Atlas couldn't see, or squash merges are off) |
+| 409 | The branch changed after approval; nothing merged |
+| Timeout after sending | Atlas re-reads the pull request. `merged: true` means it landed; otherwise the outcome is recorded as unknown |
+
+### Merge tokens
+
+One fine-grained personal access token **per repository**, stored in the Keychain vault under `github-merge-token:owner/name`:
+
+- Repository access: **Only select repositories**, just that one
+- Repository permissions: **Pull requests: Read and write** and **Contents: Read and write** (GitHub adds Metadata: Read). Nothing else.
+- An expiry of 90 days or less
+
+Atlas rejects classic `ghp_` tokens and any token already saved for something else (the read-only token, the Actions token, another repository's merge token), checks the token with `GET /user` and `GET /repos/{owner}/{repo}` before saving it, and never returns it to the web view. Removing a repository's token also unticks it.
+
 ## Where things live
 
 | Path | Role |
 |---|---|
-| `src-tauri/src/actions/client.rs` | The only code that sends a GitHub write; builds the one URL itself |
-| `src-tauri/src/actions/rerun.rs` | Checks, approval, audit and outcome mapping (with tests against fakes) |
+| `src-tauri/src/actions/client.rs` | The only code that sends a GitHub write; builds both URLs itself |
+| `src-tauri/src/actions/rerun.rs` | Re-run checks, approval, audit and outcome mapping (with tests against fakes) |
+| `src-tauri/src/actions/merge.rs` | Merge readiness checks, approval, Touch ID, audit and outcome mapping (with tests against fakes) |
 | `src-tauri/src/actions/store.rs` | `actions.json` (switch and repositories) and `audit.jsonl`, in the app data folder under `actions/` |
 | `src-tauri/src/actions/mod.rs` | Tauri commands, the native dialog, and a test that fails if a write request appears anywhere else |
 | `src/actions/` | Web view API, state and button rules |
+| `src/components/PullRequests.tsx` | The inspector's PRs tab and Merge button |
 | `src/views/ActionsSettings.tsx` | Settings section |
 
 ## Turning it off
 
-Any one of these stops it: untick the switch in Settings, remove the Actions token in Settings, or revoke the token on GitHub.
+Any one of these stops a re-run: untick the switch in Settings, remove the Actions token in Settings, or revoke the token on GitHub.
+
+Any one of these stops merging: untick **Merge pull requests**, untick the repository, remove its merge token in Settings, or revoke the token on GitHub.

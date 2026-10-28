@@ -29,11 +29,11 @@ describe("office plan", () => {
   it("gives the AI Ops Atlas headquarters one desk per registered agent, in manifest order", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = catalog.agents.filter((a) => a.projectId === project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-rerun-failed"]);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("repo:khaneilcampbell/ai-ops-atlas");
-    expect(plan.workstations.map((w) => w.id)).toEqual(["ai-ops-atlas/atlas-ci", "ai-ops-atlas/repo-intelligence", "ai-ops-atlas/atlas-rerun-failed"]);
-    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(3);
+    expect(plan.workstations.map((w) => w.id)).toEqual(["ai-ops-atlas/atlas-ci", "ai-ops-atlas/repo-intelligence", "ai-ops-atlas/atlas-engineering-review", "ai-ops-atlas/atlas-rerun-failed", "ai-ops-atlas/atlas-merge-pr"]);
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(5);
     // Stable: the same input always gives the same desks.
     expect(planOffice(project, agents)).toEqual(plan);
   });
@@ -48,7 +48,10 @@ describe("runtime state", () => {
     expect(runtimeFor(agent, tel()).state).toBe("idle");
     expect(runtimeFor(agent, tel({ source: null, loaded: false })).state).toBe("unknown");
     expect(runtimeFor(agent, tel({ loaded: false })).state).toBe("unknown");
-    expect(runtimeFor(agent, tel({ executions: [run("2026-10-28T02:00:00Z", "running")] })).state).toBe("working");
+    const now = Date.parse("2026-10-28T03:00:00Z");
+    expect(runtimeFor(agent, tel({ executions: [run("2026-10-28T02:00:00Z", "running")] }), undefined, 0, now).state).toBe("working");
+    // A run still marked in progress long after GitHub would have stopped it is a stale record.
+    expect(runtimeFor(agent, tel({ executions: [run("2026-10-27T12:00:00Z", "running")] }), undefined, 0, now).state).toBe("idle");
   });
 
   it("reports the latest completed run's failure, and a later success clears it", () => {
@@ -76,5 +79,21 @@ describe("runtime state", () => {
     expect(runtimeFor(a, none, { available: true, status: status(true), audit }).state).toBe("failed");
     expect(runtimeFor(a, none, { available: true, status: status(true), audit }, 2).state).toBe("awaiting");
     expect(runtimeFor(a, none, { available: true, status: status(false), audit }, 2).state).toBe("offline");
+  });
+
+  it("reads the merge action from its own switch, not the re-run switch", () => {
+    const a = { id: "atlas-merge-pr", status: "idle" as const };
+    const none = tel({ source: null, loaded: false });
+    const status = (merge: boolean): ActionsStatus => ({
+      config: { rerun_failed_jobs: { enabled: true, repos: ["me/r"] }, token_login: null, merge_pull_requests: { enabled: merge, repos: [], token_logins: {} } },
+      token: true,
+    });
+    expect(runtimeFor(a, none, { available: true, status: status(false), audit: [] }).state).toBe("offline");
+    const merged: AuditRecord = {
+      id: "m", at: "2026-10-28T01:00:00Z", stage: "merged", action: "merge_pull_request", actor: "KC", github_login: null, repo: "me/r", run_id: 0, pull_number: 7, title: "Fix",
+      workflow: null, run_number: null, attempt_before: null, head_sha: null, branch: "fix", reason: null, http_status: 200, request_id: null, message: null,
+    };
+    expect(actionExecutions("merge_pull_request", [merged])[0]).toMatchObject({ result: "success", url: "https://github.com/me/r/pull/7" });
+    expect(runtimeFor(a, none, { available: true, status: status(true), audit: [merged] }).state).toBe("idle");
   });
 });

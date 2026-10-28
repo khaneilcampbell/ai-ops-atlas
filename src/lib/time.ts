@@ -23,6 +23,14 @@ export function relative(iso: string | null | undefined, now = Date.now()): stri
   return `${Math.round(mo / 12)} y ago`;
 }
 
+/** "Resets in 12 min" for a GitHub rate-limit reset given in epoch seconds. */
+export function resetsIn(resetSec: number, now = Date.now()): string {
+  const min = Math.ceil((resetSec * 1000 - now) / 60_000);
+  if (min <= 0) return "Resets at the next refresh";
+  if (min < 60) return `Resets in ${min} min`;
+  return `Resets in ${Math.round(min / 60)} h`;
+}
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "Not recorded";
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
