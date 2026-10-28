@@ -18,6 +18,7 @@ import { UsageView } from "./views/Usage";
 import { useAutoPush } from "./usage/sync";
 import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
+import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
@@ -67,6 +68,7 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
+        <VaultLockedPill />
         <UpdateButton />
         {rerunOn ? (
           <span className="pill-mode" title="Read-only, except Re-run failed jobs on the repositories ticked in Settings. Each re-run needs your approval in a macOS dialog and is written to the audit log.">

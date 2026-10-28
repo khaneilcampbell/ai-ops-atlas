@@ -31,6 +31,13 @@ tauri-plugin-dialog = "2"
 tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
 
+# Touch ID for unlocking the saved keys once per launch.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+block2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSError"] }
+objc2-local-authentication = { version = "0.3", default-features = false, features = ["std", "block2", "LAContext"] }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["sync", "time", "macros", "rt", "rt-multi-thread", "test-util"] }
 tempfile = "3"

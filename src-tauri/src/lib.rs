@@ -18,6 +18,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             github::github_get,
+            secrets::vault_status,
+            secrets::vault_unlock,
             secrets::github_token_status,
             secrets::github_token_set,
             secrets::github_token_clear,
