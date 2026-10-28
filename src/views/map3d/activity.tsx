@@ -39,12 +39,32 @@ export function ActivityGlow({ towers, houses, states, g, m, reduced }: { towers
 }
 
 const EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+/** A flat disc on the ground, lifted so it sits just above the terrace. */
+const HALO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+/** Soft round falloff for the ground halo, drawn once. */
+const HALO_TEX = (() => {
+  if (typeof document === "undefined") return null;
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const x = c.getContext("2d");
+  if (!x) return null;
+  const grad = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.45, "rgba(255,255,255,0.45)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = grad;
+  x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
 
 function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House; tower: boolean; mask: THREE.Texture | null; state: Illumination; g: G; reduced: boolean }) {
   const mats = useMemo(
     () => ({
       win: new THREE.MeshBasicMaterial({ map: mask, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
       edge: new THREE.LineBasicMaterial({ color: "#000000", transparent: true, opacity: 0, toneMapped: false }),
+      // A wash over the whole facade, so the change reads in daylight where the glass is already pale blue.
+      tint: new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+      halo: new THREE.MeshBasicMaterial({ map: HALO_TEX, color: "#000000", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
     }),
     [mask],
   );
@@ -65,9 +85,11 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
     // A slow, gentle breath while running; still when reduced motion is on.
     const breath = state === "running" && !reduced ? 0.8 + 0.2 * Math.sin(clock.elapsedTime * 1.8) : 1;
     // Houses have fewer, smaller windows, so they need a stronger glow to read at the same distance.
-    mats.win.color.copy(color).multiplyScalar(e * breath * (tower ? 1.25 : 2.2));
+    mats.win.color.copy(color).multiplyScalar(e * breath * (tower ? 2.6 : 3.2));
+    mats.tint.color.copy(color).multiplyScalar(e * breath * 0.28);
+    mats.halo.color.copy(color).multiplyScalar(e * breath * 0.9);
     mats.edge.color.copy(color);
-    mats.edge.opacity = e * breath * (tower ? 0.6 : 0.9);
+    mats.edge.opacity = e * breath;
   });
 
   const parts = useMemo(() => {
@@ -86,7 +108,9 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
       {parts.floors.map(([x, y, z, w, d], i) => (
         <mesh key={i} geometry={g.box} material={mats.win} position={[x, y, z]} scale={[w, tower ? FLOOR_H : (parts.hh ?? 0), d]} raycast={noRaycast} renderOrder={2} />
       ))}
+      <mesh geometry={g.box} material={mats.tint} position={[bx, by, bz]} scale={[bw, bh, bd]} raycast={noRaycast} renderOrder={2} />
       <lineSegments geometry={EDGES} material={mats.edge} position={[bx, by + bh / 2, bz]} scale={[bw, bh, bd]} raycast={noRaycast} />
+      <mesh geometry={HALO} material={mats.halo} position={[bx, TERRACE_H + 0.02, bz]} scale={[Math.max(bw, bd) * 2.6, 1, Math.max(bw, bd) * 2.6]} raycast={noRaycast} renderOrder={1} />
     </group>
   );
 }
