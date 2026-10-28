@@ -12,6 +12,76 @@ project:
   tags: [itsm, dashboard]
 
 agents:
+  - id: service-desk-insights
+    name: Insights Analyst
+    purpose: Writes a weekly brief on the desk's figures (what changed, what is at risk, what to do next) with Claude.
+    framework: GitHub Actions + Claude API
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Weekly schedule or manual
+    source: src/service_desk_dashboard/insights.py
+    observe:
+      github_workflow: insights.yml
+    last_run: null
+    capabilities:
+      - Compare the last 14 days with the 14 before
+      - Name SLA, backlog and knowledge risks by priority, category and group
+      - Recommend actions with an owning group
+      - Flag any number in the brief that is not in the computed figures
+    permissions:
+      - "Anthropic API: messages (ANTHROPIC_API_KEY repository secret)"
+      - "GITHUB_TOKEN: contents read"
+    registry:
+      title: Service Desk Insights Analyst
+      category: data
+      subcategory: Service desk analytics
+      classification:
+        type: B
+        confidence: verified
+        evidence: insights.py computes the figures with metrics.py, then makes one Claude call that writes the brief; the workflow's steps are fixed
+      mission:
+        problem: The dashboard shows figures but nobody writes down what they mean or what to do about them.
+        outcomes: [A weekly brief with findings, risks and recommendations a service desk manager can act on]
+        beneficiaries: [KC, Service desk manager]
+      responsibilities:
+        tasks: [Compute aggregate figures with the dashboard's metrics, Ask Claude for findings risks and recommendations, Check every quoted number against the figures, Publish the brief to the run summary and an artifact]
+        tools: [GitHub Actions, Claude API, pandas]
+        inputs: [Synthetic tickets in GitHub Actions, or a local export via TICKETS_CSV]
+        outputs: [insights/brief.md and brief.json, Run summary]
+        limitations:
+          - Scheduled runs use synthetic tickets; there is no real ticket export in the repository
+          - Advice only; it changes no tickets or settings
+      goals:
+        objective: A trustworthy brief every Monday.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: scheduled
+        schedule: Mondays at 13:00 UTC, or on demand
+        environment: GitHub-hosted runner
+        stages: [Load tickets, Compute figures, Claude writes the brief, Check quoted numbers, Publish]
+      governance:
+        autonomy: 1
+        autonomy_note: Recommends only; nothing is changed
+        data_sensitivity: public
+        credential_owner: KC (ANTHROPIC_API_KEY repository secret)
+        risk: low
+        audit_log: GitHub Actions run history and the insights-brief artifact
+      cost:
+        notes: One Claude call per run, about 3,000 input and at most 2,000 output tokens; token counts are printed in each brief
+      docs:
+        technical: https://github.com/khaneilcampbell/service-desk-dashboard/blob/main/docs/insights.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/service-desk-dashboard.md#insights-analyst
+        known_issues:
+          - Needs the ANTHROPIC_API_KEY repository secret before its first run
+          - Scheduled runs use synthetic tickets
+        improvements:
+          - Show the latest brief in the Streamlit dashboard
+        last_review: 2026-10-28
+
   - id: service-desk-codeql
     name: CodeQL Scan
     purpose: GitHub code scanning for security issues on pushes and pull requests.
