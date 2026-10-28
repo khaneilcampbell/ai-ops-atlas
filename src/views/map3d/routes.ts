@@ -3,7 +3,9 @@ import { TERRACE_H, type Rect, type Scene3D } from "./scene";
 /** Grid cell size for route finding, in world units: fine enough to land on every step. */
 const CELL = 0.1;
 /** Walking off the paving costs this much more, so routes keep to paths and use grass only to reach them. */
-const GRASS = 6;
+const GRASS = 20;
+/** Corners are rounded with this radius, like a drawn route. */
+const CORNER = 0.18;
 /** Largest height change between neighboring cells; terrace edges are only crossed on steps. */
 const CLIMB = 0.2;
 
@@ -50,6 +52,31 @@ export function makeRouter(scene: Scene3D) {
   for (const r of scene.bridges) fill(r, 0, set(1, 0.06));
   // Keep a margin around buildings so rounded corners never cut into them.
   for (const r of blockers) fill(r, 0.15, set(0, 0));
+
+  // Prefer the middle of each path: paving costs a little more the closer it is to its edge.
+  const edge = new Int16Array(W * H).fill(-1);
+  const queue: number[] = [];
+  for (let k = 0; k < W * H; k++)
+    if (cost[k] !== 1) {
+      edge[k] = 0;
+      queue.push(k);
+    }
+  for (let q = 0; q < queue.length; q++) {
+    const k = queue[q];
+    const i = k % W;
+    const j = Math.floor(k / W);
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      const ni = i + di;
+      const nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+      const n = nj * W + ni;
+      if (edge[n] >= 0) continue;
+      edge[n] = edge[k] + 1;
+      queue.push(n);
+    }
+  }
+  const paved = (k: number) => cost[k] > 0 && cost[k] < GRASS;
+  for (let k = 0; k < W * H; k++) if (cost[k] === 1) cost[k] = 1 + 1.5 / (edge[k] * edge[k]);
 
   const cellOf = (x: number, z: number) => [Math.round((x - b.x0) / CELL), Math.round((z - b.z0) / CELL)] as const;
   /** The nearest open cell to a point, preferring paving, for starting beside a building. */
@@ -129,44 +156,73 @@ export function makeRouter(scene: Scene3D) {
         const cells: number[] = [];
         for (let k = t; k >= 0; k = prev[k]) cells.push(k);
         cells.reverse();
-        out = simplify(cells.map((k) => ({ x: b.x0 + (k % W) * CELL, y: height[k], z: b.z0 + Math.floor(k / W) * CELL })));
+        out = round(pull(cells).map((k) => ({ x: b.x0 + (k % W) * CELL, y: height[k], z: b.z0 + Math.floor(k / W) * CELL })));
       }
     }
     cache.set(key, out);
     return out;
   }
 
+  /** True when a straight line between two cells stays on the same kind of ground at one height. */
+  function sight(a: number, c: number) {
+    const ai = a % W;
+    const aj = Math.floor(a / W);
+    const ci = c % W;
+    const cj = Math.floor(c / W);
+    const n = Math.ceil(Math.hypot(ci - ai, cj - aj) * 2.5);
+    const onPath = paved(a) && paved(c);
+    for (let s = 1; s < n; s++) {
+      const k = Math.round(aj + ((cj - aj) * s) / n) * W + Math.round(ai + ((ci - ai) * s) / n);
+      if (!cost[k] || Math.abs(height[k] - height[a]) > 1e-3 || (onPath && !paved(k))) return false;
+    }
+    return Math.abs(height[c] - height[a]) < 1e-3;
+  }
+
+  /** Straightens the grid path into the fewest runs that stay on the paths. */
+  function pull(cells: number[]) {
+    if (cells.length < 3) return cells;
+    const out = [cells[0]];
+    let from = 0;
+    for (let j = 2; j < cells.length; j++)
+      if (!sight(cells[from], cells[j])) {
+        from = j - 1;
+        out.push(cells[from]);
+      }
+    out.push(cells[cells.length - 1]);
+    return out;
+  }
+
   return { route };
 }
 
-/** Drops points on straight runs, then rounds the corners a little, like a drawn route. */
-function simplify(pts: RoutePoint[]): RoutePoint[] {
+/** Rounds each corner with a short arc, keeping the ends where they are. */
+function round(pts: RoutePoint[]): RoutePoint[] {
   if (pts.length < 3) return pts;
-  const keep = [pts[0]];
+  const out = [pts[0]];
+  const lerp = (a: RoutePoint, c: RoutePoint, t: number) => ({ x: a.x + (c.x - a.x) * t, y: a.y + (c.y - a.y) * t, z: a.z + (c.z - a.z) * t });
   for (let i = 1; i < pts.length - 1; i++) {
-    const a = keep[keep.length - 1];
+    const a = pts[i - 1];
     const p = pts[i];
     const c = pts[i + 1];
-    const cross = (p.x - a.x) * (c.z - a.z) - (p.z - a.z) * (c.x - a.x);
-    if (Math.abs(cross) > 1e-4 || Math.abs(p.y - c.y) > 1e-4 || Math.abs(p.y - a.y) > 1e-4) keep.push(p);
-  }
-  keep.push(pts[pts.length - 1]);
-  // Two rounds of corner cutting, keeping the ends where they are.
-  let r = keep;
-  for (let n = 0; n < 2; n++) {
-    const next = [r[0]];
-    for (let i = 0; i < r.length - 1; i++) {
-      const a = r[i];
-      const c = r[i + 1];
-      const q = { x: a.x * 0.75 + c.x * 0.25, y: a.y * 0.75 + c.y * 0.25, z: a.z * 0.75 + c.z * 0.25 };
-      const w = { x: a.x * 0.25 + c.x * 0.75, y: a.y * 0.25 + c.y * 0.75, z: a.z * 0.25 + c.z * 0.75 };
-      if (i > 0) next.push(q);
-      if (i < r.length - 2) next.push(w);
+    const la = Math.hypot(p.x - a.x, p.z - a.z);
+    const lc = Math.hypot(c.x - p.x, c.z - p.z);
+    const r = Math.min(CORNER, la / 2, lc / 2);
+    if (r < 0.02 || Math.abs(a.y - p.y) > 1e-3 || Math.abs(c.y - p.y) > 1e-3) {
+      out.push(p);
+      continue;
     }
-    next.push(r[r.length - 1]);
-    r = next;
+    const q0 = lerp(p, a, r / la);
+    const q1 = lerp(p, c, r / lc);
+    for (let s = 0; s <= 4; s++) {
+      const t = s / 4;
+      // Quadratic Bezier through the corner.
+      const u = lerp(q0, p, t);
+      const v = lerp(p, q1, t);
+      out.push(lerp(u, v, t));
+    }
   }
-  return r;
+  out.push(pts[pts.length - 1]);
+  return out;
 }
 
 /** A minimal binary min-heap of cell indices by priority. */

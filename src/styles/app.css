@@ -688,6 +688,8 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .map-menu .text-btn { align-self: flex-start; margin-top: 2px; }
 .map-menu .text-btn:disabled { color: var(--ink-3); opacity: 0.6; cursor: default; }
 .map-menu .note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+.map-menu .legend { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 0; font-size: 12.5px; color: var(--ink-2); }
+.map-menu .legend .row { cursor: default; padding: 3px 2px; }
 .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; flex: none; }
 .m3-labels > div.dim { opacity: 0.32; }
 .chip.link-active { color: #2f6b3c; }
