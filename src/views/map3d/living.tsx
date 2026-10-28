@@ -307,9 +307,10 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
   const heads = useRef<THREE.InstancedMesh>(null);
   const tails = useRef<THREE.InstancedMesh>(null);
   const pools = useRef<THREE.InstancedMesh>(null);
-  const o = useMemo(() => new THREE.Object3D(), []);
+  const tmp = useMemo(() => ({ base: new THREE.Matrix4(), part: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(0, 0, 0, "YZX"), p: new THREE.Vector3(), s: new THREE.Vector3(), one: new THREE.Quaternion() }), []);
   const clock = useRef(0);
   const yaw = useRef<number[]>([]);
+  const pitch = useRef<number[]>([]);
   const y0 = TERRACE_H + 0.03;
 
   const place = (dt: number) => {
@@ -318,29 +319,23 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     const t = tails.current;
     const pl = pools.current;
     if (!b || !h || !t || !pl) return;
+    // Turn and tilt smoothly toward the way ahead; snap when there is no time step (first frame, frozen).
+    const ease = (cur: number | undefined, want: number, rate: number) => {
+      if (cur === undefined || dt <= 0) return want;
+      const diff = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+      return cur + diff * (1 - Math.exp(-dt * rate));
+    };
     const pose = plans.map((v, i) => {
       const at = vehicleAt(v, clock.current);
-      const want = Math.atan2(-at.dz, at.dx);
-      // Turn smoothly toward the way ahead; snap when there is no time step (first frame, frozen).
-      let cur = yaw.current[i] ?? want;
-      const diff = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
-      cur = dt > 0 ? cur + diff * (1 - Math.exp(-dt * 7)) : want;
-      yaw.current[i] = cur;
-      return { x: at.x, z: at.z, cos: Math.cos(cur), sin: Math.sin(cur), yaw: cur };
+      yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
+      pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
+      tmp.e.set(0, yaw.current[i], pitch.current[i]);
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.set(1, 1, 1));
     });
+    // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
-      const p = pose[i];
-      fx *= SCALE;
-      y *= SCALE;
-      sz *= SCALE;
-      sx *= SCALE;
-      sy *= SCALE;
-      szz *= SCALE;
-      o.position.set(p.x + fx * p.cos + sz * p.sin, y0 + y, p.z - fx * p.sin + sz * p.cos);
-      o.rotation.set(0, p.yaw, 0);
-      o.scale.set(sx, sy, szz);
-      o.updateMatrix();
-      mesh.setMatrixAt(k, o.matrix);
+      tmp.part.compose(tmp.p.set(fx * SCALE, y * SCALE, sz * SCALE), tmp.one, tmp.s.set(sx * SCALE, sy * SCALE, szz * SCALE));
+      mesh.setMatrixAt(k, tmp.base.multiplyMatrices(pose[i], tmp.part));
     };
     parts.forEach(({ v, p }, k) => put(b, k, v, p.at[0], p.at[1], p.at[2], p.size[0], p.size[1], p.size[2]));
     plans.forEach((v, i) => {
@@ -361,6 +356,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     parts.forEach(({ color }, k) => body.current?.setColorAt(k, col.set(color)));
     if (body.current?.instanceColor) body.current.instanceColor.needsUpdate = true;
     yaw.current = [];
+    pitch.current = [];
     place(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parts]);

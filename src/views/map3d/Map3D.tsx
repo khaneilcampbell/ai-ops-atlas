@@ -13,7 +13,7 @@ import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
 import { Network, type NetLink } from "./network";
-import { Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
@@ -808,6 +808,7 @@ function World({
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
+      <Bridges scene={scene} g={g} m={m} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />

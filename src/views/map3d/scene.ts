@@ -1,6 +1,7 @@
 import type { Agent, Status } from "../../catalog/types";
 import { frameworkColor, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
+import { planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -121,6 +122,8 @@ export interface Scene3D {
   steps: Slab[];
   brooks: Rect[];
   bridges: (Rect & { axis: "x" | "z" })[];
+  /** Road bridges between neighboring districts, at terrace height, with roads out to each plaza. */
+  carBridges: CarBridge[];
   ponds: { x: number; y: number; z: number; r: number }[];
   falls: Fall[];
   /** k scales the fountain down from its full size (1) where room is tight. */
@@ -174,7 +177,10 @@ export function buildScene(layout: Layout): Scene3D {
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
+  // Each district's own paving, so its trees only check what is on its terrace.
+  const pavedIn = new Map<string, Slab[]>();
   for (const d of layout.districts) {
+    const pavedFrom = paving.length;
     terraces.push({ id: d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
@@ -264,11 +270,81 @@ export function buildScene(layout: Layout): Scene3D {
       const at = size / 2 + room - r;
       if (r > 0.2 && clear(cx - at, cz + at, r + 0.08)) fountains.push({ x: cx - at, z: cz + at, k: r / FOUNTAIN_R });
     }
+    pavedIn.set(d.project.id, paving.slice(pavedFrom));
+  }
+
+  // Road bridges between neighboring districts, beside the footpaths, and the roads out to them.
+  const byId = new Map(layout.districts.map((d) => [d.project.id, d]));
+  const roadsOf = new Map<string, DistrictRoads>();
+  for (const t of towers) {
+    const d = byId.get(t.projectId)!;
+    const own = <T extends { projectId: string }>(xs: T[]) => xs.filter((x) => x.projectId === t.projectId);
+    roadsOf.set(t.projectId, {
+      tower: t,
+      ring: towerRing(t, d.hq.size * 1.25),
+      obstacles: [
+        stairsOf(t),
+        ...own(houses),
+        ...own(kiosks).map((k) => ({ x: k.x, z: k.z, w: k.size, d: k.size })),
+        ...fountains
+          .filter((f) => inRect({ x: d.ox, z: d.oy, w: d.size, d: d.size }, f.x, f.z))
+          .map((f) => ({ x: f.x, z: f.z, w: FOUNTAIN_R * 2 * (f.k ?? 1), d: FOUNTAIN_R * 2 * (f.k ?? 1) })),
+      ],
+    });
+  }
+  const sites: BridgeSite[] = layout.walks.flatMap((w) => {
+    const a = byId.get(w.from);
+    const b = byId.get(w.to);
+    if (!a || !b) return [];
+    const x = w.axis === "x";
+    const [alo, ahi, blo, bhi] = x ? [a.oy, a.oy + a.size, b.oy, b.oy + b.size] : [a.ox, a.ox + a.size, b.ox, b.ox + b.size];
+    return [
+      {
+        from: w.from,
+        to: w.to,
+        axis: x ? "x" : "z",
+        a: (x ? w.a.gx : w.a.gy) + TERRACE_M,
+        b: (x ? w.b.gx : w.b.gy) - TERRACE_M,
+        mid: x ? w.a.gy : w.a.gx,
+        lo: Math.max(alo, blo),
+        hi: Math.min(ahi, bhi),
+      },
+    ];
+  });
+  const carBridges = planBridges(sites, roadsOf);
+  const roadStart = paving.length;
+  for (const br of carBridges)
+    br.roads.forEach((road, end) =>
+      road.forEach((p, k) => {
+        if (!k) return;
+        // Overlap at the bends, so corners are paved; the last piece stops at the terrace edge.
+        const q = road[k - 1];
+        const last = k === road.length - 1;
+        const ext = (from: number, to: number, e0: number, e1: number) => [from - Math.sign(to - from) * e0, to + Math.sign(to - from) * e1];
+        const [x0, x1] = p[0] === q[0] ? [q[0], p[0]] : ext(q[0], p[0], ROAD_W / 2, last ? 0 : ROAD_W / 2);
+        const [z0, z1] = p[1] === q[1] ? [q[1], p[1]] : ext(q[1], p[1], ROAD_W / 2, last ? 0 : ROAD_W / 2);
+        const slab = strip(x0, z0, x1, z1, ROAD_W, top);
+        paving.push(slab);
+        pavedIn.get(br.ends[end])!.push(slab);
+      }),
+    );
+  const roadPaving = paving.slice(roadStart);
+  // Path lights that would stand in the road give way to it.
+  for (let i = bollards.length - 1; i >= 0; i--) if (roadPaving.some((r) => inRect(r, bollards[i].x, bollards[i].z, 0.06))) bollards.splice(i, 1);
+  const decks: Rect[] = carBridges.map((br) => {
+    const x0 = Math.min(br.a[0], br.b[0]);
+    const z0 = Math.min(br.a[1], br.b[1]);
+    return br.axis === "x" ? { x: x0, z: br.a[1] - 0.3, w: Math.abs(br.b[0] - br.a[0]), d: 0.6 } : { x: br.a[0] - 0.3, z: z0, w: 0.6, d: Math.abs(br.b[1] - br.a[1]) };
+  });
+
+  for (const d of layout.districts) {
+    const cx = d.hq.gx + d.hq.size / 2;
+    const cz = d.hq.gy + d.hq.size / 2;
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
     const blocked = (x: number, z: number) =>
       houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + 0.35 && Math.abs(h.z - z) < h.d / 2 + 0.35) ||
       kiosks.some((k) => k.projectId === d.project.id && Math.abs(k.x - x) < k.size / 2 + 0.3 && Math.abs(k.z - z) < k.size / 2 + 0.3) ||
-      paving.some((p) => inRect(p, x, z, 0.22)) ||
+      pavedIn.get(d.project.id)!.some((p) => inRect(p, x, z, 0.22)) ||
       Math.hypot(x - cx, z - cz) < d.hq.size * 0.9;
     for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(d.size * 3.4))) {
       if (blocked(s.gx, s.gy)) continue;
@@ -397,6 +473,7 @@ export function buildScene(layout: Layout): Scene3D {
     !terraces.some((t) => inRect(t, x, z, 0.3)) &&
     !paving.some((p) => p.y === 0 && inRect(p, x, z, 0.3)) &&
     !brooks.some((b) => inRect(b, x, z, 0.3)) &&
+    !decks.some((b) => inRect(b, x, z, 0.4)) &&
     !ponds.some((p) => Math.hypot(p.x - x, p.z - z) < p.r + 0.3) &&
     !strays.some((s) => Math.abs(s.x - x) < s.size && Math.abs(s.z - z) < s.size);
   land.forEach((r, i) => {
@@ -428,6 +505,7 @@ export function buildScene(layout: Layout): Scene3D {
     steps,
     brooks,
     bridges,
+    carBridges,
     ponds,
     falls,
     fountains,
