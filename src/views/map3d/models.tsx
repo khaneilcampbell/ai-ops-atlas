@@ -430,6 +430,12 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
     }
+    // Architectural trim: slim corner pilasters that catch the light, and a ledge every few floors.
+    if (style !== "timber") {
+      const trim = style === "tech" ? "#7d8790" : style === "secure" ? "#c9ccd2" : style === "classic" ? "#efe7d5" : "#dfe2dc";
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) P.plain.push({ p: [t.x + (dx * s) / 2, FLOOR_BASE, t.z + (dz * s) / 2], s: [0.05, t.height, 0.05], c: trim });
+      if (style !== "tech") for (let i = 3; i < t.floors - 1; i += 3) P.plain.push({ p: [t.x, FLOOR_BASE + i * FLOOR_H - 0.012, t.z], s: [s * 1.025, 0.024, s * 1.025], c: trim });
+    }
 
     // Entrance: lit lobby on both visible faces, a canopy, stairs down to the plaza and
     // flowerbeds either side.
