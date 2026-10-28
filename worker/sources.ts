@@ -40,7 +40,7 @@ export const SOURCES: SourceDef[] = [
     key: 'github',
     name: 'GitHub',
     requires: ['GITHUB_TOKEN'],
-    permissions: ['Repository khancam15/benjaire.com only', 'Contents · Read', 'Pull requests · Read', 'Actions · Read', 'Metadata · Read'],
+    permissions: ['Repository khaneilcampbell/benjaire.com only', 'Contents · Read', 'Pull requests · Read', 'Actions · Read', 'Metadata · Read'],
     provides: ['Recent commits', 'Open pull requests', 'Site CI status'],
     intervalMin: 10,
     docs: 'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token',

@@ -55,7 +55,7 @@ Integration credentials go in as they're connected, one step at a time. The Conn
 | Secret / var | Create it at | Permissions |
 |---|---|---|
 | `CF_API_TOKEN` (+ `CF_ACCOUNT_ID`, `CF_ZONE_ID`) | Cloudflare → My Profile → API Tokens → Create custom token | Account Analytics Read, Workers Scripts Read, Workers Builds Read; Zone `benjaire.com`: Analytics Read, DNS Read. Set a 12-month expiry. |
-| `GITHUB_TOKEN` | GitHub → Settings → Developer settings → Fine-grained tokens | Only `khancam15/benjaire.com`: Contents, Pull requests, Actions, Metadata, all Read. |
+| `GITHUB_TOKEN` | GitHub → Settings → Developer settings → Fine-grained tokens | Only `khaneilcampbell/benjaire.com`: Contents, Pull requests, Actions, Metadata, all Read. |
 | `STRIPE_RESTRICTED_KEY` | Stripe → Developers → API keys → Create restricted key | Read on Balance, Charges, Refunds, Checkout Sessions, Products, Prices, Payment Links. Nothing else. |
 | `N8N_FEED_SECRET` | Generate: `openssl rand -hex 32` | Shared with the n8n Ops feed workflow (approval). |
 
