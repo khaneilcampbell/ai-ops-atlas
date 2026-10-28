@@ -5,7 +5,7 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, CONNECTION_HEALTH_LABEL, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
@@ -1245,6 +1245,7 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
         {CONNECTION_TYPES.map((t) => (
           <label key={t} className="row">
             <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
+            <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
             {CONNECTION_LABEL[t]}
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
@@ -1261,16 +1262,12 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
       <button className="text-btn" disabled={!picked} onClick={onClear}>
         Clear connection selection
       </button>
-      <div className="group legend">
-        {(Object.keys(CONNECTION_HEALTH_LABEL) as (keyof typeof CONNECTION_HEALTH_LABEL)[]).map((s) => (
-          <span key={s} className="row">
-            <i className="swatch" style={{ background: LINK_COLORS[s].day }} />
-            {CONNECTION_HEALTH_LABEL[s]}
-          </span>
-        ))}
-      </div>
+      <span className="row legend">
+        <i className="swatch" style={{ background: LINK_COLORS.unhealthy.day }} />
+        Verified failure, any kind
+      </span>
       <p className="note">
-        Hover or select a building to see its connections. Drawn only from catalog manifests and GitHub data; colors show health, and moving light means recently verified activity. Red needs a real failure.
+        Hover or select a building to see its connections. Drawn only from catalog manifests and GitHub data; colors show the kind of link, and moving signals mean recently verified activity. Red needs a real failure.
         {missing.length > 0 &&
           ` Not declared yet: ${missing.map((t) => CONNECTION_LABEL[t]).join(", ")}. To add one, list agent ids under registry.responsibilities.dependencies, or add connections to a project, in catalog/*.yaml.`}
       </p>

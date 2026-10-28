@@ -222,10 +222,13 @@ export const CONNECTION_LABEL: Record<Connection["type"], string> = { github: "G
 export const CONNECTION_STATUS_LABEL: Record<ConnectionStatus, string> = { active: "Active", inactive: "Inactive", unhealthy: "Unhealthy", unknown: "Unknown" };
 /** How each status reads on the map legend: health, not the kind of link. */
 export const CONNECTION_HEALTH_LABEL: Record<ConnectionStatus, string> = { active: "Healthy", inactive: "Needs a look", unhealthy: "Failing", unknown: "No live data" };
-/** Connection colors by health, warm like the path lights: deeper by day, lighter at night. */
-export const LINK_COLORS: Record<ConnectionStatus, { day: string; night: string }> = {
-  active: { day: "#cf9a2c", night: "#ffd47e" },
-  inactive: { day: "#cf6e24", night: "#ffa057" },
+/** Connection colors by kind, plus muted red for a verified failure: deeper by day, lighter at night. */
+export const LINK_COLORS: Record<ConnectionType | "unhealthy", { day: string; night: string }> = {
+  github: { day: "#1f86c4", night: "#6cc8ff" },
+  agent: { day: "#7a55c8", night: "#b89cff" },
+  n8n: { day: "#d0701f", night: "#ffad5c" },
+  dependency: { day: "#14917f", night: "#4fe0c6" },
   unhealthy: { day: "#b0473e", night: "#ea7263" },
-  unknown: { day: "#56636f", night: "#c3cdd8" },
 };
+/** The color a link is drawn in: its kind, unless live data shows it failing. */
+export const linkHue = (c: { type: ConnectionType; status: ConnectionStatus }) => (c.status === "unhealthy" ? "unhealthy" : c.type);

@@ -70,6 +70,8 @@ interface Props {
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
 /** Connection ribbons sit this far above a route point: just over the 0.03 paving. */
 const PAVE_TOP = 0.045;
+/** Spacing between links that share a walkway. */
+const LANE = 0.07;
 const ELEVATION = (42 * Math.PI) / 180;
 const DIR = new THREE.Vector3(Math.cos(ELEVATION) * Math.SQRT1_2, Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.SQRT1_2);
 const FOV = 30;
@@ -714,6 +716,12 @@ function World({
   // Each connection follows the streets between its buildings, like turn-by-turn directions.
   const router = useMemo(() => makeRouter(scene), [scene]);
   const netLinks = useMemo<NetLink[]>(() => {
+    // Links on show at once each take their own lane, side by side like lane markings, so they never overlap.
+    const lit = net.shown.filter((s) => s.level !== "dim").map((s) => s.l.id).sort();
+    const laneOf = (id: string) => {
+      const i = lit.indexOf(id);
+      return i < 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil((i % 5) / 2) * LANE;
+    };
     return net.shown.map(({ l, level }) => {
       const a = anchors.get(l.a)!;
       const b = anchors.get(l.b)!;
@@ -721,8 +729,14 @@ function World({
         { x: a.x, y: a.y0, z: a.z },
         { x: b.x, y: b.y0, z: b.z },
       ];
-      // Inlaid along the middle of the walkway, just above the stone.
-      const path = route.map((p) => new THREE.Vector3(p.x, p.y + PAVE_TOP, p.z));
+      // Inlaid in the walkway, just above the stone, in the link's own lane.
+      const lane = laneOf(l.id);
+      const path = route.map((p, i) => {
+        const q = route[Math.min(i + 1, route.length - 1)];
+        const o = route[Math.max(i - 1, 0)];
+        const n = Math.hypot(q.x - o.x, q.z - o.z) || 1;
+        return new THREE.Vector3(p.x - ((q.z - o.z) / n) * lane, p.y + PAVE_TOP, p.z + ((q.x - o.x) / n) * lane);
+      });
       return { id: l.id, type: l.type, status: l.status, path, level, flow: l.directed && l.status === "active" && level !== "dim" };
     });
   }, [net, anchors, router]);

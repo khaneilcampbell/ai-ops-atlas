@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ConnectionType } from "../../catalog/types";
-import { LINK_COLORS, type ConnectionStatus } from "../../lib/connections";
+import { LINK_COLORS, linkHue, type ConnectionStatus } from "../../lib/connections";
 import { night } from "./materials";
 
 /** selected: the connection in hand. strong: verified activity, or related to the selection. */
@@ -20,10 +20,12 @@ export interface NetLink {
 }
 
 const ALPHA: Record<LinkLevel, number> = { selected: 1, strong: 0.95, weak: 0.6, dim: 0.08 };
-/** Half the ribbon's width; the bright hairline is its middle fifth, the rest is glow. */
-const HALF = 0.11;
+/** Half the ribbon's width; the bright hairline is its middle, the rest is glow. */
+const HALF = 0.09;
 const SPEED = 1.3; // world units per second
 const SPACING = 1.6;
+/** Length of one dash and its gap, in world units. */
+const DASH = 0.3;
 
 const VERT = /* glsl */ `
 attribute float aDist;
@@ -41,6 +43,7 @@ uniform vec3 uColor;
 uniform float uAlpha;
 uniform float uGlow;
 uniform float uCore;
+uniform float uSolid;
 uniform float uFlow;
 uniform float uLen;
 uniform float uTime;
@@ -52,7 +55,10 @@ void main() {
   float halo = (1.0 - s) * (1.0 - s) * uGlow;
   // A comet of light every few units, its head leading toward the target.
   float d = fract((vDist - uTime * ${SPEED.toFixed(2)}) / ${SPACING.toFixed(2)});
-  float pulse = uFlow * pow(d, 14.0);
+  float pulse = uFlow * pow(d, 22.0);
+  // Dashed like a lane marking; the link in hand fills in solid.
+  float dash = mix(smoothstep(0.62, 0.55, fract(vDist / ${DASH.toFixed(2)})) * smoothstep(0.0, 0.07, fract(vDist / ${DASH.toFixed(2)})), 1.0, uSolid);
+  core *= 0.3 + 0.7 * max(dash, pulse);
   // Fade in and out at the buildings so the ribbon does not end in a hard edge.
   float ends = smoothstep(0.0, 0.3, vDist) * smoothstep(0.0, 0.3, uLen - vDist);
   vec3 col = mix(uColor, vec3(1.0), pulse * 0.75);
@@ -128,7 +134,7 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
         const mat = new THREE.ShaderMaterial({
           vertexShader: VERT,
           fragmentShader: FRAG,
-          uniforms: { uColor: { value: new THREE.Color() }, uAlpha: { value: 1 }, uGlow: { value: 0.4 }, uCore: { value: 0.14 }, uFlow: { value: 0 }, uLen: { value: len }, uTime: time },
+          uniforms: { uColor: { value: new THREE.Color() }, uAlpha: { value: 1 }, uGlow: { value: 0.4 }, uCore: { value: 0.14 }, uSolid: { value: 0 }, uFlow: { value: 0 }, uLen: { value: len }, uTime: time },
           transparent: true,
           depthWrite: false,
           side: THREE.DoubleSide,
@@ -165,12 +171,14 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
       const l = current.get(b.link.id) ?? b.link;
       const u = b.mat.uniforms;
       const lit = l.level === "selected" || (hover === l.id && l.level !== "dim");
-      u.uColor.value.set(LINK_COLORS[l.status].day).lerp(tmp.set(LINK_COLORS[l.status].night), k);
+      const hue = LINK_COLORS[linkHue(l)];
+      u.uColor.value.set(hue.day).lerp(tmp.set(hue.night), k);
       u.uAlpha.value = lit ? 1 : ALPHA[l.level] * (l.level === "weak" ? 1 + 0.3 * k : 1);
       // A soft glow at night, like the path lights; the link in hand glows at any hour.
-      u.uGlow.value = lit ? 1 : l.level === "dim" ? 0 : 0.45 + 0.4 * k;
+      u.uGlow.value = lit ? 1 : l.level === "dim" ? 0 : 0.3 + 0.55 * k;
       // The link in hand is drawn a little wider.
-      u.uCore.value = lit ? 0.3 : 0.14;
+      u.uCore.value = lit ? 0.24 : 0.14;
+      u.uSolid.value = lit ? 1 : 0;
       u.uFlow.value = l.flow && l.level !== "dim" ? 1 : 0;
     }
   });
