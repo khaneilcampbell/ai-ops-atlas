@@ -106,6 +106,10 @@ export interface Scene3D {
   ponds: { x: number; y: number; z: number; r: number }[];
   falls: Fall[];
   fountains: { x: number; z: number }[];
+  /** Low path lights along each district's footpaths. */
+  bollards: Point[];
+  /** Walkways between terraces at meadow level, end to end, for strollers. */
+  walks: { x0: number; z0: number; x1: number; z1: number }[];
   parks: Park[];
   houses: House[];
   towers: Tower[];
@@ -144,6 +148,7 @@ export function buildScene(layout: Layout): Scene3D {
   const lamps: Point[] = [];
   const ponds: Scene3D["ponds"] = [];
   const fountains: Scene3D["fountains"] = [];
+  const bollards: Point[] = [];
   const parks: Park[] = [];
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
@@ -198,6 +203,14 @@ export function buildScene(layout: Layout): Scene3D {
         solar: hash(`${a.id}:sol`) > 0.6,
       });
     }
+    // A path light at each bend, on the outside corner, unless a house stands there.
+    for (const l of d.lots) {
+      const lx = l.gx + l.size / 2;
+      const lz = l.gy + l.size / 2;
+      const b = { x: lx + Math.sign(lx - cx || 1) * (INNER_PATH_W / 2 + 0.07), y: top, z: cz - Math.sign(lz - cz || 1) * (INNER_PATH_W / 2 + 0.07), s: 1 };
+      const clear = !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - b.x) < h.w / 2 + 0.05 && Math.abs(h.z - b.z) < h.d / 2 + 0.05);
+      if (clear && !bollards.some((o) => Math.hypot(o.x - b.x, o.z - b.z) < 0.3)) bollards.push(b);
+    }
     // The landmark stands on a wider civic plaza with a fountain and lamps at its corners,
     // wherever the houses leave room.
     if (identity.landmark) {
@@ -251,12 +264,15 @@ export function buildScene(layout: Layout): Scene3D {
 
   // Walkways between terraces, with steps down each terrace face.
   const bridges: Scene3D["bridges"] = [];
+  const walks: Scene3D["walks"] = [];
   for (const w of layout.walks) {
     const x = w.axis === "x";
     const a = x ? w.a.gx + TERRACE_M : w.a.gy + TERRACE_M;
     const b = x ? w.b.gx - TERRACE_M : w.b.gy - TERRACE_M;
     const c = x ? w.a.gy : w.a.gx;
     paving.push(x ? strip(a, c, b, c, PATH_W, 0) : strip(c, a, c, b, PATH_W, 0));
+    // Strollers keep off the steps at either end.
+    walks.push(x ? { x0: a + 0.45, z0: c, x1: b - 0.45, z1: c } : { x0: c, z0: a + 0.45, x1: c, z1: b - 0.45 });
     for (const [edge, dir] of [[a, 1], [b, -1]] as const)
       for (let i = 0; i < 3; i++) {
         const along = edge + dir * (i * 0.13) - (dir === 1 ? 0 : 0.13);
@@ -379,6 +395,8 @@ export function buildScene(layout: Layout): Scene3D {
     ponds,
     falls,
     fountains,
+    bollards,
+    walks,
     parks,
     houses,
     towers,

@@ -3,6 +3,7 @@ import type { Agent, Status } from "../catalog/types";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
+import type { LightMode } from "./map3d/living";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
@@ -388,6 +389,11 @@ export function MapView() {
   const reduced = useReducedMotion();
   // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
   const [mode, setModeState] = useState<"3d" | "2d">(() => (webglAvailable() ? load<"3d" | "2d">("mapMode", "3d") : "2d"));
+  const [light, setLightState] = useState<LightMode>(() => load<LightMode>("mapLight", "day"));
+  const setLight = (l: LightMode) => {
+    setLightState(l);
+    save("mapLight", l);
+  };
   const is3d = mode === "3d";
   const map3d = useRef<Map3DApi>(null);
   const [moved3d, setMoved3d] = useState(false);
@@ -764,7 +770,10 @@ export function MapView() {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
-  const healthFor = useCallback((repository: string) => verifiedState(repos[repository]), [repos]);
+  const healthFor = useCallback(
+    (repository: string) => ({ ...verifiedState(repos[repository]), health: overallHealth(repoHealth(repoData(repos[repository]), 0)) }),
+    [repos],
+  );
 
   /** Hover text for a building, from the same live repository data the inspector uses. */
   const tipFor = (key: string) => {
@@ -799,7 +808,7 @@ export function MapView() {
       <div className="map-col">
         <div
           ref={stage}
-          className={`map-stage ${dragging ? "dragging" : ""}`}
+          className={`map-stage ${dragging ? "dragging" : ""} ${is3d && light === "night" ? "night" : ""}`}
           tabIndex={0}
           role="application"
           aria-roledescription="map"
@@ -869,6 +878,7 @@ export function MapView() {
               reduced={reduced}
               tipFor={tipFor}
               healthFor={healthFor}
+              light={light}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);
@@ -1037,6 +1047,17 @@ export function MapView() {
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
                 3D
+              </button>
+            )}
+            {is3d && (
+              <button
+                className={`icon-btn ${light === "night" ? "on" : ""}`}
+                onClick={() => setLight(light === "night" ? "day" : "night")}
+                aria-pressed={light === "night"}
+                aria-label="Night mode"
+                title={light === "night" ? "Switch to day" : "Switch to night"}
+              >
+                <Icon name={light === "night" ? "moon" : "sun"} size={17} />
               </button>
             )}
             <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">

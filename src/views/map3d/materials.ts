@@ -4,10 +4,13 @@ import { SYMBOLS, type SymbolName } from "./symbols";
 
 /** Shared clock for animated surfaces (water, waterfalls). */
 export const time = { value: 0 };
+/** 0 by day, 1 at night; eased between the two by the map's lighting. Shaders read it directly. */
+export const night = { value: 0 };
 
 const NOISE = /* glsl */ `
 varying vec3 vWPos;
 uniform float uTime;
+uniform float uNight;
 float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -48,7 +51,10 @@ const PATTERNS = {
   water: /* glsl */ `
     float w = fbm(vWPos.xz * 0.18 + vec2(uTime * 0.02, uTime * 0.015));
     float c = smoothstep(0.66, 0.82, fbm(vWPos.xz * 0.9 - vec2(uTime * 0.06, uTime * 0.03)));
-    diffuseColor.rgb = mix(diffuseColor.rgb * 0.88, diffuseColor.rgb * 1.08, w) + c * 0.05;`,
+    // Fine glints drifting the other way: sunlight by day, a cool moonlit shimmer at night.
+    float g = smoothstep(0.78, 0.9, fbm(vWPos.xz * 2.6 + vec2(uTime * 0.05, -uTime * 0.07)));
+    diffuseColor.rgb = mix(diffuseColor.rgb * 0.88, diffuseColor.rgb * 1.08, w) + c * 0.05 + g * 0.06;
+    #define ATLAS_GLINT g`,
   falls: /* glsl */ `
     float s = fbm(vec2((vWPos.x + vWPos.z) * 9.0, vWPos.y * 2.5 + uTime * 2.2));
     diffuseColor.rgb = mix(vec3(0.5, 0.74, 0.82), vec3(0.96, 0.99, 1.0), smoothstep(0.35, 0.72, s));`,
@@ -57,24 +63,84 @@ const PATTERNS = {
 
 export type Pattern = keyof typeof PATTERNS;
 
-export function patterned(color: string, pattern: Pattern, opts: THREE.MeshStandardMaterialParameters = {}) {
+/** Passes world position (and a per-instance seed) to the fragment shader. */
+function worldPos(sh: THREE.WebGLProgramParametersWithUniforms) {
+  sh.uniforms.uTime = time;
+  sh.uniforms.uNight = night;
+  sh.vertexShader = `varying vec3 vWPos;\nvarying vec3 vSeed;\n${sh.vertexShader}`.replace(
+    "#include <project_vertex>",
+    `#include <project_vertex>
+    vec4 wp4 = vec4(transformed, 1.0);
+    vSeed = vec3(dot(objectNormal, vec3(3.1, 5.7, 7.3)), 0.0, 0.0);
+    #ifdef USE_INSTANCING
+      wp4 = instanceMatrix * wp4;
+      vSeed += instanceMatrix[3].xyz;
+    #endif
+    vWPos = (modelMatrix * wp4).xyz;`,
+  );
+}
+
+/**
+ * A world-patterned material. `nightGlow` adds a faint warm light at night, for paths that
+ * should read as lit without real light sources.
+ */
+export function patterned(color: string, pattern: Pattern, opts: THREE.MeshStandardMaterialParameters = {}, nightGlow = 0) {
   const m = new THREE.MeshStandardMaterial({ color, roughness: 0.92, metalness: 0, ...opts });
   if (pattern === "none") return m;
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = time;
-    sh.vertexShader = `varying vec3 vWPos;\n${sh.vertexShader}`.replace(
-      "#include <project_vertex>",
-      `#include <project_vertex>
-      vec4 wp4 = vec4(transformed, 1.0);
-      #ifdef USE_INSTANCING
-        wp4 = instanceMatrix * wp4;
-      #endif
-      vWPos = (modelMatrix * wp4).xyz;`,
-    );
-    sh.fragmentShader = NOISE + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>\n${PATTERNS[pattern]}`);
+    worldPos(sh);
+    let frag = sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>\n${PATTERNS[pattern]}`);
+    if (pattern === "water") frag = frag.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(0.55, 0.7, 0.95) * ATLAS_GLINT * uNight * 0.35;");
+    if (nightGlow) frag = frag.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(1.0, 0.78, 0.48) * uNight * ${nightGlow.toFixed(3)};`);
+    sh.fragmentShader = `varying vec3 vSeed;\n${NOISE}${frag}`;
   };
-  m.customProgramCacheKey = () => `atlas-${pattern}-${color}`;
+  m.customProgramCacheKey = () => `atlas-${pattern}-${color}-${nightGlow}`;
   return m;
+}
+
+/**
+ * Lights a facade's windows at night. `glow` marks where windows are; each window is lit or
+ * dark at random per floor and face, so towers don't show identical stripes. Purely
+ * decorative: it says nothing about the project.
+ */
+export function windowLights(m: THREE.MeshStandardMaterial, glow: THREE.Texture, offset: number, spacing: number, share = 0.5) {
+  m.emissiveMap = glow;
+  m.emissive = new THREE.Color("#ffd9a1");
+  m.emissiveIntensity = 1;
+  m.onBeforeCompile = (sh) => {
+    worldPos(sh);
+    sh.fragmentShader = `varying vec3 vWPos;\nvarying vec3 vSeed;\nuniform float uNight;\nfloat litHash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\n${sh.fragmentShader}`.replace(
+      "#include <emissivemap_fragment>",
+      `#include <emissivemap_fragment>
+      float win = floor((vEmissiveMapUv.x * 512.0 - ${offset.toFixed(1)}) / ${spacing.toFixed(1)});
+      float lit = step(${(1 - share).toFixed(2)}, litHash(vec3(win, vSeed.y * 3.13 + vSeed.x, vSeed.z * 1.7 + vSeed.x * 0.37)));
+      totalEmissiveRadiance *= uNight * (0.06 + 0.8 * lit);`,
+    );
+  };
+  m.customProgramCacheKey = () => `atlas-windows-${offset}-${spacing}-${share}`;
+  return m;
+}
+
+/** A black canvas with the windows of a facade texture in white, for `windowLights`. */
+export function glowTexture(source: THREE.Texture) {
+  const rects = (source.userData.windows ?? []) as [number, number, number, number, boolean][];
+  const { width, height } = source.image as HTMLCanvasElement;
+  return canvas(width, height, (g) => {
+    g.fillStyle = "#000";
+    g.fillRect(0, 0, width, height);
+    g.fillStyle = "#fff";
+    for (const [x, y, w, h, arch] of rects) {
+      g.beginPath();
+      if (arch) {
+        g.moveTo(x, y + h);
+        g.lineTo(x, y + w / 2);
+        g.arc(x + w / 2, y + w / 2, w / 2, Math.PI, 0);
+        g.lineTo(x + w, y + h);
+        g.closePath();
+      } else g.rect(x + 2, y + 2, w - 4, h - 4);
+      g.fill();
+    }
+  });
 }
 
 function canvas(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void) {
@@ -92,8 +158,10 @@ const rand = (seed: number, i: number) => ((seed * 9301 + i * 49297) % 233280) /
 
 /** One storey of a headquarters facade, in the building's architectural style. */
 export function facadeTexture(style: BuildingStyle = "glass", seed = 7) {
-  return canvas(512, 96, (g) => {
+  const windows: [number, number, number, number, boolean][] = [];
+  const tex = canvas(512, 96, (g) => {
     const window = (x: number, y: number, w: number, h: number, dark: [string, string], lit: [string, string] | null) => {
+      windows.push([x, y, w, h, false]);
       const grad = g.createLinearGradient(0, y, 0, y + h);
       const [a, b] = lit ?? dark;
       grad.addColorStop(0, a);
@@ -159,6 +227,7 @@ export function facadeTexture(style: BuildingStyle = "glass", seed = 7) {
       for (let i = 0; i < 6; i++) {
         const x = 20 + i * 82;
         const lit = rand(seed, i) > 0.45;
+        windows.push([x, 9, 50, 75, true]);
         g.fillStyle = lit ? "#f1d58f" : "#6e8596";
         g.beginPath();
         g.moveTo(x, 84);
@@ -187,10 +256,18 @@ export function facadeTexture(style: BuildingStyle = "glass", seed = 7) {
       }
     }
   });
+  tex.userData.windows = windows;
+  return tex;
 }
 
 /** House wall: two shuttered windows. */
 export function houseWallTexture() {
+  const tex = houseWall();
+  tex.userData.windows = [38, 162].map((x) => [x, 40, 56, 50, false]);
+  return tex;
+}
+
+function houseWall() {
   return canvas(256, 128, (g) => {
     g.fillStyle = "#ffffff";
     g.fillRect(0, 0, 256, 128);
