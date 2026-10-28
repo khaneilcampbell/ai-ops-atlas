@@ -17,6 +17,8 @@ import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
 import { useAutoPush } from "./usage/sync";
+import { useLiveFeed } from "./live/feed";
+import { LivePill } from "./components/LivePill";
 import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
@@ -40,6 +42,7 @@ export default function App() {
   const writes = [rerunOn && "re-runs", mergeOn && "merges"].filter(Boolean).join(" + ");
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
+  useLiveFeed();
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -71,6 +74,7 @@ export default function App() {
           </button>
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
+        <LivePill />
         <VaultLockedPill />
         <UpdateButton />
         {writes ? (

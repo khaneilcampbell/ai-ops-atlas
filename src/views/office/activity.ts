@@ -50,7 +50,7 @@ export function isFresh(state: RepoState | undefined): boolean {
 /** Live illumination for every building, from the catalog, GitHub snapshots and the app's own logs. */
 export function useBuildingActivity(): Map<string, Illumination> {
   const { catalog, repos } = useAtlas();
-  const { status: intel } = useIntel();
+  const { telemetry: intel } = useIntel();
   const actions = useActions();
   const runtimes = useMemo(() => {
     const data = { available: actions.available, status: actions.status, audit: actions.audit };

@@ -35,6 +35,7 @@
   .search input { width: 100%; min-width: 0; }
   .refresh { font-size: 0; gap: 0; }
   .refresh .icon-btn { width: 40px; height: 40px; }
+  .live-pill { padding: 5px 9px; font-size: 11px; }
 
   /* Sidebar → bottom tab bar. */
   .sidebar {

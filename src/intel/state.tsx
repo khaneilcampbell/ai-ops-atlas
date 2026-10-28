@@ -1,10 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { intelApi } from "./api";
-import type { AgentConfig, AgentStatus, Depth, EcoContext, EcoReport, RepoContext, Report } from "./types";
+import { publishLocal, useLiveStatus } from "../live/feed";
+import type { IntelSource } from "../registry/registry";
+import type { AgentConfig, AgentStatus, Depth, EcoContext, EcoReport, RepoContext, Report, Run } from "./types";
 
 interface IntelState {
   available: boolean;
   status: AgentStatus | null;
+  /** Runs for telemetry: the full status on the Mac, or the runs the Mac reported, live, on the website. */
+  telemetry: IntelSource | null;
   reports: Record<string, Report>;
   /** The latest Senior Engineering Review, if one has run. */
   review: EcoReport | null;
@@ -57,10 +61,29 @@ export function IntelProvider({ children }: { children: ReactNode }) {
     };
   }, [available, reload]);
 
+  // The Mac tells the site about each run as it changes, so the website shows it live.
+  const sent = useRef(new Map<string, string>());
+  useEffect(() => {
+    if (!available || !status) return;
+    const changed = status.runs.filter((r) => sent.current.get(r.id) !== r.status);
+    const first = sent.current.size === 0;
+    for (const r of status.runs) sent.current.set(r.id, r.status);
+    // On launch only what's unfinished or recent matters; older runs are history, not live.
+    const recent = Date.now() - 6 * 3_600_000;
+    const out = changed.filter((r) => !first || r.status === "queued" || r.status === "running" || Date.parse(r.finished_at ?? r.queued_at) >= recent).slice(0, 50);
+    void publishLocal(out.map((r) => ({ kind: "intel_run" as const, repo: r.repo, body: liveRun(r) }))).catch(() => {
+      for (const r of out) sent.current.delete(r.id); // retried on the next change
+    });
+  }, [available, status]);
+
+  const live = useLiveStatus();
+  const telemetry = useMemo<IntelSource | null>(() => status ?? (live.intelRuns ? { runs: live.intelRuns } : null), [status, live.intelRuns]);
+
   const value = useMemo<IntelState>(
     () => ({
       available,
       status,
+      telemetry,
       reports,
       review,
       error,
@@ -86,7 +109,7 @@ export function IntelProvider({ children }: { children: ReactNode }) {
         return next;
       },
     }),
-    [available, status, reports, review, error, reload],
+    [available, status, telemetry, reports, review, error, reload],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -95,4 +118,10 @@ export function useIntel(): IntelState {
   const v = useContext(Ctx);
   if (!v) throw new Error("useIntel outside IntelProvider");
   return v;
+}
+
+/** What the website needs to show a run: status, timing and cost. No trace, prompts or report text. */
+function liveRun(r: Run): Partial<Run> {
+  const { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd } = r;
+  return { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd, error: r.error ? { ...r.error, message: "" } : null, usage: null, estimate: null, trace: [] };
 }

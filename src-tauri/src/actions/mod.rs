@@ -375,6 +375,11 @@ mod tests {
                     !code.contains("github.com") && !code.contains("read_token"),
                     "the usage sync must not talk to GitHub or read a GitHub token"
                 ),
+                // Writes only its own agents' run summaries to the user's own site, never to GitHub.
+                "live.rs" => assert!(
+                    !code.contains("github.com") && !code.contains("read_token"),
+                    "live updates must not talk to GitHub or read a GitHub token"
+                ),
                 _ => assert!(
                     !writes,
                     "{rel} sends a write request; GitHub writes belong in actions/client.rs"

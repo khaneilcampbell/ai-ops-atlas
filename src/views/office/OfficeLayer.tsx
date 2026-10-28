@@ -32,7 +32,7 @@ interface Row {
 export default function OfficeLayer({ light }: { light: LightMode }) {
   const { projectId, phase } = useOffice();
   const { catalog, repos, setView } = useAtlas();
-  const { status: intel } = useIntel();
+  const { telemetry: intel } = useIntel();
   const actions = useActions();
   const pending = useProposals();
   const reduced = useReducedMotion();

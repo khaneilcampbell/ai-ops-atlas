@@ -18,8 +18,11 @@ export interface RegistryEntry {
   review: string[];
 }
 
-export function buildRegistry(catalog: Catalog, repos: Record<string, RepoState>, intel: AgentStatus | null): RegistryEntry[] {
-  const spend = intel ? { month: intel.month_spent_usd, budget: intel.config.monthly_budget_usd } : null;
+/** The app's own agent runs: the full status on the Mac, or only the runs the Mac reported on the website. */
+export type IntelSource = Pick<AgentStatus, "runs"> & Partial<Pick<AgentStatus, "month_spent_usd" | "config">>;
+
+export function buildRegistry(catalog: Catalog, repos: Record<string, RepoState>, intel: IntelSource | null): RegistryEntry[] {
+  const spend = intel?.config && intel.month_spent_usd != null ? { month: intel.month_spent_usd, budget: intel.config.monthly_budget_usd } : null;
   return catalog.agents.map((a) => {
     const profile = toProfile(a, catalog.projects.find((p) => p.id === a.projectId));
     const telemetry = telemetryFor(a, repoData(repos[a.repository]), intel ? intel.runs : null, spend);
