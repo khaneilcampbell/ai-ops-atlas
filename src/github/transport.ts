@@ -35,6 +35,10 @@ const TIMEOUT_MS = 20_000;
 
 export const PRIVATE_OR_MISSING = "Private or not found. Add a GitHub token in Settings to load private repositories.";
 
+/** A fine-grained token whose repository access leaves this repository out. */
+export const NOT_IN_TOKEN =
+  "The GitHub token can't read this repository. Add it to the token's repository access, with read-only Contents, Metadata and Actions.";
+
 type EtagCache = Record<string, { etag: string; body: unknown }>;
 
 // Conditional requests: GitHub answers 304 for unchanged data, and with a token those
@@ -147,6 +151,7 @@ export async function githubGet(path: string): Promise<unknown> {
   if (res.status === 404) throw new GithubError(PRIVATE_OR_MISSING, 404);
   if ((res.status === 403 || res.status === 429) && res.rate?.remaining === 0)
     throw new GithubError(`GitHub's hourly limit is used up. It resets at ${resetTime(res.rate)}.`, res.status);
+  if (res.status === 403 && msg?.startsWith("Resource not accessible by personal access token")) throw new GithubError(NOT_IN_TOKEN, 403);
   if (res.status === 403 || res.status === 429) throw new GithubError(msg ?? "Rate limited by GitHub", res.status);
   if (res.status === 401) throw new GithubError("The saved GitHub token was rejected", 401);
   throw new GithubError(msg ?? `GitHub returned ${res.status}`, res.status);
