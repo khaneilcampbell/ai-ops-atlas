@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tracker:
+        description: Also build the blank application tracker for download
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Lint and test (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m compileall -q scripts tests
+      - name: Lint (pyflakes rules)
+        run: ruff check --select F scripts tests
+      - run: pytest -q
+      # Personal data belongs in the gitignored private/ folder; fail if any of it was committed.
+      - name: No personal data committed
+        run: |
+          tracked=$(git ls-files 'private/*' 'output/*' '*.docx' '*.pdf' '.env' '*.env')
+          if [ -n "$tracked" ]; then
+            echo "::error::These files should never be committed:"
+            echo "$tracked"
+            exit 1
+          fi
+      - name: Build the blank tracker
+        if: github.event_name == 'workflow_dispatch' && inputs.tracker
+        run: python scripts/build_tracker.py application_tracker.xlsx
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.tracker
+        with:
+          name: application-tracker
+          path: application_tracker.xlsx
