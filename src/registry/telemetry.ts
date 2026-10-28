@@ -43,10 +43,12 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
   } else if (agent.observe?.atlasIntel) {
     source = "atlas-intel";
     loaded = intelRuns !== null;
-    executions = (intelRuns ?? []).map((r) => ({
+    // The run log holds both repository analyses and engineering reviews.
+    const kind = agent.observe.atlasIntelRuns ?? "repository";
+    executions = (intelRuns ?? []).filter((r) => (r.kind ?? "repository") === kind).map((r) => ({
       at: r.finished_at ?? r.started_at ?? r.queued_at,
       result: intelResult(r),
-      label: `${r.repo} · ${r.trigger} · ${r.model}`,
+      label: `${kind === "ecosystem" ? "All catalog repositories" : r.repo} · ${r.trigger} · ${r.model}`,
       durationMs: r.duration_ms,
       costUsd: r.cost_usd,
       source: "atlas-intel" as const,

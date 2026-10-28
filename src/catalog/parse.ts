@@ -62,7 +62,11 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         history: r.history(ao, path),
         links: r.links(ao, path),
         observe: observe
-          ? { githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false), atlasIntel: r.bool(observe, "atlas_intel", `${path}.observe`) }
+          ? {
+              githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false),
+              atlasIntel: r.bool(observe, "atlas_intel", `${path}.observe`),
+              atlasIntelRuns: r.oneOf(observe, "atlas_intel_runs", `${path}.observe`, ["repository", "ecosystem"] as const),
+            }
           : undefined,
         projectId,
         repository: agentRepo,

@@ -120,6 +120,68 @@ agents:
       docs:
         technical: docs/repository-intelligence.md
 
+  - id: atlas-engineering-review
+    name: Senior Engineering Reviewer
+    purpose: Reviews the whole ecosystem at once (every catalog repository, its CI, dependencies and security settings, and the agents with their autonomy levels) and returns a scorecard, top risks, ranked recommendations and suggested tools. Recommends only.
+    framework: Claude API (Messages, structured output)
+    model: claude-sonnet-5-5 by default; haiku-5-5 quick, opus-5-5 deep
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Run review button in Intel → Engineering review; optional weekly schedule, off by default
+    source: src-tauri/src/intel/review.rs
+    observe:
+      atlas_intel: true
+      atlas_intel_runs: ecosystem
+    last_run: null
+    permissions: [GitHub read-only (GET through the app's allowlist), Anthropic API key from Keychain]
+    registry:
+      title: Senior Engineering Reviewer
+      category: engineering
+      subcategory: Architecture and security review
+      classification:
+        type: A
+        confidence: verified
+        evidence: src-tauri/src/intel/review.rs sends catalog and repository facts to Claude in one request and validates a structured review
+      mission:
+        problem: Risks and gaps repeat across repositories and agents, and reviewing each repository alone misses the patterns.
+        outcomes: [A ranked list of improvements across the ecosystem, with verified facts kept separate from Claude's recommendations]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Gather facts for every catalog repository, reusing saved Repository Intelligence reports, Check Dependabot config, CODEOWNERS, branch rules and workflow files, Ask Claude for one structured review, Validate citations and drop invented repositories or agents]
+        tools: [GitHub REST API (read-only), Anthropic Messages API]
+        inputs: [The Atlas catalog, Saved repository reports, GitHub token from Keychain, Anthropic API key from Keychain]
+        outputs: [Saved review shown in Intel → Engineering review]
+        limitations: [Recommends only and changes nothing, Reads at most 30 repositories and 6 workflow files each, Sends catalog and repository facts to Anthropic when run]
+      goals:
+        objective: Grounded, proportionate recommendations within the spending limits.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from the app's run log
+          - name: Spend this month
+            kind: cost
+            target: Within the monthly budget shared with Repository Intelligence
+            measure: month_spend_usd
+            basis: Budget and spend come from the app's settings and run log
+      execution:
+        trigger_type: manual
+        schedule: Optional weekly, off by default; runs only while the app is open
+        environment: Inside the desktop app (Rust side)
+        stages: [Gather repository facts, Run deterministic checks, Estimate cost and check budget, Call Claude, Validate output, Save review]
+      governance:
+        autonomy: 1
+        autonomy_note: Writes nothing to GitHub or anywhere else; produces recommendations only.
+        data_sensitivity: internal
+        approval: Each run is started by KC, or by a weekly schedule KC consented to
+        credential_owner: KC (macOS Keychain)
+        risk: low
+        audit_log: Per-run trace in the app's run log
+      cost:
+        budget: Own per-run cap ($0.60 default) and the shared monthly budget in Intel settings
+      docs:
+        technical: docs/engineering-review.md
+
   - id: atlas-rerun-failed
     name: Re-run Failed Jobs
     purpose: Re-runs the failed jobs of a failed GitHub Actions run, only on repositories KC has switched on and only after KC approves each run in a native macOS dialog.

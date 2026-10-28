@@ -109,7 +109,7 @@ pub fn valid_repo(repo: &str) -> bool {
     owner_ok && name_ok
 }
 
-fn enc(s: &str) -> String {
+pub(crate) fn enc(s: &str) -> String {
     s.bytes()
         .map(|b| {
             if b.is_ascii_alphanumeric() || b"-_.".contains(&b) {
@@ -121,19 +121,19 @@ fn enc(s: &str) -> String {
         .collect()
 }
 
-enum Fetched {
+pub(crate) enum Fetched {
     Ok(Value),
     /// GitHub answered but won't give this section (no permission, disabled, empty repo).
     Unavailable(u16, String),
 }
 
-struct Session<'a> {
-    gh: &'a dyn GithubApi,
-    requests: u32,
+pub(crate) struct Session<'a> {
+    pub gh: &'a dyn GithubApi,
+    pub requests: u32,
 }
 
 impl Session<'_> {
-    async fn fetch(&mut self, path: &str) -> Result<Fetched, CollectError> {
+    pub(crate) async fn fetch(&mut self, path: &str) -> Result<Fetched, CollectError> {
         let mut tries = 0;
         loop {
             tries += 1;
@@ -167,7 +167,10 @@ impl Session<'_> {
     }
 
     /// For optional sections: a refusal becomes "not assessed" with GitHub's reason.
-    async fn optional(&mut self, path: &str) -> Result<Result<Value, String>, CollectError> {
+    pub(crate) async fn optional(
+        &mut self,
+        path: &str,
+    ) -> Result<Result<Value, String>, CollectError> {
         Ok(match self.fetch(path).await? {
             Fetched::Ok(v) => Ok(v),
             Fetched::Unavailable(s, m) => Err(reason(s, &m)),
@@ -195,7 +198,7 @@ fn reason(status: u16, msg: &str) -> String {
     }
 }
 
-fn s(v: &Value, k: &str) -> Option<String> {
+pub(crate) fn s(v: &Value, k: &str) -> Option<String> {
     v.get(k).and_then(Value::as_str).map(str::to_owned)
 }
 
@@ -214,7 +217,7 @@ pub fn truncate_chars(t: &str, max: usize) -> String {
     }
 }
 
-fn decode_content(v: &Value) -> Option<String> {
+pub(crate) fn decode_content(v: &Value) -> Option<String> {
     let raw = v.get("content")?.as_str()?.replace(['\n', '\r'], "");
     let bytes = base64::engine::general_purpose::STANDARD.decode(raw).ok()?;
     Some(String::from_utf8_lossy(&bytes).into_owned())

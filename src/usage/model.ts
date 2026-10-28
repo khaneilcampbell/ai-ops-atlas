@@ -2,6 +2,7 @@
 // Nothing here calls a provider or a model: records come from runs Atlas already logged
 // (token counts the provider reported, priced locally) or from a file the user imported.
 import type { Run } from "../intel/types";
+import { isReviewRun, REVIEW_AGENT_NAME } from "../intel/ecosystem";
 
 /** "estimated" = reported tokens × the prices configured in Atlas. "billed" = the provider's own cost figure. */
 export type CostKind = "estimated" | "billed";
@@ -37,8 +38,8 @@ export function recordsFromRuns(runs: Run[], agent: string): UsageRecord[] {
       at: r.started_at ?? r.queued_at,
       provider: "anthropic",
       model: u.served_by ?? r.model ?? null,
-      agent,
-      project: r.repo || null,
+      agent: isReviewRun(r) ? REVIEW_AGENT_NAME : agent,
+      project: isReviewRun(r) ? "All catalog repositories" : r.repo || null,
       requests: Math.max(1, r.attempts),
       input: u.input_tokens,
       output: u.output_tokens,
