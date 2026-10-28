@@ -3,17 +3,17 @@
 # They cover what ships a signed update to the Mac, and what can write to GitHub.
 
 # CI, release, and the self-update signing setup
-/.github/                     @khancam15
-/scripts/macos-signing-cert.sh  @khancam15
-/scripts/setup-macos-signing.sh @khancam15
-/src-tauri/tauri.conf.json    @khancam15
+/.github/                     @khaneilcampbell
+/scripts/macos-signing-cert.sh  @khaneilcampbell
+/scripts/setup-macos-signing.sh @khaneilcampbell
+/src-tauri/tauri.conf.json    @khaneilcampbell
 
 # Write actions: merge from Atlas and re-run failed jobs
-/src-tauri/src/actions/       @khancam15
-/src/actions/                 @khancam15
-/src-tauri/src/secrets.rs     @khancam15
+/src-tauri/src/actions/       @khaneilcampbell
+/src/actions/                 @khaneilcampbell
+/src-tauri/src/secrets.rs     @khaneilcampbell
 
 # Website access and webhook endpoints
-/functions/_middleware.ts     @khancam15
-/functions/api/hooks/         @khancam15
-/server/access.ts             @khancam15
+/functions/_middleware.ts     @khaneilcampbell
+/functions/api/hooks/         @khaneilcampbell
+/server/access.ts             @khaneilcampbell
