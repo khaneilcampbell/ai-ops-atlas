@@ -11,7 +11,7 @@ export default defineConfig({
   snapshotPathTemplate: `{testDir}/baselines/${process.env.CI ? "ci" : "local"}/{arg}{ext}`,
   // One WebGL page at a time: software rendering is CPU heavy, and parallel pages slow each other.
   workers: 1,
-  timeout: 180_000,
+  timeout: 300_000,
   reporter: [["list"], ["html", { open: "never", outputFolder: "../playwright-report" }]],
   expect: {
     toHaveScreenshot: {
@@ -22,7 +22,7 @@ export default defineConfig({
       caret: "hide",
       // Full 2x pixels, not scaled down to CSS size.
       scale: "device",
-      timeout: 60_000,
+      timeout: 120_000,
     },
   },
   use: {

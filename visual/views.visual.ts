@@ -5,10 +5,17 @@ import { goTo, openAtlas, selectBuilding, settle } from "./atlas";
 
 // Each key view, compared against visual/baselines/<local|ci>/<name>.png.
 // SHOTS=1 skips the comparison and writes the screenshots to visual/out/ instead, for looking at.
+// BASELINE=1 writes them straight over the baselines. One capture of a frozen frame is enough;
+// Playwright's own update mode retakes each until two match, which is slow with software WebGL.
 const SHOTS = !!process.env.SHOTS;
+const BASELINE = !!process.env.BASELINE;
 const OUT = join(import.meta.dirname, "out");
 
 async function check(page: Page, name: string) {
+  if (BASELINE) {
+    await page.screenshot({ path: test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }), animations: "disabled", caret: "hide" });
+    return;
+  }
   if (SHOTS) {
     mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: join(OUT, `${name}.png`), animations: "disabled", caret: "hide" });
