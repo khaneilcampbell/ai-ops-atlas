@@ -49,6 +49,8 @@ pub fn run() {
             actions::merge_token_clear,
             actions::action_merge_check,
             actions::action_merge_pr,
+            actions::actions_edit_settings_set,
+            actions::action_propose_edit,
             usage_sync::usage_sync_status,
             usage_sync::usage_sync_set_url,
             usage_sync::usage_sync_new_key,

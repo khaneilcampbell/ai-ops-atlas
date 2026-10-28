@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 pub const ACTION_RERUN: &str = "rerun_failed_jobs";
 pub const ACTION_MERGE: &str = "merge_pull_request";
+pub const ACTION_EDIT: &str = "propose_edit";
 /// The same run can't be re-run again from Atlas within this window.
 pub const PER_RUN_COOLDOWN_MINUTES: i64 = 10;
 /// Re-runs Atlas will start across all repositories in any rolling hour.
@@ -20,6 +21,8 @@ pub const MAX_PER_HOUR: usize = 10;
 pub const MERGE_COOLDOWN_MINUTES: i64 = 10;
 /// Merges Atlas will send across all repositories in any rolling hour.
 pub const MAX_MERGES_PER_HOUR: usize = 5;
+/// Edit pull requests Atlas will open across all repositories in any rolling hour.
+pub const MAX_EDITS_PER_HOUR: usize = 20;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -41,6 +44,16 @@ pub struct MergeSwitch {
     pub token_logins: BTreeMap<String, String>,
 }
 
+/// Editing files: each change goes to a new branch and a pull request, never to the default
+/// branch. Uses the repository's merge token, so each repository also needs one saved.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EditSwitch {
+    pub enabled: bool,
+    /// Repositories (owner/name) Atlas may open edit pull requests on. Empty means none.
+    pub repos: Vec<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ActionsConfig {
@@ -48,6 +61,7 @@ pub struct ActionsConfig {
     /// The GitHub account the write token belongs to, read once when it is saved.
     pub token_login: Option<String>,
     pub merge_pull_requests: MergeSwitch,
+    pub edit_files: EditSwitch,
 }
 
 impl ActionsConfig {
@@ -68,6 +82,15 @@ impl ActionsConfig {
                 .iter()
                 .any(|r| r.eq_ignore_ascii_case(repo))
     }
+
+    pub fn allows_edit(&self, repo: &str) -> bool {
+        self.edit_files.enabled
+            && self
+                .edit_files
+                .repos
+                .iter()
+                .any(|r| r.eq_ignore_ascii_case(repo))
+    }
 }
 
 /// How far an attempt got. `Attempted` is written before the request is sent, so a crash
@@ -81,6 +104,8 @@ pub enum Stage {
     Started,
     /// A pull request GitHub reports as merged.
     Merged,
+    /// An edit pull request GitHub opened.
+    Opened,
     Failed,
     Unknown,
 }
@@ -103,9 +128,12 @@ pub struct AuditRecord {
     /// The pull request's title, for merges.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    /// The branch a merge lands on.
+    /// The branch a merge lands on, or an edit pull request targets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub base: Option<String>,
+    /// The file an edit changes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
     pub workflow: Option<String>,
     pub run_number: Option<u64>,
     pub attempt_before: Option<u32>,
@@ -254,6 +282,20 @@ pub fn merge_rate_block(
     None
 }
 
+/// Why Atlas's own limits block opening another edit pull request right now, if they do.
+pub fn edit_rate_block(log: &[AuditRecord], now: DateTime<Utc>) -> Option<String> {
+    let hour = now - Duration::hours(1);
+    let sent = log
+        .iter()
+        .filter(|r| r.stage == Stage::Attempted && r.action == ACTION_EDIT && r.at > hour)
+        .count();
+    (sent >= MAX_EDITS_PER_HOUR).then(|| {
+        format!(
+            "Atlas opens at most {MAX_EDITS_PER_HOUR} edit pull requests an hour. Try again later."
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,6 +312,7 @@ mod tests {
             pull_number: None,
             title: None,
             base: None,
+            path: None,
             workflow: None,
             run_number: None,
             attempt_before: None,
@@ -409,5 +452,59 @@ mod tests {
             "5 within the hour"
         );
         assert!(merge_rate_block(&log, "o/r", 9, now + Duration::minutes(31)).is_none());
+    }
+}
+
+#[cfg(test)]
+mod edit_tests {
+    use super::*;
+
+    #[test]
+    fn edit_switch_is_separate_and_capped() {
+        let mut c = ActionsConfig::default();
+        c.merge_pull_requests.enabled = true;
+        c.merge_pull_requests.repos = vec!["o/r".into()];
+        assert!(
+            !c.allows_edit("o/r"),
+            "the merge switch doesn't allow edits"
+        );
+        c.edit_files.repos = vec!["O/R".into()];
+        assert!(!c.allows_edit("o/r"), "off switch wins");
+        c.edit_files.enabled = true;
+        assert!(c.allows_edit("o/r"));
+        assert!(!c.allows_edit("o/other"));
+
+        let now = Utc::now();
+        let rec = |stage| AuditRecord {
+            id: "e".into(),
+            at: now - Duration::minutes(5),
+            action: ACTION_EDIT.into(),
+            actor: "kc".into(),
+            github_login: None,
+            repo: "o/r".into(),
+            run_id: 0,
+            pull_number: None,
+            title: None,
+            base: None,
+            path: Some("README.md".into()),
+            workflow: None,
+            run_number: None,
+            attempt_before: None,
+            head_sha: None,
+            branch: None,
+            stage,
+            reason: None,
+            http_status: None,
+            request_id: None,
+            message: None,
+        };
+        let mut log: Vec<AuditRecord> = (0..MAX_EDITS_PER_HOUR - 1)
+            .map(|_| rec(Stage::Attempted))
+            .collect();
+        log.push(rec(Stage::Cancelled));
+        assert!(edit_rate_block(&log, now).is_none());
+        log.push(rec(Stage::Attempted));
+        assert!(edit_rate_block(&log, now).is_some());
+        assert!(edit_rate_block(&log, now + Duration::minutes(56)).is_none());
     }
 }

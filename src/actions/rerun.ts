@@ -44,19 +44,29 @@ export const STAGE_LABEL: Record<Stage, string> = {
   attempted: "Sent",
   started: "Started",
   merged: "Merged",
+  opened: "Pull request opened",
   failed: "Failed",
   unknown: "Outcome unknown",
 };
 
 /** How the activity feed, the office and Settings name one audit record. */
 export function describeRecord(r: AuditRecord): { title: string; subject: string; url: string; result: "success" | "failure" | "running" | "other" } {
-  const result = r.stage === "started" || r.stage === "merged" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
+  const result = r.stage === "started" || r.stage === "merged" || r.stage === "opened" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
   if (r.action === "merge_pull_request") {
     const n = r.pull_number ?? 0;
     return {
       title: `Merge pull request: ${STAGE_LABEL[r.stage]}`,
       subject: `#${n}${r.title ? ` ${r.title}` : ""}`,
       url: `https://github.com/${r.repo}/pull/${n}`,
+      result,
+    };
+  }
+  if (r.action === "propose_edit") {
+    const n = r.pull_number;
+    return {
+      title: `Edit ${r.path ?? "a file"}: ${STAGE_LABEL[r.stage]}`,
+      subject: n ? `#${n}${r.title ? ` ${r.title}` : ""}` : (r.title ?? r.path ?? "Edit"),
+      url: n ? `https://github.com/${r.repo}/pull/${n}` : `https://github.com/${r.repo}`,
       result,
     };
   }

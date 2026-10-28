@@ -8,6 +8,7 @@ import { documentationChecks } from "../../registry/profile";
 import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
 import { useAtlas } from "../../state";
+import { EditDetailsButton, InspectorEditRow } from "../../components/edit/EditControls";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
 type Tab = "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
@@ -28,6 +29,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   const [tab, setTab] = useState<Tab>("overview");
   const { profile: p, telemetry: t } = entry;
   const agent = catalog.agents.find((a) => a.id === p.id)!;
+  const manifest = catalog.projects.find((x) => x.id === p.project.id)?.file;
   const snap = repoData(repos[p.repository]);
   const branch = snap?.defaultBranch ?? "HEAD";
   const sourceUrl = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
@@ -67,6 +69,9 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
             <RiskPill risk={p.governance.risk} />
             <span className="chip">{p.framework}</span>
           </div>
+          <InspectorEditRow>
+            <EditDetailsButton target={manifest ? { kind: "agent", file: manifest, id: p.id, name: p.title } : null} />
+          </InspectorEditRow>
         </div>
       </header>
 
