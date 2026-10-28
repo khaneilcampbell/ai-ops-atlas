@@ -12,6 +12,22 @@ use std::path::PathBuf;
 
 pub const ACTION_RERUN: &str = "rerun_failed_jobs";
 pub const ACTION_MERGE: &str = "merge_pull_request";
+pub const ACTION_CANCEL: &str = "cancel_run";
+pub const ACTION_DISPATCH: &str = "run_workflow";
+pub const ACTION_PAUSE: &str = "pause_workflow";
+pub const ACTION_RESUME: &str = "resume_workflow";
+pub const ACTION_CLOSE_PR: &str = "close_pull_request";
+pub const ACTION_REOPEN_PR: &str = "reopen_pull_request";
+pub const ACTION_COMMENT_PR: &str = "comment_pull_request";
+pub const ACTION_EDIT_CATALOG: &str = "edit_catalog";
+/// Atlas's own repository. Re-running or starting its workflows publishes a release, so
+/// neither is ever sent from Atlas, whatever the settings say.
+pub const SELF_REPO: &str = "khaneilcampbell/ai-ops-atlas";
+/// The same change to the same run, workflow or pull request can't be sent again within this
+/// window, so a double press can't send it twice.
+pub const OP_COOLDOWN_SECONDS: i64 = 60;
+/// Workflow and pull request changes Atlas will send across all repositories in any rolling hour.
+pub const MAX_OPS_PER_HOUR: usize = 30;
 /// The same run can't be re-run again from Atlas within this window.
 pub const PER_RUN_COOLDOWN_MINUTES: i64 = 10;
 /// Re-runs Atlas will start across all repositories in any rolling hour.
@@ -21,6 +37,11 @@ pub const MERGE_COOLDOWN_MINUTES: i64 = 10;
 /// Merges Atlas will send across all repositories in any rolling hour.
 pub const MAX_MERGES_PER_HOUR: usize = 5;
 
+pub fn is_self_repo(repo: &str) -> bool {
+    repo.eq_ignore_ascii_case(SELF_REPO)
+}
+
+/// An on/off switch and the repositories it covers. Every action has its own.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RerunSwitch {
@@ -48,9 +69,52 @@ pub struct ActionsConfig {
     /// The GitHub account the write token belongs to, read once when it is saved.
     pub token_login: Option<String>,
     pub merge_pull_requests: MergeSwitch,
+    /// Cancel a queued or running workflow run. Uses the Actions token.
+    pub cancel_runs: ActionSwitch,
+    /// Start a workflow that has a `workflow_dispatch` trigger. Uses the Actions token.
+    pub run_workflows: ActionSwitch,
+    /// Turn a workflow off or back on. Uses the Actions token.
+    pub pause_workflows: ActionSwitch,
+    /// Close, reopen and comment on pull requests. Uses the repository's pull request token.
+    pub pull_request_changes: ActionSwitch,
+}
+
+pub type ActionSwitch = RerunSwitch;
+
+/// The switches added after re-runs and merges, by the name the settings screen uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Group {
+    CancelRuns,
+    RunWorkflows,
+    PauseWorkflows,
+    PullRequestChanges,
 }
 
 impl ActionsConfig {
+    pub fn switch(&self, g: Group) -> &ActionSwitch {
+        match g {
+            Group::CancelRuns => &self.cancel_runs,
+            Group::RunWorkflows => &self.run_workflows,
+            Group::PauseWorkflows => &self.pause_workflows,
+            Group::PullRequestChanges => &self.pull_request_changes,
+        }
+    }
+
+    pub fn switch_mut(&mut self, g: Group) -> &mut ActionSwitch {
+        match g {
+            Group::CancelRuns => &mut self.cancel_runs,
+            Group::RunWorkflows => &mut self.run_workflows,
+            Group::PauseWorkflows => &mut self.pause_workflows,
+            Group::PullRequestChanges => &mut self.pull_request_changes,
+        }
+    }
+
+    pub fn allows_op(&self, g: Group, repo: &str) -> bool {
+        let sw = self.switch(g);
+        sw.enabled && sw.repos.iter().any(|r| r.eq_ignore_ascii_case(repo))
+    }
+
     pub fn allows(&self, repo: &str) -> bool {
         self.rerun_failed_jobs.enabled
             && self
@@ -81,6 +145,8 @@ pub enum Stage {
     Started,
     /// A pull request GitHub reports as merged.
     Merged,
+    /// Any other change GitHub accepted: a cancel, a dispatch, a pause, a comment.
+    Done,
     Failed,
     Unknown,
 }
@@ -117,6 +183,9 @@ pub struct AuditRecord {
     pub http_status: Option<u16>,
     pub request_id: Option<String>,
     pub message: Option<String>,
+    /// What was sent beyond the target: a comment's text, or the catalog fields changed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 pub struct Store {
@@ -254,6 +323,56 @@ pub fn merge_rate_block(
     None
 }
 
+/// What an op touches, for the cooldown: a run, a workflow file or a pull request.
+pub fn op_target(r: &AuditRecord) -> String {
+    match (r.pull_number, r.run_id) {
+        (Some(n), _) => format!("pull:{n}"),
+        (None, id) if id > 0 => format!("run:{id}"),
+        _ => format!("workflow:{}", r.workflow.as_deref().unwrap_or("")),
+    }
+}
+
+/// Why Atlas's own limits block a workflow or pull request change right now, if they do.
+/// Counts requests that were sent (`Attempted`), whatever their outcome.
+pub fn op_rate_block(
+    log: &[AuditRecord],
+    action: &str,
+    repo: &str,
+    target: &str,
+    now: DateTime<Utc>,
+) -> Option<String> {
+    const OPS: [&str; 7] = [
+        ACTION_CANCEL,
+        ACTION_DISPATCH,
+        ACTION_PAUSE,
+        ACTION_RESUME,
+        ACTION_CLOSE_PR,
+        ACTION_REOPEN_PR,
+        ACTION_COMMENT_PR,
+    ];
+    let sent = log
+        .iter()
+        .filter(|r| r.stage == Stage::Attempted && OPS.contains(&r.action.as_str()));
+    let cooldown = now - Duration::seconds(OP_COOLDOWN_SECONDS);
+    if sent.clone().any(|r| {
+        r.action == action
+            && r.repo.eq_ignore_ascii_case(repo)
+            && op_target(r) == target
+            && r.at > cooldown
+    }) {
+        return Some(
+            "Atlas sent this a moment ago. Refresh to see whether it went through.".into(),
+        );
+    }
+    let hour = now - Duration::hours(1);
+    if sent.filter(|r| r.at > hour).count() >= MAX_OPS_PER_HOUR {
+        return Some(format!(
+            "Atlas sends at most {MAX_OPS_PER_HOUR} workflow and pull request changes an hour. Try again later."
+        ));
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,7 +399,86 @@ mod tests {
             http_status: None,
             request_id: None,
             message: None,
+            detail: None,
         }
+    }
+
+    #[test]
+    fn new_switches_are_off_and_separate() {
+        let mut c: ActionsConfig =
+            serde_json::from_str(r#"{"rerun_failed_jobs":{"enabled":true,"repos":["o/r"]}}"#)
+                .unwrap();
+        for g in [
+            Group::CancelRuns,
+            Group::RunWorkflows,
+            Group::PauseWorkflows,
+            Group::PullRequestChanges,
+        ] {
+            assert!(!c.allows_op(g, "o/r"), "{g:?} starts off");
+        }
+        c.cancel_runs.repos = vec!["O/R".into()];
+        assert!(!c.allows_op(Group::CancelRuns, "o/r"), "off switch wins");
+        c.switch_mut(Group::CancelRuns).enabled = true;
+        assert!(c.allows_op(Group::CancelRuns, "o/r"));
+        assert!(!c.allows_op(Group::RunWorkflows, "o/r"));
+        assert!(!c.allows_op(Group::CancelRuns, "o/other"));
+    }
+
+    #[test]
+    fn op_cooldown_is_per_target_and_hourly_cap_is_shared() {
+        let now = Utc::now();
+        let op = |action: &str, run: u64, pull: Option<u64>, wf: Option<&str>, at| AuditRecord {
+            action: action.into(),
+            pull_number: pull,
+            workflow: wf.map(str::to_owned),
+            ..record(Stage::Attempted, "o/r", run, at)
+        };
+        let mut log = vec![op(
+            ACTION_CANCEL,
+            9,
+            None,
+            None,
+            now - Duration::seconds(20),
+        )];
+        assert!(op_rate_block(&log, ACTION_CANCEL, "o/r", "run:9", now).is_some());
+        assert!(op_rate_block(&log, ACTION_CANCEL, "o/r", "run:10", now).is_none());
+        assert!(op_rate_block(
+            &log,
+            ACTION_CANCEL,
+            "o/r",
+            "run:9",
+            now + Duration::seconds(61)
+        )
+        .is_none());
+        // Re-runs and merges have their own limits.
+        for i in 0..40 {
+            log.push(record(Stage::Attempted, "o/r", 100 + i, now));
+        }
+        assert!(op_rate_block(&log, ACTION_PAUSE, "o/r", "workflow:ci.yml", now).is_none());
+        for i in 0..29 {
+            log.push(op(
+                ACTION_COMMENT_PR,
+                0,
+                Some(i),
+                None,
+                now - Duration::minutes(10),
+            ));
+        }
+        assert!(
+            op_rate_block(&log, ACTION_PAUSE, "o/r", "workflow:ci.yml", now).is_some(),
+            "30 within the hour"
+        );
+        assert_eq!(op_target(&log[0]), "run:9");
+        assert_eq!(
+            op_target(&op(ACTION_PAUSE, 0, None, Some("ci.yml"), now)),
+            "workflow:ci.yml"
+        );
+    }
+
+    #[test]
+    fn atlas_itself_is_recognised() {
+        assert!(is_self_repo("KhaneilCampbell/AI-Ops-Atlas"));
+        assert!(!is_self_repo("khaneilcampbell/benjaire.com"));
     }
 
     #[test]

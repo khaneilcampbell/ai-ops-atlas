@@ -8,6 +8,7 @@ import { useAtlas } from "../state";
 import type { Agent } from "../catalog/types";
 import { IntelPanel } from "./IntelPanel";
 import { RerunButton } from "./RerunButton";
+import { CancelRunButton } from "./OpButton";
 import { PullRequests } from "./PullRequests";
 import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
@@ -248,6 +249,7 @@ function RepoDetail({ name }: { name: string }) {
                       {relative(r.createdAt)}
                     </span>
                     <RerunButton repo={name} run={r} />
+                    <CancelRunButton repo={name} run={r} />
                   </li>
                 ))}
               </ul>

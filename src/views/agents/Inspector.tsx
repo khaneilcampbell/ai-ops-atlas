@@ -8,6 +8,8 @@ import { documentationChecks } from "../../registry/profile";
 import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
 import { useAtlas } from "../../state";
+import { WorkflowControls } from "../../components/OpButton";
+import { CatalogEditor } from "./CatalogEditor";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
 type Tab = "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
@@ -22,7 +24,11 @@ const TABS: { id: Tab; label: string }[] = [
 
 const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log" } as const;
 
-/** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
+/**
+ * Agent Detail Inspector. Read-only unless KC switched on workflow actions in Settings: then
+ * Run, Pause and Resume appear for an agent's GitHub workflow, each behind a native dialog and
+ * Touch ID. "Edit details" changes only how this Mac shows the agent.
+ */
 export function Inspector({ entry }: { entry: RegistryEntry }) {
   const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
   const [tab, setTab] = useState<Tab>("overview");
@@ -66,6 +72,15 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
             <StatusPill status={entry.status} />
             <RiskPill risk={p.governance.risk} />
             <span className="chip">{p.framework}</span>
+          </div>
+          {agent.localNote && (
+            <div className="local-note small selectable">
+              <Icon name="tag" size={12} /> {agent.localNote}
+            </div>
+          )}
+          <div className="agent-actions">
+            {agent.observe?.githubWorkflow && <WorkflowControls repo={agent.repository} workflow={agent.observe.githubWorkflow} />}
+            <CatalogEditor key={agent.id} agent={agent} />
           </div>
         </div>
       </header>

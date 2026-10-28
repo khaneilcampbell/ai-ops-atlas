@@ -1,27 +1,35 @@
-//! Approval-required actions (autonomy level 2). Atlas can make exactly two changes on
-//! GitHub, each on a repository the person has switched on and only after they approve that
-//! one change in a native dialog: re-run the failed jobs of a failed workflow run, and merge
-//! a pull request GitHub reports as ready (which also asks for Touch ID). Every press is
-//! audited. Nothing proposes or approves a merge on its own.
+//! Approval-required actions (autonomy level 2). Each change Atlas can make on GitHub works
+//! only on a repository the person has switched on for it, and only after they approve that
+//! one change in a native dialog: re-run failed jobs, merge a ready pull request, cancel a
+//! run, start a workflow by hand, pause or resume a workflow, and close, reopen or comment on a
+//! pull request. Everything except re-runs also asks for Touch ID. Every press is audited.
+//! Nothing proposes or approves a change on its own.
 //!
 //! - `store`: the off switches (`actions.json`) and the audit log (`audit.jsonl`)
 //! - `rerun`: pre-flight checks, approval, audit and the single re-run request
 //! - `merge`: readiness checks, approval, Touch ID, audit and the single merge request
+//! - `ops`: the same path for the everyday workflow and pull request changes
+//! - `catalog`: local edits to how an agent is shown, never sent anywhere
 //! - `client`: the write-scoped HTTP client; the only code that sends a GitHub write
 //!
 //! Reads, including the pre-flight check of the run, still go through the read-only
 //! client in `github.rs` and its GET allowlist, which this module leaves untouched.
 
+pub mod catalog;
 pub mod client;
 pub mod merge;
+pub mod ops;
 pub mod rerun;
 pub mod store;
 
+use catalog::{CatalogEdit, Overrides};
 use merge::{MergeApprover, MergeCheck, MergeOutcome, MergePreview, Merger};
+use ops::{Op, OpApprover, OpOutcome, Operator, WorkflowInfo};
 use rerun::{Approver, Outcome, Preview, Rerunner};
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::sync::Arc;
-use store::{clean_repos, ActionsConfig, AuditRecord, Store};
+use store::{clean_repos, ActionsConfig, AuditRecord, Group, Store};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
@@ -30,6 +38,10 @@ pub struct Actions {
     client: Arc<client::WriteClient>,
     rerunner: Rerunner,
     merger: Merger,
+    operator: Operator,
+    overrides: Overrides,
+    actor: String,
+    app: AppHandle,
 }
 
 /// Native confirmation, drawn by macOS rather than the web view, so nothing running in the
@@ -96,6 +108,41 @@ impl MergeApprover for NativeApprover {
     }
 }
 
+/// A native warning dialog with a custom confirm button. `true` only if that button was pressed.
+async fn ask(app: &AppHandle, title: &str, text: &str, button: &str) -> bool {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let mut dialog = app
+        .dialog()
+        .message(text)
+        .title(title)
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            button.into(),
+            "Cancel".into(),
+        ));
+    if let Some(w) = app.get_webview_window("main") {
+        dialog = dialog.parent(&w);
+    }
+    dialog.show(move |ok| {
+        let _ = tx.send(ok);
+    });
+    rx.await.unwrap_or(false)
+}
+
+#[async_trait::async_trait]
+impl OpApprover for NativeApprover {
+    async fn approve(&self, title: &str, text: &str, button: &str) -> bool {
+        ask(&self.app, title, text, button).await
+    }
+
+    async fn confirm_owner(&self, reason: &str) -> Result<(), String> {
+        let reason = reason.to_string();
+        tauri::async_runtime::spawn_blocking(move || crate::secrets::confirm_owner(&reason))
+            .await
+            .map_err(|e| e.to_string())?
+    }
+}
+
 fn actor() -> String {
     let user = std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
@@ -104,7 +151,8 @@ fn actor() -> String {
 }
 
 pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let store = Arc::new(Store::new(app.path().app_data_dir()?.join("actions"))?);
+    let dir = app.path().app_data_dir()?.join("actions");
+    let store = Arc::new(Store::new(dir.clone())?);
     let client = Arc::new(client::WriteClient::new());
     let approver = Arc::new(NativeApprover {
         app: app.handle().clone(),
@@ -121,6 +169,14 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store.clone(),
         Arc::new(crate::github::Client::new()),
         client.clone(),
+        approver.clone(),
+        actor(),
+        Box::new(chrono::Utc::now),
+    );
+    let operator = Operator::new(
+        store.clone(),
+        Arc::new(crate::github::Client::new()),
+        client.clone(),
         approver,
         actor(),
         Box::new(chrono::Utc::now),
@@ -130,6 +186,10 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         client,
         rerunner,
         merger,
+        operator,
+        overrides: Overrides::new(dir),
+        actor: actor(),
+        app: app.handle().clone(),
     });
     Ok(())
 }
@@ -316,6 +376,100 @@ pub async fn action_merge_pr(
     let outcome = actions.merger.run(&repo, number, seen_sha.as_deref()).await;
     app.emit("actions-changed", ()).ok();
     Ok(outcome)
+}
+
+/// Turns one of the everyday actions on or off and sets its repositories. Pull request changes
+/// use each repository's pull request token, so only repositories with one can be listed.
+#[tauri::command]
+pub fn actions_op_settings_set(
+    group: Group,
+    enabled: bool,
+    repos: Vec<String>,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    let repos = clean_repos(&repos)?;
+    match group {
+        Group::PullRequestChanges => {
+            let saved = crate::secrets::merge_token_repos();
+            if let Some(r) = repos
+                .iter()
+                .find(|r| !saved.contains(&r.to_ascii_lowercase()))
+            {
+                return Err(format!(
+                    "Save a pull request token for {r} before enabling it."
+                ));
+            }
+        }
+        _ => {
+            if enabled && crate::secrets::read_actions_token().is_none() {
+                return Err("Save an Actions token before turning this on.".into());
+            }
+        }
+    }
+    let mut c = actions.store.load_config();
+    let sw = c.switch_mut(group);
+    sw.enabled = enabled;
+    sw.repos = repos;
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+/// Cancel a run, start, pause or resume a workflow, or close, reopen or comment on a pull request.
+#[tauri::command]
+pub async fn action_op(
+    repo: String,
+    op: Op,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<OpOutcome, String> {
+    let outcome = actions.operator.run(&repo, op).await;
+    app.emit("actions-changed", ()).ok();
+    Ok(outcome)
+}
+
+/// A workflow's state and whether it can be started by hand. Read-only; nothing is logged.
+#[tauri::command]
+pub async fn action_workflow_info(
+    repo: String,
+    workflow: String,
+    actions: tauri::State<'_, Actions>,
+) -> Result<WorkflowInfo, String> {
+    actions.operator.workflow_info(&repo, &workflow).await
+}
+
+#[tauri::command]
+pub fn catalog_overrides(actions: tauri::State<'_, Actions>) -> BTreeMap<String, CatalogEdit> {
+    actions.overrides.load()
+}
+
+/// Saves a local edit to how an agent is shown, after a native confirmation. `false` when
+/// nothing changed or the dialog was cancelled.
+#[tauri::command]
+pub async fn catalog_override_set(
+    agent: String,
+    edit: CatalogEdit,
+    actions: tauri::State<'_, Actions>,
+) -> Result<bool, String> {
+    let Some((edit, lines)) = actions.overrides.preview(&agent, edit)? else {
+        return Ok(false);
+    };
+    let text = format!(
+        "{}\n\nThis changes how Atlas shows {agent} on this Mac only. No manifest, repository or agent is changed.",
+        lines.join("\n")
+    );
+    if !ask(&actions.app, "Save catalog edit?", &text, "Save").await {
+        actions
+            .overrides
+            .log_cancel(&actions.store, &actions.actor, &agent, &lines);
+        return Ok(false);
+    }
+    actions
+        .overrides
+        .apply(&actions.store, &actions.actor, &agent, edit, &lines)?;
+    actions.app.emit("actions-changed", ()).ok();
+    Ok(true)
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 import type { RegistryManifest } from "../registry/types";
+import type { CatalogEdit } from "../actions/types";
 
 /** Manifest versions. atlas/v2 adds the optional per-agent `registry` block. */
 export const SCHEMAS = ["atlas/v1", "atlas/v2"] as const;
@@ -42,6 +43,10 @@ export interface Agent {
   registry?: RegistryManifest;
   projectId: string;
   repository: string;
+  /** A note KC added in the desktop app. Never in a manifest. */
+  localNote?: string;
+  /** The local edit applied to this agent, if any, for the edit form. */
+  localEdit?: CatalogEdit;
 }
 
 /** Kinds of relationship the map draws between buildings. */

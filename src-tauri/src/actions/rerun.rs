@@ -2,7 +2,7 @@
 //! that can stop the action runs before the approval dialog, the dialog runs before the
 //! audit record, and the audit record is written before the single request is sent.
 
-use super::store::{rate_block, AuditRecord, Stage, Store, ACTION_RERUN};
+use super::store::{is_self_repo, rate_block, AuditRecord, Stage, Store, ACTION_RERUN};
 use crate::intel::collect::{valid_repo, GithubApi};
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
@@ -233,6 +233,7 @@ impl Rerunner {
             http_status: None,
             request_id: None,
             message: None,
+            detail: None,
         }
     }
 
@@ -332,6 +333,13 @@ impl Rerunner {
                 None,
                 "disabled",
                 "Re-running failed jobs is off. Turn it on in Settings.",
+            );
+        }
+        if is_self_repo(repo) {
+            return stop(
+                None,
+                "self_repo",
+                "Atlas doesn't re-run its own workflows: a new run would publish a release. Re-run it on GitHub if you mean to.",
             );
         }
         if !config.allows(repo) {
@@ -682,6 +690,16 @@ mod tests {
         assert_eq!(log[1].github_login.as_deref(), Some("khaneilcampbell"));
         let seen = r.approver.seen.lock().unwrap().clone().unwrap();
         assert_eq!(seen.failed_jobs, vec!["build".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn atlas_never_reruns_its_own_workflows() {
+        let me = crate::actions::store::SELF_REPO;
+        let r = rig_with(true, &[me], true, true, vec![failed()], None);
+        let o = r.r.run(me, 42, None).await;
+        assert_eq!(o.reason.as_deref(), Some("self_repo"));
+        assert_eq!(r.read.calls.load(Ordering::SeqCst), 0);
+        assert_eq!(r.write.posts.load(Ordering::SeqCst), 0);
     }
 
     #[tokio::test]

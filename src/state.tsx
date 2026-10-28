@@ -4,6 +4,7 @@ import { discoverRepos } from "./github/discover";
 import { fetchRepo } from "./github/fetchRepo";
 import { budgetExhausted, clearEtags, GithubError, PRIVATE_OR_MISSING, rateLimit, takeUsage, type RateLimit } from "./github/transport";
 import { liveCatalog, type HiddenRepo } from "./lib/live";
+import { applyOverrides, useCatalogOverrides } from "./catalog/overrides";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
@@ -226,7 +227,11 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
-  const live = useMemo(() => liveCatalog(catalog, repos, deleted), [repos, deleted]);
+  const edits = useCatalogOverrides();
+  const live = useMemo(() => {
+    const l = liveCatalog(catalog, repos, deleted);
+    return { ...l, catalog: applyOverrides(l.catalog, edits) };
+  }, [repos, deleted, edits]);
 
   const value = useMemo<AtlasState>(
     () => ({

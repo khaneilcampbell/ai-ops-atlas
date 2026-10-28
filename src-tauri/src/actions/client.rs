@@ -1,8 +1,10 @@
-//! The only GitHub client that can write. It has no path parameter: the two requests it can
-//! send are built here from a validated repository and a number. A re-run uses the separate
-//! Actions token; a merge uses that repository's own merge token. Never the read-only one.
+//! The only GitHub client that can write. It has no path parameter: every request it can
+//! send is built here from a validated repository and a number or workflow file name. Re-runs
+//! and workflow changes use the separate Actions token; merges and pull request changes use
+//! that repository's own pull request token. Never the read-only one.
 
 use super::merge::{MergeApi, MERGE_METHOD};
+use super::ops::{valid_ref, valid_workflow, Op, OpsApi, TokenKind};
 use super::rerun::{SendError, WriteApi, WriteResponse};
 use crate::intel::collect::valid_repo;
 use std::time::Duration;
@@ -28,6 +30,52 @@ pub fn rerun_url(repo: &str, run_id: u64) -> Option<String> {
 /// The merge endpoint for one pull request. `None` for anything that isn't a plain owner/name.
 pub fn merge_url(repo: &str, number: u64) -> Option<String> {
     valid_repo(repo).then(|| format!("https://api.github.com/repos/{repo}/pulls/{number}/merge"))
+}
+
+/// The method, URL and JSON body for one op. `None` for anything that doesn't validate.
+pub fn op_request(
+    repo: &str,
+    op: &Op,
+    git_ref: Option<&str>,
+) -> Option<(reqwest::Method, String, Option<serde_json::Value>)> {
+    use reqwest::Method;
+    if !valid_repo(repo) {
+        return None;
+    }
+    let base = format!("https://api.github.com/repos/{repo}");
+    let wf = |w: &str| valid_workflow(w).then(|| format!("{base}/actions/workflows/{w}"));
+    Some(match op {
+        Op::CancelRun { run_id } => (
+            Method::POST,
+            format!("{base}/actions/runs/{run_id}/cancel"),
+            None,
+        ),
+        Op::RunWorkflow { workflow } => {
+            let r = git_ref.filter(|r| valid_ref(r))?;
+            (
+                Method::POST,
+                format!("{}/dispatches", wf(workflow)?),
+                Some(serde_json::json!({ "ref": r })),
+            )
+        }
+        Op::PauseWorkflow { workflow } => (Method::PUT, format!("{}/disable", wf(workflow)?), None),
+        Op::ResumeWorkflow { workflow } => (Method::PUT, format!("{}/enable", wf(workflow)?), None),
+        Op::ClosePull { number } => (
+            Method::PATCH,
+            format!("{base}/pulls/{number}"),
+            Some(serde_json::json!({ "state": "closed" })),
+        ),
+        Op::ReopenPull { number } => (
+            Method::PATCH,
+            format!("{base}/pulls/{number}"),
+            Some(serde_json::json!({ "state": "open" })),
+        ),
+        Op::CommentPull { number, body } => (
+            Method::POST,
+            format!("{base}/issues/{number}/comments"),
+            Some(serde_json::json!({ "body": body })),
+        ),
+    })
 }
 
 /// Maps a send error to text without the request, which would carry the auth header.
@@ -187,9 +235,148 @@ impl MergeApi for WriteClient {
     }
 }
 
+#[async_trait::async_trait]
+impl OpsApi for WriteClient {
+    async fn has_op_token(&self, kind: TokenKind, repo: &str) -> bool {
+        match kind {
+            TokenKind::Actions => crate::secrets::read_actions_token().is_some(),
+            TokenKind::Pulls => crate::secrets::read_merge_token(repo).is_some(),
+        }
+    }
+
+    async fn send_op(
+        &self,
+        repo: &str,
+        op: &Op,
+        git_ref: Option<&str>,
+    ) -> Result<WriteResponse, SendError> {
+        let (method, url, body) = op_request(repo, op, git_ref)
+            .ok_or_else(|| SendError::NotSent("Invalid request".into()))?;
+        let token = match op.token() {
+            TokenKind::Actions => crate::secrets::read_actions_token()
+                .ok_or_else(|| SendError::NotSent("No Actions token is saved".into()))?,
+            TokenKind::Pulls => crate::secrets::read_merge_token(repo).ok_or_else(|| {
+                SendError::NotSent("No pull request token is saved for this repository".into())
+            })?,
+        };
+        let mut req = self
+            .http
+            .request(method, url)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .bearer_auth(token);
+        if let Some(b) = body {
+            req = req.json(&b);
+        }
+        let res = req.send().await.map_err(send_error)?;
+        Ok(write_response(res).await)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{merge_url, rerun_url};
+    use super::{merge_url, op_request, rerun_url};
+    use crate::actions::ops::Op;
+    use reqwest::Method;
+
+    #[test]
+    fn builds_only_the_op_endpoints() {
+        let r = "khaneilcampbell/benjaire.com";
+        let base = "https://api.github.com/repos/khaneilcampbell/benjaire.com";
+        let url = |op: Op, git_ref: Option<&str>| op_request(r, &op, git_ref);
+        assert_eq!(
+            url(Op::CancelRun { run_id: 9 }, None).unwrap().1,
+            format!("{base}/actions/runs/9/cancel")
+        );
+        let (m, u, b) = url(
+            Op::RunWorkflow {
+                workflow: "ci.yml".into(),
+            },
+            Some("main"),
+        )
+        .unwrap();
+        assert_eq!(
+            (m, u),
+            (
+                Method::POST,
+                format!("{base}/actions/workflows/ci.yml/dispatches")
+            )
+        );
+        assert_eq!(b.unwrap()["ref"], "main");
+        assert!(
+            url(
+                Op::RunWorkflow {
+                    workflow: "ci.yml".into()
+                },
+                None
+            )
+            .is_none(),
+            "dispatch needs a ref"
+        );
+        assert!(url(
+            Op::RunWorkflow {
+                workflow: "ci.yml".into()
+            },
+            Some("a b")
+        )
+        .is_none());
+        assert_eq!(
+            url(
+                Op::PauseWorkflow {
+                    workflow: "ci.yml".into()
+                },
+                None
+            )
+            .unwrap()
+            .1,
+            format!("{base}/actions/workflows/ci.yml/disable")
+        );
+        assert_eq!(
+            url(
+                Op::ResumeWorkflow {
+                    workflow: "ci.yml".into()
+                },
+                None
+            )
+            .unwrap()
+            .1,
+            format!("{base}/actions/workflows/ci.yml/enable")
+        );
+        let (m, u, b) = url(Op::ClosePull { number: 3 }, None).unwrap();
+        assert_eq!(
+            (m, u, b.unwrap()["state"].clone()),
+            (Method::PATCH, format!("{base}/pulls/3"), "closed".into())
+        );
+        let (m, u, b) = url(
+            Op::CommentPull {
+                number: 3,
+                body: "hi".into(),
+            },
+            None,
+        )
+        .unwrap();
+        assert_eq!(
+            (m, u, b.unwrap()["body"].clone()),
+            (
+                Method::POST,
+                format!("{base}/issues/3/comments"),
+                "hi".into()
+            )
+        );
+        for bad in ["../ci.yml", "ci.yml/../../x.yml", "a/b.yml"] {
+            assert!(
+                url(
+                    Op::PauseWorkflow {
+                        workflow: bad.into()
+                    },
+                    None
+                )
+                .is_none(),
+                "{bad}"
+            );
+        }
+        assert!(op_request("a/b/c", &Op::CancelRun { run_id: 1 }, None).is_none());
+    }
 
     #[test]
     fn builds_only_the_merge_endpoint() {
