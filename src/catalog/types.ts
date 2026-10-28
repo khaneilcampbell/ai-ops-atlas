@@ -1,4 +1,5 @@
 import type { RegistryManifest } from "../registry/types";
+import type { DistrictId } from "./taxonomy";
 
 /** Manifest versions. atlas/v2 adds the optional per-agent `registry` block. */
 export const SCHEMAS = ["atlas/v1", "atlas/v2"] as const;
@@ -66,6 +67,8 @@ export interface Project {
   status: Status;
   repository: string;
   tags: string[];
+  /** Infrastructure district declared in the manifest; Atlas infers one when this is absent. */
+  district?: DistrictId;
   links: Link[];
   agentIds: string[];
   /** Relationships the manifest declares; empty when none. */

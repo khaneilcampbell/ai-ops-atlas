@@ -1,3 +1,4 @@
+import { districtLabel, districtOf, districtRank } from "../catalog/organization";
 import { isAiAgent, servicesOf, type ServiceUse } from "../catalog/roles";
 import type { Agent, Catalog, Project, Status } from "../catalog/types";
 
@@ -14,7 +15,7 @@ export function iso(gx: number, gy: number) {
   return { x: (gx - gy) * TW, y: (gx + gy) * TH };
 }
 
-export type GroupBy = "none" | "status" | "tag";
+export type GroupBy = "none" | "district" | "status" | "tag";
 
 export interface Lot {
   agent: Agent;
@@ -190,7 +191,11 @@ function shelf<T extends Box>(items: T[], gap: number): { placed: Placed<T>[]; w
 const STATUS_ORDER: Status[] = ["attention", "active", "idle", "paused", "retired"];
 const STATUS_GROUP: Record<Status, string> = { attention: "Needs attention", active: "Active", idle: "Idle", paused: "Paused", retired: "Retired" };
 
-function groupOf(p: Project, by: GroupBy): { key: string; label: string; rank: number } {
+function groupOf(p: Project, by: GroupBy, agents: Agent[]): { key: string; label: string; rank: number } {
+  if (by === "district") {
+    const d = districtOf(p, agents).value;
+    return { key: `d:${d}`, label: districtLabel(d), rank: districtRank(d) };
+  }
   if (by === "status") return { key: `s:${p.status}`, label: STATUS_GROUP[p.status], rank: STATUS_ORDER.indexOf(p.status) };
   if (by === "tag") {
     const t = p.tags[0];
@@ -206,7 +211,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   // Bucket projects into neighborhoods, then pack each neighborhood on its own.
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
   for (const p of catalog.projects) {
-    const g = groupOf(p, groupBy);
+    const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
     b.projects.push(p);
     buckets.set(g.key, b);
@@ -236,7 +241,11 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     blocks.push({ key: "uncataloged", label: "Not in the catalog yet", count: uncataloged.length, inner: { placed: [], w, h }, strays: uncataloged, w, h });
   }
 
-  const outer = shelf(blocks, GROUP_GAP);
+  // Districts share one landmass: the usual street gap between them, and walkways across, so
+  // roads, bridges and street-routed connections reach every district. Other groupings stay apart.
+  const joined = groupBy === "district";
+  const outer = shelf(blocks, joined ? GAP : GROUP_GAP);
+  const rects: { id: string; x: number; y: number; w: number; h: number }[] = [];
   const districts: District[] = [];
   const parks: Park[] = [];
   const neighborhoods: Neighborhood[] = [];
@@ -268,7 +277,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
     // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
     for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
-    walks.push(...walkways(blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }))));
+    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
+    if (joined) rects.push(...own);
+    else walks.push(...walkways(own));
     for (const it of blk.inner.placed) {
       const ox = blk.x + it.x;
       const oy = blk.y + it.y;
@@ -311,8 +322,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
   }
 
-  const rects = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
-  const corners = rects.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
+  if (joined) walks.push(...walkways(rects));
+
+  const boxes = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
+  const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
   const xs = corners.map((c) => c.x);
   const ys = corners.map((c) => c.y);
   return {

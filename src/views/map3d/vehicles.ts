@@ -1,18 +1,23 @@
 import { hash } from "../mapLayout";
+import { CLEAR, crossing, dist, pathClear, ringParam, ringPath, stairsOf, towerRing, type Pt, type Pt3, type Ring } from "./roads";
 import type { Scene3D } from "./scene";
 
 // Routes for the decorative vehicles: each one tours a district's stone paths, out from the plaza
-// around its headquarters to each agent's house and back, stopping at the door. Pure data, so the
-// routes can be checked against the map without rendering anything.
+// around its headquarters to each agent's house and back, stopping at the door, and over the road
+// bridges to its neighbors' plazas and back. Pure data, so the routes can be checked against the map
+// without rendering anything.
 
 export type VehicleKind = "sedan" | "van" | "service";
 
-export type Pt = [number, number];
+export type { Pt };
 
 /** One step of a vehicle's loop: drive from a to b, or wait at a (b is where it heads next). */
 export interface Leg {
   a: Pt;
   b: Pt;
+  /** Height above the terrace paving at a and at b: above zero only on a bridge. */
+  ya: number;
+  yb: number;
   /** Seconds this leg takes. */
   dur: number;
   hold: boolean;
@@ -35,14 +40,10 @@ const SPEED = 0.3; // world units per second, before each vehicle's own variatio
 const DOOR_GAP = 0.22;
 const DELIVERY_S = 2.4;
 const JUNCTION_S = 0.9;
-/** How far a vehicle's center keeps from any wall: half its width and a little air. */
-const CLEAR = 0.08;
-/** The tower's entrance stairs and flowerbeds reach this far out from its front. */
-const ENTRANCE = 0.26;
-/** And from the plaza's edge, so wheels stay on the paving. */
-const EDGE = 0.08;
-/** How far out from the tower's walls the plaza lane runs. */
-const LANE = 0.15;
+/** A pause at the neighbor's plaza before heading home. */
+const VISIT_S = 1.6;
+/** Vehicles ease off a little on a bridge's ramps. */
+const RAMP_PACE = 0.7;
 
 const FLEET: { kind: VehicleKind; color: string }[] = [
   { kind: "sedan", color: "#2f4a3a" },
@@ -51,61 +52,6 @@ const FLEET: { kind: VehicleKind; color: string }[] = [
   { kind: "sedan", color: "#a88a4c" },
   { kind: "van", color: "#8fa58a" },
 ];
-
-const dist = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
-
-/** The lane around a tower: a rectangle, wider on the entrance side. */
-interface Ring {
-  x0: number;
-  z0: number;
-  x1: number;
-  z1: number;
-}
-
-/** Position along the ring by distance s, counterclockwise from its -x,-z corner. */
-function ringPoint(g: Ring, s: number): Pt {
-  const w = g.x1 - g.x0;
-  const d = g.z1 - g.z0;
-  const total = 2 * (w + d);
-  s = ((s % total) + total) % total;
-  if (s <= w) return [g.x0 + s, g.z0];
-  if (s <= w + d) return [g.x1, g.z0 + s - w];
-  if (s <= 2 * w + d) return [g.x1 - (s - w - d), g.z1];
-  return [g.x0, g.z1 - (s - 2 * w - d)];
-}
-function ringParam(g: Ring, p: Pt): number {
-  const w = g.x1 - g.x0;
-  const d = g.z1 - g.z0;
-  if (Math.abs(p[1] - g.z0) < 1e-6) return p[0] - g.x0;
-  if (Math.abs(p[0] - g.x1) < 1e-6) return w + p[1] - g.z0;
-  if (Math.abs(p[1] - g.z1) < 1e-6) return w + d + g.x1 - p[0];
-  return 2 * w + d + g.z1 - p[1];
-}
-/**
- * Points along the ring from one exit to another, corners included. Goes counterclockwise unless
- * that would cross in front of the tower, where the entrance stairs are; then it goes round the back.
- */
-function ringPath(g: Ring, from: Pt, to: Pt): Pt[] {
-  const w = g.x1 - g.x0;
-  const d = g.z1 - g.z0;
-  const corners = [0, w, w + d, 2 * w + d];
-  const total = 2 * (w + d);
-  const walk = (a: Pt, b: Pt) => {
-    const s0 = ringParam(g, a);
-    let s1 = ringParam(g, b);
-    if (s1 < s0 - 1e-6) s1 += total;
-    const pts: Pt[] = [];
-    for (const k of [0, 1])
-      for (const cs of corners) {
-        const at = cs + k * total;
-        if (at > s0 + 1e-6 && at < s1 - 1e-6) pts.push(ringPoint(g, at));
-      }
-    return pts;
-  };
-  const ccw = walk(from, to);
-  if (!ccw.some((p) => Math.abs(p[1] - g.z1) < 1e-6)) return [...ccw, to];
-  return [...walk(to, from).reverse(), to];
-}
 
 /** A spoke: from where the path leaves the plaza ring out to just short of the house's door. */
 function spokeOf(c: Pt, g: Ring, house: { x: number; z: number; w: number; d: number }): Pt[] | null {
@@ -157,64 +103,78 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     const c: Pt = [t.x, t.z];
     // A lane around the tower, inside the plaza. Vehicles never use its front side, where the
     // entrance stairs are; they go round the back instead.
-    const lane = Math.min(plaza.w / 2 - EDGE, t.size / 2 + LANE);
-    if (lane < t.size / 2 + CLEAR) return [];
-    const g: Ring = { x0: t.x - lane, z0: t.z - lane, x1: t.x + lane, z1: t.z + lane };
-    const stairs = { x: t.x, z: t.z + t.size / 2 + ENTRANCE / 2, w: t.size, d: ENTRANCE };
+    const g: Ring | null = towerRing(t, plaza.w);
+    if (!g) return [];
+    const stairs = stairsOf(t);
     const stalls = scene.kiosks.filter((k) => k.projectId === t.projectId).map((k) => ({ x: k.x, z: k.z, w: k.size, d: k.size }));
     // A path that runs past another house's or a kiosk's walls (some do, to reach the house behind) is skipped.
-    const clear = (pts: Pt[]) =>
-      pts.every((p, k) => {
-        if (!k) return true;
-        const a = pts[k - 1];
-        const n = Math.ceil(dist(a, p) / 0.05);
-        for (let j = 0; j <= n; j++) {
-          const x = a[0] + ((p[0] - a[0]) * j) / n;
-          const z = a[1] + ((p[1] - a[1]) * j) / n;
-          if ([...houses, ...stalls, stairs].some((h) => Math.abs(x - h.x) < h.w / 2 + CLEAR && Math.abs(z - h.z) < h.d / 2 + CLEAR)) return false;
-        }
-        return true;
-      });
-    const spokes = houses
-      .map((h) => spokeOf(c, g, h))
-      .filter((s): s is Pt[] => !!s && clear(s))
-      .sort((a, b) => ringParam(g, a[0]) - ringParam(g, b[0]));
+    const clear = (pts: Pt[]) => pathClear(pts, [...houses, ...stalls, stairs], CLEAR);
+    const spokes = houses.map((h) => spokeOf(c, g, h)).filter((s): s is Pt[] => !!s && clear(s));
     if (!spokes.length) return [];
+    // Trips over each of the district's bridges, to the neighbor's plaza and back.
+    const trips = scene.carBridges.flatMap((br) => {
+      const end = br.ends.indexOf(t.projectId);
+      return end < 0 ? [] : [{ out: crossing(br, end as 0 | 1), back: crossing(br, (1 - end) as 0 | 1) }];
+    });
+    const stops = [...spokes.map((sp) => ({ exit: sp[0], sp, trip: null })), ...trips.map((trip) => ({ exit: [trip.out[0][0], trip.out[0][2]] as Pt, sp: null, trip }))].sort(
+      (a, b) => ringParam(g, a.exit) - ringParam(g, b.exit),
+    );
     const { kind, color } = FLEET[i % FLEET.length];
     const speed = SPEED * (0.85 + 0.3 * hash(`${t.key}:speed`));
     const legs: Leg[] = [];
-    const drive = (pts: Pt[]) => {
+    const flat = (pts: Pt[]): Pt3[] => pts.map((p) => [p[0], 0, p[1]]);
+    const drive = (pts: Pt3[]) => {
       for (let k = 1; k < pts.length; k++) {
-        const len = dist(pts[k - 1], pts[k]);
-        if (len > 1e-6) legs.push({ a: pts[k - 1], b: pts[k], dur: len / speed, hold: false });
+        const [a, b] = [pts[k - 1], pts[k]];
+        const len = Math.hypot(b[0] - a[0], b[2] - a[2]);
+        const pace = a[1] !== b[1] ? RAMP_PACE : 1;
+        if (len > 1e-6) legs.push({ a: [a[0], a[2]], b: [b[0], b[2]], ya: a[1], yb: b[1], dur: len / (speed * pace), hold: false });
       }
     };
-    const wait = (at: Pt, next: Pt, s: number) => legs.push({ a: at, b: next, dur: s, hold: true });
-    spokes.forEach((sp, k) => {
-      const next = spokes[(k + 1) % spokes.length];
-      // Sometimes wait at the junction before turning off the plaza.
-      if (hash(`${t.key}:${k}:junction`) > 0.5) wait(sp[0], sp[1], JUNCTION_S);
-      drive(sp);
-      const back = [...sp].reverse();
-      wait(back[0], back[1], DELIVERY_S);
-      drive(back);
-      drive([sp[0], ...ringPath(g, sp[0], next[0])]);
+    const wait = (at: Pt3, next: Pt3, s: number) => legs.push({ a: [at[0], at[2]], b: [next[0], next[2]], ya: at[1], yb: at[1], dur: s, hold: true });
+    stops.forEach((st, k) => {
+      const next = stops[(k + 1) % stops.length];
+      if (st.sp) {
+        const sp = flat(st.sp);
+        // Sometimes wait at the junction before turning off the plaza.
+        if (hash(`${t.key}:${k}:junction`) > 0.5) wait(sp[0], sp[1], JUNCTION_S);
+        drive(sp);
+        const back = [...sp].reverse();
+        wait(back[0], back[1], DELIVERY_S);
+        drive(back);
+      } else if (st.trip) {
+        const { out, back } = st.trip;
+        drive(out);
+        wait(back[0], back[1], VISIT_S);
+        drive(back);
+      }
+      drive(flat([st.exit, ...ringPath(g, st.exit, next.exit)]));
     });
     const period = legs.reduce((s, l) => s + l.dur, 0);
     return [{ id: t.key, kind, color, legs, period, offset: hash(`${t.key}:offset`) * period }];
   });
 }
 
-/** Where a vehicle is at time t, and which way it should face (for a wait, the way it leaves). */
-export function vehicleAt(v: VehiclePlan, t: number): { x: number; z: number; dx: number; dz: number } {
+/**
+ * Where a vehicle is at time t, its height above the terrace paving, which way it should face (for
+ * a wait, the way it leaves) and how steeply it climbs (rise over run).
+ */
+export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z: number; dx: number; dz: number; slope: number } {
   let u = (((t + v.offset) % v.period) + v.period) % v.period;
+  const at = (l: Leg, f: number) => {
+    const run = Math.hypot(l.b[0] - l.a[0], l.b[1] - l.a[1]);
+    return {
+      x: l.a[0] + (l.b[0] - l.a[0]) * f,
+      y: l.ya + (l.yb - l.ya) * f,
+      z: l.a[1] + (l.b[1] - l.a[1]) * f,
+      dx: l.b[0] - l.a[0],
+      dz: l.b[1] - l.a[1],
+      slope: l.hold || run < 1e-6 ? 0 : (l.yb - l.ya) / run,
+    };
+  };
   for (const l of v.legs) {
-    if (u <= l.dur) {
-      const f = l.hold ? 0 : u / l.dur;
-      return { x: l.a[0] + (l.b[0] - l.a[0]) * f, z: l.a[1] + (l.b[1] - l.a[1]) * f, dx: l.b[0] - l.a[0], dz: l.b[1] - l.a[1] };
-    }
+    if (u <= l.dur) return at(l, l.hold ? 0 : u / l.dur);
     u -= l.dur;
   }
-  const l = v.legs[v.legs.length - 1];
-  return { x: l.b[0], z: l.b[1], dx: l.b[0] - l.a[0], dz: l.b[1] - l.a[1] };
+  return at(v.legs[v.legs.length - 1], 1);
 }

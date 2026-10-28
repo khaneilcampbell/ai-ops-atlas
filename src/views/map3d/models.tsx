@@ -5,7 +5,8 @@ import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
+import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -184,6 +185,102 @@ type M = ReturnType<typeof useMaterials>;
 
 const grow = (r: { x: number; z: number; w: number; d: number }, m: number) => ({ x: r.x - m, z: r.z - m, w: r.w + 2 * m, d: r.d + 2 * m });
 const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1: number, c?: string): Inst => ({ p: [r.x + r.w / 2, y0, r.z + r.d / 2], s: [r.w, y1 - y0, r.d], c });
+
+// ── Road bridges ────────────────────────────────────
+
+const RAIL = "#2f4a3a";
+const DECK_T = 0.07;
+
+/**
+ * The pieces of one road bridge: a stone deck that ramps up from each terrace, railings in Atlas
+ * green, pairs of pillars standing in the meadow or the brook below, and a lantern at each corner
+ * that lights with the rest of the map at night.
+ */
+function bridgeParts(br: CarBridge, brooks: Rect[]) {
+  const len = dist(br.a, br.b);
+  const r = rampOf(len);
+  const x = br.axis === "x";
+  const yaw = x ? Math.PI / 2 : 0;
+  // From (s along the deck, v across it, y) to world.
+  const at = (s: number, v: number, y: number): [number, number, number] => {
+    const px = br.a[0] + (x ? s : v);
+    const pz = br.a[1] + (x ? v : s);
+    return [px, y, pz];
+  };
+  const top = (s: number) => TERRACE_H + 0.03 + deckRise(len, s);
+  const deck: Inst[] = [];
+  const rails: Inst[] = [];
+  const piers: Inst[] = [];
+  const lamps: Inst[] = [];
+  const pools: Inst[] = [];
+  const edge = DECK_W / 2 - 0.016;
+  // Ramps and the level span, each a tilted slab, with a rail along each side.
+  const spans: [number, number][] = [
+    [-0.04, r],
+    [r, len - r],
+    [len - r, len + 0.04],
+  ];
+  for (const [s0, s1] of spans) {
+    const y0 = top(Math.max(0, s0));
+    const y1 = top(Math.min(len, s1));
+    const run = s1 - s0;
+    const tilt = -Math.atan2(y1 - y0, run);
+    const l = Math.hypot(run, y1 - y0);
+    const m = (s0 + s1) / 2;
+    const ym = (y0 + y1) / 2;
+    deck.push({ p: at(m, 0, ym - DECK_T), s: [DECK_W, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
+    for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym + 0.085), s: [0.024, 0.016, l], r: yaw, rx: tilt, c: RAIL });
+    for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym), s: [0.03, 0.03, l], r: yaw, rx: tilt, c: "#cfc4ab" });
+  }
+  // Balusters between the rails.
+  const posts = Math.max(4, Math.round(len / 0.16));
+  for (let i = 0; i <= posts; i++) {
+    const s = (len * i) / posts;
+    for (const v of [-edge, edge]) rails.push({ p: at(s, v, top(s)), s: [0.016, 0.09, 0.016], c: RAIL });
+  }
+  // A dashed center line on the level span.
+  for (let s = r + 0.06; s < len - r - 0.06; s += 0.17) deck.push({ p: at(s + 0.04, 0, top(s)), s: [0.018, 0.003, 0.08], r: yaw, c: "#c9a35a" });
+  // Pillars, in pairs, down to the meadow or into the brook.
+  const n = Math.max(2, Math.round(len / 0.75));
+  for (let i = 1; i <= n; i++) {
+    const s = (len * i) / (n + 1);
+    const [px, , pz] = at(s, 0, 0);
+    const ground = brooks.some((b) => px >= b.x && px <= b.x + b.w && pz >= b.z && pz <= b.z + b.d) ? -0.03 : 0;
+    const under = top(s) - DECK_T;
+    for (const v of [-0.13, 0.13]) piers.push({ p: at(s, v, ground), s: [0.1, under - ground, 0.1] });
+    rails.push({ p: at(s, 0, under - 0.05), s: [DECK_W + 0.02, 0.05, 0.1], r: yaw, c: "#cfc4ab" });
+  }
+  // Lanterns at the four corners, with a pool of light on the deck at night.
+  for (const s of [0.06, len - 0.06])
+    for (const v of [-edge, edge]) {
+      rails.push({ p: at(s, v, top(s)), s: [0.022, 0.2, 0.022], c: RAIL });
+      lamps.push({ p: at(s, v, top(s) + 0.225), s: [0.026, 0.026, 0.026] });
+      pools.push({ p: at(s, v * 0.45, top(s) + 0.003), s: [0.34, 0.004, 0.34] });
+    }
+  return { deck, rails, piers, lamps, pools };
+}
+
+export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
+  const items = useMemo(() => {
+    const all = scene.carBridges.map((br) => bridgeParts(br, scene.brooks));
+    return {
+      deck: all.flatMap((b) => b.deck),
+      rails: all.flatMap((b) => b.rails),
+      piers: all.flatMap((b) => b.piers),
+      lamps: all.flatMap((b) => b.lamps),
+      pools: all.flatMap((b) => b.pools),
+    };
+  }, [scene]);
+  return (
+    <group>
+      <Instanced items={items.deck} geometry={g.box} material={m.plain} />
+      <Instanced items={items.rails} geometry={g.box} material={m.plain} />
+      <Instanced items={items.piers} geometry={g.cyl} material={m.step} />
+      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
+      <Instanced items={items.pools} geometry={g.cyl} material={m.pool} shadow={false} />
+    </group>
+  );
+}
 
 // ── Terrain ─────────────────────────────────────────
 

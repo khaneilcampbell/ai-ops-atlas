@@ -11,6 +11,7 @@ project:
   status: active
   repository: khaneilcampbell/benjaire-dashboard
   tags: [benjaire, cloudflare, d1, dashboard]
+  district: business-operations
 
 agents:
   - id: benjaire-ops-ci

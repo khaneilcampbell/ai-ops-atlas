@@ -57,6 +57,16 @@
             "minLength": 1
           }
         },
+        "district": {
+          "enum": [
+            "ai-operations",
+            "business-operations",
+            "ai-engineering",
+            "security-infrastructure",
+            "career-portfolio"
+          ],
+          "description": "Infrastructure district on the map. Left out, Atlas infers one from the project's tags and agents."
+        },
         "links": {
           "type": "array",
           "items": {
@@ -315,6 +325,25 @@
                     "minLength": 1
                   }
                 }
+              },
+              "tier": {
+                "enum": [
+                  "central",
+                  "coordinator",
+                  "specialized"
+                ],
+                "description": "Agent tier. Left out, Atlas infers it: central for AI Ops Atlas agents that work across repositories, coordinator for agents that orchestrate two or more items in their project, specialized otherwise."
+              },
+              "automation_category": {
+                "enum": [
+                  "ci",
+                  "security",
+                  "monitoring",
+                  "business",
+                  "intelligence",
+                  "maintenance"
+                ],
+                "description": "What the item does. Left out, Atlas infers it from the classification, category and subcategory."
               },
               "version": {
                 "type": "string",

@@ -134,3 +134,27 @@ describe("walkways", () => {
     for (const w of layout.walks) expect(w.b.gx - w.a.gx + w.b.gy - w.a.gy).toBeGreaterThan(0);
   });
 });
+
+describe("district grouping", () => {
+  const layout = layoutMap(catalog, [], "district");
+
+  it("places the five districts in their fixed order without overlaps", () => {
+    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Security & Infrastructure", "Career & Portfolio"]);
+    expect(overlaps(layout, GAP - 0.01)).toEqual([]);
+  });
+
+  it("joins every district with walkways, so roads and bridges reach all of them", () => {
+    const ids = layout.districts.map((d) => d.project.id);
+    const seen = new Set([ids[0]]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const w of layout.walks)
+        if (seen.has(w.from) !== seen.has(w.to)) {
+          seen.add(w.from);
+          seen.add(w.to);
+          grew = true;
+        }
+    }
+    expect(ids.filter((id) => !seen.has(id))).toEqual([]);
+  });
+});

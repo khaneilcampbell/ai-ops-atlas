@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
@@ -13,11 +13,12 @@ import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
 import { Network, type NetLink } from "./network";
-import { Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
+import { PHONE_QUERY, useMedia } from "../../lib/media";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -45,6 +46,8 @@ export interface MapLink {
 
 interface Props {
   layout: Layout;
+  /** Share of the view covered from below by a sheet; selections are framed above it. */
+  cover?: number;
   selKey: string | null;
   selectedDistrict?: string;
   focus: string;
@@ -64,6 +67,8 @@ interface Props {
   linkTip: (id: string) => { title: string; sub: string } | null;
   /** Selecting a building shows only its connections and fades the rest of the map. */
   linkFocus: boolean;
+  /** Draw links inside one project even when zoomed out (the Agent network and Automation flow views). */
+  showLocal?: boolean;
   /** Connection particles move; off when paused in the toolbar or for reduced motion. */
   linksMoving: boolean;
   /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
@@ -73,7 +78,14 @@ interface Props {
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
 const ELEVATION = (42 * Math.PI) / 180;
 const DIR = new THREE.Vector3(Math.cos(ELEVATION) * Math.SQRT1_2, Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.SQRT1_2);
+const DIR_UPRIGHT = new THREE.Vector3(0, Math.sin(ELEVATION), Math.cos(ELEVATION));
 const FOV = 30;
+/**
+ * Portrait views keep this width-to-height ratio's horizontal angle, so a change in height (Safari's
+ * toolbar, the keyboard, a strip below the map) shows a little more or less sky and sea instead of
+ * zooming the whole map in or out.
+ */
+const PORTRAIT_ASPECT = 0.75;
 
 const STATUS_DOT: Record<Status, string> = { active: "#7fbf7a", idle: "#a9b4a0", paused: "#c4b07c", attention: "#e2b55a", retired: "#7d857a" };
 
@@ -110,7 +122,7 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus } = props;
+  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
@@ -156,7 +168,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         continue;
       }
       // Links inside one project only up close, or around the project in hand.
-      if (l.pa === l.pb && near === "far" && !inHand(l.pa)) continue;
+      if (!showLocal && l.pa === l.pb && near === "far" && !inHand(l.pa)) continue;
       shown.push({ l, level: l.status === "active" || l.status === "unhealthy" ? "strong" : "weak" });
     }
     // Many links at once: keep only failures at full strength so the map stays readable.
@@ -169,7 +181,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       for (const s of shown) for (const p of [s.l.pa, s.l.pb]) if (p) focusSet.add(p);
     }
     return { shown, picked, focusSet };
-  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus]);
+  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus, showLocal]);
 
   // Labels: project plaques always, agent pills once zoomed in (or for the hovered or selected agent).
   const labels = useMemo(() => {
@@ -286,8 +298,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // Neighborhood names when the map is grouped, at the back corner of each landmass.
     for (const n of layout.neighborhoods) {
       if (!n.label || layout.neighborhoods.length < 2) continue;
-      const text = `${n.label.toUpperCase()} · ${n.count}`;
-      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: "m3-pill hood", node: text });
+      // Districts are a fixed set, so their names stand alone; other groupings show how many they hold.
+      const district = n.key.startsWith("d:");
+      const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
+      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
     for (const p of scene.parks) {
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 1.1, p.z + p.d / 2), w: measure(p.label, 11.5, SANS, 500) + 22, h: 28, priority: 7, className: "m3-pill quiet", node: p.label });
@@ -353,12 +367,14 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   }, []);
   // The map is fully covered while a building's office is open, so it stops rendering then.
   const officePhase = useOffice().phase;
+  // Phones get a lighter scene: fewer pixels and a smaller shadow map keep frames steady.
+  const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
   const activity = useBuildingActivity();
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={[1, 2]} frameloop={visible && officePhase !== "inside" ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={phone ? [1, 1.5] : [1, 2]} frameloop={visible && officePhase !== "inside" ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <World
           light={props.light}
           health={health}
@@ -391,6 +407,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           activity={activity}
           onNear={setNear}
           onMoved={() => setTip(null)}
+          phone={phone}
+          cover={props.cover ?? 0}
         />
       </Canvas>
       <div
@@ -452,6 +470,8 @@ function World({
   activity,
   onNear,
   onMoved,
+  phone,
+  cover,
 }: {
   light: LightMode;
   health: Map<string, Health>;
@@ -478,8 +498,18 @@ function World({
   activity: Map<string, Illumination>;
   onNear: (near: "far" | "mid" | "near") => void;
   onMoved: () => void;
+  phone: boolean;
+  cover: number;
 }) {
   const { camera, gl, size, scene: three } = useThree();
+  // Before anything measures the view: in portrait, hold the horizontal angle steady (see PORTRAIT_ASPECT).
+  useLayoutEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const aspect = size.width / Math.max(1, size.height);
+    const t = Math.tan((FOV * Math.PI) / 360);
+    cam.fov = aspect < PORTRAIT_ASPECT ? Math.min(60, (Math.atan((t * PORTRAIT_ASPECT) / aspect) * 360) / Math.PI) : FOV;
+    cam.updateProjectionMatrix();
+  }, [camera, size.width, size.height]);
   const g = useGeometries();
   const m = useMaterials();
   const controls = useMemo(() => {
@@ -527,6 +557,13 @@ function World({
     };
   }, [controls, gl]);
 
+  /**
+   * The angle the map is first seen from. A tall phone screen looks along the island's side
+   * instead of across its corner, so the island spans the narrow width side to side rather than
+   * corner to corner and draws about a third larger.
+   */
+  const homeDir = () => (phone && size.width < size.height ? DIR_UPRIGHT : DIR);
+
   /** Distance from the target at which the whole landmass fits the view, by bisection on its corners. */
   const computeFit = () => {
     const b = scene.bounds;
@@ -540,7 +577,7 @@ function World({
     const v = new THREE.Vector3();
     for (let i = 0; i < 26; i++) {
       const mid = (lo + hi) / 2;
-      cam.position.copy(center).addScaledVector(DIR, mid);
+      cam.position.copy(center).addScaledVector(homeDir(), mid);
       cam.lookAt(center);
       cam.updateMatrixWorld();
       const ok = corners.every((c) => {
@@ -573,7 +610,7 @@ function World({
     controls.minDistance = 4;
     // Frame the heart of the map, the way the reference crops its coastline, rather than every corner.
     // Grouped maps keep every neighborhood in view.
-    goto(center, fitDist.current * (hoods > 1 ? 0.9 : 0.7), instant, 420, DIR);
+    goto(center, fitDist.current * (hoods > 1 ? 0.9 : homeDir() === DIR_UPRIGHT ? 0.8 : 0.7), instant, 420, homeDir());
   };
 
   // Fit on first show and when the layout changes; refit on resize until the person moves the camera.
@@ -582,8 +619,15 @@ function World({
     fitNow(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene]);
+  const lastSize = useRef(size);
   useEffect(() => {
-    if (framing.current) frame(framing.current);
+    const prev = lastSize.current;
+    lastSize.current = size;
+    // Only the height changed (Safari's toolbar or the keyboard on a phone): the horizontal angle
+    // holds, so leave the camera where it is rather than jump to a new fit.
+    const heightOnly = phone && prev !== size && Math.abs(prev.width - size.width) < 2;
+    if (heightOnly) fitDist.current = computeFit();
+    else if (framing.current) frame(framing.current);
     else if (!touched.current) fitNow(true);
     else fitDist.current = computeFit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -618,7 +662,15 @@ function World({
     touched.current = true;
     const h = a.y1 - a.y0;
     const dist = THREE.MathUtils.clamp(Math.max(h * 3.4, Math.max(a.w, a.d) * 5) + 3, controls.minDistance, fitDist.current * 0.45);
-    goto(new THREE.Vector3(a.x, a.y0 + h * 0.42, a.z), dist, false, 900);
+    const target = new THREE.Vector3(a.x, a.y0 + h * 0.42, a.z);
+    const dir = viewDir();
+    if (cover > 0 && dir.y > 0.2) {
+      // Raise the building into the middle of the part a sheet leaves uncovered, by sliding the
+      // point the camera looks at toward the viewer along the ground.
+      const lift = cover * dist * Math.tan(((camera as THREE.PerspectiveCamera).fov * Math.PI) / 360);
+      target.addScaledVector(new THREE.Vector3(dir.x, 0, dir.z).normalize(), lift / dir.y);
+    }
+    goto(target, dist, false, 900, dir);
   }
 
   // Frame every selection, wherever it was made (map, search, inspector). The docked inspector
@@ -627,7 +679,7 @@ function World({
     framing.current = selKey && anchors.has(selKey) ? selKey : null;
     if (framing.current) frame(framing.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selKey, anchors]);
+  }, [selKey, anchors, cover]);
 
   // Entering a building: remember the view, glide in toward its headquarters, and glide back to
   // the same view on the way out.
@@ -806,8 +858,9 @@ function World({
       <Bloom />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
+      <Bridges scene={scene} g={g} m={m} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />

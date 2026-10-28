@@ -1,4 +1,5 @@
 import type { Raw, Reader } from "../catalog/reader";
+import { AGENT_TIERS, AUTOMATION_CATEGORIES } from "../catalog/taxonomy";
 import {
   AUTONOMY_LEVELS,
   CATEGORIES,
@@ -26,6 +27,8 @@ export function parseRegistry(r: Reader, value: unknown, path: string): Registry
     category: r.oneOf(o, "category", path, CATEGORIES),
     subcategory: r.str(o, "subcategory", path, false),
     version: r.str(o, "version", path, false),
+    tier: r.oneOf(o, "tier", path, AGENT_TIERS),
+    automationCategory: r.oneOf(o, "automation_category", path, AUTOMATION_CATEGORIES),
   };
 
   const c = sub("classification");
@@ -134,7 +137,7 @@ export function parseRegistry(r: Reader, value: unknown, path: string): Registry
     };
   }
 
-  warnUnknown(r, o, path, ["title", "suggested_title", "summary", "category", "subcategory", "classification", "version", "mission", "responsibilities", "goals", "execution", "governance", "cost", "docs"]);
+  warnUnknown(r, o, path, ["title", "suggested_title", "summary", "category", "subcategory", "classification", "tier", "automation_category", "version", "mission", "responsibilities", "goals", "execution", "governance", "cost", "docs"]);
   return out;
 }
 

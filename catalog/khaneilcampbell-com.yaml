@@ -11,6 +11,7 @@ project:
   status: active
   repository: khaneilcampbell/khaneilcampbell.com
   tags: [portfolio, static-site, github-pages, claude]
+  district: career-portfolio
   links:
     - label: Live site
       url: https://khaneilcampbell.com

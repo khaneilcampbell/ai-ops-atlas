@@ -9,6 +9,7 @@ project:
   status: active
   repository: khaneilcampbell/khaneilcampbell
   tags: [profile]
+  district: career-portfolio
   links:
     - label: GitHub profile
       url: https://github.com/khaneilcampbell

@@ -12,6 +12,7 @@ project:
   status: active
   repository: khaneilcampbell/job-applications-workflow
   tags: [claude, career, human-in-the-loop]
+  district: career-portfolio
 
 agents:
   - id: job-analyst
