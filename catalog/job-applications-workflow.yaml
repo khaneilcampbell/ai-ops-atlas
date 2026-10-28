@@ -129,3 +129,48 @@ agents:
         environment: Local
       governance:
         autonomy: 0
+
+  - id: career-ci
+    name: Career Workflow CI
+    purpose: Lints and tests the career scripts and blocks commits of personal data.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request or manual
+    source: .github/workflows/ci.yml
+    observe:
+      github_workflow: ci.yml
+    last_run: null
+    registry:
+      title: Career Workflow Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/ci.yml runs ruff, pytest on templates and scripts, and fails if private/ or documents are tracked; no AI model
+      mission:
+        problem: Keeps the validator and tracker working and personal data out of git.
+        outcomes: ["Every pull request is tested and checked for personal data before merge"]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Lint the scripts, Test templates and the database validator, Test the tracker build, Fail if personal data is tracked, Optional blank tracker on manual dispatch]
+        tools: [GitHub Actions, ruff, pytest, openpyxl]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request, Blank tracker when requested]
+      goals:
+        objective: Block merges that break the scripts or leak personal data.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: internal
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)

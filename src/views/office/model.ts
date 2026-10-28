@@ -104,6 +104,9 @@ export function actionExecutions(action: string, audit: AuditRecord[]): Executio
   }));
 }
 
+/** The longest a run can really be in progress (GitHub's job limit). */
+const MAX_RUN_MS = 6 * 3_600_000;
+
 const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /**
@@ -111,7 +114,7 @@ const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "sh
  * working: only an execution observed in progress does. With no live source, or one that has
  * not loaded, the state is "unknown" rather than a guess.
  */
-export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0): Runtime {
+export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0, now = Date.now()): Runtime {
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
@@ -130,7 +133,8 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (!source) return { state: "unknown", reason: "No live telemetry source is declared for this agent.", basis: null, source: null };
   if (!loaded) return { state: "unknown", reason: `${source} data has not loaded${t.source === "atlas-intel" ? "; it is only available in the desktop app" : ""}.`, basis: null, source };
   const latest = executions[0];
-  if (latest?.result === "running") return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
+  // GitHub stops any job after 6 hours, so a run "in progress" older than that is a stale record.
+  if (latest?.result === "running" && now - Date.parse(latest.at) < MAX_RUN_MS) return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
   // Proposed actions waiting for a person outrank the last result: the agent is blocked on KC.
   if (pending > 0) return { state: "awaiting", reason: `${pending} proposed ${pending === 1 ? "action is" : "actions are"} waiting for your approval.`, basis: latest ?? null, source };
   if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };

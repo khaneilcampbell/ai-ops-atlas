@@ -42,3 +42,48 @@ agents:
         autonomy: 0
         data_sensitivity: internal
         risk: low
+
+  - id: hub-ci
+    name: Hub CI
+    purpose: Checks every project's sources and renders all documents, with DOCX downloads on request.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Push, pull request or manual
+    source: .github/workflows/ci.yml
+    observe:
+      github_workflow: ci.yml
+    last_run: null
+    registry:
+      title: Project Intelligence Hub Continuous Integration
+      category: engineering
+      subcategory: CI/CD
+      classification:
+        type: D
+        confidence: verified
+        evidence: .github/workflows/ci.yml validates project.json and the five sources per project, then runs build_docs.py with pandoc; no AI model
+      mission:
+        problem: Proves every project's Markdown still renders to DOCX before it is merged.
+        outcomes: ["Every pull request renders all documents before merge"]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Lint build_docs.py, Check project.json and the five sources, Render every project to DOCX, Optional DOCX download on manual dispatch]
+        tools: [GitHub Actions, pandoc, python-docx, ruff]
+        inputs: [Pushes and pull requests]
+        outputs: [Check results on the pull request, Rendered DOCX when requested]
+      goals:
+        objective: Block merges that break a project's documents.
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            measure: run_success_rate
+            basis: Observed from GitHub Actions; no target agreed yet
+      execution:
+        trigger_type: event
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 0
+        data_sensitivity: public
+        risk: low
+        audit_log: GitHub Actions run history
+        credential_owner: KC (GitHub repository settings)

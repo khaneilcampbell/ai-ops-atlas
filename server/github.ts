@@ -26,6 +26,9 @@ export function refusal(path: string, env: GithubEnv): string | null {
 
 const PASS_HEADERS = ["etag", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset", "content-type"];
 
+/** Matches the desktop app's GitHub client, so a hung request fails the same way on both. */
+export const UPSTREAM_TIMEOUT_MS = 20_000;
+
 export async function proxyGithub(path: string, search: string, req: Request, env: GithubEnv, fetcher: typeof fetch = fetch): Promise<Response> {
   const refused = refusal(path, env);
   if (refused) return Response.json({ message: refused }, { status: 403, headers: { "cache-control": "no-store" } });
@@ -39,7 +42,17 @@ export async function proxyGithub(path: string, search: string, req: Request, en
   const inm = req.headers.get("if-none-match");
   if (inm) headers["If-None-Match"] = inm;
 
-  const r = await fetcher(`https://api.github.com${path}${search}`, { headers });
+  let r: Response;
+  try {
+    r = await fetcher(`https://api.github.com${path}${search}`, { headers, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+  } catch (e) {
+    // A JSON answer the page can show, instead of the platform's error page.
+    const timedOut = e instanceof Error && e.name === "TimeoutError";
+    return Response.json(
+      { message: timedOut ? `GitHub didn't answer within ${UPSTREAM_TIMEOUT_MS / 1000} seconds.` : "The site couldn't reach GitHub." },
+      { status: timedOut ? 504 : 502, headers: { "cache-control": "no-store" } },
+    );
+  }
   const out = new Headers({ "cache-control": "private, no-store", "x-atlas-authed": env.GITHUB_TOKEN ? "1" : "0" });
   for (const h of PASS_HEADERS) {
     const v = r.headers.get(h);
