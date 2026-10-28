@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
 import { RerunButton } from "../components/RerunButton";
+import { ApprovalQueue } from "../components/ApprovalQueue";
+import { useActions } from "../actions/state";
+import { useProposals } from "../approvals/state";
 import { activityFeed, type AttentionItem } from "../lib/derive";
 import { workspaceMetrics, type DayBucket } from "../lib/metrics";
 import { relative } from "../lib/time";
@@ -15,6 +18,8 @@ const WINDOW = 14;
 export function MissionControl({ attention }: { attention: AttentionItem[] }) {
   const { catalog, repos, uncataloged, usage, select, setView, setFilters, clearFilters } = useAtlas();
   const intel = useIntel();
+  const actionsAvailable = useActions().available;
+  const pendingCount = useProposals().length;
   const intelRuns = intel.status?.runs;
   const spend = useMemo(() => (intelRuns ? rollup(intelRuns) : null), [intelRuns]);
   const m = useMemo(() => workspaceMetrics(catalog, repos, uncataloged, Date.now(), WINDOW), [catalog, repos, uncataloged]);
@@ -147,6 +152,18 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
           </div>
         </section>
       </div>
+
+      {actionsAvailable && (
+        <section className="card mc-approvals">
+          <div className="card-head">
+            <h2 className="grow">Awaiting your approval</h2>
+            <span className="muted small" title="Actions agents propose from verified GitHub data. Each one asks again in a native dialog and is logged.">
+              {pendingCount} proposed
+            </span>
+          </div>
+          <ApprovalQueue />
+        </section>
+      )}
 
       <div className="grid mc-row">
         <section className="card">

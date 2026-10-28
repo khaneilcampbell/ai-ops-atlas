@@ -11,7 +11,10 @@ import type { ExecutionRecord } from "../../registry/types";
 import { useAtlas } from "../../state";
 import { CATEGORY_LABEL } from "../../registry/types";
 import type { LightMode } from "../map3d/living";
-import { ListField, NA, OperationalPill } from "../agents/parts";
+import { AutonomyMeter, ListField, NA, OperationalPill } from "../agents/parts";
+import { ApprovalQueue } from "../../components/ApprovalQueue";
+import { useProposals } from "../../approvals/state";
+import type { Proposal } from "../../approvals/proposals";
 import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
 import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
 import { leaveBuilding, useOffice } from "./store";
@@ -30,6 +33,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const { catalog, repos, setView } = useAtlas();
   const { status: intel } = useIntel();
   const actions = useActions();
+  const pending = useProposals();
   const reduced = useReducedMotion();
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
@@ -44,10 +48,10 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
       entries.map((entry) => {
         const a = agents.find((x) => x.id === entry.profile.id)!;
         const action = ACTION_AGENTS[a.id];
-        return [a.id, { entry, runtime: runtimeFor(a, entry.telemetry, data), history: action ? actionExecutions(action, actions.audit) : entry.telemetry.executions }];
+        return [a.id, { entry, runtime: runtimeFor(a, entry.telemetry, data, pending.filter((p) => p.agentId === a.id).length), history: action ? actionExecutions(action, actions.audit) : entry.telemetry.executions }];
       }),
     );
-  }, [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit]);
+  }, [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending]);
 
   const desks = useMemo<DeskData[]>(
     () =>
@@ -61,11 +65,12 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
           runtime: r.runtime,
-          task: b ? b.label : null,
-          when: b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
+          // While waiting on KC, the monitor shows what the agent proposes, not its last run.
+          task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
+          when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
         };
       }),
-    [plan, rows, agents],
+    [plan, rows, agents, pending],
   );
 
   // Escape closes the inspector, then leaves the building. Captured first so the map's own
@@ -107,6 +112,11 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
             <div className="eyebrow">Headquarters · {project.repository}</div>
             <h2>{project.name}</h2>
           </div>
+          {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
+            <button className="office-awaiting" onClick={() => setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId)}>
+              <i /> {pending.filter((p) => agents.some((a) => a.id === p.agentId)).length} awaiting approval
+            </button>
+          )}
         </div>
 
         {desks.length === 0 && (
@@ -170,6 +180,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   );
 }
 
+const firstFor = (ps: Proposal[], agentId: string) => ps.find((p) => p.agentId === agentId);
+
 const RESULT_LABEL: Record<ExecutionRecord["result"], string> = { success: "Succeeded", failure: "Failed", running: "In progress", other: "Other" };
 
 /** AgentInspectionPanel: the registry profile plus what verified telemetry says right now. */
@@ -205,6 +217,17 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
           <div className="section-title">Current status</div>
           <p style={{ margin: 0, fontSize: 13.5 }}>{runtime.reason}</p>
           <div className="muted small">Source: {runtime.source ?? <NA kind="connected" />}</div>
+        </section>
+        {ACTION_AGENTS[p.id] && (
+          <section>
+            <div className="section-title">Awaiting your approval</div>
+            <ApprovalQueue agentId={p.id} compact />
+          </section>
+        )}
+        <section>
+          <div className="section-title">Autonomy</div>
+          <AutonomyMeter level={p.governance.autonomy} />
+          {p.governance.approval && <div className="muted small">Approval: {p.governance.approval}</div>}
         </section>
         <section>
           <div className="section-title">Role</div>
