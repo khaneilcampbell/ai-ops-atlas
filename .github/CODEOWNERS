@@ -1,0 +1,19 @@
+# Changes to these paths need a review from KC before they merge, once the
+# default-branch ruleset has "Require review from Code Owners" switched on.
+# They cover what ships a signed update to the Mac, and what can write to GitHub.
+
+# CI, release, and the self-update signing setup
+/.github/                     @khaneilcampbell
+/scripts/macos-signing-cert.sh  @khaneilcampbell
+/scripts/setup-macos-signing.sh @khaneilcampbell
+/src-tauri/tauri.conf.json    @khaneilcampbell
+
+# Write actions: merge from Atlas and re-run failed jobs
+/src-tauri/src/actions/       @khaneilcampbell
+/src/actions/                 @khaneilcampbell
+/src-tauri/src/secrets.rs     @khaneilcampbell
+
+# Website access and webhook endpoints
+/functions/_middleware.ts     @khaneilcampbell
+/functions/api/hooks/         @khaneilcampbell
+/server/access.ts             @khaneilcampbell
