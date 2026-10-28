@@ -46,4 +46,21 @@ describe("proxyGithub", () => {
     expect(res.status).toBe(403);
     expect(fetcher).not.toHaveBeenCalled();
   });
+
+  it("answers in JSON when GitHub times out or can't be reached", async () => {
+    const req = new Request("https://a/");
+    const timeout = vi.fn(async () => {
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    });
+    const slow = await proxyGithub("/repos/khaneilcampbell/x", "", req, env, timeout as unknown as typeof fetch);
+    expect(slow.status).toBe(504);
+    expect(((await slow.json()) as { message: string }).message).toContain("20 seconds");
+
+    const down = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    const unreachable = await proxyGithub("/repos/khaneilcampbell/x", "", req, env, down as unknown as typeof fetch);
+    expect(unreachable.status).toBe(502);
+    expect(unreachable.headers.get("x-atlas-authed")).toBeNull();
+  });
 });

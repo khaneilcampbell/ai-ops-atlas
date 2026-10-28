@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAtlas, type View } from "./state";
 import { attentionItems } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows } from "./lib/search";
@@ -99,15 +100,18 @@ export default function App() {
       </nav>
 
       <main className="main">
-        {view === "overview" && <MissionControl attention={attention} />}
-        {view === "grid" && <GridView />}
-        {view === "activity" && <ActivityView />}
-        {view === "agents" && <AgentsView />}
-        {view === "repos" && <ReposView />}
-        {view === "map" && <MapView />}
-        {view === "intel" && <IntelligenceView />}
-        {view === "usage" && <UsageView />}
-        {view === "settings" && <SettingsView />}
+        {/* Keyed by view, so moving to another view also clears a crash. */}
+        <ErrorBoundary key={view}>
+          {view === "overview" && <MissionControl attention={attention} />}
+          {view === "grid" && <GridView />}
+          {view === "activity" && <ActivityView />}
+          {view === "agents" && <AgentsView />}
+          {view === "repos" && <ReposView />}
+          {view === "map" && <MapView />}
+          {view === "intel" && <IntelligenceView />}
+          {view === "usage" && <UsageView />}
+          {view === "settings" && <SettingsView />}
+        </ErrorBoundary>
       </main>
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
