@@ -1,5 +1,5 @@
 import { Icon } from "./Icon";
-import { CONNECTION_HEALTH_LABEL, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, LINK_COLORS, type Connection, type Endpoint } from "../lib/connections";
+import { CONNECTION_HEALTH_LABEL, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, LINK_COLORS, linkHue, type Connection, type Endpoint } from "../lib/connections";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
 
@@ -38,11 +38,11 @@ export function ConnectionPanel({ c, onClose }: { c: Connection; onClose: () => 
             {name(c.source)} {c.directed ? "→" : "↔"} {name(c.target)}
           </h2>
           <div className="chips" style={{ marginTop: 10 }}>
-            <span className="chip">{CONNECTION_LABEL[c.type]}</span>
-            <span className={`chip link-${c.status}`}>
-              <i className="swatch" style={{ background: LINK_COLORS[c.status].day }} />
-              {CONNECTION_HEALTH_LABEL[c.status]}
+            <span className="chip">
+              <i className="swatch" style={{ background: LINK_COLORS[linkHue(c)].day }} />
+              {CONNECTION_LABEL[c.type]}
             </span>
+            <span className={`chip link-${c.status}`}>{CONNECTION_HEALTH_LABEL[c.status]}</span>
             {!c.directed && <span className="chip">Two-way</span>}
           </div>
         </div>
