@@ -27,6 +27,8 @@ agents:
     status: active
     trigger: loop.sh (systemd, hourly cycle)
     source: loop.sh
+    observe:
+      agent_feed: true
     last_run: null
     history:
       - at: 2026-10-12
@@ -104,6 +106,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -161,6 +165,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -217,6 +223,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -270,6 +278,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -325,6 +335,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -380,6 +392,8 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -434,6 +448,8 @@ agents:
     status: idle
     trigger: Phase 3, every build or design cycle
     source: scripts/canva_image_generator.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -485,6 +501,8 @@ agents:
     status: idle
     trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
     source: scripts/stripe_publisher.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Stripe secret key (STRIPE_SECRET_KEY): products, prices and payment links'
@@ -541,6 +559,8 @@ agents:
     status: idle
     trigger: Phase 6, every maintain cycle
     source: scripts/seo_analyzer.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Serper API (SERPER_API_KEY)
@@ -595,6 +615,8 @@ agents:
     status: idle
     trigger: Phase 7, daily via n8n
     source: scripts/health_dashboard.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db; writes nothing
@@ -643,6 +665,8 @@ agents:
     status: active
     trigger: Every loop cycle and every 10 minutes while the loop sleeps
     source: scripts/order_delivery.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Stripe secret key: reads checkout sessions'
@@ -698,6 +722,8 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/sales_tracker.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Stripe secret key: reads checkout sessions'
@@ -748,6 +774,8 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/email_digest.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db
@@ -799,6 +827,8 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/backup_db.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db

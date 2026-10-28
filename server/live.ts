@@ -1,6 +1,7 @@
 // Live activity for the app and the hosted web build. GitHub sends workflow and push events to
 // /api/hooks/github (signed with GITHUB_WEBHOOK_SECRET); the Mac app adds its own agents' runs
-// at /api/hooks/atlas (USAGE_SYNC_TOKEN). Both land in one D1 table, and clients read whatever
+// at /api/hooks/atlas (USAGE_SYNC_TOKEN), and pipelines outside Atlas (the commerce loop on its
+// VPS) report their phases at /api/hooks/agents (AGENT_FEED_TOKEN). All land in one D1 table, and clients read whatever
 // is newer than the last event they saw: the signed-in page at /api/events, the Mac app at
 // /api/hooks/feed with its sync key.
 //
@@ -28,6 +29,9 @@ export interface LiveEnv {
   GITHUB_WEBHOOK_SECRET?: string;
   /** The Mac app's sync key, shared with usage sync. */
   USAGE_SYNC_TOKEN?: string;
+  /** The key outside pipelines use to report runs. Separate from the sync key, so a leaked
+   *  VPS .env can only add run records, never read the feed. */
+  AGENT_FEED_TOKEN?: string;
 }
 
 export const HOOKS_PREFIX = "/api/hooks/";
@@ -42,7 +46,7 @@ const MAX_LOCAL = 50;
 export interface LiveEvent {
   id: number;
   at: string;
-  source: "github" | "atlas";
+  source: "github" | "atlas" | "agent";
   kind: string;
   repo: string | null;
   body: unknown;
@@ -136,10 +140,10 @@ export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()
   return reply(202, { stored: c.kind });
 }
 
-function bearerOk(req: Request, env: LiveEnv): boolean {
+function bearerOk(req: Request, secret: string | undefined): boolean {
   const auth = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  return !!token && !!env.USAGE_SYNC_TOKEN && env.USAGE_SYNC_TOKEN.length >= 32 && sameSecret(token, env.USAGE_SYNC_TOKEN);
+  return !!token && !!secret && secret.length >= 32 && sameSecret(token, secret);
 }
 
 const KINDS = new Set(["intel_run"]);
@@ -147,7 +151,7 @@ const KINDS = new Set(["intel_run"]);
 /** POST /api/hooks/atlas: runs of the Mac app's own agents, sent as they change. */
 export async function receiveAtlas(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
   if (!env.LIVE || !env.USAGE_SYNC_TOKEN) return reply(503, { message: "Live updates aren't set up on the site yet (LIVE binding or USAGE_SYNC_TOKEN missing)." });
-  if (!bearerOk(req, env)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
+  if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
   const text = await readBody(req);
   if (text === null) return reply(413, { message: "Payload too large." });
   let body: { events?: unknown };
@@ -163,6 +167,44 @@ export async function receiveAtlas(req: Request, env: LiveEnv, now = Date.now())
   const at = new Date(now).toISOString();
   await insert(env.LIVE, rows.map((e) => ({ at, source: "atlas", kind: e.kind, repo: typeof e.repo === "string" ? e.repo : null, delivery: null, body: e.body })), now);
   return reply(202, { stored: rows.length });
+}
+
+const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const RUN_STATUSES = new Set(["ok", "failed", "skipped", "paused"]);
+const MAX_AGENTS = 10;
+const MAX_RUN_BODY = 4_000;
+
+/** One pipeline report, checked field by field. Null when anything is off. */
+export function agentRun(e: J): { project: string; agents: string[]; phase: string; status: string; detail: string; at: string } | null {
+  if (!e || typeof e !== "object") return null;
+  const { project, agents, phase, status, detail = "", at } = e;
+  if (typeof project !== "string" || !ID.test(project)) return null;
+  if (!Array.isArray(agents) || !agents.length || agents.length > MAX_AGENTS || !agents.every((a) => typeof a === "string" && ID.test(a))) return null;
+  if (typeof phase !== "string" || !phase.trim() || phase.length > 120) return null;
+  if (typeof status !== "string" || !RUN_STATUSES.has(status)) return null;
+  if (typeof detail !== "string" || detail.length > 300) return null;
+  if (typeof at !== "string" || Number.isNaN(Date.parse(at))) return null;
+  return { project, agents: [...new Set(agents as string[])], phase: phase.trim(), status, detail, at: new Date(Date.parse(at)).toISOString() };
+}
+
+/** POST /api/hooks/agents: one phase result from a pipeline that runs outside Atlas. */
+export async function receiveAgents(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
+  if (!env.LIVE || !env.AGENT_FEED_TOKEN) return reply(503, { message: "Pipeline runs aren't set up on the site yet (LIVE binding or AGENT_FEED_TOKEN missing)." });
+  if (!bearerOk(req, env.AGENT_FEED_TOKEN)) return reply(401, { message: "The key doesn't match the site's AGENT_FEED_TOKEN." });
+  if (Number(req.headers.get("content-length") ?? 0) > MAX_RUN_BODY) return reply(413, { message: "Payload too large." });
+  const text = await req.text();
+  if (text.length > MAX_RUN_BODY) return reply(413, { message: "Payload too large." });
+  let body: J;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return reply(400, { message: "Body isn't JSON." });
+  }
+  const run = agentRun(body);
+  if (!run) return reply(400, { message: "Expected {project, agents, phase, status: ok|failed|skipped|paused, detail?, at}." });
+  // The server's clock orders events; the body keeps the pipeline's own timestamp.
+  await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "agent", kind: "agent_run", repo: null, delivery: null, body: run }], now);
+  return reply(202, { stored: 1 });
 }
 
 /** Events after `after` (an id), or the recent past for a client starting fresh. */
@@ -188,6 +230,6 @@ export async function readEvents(url: URL, env: LiveEnv, now = Date.now()): Prom
 /** GET /api/hooks/feed: the same feed for the Mac app, with its sync key instead of Access. */
 export async function readFeed(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
   if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Live updates aren't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
-  if (!bearerOk(req, env)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
+  if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
   return readEvents(new URL(req.url), env, now);
 }

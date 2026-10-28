@@ -1,6 +1,7 @@
 import type { Catalog, Status } from "../catalog/types";
 import type { RepoState } from "../github/types";
 import type { AgentStatus } from "../intel/types";
+import type { AgentRun } from "../live/apply";
 import { repoData } from "../lib/derive";
 import { matches } from "../lib/search";
 import { documentationScore, toProfile, type AgentProfile } from "./profile";
@@ -18,14 +19,15 @@ export interface RegistryEntry {
   review: string[];
 }
 
-/** The app's own agent runs: the full status on the Mac, or only the runs the Mac reported on the website. */
-export type IntelSource = Pick<AgentStatus, "runs"> & Partial<Pick<AgentStatus, "month_spent_usd" | "config">>;
+/** The app's own agent runs: the full status on the Mac, or only the runs the Mac reported on the
+ *  website. `agentRuns` are the phase results outside pipelines sent to the live feed. */
+export type IntelSource = Pick<AgentStatus, "runs"> & Partial<Pick<AgentStatus, "month_spent_usd" | "config">> & { agentRuns?: AgentRun[] | null };
 
 export function buildRegistry(catalog: Catalog, repos: Record<string, RepoState>, intel: IntelSource | null): RegistryEntry[] {
   const spend = intel?.config && intel.month_spent_usd != null ? { month: intel.month_spent_usd, budget: intel.config.monthly_budget_usd } : null;
   return catalog.agents.map((a) => {
     const profile = toProfile(a, catalog.projects.find((p) => p.id === a.projectId));
-    const telemetry = telemetryFor(a, repoData(repos[a.repository]), intel ? intel.runs : null, spend);
+    const telemetry = telemetryFor(a, repoData(repos[a.repository]), intel ? intel.runs : null, spend, intel?.agentRuns ?? null);
     const operational = operationalState(profile, telemetry);
     const docs = documentationScore(profile);
     return { profile, status: a.status, telemetry, operational, docs, review: reviewReasons(profile, operational, a.status) };

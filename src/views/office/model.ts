@@ -124,7 +124,7 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
   let executions = mainline(t.executions);
   let loaded = t.loaded;
-  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : null;
+  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : null;
   const action = ACTION_AGENTS[agent.id];
   if (action && actions) {
     source = "Atlas action audit log";
