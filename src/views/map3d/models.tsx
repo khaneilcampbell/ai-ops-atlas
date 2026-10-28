@@ -5,7 +5,7 @@ import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, windowLights } from "./materials";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Scene3D, type Slab, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -146,10 +146,14 @@ export function useMaterials() {
       terrace: [wall, wall, patterned("#86b958", "grass"), wall, wall, wall],
       sand: patterned("#e4d3a3", "sand"),
       foam: new THREE.MeshStandardMaterial({ color: "#d9eee8", roughness: 1 }),
+      surf: patterned("#e8f6f2", "foam", { roughness: 1, transparent: true, depthWrite: false }),
       water: patterned("#4e9fb7", "water", { roughness: 0.35, metalness: 0.05 }),
       brook: patterned("#5aaac0", "water", { roughness: 0.3 }),
       falls: patterned("#ffffff", "falls", { transparent: true, opacity: 0.92, roughness: 0.4, side: THREE.DoubleSide }),
       stone: patterned("#e6d6b4", "stone", {}, 0.07),
+      // Streets between districts: dark asphalt with pale curbs, like the reference.
+      asphalt: patterned("#4a4f53", "asphalt", { roughness: 0.85 }, 0.02),
+      curb: patterned("#d9d3c4", "none", { roughness: 0.8 }),
       step: patterned("#d9ceb4", "stone"),
       plain: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.85 }),
       roof: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.75, flatShading: true }),
@@ -186,6 +190,32 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 
 // ── Terrain ─────────────────────────────────────────
 
+/** Ground-level walkways between terraces are the streets; paths up on the terraces stay stone. */
+const isStreet = (p: Slab) => !!p.street;
+const CURB = 0.045;
+
+/** Pale curbs along both sides of a street, broken where a walkway crosses it. */
+function curbsOf(p: Slab, paving: Slab[]): Inst[] {
+  const alongX = p.w > p.d;
+  const gaps = paving
+    .filter((q) => !isStreet(q) && q.y === 0 && (alongX ? q.z < p.z && q.z + q.d > p.z + p.d && q.x + q.w > p.x && q.x < p.x + p.w : q.x < p.x && q.x + q.w > p.x + p.w && q.z + q.d > p.z && q.z < p.z + p.d))
+    .map((q) => (alongX ? [q.x, q.x + q.w] : [q.z, q.z + q.d]))
+    .sort((a, b) => a[0] - b[0]);
+  const runs: [number, number][] = [];
+  let at = alongX ? p.x : p.z;
+  for (const [g0, g1] of gaps) {
+    if (g0 > at) runs.push([at, g0]);
+    at = Math.max(at, g1);
+  }
+  const end = alongX ? p.x + p.w : p.z + p.d;
+  if (end > at) runs.push([at, end]);
+  return runs.flatMap(([a, b]) =>
+    alongX
+      ? [slab({ x: a, z: p.z - CURB, w: b - a, d: CURB }, 0, 0.04), slab({ x: a, z: p.z + p.d, w: b - a, d: CURB }, 0, 0.04)]
+      : [slab({ x: p.x - CURB, z: a, w: CURB, d: b - a }, 0, 0.04), slab({ x: p.x + p.w, z: a, w: CURB, d: b - a }, 0, 0.04)],
+  );
+}
+
 export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M; onTerrace: Pick }) {
   const items = useMemo(() => {
     const top = TERRACE_H;
@@ -194,7 +224,9 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
-      paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
+      paving: scene.paving.filter((p) => !isStreet(p)).map((p) => slab(p, p.y, p.y + p.h)),
+      streets: scene.paving.filter(isStreet).map((p) => slab(p, p.y, p.y + p.h)),
+      curbs: scene.paving.filter(isStreet).flatMap((p) => curbsOf(p, scene.paving)),
       steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
       banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, 0, 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, 0, 0.035)]),
@@ -232,11 +264,13 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
         <planeGeometry args={[400, 400]} />
       </mesh>
-      <Instanced items={items.foam} geometry={g.box} material={m.foam} shadow={false} />
+      <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
       <Instanced items={items.terraces} geometry={g.box} material={m.terrace} pick={onTerrace} />
       <Instanced items={items.paving} geometry={g.box} material={m.stone} shadow={false} />
+      <Instanced items={items.streets} geometry={g.box} material={m.asphalt} shadow={false} />
+      <Instanced items={items.curbs} geometry={g.box} material={m.curb} shadow={false} />
       <Instanced items={items.steps} geometry={g.box} material={m.step} />
       <Instanced items={items.brooks} geometry={g.box} material={m.brook} shadow={false} />
       <Instanced items={items.banks} geometry={g.box} material={m.step} shadow={false} />
@@ -288,7 +322,7 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = [
-      ...scene.lamps.map((l) => ({ p: [l.x, l.y + 0.035, l.z], s: [0.95, 0.004, 0.95] }) as Inst),
+      ...scene.lamps.map((l) => ({ p: [l.x, l.y + 0.035, l.z], s: [1.3, 0.004, 1.3] }) as Inst),
       ...scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst),
     ];
     return { trunks, blobs, cones, bushes, flowers, rocks, poles, bulbs, bollards, caps, pools };
@@ -429,6 +463,12 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
+    }
+    // Architectural trim: slim corner pilasters that catch the light, and a ledge every few floors.
+    if (style !== "timber") {
+      const trim = style === "tech" ? "#7d8790" : style === "secure" ? "#c9ccd2" : style === "classic" ? "#efe7d5" : "#dfe2dc";
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) P.plain.push({ p: [t.x + (dx * s) / 2, FLOOR_BASE, t.z + (dz * s) / 2], s: [0.05, t.height, 0.05], c: trim });
+      if (style !== "tech") for (let i = 3; i < t.floors - 1; i += 3) P.plain.push({ p: [t.x, FLOOR_BASE + i * FLOOR_H - 0.012, t.z], s: [s * 1.025, 0.024, s * 1.025], c: trim });
     }
 
     // Entrance: lit lobby on both visible faces, a canopy, stairs down to the plaza and
