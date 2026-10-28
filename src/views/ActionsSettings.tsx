@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { actionsApi } from "../actions/api";
-import { latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
+import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
 import { useActions } from "../actions/state";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 
 /**
- * Settings for the one approval-required action. Off by default; it needs its own
+ * Settings for the approval-required actions. Each is off by default and needs its own
  * write-scoped token, a switch, and a list of repositories it may touch.
  */
 export function ActionsSettings() {
@@ -50,8 +50,8 @@ export function ActionsSettings() {
       </div>
       <div className="setting">
         <div className="grow muted small">
-          Atlas can do one thing on GitHub: re-run the failed jobs of a failed workflow run. It's off until you turn it on here, works only on the repositories you tick, and every press asks for
-          confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for it.
+          Atlas can do two things on GitHub: re-run the failed jobs of a failed workflow run, and merge a pull request GitHub reports as ready. Each is off until you turn it on here, works only on
+          the repositories you tick, and every press asks for confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for either.
         </div>
       </div>
 
@@ -135,6 +135,8 @@ export function ActionsSettings() {
         </div>
       )}
 
+      <MergeSettings allRepos={allRepos} />
+
       <div className="setting">
         <div className="grow">
           <div className="label">Audit log</div>
@@ -152,7 +154,7 @@ export function ActionsSettings() {
             <li key={r.id}>
               <span className={`result r-${r.stage === "started" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : "other"}`}>{STAGE_LABEL[r.stage]}</span>
               <span className="grow">
-                {r.workflow ?? "Run"} {r.run_number ? `#${r.run_number}` : r.run_id} · <span className="mono">{r.repo}</span>
+                {describeRecord(r).subject} · <span className="mono">{r.repo}</span>
                 {r.message && <div className="muted small">{r.message}</div>}
               </span>
               <span className="muted small nowrap">{relative(r.at)}</span>
@@ -161,5 +163,130 @@ export function ActionsSettings() {
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * Merging pull requests: a switch, and one fine-grained token per repository so a leaked
+ * token can merge in one place only. A repository can be ticked only once its token is saved.
+ */
+function MergeSettings({ allRepos }: { allRepos: string[] }) {
+  const { status, reload } = useActions();
+  const [repo, setRepo] = useState("");
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const sw = status?.config.merge_pull_requests ?? { enabled: false, repos: [], token_logins: {} };
+  const tokens = status?.merge_tokens ?? [];
+  const withToken = allRepos.filter((r) => tokens.includes(r.toLowerCase()));
+  const listed = (r: string) => sw.repos.some((x) => x.toLowerCase() === r.toLowerCase());
+
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      await reload();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const save = (enabled: boolean, repos: string[]) => run(() => actionsApi.setMergeSettings(enabled, repos));
+
+  return (
+    <>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Merge pull requests</div>
+          <div className="muted small">
+            Shows a Merge button in a repository's PRs tab, only on pull requests GitHub reports mergeable with every required check green and no changes requested. Drafts are never offered,
+            nothing can override a check, and each merge asks for confirmation and Touch ID. Squash merges only.
+          </div>
+        </div>
+        <input type="checkbox" className="toggle" aria-label="Allow merging pull requests" checked={sw.enabled} disabled={busy} onChange={(e) => void save(e.target.checked, sw.repos)} />
+      </div>
+      {sw.enabled && (
+        <>
+          <div className="setting">
+            <div className="grow">
+              <div className="label">Merge tokens</div>
+              <div className="muted small">
+                One fine-grained token per repository: Only select repositories (just that one), with Pull requests and Contents: Read and write and nothing else. Saved in your macOS Keychain.
+              </div>
+            </div>
+          </div>
+          <div className="setting">
+            <select value={repo} onChange={(e) => setRepo(e.target.value)} aria-label="Repository for the merge token" disabled={busy}>
+              <option value="">Repository…</option>
+              {allRepos.map((r) => (
+                <option key={r} value={r}>
+                  {r.split("/")[1]}
+                  {tokens.includes(r.toLowerCase()) ? " (token saved)" : ""}
+                </option>
+              ))}
+            </select>
+            <label className="field grow" style={{ flex: 1 }}>
+              <Icon name="key" size={14} />
+              <input
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="github_pat_…"
+                style={{ width: "100%" }}
+                aria-label="Merge token"
+              />
+            </label>
+            <button
+              className="btn primary"
+              disabled={!repo || !value.trim() || busy}
+              onClick={() =>
+                run(async () => {
+                  await actionsApi.setMergeToken(repo, value.trim());
+                  setValue("");
+                })
+              }
+            >
+              Check and save
+            </button>
+          </div>
+          {withToken.length > 0 ? (
+            <ul className="audit-list" aria-label="Repositories that allow merges">
+              {withToken.map((r) => (
+                <li key={r}>
+                  <input
+                    type="checkbox"
+                    aria-label={`Allow merges in ${r}`}
+                    checked={listed(r)}
+                    disabled={busy}
+                    onChange={(e) => void save(true, e.target.checked ? [...sw.repos, r] : sw.repos.filter((x) => x.toLowerCase() !== r.toLowerCase()))}
+                  />
+                  <span className="grow">
+                    <span className="mono">{r}</span>
+                    <div className="muted small">Token for {sw.token_logins[r.toLowerCase()] ?? "an unknown account"}{listed(r) ? " · merges allowed" : " · not ticked"}</div>
+                  </span>
+                  <button className="btn small" disabled={busy} onClick={() => run(() => actionsApi.clearMergeToken(r))}>
+                    Remove token
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="setting">
+              <div className="muted small">No merge tokens saved yet.</div>
+            </div>
+          )}
+        </>
+      )}
+      {error && (
+        <div className="setting">
+          <div className="notice bad">{error}</div>
+        </div>
+      )}
+    </>
   );
 }
