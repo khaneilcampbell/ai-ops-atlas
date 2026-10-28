@@ -60,6 +60,12 @@ pub fn intel_status(agent: tauri::State<'_, AgentState>) -> AgentStatus {
     agent.status()
 }
 
+/// All recorded runs (the status call only carries the latest 150), for the API Usage tab.
+#[tauri::command]
+pub fn intel_runs(agent: tauri::State<'_, AgentState>) -> Vec<Run> {
+    agent.runs()
+}
+
 #[tauri::command]
 pub fn intel_report(repo: String, agent: tauri::State<'_, AgentState>) -> Option<Report> {
     agent.report(&repo)

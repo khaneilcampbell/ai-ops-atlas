@@ -1,5 +1,5 @@
 import { isTauri } from "../lib/env";
-import type { AgentConfig, AgentStatus, CostEstimate, Depth, RepoContext, Report } from "./types";
+import type { AgentConfig, AgentStatus, CostEstimate, Depth, RepoContext, Report, Run } from "./types";
 
 // Everything here goes to the Rust side, which holds the Anthropic key and makes every
 // GitHub and Claude request. The web view never sees credentials.
@@ -11,6 +11,8 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const intelApi = {
   available: isTauri,
   status: () => call<AgentStatus>("intel_status"),
+  /** Every recorded run; the status only carries the latest 150. */
+  runs: () => call<Run[]>("intel_runs"),
   report: (repo: string) => call<Report | null>("intel_report", { repo }),
   reports: () => call<Report[]>("intel_reports"),
   analyze: (repo: string, opts: { force?: boolean; depth?: Depth | null; context?: RepoContext } = {}) =>
