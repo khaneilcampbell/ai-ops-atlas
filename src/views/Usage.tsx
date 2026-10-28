@@ -126,11 +126,11 @@ export function UsageView() {
           </button>
         </div>
       </div>
-      <div className="usage-meta small muted">
+      {(hasAny || data.available) && <div className="usage-meta small muted">
         {data.updatedAt ? <>Last updated {new Date(data.updatedAt).toLocaleString()} · </> : null}
         Showing the {span}
         {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
-      </div>
+      </div>}
 
       {data.error && (
         <div className="card card-pad usage-error" role="alert">
@@ -543,13 +543,17 @@ function SetupState({ available, keyPresent, onSettings, onImport }: { available
           <Icon name="usage" size={20} />
         </div>
         <div>
-          <h2>No API usage recorded yet</h2>
-          <p className="muted">Atlas only shows usage it can read from a real record. Until one exists, there's nothing to total, and nothing runs in the background.</p>
+          <h2>{available ? "No API usage recorded yet" : "Your usage is recorded on your Mac"}</h2>
+          <p className="muted">
+            {available
+              ? "Atlas only shows usage it can read from a real record. Until one exists, there's nothing to total, and nothing runs in the background."
+              : "The Mac app records each run's tokens and estimated cost using the API key in its Keychain. This website never receives your keys or that record, so it has nothing to show yet. That doesn't mean nothing was used."}
+          </p>
         </div>
       </div>
       <ol className="usage-steps">
         <li>
-          <div className="title">Record usage from Atlas's own agent</div>
+          <div className="title">{available ? "Record usage from Atlas's own agent" : "See it in the Mac app"}</div>
           {available ? (
             <p className="muted">
               {keyPresent
@@ -557,7 +561,7 @@ function SetupState({ available, keyPresent, onSettings, onImport }: { available
                 : "Add an Anthropic API key under Settings → Repository intelligence. The key stays in the macOS Keychain. Each analysis then logs the tokens Anthropic reports, and an estimated cost."}
             </p>
           ) : (
-            <p className="muted">Usage is recorded by the Mac app, which holds the API key in the macOS Keychain. This web view can't read it; open Atlas on your Mac.</p>
+            <p className="muted">Open AI Ops Atlas on your Mac and choose API Usage in the sidebar. Your recorded runs, spend and tokens are there.</p>
           )}
           {available && !keyPresent && (
             <button className="btn small" onClick={onSettings}>
