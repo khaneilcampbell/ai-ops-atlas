@@ -1,6 +1,7 @@
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader } from "./reader";
+import { DISTRICTS } from "./taxonomy";
 import { CONNECTION_TYPES, SCHEMAS, type Agent, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
@@ -66,6 +67,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
               githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false),
               atlasIntel: r.bool(observe, "atlas_intel", `${path}.observe`),
               atlasIntelRuns: r.oneOf(observe, "atlas_intel_runs", `${path}.observe`, ["repository", "ecosystem"] as const),
+              agentFeed: r.bool(observe, "agent_feed", `${path}.observe`),
             }
           : undefined,
         projectId,
@@ -81,6 +83,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     status: r.status(p, "project"),
     repository,
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
+    district: r.oneOf(p, "district", "project", DISTRICTS),
     links: r.links(p, "project"),
     agentIds: agents.map((a) => a.id),
     connections: r.list(p, "connections", "project").flatMap((c, i): DeclaredConnection[] => {

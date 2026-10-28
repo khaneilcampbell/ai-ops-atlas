@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { compactGithub, readEvents, readFeed, receiveAtlas, receiveGithub, validSignature, type D1, type D1Statement } from "./live";
+import { agentRun, compactGithub, readEvents, readFeed, receiveAgents, receiveAtlas, receiveGithub, validSignature, type D1, type D1Statement } from "./live";
 
 const SECRET = "w".repeat(64);
 const SYNC = "s".repeat(43);
@@ -110,5 +110,37 @@ describe("live hooks", () => {
     const r = await receiveAtlas(post({ events: [{ kind: "intel_run", repo: "o/r", body: { id: "run1", status: "running" } }, { kind: "other", body: {} }] }), env, NOW);
     expect(await r.json()).toEqual({ stored: 1 });
     expect(d.rows[0]).toMatchObject({ source: "atlas", kind: "intel_run", repo: "o/r" });
+  });
+
+  it("takes pipeline runs with their own key, never the sync key", async () => {
+    const d = fakeD1();
+    const FEED = "f".repeat(40);
+    const run = { project: "commerce-pipeline", agents: ["seo-maintainer"], phase: "Phase 6: SEO", status: "ok", detail: "3 listings", at: "2026-10-28T07:59:00+00:00" };
+    const post = (body: unknown, token = FEED) => new Request("https://x/api/hooks/agents", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: typeof body === "string" ? body : JSON.stringify(body) });
+    expect((await receiveAgents(post(run), { LIVE: d.db })).status).toBe(503);
+    const env = { LIVE: d.db, AGENT_FEED_TOKEN: FEED, USAGE_SYNC_TOKEN: SYNC };
+    expect((await receiveAgents(post(run, SYNC), env)).status).toBe(401);
+    expect((await receiveAgents(post(run), { LIVE: d.db, AGENT_FEED_TOKEN: "short" })).status).toBe(401);
+    expect((await receiveAgents(post("x".repeat(5000)), env)).status).toBe(413);
+    expect((await receiveAgents(post({ ...run, status: "deleted" }), env)).status).toBe(400);
+    expect(d.rows).toHaveLength(0);
+    const r = await receiveAgents(post(run), env, NOW);
+    expect(await r.json()).toEqual({ stored: 1 });
+    expect(d.rows[0]).toMatchObject({ source: "agent", kind: "agent_run", repo: null });
+    expect(JSON.parse(d.rows[0].body)).toEqual({ ...run, at: "2026-10-28T07:59:00.000Z" });
+    // The feed key can only write: reading the feed still needs the sync key.
+    expect((await readFeed(new Request("https://x/api/hooks/feed", { headers: { authorization: `Bearer ${FEED}` } }), env, NOW)).status).toBe(401);
+  });
+
+  it("checks every field of a pipeline run", () => {
+    const ok = { project: "p", agents: ["a", "a"], phase: " Loop ", status: "paused", at: "2026-10-28T08:00:00Z" };
+    expect(agentRun(ok)).toEqual({ project: "p", agents: ["a"], phase: "Loop", status: "paused", detail: "", at: "2026-10-28T08:00:00.000Z" });
+    expect(agentRun({ ...ok, project: "Bad Id" })).toBeNull();
+    expect(agentRun({ ...ok, agents: [] })).toBeNull();
+    expect(agentRun({ ...ok, agents: Array.from({ length: 11 }, (_, i) => `a${i}`) })).toBeNull();
+    expect(agentRun({ ...ok, agents: ["<script>"] })).toBeNull();
+    expect(agentRun({ ...ok, phase: "x".repeat(121) })).toBeNull();
+    expect(agentRun({ ...ok, detail: "x".repeat(301) })).toBeNull();
+    expect(agentRun({ ...ok, at: "yesterday" })).toBeNull();
   });
 });

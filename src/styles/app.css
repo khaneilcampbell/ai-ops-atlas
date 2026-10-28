@@ -266,8 +266,17 @@ table.table { width: 100%; border-collapse: collapse; }
 .map-stage { flex: 1; position: relative; overflow: hidden; cursor: grab; }
 .map-stage.dragging { cursor: grabbing; }
 .map-stage svg { width: 100%; height: 100%; display: block; }
-.map-intro { position: absolute; top: 22px; left: 26px; pointer-events: none; max-width: 420px; }
-.map-intro h1 { font-size: 30px; }
+.map-intro { position: absolute; top: 22px; left: 26px; right: 26px; pointer-events: none; max-width: 430px; color: #162638; }
+.map-intro .eyebrow { color: var(--gold-deep); font-size: 9px; font-weight: 600; letter-spacing: 0.17em; line-height: 1.4; }
+.map-intro h1 { margin: 8px 0 0; font-family: var(--sans); font-size: clamp(23px, 2.5vw, 30px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.16; text-wrap: balance; }
+.map-intro .map-intro-subheading { margin: 7px 0 0; color: #46576a; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.map-intro .map-intro-description { max-width: 370px; margin: 7px 0 0; color: #566477; font-size: 12px; line-height: 1.55; }
+.map-intro-metrics { display: flex; flex-wrap: wrap; gap: 12px 22px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid rgba(201, 163, 90, 0.25); }
+.map-intro-metrics > div { display: flex; flex-direction: column; gap: 3px; }
+.map-intro-metrics dt { display: flex; align-items: center; gap: 6px; color: #566477; font-size: 10px; font-weight: 500; line-height: 1.4; }
+.map-intro-metrics dt i { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); flex: none; }
+.map-intro-metrics dd { margin: 0; color: inherit; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.2; }
+.map-stage.night .map-intro-metrics dt { color: #b8c2d4; }
 .map-controls {
   position: absolute; right: 20px; bottom: 18px; display: flex; gap: 2px; background: var(--sage-50); border-radius: 12px; padding: 4px; box-shadow: var(--shadow);
 }
@@ -656,6 +665,8 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
   .m3-plaque .s i.pulse { animation: none; }
   .m3-plaque, .m3-pill { transition: none; }
 }
+.m3-pill.hood { background: rgba(29, 43, 34, 0.82); color: #e9e6d4; border-color: rgba(201, 163, 90, 0.4); letter-spacing: 0.12em; font-size: 10.5px; cursor: default; }
+.m3-pill.hood.district { background: rgba(29, 43, 34, 0.6); border-color: transparent; color: #e7d6a8; letter-spacing: 0.18em; font-size: 10px; font-weight: 600; box-shadow: none; }
 
 /* Approval-required actions */
 .btn.small { padding: 3px 9px; font-size: 11.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -689,7 +700,8 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 /* Night mode on the 3D map: the intro sits on a dark wash instead of a light one. */
 .map-stage.night:has(.map3d)::before { background: radial-gradient(ellipse at 0 0, rgba(16, 26, 38, 0.9) 0%, rgba(16, 26, 38, 0.55) 45%, rgba(16, 26, 38, 0) 72%); }
 .map-stage.night .map-intro { color: #e9ecf2; }
-.map-stage.night .map-intro .eyebrow, .map-stage.night .map-intro p { color: #b8c2d4; }
+.map-stage.night .map-intro .eyebrow { color: var(--gold); }
+.map-stage.night .map-intro p { color: #b8c2d4; }
 .map-stage:has(.map3d)::before { transition: opacity 0.3s ease, background 1.2s ease; }
 
 /* Connections: toolbar popover, faded labels in focus mode, connection inspector. */
@@ -725,3 +737,4 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .rec-head .grow { flex: 1; min-width: 12ch; }
 .table-wrap { overflow-x: auto; margin: 0 -4px; }
 .table.compact th, .table.compact td { padding: 8px 10px; }
+.map-legend .lens-note b { font-weight: 600; }

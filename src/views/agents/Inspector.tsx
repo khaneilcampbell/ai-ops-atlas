@@ -20,7 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "docs", label: "Documentation" },
 ];
 
-const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log" } as const;
+const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed" } as const;
 
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
 export function Inspector({ entry }: { entry: RegistryEntry }) {
@@ -461,6 +461,8 @@ function OperationsTab({
               ? "GitHub has not returned runs for this workflow. Refresh, or add a token if the repository is private."
               : t.source === "atlas-intel"
                 ? "Runs appear here once the agent has run in this app."
+                : t.source === "agent-feed"
+                  ? "Runs appear here once its pipeline reports a phase to Atlas (ATLAS_FEED_URL and ATLAS_FEED_TOKEN in the pipeline's .env)."
                 : "Atlas has no live source for this agent, so it cannot confirm that it has ever run. A configuration is not evidence of a successful execution."}
           </span>
         </div>

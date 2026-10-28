@@ -2,6 +2,8 @@
 // `RegistryManifest`; everything observed at runtime lives in `Telemetry` and is never
 // written back to a manifest. `null` always means "nobody has documented this".
 
+import type { AgentTier, AutomationCategory } from "../catalog/taxonomy";
+
 export const CLASSIFICATIONS = ["A", "B", "C", "D", "E", "F"] as const;
 export type Classification = (typeof CLASSIFICATIONS)[number] | "unclassified";
 
@@ -81,6 +83,10 @@ export interface RegistryManifest {
   category?: Category;
   subcategory?: string;
   classification?: { type: Classification; confidence: Confidence; evidence?: string };
+  /** Declared agent tier; Atlas infers one when this is absent. */
+  tier?: AgentTier;
+  /** Declared automation category; Atlas infers one when this is absent. */
+  automationCategory?: AutomationCategory;
   version?: string;
   mission?: { purpose?: string; problem?: string; outcomes: string[]; beneficiaries: string[] };
   responsibilities?: { tasks: string[]; tools: string[]; inputs: string[]; outputs: string[]; dependencies: string[]; limitations: string[] };
@@ -107,7 +113,7 @@ export interface ExecutionRecord {
   url?: string;
   durationMs?: number | null;
   costUsd?: number | null;
-  source: "github" | "atlas-intel" | "manual";
+  source: "github" | "atlas-intel" | "agent-feed" | "manual";
   /** A GitHub run on a branch other than the default one (a pull request, Dependabot). Kept in
    *  the history, but it doesn't decide the agent's status. */
   offMainline?: boolean;
@@ -116,7 +122,7 @@ export interface ExecutionRecord {
 /** Derived at runtime. Never stored in a manifest. */
 export interface Telemetry {
   /** Where live execution data comes from, or null when nothing is connected. */
-  source: "github" | "atlas-intel" | null;
+  source: "github" | "atlas-intel" | "agent-feed" | null;
   /** True when Atlas has looked at the source (the repository or the agent was loaded). */
   loaded: boolean;
   executions: ExecutionRecord[];

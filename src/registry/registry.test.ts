@@ -222,6 +222,22 @@ describe("telemetry", () => {
     const up = telemetryFor(ciAgent, snapshot(days.map((d, i) => run(i < 3 ? "success" : "failure", d))), null);
     expect(successTrend(up)).toBe("up");
   });
+
+  it("reads pipeline phases from the run feed for agents that opt in", () => {
+    const seo = { ...ciAgent, id: "seo-maintainer", observe: { agentFeed: true } } as Agent;
+    const feedRun = (id: number, status: "ok" | "failed" | "skipped" | "paused", at: string, agents = ["seo-maintainer"]) => ({ id, project: "commerce-pipeline", agents, phase: "Phase 6: SEO", status, detail: "", at });
+    expect(telemetryFor(seo, undefined, null)).toMatchObject({ source: "agent-feed", loaded: false, executions: [] });
+    const t = telemetryFor(seo, undefined, null, null, [
+      feedRun(3, "paused", "2026-10-28T03:00:00Z"),
+      feedRun(2, "failed", "2026-10-28T02:00:00Z"),
+      feedRun(1, "ok", "2026-10-28T01:00:00Z"),
+      feedRun(4, "ok", "2026-10-28T04:00:00Z", ["health-report"]),
+    ]);
+    expect(t.executions.map((e) => e.result)).toEqual(["other", "failure", "success"]);
+    expect(t.lastVerifiedRun?.at).toBe("2026-10-28T01:00:00Z");
+    expect(t.successRate).toBe(0.5);
+    expect(operationalState({ classification: "C" }, t)).toBe("failing");
+  });
 });
 
 describe("directory", () => {
@@ -261,7 +277,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(12);
+    expect(s.observable).toBe(29);
   });
 });
 
