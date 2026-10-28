@@ -168,6 +168,21 @@ describe("telemetry", () => {
     expect(bad.successRate).toBe(0.5);
   });
 
+  it("takes status from the default branch, keeping pull request runs in the history", () => {
+    const pr = { ...run("failure", "2026-10-28T00:00:00Z"), event: "pull_request", branch: "dependabot/npm_and_yarn/eslint-10" };
+    const snap = { ...snapshot([pr, run("success", "2026-10-27T00:00:00Z")]), defaultBranch: "main" } as RepoSnapshot;
+    const t = telemetryFor(ciAgent, snap, null);
+    expect(operationalState({ classification: "D" }, t)).toBe("verified");
+    expect(t.executions).toHaveLength(2);
+    expect(t.executions[0].offMainline).toBe(true);
+    expect(t.failures).toBe(0);
+    expect(t.successRate).toBe(1);
+    expect(t.lastAnyRun?.at).toBe("2026-10-27T00:00:00Z");
+    // A failure on the default branch still shows as failing.
+    const broken = { ...snap, workflowRuns: { "ci.yml": [pr, run("failure", "2026-10-27T12:00:00Z")] } } as RepoSnapshot;
+    expect(operationalState({ classification: "D" }, telemetryFor(ciAgent, broken, null))).toBe("failing");
+  });
+
   it("ignores in-progress runs in the success rate", () => {
     const t = telemetryFor(ciAgent, snapshot([run(null, "2026-10-27T00:00:00Z", "in_progress"), run("success", "2026-10-26T00:00:00Z")]), null);
     expect(t.successRate).toBe(1);

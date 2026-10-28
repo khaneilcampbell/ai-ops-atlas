@@ -84,6 +84,14 @@ describe("fetchRepo", () => {
     expect(snap.workflowRuns["deploy.yml"]).toHaveLength(1);
   });
 
+  it("keeps the newest default-branch run when pull request runs crowd it out", async () => {
+    const prs = Array.from({ length: 6 }, (_, i) => run({ head_branch: "dependabot/x", event: "pull_request", created_at: `2026-10-27T09:1${i}:00Z`, conclusion: "failure" }));
+    responses = { "/repos/o/r/actions/runs": { workflow_runs: [...prs.reverse(), run()] } };
+    const snap = await fetchRepo("o/r", ["ci.yml"], { meta, runsEveryMs: 0, now });
+    expect(snap.workflowRuns["ci.yml"]).toHaveLength(6);
+    expect(snap.workflowRuns["ci.yml"].at(-1)?.branch).toBe("main");
+  });
+
   it("asks only for a workflow the run list doesn't show", async () => {
     await fetchRepo("o/r", ["codeql.yml"], { meta, runsEveryMs: 0, now });
     expect(calls).toContain("/repos/o/r/actions/workflows/codeql.yml/runs?per_page=5");

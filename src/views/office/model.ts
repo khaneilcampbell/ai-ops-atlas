@@ -2,6 +2,7 @@ import type { Agent, Project } from "../../catalog/types";
 import type { AuditRecord, ActionsStatus } from "../../actions/types";
 import { latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
+import { mainline } from "../../registry/telemetry";
 
 /**
  * The data behind a virtual office: which project and building it belongs to, one workstation
@@ -118,7 +119,8 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
-  let executions = t.executions;
+  // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
+  let executions = mainline(t.executions);
   let loaded = t.loaded;
   let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : null;
   const action = ACTION_AGENTS[agent.id];

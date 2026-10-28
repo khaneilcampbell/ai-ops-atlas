@@ -108,6 +108,9 @@ export interface ExecutionRecord {
   durationMs?: number | null;
   costUsd?: number | null;
   source: "github" | "atlas-intel" | "manual";
+  /** A GitHub run on a branch other than the default one (a pull request, Dependabot). Kept in
+   *  the history, but it doesn't decide the agent's status. */
+  offMainline?: boolean;
 }
 
 /** Derived at runtime. Never stored in a manifest. */
