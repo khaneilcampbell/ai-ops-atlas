@@ -34,7 +34,7 @@ const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", c
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
 export function AgentsView() {
   const { catalog, repos, filters, setFilters, select, selection } = useAtlas();
-  const { status: intel } = useIntel();
+  const { telemetry: intel } = useIntel();
   const [prefs, setPrefs] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...load<Partial<Prefs>>("registry-prefs", {}) }));
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
   useEffect(() => save("registry-prefs", prefs), [prefs]);

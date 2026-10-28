@@ -1,6 +1,7 @@
 mod actions;
 mod github;
 mod intel;
+mod live;
 mod secrets;
 mod usage_sync;
 
@@ -45,6 +46,8 @@ pub fn run() {
             usage_sync::usage_sync_new_key,
             usage_sync::usage_sync_clear,
             usage_sync::usage_sync_push,
+            live::live_feed,
+            live::live_publish,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AI Ops Atlas");

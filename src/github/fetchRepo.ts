@@ -3,7 +3,7 @@ import type { Commit, RepoSnapshot, WorkflowRun } from "./types";
 
 type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-function toRun(r: J): WorkflowRun {
+export function toRun(r: J): WorkflowRun {
   return {
     id: typeof r.id === "number" ? r.id : undefined,
     attempt: typeof r.run_attempt === "number" ? r.run_attempt : undefined,

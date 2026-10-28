@@ -59,6 +59,15 @@ impl UsageSync {
         })
     }
 
+    /// The site's origin, when website sync has one.
+    pub fn url(&self) -> Option<String> {
+        self.saved.lock().unwrap().url.clone()
+    }
+
+    pub fn http(&self) -> &reqwest::Client {
+        &self.http
+    }
+
     fn status(&self) -> SyncStatus {
         let s = self.saved.lock().unwrap();
         SyncStatus {

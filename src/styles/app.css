@@ -101,6 +101,14 @@ a { color: inherit; }
 .icon-btn:focus-visible, .nav-item:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .refresh { display: flex; align-items: center; gap: 6px; color: var(--on-dark-2); font-size: 12px; white-space: nowrap; }
 .spin { animation: spin 1s linear infinite; }
+.live-pill { display: inline-flex; align-items: center; gap: 7px; max-width: 320px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--forest-line); color: var(--on-dark-2); font-size: 12px; white-space: nowrap; }
+.live-pill .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--on-dark-2); opacity: 0.6; }
+.live-pill.live { color: var(--on-dark); border-color: rgba(120, 200, 150, 0.45); }
+.live-pill.live .dot { background: #6fd39a; opacity: 1; animation: dot-pulse 2.4s ease-in-out infinite; }
+.live-pill.error .dot { background: #e0a54a; opacity: 1; }
+.live-last { overflow: hidden; text-overflow: ellipsis; color: var(--on-dark-2); }
+@media (max-width: 1280px) { .live-last { display: none; } }
+@media (prefers-reduced-motion: reduce) { .live-pill.live .dot { animation: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .sidebar {

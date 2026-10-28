@@ -7,6 +7,8 @@ import { liveCatalog, type HiddenRepo } from "./lib/live";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
+import { applyGithubEvent } from "./live/apply";
+import { onLiveEvents } from "./live/feed";
 
 export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
@@ -210,6 +212,41 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
+
+  // Live events patch runs and commits in place as they happen, with no GitHub requests.
+  // A gap (more happened than the feed returned) falls back to a normal refresh.
+  useEffect(
+    () =>
+      onLiveEvents((events, gap) => {
+        if (gap) void refresh(true);
+        const github = events.filter((e) => e.source === "github" && e.repo);
+        if (!github.length) return;
+        setRepos((prev) => {
+          let changed = false;
+          const next = { ...prev };
+          for (const e of github) {
+            const repo = e.repo!.toLowerCase();
+            const key = Object.keys(next).find((k) => {
+              const st = next[k];
+              const snap = st.kind === "ok" ? st.data : st.kind === "error" ? st.data : undefined;
+              return k.toLowerCase() === repo || snap?.fullName.toLowerCase() === repo;
+            });
+            const st = key ? next[key] : undefined;
+            if (!key || !st || st.kind !== "ok") continue;
+            const data = applyGithubEvent(st.data, e);
+            if (data === st.data) continue;
+            next[key] = { ...st, data };
+            changed = true;
+          }
+          if (!changed) return prev;
+          const cache = load<Cache>("repoCache", {});
+          for (const [k, st] of Object.entries(next)) if (st.kind === "ok") cache[k] = st.data;
+          save("repoCache", cache);
+          return next;
+        });
+      }),
+    [refresh],
+  );
 
   const live = useMemo(() => liveCatalog(catalog, repos, deleted), [repos, deleted]);
 
