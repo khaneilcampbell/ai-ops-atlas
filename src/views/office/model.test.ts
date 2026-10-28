@@ -74,5 +74,7 @@ describe("runtime state", () => {
     const audit = [rec("x", "2026-10-28T01:00:00Z", "attempted"), rec("x", "2026-10-28T01:00:01Z", "failed")];
     expect(actionExecutions("rerun_failed_jobs", audit)).toHaveLength(1);
     expect(runtimeFor(a, none, { available: true, status: status(true), audit }).state).toBe("failed");
+    expect(runtimeFor(a, none, { available: true, status: status(true), audit }, 2).state).toBe("awaiting");
+    expect(runtimeFor(a, none, { available: true, status: status(false), audit }, 2).state).toBe("offline");
   });
 });

@@ -111,7 +111,7 @@ const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "sh
  * working: only an execution observed in progress does. With no live source, or one that has
  * not loaded, the state is "unknown" rather than a guess.
  */
-export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData): Runtime {
+export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0): Runtime {
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
@@ -130,8 +130,10 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (!source) return { state: "unknown", reason: "No live telemetry source is declared for this agent.", basis: null, source: null };
   if (!loaded) return { state: "unknown", reason: `${source} data has not loaded${t.source === "atlas-intel" ? "; it is only available in the desktop app" : ""}.`, basis: null, source };
   const latest = executions[0];
+  if (latest?.result === "running") return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
+  // Proposed actions waiting for a person outrank the last result: the agent is blocked on KC.
+  if (pending > 0) return { state: "awaiting", reason: `${pending} proposed ${pending === 1 ? "action is" : "actions are"} waiting for your approval.`, basis: latest ?? null, source };
   if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };
-  if (latest.result === "running") return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
   const done = executions.find((e) => e.result === "success" || e.result === "failure");
   if (done?.result === "failure") return { state: "failed", reason: `The latest completed run failed (${when(done.at)}).`, basis: done, source };
   return { state: "idle", reason: done ? `Not running. Last run succeeded ${when(done.at)}.` : `Not running. Last activity ${when(latest.at)}.`, basis: done ?? latest, source };

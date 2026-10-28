@@ -61,3 +61,8 @@
   .office-head h2 { font-size: 19px; }
 }
 .office-panel .panel-head .op-pill { color: var(--on-dark); border-color: var(--forest-line); }
+.office-awaiting {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--gold); background: #fff7e2; color: var(--gold-deep); font-weight: 600; font-size: 12.5px; box-shadow: var(--shadow);
+}
+.office-awaiting i { width: 8px; height: 8px; border-radius: 50%; background: #e7b04a; }
