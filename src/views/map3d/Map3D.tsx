@@ -6,12 +6,13 @@ import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
 import { Sky, Traffic, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
-import { placeLabels, type Layout } from "../mapLayout";
+import { hash, placeLabels, type Layout } from "../mapLayout";
 import { clip, measure, SANS, wrap } from "../mapText";
 import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
 import { Network, type NetLink } from "./network";
+import { makeRouter } from "./routes";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 
@@ -663,30 +664,29 @@ function World({
     focusLevel.value = reduced ? focusTarget : THREE.MathUtils.clamp(f + Math.sign(focusTarget - f) * delta * 3.5, 0, 1);
   });
 
+  // Each connection follows the streets between its buildings, like turn-by-turn directions.
+  const router = useMemo(() => makeRouter(scene), [scene]);
   const netLinks = useMemo<NetLink[]>(() => {
-    const at = (k: string) => {
-      const a = anchors.get(k)!;
-      return new THREE.Vector3(a.x, a.y1 + 0.04, a.z);
-    };
-    // Highest headquarters roof near the straight line between the ends, for the arc to clear.
-    const clearance = (p: THREE.Vector3, q: THREE.Vector3) => {
-      let h = 0;
-      const seg = new THREE.Line3(new THREE.Vector3(p.x, 0, p.z), new THREE.Vector3(q.x, 0, q.z));
-      const c = new THREE.Vector3();
-      for (const t of scene.towers) {
-        const o = new THREE.Vector3(t.x, 0, t.z);
-        if (o.distanceTo(seg.start) < 0.1 || o.distanceTo(seg.end) < 0.1) continue;
-        seg.closestPointToPoint(o, true, c);
-        if (c.distanceTo(o) < t.size * 0.8) h = Math.max(h, towerTop(t) + 0.6);
-      }
-      return Math.round(h * 100) / 100;
-    };
     return net.shown.map(({ l, level }) => {
-      const from = at(l.a);
-      const to = at(l.b);
-      return { id: l.id, type: l.type, status: l.status, from, to, clear: clearance(from, to), level, flow: l.directed && l.status === "active" && level !== "dim" };
+      const a = anchors.get(l.a)!;
+      const b = anchors.get(l.b)!;
+      const route = router.route(a, b) ?? [
+        { x: a.x, y: a.y0, z: a.z },
+        { x: b.x, y: b.y0, z: b.z },
+      ];
+      // Links sharing a street sit in their own lane, a little apart, like transit lines on a map.
+      const lane = (Math.floor(hash(l.id) * 5) - 2) * 0.06;
+      const path = route.map((p, i) => {
+        const q = route[Math.min(i + 1, route.length - 1)];
+        const o = route[Math.max(i - 1, 0)];
+        const dx = q.x - o.x;
+        const dz = q.z - o.z;
+        const n = Math.hypot(dx, dz) || 1;
+        return new THREE.Vector3(p.x - (dz / n) * lane, p.y + 0.07, p.z + (dx / n) * lane);
+      });
+      return { id: l.id, type: l.type, status: l.status, path, level, flow: l.directed && l.status === "active" && level !== "dim" };
     });
-  }, [net, anchors, scene]);
+  }, [net, anchors, router]);
 
   // Frame both ends of a selected connection.
   useEffect(() => {

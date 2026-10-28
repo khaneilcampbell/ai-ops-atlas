@@ -145,7 +145,7 @@ project:
       note: What the relationship is and how it was verified.
 ```
 
-A connection turns red only when an observed workflow run on the default branch failed. Moving dots mean a run or sync verified it in the last 14 days.
+Connections follow the map's paths, steps and bridges between buildings, like directions on a street map. A connection turns red only when an observed workflow run on the default branch failed. Moving dots mean a run or sync verified it in the last 14 days.
 
 ## Status meanings
 

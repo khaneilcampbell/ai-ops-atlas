@@ -12,12 +12,10 @@ export interface NetLink {
   id: string;
   type: ConnectionType;
   status: ConnectionStatus;
-  from: THREE.Vector3;
-  to: THREE.Vector3;
-  /** The arc's peak stays at least this high, to clear the buildings it passes over. */
-  clear: number;
+  /** The route along the map's paths, from source to target, just above the pavement. */
+  path: THREE.Vector3[];
   level: LinkLevel;
-  /** Particles run from `from` to `to`; only for verified, directed, active links. */
+  /** Particles run from source to target; only for verified, directed, active links. */
   flow: boolean;
 }
 
@@ -25,19 +23,11 @@ type Hue = keyof typeof LINK_COLORS;
 /** "glow" is the soft sleeve around the selected or hovered link. */
 type Shade = LinkLevel | "glow";
 const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.95, weak: 0.55, dim: 0.06, glow: 0.16 };
-const RADIUS = 0.06;
+const RADIUS = 0.055;
 const MAX_PARTICLES = 160;
-const SPEED = 2.2; // world units per second
+const SPEED = 1.6; // world units per second
 
 const hueOf = (l: NetLink): Hue => (l.status === "unhealthy" ? "unhealthy" : l.type);
-
-/** An arc that rises with the distance it spans and clears the roofs between its ends. */
-function arcOf(a: THREE.Vector3, b: THREE.Vector3, clear: number) {
-  const mid = a.clone().add(b).multiplyScalar(0.5);
-  // A quadratic curve peaks at a quarter of each end plus half the control point.
-  mid.y = Math.max(Math.max(a.y, b.y) + 0.45 + a.distanceTo(b) * 0.24, 2 * clear - (a.y + b.y) / 2);
-  return new THREE.QuadraticBezierCurve3(a.clone(), mid, b.clone());
-}
 
 interface Built {
   link: NetLink;
@@ -55,15 +45,25 @@ interface Built {
 export function Network({ links, hover, moving, onHover, onPick }: { links: NetLink[]; hover: string | null; moving: boolean; onHover: (id: string | null, e?: ThreeEvent<PointerEvent>) => void; onPick: (id: string) => void }) {
   const { gl } = useThree();
   // Geometry depends only on where a link runs, so selection changes reuse it.
-  const shapeKey = links.map((l) => `${l.id}@${l.from.toArray().join()}>${l.to.toArray().join()}^${l.clear}`).join("|");
+  const shapeKey = links.map((l) => `${l.id}@${l.path.length}:${l.path[0]?.toArray().join()}>${l.path[l.path.length - 1]?.toArray().join()}`).join("|");
   const built = useMemo<Built[]>(
     () =>
       links.map((link) => {
-        const curve = arcOf(link.from, link.to, link.clear);
-        const pts = curve.getSpacedPoints(64);
-        // The pick target skips both ends so it never covers the buildings' roofs.
-        const mid = new THREE.CatmullRomCurve3(pts.slice(8, 57));
-        return { link, tube: new THREE.TubeGeometry(curve, 48, RADIUS, 6), glow: new THREE.TubeGeometry(curve, 48, RADIUS * 2.6, 6), hit: new THREE.TubeGeometry(mid, 20, 0.2, 5), pts, len: curve.getLength() };
+        const curve = new THREE.CatmullRomCurve3(link.path, false, "centripetal");
+        const len = curve.getLength();
+        const segs = Math.max(16, Math.min(400, Math.round(len * 12)));
+        const pts = curve.getSpacedPoints(segs);
+        // The pick target skips both ends so it never covers the buildings' doors.
+        const cut = Math.round(segs * Math.min(0.2, 0.4 / Math.max(len, 0.1)));
+        const mid = new THREE.CatmullRomCurve3(pts.slice(cut, segs + 1 - cut).length > 1 ? pts.slice(cut, segs + 1 - cut) : pts);
+        return {
+          link,
+          tube: new THREE.TubeGeometry(curve, segs, RADIUS, 6),
+          glow: new THREE.TubeGeometry(curve, segs, RADIUS * 2.6, 6),
+          hit: new THREE.TubeGeometry(mid, Math.max(8, Math.round(segs / 3)), 0.16, 5),
+          pts,
+          len,
+        };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt when the shapes change
     [shapeKey],
