@@ -7,6 +7,54 @@ export const time = { value: 0 };
 /** 0 by day, 1 at night; eased between the two by the map's lighting. Shaders read it directly. */
 export const night = { value: 0 };
 
+/**
+ * Focus mode: 0 shows the map as is; toward 1, everything outside `focusRects` (x0, z0, x1, z1
+ * in world units) fades to a muted grey, so the buildings in hand stand out.
+ */
+export const focus = { value: 0 };
+export const FOCUS_MAX = 24;
+export const focusRects = { value: Array.from({ length: FOCUS_MAX }, () => new THREE.Vector4()) };
+export const focusCount = { value: 0 };
+
+/** Lets any material take part in focus mode. Keeps whatever patch the material already has. */
+export function focusable<T extends THREE.Material>(m: T): T {
+  if (m.userData.focusable) return m;
+  m.userData.focusable = true;
+  const prev = m.onBeforeCompile.bind(m);
+  const key = m.customProgramCacheKey.bind(m);
+  m.onBeforeCompile = (sh, r) => {
+    prev(sh, r);
+    sh.uniforms.uFocus = focus;
+    sh.uniforms.uFocusRects = focusRects;
+    sh.uniforms.uFocusN = focusCount;
+    sh.vertexShader = `varying vec3 vFocusW;\n${sh.vertexShader}`.replace(
+      "#include <project_vertex>",
+      `#include <project_vertex>
+      vec4 fw4 = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        fw4 = instanceMatrix * fw4;
+      #endif
+      vFocusW = (modelMatrix * fw4).xyz;`,
+    );
+    sh.fragmentShader = `varying vec3 vFocusW;\nuniform float uFocus;\nuniform vec4 uFocusRects[${FOCUS_MAX}];\nuniform int uFocusN;\n${sh.fragmentShader}`.replace(
+      "#include <dithering_fragment>",
+      `#include <dithering_fragment>
+      if (uFocus > 0.001) {
+        float inside = 0.0;
+        for (int i = 0; i < ${FOCUS_MAX}; i++) {
+          if (i >= uFocusN) break;
+          vec4 r = uFocusRects[i];
+          inside = max(inside, step(r.x, vFocusW.x) * step(vFocusW.x, r.z) * step(r.y, vFocusW.z) * step(vFocusW.z, r.w));
+        }
+        float l = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(l) * vec3(0.5, 0.53, 0.56), 0.62 * uFocus * (1.0 - inside));
+      }`,
+    );
+  };
+  m.customProgramCacheKey = () => `${key()}|focus`;
+  return m;
+}
+
 const NOISE = /* glsl */ `
 varying vec3 vWPos;
 uniform float uTime;

@@ -1,9 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Agent, Status } from "../catalog/types";
+import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
+import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import type { LightMode } from "./map3d/living";
+import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
@@ -28,7 +30,7 @@ import {
   type Walk,
 } from "./mapLayout";
 import { measure, SANS, SERIF, wrap } from "./mapText";
-import type { Map3DApi } from "./map3d/Map3D";
+import type { Map3DApi, MapLink } from "./map3d/Map3D";
 import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
@@ -401,6 +403,49 @@ export function MapView() {
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
   const map3d = useRef<Map3DApi>(null);
+
+  // Connections between buildings, from catalog manifests and cached GitHub data only.
+  const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
+    const saved = load<Partial<LinkPrefs>>("mapLinks", {});
+    return { ...LINK_DEFAULTS, ...saved, types: { ...LINK_DEFAULTS.types, ...saved.types } };
+  });
+  const setLinkPrefs = (p: Partial<LinkPrefs>) =>
+    setLinkPrefsState((v) => {
+      const next = { ...v, ...p };
+      save("mapLinks", next);
+      return next;
+    });
+  const [linksMenu, setLinksMenu] = useState(false);
+  const [linkSel, setLinkSel] = useState<string | null>(null);
+  const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
+  const linkCounts = useMemo(() => Object.fromEntries(CONNECTION_TYPES.map((t) => [t, connections.filter((c) => c.type === t).length])) as Record<ConnectionType, number>, [connections]);
+  const mapLinks = useMemo<MapLink[]>(
+    () =>
+      !linkPrefs.on
+        ? []
+        : connections.flatMap((c) => {
+            const a = endpointKey(catalog, c.source);
+            const b = endpointKey(catalog, c.target);
+            if (!a || !b || !linkPrefs.types[c.type]) return [];
+            return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
+          }),
+    [connections, catalog, linkPrefs],
+  );
+  const pickedLink = linkSel && is3d && mapLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
+  // A building selection replaces a connection selection, wherever it was made.
+  useEffect(() => {
+    if (selection) setLinkSel(null);
+  }, [selection]);
+  useEffect(() => {
+    if (!pickedLink) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLinkSel(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pickedLink]);
+  const linkTip = (id: string) => {
+    const c = connections.find((x) => x.id === id);
+    return c ? { title: c.relation, sub: `${CONNECTION_LABEL[c.type]} · ${CONNECTION_STATUS_LABEL[c.status]} · click to inspect` } : null;
+  };
   const [moved3d, setMoved3d] = useState(false);
   const setMode = (m: "3d" | "2d") => {
     setModeState(m);
@@ -809,7 +854,7 @@ export function MapView() {
   };
 
   return (
-    <div className={`map-wrap ${selection ? "inspecting" : ""}`}>
+    <div className={`map-wrap ${selection || pickedLink ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
           <OfficeLayer light={light} />
@@ -895,6 +940,15 @@ export function MapView() {
               }}
               onFocus={setFocus}
               onMoved={() => setMoved3d(true)}
+              links={mapLinks}
+              linkSel={pickedLink ? pickedLink.id : null}
+              onLinkSelect={(id) => {
+                select(null);
+                setLinkSel(id);
+              }}
+              linkTip={linkTip}
+              linkFocus={linkPrefs.focus}
+              linksMoving={!linkPrefs.paused}
             />
             </Suspense>
           ) : (
@@ -1016,7 +1070,7 @@ export function MapView() {
           </svg>
           )}
 
-          <div className={`map-intro ${selection || (is3d ? moved3d : k > fitK.current * 1.15) ? "faded" : ""}`}>
+          <div className={`map-intro ${selection || pickedLink || (is3d ? moved3d : k > fitK.current * 1.15) ? "faded" : ""}`}>
             <div className="eyebrow">Workspace map</div>
             <h1>Welcome to the neighborhood.</h1>
             <p className="lede small">Each project is a district. Its repository is the tall building in the middle and its agents are the houses around it.</p>
@@ -1070,6 +1124,30 @@ export function MapView() {
                 <Icon name={light === "night" ? "moon" : "sun"} size={17} />
               </button>
             )}
+            {is3d && (
+              <div className="map-menu-wrap">
+                <button
+                  className={`icon-btn ${linkPrefs.on ? "on" : ""}`}
+                  onClick={() => setLinksMenu(!linksMenu)}
+                  aria-expanded={linksMenu}
+                  aria-haspopup="dialog"
+                  aria-label="Connections"
+                  title="Connections"
+                >
+                  <Icon name="network" size={17} />
+                </button>
+                {linksMenu && (
+                  <ConnectionsMenu
+                    prefs={linkPrefs}
+                    counts={linkCounts}
+                    picked={!!pickedLink}
+                    onChange={setLinkPrefs}
+                    onClear={() => setLinkSel(null)}
+                    onClose={() => setLinksMenu(false)}
+                  />
+                )}
+              </div>
+            )}
             <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />
             </button>
@@ -1100,10 +1178,94 @@ export function MapView() {
           ))}
         </ul>
 
+        {is3d && mapLinks.length > 0 && (
+          <ul className="sr-only" aria-label="Connections on the map">
+            {mapLinks.map((l) => (
+              <li key={l.id}>
+                <button
+                  tabIndex={-1}
+                  onClick={() => {
+                    select(null);
+                    setLinkSel(l.id);
+                  }}
+                >
+                  {linkTip(l.id)?.title} ({CONNECTION_STATUS_LABEL[l.status]})
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {focused && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
       </div>
 
-      {selection && <DetailPanel docked />}
+      {pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />}
+    </div>
+  );
+}
+
+interface LinkPrefs {
+  on: boolean;
+  types: Record<ConnectionType, boolean>;
+  /** Selecting a building fades everything but it and its connections. */
+  focus: boolean;
+  paused: boolean;
+}
+const LINK_DEFAULTS: LinkPrefs = { on: true, types: { github: true, agent: true, n8n: true, dependency: true }, focus: true, paused: false };
+
+/** The toolbar's Connections popover: what to draw, focus mode and animation. */
+function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: {
+  prefs: LinkPrefs;
+  counts: Record<ConnectionType, number>;
+  picked: boolean;
+  onChange: (p: Partial<LinkPrefs>) => void;
+  onClear: () => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const away = (e: PointerEvent) => !ref.current?.parentElement?.contains(e.target as Node) && onClose();
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("pointerdown", away);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener("pointerdown", away);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [onClose]);
+  const missing = CONNECTION_TYPES.filter((t) => !counts[t]);
+  return (
+    <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
+      <label className="row strong">
+        <input type="checkbox" checked={prefs.on} onChange={(e) => onChange({ on: e.target.checked })} />
+        Show connections
+      </label>
+      <div className="group">
+        {CONNECTION_TYPES.map((t) => (
+          <label key={t} className={`row ${prefs.on ? "" : "off"}`}>
+            <input type="checkbox" disabled={!prefs.on} checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
+            <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
+            {CONNECTION_LABEL[t]}
+            <span className="count">{counts[t] || "None yet"}</span>
+          </label>
+        ))}
+      </div>
+      <label className={`row ${prefs.on ? "" : "off"}`}>
+        <input type="checkbox" disabled={!prefs.on} checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
+        Selected building only
+      </label>
+      <label className={`row ${prefs.on ? "" : "off"}`}>
+        <input type="checkbox" disabled={!prefs.on} checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
+        Pause animation
+      </label>
+      <button className="text-btn" disabled={!picked} onClick={onClear}>
+        Clear connection selection
+      </button>
+      <p className="note">
+        Drawn only from catalog manifests and GitHub data. Moving dots mean recently verified activity; faint lines have no live data. Red needs a real failure.
+        {missing.length > 0 &&
+          ` Not declared yet: ${missing.map((t) => CONNECTION_LABEL[t]).join(", ")}. To add one, list agent ids under registry.responsibilities.dependencies, or add connections to a project, in catalog/*.yaml.`}
+      </p>
     </div>
   );
 }

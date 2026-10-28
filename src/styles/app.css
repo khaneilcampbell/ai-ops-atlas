@@ -673,3 +673,25 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .map-stage.night .map-intro { color: #e9ecf2; }
 .map-stage.night .map-intro .eyebrow, .map-stage.night .map-intro p { color: #b8c2d4; }
 .map-stage:has(.map3d)::before { transition: opacity 0.3s ease, background 1.2s ease; }
+
+/* Connections: toolbar popover, faded labels in focus mode, connection inspector. */
+.map-menu-wrap { position: relative; display: flex; }
+.map-menu {
+  position: absolute; right: -4px; bottom: calc(100% + 10px); width: 268px; background: var(--sage-50); border-radius: 12px; padding: 10px 12px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--ink-2); z-index: 5;
+}
+.map-menu .row { display: flex; align-items: center; gap: 8px; padding: 5px 2px; cursor: pointer; }
+.map-menu .row.strong { font-weight: 600; color: var(--ink); }
+.map-menu .row.off { opacity: 0.45; cursor: default; }
+.map-menu .group { border-top: 1px solid var(--sage-200); border-bottom: 1px solid var(--sage-200); margin: 4px 0; padding: 4px 0; }
+.map-menu .count { margin-left: auto; color: var(--ink-3); font-size: 12px; }
+.map-menu .text-btn { align-self: flex-start; margin-top: 2px; }
+.map-menu .text-btn:disabled { color: var(--ink-3); opacity: 0.6; cursor: default; }
+.map-menu .note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+.swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; flex: none; }
+.m3-labels > div.dim { opacity: 0.32; }
+.chip.link-active { color: #2f6b3c; }
+.chip.link-unhealthy { color: #a2443b; }
+.panel.docked .panel-head .chip.link-active { color: #9fd3a8; }
+.panel.docked .panel-head .chip.link-unhealthy { color: #f0a097; }
+.evidence { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); font-family: var(--mono, ui-monospace, monospace); font-size: 12px; overflow-wrap: anywhere; }
