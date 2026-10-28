@@ -26,14 +26,15 @@ Complex applications take longer.
 | 1. Analyze | Paste the job description or link: "Run my resume tailoring workflow." | Extracts requirements, scores the match, recommends a version and priority | 2 min |
 | 2. Decide | Go / skip. Prioritize strong-fit roles | Waits for your go-ahead | 1 min |
 | 3. Tailor | Answer any `[CONFIRM: ...]` flags | Tailors summary, bullets, projects, skills | 3 min |
-| 4. QA | Optionally run `prompts/quality-review.md` in a fresh chat | Fact-checks every claim against the database | 2 min |
-| 5. Approve | Read the resume, tick the checklist, export DOCX + PDF | | 3 min |
-| 6. Apply | Submit the application yourself | | varies |
-| 7. Track | Paste the tracker row into `private/application_tracker.xlsx`, set a follow-up date (about 7 days) | Provides the row | 1 min |
-| 8. Prep | When an interview lands, fill `templates/interview-prep.md` | Suggests questions mapped to your accomplishments | |
+| 4. Check | Save the claims manifest as `claims.json` in the application folder and run `python scripts/check_claims.py <path>/claims.json`. Fix anything it lists | Rewrites flagged lines from the database | 1 min |
+| 5. QA | Optionally run `prompts/quality-review.md` in a fresh chat | Reviews wording, ATS readability and grammar | 2 min |
+| 6. Approve | Read the resume, tick the checklist, export DOCX + PDF | | 3 min |
+| 7. Apply | Submit the application yourself | | varies |
+| 8. Track | Paste the tracker row into `private/application_tracker.xlsx`, set a follow-up date (about 7 days) | Provides the row | 1 min |
+| 9. Prep | When an interview lands, fill `templates/interview-prep.md` | Suggests questions mapped to your accomplishments | |
 
 Save each application's files in `private/applications/<company>-<position>/`
-(job description, analysis, final resume).
+(job description, analysis, claims.json, final resume).
 
 ## Keep improving
 

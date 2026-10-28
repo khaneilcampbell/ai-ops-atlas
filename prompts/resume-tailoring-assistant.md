@@ -114,10 +114,32 @@ Provide:
 5. Missing qualifications and recommended improvements
 6. Three likely interview questions, each paired with the accomplishment I should use to answer it
 7. A tracker row (Company, Position, Industry, Location, Work arrangement, Salary, Match score, Priority, Resume version, Job posting URL, Notes) I can paste into my application tracker
+8. A claims manifest (format below) that I check with `python scripts/check_claims.py` before I approve the resume
 
 Use this file naming convention:
 
 `FirstName_LastName_Company_Position_Resume`
+
+## Claims Manifest
+
+End every tailored resume with one JSON code block listing what the resume claims, so a script can check it against my database:
+
+```json
+{
+  "positions": [
+    {"id": "exp-employer-1", "employer": "...", "title": "...", "start": "YYYY-MM", "end": "YYYY-MM or present"}
+  ],
+  "claims": [
+    {"section": "summary | experience | projects", "text": "the exact line as written on the resume", "sources": ["acc-001"]}
+  ],
+  "skills": ["each skill exactly as listed in the Skills section"]
+}
+```
+
+- Include every summary line, experience bullet and project bullet as a claim.
+- `sources` lists the database ids (experience, project or accomplishment) the line is built from. Experience bullets never cite a project id.
+- Every number in a claim must appear in one of its cited entries.
+- Copy employer, title and dates exactly as they appear in `experience.json`.
 
 ## Operating Rules
 

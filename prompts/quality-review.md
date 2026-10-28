@@ -1,6 +1,8 @@
 # Stage prompt: Accuracy and Quality Review
 
-Run this on a tailored resume *before* you approve it. It is deliberately a
+Run this on a tailored resume *before* you approve it, after `scripts/check_claims.py`
+passes (the script catches invented numbers, wrong titles and missing sources;
+this pass catches overstated wording it can't see). It is deliberately a
 separate pass so the reviewer is not anchored on the writer's choices.
 
 ---

@@ -30,7 +30,10 @@ Every resume claim must trace back to a verified entry in a structured career da
             └── Technical Skills
             │
             ▼
-      QUALITY CONTROL ................ prompts/quality-review.md + templates/quality-checklist.md
+     CLAIMS CHECK ................... scripts/check_claims.py (every claim cites a verified entry)
+            │
+            ▼
+     QUALITY CONTROL ................ prompts/quality-review.md + templates/quality-checklist.md
             ├── Accuracy Verification
             ├── ATS Readability
             ├── Grammar Review
@@ -59,7 +62,7 @@ Every resume claim must trace back to a verified entry in a structured career da
 | `resume-versions/` | Strategies for the three base resumes: AI Solutions, Enterprise Technology, Security & Automation |
 | `templates/` | Quality checklist, job analysis report, interview prep |
 | `tracker/application_tracker_template.xlsx` | Application tracker with dropdowns, follow-up highlighting, and a dashboard (volume, interview conversion, target salary, resume-version performance) |
-| `scripts/` | `init_private.py` (set up your private workspace), `validate_database.py` (find unfinished or unverified entries), `build_tracker.py` (regenerate the tracker) |
+| `scripts/` | `init_private.py` (set up your private workspace), `validate_database.py` (find unfinished or unverified entries), `check_claims.py` (fact-check a tailored resume's claims manifest before you approve it), `build_tracker.py` (regenerate the tracker) |
 | `docs/workflow.md` | Step-by-step guide to running the workflow |
 | `jobflow/` | Python pipeline: fetch a posting, score it, tailor and fact-check a resume, render DOCX/PDF, update the tracker ([docs/automation.md](docs/automation.md)) |
 | `n8n/` | Importable n8n workflow that sends job links into the pipeline |
