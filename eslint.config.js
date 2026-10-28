@@ -11,7 +11,10 @@ export default tseslint.config(
     languageOptions: { ecmaVersion: 2022, globals: globals.browser },
     plugins: { "react-hooks": reactHooks },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // The two rules plugin v5 recommended. v7's recommended set adds React Compiler checks
+      // (refs, mutation in render) that flag the normal three.js / R3F patterns used here.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },

@@ -82,10 +82,15 @@ export function overallHealth(ind: HealthIndicator[]): Health {
   return "good";
 }
 
-/** Latest observed workflow run for an agent that declares observe.github_workflow. */
+/**
+ * Latest observed run on the default branch for an agent that declares observe.github_workflow.
+ * A failed pull request or Dependabot run doesn't mean the agent is failing. Any branch counts
+ * when the default branch isn't known.
+ */
 export function observedRun(agent: Agent, snap: RepoSnapshot | undefined): WorkflowRun | undefined {
   const wf = agent.observe?.githubWorkflow;
-  return wf ? snap?.workflowRuns[wf]?.[0] : undefined;
+  const runs = (wf && snap?.workflowRuns[wf]) || [];
+  return snap?.defaultBranch ? runs.find((r) => r.branch === snap.defaultBranch) : runs[0];
 }
 
 /** Manifest value, unless GitHub has a newer observed run. */
@@ -122,8 +127,6 @@ export function attentionItems(
     }
     const run = observedRun(a, snap);
     if (run && (run.conclusion === "failure" || run.conclusion === "timed_out")) {
-      // Observed workflows include runs on any branch, so say which one: a failed pull request
-      // run is not the same as the default branch failing.
       items.push({ id: `agent:${a.id}:run`, severity: "high", title: a.name, detail: `Latest ${run.name} run failed on ${run.branch}`, target });
     }
     if (a.status === "active") {

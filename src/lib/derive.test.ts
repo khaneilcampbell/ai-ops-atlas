@@ -65,6 +65,16 @@ describe("attention", () => {
   });
 });
 
+describe("observed runs on other branches", () => {
+  it("don't raise an agent failure when the default branch is green", () => {
+    const pr = { ...run("CI", "failure", "2026-10-28T00:00:00Z"), event: "pull_request", branch: "dependabot/npm_and_yarn/eslint-10" };
+    const s = snap({ workflowRuns: { "ci.yml": [pr, run("CI", "success", "2026-10-27T00:00:00Z")] } });
+    const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: s, stale: false } }, []);
+    expect(items.some((i) => i.id === "agent:ci:run")).toBe(false);
+    expect(effectiveLastRun(catalog.agents[0], s)).toBe("2026-10-27T00:00:00Z");
+  });
+});
+
 describe("uncataloged repositories", () => {
   it("raise failing CI even without a manifest", () => {
     const s = snap({ fullName: "me/other", runs: [run("CI", "failure")] });
