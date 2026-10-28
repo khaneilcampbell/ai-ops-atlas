@@ -89,6 +89,8 @@
     border-radius: 18px 18px 0 0; border-left: 0; box-shadow: 0 -12px 40px rgba(22, 33, 26, 0.28);
     padding-bottom: env(safe-area-inset-bottom); animation: sheet 0.22s ease; overflow: hidden;
   }
+  /* app.css gives overlay panels z-index 30 with a more specific selector; keep the sheet above its scrim. */
+  .panel:not(.docked) { z-index: 41; }
   .panel::before {
     content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px;
     border-radius: 999px; background: var(--sage-400); opacity: 0.7; z-index: 1; pointer-events: none;

@@ -23,6 +23,8 @@ import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
+import { EditToggle } from "./components/edit/EditControls";
+import { useEditMode } from "./edit/mode";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -39,7 +41,9 @@ export default function App() {
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
   const mergeOn = !!actionsStatus?.config.merge_pull_requests?.enabled && actionsStatus.config.merge_pull_requests.repos.length > 0;
-  const writes = [rerunOn && "re-runs", mergeOn && "merges"].filter(Boolean).join(" + ");
+  const editOn = !!actionsStatus?.config.edit_files?.enabled && actionsStatus.config.edit_files.repos.length > 0;
+  const writes = [rerunOn && "re-runs", mergeOn && "merges", editOn && "edit PRs"].filter(Boolean).join(" + ");
+  const editing = useEditMode();
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
@@ -77,7 +81,13 @@ export default function App() {
         <LivePill />
         <VaultLockedPill />
         <UpdateButton />
-        {writes ? (
+        <EditToggle />
+        {editing ? (
+          <span className="pill-mode editing" title="Edit buttons are showing. Nothing changes until you review a diff and open a pull request; nothing is pushed to main.">
+            <span className="dot" />
+            Edit mode · changes open pull requests
+          </span>
+        ) : writes ? (
           <span className="pill-mode" title="Read-only, except the actions switched on for the repositories ticked in Settings. Each one needs your approval in a macOS dialog (merges also need Touch ID) and is written to the audit log.">
             <span className="dot" />
             Read-only + {writes}

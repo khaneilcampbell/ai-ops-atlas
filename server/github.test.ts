@@ -21,6 +21,12 @@ describe("refusal", () => {
   it("refuses other owners, other endpoints and traversal", () => {
     expect(refusal("/repos/someone/else", env)).toBe("Owner not allowed.");
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/contents/secrets.txt", env)).toBe("Path not allowed.");
+    // File contents only for the repositories the editor is switched on for.
+    const editing = { ...env, GITHUB_EDIT_TOKEN: "t", EDIT_REPOS: "khaneilcampbell/ai-ops-atlas" };
+    expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/contents/docs/READ%20ME.md", editing)).toBeNull();
+    expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/contents", editing)).toBeNull();
+    expect(refusal("/repos/khaneilcampbell/other/contents/README.md", editing)).toBe("Path not allowed.");
+    expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/contents/README.md", { ...editing, GITHUB_EDIT_TOKEN: undefined })).toBe("Path not allowed.");
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/../../user", env)).toBe("Path not allowed.");
     expect(refusal("/user", env)).toBe("Path not allowed.");
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/pulls/7/merge", env)).toBe("Path not allowed.");

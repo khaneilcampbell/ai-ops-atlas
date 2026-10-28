@@ -1,13 +1,15 @@
 // Mirrors src-tauri/src/actions: the approval-required actions (re-run failed jobs, merge a
-// pull request), their switches and the audit log.
+// pull request, propose an edit), their switches and the audit log.
 
-export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "failed" | "unknown";
+export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "opened" | "failed" | "unknown";
 
 export interface ActionsConfig {
   rerun_failed_jobs: { enabled: boolean; repos: string[] };
   token_login: string | null;
   /** Missing in builds from before merging existed. */
   merge_pull_requests?: { enabled: boolean; repos: string[]; token_logins: Record<string, string> };
+  /** Missing in builds from before editing existed. Uses each repository's merge token. */
+  edit_files?: { enabled: boolean; repos: string[] };
 }
 
 export interface ActionsStatus {
@@ -30,6 +32,8 @@ export interface AuditRecord {
   pull_number?: number | null;
   title?: string | null;
   base?: string | null;
+  /** The file an edit changed. */
+  path?: string | null;
   workflow: string | null;
   run_number: number | null;
   attempt_before: number | null;

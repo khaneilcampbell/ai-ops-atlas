@@ -661,6 +661,7 @@ impl Merger {
             pull_number: Some(number),
             title: p.map(|p| p.title.clone()),
             base: p.map(|p| p.base.clone()),
+            path: None,
             workflow: None,
             run_number: None,
             attempt_before: None,
