@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import type { Status } from "../catalog/types";
+import { copyText } from "../lib/clipboard";
+import { Icon } from "./Icon";
 import type { Health, HealthIndicator } from "../lib/derive";
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -82,4 +85,30 @@ export function openExternal(e: React.MouseEvent, href: string) {
   if (!("__TAURI_INTERNALS__" in window)) return;
   e.preventDefault();
   void import("@tauri-apps/plugin-opener").then((m) => m.openUrl(href));
+}
+
+/**
+ * Copies `text()` to the clipboard and says so for a moment. The text is built on click so a
+ * long review isn't turned into Markdown on every render.
+ */
+export function CopyButton({ text, label = "Copy", title, compact }: { text: () => string; label?: string; title?: string; compact?: boolean }) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  useEffect(() => {
+    if (state === "idle") return;
+    const t = setTimeout(() => setState("idle"), 1800);
+    return () => clearTimeout(t);
+  }, [state]);
+  const shown = state === "copied" ? "Copied" : state === "failed" ? "Couldn't copy" : label;
+  return (
+    <button
+      type="button"
+      className={`copy-btn${compact ? " compact" : ""}${state === "copied" ? " done" : ""}`}
+      title={state === "failed" ? "Select the text and copy it instead" : (title ?? label)}
+      aria-label={compact ? (title ?? label) : undefined}
+      onClick={() => copyText(text()).then(() => setState("copied"), () => setState("failed"))}
+    >
+      <Icon name={state === "copied" ? "check" : "copy"} size={compact ? 12 : 13} />
+      {(!compact || state !== "idle") && <span>{shown}</span>}
+    </button>
+  );
 }
