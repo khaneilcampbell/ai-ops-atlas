@@ -115,8 +115,6 @@ const PATTERNS = {
     vec2 f = fract(q);
     float m = clamp(step(f.x, 0.06) + step(f.y, 0.06), 0.0, 1.0);
     diffuseColor.rgb *= (0.93 + 0.1 * h21(floor(q))) * (1.0 - 0.1 * m);`,
-  asphalt: /* glsl */ `
-    diffuseColor.rgb *= 0.9 + 0.16 * fbm(vWPos.xz * 9.0) + 0.05 * h21(floor(vWPos.xz * 40.0));`,
   sand: /* glsl */ `
     diffuseColor.rgb *= 0.93 + 0.12 * fbm(vWPos.xz * 3.0);`,
   water: /* glsl */ `

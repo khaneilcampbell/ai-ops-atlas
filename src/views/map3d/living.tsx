@@ -207,7 +207,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
 }
 
 /**
- * A light bloom at night, only on what is brighter than the scene: lit windows, lamps and the
+ * A light bloom at night, only on what is brighter than the scene: lit windows, path lights and the
  * connection traces. By day, and while the bloom is off, the map renders directly.
  */
 export function Bloom() {
@@ -236,84 +236,4 @@ export function Bloom() {
     composer.c.render();
   }, 1);
   return null;
-}
-
-const CAR_SPEED = 0.45;
-const CAR_COLORS = ["#d9d4c7", "#3d5a80", "#9b2f2f", "#2f4f3a", "#e0b04a", "#5b5f66"];
-const LANE = 0.13;
-
-/**
- * Cars driving both ways along the streets, headlights glowing at night. Decorative only, never
- * tied to project data. Frozen in place when motion is off.
- */
-export function Cars({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
-  const cars = useMemo(
-    () =>
-      scene.paving
-        .filter((p) => p.street && p.w > p.d)
-        .flatMap((r, ri) => {
-          const n = Math.max(1, Math.round(r.w / 6));
-          return Array.from({ length: n * 2 }, (_, i) => ({ r, dir: i % 2 ? -1 : 1, off: Math.floor(i / 2) / n + ri * 0.37 + (i % 2) * 0.5 }));
-        }),
-    [scene],
-  );
-  const body = useRef<THREE.InstancedMesh>(null);
-  const top = useRef<THREE.InstancedMesh>(null);
-  const lights = useRef<THREE.InstancedMesh>(null);
-  const o = useMemo(() => new THREE.Object3D(), []);
-  const clock = useRef(0);
-
-  const place = (t: number) => {
-    const b = body.current;
-    const c = top.current;
-    const l = lights.current;
-    if (!b || !c || !l) return;
-    cars.forEach(({ r, dir, off }, i) => {
-      const u = ((((t * CAR_SPEED) / r.w + off) % 1) + 1) % 1;
-      const x = dir > 0 ? r.x + u * r.w : r.x + r.w - u * r.w;
-      const z = r.z + r.d / 2 + dir * LANE;
-      const y = r.y + r.h;
-      o.rotation.set(0, dir > 0 ? 0 : Math.PI, 0);
-      o.position.set(x, y, z);
-      o.scale.set(0.24, 0.07, 0.12);
-      o.updateMatrix();
-      b.setMatrixAt(i, o.matrix);
-      o.position.set(x - dir * 0.02, y + 0.07, z);
-      o.scale.set(0.12, 0.05, 0.1);
-      o.updateMatrix();
-      c.setMatrixAt(i, o.matrix);
-      for (const s of [-1, 1]) {
-        o.position.set(x + dir * 0.12, y + 0.04, z + s * 0.04);
-        o.scale.setScalar(0.018);
-        o.updateMatrix();
-        l.setMatrixAt(i * 2 + (s > 0 ? 1 : 0), o.matrix);
-      }
-    });
-    b.instanceMatrix.needsUpdate = c.instanceMatrix.needsUpdate = l.instanceMatrix.needsUpdate = true;
-  };
-
-  useEffect(() => {
-    const col = new THREE.Color();
-    cars.forEach((_, i) => body.current?.setColorAt(i, col.set(CAR_COLORS[i % CAR_COLORS.length])));
-    if (body.current?.instanceColor) body.current.instanceColor.needsUpdate = true;
-    cars.forEach((_, i) => top.current?.setColorAt(i, col.set("#2b3338")));
-    if (top.current?.instanceColor) top.current.instanceColor.needsUpdate = true;
-    place(clock.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cars]);
-
-  useFrame((_, dt) => {
-    if (!moving) return;
-    clock.current += Math.min(dt, 0.1);
-    place(clock.current);
-  });
-
-  if (!cars.length) return null;
-  return (
-    <group>
-      <instancedMesh ref={body} args={[g.box, m.plain, cars.length]} castShadow frustumCulled={false} raycast={() => null} />
-      <instancedMesh ref={top} args={[g.box, m.plain, cars.length]} frustumCulled={false} raycast={() => null} />
-      <instancedMesh ref={lights} args={[g.ball, m.lamp, cars.length * 2]} frustumCulled={false} raycast={() => null} />
-    </group>
-  );
 }

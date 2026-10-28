@@ -13,7 +13,7 @@ export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
 const PATH_W = 0.55;
 const INNER_PATH_W = 0.32;
-const ROAD_W = 0.6;
+const BROOK_W = 0.55;
 export const FLOOR_H = 0.32;
 
 export interface Rect {
@@ -26,8 +26,6 @@ export interface Slab extends Rect {
   /** Top surface height. */
   y: number;
   h: number;
-  /** An asphalt street between districts, rather than stone paving. */
-  street?: boolean;
 }
 export interface Terrace extends Rect {
   id: string;
@@ -119,7 +117,6 @@ export interface Scene3D {
   trees: Tree[];
   bushes: Point[];
   rocks: Point[];
-  lamps: Point[];
   bounds: { x0: number; z0: number; x1: number; z1: number };
 }
 
@@ -147,7 +144,6 @@ export function buildScene(layout: Layout): Scene3D {
   const trees: Tree[] = [];
   const bushes: Point[] = [];
   const rocks: Point[] = [];
-  const lamps: Point[] = [];
   const ponds: Scene3D["ponds"] = [];
   const fountains: Scene3D["fountains"] = [];
   const bollards: Point[] = [];
@@ -213,8 +209,7 @@ export function buildScene(layout: Layout): Scene3D {
       const clear = !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - b.x) < h.w / 2 + 0.05 && Math.abs(h.z - b.z) < h.d / 2 + 0.05);
       if (clear && !bollards.some((o) => Math.hypot(o.x - b.x, o.z - b.z) < 0.3)) bollards.push(b);
     }
-    // The landmark stands on a wider civic plaza with a fountain and lamps at its corners,
-    // wherever the houses leave room.
+    // The landmark stands on a wider civic plaza with a fountain, wherever the houses leave room.
     if (identity.landmark) {
       const half = d.hq.size * 0.62 + 0.45;
       paving.push({ x: cx - half, z: cz - half, w: half * 2, d: half * 2, y: top, h: 0.02 });
@@ -222,11 +217,6 @@ export function buildScene(layout: Layout): Scene3D {
       const fx = cx + half - 0.5;
       const fz = cz + half - 0.5;
       if (clear(fx, fz, 0.55)) fountains.push({ x: fx, z: fz });
-      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-        const lx = cx + sx * (half - 0.12);
-        const lz = cz + sz * (half - 0.12);
-        if (clear(lx, lz, 0.15) && !(sx === 1 && sz === 1)) lamps.push({ x: lx, y: top, z: lz, s: 1 });
-      }
     }
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
     const blocked = (x: number, z: number) =>
@@ -281,12 +271,9 @@ export function buildScene(layout: Layout): Scene3D {
         const h = (top * (3 - i)) / 4;
         steps.push(x ? { x: along, z: c - PATH_W / 2, w: 0.13, d: PATH_W, y: h, h } : { x: c - PATH_W / 2, z: along, w: PATH_W, d: 0.13, y: h, h });
       }
-    const mx = x ? (a + b) / 2 : c;
-    const mz = x ? c : (a + b) / 2;
-    lamps.push({ x: mx + (x ? 0 : 0.35), y: 0, z: mz + (x ? 0.35 : 0), s: 1 });
   }
 
-  // Streets run along the gaps between shelf rows, out to the shore, lit by streetlights.
+  // Brooks run along the gaps between shelf rows, under small bridges, and fall into the sea at the shore.
   const brooks: Rect[] = [];
   const falls: Fall[] = [];
   const rows = new Map<string, { z: number; d: number; x0: number; x1: number }>();
@@ -308,11 +295,22 @@ export function buildScene(layout: Layout): Scene3D {
       const shore = (x: number) => !onLand(x, z - 0.2) && !onLand(x, z + 0.2);
       const s0 = shore(x0 - 0.05);
       const s1 = shore(x1 + 0.05);
-      const bx0 = s0 ? x0 : x0 + 0.3;
-      const bx1 = s1 ? x1 : x1 - 0.3;
-      // Slightly lower than the stone walkways, so a crossing walkway reads as a crosswalk on top.
-      paving.push({ x: bx0, z: z - ROAD_W / 2, w: bx1 - bx0, d: ROAD_W, y: 0, h: 0.02, street: true });
-      for (let k = 0, at = bx0 + 1.2; at < bx1 - 0.6; at += 2.4, k++) lamps.push({ x: at, y: 0, z: z + (k % 2 ? -1 : 1) * (ROAD_W / 2 + 0.16), s: 1 });
+      const bx0 = s0 ? x0 : x0 + 0.6;
+      const bx1 = s1 ? x1 : r2.x1 < r1.x1 - 1e-6 && !onLand(x1 - 0.42, r2.z + r2.d + 0.2) ? x1 - 0.42 + BROOK_W / 2 : x1 - 0.6;
+      brooks.push({ x: bx0, z: z - BROOK_W / 2, w: bx1 - bx0, d: BROOK_W });
+      // Where the lower row ends first, the brook turns toward the viewer and falls off the front cliff.
+      const turnX = x1 - 0.42;
+      const front = r2.z + r2.d;
+      const turns = !s1 && r2.x1 < r1.x1 - 1e-6 && !onLand(turnX, front + 0.2);
+      if (s1) falls.push({ x: x1, z, axis: "x", dir: 1 });
+      else if (turns) {
+        brooks.push({ x: turnX - BROOK_W / 2, z: z - BROOK_W / 2, w: BROOK_W, d: front - z + BROOK_W / 2 });
+        falls.push({ x: turnX, z: front, axis: "z", dir: 1 });
+      } else ponds.push({ x: bx1, y: 0, z, r: 0.45 });
+      if (s0) falls.push({ x: x0, z, axis: "x", dir: -1 });
+      else ponds.push({ x: bx0, y: 0, z, r: 0.45 });
+      for (const w of layout.walks)
+        if (w.axis === "y" && w.a.gx > bx0 && w.a.gx < bx1 && w.a.gy < z && w.b.gy > z) bridges.push({ x: w.a.gx - 0.3, z: z - 0.45, w: 0.6, d: 0.9, axis: "z" });
     }
 
   // Break up the straight coastline with headlands, keeping clear of the waterfalls.
@@ -395,7 +393,6 @@ export function buildScene(layout: Layout): Scene3D {
     trees,
     bushes,
     rocks,
-    lamps,
     bounds: xs.length ? { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) } : { x0: -5, z0: -5, x1: 5, z1: 5 },
   };
 }
