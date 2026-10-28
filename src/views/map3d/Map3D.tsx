@@ -12,7 +12,6 @@ import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
 import { Network, type NetLink } from "./network";
-import { makeRouter } from "./routes";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
@@ -54,24 +53,18 @@ interface Props {
   /** Day or night lighting. */
   light: LightMode;
   onMoved: () => void;
-  /** Connections that may be drawn, already filtered by type in the toolbar. */
+  /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
   links: MapLink[];
-  /** Draw every connection at rest; otherwise they show only on hover or selection. */
-  linksAll: boolean;
   linkSel: string | null;
   onLinkSelect: (id: string) => void;
   linkTip: (id: string) => { title: string; sub: string } | null;
   /** Selecting a building shows only its connections and fades the rest of the map. */
   linkFocus: boolean;
-  /** Connection light pulses move; frozen when paused in the toolbar or for reduced motion. */
+  /** Connection particles move; off when paused in the toolbar or for reduced motion. */
   linksMoving: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
-/** Connection ribbons sit this far above a route point: just over the 0.03 paving. */
-const PAVE_TOP = 0.045;
-/** Spacing between links that share a walkway. */
-const LANE = 0.07;
 const ELEVATION = (42 * Math.PI) / 180;
 const DIR = new THREE.Vector3(Math.cos(ELEVATION) * Math.SQRT1_2, Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.SQRT1_2);
 const FOV = 30;
@@ -106,7 +99,7 @@ function anchorsOf(scene: Scene3D) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, linksAll } = props;
+  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const anchors = useMemo(() => anchorsOf(scene), [scene]);
   const [hover, setHover] = useState<string | null>(null);
@@ -128,20 +121,12 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   };
   const hoverDistrict = hover?.startsWith("district:") ? hover.slice(9) : hover ? anchors.get(hover)?.project : undefined;
   const [hoverLink, setHoverLink] = useState<string | null>(null);
-  // The building whose connections are peeked at by hovering; kept while the pointer moves onto one of them.
-  const [peek, setPeek] = useState<string | null>(null);
-  useEffect(() => {
-    if (hover) setPeek(hover);
-    else if (!hoverLink) setPeek(null);
-  }, [hover, hoverLink]);
 
   // Which connections show, and how strongly. A selected connection wins; then a selected
   // building, whose own connections light up while the rest fade or hide.
   const net = useMemo(() => {
-    const reaches = (key: string | null, district: string | undefined, l: MapLink) =>
-      !!key && (l.a === key || l.b === key || (/^(repo|district):/.test(key) && !!district && (l.pa === district || l.pb === district)));
-    const touches = (l: MapLink) => reaches(selKey, selectedDistrict, l);
-    const peekDistrict = peek?.startsWith("district:") ? peek.slice(9) : peek ? anchors.get(peek)?.project : undefined;
+    const touches = (l: MapLink) =>
+      !!selKey && (l.a === selKey || l.b === selKey || (selKey.startsWith("repo:") && !!selectedDistrict && (l.pa === selectedDistrict || l.pb === selectedDistrict)));
     const placed = links.filter((l) => anchors.has(l.a) && anchors.has(l.b));
     const picked = linkSel ? placed.find((l) => l.id === linkSel) : undefined;
     const inHand = (p?: string) => !!p && (p === selectedDistrict || p === hoverDistrict);
@@ -149,17 +134,12 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     for (const l of placed) {
       if (picked) {
         if (l === picked) shown.push({ l, level: "selected" });
-        else if (!linkFocus && linksAll) shown.push({ l, level: "dim" });
+        else if (!linkFocus) shown.push({ l, level: "dim" });
         continue;
       }
       if (selKey) {
         if (touches(l)) shown.push({ l, level: "strong" });
-        else if (!linkFocus && linksAll) shown.push({ l, level: "dim" });
-        continue;
-      }
-      // At rest the map stays clean: a building's connections show while it is hovered.
-      if (!linksAll) {
-        if (reaches(peek, peekDistrict, l)) shown.push({ l, level: "strong" });
+        else if (!linkFocus) shown.push({ l, level: "dim" });
         continue;
       }
       // Links inside one project only up close, or around the project in hand.
@@ -176,7 +156,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       for (const s of shown) for (const p of [s.l.pa, s.l.pb]) if (p) focusSet.add(p);
     }
     return { shown, picked, focusSet };
-  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus, linksAll, peek]);
+  }, [links, anchors, linkSel, selKey, selectedDistrict, hoverDistrict, near, linkFocus]);
 
   // Labels: project plaques always, agent pills once zoomed in (or for the hovered or selected agent).
   const labels = useMemo(() => {
@@ -713,33 +693,30 @@ function World({
     focusLevel.value = reduced ? focusTarget : THREE.MathUtils.clamp(f + Math.sign(focusTarget - f) * delta * 3.5, 0, 1);
   });
 
-  // Each connection follows the streets between its buildings, like turn-by-turn directions.
-  const router = useMemo(() => makeRouter(scene), [scene]);
   const netLinks = useMemo<NetLink[]>(() => {
-    // Links on show at once each take their own lane, side by side like lane markings, so they never overlap.
-    const lit = net.shown.filter((s) => s.level !== "dim").map((s) => s.l.id).sort();
-    const laneOf = (id: string) => {
-      const i = lit.indexOf(id);
-      return i < 0 ? 0 : (i % 2 ? -1 : 1) * Math.ceil((i % 5) / 2) * LANE;
+    const at = (k: string) => {
+      const a = anchors.get(k)!;
+      return new THREE.Vector3(a.x, a.y1 + 0.04, a.z);
+    };
+    // Highest headquarters roof near the straight line between the ends, for the arc to clear.
+    const clearance = (p: THREE.Vector3, q: THREE.Vector3) => {
+      let h = 0;
+      const seg = new THREE.Line3(new THREE.Vector3(p.x, 0, p.z), new THREE.Vector3(q.x, 0, q.z));
+      const c = new THREE.Vector3();
+      for (const t of scene.towers) {
+        const o = new THREE.Vector3(t.x, 0, t.z);
+        if (o.distanceTo(seg.start) < 0.1 || o.distanceTo(seg.end) < 0.1) continue;
+        seg.closestPointToPoint(o, true, c);
+        if (c.distanceTo(o) < t.size * 0.8) h = Math.max(h, towerTop(t) + 0.6);
+      }
+      return Math.round(h * 100) / 100;
     };
     return net.shown.map(({ l, level }) => {
-      const a = anchors.get(l.a)!;
-      const b = anchors.get(l.b)!;
-      const route = router.route(a, b) ?? [
-        { x: a.x, y: a.y0, z: a.z },
-        { x: b.x, y: b.y0, z: b.z },
-      ];
-      // Inlaid in the walkway, just above the stone, in the link's own lane.
-      const lane = laneOf(l.id);
-      const path = route.map((p, i) => {
-        const q = route[Math.min(i + 1, route.length - 1)];
-        const o = route[Math.max(i - 1, 0)];
-        const n = Math.hypot(q.x - o.x, q.z - o.z) || 1;
-        return new THREE.Vector3(p.x - ((q.z - o.z) / n) * lane, p.y + PAVE_TOP, p.z + ((q.x - o.x) / n) * lane);
-      });
-      return { id: l.id, type: l.type, status: l.status, path, level, flow: l.directed && l.status === "active" && level !== "dim" };
+      const from = at(l.a);
+      const to = at(l.b);
+      return { id: l.id, type: l.type, status: l.status, from, to, clear: clearance(from, to), level, flow: l.directed && l.status === "active" && level !== "dim" };
     });
-  }, [net, anchors, router]);
+  }, [net, anchors, scene]);
 
   // Frame both ends of a selected connection.
   useEffect(() => {
@@ -768,9 +745,9 @@ function World({
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
-      <Outline a={hl(selKey)} color="#ffffff" ring />
-      {net.picked && <Outline a={hl(net.picked.a)} color="#ffffff" />}
-      {net.picked && <Outline a={hl(net.picked.b)} color="#ffffff" />}
+      <Outline a={hl(selKey)} color="#c9a35a" ring />
+      {net.picked && <Outline a={hl(net.picked.a)} color="#c9a35a" />}
+      {net.picked && <Outline a={hl(net.picked.b)} color="#c9a35a" />}
       {netLinks.length > 0 && <Network links={netLinks} hover={hoverLink} moving={linksMoving && !reduced} onHover={onLinkHover} onPick={onLinkPick} />}
       <TerraceGlow t={terraceOf(selectedDistrict)} strong />
       {hoverDistrict !== selectedDistrict && <TerraceGlow t={terraceOf(hoverDistrict)} />}

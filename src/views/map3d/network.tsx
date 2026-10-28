@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ConnectionType } from "../../catalog/types";
-import { LINK_COLORS, linkHue, type ConnectionStatus } from "../../lib/connections";
+import { LINK_COLORS, type ConnectionStatus } from "../../lib/connections";
 import { night } from "./materials";
 
 /** selected: the connection in hand. strong: verified activity, or related to the selection. */
@@ -12,138 +12,58 @@ export interface NetLink {
   id: string;
   type: ConnectionType;
   status: ConnectionStatus;
-  /** The route along the map's paths, from source to target, just above the pavement. */
-  path: THREE.Vector3[];
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  /** The arc's peak stays at least this high, to clear the buildings it passes over. */
+  clear: number;
   level: LinkLevel;
-  /** Light pulses run from source to target; only for verified, directed, active links. */
+  /** Particles run from `from` to `to`; only for verified, directed, active links. */
   flow: boolean;
 }
 
-const ALPHA: Record<LinkLevel, number> = { selected: 1, strong: 0.95, weak: 0.6, dim: 0.08 };
-/** Half the ribbon's width; the bright hairline is its middle, the rest is glow. */
-const HALF = 0.09;
-const SPEED = 1.3; // world units per second
-const SPACING = 1.6;
-/** Length of one dash and its gap, in world units. */
-const DASH = 0.3;
+type Hue = keyof typeof LINK_COLORS;
+/** "glow" is the soft sleeve around the selected or hovered link. */
+type Shade = LinkLevel | "glow";
+const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.95, weak: 0.55, dim: 0.06, glow: 0.16 };
+const RADIUS = 0.06;
+const MAX_PARTICLES = 160;
+const SPEED = 2.2; // world units per second
 
-const VERT = /* glsl */ `
-attribute float aDist;
-attribute float aSide;
-varying float vDist;
-varying float vSide;
-void main() {
-  vDist = aDist;
-  vSide = aSide;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}`;
+const hueOf = (l: NetLink): Hue => (l.status === "unhealthy" ? "unhealthy" : l.type);
 
-const FRAG = /* glsl */ `
-uniform vec3 uColor;
-uniform float uAlpha;
-uniform float uGlow;
-uniform float uCore;
-uniform float uSolid;
-uniform float uFlow;
-uniform float uLen;
-uniform float uTime;
-varying float vDist;
-varying float vSide;
-void main() {
-  float s = abs(vSide);
-  float core = 1.0 - smoothstep(uCore, uCore + 0.16, s);
-  float halo = (1.0 - s) * (1.0 - s) * uGlow;
-  // A comet of light every few units, its head leading toward the target.
-  float d = fract((vDist - uTime * ${SPEED.toFixed(2)}) / ${SPACING.toFixed(2)});
-  float pulse = uFlow * pow(d, 22.0);
-  // Dashed like a lane marking; the link in hand fills in solid.
-  float dash = mix(smoothstep(0.62, 0.55, fract(vDist / ${DASH.toFixed(2)})) * smoothstep(0.0, 0.07, fract(vDist / ${DASH.toFixed(2)})), 1.0, uSolid);
-  core *= 0.3 + 0.7 * max(dash, pulse);
-  // Fade in and out at the buildings so the ribbon does not end in a hard edge.
-  float ends = smoothstep(0.0, 0.3, vDist) * smoothstep(0.0, 0.3, uLen - vDist);
-  vec3 col = mix(uColor, vec3(1.0), pulse * 0.75);
-  float a = core * (0.9 + 0.1 * pulse) + halo * (0.32 + 0.6 * pulse);
-  gl_FragColor = vec4(col, clamp(a, 0.0, 1.0) * uAlpha * ends);
-}`;
+/** An arc that rises with the distance it spans and clears the roofs between its ends. */
+function arcOf(a: THREE.Vector3, b: THREE.Vector3, clear: number) {
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  // A quadratic curve peaks at a quarter of each end plus half the control point.
+  mid.y = Math.max(Math.max(a.y, b.y) + 0.45 + a.distanceTo(b) * 0.24, 2 * clear - (a.y + b.y) / 2);
+  return new THREE.QuadraticBezierCurve3(a.clone(), mid, b.clone());
+}
 
 interface Built {
   link: NetLink;
-  ribbon: THREE.BufferGeometry;
+  tube: THREE.TubeGeometry;
   hit: THREE.TubeGeometry;
-  mat: THREE.ShaderMaterial;
-}
-
-/** A flat strip along the route, with distance along it and side across it for the shader. */
-function ribbonOf(path: THREE.Vector3[]) {
-  const pts = path.filter((p, i) => i === 0 || p.distanceToSquared(path[i - 1]) > 1e-8);
-  const pos: number[] = [];
-  const dist: number[] = [];
-  const side: number[] = [];
-  const idx: number[] = [];
-  let run = 0;
-  let nx = 0;
-  let nz = 1;
-  pts.forEach((p, i) => {
-    if (i) run += p.distanceTo(pts[i - 1]);
-    const q = pts[Math.min(i + 1, pts.length - 1)];
-    const o = pts[Math.max(i - 1, 0)];
-    const tx = q.x - o.x;
-    const tz = q.z - o.z;
-    const n = Math.hypot(tx, tz);
-    // Straight up a step there is no direction across; keep the last one.
-    if (n > 1e-6) {
-      nx = -tz / n;
-      nz = tx / n;
-    }
-    for (const sd of [-1, 1]) {
-      pos.push(p.x + nx * HALF * sd, p.y, p.z + nz * HALF * sd);
-      dist.push(run);
-      side.push(sd);
-    }
-    if (i) {
-      const k = i * 2;
-      idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
-    }
-  });
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute("aDist", new THREE.Float32BufferAttribute(dist, 1));
-  g.setAttribute("aSide", new THREE.Float32BufferAttribute(side, 1));
-  g.setIndex(idx);
-  g.computeBoundingSphere();
-  return { g, len: run, pts };
+  glow: THREE.TubeGeometry;
+  pts: THREE.Vector3[];
+  len: number;
 }
 
 /**
- * Connections between buildings: a thin lit inlay along the walkways, colored by health, with
- * light pulses for verified activity. One small shader per link, all driven by one clock.
+ * Connections between buildings: one thin tube per link, shared materials per color and level,
+ * and every moving particle in a single instanced mesh updated in one frame callback.
  */
 export function Network({ links, hover, moving, onHover, onPick }: { links: NetLink[]; hover: string | null; moving: boolean; onHover: (id: string | null, e?: ThreeEvent<PointerEvent>) => void; onPick: (id: string) => void }) {
   const { gl } = useThree();
-  const time = useMemo(() => ({ value: 0 }), []);
   // Geometry depends only on where a link runs, so selection changes reuse it.
-  const shapeKey = links.map((l) => `${l.id}@${l.path.length}:${l.path[0]?.toArray().join()}>${l.path[l.path.length - 1]?.toArray().join()}`).join("|");
+  const shapeKey = links.map((l) => `${l.id}@${l.from.toArray().join()}>${l.to.toArray().join()}^${l.clear}`).join("|");
   const built = useMemo<Built[]>(
     () =>
       links.map((link) => {
-        const { g, len, pts } = ribbonOf(link.path);
-        // The pick target skips both ends so it never covers the buildings' doors.
-        const cut = Math.min(Math.floor(pts.length / 3), Math.max(1, Math.round(pts.length * Math.min(0.2, 0.4 / Math.max(len, 0.1)))));
-        const mid = pts.length > 2 * cut + 1 ? pts.slice(cut, pts.length - cut) : pts;
-        const curve = new THREE.CatmullRomCurve3(mid.length > 1 ? mid : [pts[0], pts[0].clone().add(new THREE.Vector3(0.01, 0, 0))], false, "centripetal");
-        const mat = new THREE.ShaderMaterial({
-          vertexShader: VERT,
-          fragmentShader: FRAG,
-          uniforms: { uColor: { value: new THREE.Color() }, uAlpha: { value: 1 }, uGlow: { value: 0.4 }, uCore: { value: 0.14 }, uSolid: { value: 0 }, uFlow: { value: 0 }, uLen: { value: len }, uTime: time },
-          transparent: true,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-          polygonOffset: true,
-          polygonOffsetFactor: -2,
-          polygonOffsetUnits: -2,
-          toneMapped: false,
-        });
-        return { link, ribbon: g, hit: new THREE.TubeGeometry(curve, Math.max(8, mid.length * 2), 0.16, 5), mat };
+        const curve = arcOf(link.from, link.to, link.clear);
+        const pts = curve.getSpacedPoints(64);
+        // The pick target skips both ends so it never covers the buildings' roofs.
+        const mid = new THREE.CatmullRomCurve3(pts.slice(8, 57));
+        return { link, tube: new THREE.TubeGeometry(curve, 48, RADIUS, 6), glow: new THREE.TubeGeometry(curve, 48, RADIUS * 2.6, 6), hit: new THREE.TubeGeometry(mid, 20, 0.2, 5), pts, len: curve.getLength() };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt when the shapes change
     [shapeKey],
@@ -151,36 +71,72 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
   useEffect(
     () => () =>
       built.forEach((b) => {
-        b.ribbon.dispose();
+        b.tube.dispose();
+        b.glow.dispose();
         b.hit.dispose();
-        b.mat.dispose();
       }),
     [built],
   );
   // Levels and flags change on every selection; read them from the latest links by id.
   const current = new Map(links.map((l) => [l.id, l]));
+
+  const mats = useMemo(() => new Map<string, THREE.MeshBasicMaterial>(), []);
+  const matOf = (hue: Hue, level: Shade) => {
+    const k = `${hue}:${level}`;
+    let m = mats.get(k);
+    if (!m) {
+      m = new THREE.MeshBasicMaterial({ color: LINK_COLORS[hue].day, transparent: true, opacity: OPACITY[level], depthWrite: false, toneMapped: false });
+      m.userData = { hue, level };
+      mats.set(k, m);
+    }
+    return m;
+  };
+  const glowOf = (hue: Hue) => matOf(hue, "glow");
   const hitMat = useMemo(() => new THREE.MeshBasicMaterial({ visible: false }), []);
-  useEffect(() => () => hitMat.dispose(), [hitMat]);
-  const tmp = useMemo(() => new THREE.Color(), []);
+  useEffect(
+    () => () => {
+      mats.forEach((m) => m.dispose());
+      hitMat.dispose();
+    },
+    [mats, hitMat],
+  );
+
+  const dots = useRef<THREE.InstancedMesh>(null);
+  const clock = useRef(0);
+  const tmp = useMemo(() => ({ o: new THREE.Object3D(), c: new THREE.Color(), d: new THREE.Color(), n: new THREE.Color() }), []);
 
   useFrame((_, delta) => {
-    // Frozen, not hidden, when motion is off: the pulses stay where they are.
-    if (moving) time.value += Math.min(delta, 0.1);
+    if (moving) clock.current += Math.min(delta, 0.1);
     const k = night.value;
-    for (const b of built) {
-      const l = current.get(b.link.id) ?? b.link;
-      const u = b.mat.uniforms;
-      const lit = l.level === "selected" || (hover === l.id && l.level !== "dim");
-      const hue = LINK_COLORS[linkHue(l)];
-      u.uColor.value.set(hue.day).lerp(tmp.set(hue.night), k);
-      u.uAlpha.value = lit ? 1 : ALPHA[l.level] * (l.level === "weak" ? 1 + 0.3 * k : 1);
-      // A soft glow at night, like the path lights; the link in hand glows at any hour.
-      u.uGlow.value = lit ? 1 : l.level === "dim" ? 0 : 0.3 + 0.55 * k;
-      // The link in hand is drawn a little wider.
-      u.uCore.value = lit ? 0.24 : 0.14;
-      u.uSolid.value = lit ? 1 : 0;
-      u.uFlow.value = l.flow && l.level !== "dim" ? 1 : 0;
+    const pulse = moving ? 0.78 + 0.22 * Math.sin(clock.current * 3.2) : 1;
+    for (const m of mats.values()) {
+      const { hue, level } = m.userData as { hue: Hue; level: Shade };
+      m.color.set(LINK_COLORS[hue].day).lerp(tmp.n.set(LINK_COLORS[hue].night), k);
+      m.opacity = level === "glow" ? OPACITY.glow * pulse + 0.08 * k : OPACITY[level] * (level === "selected" ? pulse : 1) * (level === "weak" ? 1 + 0.25 * k : 1);
     }
+
+    const mesh = dots.current;
+    if (!mesh) return;
+    let n = 0;
+    for (const b of built) {
+      const l = current.get(b.link.id);
+      if (!l?.flow || l.level === "dim") continue;
+      const count = l.level === "selected" ? 4 : Math.max(1, Math.min(3, Math.round(b.len / 6)));
+      tmp.c.set(LINK_COLORS[hueOf(l)].day).lerp(tmp.n.set(LINK_COLORS[hueOf(l)].night), k).lerp(tmp.d.set("#ffffff"), 0.35);
+      for (let i = 0; i < count && n < MAX_PARTICLES; i++) {
+        const t = (((clock.current * SPEED) / b.len + i / count) % 1) * (b.pts.length - 1);
+        const j = Math.floor(t);
+        tmp.o.position.lerpVectors(b.pts[j], b.pts[Math.min(j + 1, b.pts.length - 1)], t - j);
+        tmp.o.scale.setScalar(l.level === "selected" ? 1.25 : 1);
+        tmp.o.updateMatrix();
+        mesh.setMatrixAt(n, tmp.o.matrix);
+        mesh.setColorAt(n, tmp.c);
+        n++;
+      }
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   const setCursor = (on: boolean) => (gl.domElement.style.cursor = on ? "pointer" : "");
@@ -190,7 +146,8 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
         const l = current.get(b.link.id) ?? b.link;
         return (
           <group key={b.link.id}>
-            <mesh geometry={b.ribbon} material={b.mat} raycast={() => null} renderOrder={l.level === "selected" || hover === l.id ? 3 : 2} />
+            <mesh geometry={b.tube} material={matOf(hueOf(l), l.level)} raycast={() => null} renderOrder={2} />
+            {(l.level === "selected" || (hover === l.id && l.level !== "dim")) && <mesh geometry={b.glow} material={glowOf(hueOf(l))} raycast={() => null} renderOrder={1} />}
             {l.level !== "dim" && (
               <mesh
                 geometry={b.hit}
@@ -214,6 +171,10 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
           </group>
         );
       })}
+      <instancedMesh ref={dots} args={[DOT, DOT_MAT, MAX_PARTICLES]} raycast={() => null} frustumCulled={false} renderOrder={3} />
     </group>
   );
 }
+
+const DOT = new THREE.SphereGeometry(0.075, 10, 8);
+const DOT_MAT = new THREE.MeshBasicMaterial({ toneMapped: false });

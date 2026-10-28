@@ -220,15 +220,11 @@ export function endpointKey(catalog: Catalog, e: Endpoint): string | undefined {
 
 export const CONNECTION_LABEL: Record<Connection["type"], string> = { github: "GitHub", agent: "AI agents", n8n: "n8n", dependency: "Dependencies" };
 export const CONNECTION_STATUS_LABEL: Record<ConnectionStatus, string> = { active: "Active", inactive: "Inactive", unhealthy: "Unhealthy", unknown: "Unknown" };
-/** How each status reads on the map legend: health, not the kind of link. */
-export const CONNECTION_HEALTH_LABEL: Record<ConnectionStatus, string> = { active: "Healthy", inactive: "Needs a look", unhealthy: "Failing", unknown: "No live data" };
-/** Connection colors by kind, plus muted red for a verified failure: deeper by day, lighter at night. */
+/** Connection colors, deeper by day to hold up against the bright scene and lighter at night. */
 export const LINK_COLORS: Record<ConnectionType | "unhealthy", { day: string; night: string }> = {
-  github: { day: "#1f86c4", night: "#6cc8ff" },
-  agent: { day: "#7a55c8", night: "#b89cff" },
-  n8n: { day: "#d0701f", night: "#ffad5c" },
-  dependency: { day: "#14917f", night: "#4fe0c6" },
-  unhealthy: { day: "#b0473e", night: "#ea7263" },
+  github: { day: "#1f8ec2", night: "#62cbf4" },
+  agent: { day: "#7a52cc", night: "#b597ff" },
+  n8n: { day: "#dd7428", night: "#ffab62" },
+  dependency: { day: "#17968a", night: "#52d8c5" },
+  unhealthy: { day: "#b54a40", night: "#e06a5d" },
 };
-/** The color a link is drawn in: its kind, unless live data shows it failing. */
-export const linkHue = (c: { type: ConnectionType; status: ConnectionStatus }) => (c.status === "unhealthy" ? "unhealthy" : c.type);
