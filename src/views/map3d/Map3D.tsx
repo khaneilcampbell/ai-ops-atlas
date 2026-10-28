@@ -297,7 +297,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     // Neighborhood names when the map is grouped, at the back corner of each landmass.
     for (const n of layout.neighborhoods) {
-      if (!n.label || layout.neighborhoods.length < 2) continue;
+      // Tag groups usually hold one project each, so their "CLAUDE · 1" pills read like error badges.
+      if (!n.label || layout.neighborhoods.length < 2 || n.key.startsWith("t:")) continue;
       // Districts are a fixed set, so their names stand alone; other groupings show how many they hold.
       const district = n.key.startsWith("d:");
       const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
