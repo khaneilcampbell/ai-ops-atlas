@@ -1,5 +1,5 @@
 // Fails if anything that looks like a credential ends up in the built UI or
-// the repository's tracked source. Usage: node scripts/check-secrets.mjs dist worker src
+// the repository's tracked files. Usage: node scripts/check-secrets.mjs dist worker src
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -9,13 +9,17 @@ const PATTERNS = [
   [/gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}/, 'GitHub token'],
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'Private key'],
   [/\bBearer [A-Za-z0-9._-]{30,}/, 'Bearer token'],
+  [/\bre_[A-Za-z0-9]{8,}_[A-Za-z0-9]{16,}/, 'Resend API key'],
+  [/sk-ant-[A-Za-z0-9_-]{20,}/, 'Anthropic API key'],
+  [/\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/, 'JWT (n8n API keys are JWTs)'],
+  [/hooks\.slack\.com\/services\/[A-Za-z0-9/]+/, 'Slack webhook URL'],
 ];
 
 function* files(dir) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) yield* files(p);
-    else if (/\.(js|mjs|ts|tsx|css|html|json|jsonc|sql|md)$/.test(name)) yield p;
+    else if (/\.(js|mjs|ts|tsx|css|html|json|jsonc|sql|md|csv|php|py|sh|txt|ya?ml)$/.test(name)) yield p;
   }
 }
 

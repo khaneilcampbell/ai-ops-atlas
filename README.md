@@ -2,7 +2,9 @@
 
 Private business dashboard for Benjaire LLC: website traffic, product sales and downloads, inquiries, n8n automation health, Cloudflare infrastructure, and a manual finance ledger. One owner, one screen.
 
-Architecture decision: [ADR-0005 in benjaire.com](https://github.com/khancam15/benjaire.com/blob/main/docs/adr/0005-business-dashboard.md).
+This repository also holds the source of the paid **Flow kit** and Benjaire's live n8n workflow exports, under [`products/flow/`](products/flow/README.md).
+
+Architecture decision: ADR-0005 in benjaire.com, currently on the unmerged [`claude/benjaire-bi-dashboard-7luk2h`](https://github.com/khancam15/benjaire.com/blob/claude/benjaire-bi-dashboard-7luk2h/docs/adr/0005-business-dashboard.md) branch.
 
 ## Rules this code follows
 
@@ -41,11 +43,11 @@ npm run build && npx wrangler dev        # http://localhost:8787
 ## Checks
 
 ```bash
-npm run ci          # Worker types, unit tests, UI types and build, secret scan
+npm run ci          # Worker types, unit tests, UI types and build, secret scan, Flow export check
 npm run test:a11y   # axe WCAG 2.2 AA + no sideways scroll, light/dark, desktop/phone (needs wrangler dev running)
 ```
 
-GitHub Actions runs both on every pull request.
+GitHub Actions runs both on every pull request. Dependabot opens grouped dependency updates every Monday.
 
 ## Layout
 
@@ -59,5 +61,8 @@ GitHub Actions runs both on every pull request.
 | `worker/db.ts` | D1 queries; every write paired with its audit entry |
 | `migrations/` | D1 schema |
 | `src/` | Preact UI (pages, components, Pavilion design tokens in `styles.css`) |
-| `scripts/` | Accessibility check and secret scan |
+| `scripts/` | Accessibility check, secret scan, n8n export check |
 | `docs/SETUP.md` | Cloudflare setup and deployment, step by step |
+| `products/flow/` | Flow kit source, its build and pack scripts, and the live n8n exports ([README](products/flow/README.md)) |
+| `.github/` | CI workflow and Dependabot |
+| `CLAUDE.md`, `.claude/rules/` | Instructions for Claude sessions working in this repo |

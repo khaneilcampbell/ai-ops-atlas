@@ -9,8 +9,10 @@
     "test": "node --experimental-strip-types --no-warnings --test worker/*.test.ts",
     "db:migrate:local": "wrangler d1 migrations apply benjaire-dashboard --local",
     "start": "wrangler dev",
-    "ci": "npm run check:worker && npm test && npm run build && npm run check:secrets",
-    "check:secrets": "node scripts/check-secrets.mjs dist worker src migrations",
+    "ci": "npm run check:worker && npm test && npm run build && npm run check:secrets && npm run check:flow",
+    "check:secrets": "node scripts/check-secrets.mjs dist worker src migrations scripts docs products .github",
+    "check:flow": "node scripts/check-flow.mjs",
+    "flow:pack": "python3 -I products/flow/build/pack.py",
     "test:a11y": "node scripts/a11y.mjs"
   },
   "engines": {
