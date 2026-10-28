@@ -36,6 +36,7 @@ agents:
       github_workflow: ci.yml      # latest run of this workflow updates last run and health
       atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
       atlas_intel_runs: ecosystem  # optional with atlas_intel: which runs count (repository, the default, or ecosystem)
+      agent_feed: true             # or: phase results its pipeline reports to /api/hooks/agents (docs/live-updates.md)
     links: []                      # optional
     history:                       # optional notable events, newest first
       - at: 2026-10-12

@@ -9,6 +9,7 @@ what it last reported.
 ```
 GitHub App "KC Atlas Live" ──webhook──▶ POST /api/hooks/github  (HMAC, GITHUB_WEBHOOK_SECRET)
 Mac app (Repository Intelligence) ────▶ POST /api/hooks/atlas   (Bearer USAGE_SYNC_TOKEN)
+Commerce pipeline (VPS loop.sh) ──────▶ POST /api/hooks/agents  (Bearer AGENT_FEED_TOKEN)
                                               │
                                      D1 database atlas-live (binding LIVE)
                                               │
@@ -44,8 +45,44 @@ Mac app  ◀── GET /api/hooks/feed?after=N (Bearer USAGE_SYNC_TOKEN, same ca
 
 The Mac app uses the website sync URL and key it already has; nothing to set there.
 
+## Pipeline runs (outside Atlas)
+
+Pipelines that run elsewhere report each phase result to `POST /api/hooks/agents`, and Atlas
+shows them as the run history of the catalog agents whose manifest has
+`observe: { agent_feed: true }`. Today that is the commerce pipeline
+(`scripts/atlas_feed.py`, called from `loop.sh`).
+
+One report is one JSON object, at most 4 KB:
+
+```json
+{ "project": "commerce-pipeline", "agents": ["seo-maintainer"], "phase": "Phase 6: SEO",
+  "status": "ok", "detail": "3 listings refreshed", "at": "2026-10-28T08:00:00+00:00" }
+```
+
+- `status` is `ok`, `failed`, `skipped` (the loop is paused) or `paused`. `ok` counts as a
+  success and `failed` as a failure; the other two are shown but don't change health.
+- `project` and each of the 1 to 10 `agents` are catalog ids (lowercase letters, digits,
+  dashes). `phase` is up to 120 characters, `detail` up to 300. Anything else is refused with
+  a 400 and nothing is stored.
+- `AGENT_FEED_TOKEN` can only add reports. It can't read the feed, so a leaked VPS `.env`
+  exposes nothing in Atlas. It is separate from the Mac's sync key.
+- The site keeps three days; each browser and the Mac also keep the last 200 reports locally,
+  so history outlives the site's pruning on a device that has been open.
+
+Setup:
+
+1. Make a key: `openssl rand -hex 32`.
+2. Cloudflare → Workers & Pages → ai-ops-atlas → Settings → Variables and Secrets: add
+   `AGENT_FEED_TOKEN` (type Secret) with that key, then retry the latest production deployment.
+3. On the VPS, add to the pipeline's `.env`:
+   `ATLAS_FEED_URL=https://ai-ops-atlas.pages.dev/api/hooks/agents` and
+   `ATLAS_FEED_TOKEN=<the same key>`. The existing `/api/hooks/*` login exception covers it.
+
 ## Checking it
 
 - GitHub: the app's Advanced tab lists recent deliveries; a 202 means stored, 401 a secret
   mismatch, 503 that the secret or binding isn't on the deployment yet.
 - The Live pill's tooltip shows the last check and the latest event.
+- Pipeline: `python scripts/atlas_feed.py ok "Loop" "test"` on the VPS prints nothing when
+  Atlas stored it, `not sent: HTTP 401` for a key mismatch and `HTTP 503` when the secret isn't
+  on the deployment yet. The test shows up under the Autonomous Loop agent.
