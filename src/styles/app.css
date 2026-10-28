@@ -738,3 +738,14 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .table-wrap { overflow-x: auto; margin: 0 -4px; }
 .table.compact th, .table.compact td { padding: 8px 10px; }
 .map-legend .lens-note b { font-weight: 600; }
+
+/* Copy buttons (Engineering review) */
+.box-head { display: flex; align-items: center; gap: 8px; }
+.box-head .box-label { flex: 1; }
+.copy-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(201, 163, 90, 0.45); background: rgba(255, 255, 255, 0.55); color: var(--gold-deep); font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.copy-btn:hover { background: var(--gold-soft); }
+.copy-btn.compact { border-color: transparent; background: none; padding: 2px 6px; color: var(--ink-3); font-size: 11px; }
+.copy-btn.compact:hover { color: var(--gold-deep); background: var(--gold-soft); }
+.copy-btn.done, .copy-btn.compact.done { color: var(--forest-700); }
+.ai-box .section-head { margin-bottom: 8px; align-items: center; }
+.rec-head .copy-btn { align-self: center; }
