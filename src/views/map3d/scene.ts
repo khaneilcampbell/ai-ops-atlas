@@ -1,5 +1,6 @@
 import type { Agent, Status } from "../../catalog/types";
 import { frameworkColor, hash, treeSpots, type Layout } from "../mapLayout";
+import { identityFor, type BuildingIdentity } from "./identity";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -53,6 +54,7 @@ export interface Tower {
   name: string;
   status: Status;
   agents: number;
+  identity: BuildingIdentity;
   x: number;
   z: number;
   size: number;
@@ -149,8 +151,10 @@ export function buildScene(layout: Layout): Scene3D {
   for (const d of layout.districts) {
     terraces.push({ id: d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
     const agents = d.lots.length;
-    const floors = 6 + Math.min(agents, 12);
-    const size = d.hq.size * 0.92;
+    const identity = identityFor(d.project);
+    // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
+    const floors = identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const size = d.hq.size * (identity.landmark ? 1.02 : 0.92);
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     towers.push({
@@ -160,6 +164,7 @@ export function buildScene(layout: Layout): Scene3D {
       name: d.project.name,
       status: d.project.status,
       agents,
+      identity,
       x: cx,
       z: cz,
       size,
@@ -192,6 +197,21 @@ export function buildScene(layout: Layout): Scene3D {
         chimney: hash(`${a.id}:ch`) > 0.4,
         solar: hash(`${a.id}:sol`) > 0.6,
       });
+    }
+    // The landmark stands on a wider civic plaza with a fountain and lamps at its corners,
+    // wherever the houses leave room.
+    if (identity.landmark) {
+      const half = d.hq.size * 0.62 + 0.45;
+      paving.push({ x: cx - half, z: cz - half, w: half * 2, d: half * 2, y: top, h: 0.02 });
+      const clear = (x: number, z: number, r: number) => !houses.some((h) => h.projectId === d.project.id && Math.abs(h.x - x) < h.w / 2 + r && Math.abs(h.z - z) < h.d / 2 + r);
+      const fx = cx + half - 0.5;
+      const fz = cz + half - 0.5;
+      if (clear(fx, fz, 0.55)) fountains.push({ x: fx, z: fz });
+      for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+        const lx = cx + sx * (half - 0.12);
+        const lz = cz + sz * (half - 0.12);
+        if (clear(lx, lz, 0.15) && !(sx === 1 && sz === 1)) lamps.push({ x: lx, y: top, z: lz, s: 1 });
+      }
     }
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
     const blocked = (x: number, z: number) =>

@@ -3,7 +3,7 @@ import type { Agent, Status } from "../catalog/types";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
-import { effectiveLastRun, overallHealth, repoData, repoHealth } from "../lib/derive";
+import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
@@ -764,6 +764,8 @@ export function MapView() {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
+  const healthFor = useCallback((repository: string) => verifiedState(repos[repository]), [repos]);
+
   /** Hover text for a building, from the same live repository data the inspector uses. */
   const tipFor = (key: string) => {
     if (key.startsWith("agent:")) {
@@ -866,6 +868,7 @@ export function MapView() {
               showAgentLabels={settings.showMapLabels}
               reduced={reduced}
               tipFor={tipFor}
+              healthFor={healthFor}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);

@@ -3,9 +3,10 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import type { Status } from "../../catalog/types";
+import type { Verified } from "../../lib/derive";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
-import { measure, SANS, wrap } from "../mapText";
+import { clip, measure, SANS, wrap } from "../mapText";
 import { time } from "./materials";
 import { Houses, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
@@ -29,6 +30,8 @@ interface Props {
   onSelect: (sel: Sel, projectId?: string) => void;
   onFocus: (projectId: string) => void;
   tipFor: (key: string) => { title: string; sub: string } | null;
+  /** Verified repository health, for the discreet mark on each nameplate. */
+  healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean };
   onMoved: () => void;
 }
 
@@ -49,6 +52,7 @@ interface LabelSpec {
   node: React.ReactNode;
   className: string;
   onClick?: () => void;
+  title?: string;
 }
 
 const selOf = (key: string): Sel => {
@@ -66,7 +70,7 @@ function anchorsOf(scene: Scene3D) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor } = props;
+  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const anchors = useMemo(() => anchorsOf(scene), [scene]);
   const [hover, setHover] = useState<string | null>(null);
@@ -91,20 +95,48 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Labels: project plaques always, agent pills once zoomed in (or for the hovered or selected agent).
   const labels = useMemo(() => {
     const out: LabelSpec[] = [];
-    const agentsShown = near === "near" || (showAgentLabels && near === "mid");
+    // Agent names only up close, and then only around the project in hand, unless the person
+    // asked to always show them.
+    const agentsNear = near === "near" || (showAgentLabels && near === "mid");
+    const inHand = (p: string) => p === selectedDistrict || p === hoverDistrict || (p === focus && near === "near");
     for (const t of scene.towers) {
+      const state = t.key === selKey || t.projectId === selectedDistrict ? "selected" : t.key === hover || hoverDistrict === t.projectId ? "hover" : "";
+      const health = healthFor(t.repository);
+      const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
+      // A compact nameplate by default; the full name and details on hover or selection.
+      if (!state) {
+        const name = clip(t.name, 12, 168);
+        out.push({
+          id: `hq:${t.projectId}`,
+          key: t.key,
+          pos: new THREE.Vector3(t.x, towerTop(t) + 0.3, t.z),
+          w: measure(name, 12, SANS, 600) + 40,
+          h: 34,
+          priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents),
+          className: "m3-plaque compact",
+          onClick: () => select(t.key),
+          title: `${t.name} · ${health.label}`,
+          node: (
+            <div className="t">
+              <i className={t.status === "attention" ? "pulse" : undefined} style={{ background: STATUS_DOT[t.status] }} />
+              {name}
+              {mark}
+            </div>
+          ),
+        });
+        continue;
+      }
       const lines = wrap(t.name, 13, SANS, 230, 600);
       const sub = `${t.agents} ${t.agents === 1 ? "agent" : "agents"} · ${statusLabel(t.status)}`;
-      const w = Math.max(...lines.map((l) => measure(l, 13, SANS, 600)), measure(sub, 11, SANS) + 14) + 26;
-      const h = lines.length * 17 + 30;
-      const state = t.key === selKey || t.projectId === selectedDistrict ? "selected" : t.key === hover || hoverDistrict === t.projectId ? "hover" : "";
+      const w = Math.max(...lines.map((l) => measure(l, 13, SANS, 600)), measure(sub, 11, SANS) + 14, measure(health.label, 11, SANS) + 14) + 26;
+      const h = lines.length * 17 + 48;
       out.push({
         id: `hq:${t.projectId}`,
         key: t.key,
         pos: new THREE.Vector3(t.x, towerTop(t) + 0.3, t.z),
         w,
         h: h + 8,
-        priority: state ? 0 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents),
+        priority: 0,
         className: `m3-plaque ${state}`,
         onClick: () => select(t.key),
         node: (
@@ -118,13 +150,17 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
               <i className={t.status === "attention" ? "pulse" : undefined} style={{ background: STATUS_DOT[t.status] }} />
               {sub}
             </div>
+            <div className="s">
+              {mark}
+              {health.label}
+            </div>
           </>
         ),
       });
     }
     for (const h of scene.houses) {
       const urgent = h.key === selKey || h.key === hover;
-      if (!agentsShown && !urgent) continue;
+      if (!urgent && !(agentsNear && (showAgentLabels || inHand(h.projectId)))) continue;
       const a = h.agent;
       const text = a.status === "attention" ? `${a.name} · needs attention` : a.name;
       out.push({
@@ -164,7 +200,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect]);
+  }, [scene, layout, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -232,6 +268,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
               else labelEls.current.delete(l.id);
             }}
             className={l.className}
+            title={l.title}
             style={{ width: l.w, visibility: "hidden" }}
             onClick={l.onClick}
             onMouseEnter={l.onClick ? () => setHover(l.key) : undefined}
@@ -299,7 +336,9 @@ function World({
   }, [camera, gl]);
   const touched = useRef(false);
   const fitDist = useRef(30);
-  const anim = useRef<{ t0: number; from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3] } | null>(null);
+  const anim = useRef<{ t0: number; ms: number; from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3] } | null>(null);
+  /** The selection the camera is framing, until the person moves the camera themselves. */
+  const framing = useRef<string | null>(null);
   const center = useMemo(() => {
     const b = scene.bounds;
     return new THREE.Vector3((b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2);
@@ -312,6 +351,7 @@ function World({
     const start = () => {
       touched.current = true;
       anim.current = null;
+      framing.current = null;
       movedRef.current();
     };
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
@@ -350,7 +390,7 @@ function World({
     return hi;
   };
 
-  const goto = (target: THREE.Vector3, dist: number, instant = false) => {
+  const goto = (target: THREE.Vector3, dist: number, instant = false, ms = 420) => {
     const to: [THREE.Vector3, THREE.Vector3] = [target.clone(), target.clone().addScaledVector(DIR, dist)];
     if (instant || reduced) {
       controls.target.copy(to[0]);
@@ -358,7 +398,7 @@ function World({
       anim.current = null;
       return;
     }
-    anim.current = { t0: performance.now(), from: [controls.target.clone(), camera.position.clone()], to };
+    anim.current = { t0: performance.now(), ms, from: [controls.target.clone(), camera.position.clone()], to };
   };
 
   const fitNow = (instant = false) => {
@@ -377,7 +417,8 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene]);
   useEffect(() => {
-    if (!touched.current) fitNow(true);
+    if (framing.current) frame(framing.current);
+    else if (!touched.current) fitNow(true);
     else fitDist.current = computeFit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height]);
@@ -399,18 +440,23 @@ function World({
     },
   };
 
-  // Follow selections made elsewhere (search, inspector) so the building stays in view.
-  useEffect(() => {
-    if (!selKey) return;
-    const a = anchors.get(selKey);
+  /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
+  function frame(key: string) {
+    const a = anchors.get(key);
     if (!a) return;
-    const id = requestAnimationFrame(() => {
-      const v = new THREE.Vector3(a.x, a.y1, a.z).project(camera);
-      const far = camera.position.distanceTo(controls.target) > fitDist.current * 0.62;
-      if (Math.abs(v.x) > 0.7 || Math.abs(v.y) > 0.7 || far) api.current?.reveal(a.x, a.z, true);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [selKey, anchors, camera, controls, api]);
+    touched.current = true;
+    const h = a.y1 - a.y0;
+    const dist = THREE.MathUtils.clamp(Math.max(h * 3.4, Math.max(a.w, a.d) * 5) + 3, controls.minDistance, fitDist.current * 0.45);
+    goto(new THREE.Vector3(a.x, a.y0 + h * 0.42, a.z), dist, false, 900);
+  }
+
+  // Frame every selection, wherever it was made (map, search, inspector). The docked inspector
+  // resizes the canvas a moment later, so the resize handler frames it again.
+  useEffect(() => {
+    framing.current = selKey && anchors.has(selKey) ? selKey : null;
+    if (framing.current) frame(framing.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selKey, anchors]);
 
   // Light and shadows sized to the whole map.
   const light = useRef<THREE.DirectionalLight>(null);
@@ -453,8 +499,9 @@ function World({
     if (!reduced) time.value = state.clock.elapsedTime;
     const a = anim.current;
     if (a) {
-      const p = Math.min(1, (performance.now() - a.t0) / 420);
-      const e = 1 - Math.pow(1 - p, 3);
+      const p = Math.min(1, (performance.now() - a.t0) / a.ms);
+      // Ease in and out so long glides start and land gently.
+      const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
       controls.target.lerpVectors(a.from[0], a.to[0], e);
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
@@ -521,6 +568,8 @@ function World({
 }
 
 /** A slightly larger back-faced shell behind a building, which reads as an outline. */
+const BOX_EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+
 function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y1: number; w: number; d: number }; color: string; ring?: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
@@ -534,13 +583,14 @@ function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y
   const pad = 0.12;
   return (
     <group>
-      <mesh position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad, a.y1 - a.y0 + pad, a.d + pad]} raycast={() => null}>
-        <boxGeometry />
-        <meshBasicMaterial color={color} side={THREE.BackSide} />
-      </mesh>
+      {/* Crisp edges rather than a solid silhouette, so the facade stays visible. */}
+      <lineSegments position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad, a.y1 - a.y0 + pad, a.d + pad]} geometry={BOX_EDGES} raycast={() => null}>
+        <lineBasicMaterial color={color} />
+      </lineSegments>
       <mesh position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad * 2, a.y1 - a.y0 + pad * 2, a.d + pad * 2]} raycast={() => null}>
         <boxGeometry />
-        <meshBasicMaterial color={color} transparent opacity={0.18} depthWrite={false} />
+        {/* A faint glaze; kept light so the building's signs and details stay readable. */}
+        <meshBasicMaterial color={color} transparent opacity={ring ? 0.05 : 0.1} depthWrite={false} />
       </mesh>
       {ring && (
         <mesh ref={ringRef} position={[a.x, a.y0 + 0.05, a.z]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>

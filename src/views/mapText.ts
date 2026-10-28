@@ -23,3 +23,11 @@ export function wrap(text: string, size: number, font: string, max: number, weig
   return lines.length > 3 ? [...lines.slice(0, 2), lines.slice(2).join(" ")] : lines;
 }
 
+
+/** Shorten text to fit a width, ending in an ellipsis when cut. */
+export function clip(text: string, size: number, max: number, font = SANS, weight = 600) {
+  if (measure(text, size, font, weight) <= max) return text;
+  let t = text;
+  while (t.length > 1 && measure(`${t}…`, size, font, weight) > max) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}

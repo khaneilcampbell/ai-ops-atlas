@@ -40,23 +40,34 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       </div>
 
       <div className="grid kpis">
-        <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} onClick={() => setView("grid")} />
+        <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />
         <Tile
           label="Configured agents"
           value={m.agents}
           sub={`${m.agentsByStatus.active} active · ${m.frameworks} frameworks · ${m.observedAgents} watched via Actions`}
+          source="Catalog manifests"
           onClick={() => toAgents()}
         />
         <Tile
-          label={`Workflow runs · ${WINDOW} d`}
+          label={`Workflow runs · last ${WINDOW} days`}
           value={m.runs.total}
-          sub={m.runs.successRate === null ? "No finished runs in the window" : `${Math.round(m.runs.successRate * 100)}% succeeded · ${m.runs.failure} failed`}
+          sub={m.runs.successRate === null ? "No finished runs in the window" : `${Math.round(m.runs.successRate * 100)}% succeeded · ${m.runs.failure} failed ${m.runs.failure === 1 ? "run" : "runs"} in the window`}
+          source="GitHub · latest 10 default-branch runs per repository"
         />
-        <Tile label={`Commits · ${WINDOW} d`} value={m.commits} sub={`Across ${m.busiest.filter((b) => b.commits).length} repositories`} />
+        <Tile label={`Commits · last ${WINDOW} days`} value={m.commits} sub={`Across ${m.busiest.filter((b) => b.commits).length} repositories`} source="GitHub · latest 10 default-branch commits per repository" />
         <Tile
-          label="Failing workflows"
+          label="Workflows failing now"
           value={m.failing.length}
-          sub={m.failing.length ? "Latest run failed" : "Every workflow's latest run passed"}
+          sub={
+            m.failing.length
+              ? "Their most recent default-branch run failed, whenever it ran"
+              : !m.synced
+                ? "Not verified until GitHub is synced"
+                : m.synced < m.repos
+                  ? `None in the ${m.synced} synced repositories; the rest are not verified`
+                  : "Every workflow's most recent default-branch run passed"
+          }
+          source={`GitHub · latest run of each workflow, any age · ${m.synced} of ${m.repos} repositories synced`}
           tone={m.failing.length ? "bad" : "accent"}
         />
       </div>
@@ -72,7 +83,9 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
             </span>
           </div>
           <RunsChart days={m.days} />
-          <div className="card-foot muted small">From each repository's latest 10 runs on its default branch. Runs older than that are not fetched.</div>
+          <div className="card-foot muted small">
+            Last {WINDOW} days, from each repository's latest 10 runs on its default branch; older runs are not fetched. Red bars are failed runs, including ones a later run fixed, so they can differ from the workflows failing now.
+          </div>
         </section>
 
         <section className="card">
@@ -138,8 +151,10 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <div className="grid mc-row">
         <section className="card">
           <div className="card-head">
-            <h2 className="grow">Failing workflows</h2>
-            <span className="muted small">{m.failing.length}</span>
+            <h2 className="grow">Workflows failing now</h2>
+            <span className="muted small" title="A workflow is failing now when its most recent run on the default branch failed. Failed runs that were later fixed are counted only in the runs chart.">
+              {m.failing.length} · latest run failed
+            </span>
           </div>
           {m.failing.length === 0 ? (
             <div className="empty">{m.synced ? "No workflow's latest run has failed." : "Refresh to load workflow runs from GitHub."}</div>
@@ -260,13 +275,14 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
   );
 }
 
-function Tile({ label, value, sub, tone, onClick }: { label: string; value: number; sub: string; tone?: "accent" | "bad"; onClick?: () => void }) {
+function Tile({ label, value, sub, source, tone, onClick }: { label: string; value: number; sub: string; source: string; tone?: "accent" | "bad"; onClick?: () => void }) {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag className={`card tile ${tone ?? ""}`} onClick={onClick} style={{ textAlign: "left" }}>
       <div className="eyebrow">{label}</div>
       <div className="num">{value.toLocaleString()}</div>
       <div className="sub">{sub}</div>
+      <div className="src">{source}</div>
     </Tag>
   );
 }
