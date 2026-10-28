@@ -11,10 +11,6 @@ pub const FEED_PATH: &str = "/api/hooks/feed";
 pub const PUBLISH_PATH: &str = "/api/hooks/atlas";
 const MAX_EVENTS: usize = 50;
 
-fn site(sync: &UsageSync) -> Option<(String, String)> {
-    Some((sync.url()?, secrets::read_usage_sync_key()?))
-}
-
 async fn refused(r: reqwest::Response, path: &str) -> String {
     let code = r.status().as_u16();
     let msg = r
@@ -40,7 +36,8 @@ pub async fn live_feed(
     after: Option<i64>,
     sync: tauri::State<'_, UsageSync>,
 ) -> Result<Option<serde_json::Value>, String> {
-    let Some((url, key)) = site(&sync) else {
+    // The URL is an https origin (usage_sync::normalize_url); the key only goes in the header.
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
         return Ok(None);
     };
     let mut req = sync
@@ -67,7 +64,8 @@ pub async fn live_publish(
     events: Vec<serde_json::Value>,
     sync: tauri::State<'_, UsageSync>,
 ) -> Result<(), String> {
-    let Some((url, key)) = site(&sync) else {
+    // The URL is an https origin (usage_sync::normalize_url); the key only goes in the header.
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
         return Ok(());
     };
     if events.is_empty() {
