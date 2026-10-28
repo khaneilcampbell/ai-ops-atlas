@@ -11,6 +11,7 @@ import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } 
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
+import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
 import {
   FRAMEWORK_COLORS,
@@ -421,6 +422,7 @@ export function MapView() {
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
   const map3d = useRef<Map3DApi>(null);
+  const phone = useMedia(PHONE_QUERY);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
   const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
@@ -943,6 +945,8 @@ export function MapView() {
             <Map3D
               ref={map3d}
               layout={layout}
+              // On a phone the inspector is a sheet over the lower half of the map (mobile.css).
+              cover={phone && (selection || pickedLink) ? 0.4 : 0}
               selKey={selKey}
               selectedDistrict={selectedDistrict}
               focus={focus}

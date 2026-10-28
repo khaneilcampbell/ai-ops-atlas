@@ -68,3 +68,25 @@ test("mission control, active agents", async ({ page }) => {
   await settle(page);
   await check(page, "active-agents");
 });
+
+// iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.
+test.describe("phone", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("map", async ({ page }) => {
+    await openAtlas(page);
+    await waitForScene(page);
+    // Every toolbar control sits inside the screen.
+    const box = await page.locator(".map-controls").boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    await check(page, "phone-map");
+  });
+
+  test("map, building selected", async ({ page }) => {
+    await openAtlas(page);
+    await waitForScene(page);
+    await selectBuilding(page, "AI Ops Atlas");
+    await check(page, "phone-map-selected");
+  });
+});
