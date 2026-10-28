@@ -6,6 +6,8 @@ import { useIntel } from "../intel/state";
 import { load, remove, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
+import { isHostedWeb } from "../lib/env";
+import { fetchWebSnapshot, syncConfigured, usageSync, type SyncStatus, type WebSnapshot } from "../usage/sync";
 import {
   PERIODS,
   compact,
@@ -35,29 +37,42 @@ const KNOWN_PROVIDERS = ["anthropic", "openai"];
 /** Reads usage Atlas already logged, on open and when Refresh is pressed. No polling, no model calls. */
 function useUsageData() {
   const intel = useIntel();
+  const hosted = isHostedWeb();
   const [runs, setRuns] = useState<Run[] | null>(null);
+  const [snapshot, setSnapshot] = useState<WebSnapshot | null>(null);
+  const [sync, setSync] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(intel.available);
+  const [loading, setLoading] = useState(intel.available || hosted);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [imports, setImports] = useState<ImportStore>(() => load<ImportStore>(IMPORT_KEY, { files: [], records: [] }));
+  const agentName = intel.status?.name ?? "Repository Intelligence";
+  const agentRef = useRef(agentName);
+  agentRef.current = agentName;
 
   const refresh = useCallback(async () => {
     setImports(load<ImportStore>(IMPORT_KEY, { files: [], records: [] }));
-    if (!intel.available) {
+    if (!intel.available && !hosted) {
       setUpdatedAt(new Date().toISOString());
       return;
     }
     setLoading(true);
     try {
-      setRuns(await intelApi.runs());
+      if (intel.available) {
+        setRuns(await intelApi.runs());
+        // Refresh also sends the records to the website, when website sync is set up.
+        const st = await usageSync.status();
+        setSync(syncConfigured(st) ? await usageSync.push(agentRef.current).catch(() => usageSync.status()) : st);
+      } else {
+        setSnapshot(await fetchWebSnapshot());
+      }
       setError(null);
       setUpdatedAt(new Date().toISOString());
     } catch (e) {
-      setError(String(e));
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [intel.available]);
+  }, [intel.available, hosted]);
 
   useEffect(() => {
     void refresh();
@@ -76,11 +91,14 @@ function useUsageData() {
     setImports({ files: [], records: [] });
   };
 
-  const agentName = intel.status?.name ?? "Repository Intelligence";
-  const records = useMemo(() => [...recordsFromRuns(runs ?? [], agentName), ...imports.records], [runs, agentName, imports.records]);
+  const records = useMemo(
+    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...imports.records],
+    [runs, agentName, snapshot, imports.records],
+  );
   const oldestRun = runs?.find((r) => r.usage)?.started_at ?? null;
+  const firstLoad = loading && runs === null && snapshot === null;
 
-  return { available: intel.available, keyPresent: intel.status?.key_present ?? false, records, runs, imports, loading, error, updatedAt, oldestRun, refresh, addImport, clearImports };
+  return { available: intel.available, keyPresent: intel.status?.key_present ?? false, records, runs, snapshot, sync, imports, loading, firstLoad, error, updatedAt, oldestRun, refresh, addImport, clearImports };
 }
 
 export function UsageView() {
@@ -101,7 +119,7 @@ export function UsageView() {
   }, [catalog.projects]);
 
   const hasAny = data.records.length > 0;
-  const firstLoad = data.loading && data.runs === null;
+  const firstLoad = data.firstLoad;
   const cached = t.cacheRead + t.cacheWrite;
   const billedProviders = new Set(summary.inWindow.filter((r) => r.costKind === "billed").map((r) => r.provider));
 
@@ -126,11 +144,26 @@ export function UsageView() {
           </button>
         </div>
       </div>
-      {(hasAny || data.available) && <div className="usage-meta small muted">
-        {data.updatedAt ? <>Last updated {new Date(data.updatedAt).toLocaleString()} · </> : null}
-        Showing the {span}
-        {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
-      </div>}
+      {(hasAny || data.available) && (
+        <div className="usage-meta small muted">
+          {data.updatedAt ? <>Last updated {new Date(data.updatedAt).toLocaleString()} · </> : null}
+          Showing the {span}
+          {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
+          {data.snapshot?.pushedAt && <> · Synced from your Mac {relative(data.snapshot.pushedAt)}</>}
+          {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}
+        </div>
+      )}
+      {syncConfigured(data.sync) && data.sync?.last_error && (
+        <div className="notice usage-sync-error">
+          <Icon name="alert" size={14} />
+          <span className="grow">
+            Website sync failed: {data.sync.last_error}{" "}
+            <button className="text-btn small" onClick={() => setView("settings")}>
+              Sync settings
+            </button>
+          </span>
+        </div>
+      )}
 
       {data.error && (
         <div className="card card-pad usage-error" role="alert">
@@ -148,7 +181,7 @@ export function UsageView() {
       {firstLoad ? (
         <div className="card empty">Reading recorded usage…</div>
       ) : !hasAny ? (
-        <SetupState available={data.available} keyPresent={data.keyPresent} onSettings={() => setView("settings")} onImport={data.addImport} />
+        <SetupState available={data.available} keyPresent={data.keyPresent} snapshot={data.snapshot} onSettings={() => setView("settings")} onImport={data.addImport} />
       ) : (
         <div className={data.loading ? "usage-body refetching" : "usage-body"}>
           <div className="grid usage-kpis">
@@ -535,7 +568,24 @@ function UsageTable({ records, projectName, span }: { records: UsageRecord[]; pr
 
 // ── Setup ───────────────────────────────────────────────────────────────────
 
-function SetupState({ available, keyPresent, onSettings, onImport }: { available: boolean; keyPresent: boolean; onSettings: () => void; onImport: (name: string, r: UsageRecord[]) => void }) {
+function SetupState({
+  available,
+  keyPresent,
+  snapshot,
+  onSettings,
+  onImport,
+}: {
+  available: boolean;
+  keyPresent: boolean;
+  snapshot: WebSnapshot | null;
+  onSettings: () => void;
+  onImport: (name: string, r: UsageRecord[]) => void;
+}) {
+  const webLine = !snapshot?.configured
+    ? "Turn on Website sync in the Mac app (Settings → Website sync). After that, the Mac sends its records here after each run and when you press Refresh there."
+    : snapshot.pushedAt
+      ? `Your Mac last synced ${relative(snapshot.pushedAt)}, and it hadn't recorded any usage yet. Run an analysis on the Mac to see the first record.`
+      : "Website sync is set up on this site, but your Mac hasn't sent anything yet. Open API Usage on the Mac and press Refresh.";
   return (
     <div className="card usage-setup">
       <div className="usage-setup-head">
@@ -547,13 +597,13 @@ function SetupState({ available, keyPresent, onSettings, onImport }: { available
           <p className="muted">
             {available
               ? "Atlas only shows usage it can read from a real record. Until one exists, there's nothing to total, and nothing runs in the background."
-              : "The Mac app records each run's tokens and estimated cost using the API key in its Keychain. This website never receives your keys or that record, so it has nothing to show yet. That doesn't mean nothing was used."}
+              : "The Mac app records each run's tokens and estimated cost using the API key in its Keychain. This website never receives your keys; it only shows the usage records your Mac sends it."}
           </p>
         </div>
       </div>
       <ol className="usage-steps">
         <li>
-          <div className="title">{available ? "Record usage from Atlas's own agent" : "See it in the Mac app"}</div>
+          <div className="title">{available ? "Record usage from Atlas's own agent" : "Sync it from the Mac app"}</div>
           {available ? (
             <p className="muted">
               {keyPresent
@@ -561,7 +611,7 @@ function SetupState({ available, keyPresent, onSettings, onImport }: { available
                 : "Add an Anthropic API key under Settings → Repository intelligence. The key stays in the macOS Keychain. Each analysis then logs the tokens Anthropic reports, and an estimated cost."}
             </p>
           ) : (
-            <p className="muted">Open AI Ops Atlas on your Mac and choose API Usage in the sidebar. Your recorded runs, spend and tokens are there.</p>
+            <p className="muted">{webLine}</p>
           )}
           {available && !keyPresent && (
             <button className="btn small" onClick={onSettings}>

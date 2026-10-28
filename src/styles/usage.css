@@ -77,3 +77,6 @@
 .usage-steps .title { font-weight: 500; }
 .usage-steps p { margin: 4px 0 8px; max-width: 64ch; }
 .usage-setup-note { margin: 18px 0 0; }
+.usage-sync-error { margin: -6px 0 16px; align-items: center; }
+.usage-sync-error .grow { flex: 1; }
+.sync-key { margin-top: 8px; padding: 8px 10px; background: var(--sage-100); border-radius: var(--radius-sm); word-break: break-all; }

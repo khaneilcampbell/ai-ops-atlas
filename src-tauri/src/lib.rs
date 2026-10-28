@@ -2,6 +2,7 @@ mod actions;
 mod github;
 mod intel;
 mod secrets;
+mod usage_sync;
 
 pub fn run() {
     tauri::Builder::default()
@@ -12,6 +13,7 @@ pub fn run() {
         .manage(github::Client::new())
         .setup(|app| {
             intel::setup(app)?;
+            usage_sync::setup(app)?;
             actions::setup(app)
         })
         .invoke_handler(tauri::generate_handler![
@@ -36,6 +38,11 @@ pub fn run() {
             actions::actions_token_set,
             actions::actions_token_clear,
             actions::action_rerun_failed,
+            usage_sync::usage_sync_status,
+            usage_sync::usage_sync_set_url,
+            usage_sync::usage_sync_new_key,
+            usage_sync::usage_sync_clear,
+            usage_sync::usage_sync_push,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AI Ops Atlas");

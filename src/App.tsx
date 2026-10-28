@@ -15,6 +15,7 @@ import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
+import { useAutoPush } from "./usage/sync";
 import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { PHONE_QUERY, useMedia } from "./lib/media";
@@ -34,6 +35,7 @@ export default function App() {
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
   const phone = useMedia(PHONE_QUERY);
+  useAutoPush();
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {

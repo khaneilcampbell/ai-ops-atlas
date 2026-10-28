@@ -23,7 +23,7 @@ export interface UsageRecord {
   /** null when no price was configured for the model, so the cost is unknown. */
   costUsd: number | null;
   costKind: CostKind;
-  source: "atlas" | "import";
+  source: "atlas" | "import" | "sync";
 }
 
 /** Runs the repository intelligence agent logged. Only runs that reached the provider carry usage. */
