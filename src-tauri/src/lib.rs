@@ -3,6 +3,7 @@ mod github;
 mod intel;
 mod live;
 mod secrets;
+mod steward;
 mod usage_sync;
 
 pub fn run() {
@@ -16,10 +17,17 @@ pub fn run() {
         .setup(|app| {
             intel::setup(app)?;
             usage_sync::setup(app)?;
+            steward::setup(app)?;
             actions::setup(app)
         })
         .invoke_handler(tauri::generate_handler![
             github::github_get,
+            steward::steward_state,
+            steward::steward_run,
+            steward::steward_pause,
+            steward::steward_configure,
+            steward::steward_dismiss,
+            steward::steward_import,
             secrets::vault_status,
             secrets::vault_unlock,
             secrets::github_token_status,

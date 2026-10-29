@@ -58,7 +58,7 @@ describe("agent tiers", () => {
   const tiers = (t: string) => [...org.records.values()].filter((r) => r.tier.value === t).map((r) => r.id).sort();
 
   it("puts AI Ops Atlas agents that work across repositories at the center", () => {
-    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
+    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-github-steward", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
   });
 
   it("makes orchestrators coordinators", () => {
@@ -97,7 +97,7 @@ describe("automation categories", () => {
       ],
       monitoring: ["health-report"],
       intelligence: ["atlas-engineering-review", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
-      maintenance: ["career-db-validator", "db-backup", "docs-builder", "site-audit", "site-builder"],
+      maintenance: ["atlas-github-steward", "career-db-validator", "db-backup", "docs-builder", "site-audit", "site-builder"],
     });
   });
 
