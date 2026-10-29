@@ -225,7 +225,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // Largest first packs tighter; ties keep catalog order.
       .sort((a, c) => c.w - a.w);
     // An empty park keeps the "room for the next project" corner of the original map.
-    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 6, h: 6 });
+    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 8, h: 8 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };
   });

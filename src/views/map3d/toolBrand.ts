@@ -6,6 +6,8 @@ const BRANDS: Record<string, ToolBrand> = {
   Starbucks: {primary:"#00754a",secondary:"#174b37",wall:"#e8e2d5",roof:"#263a30",rounded:true},
   Zara: {primary:"#151515",secondary:"#49443c",wall:"#eeeae0",roof:"#2c2b29"},
   Smashburger: {primary:"#c62828",secondary:"#ea7738",wall:"#eee1d4",roof:"#40332d"},
+  Anthropic: { primary: "#d97757", secondary: "#141413", wall: "#f0eee6", roof: "#3d3929", stepped: true },
+  OpenAI: { primary: "#202123", secondary: "#10a37f", wall: "#ececea", roof: "#202123", rounded: true },
   Canva: { primary: "#00c4cc", secondary: "#7d2ae7", wall: "#e0edee", roof: "#47346b", rounded: true },
   Stripe: { primary: "#635bff", secondary: "#9a8cff", wall: "#e1e4f2", roof: "#353958", stepped: true },
   Cloudflare: { primary: "#f48120", secondary: "#faae40", wall: "#eee8dc", roof: "#4e4941", rounded: true },
