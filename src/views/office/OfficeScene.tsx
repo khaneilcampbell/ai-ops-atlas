@@ -7,7 +7,7 @@ import type { LightMode } from "../map3d/living";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
-import { OfficeFinish, OfficeLighting, readOfficeLook, type OfficeLook } from "./lighting";
+import { OfficeFinish, OfficeLighting, SURFACE_COLORS } from "./lighting";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -43,17 +43,16 @@ export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
   // Render continuously only while something on screen moves; otherwise only on camera changes.
   const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
-  const [look] = useState<OfficeLook>(readOfficeLook);
   const phone = useMemo(() => window.matchMedia("(max-width: 700px)").matches, []);
   const spots = useMemo(() => desks.map((d) => ({ x: d.ws.x, z: d.ws.z })), [desks]);
   return (
-    <Canvas shadows={look === "classic" ? true : "percentage"} dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas shadows="percentage" dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <OfficeCamera plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} look={look} desks={spots} />
+      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} desks={spots} />
       {desks.map((d) => (
         <AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light === "night"} selected={props.selected === d.ws.agentId} onSelect={props.onSelect} />
       ))}
-      <OfficeFinish look={look} phone={phone} />
+      <OfficeFinish phone={phone} />
     </Canvas>
   );
 }
@@ -168,10 +167,10 @@ const RING = new THREE.RingGeometry(0.9, 0.98, 48);
 
 const std = (color: string, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o });
 const MAT = {
-  floor: patterned("#d8d2c3", "stone", { roughness: 0.75 }),
-  rug: std("#2f4535", { roughness: 1 }),
-  wall: std("#ece5d2"),
-  trim: std("#2f4535", { roughness: 0.6 }),
+  floor: patterned(SURFACE_COLORS.floor, "stone", { roughness: 0.75 }),
+  rug: std(SURFACE_COLORS.rug, { roughness: 1 }),
+  wall: std(SURFACE_COLORS.wall),
+  trim: std(SURFACE_COLORS.trim, { roughness: 0.6 }),
   frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
   grass: patterned("#8fae6a", "grass"),
   oak: std("#c49a6c", { roughness: 0.55 }),
@@ -190,8 +189,6 @@ const MAT = {
   ledOff: new THREE.MeshBasicMaterial({ color: "#3d4a41" }),
 };
 
-const SURFACES = { wall: MAT.wall, floor: MAT.floor, rug: MAT.rug, trim: MAT.trim };
-
 const shadow = { castShadow: true, receiveShadow: true } as const;
 
 function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, number]; m: THREE.Material; r?: [number, number, number] }) {
@@ -201,7 +198,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count, look, desks }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; look: OfficeLook; desks: { x: number; z: number }[] }) {
+function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; desks: { x: number; z: number }[] }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -218,7 +215,7 @@ function OfficeEnvironment({ plan, wall, light, count, look, desks }: { plan: Of
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
-      <OfficeLighting look={look} light={light} size={Math.max(w, d)} height={H} desks={desks} mats={SURFACES} />
+      <OfficeLighting light={light} size={Math.max(w, d)} height={H} desks={desks} />
 
       <mesh geometry={CYL} material={MAT.grass} position={[0, -0.32, 0]} scale={[Math.max(w, d) * 3.2, 0.5, Math.max(w, d) * 3.2]} receiveShadow />
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
