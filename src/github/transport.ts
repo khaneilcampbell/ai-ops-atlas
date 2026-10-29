@@ -89,16 +89,32 @@ export function clearEtags() {
   save("etags", {});
 }
 
+/** Drops cached responses whose path matches, and saves at once rather than on the debounce. */
+export function forgetEtags(match: (path: string) => boolean) {
+  const cache = etagCache();
+  const stale = Object.keys(cache).filter(match);
+  if (!stale.length) return;
+  for (const path of stale) delete cache[path];
+  clearTimeout(saveTimer);
+  save("etags", cache);
+}
+
+export interface GetOptions {
+  /** False keeps the response out of the ETag cache, which lives in plain local storage. Use it for anything private. */
+  cache?: boolean;
+}
+
 /**
  * Read-only GitHub GET. Inside the desktop app the request goes through the Rust side,
  * which adds the Keychain token so it never reaches the web view. The hosted web build
  * goes through its `/api/github` function, which holds the token on the server. In a
  * plain browser (vite dev) it falls back to an unauthenticated fetch of public data.
  */
-export async function githubGet(path: string): Promise<unknown> {
+export async function githubGet(path: string, options: GetOptions = {}): Promise<unknown> {
   // Don't spend requests GitHub will refuse; wait for the window to reset instead.
   if (budgetExhausted()) throw new GithubError(`GitHub's hourly limit is used up. It resets at ${resetTime(rate!)}.`, 429);
-  const cached = etagCache()[path];
+  const useCache = options.cache !== false;
+  const cached = useCache ? etagCache()[path] : undefined;
   let res: GithubResponse;
   if (isTauri()) {
     const { invoke } = await import("@tauri-apps/api/core");
@@ -140,7 +156,7 @@ export async function githubGet(path: string): Promise<unknown> {
   track(res);
   if (res.status === 304 && cached) return cached.body;
   if (res.status >= 200 && res.status < 300) {
-    if (res.etag) remember(path, res.etag, res.body);
+    if (res.etag && useCache) remember(path, res.etag, res.body);
     return res.body;
   }
   const msg = (res.body as { message?: string } | null)?.message;
