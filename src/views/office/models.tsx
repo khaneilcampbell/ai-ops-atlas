@@ -1,5 +1,5 @@
 import { Component, Suspense, useEffect, useMemo, type ReactNode } from "react";
-import { useAnimations, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -69,8 +69,15 @@ const TINT_FRAG = `
   }
 `;
 
-/** AgentModel: the seated agent figure, its shirt in the agent's color, greyed out when offline. */
-export function AgentModel({ accent, state, reduced, seed }: { accent: string; state: Runtime["state"]; reduced: boolean; seed: number }) {
+/**
+ * AgentModel: the seated agent figure, facing the desk (-z), its hips at the origin so it sits where
+ * it is placed. Its shirt takes the agent's color and it greys out when offline.
+ *
+ * The figure holds the first frame of its sit clip (upright, hands in lap). The clip is not played:
+ * the rest of it hunches forward, and the office draws on demand, so a playing clip jumped from pose
+ * to pose whenever the view changed.
+ */
+export function AgentModel({ accent, state }: { accent: string; state: Runtime["state"] }) {
   const { scene, animations } = useModel("agent");
   const offline = state === "offline";
   const { obj, uniforms } = useMemo(() => {
@@ -88,27 +95,35 @@ export function AgentModel({ accent, state, reduced, seed }: { accent: string; s
       };
       m.material = mat;
     });
-    // Seated figure, facing the desk (-z in the workstation's frame).
-    return { obj: fit(o, 1.7), uniforms };
-  }, [scene, accent]);
+    // Scale from the bind pose (a T-pose), so the figure is person-sized, then strike the seated pose.
+    o.updateMatrixWorld(true);
+    const bind = new THREE.Box3().setFromObject(o, true);
+    o.scale.setScalar(AGENT_HEIGHT / (bind.max.y - bind.min.y));
+    if (animations[0]) new THREE.AnimationMixer(o).clipAction(animations[0]).play().getMixer().setTime(0);
+    o.updateMatrixWorld(true);
+    const posed = new THREE.Box3().setFromObject(o, true);
+    let hips: THREE.Object3D | undefined;
+    o.traverse((n) => {
+      if (!hips && /hips/i.test(n.name)) hips = n;
+    });
+    const at = hips ? hips.getWorldPosition(new THREE.Vector3()) : posed.getCenter(new THREE.Vector3());
+    o.position.set(-at.x, -posed.min.y, -at.z);
+    const holder = new THREE.Group();
+    holder.rotation.y = Math.PI;
+    holder.add(o);
+    return { obj: holder, uniforms };
+  }, [scene, animations, accent]);
+  const invalidate = useThree((t) => t.invalidate);
   useEffect(() => {
     uniforms.uGrey.value = offline ? 1 : 0;
-  }, [offline, uniforms]);
-
-  const { actions, names } = useAnimations(animations, obj);
-  useEffect(() => {
-    const a = actions[names[0]];
-    if (!a) return;
-    a.play();
-    // Spread the idle loops so two agents never breathe in step.
-    a.time = seed * a.getClip().duration;
-    a.paused = reduced || offline;
-    a.timeScale = state === "working" ? 1.25 : 0.8;
-    return () => void a.stop();
-  }, [actions, names, reduced, offline, state, seed]);
+    invalidate();
+  }, [offline, uniforms, invalidate]);
 
   return <primitive object={obj} />;
 }
+
+/** Standing height of the agent figure, in metres. */
+const AGENT_HEIGHT = 1.7;
 
 for (const n of OFFICE_MODELS) useGLTF.preload(url(n), false, false);
 

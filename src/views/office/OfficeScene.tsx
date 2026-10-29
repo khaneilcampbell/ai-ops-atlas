@@ -383,14 +383,15 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       </Swap>
       <Swap fallback={<AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />}>
         <group position={[0, 0, AGENT_Z]}>
-          <AgentModel accent={d.accent} state={state} reduced={reduced} seed={hash(d.ws.agentId)} />
+          <AgentModel accent={d.accent} state={state} />
         </group>
       </Swap>
     </group>
   );
 }
 
-const AGENT_Z = 0.97;
+/** Where the agent sits: hips over the chair seat. */
+const AGENT_Z = 0.7;
 
 function ProcDesk() {
   return (
