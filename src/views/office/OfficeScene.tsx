@@ -8,6 +8,7 @@ import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
 import { OfficeFinish, OfficeLighting, SURFACE_COLORS } from "./lighting";
+import { AgentModel, Prop, Swap } from "./models";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -210,8 +211,8 @@ function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePl
     MAT.pane.emissive.set(night ? "#2c3f66" : "#cfe6f2");
     MAT.pane.emissiveIntensity = night ? 0.6 : 0.55;
   }, [night]);
-  // Windows: three on the left wall, two on the back wall either side of the display.
-  const leftWins = [-d / 3, 0, d / 3];
+  // Windows: two on the left wall either side of the bookshelf, two on the back wall either side of the display.
+  const leftWins = [-d / 3, d / 3];
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
@@ -257,18 +258,47 @@ function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePl
 
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
       <group position={[-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
-        <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
-        {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
-          <group key={y}>
-            <Box p={[0.12, y, 0.315]} s={[0.4, 0.2, 0.01]} m={MAT.frame} />
-            <mesh geometry={BOX} material={i % 2 ? MAT.ledOff : MAT.led} position={[-0.2, y, 0.32]} scale={[0.03, 0.03, 0.01]} />
-          </group>
-        ))}
+        <Swap fallback={<ProcRack />}>
+          <Prop name="rack" height={1.9} ry={RACK_RY} />
+        </Swap>
+      </group>
+      <group position={[-w / 2 + 0.3, 0, 0]}>
+        <Swap fallback={null}>
+          <Prop name="bookshelf" height={2.0} ry={SHELF_RY} />
+        </Swap>
       </group>
 
-      <Plant p={[w / 2 - 0.5, 0, -d / 2 + 0.5]} s={1.1} />
-      <Plant p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
-      <Plant p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
+      <PlantModel p={[w / 2 - 0.5, 0, -d / 2 + 0.5]} s={1.1} />
+      <PlantModel p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
+      <PlantModel p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
+    </group>
+  );
+}
+
+const RACK_RY = -Math.PI / 4;
+const SHELF_RY = 0;
+const DESK_RY = Math.PI / 2;
+const CHAIR_RY = Math.PI;
+
+function PlantModel({ p, s }: { p: [number, number, number]; s: number }) {
+  return (
+    <Swap fallback={<Plant p={p} s={s} />}>
+      <Prop name="plant" height={1.25 * s} position={p} />
+    </Swap>
+  );
+}
+
+/** The box-built rack, shown until the model loads. Its lights are decoration, not telemetry. */
+function ProcRack() {
+  return (
+    <group>
+      <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
+      {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
+        <group key={y}>
+          <Box p={[0.12, y, 0.315]} s={[0.4, 0.2, 0.01]} m={MAT.frame} />
+          <mesh geometry={BOX} material={i % 2 ? MAT.ledOff : MAT.led} position={[-0.2, y, 0.32]} scale={[0.03, 0.03, 0.01]} />
+        </group>
+      ))}
     </group>
   );
 }
@@ -324,10 +354,9 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
         </mesh>
       )}
       {/* Desk */}
-      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
-      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
+      <Swap fallback={<ProcDesk />}>
+        <Prop name="desk" height={0.765} width={1.5} ry={DESK_RY} />
+      </Swap>
       {/* Monitor and its soft spill on the desk */}
       <Box p={[0, 0.82, -0.2]} s={[0.22, 0.02, 0.16]} m={MAT.dark} />
       <Box p={[0, 0.94, -0.24]} s={[0.05, 0.22, 0.04]} m={MAT.dark} />
@@ -349,8 +378,27 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
         <meshBasicMaterial map={plate} toneMapped={false} transparent />
       </mesh>
       <AgentStatusIndicator state={state} reduced={reduced} />
-      <Chair />
-      <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
+      <Swap fallback={<Chair />}>
+        <Prop name="chair" height={1.05} ry={CHAIR_RY} position={[0, 0, 0.66]} />
+      </Swap>
+      <Swap fallback={<AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />}>
+        <group position={[0, 0, AGENT_Z]}>
+          <AgentModel accent={d.accent} state={state} reduced={reduced} seed={hash(d.ws.agentId)} />
+        </group>
+      </Swap>
+    </group>
+  );
+}
+
+const AGENT_Z = 0.97;
+
+function ProcDesk() {
+  return (
+    <group>
+      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
+      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
     </group>
   );
 }

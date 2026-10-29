@@ -95,3 +95,20 @@ function spread(d: Buffer): number {
   const mean = sum / n;
   return Math.sqrt(Math.max(0, sq / n - mean * mean));
 }
+
+/**
+ * Waits for the office canvas to be sized and drawn. The office holds its first frame until its
+ * models have loaded, which takes real time (network and image decoding), not fake-clock time.
+ */
+export async function waitForOffice(page: Page, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const w = await page.evaluate(() => document.querySelector<HTMLCanvasElement>(".office-stage canvas")?.width ?? 0);
+    if (w > 300) {
+      await settle(page, 3);
+      return waitForScene(page);
+    }
+    await page.waitForTimeout(500);
+    await settle(page, 1);
+  }
+  throw new Error("The office never drew: its canvas was never sized.");
+}
