@@ -48,10 +48,14 @@ describe("decorative vehicles", () => {
 
   it("stays on the paved paths and bridges, clear of every building and kiosk", () => {
     const paths = scene.paving.filter((p) => p.y === TERRACE_H);
-    for (const v of plans)
-      // Every 0.08s is under 0.03 of travel, finer than any wall's clearance.
-      for (let t = 0; t < v.period; t += 0.08) {
-        const { x, y, z } = vehicleAt(v, t);
+    const checked = new Set<string>();
+    for (const v of plans) for (const leg of v.legs) {
+      const samples = Math.max(1, Math.ceil(Math.hypot(leg.b[0]-leg.a[0],leg.b[1]-leg.a[1])/0.02));
+      // Sample every geometric leg, including its endpoints, independently of fleet size and speed.
+      for (let sample=0;sample<=samples;sample++) {
+        const f=sample/samples,x=leg.a[0]+(leg.b[0]-leg.a[0])*f,z=leg.a[1]+(leg.b[1]-leg.a[1])*f,y=leg.ya+(leg.yb-leg.ya)*f;
+        const key=[x,y,z].map(n=>n.toFixed(6)).join(":");
+        if(checked.has(key))continue;checked.add(key);
         const onDeck = decks.some((d) => inside(d, x, z, 0.01));
         expect(onDeck || paths.some((p) => inside(p, x, z, 0.01)), `${v.id} off the path at ${x},${z}`).toBe(true);
         // Off a bridge, vehicles keep to the paving; on one, to the deck's rise.
@@ -63,6 +67,7 @@ describe("decorative vehicles", () => {
         for (const k of scene.kiosks) expect(inside({ x: k.x - k.size / 2, z: k.z - k.size / 2, w: k.size, d: k.size }, x, z, 0.08), `${v.id} inside ${k.key}`).toBe(false);
         for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
       }
+    }
   }, 15000);
 
   it("keeps fountains clear of the towers", () => {
