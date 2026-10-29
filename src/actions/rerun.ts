@@ -44,6 +44,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   attempted: "Sent",
   started: "Started",
   merged: "Merged",
+  // Written only by in-app editing, which has been removed; older audit lines still use it.
   opened: "Pull request opened",
   failed: "Failed",
   unknown: "Outcome unknown",
@@ -64,8 +65,8 @@ export function describeRecord(r: AuditRecord): { title: string; subject: string
   if (r.action === "propose_edit") {
     const n = r.pull_number;
     return {
-      title: `Edit ${r.path ?? "a file"}: ${STAGE_LABEL[r.stage]}`,
-      subject: n ? `#${n}${r.title ? ` ${r.title}` : ""}` : (r.title ?? r.path ?? "Edit"),
+      title: `Edit: ${STAGE_LABEL[r.stage]}`,
+      subject: n ? `#${n}${r.title ? ` ${r.title}` : ""}` : (r.title ?? "Edit"),
       url: n ? `https://github.com/${r.repo}/pull/${n}` : `https://github.com/${r.repo}`,
       result,
     };

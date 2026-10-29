@@ -17,7 +17,6 @@ import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
-import { EditDetailsButton, EditFilesButton, InspectorEditRow } from "./edit/EditControls";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -94,7 +93,6 @@ function ProjectDetail({ id }: { id: string }) {
   return <>
     <Head eyebrow="Project building" title={project.name}>
       <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
-      <InspectorEditRow><EditDetailsButton target={project.file ? { kind: "project", file: project.file, name: project.name } : null} /></InspectorEditRow>
       {view === "map" && webglAvailable() && <button className="ghost-btn enter-building" onClick={() => enterBuilding(project.id, reduced)}><Icon name="agents" size={15} /> Enter building</button>}
     </Head>
     <div className="panel-body selectable">
@@ -138,9 +136,6 @@ function AgentDetail({ id }: { id: string }) {
           <StatusPill status={agent.status} />
           <span className="chip">{agent.framework}</span>
         </div>
-        <InspectorEditRow>
-          <EditDetailsButton target={project?.file ? { kind: "agent", file: project.file, id: agent.id, name: agent.name } : null} />
-        </InspectorEditRow>
       </Head>
       <div className="panel-body selectable">
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
@@ -266,10 +261,6 @@ function RepoDetail({ name }: { name: string }) {
           {snap?.archived && <span className="chip">Archived</span>}
         </div>
         {project && <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} /> Back to {project.name}</button>}
-        <InspectorEditRow>
-          <EditDetailsButton target={project?.file ? { kind: "project", file: project.file, name: project.name } : null} />
-          <EditFilesButton repo={name} />
-        </InspectorEditRow>
       </Head>
       <div className="panel-tabs" role="tablist" aria-label="Inspector sections">
         {REPO_TABS.map((t) => (

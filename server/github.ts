@@ -5,15 +5,10 @@ export interface GithubEnv {
   GITHUB_TOKEN?: string;
   /** Comma-separated owners whose repositories may be read. */
   ALLOWED_OWNERS?: string;
-  /** The editor's repositories (server/edit.ts). Only these may have file contents read. */
-  EDIT_REPOS?: string;
-  GITHUB_EDIT_TOKEN?: string;
 }
 
 const NAME = "[A-Za-z0-9_.-]+";
 const REPO_PATH = new RegExp(`^/repos/(${NAME})/(${NAME})(?:/(?:languages|commits|pulls|actions/runs|actions/workflows/${NAME}/runs))?$`);
-// File contents, for the in-app editor only: allowed just on the repositories editing is on for.
-const CONTENTS_PATH = new RegExp(`^/repos/(${NAME})/(${NAME})/contents(?:/[A-Za-z0-9_.@+%-]+)*$`);
 const USER_REPOS = new RegExp(`^/users/(${NAME})/repos$`);
 
 export function owners(env: GithubEnv): string[] {
@@ -24,13 +19,6 @@ export function owners(env: GithubEnv): string[] {
 export function refusal(path: string, env: GithubEnv): string | null {
   if (path.includes("..") || path.includes("//")) return "Path not allowed.";
   if (path === "/user/repos") return env.GITHUB_TOKEN ? null : "No token configured.";
-  const c = CONTENTS_PATH.exec(path);
-  if (c) {
-    const repo = `${c[1]}/${c[2]}`.toLowerCase();
-    const editable = !!env.GITHUB_EDIT_TOKEN && (env.EDIT_REPOS ?? "").split(",").some((r) => r.trim().toLowerCase() === repo);
-    if (!editable) return "Path not allowed.";
-    return owners(env).includes(c[1].toLowerCase()) ? null : "Owner not allowed.";
-  }
   const m = REPO_PATH.exec(path) ?? USER_REPOS.exec(path);
   if (!m) return "Path not allowed.";
   return owners(env).includes(m[1].toLowerCase()) ? null : "Owner not allowed.";

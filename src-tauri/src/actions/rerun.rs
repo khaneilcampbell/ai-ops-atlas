@@ -223,7 +223,6 @@ impl Rerunner {
             pull_number: None,
             title: None,
             base: None,
-            path: None,
             workflow: p.map(|p| p.workflow.clone()),
             run_number: p.and_then(|p| p.run_number),
             attempt_before: p.map(|p| p.attempt),
