@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import yaml from 'js-yaml';
+for (const file of fs.readdirSync('.github/workflows').filter(name => /\.ya?ml$/.test(name))) {
+  yaml.load(fs.readFileSync(`.github/workflows/${file}`, 'utf8'));
+}
 const ci = yaml.load(fs.readFileSync('.github/workflows/ci.yml', 'utf8'));
 assert.equal(ci.permissions.contents, 'read');
 assert.deepEqual(ci.jobs.macos.needs, ['web', 'rust', 'audit', 'security']);
