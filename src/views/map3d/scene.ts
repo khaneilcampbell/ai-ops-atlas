@@ -132,10 +132,11 @@ export interface Scene3D {
   /** Low path lights along each district's footpaths. */
   bollards: Point[];
   /** Pedestrian paths and level footbridges, with optional continuous building-to-building routes. */
-  walks: { x0: number; z0: number; x1: number; z1: number; y?: number; bridge?: boolean; route?: { gx: number; gy: number }[] }[];
+  walks: { x0: number; z0: number; x1: number; z1: number; y?: number; bridge?: boolean; shopEntrance?: boolean; route?: { gx: number; gy: number }[] }[];
   parks: Park[];
   houses: House[];
   kiosks: Kiosk[];
+  retail: Kiosk[];
   towers: Tower[];
   strays: StrayBuilding[];
   trees: Tree[];
@@ -175,6 +176,7 @@ export function buildScene(layout: Layout): Scene3D {
   const fountains: Scene3D["fountains"] = [];
   const bollards: Point[] = [];
   const parks: Park[] = [];
+  const retail: Kiosk[] = [];
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
@@ -394,6 +396,14 @@ export function buildScene(layout: Layout): Scene3D {
     const cx = p.ox + p.w / 2;
     const cz = p.oy + p.h / 2;
     parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
+    // Corner shops connect to a perimeter promenade, clear of Skyline’s central entrance.
+    for(const [i,name] of ["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].entries()) {
+      const x=name==="Starbucks"?cx:name==="Wells Fargo"?cx-(p.w/2-0.9):cx+(i%2===0?-1:1)*(p.w/2-0.9);
+      const z=cz+(["Zara","Wells Fargo"].includes(name)?-1:1)*(p.h/2-1.0);
+      retail.push({key:`retail:${p.id}:${i}`,projectId:p.id,name,users:[],x,z,size:0.85,canopy:"#c9a35a"});
+      paving.push(strip(x,z+0.34,x,["Zara","Wells Fargo"].includes(name)?cz-1.2:cz+2.65,0.32,top));
+    }
+    paving.push(strip(cx-2.75,cz-1.2,cx+2.75,cz-1.2,0.4,top),strip(cx-2.75,cz-1.2,cx-2.75,cz+2.65,0.4,top),strip(cx+2.75,cz-1.2,cx+2.75,cz+2.65,0.4,top),strip(cx-2.75,cz+2.65,cx+2.75,cz+2.65,0.4,top));
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
     fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
@@ -418,14 +428,12 @@ export function buildScene(layout: Layout): Scene3D {
       const park=parks.find(p=>p.id===id);
       if(!park) continue;
       const cx=park.x+park.w/2,cz=park.z+park.d/2;
-      const front=cz+1.05;
+
       // Keep each bridge approach straight on arrival; turn only at the front promenade.
-      const side=endpoint.gx<cx?cx-1.95:cx+1.95;
-      const path=endpoint.gy<cz+0.75
-        ? [endpoint,{gx:side,gy:endpoint.gy},{gx:side,gy:front},{gx:cx,gy:front}]
-        : [endpoint,{gx:endpoint.gx,gy:front},{gx:cx,gy:front}];
+      const buildings=[{gx:cx-0.75,gy:cz-0.475,size:1.5},{gx:cx-1.695,gy:cz-0.475,size:0.95},{gx:cx+0.745,gy:cz-0.475,size:0.95},...retail.filter(k=>k.projectId===id).map(k=>({gx:k.x-k.size/2,gy:k.z-k.size/2,size:k.size}))];
+      const path=toolWorkflowRoads(buildings[0],buildings.slice(1),[endpoint,{gx:cx,gy:cz+1.35}])[0]??[];
       for(let j=1;j<path.length;j++) paving.push(strip(path[j-1].gx,path[j-1].gy,path[j].gx,path[j].gy,0.4,top));
-      if(path.length>1) walks.push({x0:endpoint.gx,z0:endpoint.gy,x1:cx,z1:front,y:top,route:path});
+      if(path.length>1) walks.push({x0:endpoint.gx,z0:endpoint.gy,x1:cx,z1:cz+1.35,y:top,route:path});
     }
     // A level pedestrian boardwalk joins the terraces independently of the road bridge.
     walks.push(x ? { x0: a, z0: c, x1: b, z1: c, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) } : { x0: c, z0: a, x1: c, z1: b, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) });
@@ -437,12 +445,18 @@ export function buildScene(layout: Layout): Scene3D {
     walks.push({ x0: path.x + (path.w > path.d ? 0.08 : path.w / 2), z0: path.z + (path.d > path.w ? 0.08 : path.d / 2), x1: path.x + (path.w > path.d ? path.w - 0.08 : path.w / 2), z1: path.z + (path.d > path.w ? path.d - 0.08 : path.d / 2), y: top });
   }
 
+  // Shop visitors leave the promenade, enter through the center door, and return after a visit.
+  for(const shop of retail) {
+    const park=parks.find(p=>p.id===shop.projectId)!;
+    const startZ=shop.z<park.z+park.d/2 ? park.z+park.d/2-1.2 : park.z+park.d/2+2.65;
+    walks.push({x0:shop.x,z0:startZ,x1:shop.x,z1:shop.z+0.12,y:top,shopEntrance:true});
+  }
+
   // Residents approach the lobby, disappear inside, then return to the promenade.
   for (const park of parks) {
     const x=park.x+park.w/2,z=park.z+park.d/2;
-    paving.push(strip(x,z+0.25,x,park.z+park.d,0.5,top));
-    for(const side of [-1,1]) paving.push({x:x+side*0.75-0.5,z:z+1.24,w:1.0,d:0.48,y:top,h:0.03});
-    walks.push({x0:x,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top});
+    paving.push(strip(x,z+0.25,x,z+1.2,0.5,top),strip(x,z+1.2,x+0.95,z+1.2,0.4,top),strip(x+0.95,z+1.2,x+0.95,park.z+park.d,0.4,top));
+    walks.push({x0:x+0.95,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top,route:[{gx:x+0.95,gy:park.z+park.d-0.15},{gx:x+0.95,gy:z+1.2},{gx:x,gy:z+1.2},{gx:x,gy:z+0.25}]});
   }
 
   // Brooks run along the gaps between shelf rows, under small bridges, and fall into the sea at the shore.
@@ -546,7 +560,7 @@ export function buildScene(layout: Layout): Scene3D {
 
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
-  for (let i=trees.length-1;i>=0;i--) if (paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
+  for (let i=trees.length-1;i>=0;i--) if (paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
     land,
@@ -564,6 +578,7 @@ export function buildScene(layout: Layout): Scene3D {
     parks,
     houses,
     kiosks,
+    retail,
     towers,
     strays,
     trees,

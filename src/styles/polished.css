@@ -1,0 +1,60 @@
+/* Polished Atlas: shared chrome and information surfaces. */
+:root {
+  --forest-900: #14251e;
+  --forest-800: #1c3027;
+  --forest-700: #294237;
+  --sage-50: #f7f7f0;
+  --sage-100: #edf0e7;
+  --sage-200: #dce2d5;
+  --ink: #20372c;
+  --ink-2: #4d6054;
+  --ink-3: #6a7b6f;
+  --gold: #d0ad69;
+  --radius: 14px;
+  --shadow: 0 2px 5px #182b2110, 0 10px 28px #182b2109;
+}
+.header { background: linear-gradient(110deg, #182d23, #213a2e); box-shadow: 0 1px 0 #e3d0a31c; gap: 14px; }
+.header .brand { gap: 10px; }
+.search { background: #ffffff07; border-color: #e6ebdf21; border-radius: 12px; transition: background .15s, border-color .15s; }
+.search:focus-within { background: #ffffff0d; box-shadow: 0 0 0 3px #d0ad6914; }
+.sidebar { background: #192e24; gap: 7px; }
+.sidebar .nav-item { border-radius: 10px; transition: background .15s, color .15s; }
+.sidebar .nav-item.active { background: #d0ad6915; border-color: #d0ad6945; box-shadow: inset 3px 0 var(--gold); }
+.sidebar .nav-item span { letter-spacing: .055em; font-weight: 500; }
+.main { background: #e9ede3; }
+.page-head { gap: 18px; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid #20372c12; }
+.page-head h1 { letter-spacing: -.025em; }
+.page p { line-height: 1.6; }
+.repo-card { background: #f9faf5; border: 1px solid #253b2e14; box-shadow: var(--shadow); border-radius: 14px; transition: border-color .15s, box-shadow .15s; }
+.repo-card:hover { box-shadow: 0 4px 18px #182b2115; border-color: #b9944e85; }
+.repo-card .rname { font-size: 20px; letter-spacing: -.015em; }
+.repo-card .commit { background: #eef1e8; border: 1px solid #20372c09; }
+.panel { background: #f8f8f2; border-left: 1px solid #d0ad6940; box-shadow: -8px 0 32px #14251e24; }
+.panel .panel-head { padding: 22px 24px 18px; background: #f0f3e9; }
+.panel .panel-head h2 { letter-spacing: -.02em; line-height: 1.18; overflow-wrap: anywhere; }
+.panel .panel-body { padding: 22px 24px 30px; gap: 24px; }
+.panel-body > section + section { border-top: 1px solid #20372c10; padding-top: 18px; }
+.section-title { font-size: 10px; font-weight: 650; letter-spacing: .12em; color: #617367; }
+.chip { font-size: 11px; padding: 3px 9px; border-color: #20372c13; }
+.reg-row { border-radius: 9px; transition: background .15s; }
+.reg-row:hover { background: #e8eddf; }
+.reg-row.on { box-shadow: inset 3px 0 var(--gold); }
+.map-controls { box-shadow: 0 5px 24px #16271e26; border: 1px solid #d4dccb; border-radius: 14px; }
+.map-controls .icon-btn { border-radius: 9px; }
+.office-head > div { max-width: min(560px, 65vw); }
+.office-head h2 { font-size: 22px; line-height: 1.2; }
+.office-head .eyebrow { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 9px; }
+.office-head .muted.small { font-size: 10px; margin-top: 4px; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #b38a3f; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .header { gap: 8px; }
+  .page-head { gap: 12px; margin-bottom: 18px; padding-bottom: 14px; }
+  .panel .panel-head { padding: 16px 18px; }
+  .panel .panel-body { padding: 18px; gap: 18px; }
+  .sidebar .nav-item.active { box-shadow: inset 0 -2px var(--gold); }
+  .office-head h2 { font-size: 17px; }
+  .office-head .muted.small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search, .sidebar .nav-item, .repo-card, .reg-row { transition: none; }
+}

@@ -1,6 +1,11 @@
 /** Brand-inspired architecture; these accents identify companies, not runtime status. */
 export interface ToolBrand { primary: string; secondary: string; wall: string; roof: string; rounded?: boolean; stepped?: boolean }
 const BRANDS: Record<string, ToolBrand> = {
+  "Wells Fargo": {primary:"#c81726",secondary:"#a91420",wall:"#e7ddc7",roof:"#6b4331"},
+  Chipotle: {primary:"#a33d2d",secondary:"#633224",wall:"#e6ddd0",roof:"#382f2a"},
+  Starbucks: {primary:"#00754a",secondary:"#174b37",wall:"#e8e2d5",roof:"#263a30",rounded:true},
+  Zara: {primary:"#151515",secondary:"#49443c",wall:"#eeeae0",roof:"#2c2b29"},
+  Smashburger: {primary:"#c62828",secondary:"#ea7738",wall:"#eee1d4",roof:"#40332d"},
   Canva: { primary: "#00c4cc", secondary: "#7d2ae7", wall: "#e0edee", roof: "#47346b", rounded: true },
   Stripe: { primary: "#635bff", secondary: "#9a8cff", wall: "#e1e4f2", roof: "#353958", stepped: true },
   Cloudflare: { primary: "#f48120", secondary: "#faae40", wall: "#eee8dc", roof: "#4e4941", rounded: true },
@@ -14,3 +19,5 @@ export const TOOL_OFFICE_TOP = TOOL_OFFICE_HEIGHT + 0.4;
 export function toolBrand(name: string): ToolBrand {
   return BRANDS[name] ?? { primary: "#839b91", secondary: "#51685f", wall: "#dfe5de", roof: "#3b5147" };
 }
+
+export function toolOfficeHeight(name: string): number { return ["Starbucks", "Smashburger", "Chipotle", "Wells Fargo"].includes(name) ? TOOL_OFFICE_HEIGHT / 2 : TOOL_OFFICE_HEIGHT; }

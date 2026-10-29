@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: benjaire-ops
-  name: Benjaire Ops Dashboard
+  name: benjaire-dashboard
   summary: >-
     Private business dashboard for Benjaire: traffic, sales, inquiries, n8n
     automation health, Cloudflare infrastructure and a manual finance ledger.

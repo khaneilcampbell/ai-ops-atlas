@@ -1,4 +1,4 @@
-import { TOOL_OFFICE_TOP } from "./toolBrand";
+import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -305,8 +305,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
       out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
+    for(const shop of scene.retail) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,12,SANS,600)+40,h:34,priority:7,className:"m3-plaque compact",node:<div className="t">{shop.name}</div>,onClick:()=>select("repo:khaneilcampbell/skyline"),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
-      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 11.5, SANS, 500) + 22, h: 28, priority: 7, className: "m3-pill quiet", node: p.label });
+      const skylineHealth=healthFor("khaneilcampbell/skyline");
+      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: 7, className: "m3-plaque compact", onClick:()=>select("repo:khaneilcampbell/skyline"), title: `Skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
@@ -393,6 +395,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
+          landmarkSelect={()=>select("repo:khaneilcampbell/skyline")}
           kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}
@@ -457,6 +460,7 @@ function World({
   api,
   pick,
   kioskPick,
+  landmarkSelect,
   terracePick,
   reduced,
   activity,
@@ -485,6 +489,7 @@ function World({
   api: React.MutableRefObject<Map3DApi | null>;
   pick: PickHandlerSet;
   kioskPick: PickHandlerSet;
+  landmarkSelect: ()=>void;
   terracePick: Pick;
   reduced: boolean;
   activity: Map<string, Illumination>;
@@ -853,7 +858,8 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Skyline parks={scene.parks} g={g} m={m} />
+      <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({keys,over:()=>{},out:()=>{},click:landmarkSelect})}} />
+      <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />
