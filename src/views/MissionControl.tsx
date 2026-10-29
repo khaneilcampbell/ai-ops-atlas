@@ -11,6 +11,7 @@ import { relative, resetsIn } from "../lib/time";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { rollup, usd } from "../intel/format";
+import { AgentAlerts } from "./AgentAlerts";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
 const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
@@ -46,6 +47,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
           <Icon name="map" size={16} /> Back to the map
         </button>
       </div>
+
+      <AgentAlerts />
 
       <div className="grid kpis">
         <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />

@@ -37,6 +37,10 @@ agents:
       atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
       atlas_intel_runs: ecosystem  # optional with atlas_intel: which runs count (repository, the default, or ecosystem)
       agent_feed: true             # or: phase results its pipeline reports to /api/hooks/agents (docs/live-updates.md)
+    alerts:                        # optional: watch an unattended agent (docs/alerts.md)
+      failures: true               # a failed run raises an alert (default true)
+      report_within: 2h            # optional: silent after this long without a report (m, h or d)
+      not_running: Host removed    # optional: off on purpose, so no alerts; shown as Not running
     links: []                      # optional
     history:                       # optional notable events, newest first
       - at: 2026-10-12

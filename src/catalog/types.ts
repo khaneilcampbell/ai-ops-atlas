@@ -39,10 +39,23 @@ export interface Agent {
   links: Link[];
   /** Read-only live sources the app may consult for this agent. */
   observe?: { githubWorkflow?: string; atlasIntel?: boolean; atlasIntelRuns?: "repository" | "ecosystem"; agentFeed?: boolean };
+  /** When Atlas should raise an alert for this agent. Absent means it is not watched. */
+  alerts?: AlertRules;
   /** Hand-maintained registry profile (atlas/v2). Absent on atlas/v1 agents. */
   registry?: RegistryManifest;
   projectId: string;
   repository: string;
+}
+
+/** A manifest's `alerts` block: what counts as an alert for an unattended agent. */
+export interface AlertRules {
+  /** A failed run raises an alert. */
+  failures: boolean;
+  /** No report for this long (ms) means the agent has gone silent. Null for agents that only run
+   *  when something happens (a form post), where a quiet stretch is normal. */
+  reportWithinMs: number | null;
+  /** Set when the agent is off on purpose (its host is gone): no alerts, shown as not running. */
+  notRunning: string | null;
 }
 
 /** Kinds of relationship the map draws between buildings. */

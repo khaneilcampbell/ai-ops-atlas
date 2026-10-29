@@ -68,6 +68,8 @@ One report is one JSON object, at most 4 KB:
   exposes nothing in Atlas. It is separate from the Mac's sync key.
 - The site keeps three days; each browser and the Mac also keep the last 200 reports locally,
   so history outlives the site's pruning on a device that has been open.
+- A `failed` report raises an alert in Atlas for agents with an `alerts` block, and can email
+  you right away. See [alerts.md](alerts.md).
 
 Setup:
 
