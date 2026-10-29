@@ -643,6 +643,8 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
     if(tool.name==="Starbucks")ctx.font="bold 66px system-ui,sans-serif";
     if(tool.name==="Chipotle")ctx.font="bold 78px system-ui,sans-serif";
     if(tool.name==="Smashburger")ctx.font="bold 68px system-ui,sans-serif";
+    if(tool.name==="Anthropic")ctx.font="600 82px Georgia,serif";
+    if(tool.name==="OpenAI")ctx.font="600 96px system-ui,sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(tool.name === "Splunk" ? "splunk>" : tool.name==="Zara"?"ZARA":tool.name==="Starbucks"?"STARBUCKS":tool.name==="Chipotle"?"CHIPOTLE":tool.name, 256, 100, 460);
     const map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
