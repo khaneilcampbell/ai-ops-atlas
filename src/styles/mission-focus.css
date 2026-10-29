@@ -1,0 +1,18 @@
+.mission .mc-failing { margin-bottom: 16px; }
+.mission-focus { margin-bottom: 20px; border-top: 3px solid var(--gold); }
+.mission-focus .card-head { align-items: flex-start; gap: 16px; }
+.mission-focus h2 { margin: 5px 0; }
+.mission-focus .card-head p { margin: 8px 0 0; max-width: 680px; line-height: 1.5; }
+.mission-shortcuts, .mission-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 14px; }
+.mission-filters { border-top: 1px solid var(--sage-300); padding-top: 14px; padding-bottom: 8px; }
+.mission-focus .mission-filters button[aria-pressed="true"] { background: var(--forest-700); color: var(--on-dark); }
+.mission-result-count { padding: 0 20px 8px; }
+.mission-item-detail { display: block; margin-top: 4px; }
+.mission-focus .list-row { width: 100%; text-align: left; }
+.mission-next { flex: none; color: var(--forest-700); }
+.mission-expand { margin: 12px 20px 18px; }
+@media (max-width: 640px) {
+  .mission-focus .card-head { flex-direction: column; }
+  .mission-focus .list-row { flex-wrap: wrap; }
+  .mission-next { width: 100%; padding-left: 18px; }
+}
