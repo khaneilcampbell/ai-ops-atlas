@@ -80,9 +80,24 @@ jobs:
         with:
           tool: cargo-audit
       - run: cargo audit --file src-tauri/Cargo.lock
+  security:
+    name: Security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
+      - run: python3 ops/security/audit.py --local
+
   macos:
     name: macOS app bundle
-    needs: [web, rust, audit]
+    needs: [web, rust, audit, security]
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.macos)
     runs-on: macos-latest
     timeout-minutes: 45
@@ -121,7 +136,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'khaneilcampbell/ai-ops-atlas'
     runs-on: macos-latest
     timeout-minutes: 15
-    environment: release-signing
+    environment: macos-signing
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

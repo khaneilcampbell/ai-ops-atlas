@@ -1,0 +1,49 @@
+# TEMPLATE ONLY: adapt ExecStart and verify in staging before installation.
+# Keep application/runtime root-owned under /opt/commerce, never under /root.
+[Unit]
+Description=Commerce worker with restricted privileges
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=commerce-delivery
+Group=commerce-delivery
+WorkingDirectory=/var/lib/commerce-delivery
+ExecStart=/opt/commerce/venv/bin/python /opt/commerce/delivery.py
+# Application must read these files through $CREDENTIALS_DIRECTORY.
+# Only delivery credentials belong here. No deploy, AI, Canva or administrator keys.
+LoadCredential=stripe:/etc/commerce/delivery/stripe
+LoadCredential=smtp:/etc/commerce/delivery/smtp
+StateDirectory=commerce-delivery
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=30
+MemoryMax=1G
+TasksMax=128
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -26,7 +26,7 @@ agents:
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'
       - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
-      - 'Protected release-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
+      - 'Protected macos-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
       title: Atlas Continuous Integration
       category: engineering
@@ -66,8 +66,8 @@ agents:
         data_sensitivity: public
         risk: medium
         audit_log: GitHub Actions run history
-        approval: KC approves the release-signing environment for each main build
-        credential_owner: KC (protected GitHub release-signing environment)
+        approval: KC approves the macos-signing environment for each main build
+        credential_owner: KC (protected GitHub macos-signing environment)
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci

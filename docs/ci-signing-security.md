@@ -2,7 +2,7 @@
 
 Ordinary pull-request checks and manual app builds use read-only tokens and no signing secrets. The app is compiled on a runner without signing keys. A separate, fresh signing runner downloads only that workflow run's artifact, after frontend, Rust and dependency-audit jobs succeed. Signing is restricted to pushes to main in the canonical repository.
 
-The `release-signing` environment must restrict deployments to the main branch, require KC's approval and disable administrator bypass. KC can approve their own deployment: this personal repository has one release owner. Review the commit and CI results before approving. GitHub withholds environment secrets until approval. Approval is required for every rolling signed build, replacing unattended signing on every push.
+The `macos-signing` environment must restrict deployments to the main branch, disable administrator bypass, and omit required reviewers for the owner's explicit solo configuration. Required checks and pull requests protect main; rolling updates remain automatic. This does not provide independent approval. Restrict workflow changes through review whenever a collaborator becomes available.
 
 Store these three keys only in that environment:
 
