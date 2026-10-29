@@ -22,6 +22,24 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("buildScene", () => {
+  it("gives Skyline Anthropic and OpenAI offices that sit inside the park, clear of every other building", () => {
+    const scene = buildScene(layoutMap(catalog));
+    const park = scene.parks[0];
+    expect(park).toBeDefined();
+    const shops = scene.retail.filter((k) => k.projectId === park.id);
+    expect(shops.map((k) => k.name)).toEqual(expect.arrayContaining(["Anthropic", "OpenAI"]));
+    const cx = park.x + park.w / 2, cz = park.z + park.d / 2;
+    for (const k of shops) {
+      expect(k.x - k.size / 2).toBeGreaterThan(park.x);
+      expect(k.x + k.size / 2).toBeLessThan(park.x + park.w);
+      expect(k.z - k.size / 2).toBeGreaterThan(park.z);
+      expect(k.z + k.size / 2).toBeLessThan(park.z + park.d);
+      // Clear of the Skyline tower and its two wings.
+      expect(Math.abs(k.x - cx) > 1.7 + k.size / 2 || Math.abs(k.z - cz) > 0.475 + k.size / 2).toBe(true);
+      for (const o of shops) if (o !== k) expect(Math.abs(o.x - k.x) >= (o.size + k.size) / 2 || Math.abs(o.z - k.z) >= (o.size + k.size) / 2).toBe(true);
+    }
+  });
+
   it("connects pedestrian crossings to both project entrances without walking through buildings", () => {
     const scene = buildScene(layoutMap(catalog));
     const journeys = scene.walks.filter(w => w.bridge && w.route?.length);

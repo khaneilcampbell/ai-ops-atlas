@@ -403,6 +403,12 @@ export function buildScene(layout: Layout): Scene3D {
       retail.push({key:`retail:${p.id}:${i}`,projectId:p.id,name,users:[],x,z,size:0.85,canopy:"#c9a35a"});
       paving.push(strip(x,z+0.34,x,["Zara","Wells Fargo"].includes(name)?cz-1.2:cz+2.65,0.32,top));
     }
+    // AI lab offices on the back promenade, either side of Skyline, each with its own walk in.
+    for(const [i,name] of ["Anthropic","OpenAI"].entries()) {
+      const x=cx+(i===0?-1.3:1.3),z=cz-(p.h/2-1.1);
+      retail.push({key:`retail:${p.id}:lab${i}`,projectId:p.id,name,users:[],x,z,size:0.95,canopy:"#c9a35a"});
+      paving.push(strip(x,z+0.34,x,cz-1.2,0.32,top));
+    }
     paving.push(strip(cx-2.75,cz-1.2,cx+2.75,cz-1.2,0.4,top),strip(cx-2.75,cz-1.2,cx-2.75,cz+2.65,0.4,top),strip(cx+2.75,cz-1.2,cx+2.75,cz+2.65,0.4,top),strip(cx-2.75,cz+2.65,cx+2.75,cz+2.65,0.4,top));
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
@@ -411,6 +417,7 @@ export function buildScene(layout: Layout): Scene3D {
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
       if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
       if (ponds.some((q) => Math.hypot(q.x - s.gx, q.z - s.gy) < q.r + 0.3)) continue;
+      if (retail.some((k) => k.projectId === p.id && Math.abs(k.x - s.gx) < k.size / 2 + 0.3 && Math.abs(k.z - s.gy) < k.size / 2 + 0.3)) continue;
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.26, kind: hash(`${s.gx}:${s.gy}`) > 0.9 ? "blossom" : "round" });
     }
   }
