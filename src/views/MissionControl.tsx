@@ -12,6 +12,7 @@ import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { rollup, usd } from "../intel/format";
 import { AgentAlerts } from "./AgentAlerts";
+import { MissionFocus } from "./MissionFocus";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
 const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
@@ -40,13 +41,15 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <div className="page-head">
         <div className="grow">
           <div className="eyebrow">Mission Control</div>
-          <h1>Everything in motion, at a glance.</h1>
-          <p className="lede">Every number here is counted from your manifests or read from GitHub. Where there is no source yet, it says so.</p>
+          <h1>Know what needs you next.</h1>
+          <p className="lede">Review issues, check agent activity, and follow up from one place.</p>
         </div>
         <button className="ghost-btn dark" onClick={() => setView("map")}>
           <Icon name="map" size={16} /> Back to the map
         </button>
       </div>
+
+      <MissionFocus attention={attention} />
 
       <AgentAlerts />
 
@@ -160,7 +163,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       </div>
 
       {actionsAvailable && (
-        <section className="card mc-approvals">
+        <section id="mission-approvals" className="card mc-approvals" tabIndex={-1}>
           <div className="card-head">
             <h2 className="grow">Awaiting your approval</h2>
             <span className="muted small" title="Actions agents propose from verified GitHub data. Each one asks again in a native dialog and is logged.">
@@ -171,7 +174,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
         </section>
       )}
 
-      <div className="grid mc-row">
+      <div className="mc-failing">
         <section className="card">
           <div className="card-head">
             <h2 className="grow">Workflows failing now</h2>
@@ -205,31 +208,6 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                   </div>
                 </li>
               ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="card">
-          <div className="card-head">
-            <h2 className="grow">Needs attention</h2>
-            <span className="muted small">{attention.length}</span>
-          </div>
-          {attention.length === 0 ? (
-            <div className="empty">Nothing needs you right now.</div>
-          ) : (
-            <ul className="list">
-              {attention.slice(0, 8).map((a) => (
-                <li key={a.id}>
-                  <button className="list-row" onClick={() => a.target && select(a.target)} disabled={!a.target}>
-                    <span className={`sev ${a.severity}`} aria-label={`${a.severity} severity`} />
-                    <span className="grow">
-                      <div className="title">{a.title}</div>
-                      <div className="meta">{a.detail}</div>
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {attention.length > 8 && <li className="muted small" style={{ padding: "4px 12px" }}>{attention.length - 8} more</li>}
             </ul>
           )}
         </section>
