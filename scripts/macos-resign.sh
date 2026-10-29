@@ -6,6 +6,7 @@
 # Env: MACOS_SIGNING_CERT (base64 .p12), MACOS_SIGNING_CERT_PASSWORD,
 #      TAURI_SIGNING_PRIVATE_KEY (only when an updater archive is present).
 set -euo pipefail
+umask 077
 dir=src-tauri/target/release/bundle/macos
 app="$dir/AI Ops Atlas.app"
 tmp=$(mktemp -d)

@@ -27,6 +27,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -35,6 +37,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run build:web
 
   rust:
     name: Desktop shell (Rust tests)
@@ -42,6 +45,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Install Tauri system libraries
         run: |
           sudo apt-get update
@@ -64,6 +69,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -73,28 +80,31 @@ jobs:
         with:
           tool: cargo-audit
       - run: cargo audit --file src-tauri/Cargo.lock
+  security:
+    name: Security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
+      - run: python3 ops/security/audit.py --local
 
   macos:
     name: macOS app bundle
-    # Every merge to main builds the app, so an install never waits on a separate dispatch.
+    needs: [web, rust, audit, security]
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.macos)
     runs-on: macos-latest
-    # Cached builds take about 6 minutes; a cold cache takes about 25.
     timeout-minutes: 45
-    permissions:
-      contents: write
-    # Builds from main publish in order, so the update feed never goes backwards.
-    concurrency:
-      group: macos-${{ github.ref }}
-      cancel-in-progress: false
-    env:
-      # Builds from main are signed for the in-app updater and published to the
-      # rolling main-build release that installed copies of Atlas check.
-      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    # The signing secrets are set only on the two steps that sign, so third-party code in
-    # the actions and npm install steps never runs with them in its environment.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -102,59 +112,108 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
-      # Reuses compiled dependencies between builds; a cold build recompiles all of Tauri.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
           shared-key: macos-app
       - run: npm ci
-      # The updater installs any build with a higher version, so each main build
-      # gets the run number as its patch version (0.2.0 -> 0.2.<run>).
-      - name: Build
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+      # Build code and dependencies never receive signing secrets or a write token.
+      - name: Build unsigned app
         run: |
-          if [ "$PUBLISH" = "true" ] && [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            base=$(node -p 'require("./src-tauri/tauri.conf.json").version.split(".").slice(0, 2).join(".")')
-            version="$base.$GITHUB_RUN_NUMBER"
-            echo "VERSION=$version" >> "$GITHUB_ENV"
-            npx tauri build --bundles app --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":true}}"
-          else
-            if [ "$PUBLISH" = "true" ]; then echo "::warning::TAURI_SIGNING_PRIVATE_KEY is not set, so this build is not published for the in-app updater."; fi
-            npx tauri build --bundles app
-          fi
-      - name: Sign with the Atlas certificate
-        # A self-signed code-signing certificate (scripts/macos-signing-cert.sh). Signing every
-        # build with the same one keeps the app's identity stable across self-updates, so the
-        # Keychain's "Always Allow" keeps working. Without it builds are ad-hoc signed.
+          base=$(node -p 'require("./src-tauri/tauri.conf.json").version.split(".").slice(0, 2).join(".")')
+          version="$base.$GITHUB_RUN_NUMBER"
+          npx tauri build --bundles app --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":false}}"
+          ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/AI Ops Atlas.app" unsigned-app.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unsigned-macos-app
+          path: unsigned-app.zip
+          retention-days: 3
+
+  sign:
+    name: Sign validated main build
+    needs: macos
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'khaneilcampbell/ai-ops-atlas'
+    runs-on: macos-latest
+    timeout-minutes: 15
+    environment: macos-signing
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # Install the signing CLI without lifecycle scripts, before keys enter the process.
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: unsigned-macos-app
+      - name: Unpack build from this workflow run
+        run: |
+          mkdir -p src-tauri/target/release/bundle/macos
+          ditto -x -k unsigned-app.zip src-tauri/target/release/bundle/macos
+      - name: Sign app and updater archive
         env:
           MACOS_SIGNING_CERT: ${{ secrets.MACOS_SIGNING_CERT }}
           MACOS_SIGNING_CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
-          # Re-signing changes the app, so the updater archive is signed again too.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
-          if [ -n "$MACOS_SIGNING_CERT" ]; then
-            scripts/macos-resign.sh
-          else
-            echo "::warning::MACOS_SIGNING_CERT is not set, so this build is ad-hoc signed and the Keychain will ask again after updating."
-          fi
-      # upload-artifact drops file permissions, which would leave the app binary
-      # non-executable, so package the bundle with ditto first.
-      - name: Zip the app bundle
-        run: ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
+          test -n "$MACOS_SIGNING_CERT"
+          test -n "$MACOS_SIGNING_CERT_PASSWORD"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          scripts/macos-resign.sh
+          dir=src-tauri/target/release/bundle/macos
+          tar -czf AI-Ops-Atlas.app.tar.gz -C "$dir" "AI Ops Atlas.app"
+          npx --no-install tauri signer sign AI-Ops-Atlas.app.tar.gz >/dev/null
+          test -s AI-Ops-Atlas.app.tar.gz.sig
+          ditto -c -k --keepParent "$dir/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: AI-Ops-Atlas-macOS
-          path: AI-Ops-Atlas-macOS.zip
-      - name: Publish to the in-app updater
-        if: env.VERSION != ''
+          name: signed-macos-app
+          path: |
+            AI-Ops-Atlas.app.tar.gz
+            AI-Ops-Atlas.app.tar.gz.sig
+            AI-Ops-Atlas-macOS.zip
+          retention-days: 7
+
+  publish:
+    name: Publish signed main build
+    needs: sign
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'khaneilcampbell/ai-ops-atlas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: atlas-main-publish
+      cancel-in-progress: false
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # This job never checks out or executes repository code or installs dependencies.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: signed-macos-app
+      - name: Read signed app version and reject older updates
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          dir="src-tauri/target/release/bundle/macos"
-          cp "$dir/AI Ops Atlas.app.tar.gz" AI-Ops-Atlas.app.tar.gz
+          tar -xOf AI-Ops-Atlas.app.tar.gz "AI Ops Atlas.app/Contents/Info.plist" > app.plist
+          version=$(python3 -c 'import plistlib; print(plistlib.load(open("app.plist", "rb"))["CFBundleShortVersionString"])')
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          # Approvals may arrive out of order. Fail closed on errors other than a missing asset.
+          gh api "repos/$GH_REPO/releases/tags/main-build" > release.json
+          asset=$(python3 -c 'import json; print(next((str(a["id"]) for a in json.load(open("release.json"))["assets"] if a["name"] == "latest.json"), ""))')
+          if [ -n "$asset" ]; then
+            gh api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$asset" > current.json
+            python3 -c 'import json,sys; v=lambda s: tuple(map(int,s.split("."))); sys.exit(0 if v(sys.argv[1]) > v(json.load(open("current.json"))["version"]) else "Refusing an older or equal update")' "$version"
+          fi
+      - name: Publish to the in-app updater
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           url="https://github.com/$GITHUB_REPOSITORY/releases/download/main-build/AI-Ops-Atlas.app.tar.gz"
           node -e '
             const fs = require("fs");
@@ -166,7 +225,7 @@ jobs:
               platforms: { "darwin-aarch64": { signature: fs.readFileSync(sigFile, "utf8").trim(), url } },
             };
             fs.writeFileSync("latest.json", JSON.stringify(feed, null, 2));
-          ' "$VERSION" "$dir/AI Ops Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA"
+          ' "$VERSION" "AI-Ops-Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA"
           gh release view main-build >/dev/null 2>&1 || gh release create main-build --prerelease --target "$GITHUB_SHA" \
             --title "Latest main build" --notes "Rolling build of main that installed copies of AI Ops Atlas update from. Not a versioned release."
           # The archive goes up before the feed that points at it.

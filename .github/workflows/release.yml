@@ -17,13 +17,15 @@ jobs:
   macos:
     name: Build and publish the macOS app
     runs-on: macos-latest
-    # Only this job can write, and only to publish the release.
-    permissions:
-      contents: write
     # Release builds start without a Rust cache, so they run longer than CI.
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Require the tagged commit on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: Check the tag matches the app version
         run: |
           want="${GITHUB_REF_NAME#v}"
@@ -51,6 +53,26 @@ jobs:
         run: |
           ditto -c -k --keepParent "src-tauri/target/universal-apple-darwin/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
           shasum -a 256 AI-Ops-Atlas-macOS.zip > AI-Ops-Atlas-macOS.zip.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: versioned-macos-app
+          path: |
+            AI-Ops-Atlas-macOS.zip
+            AI-Ops-Atlas-macOS.zip.sha256
+
+  publish:
+    name: Publish versioned app
+    needs: macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: versioned-macos-app
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

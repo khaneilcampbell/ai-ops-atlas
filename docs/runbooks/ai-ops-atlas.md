@@ -4,12 +4,12 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 
 ## Atlas CI
 
-`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Every push to `main` also builds, signs and publishes the macOS app to the rolling `main-build` release that installed copies update from.
+`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Validated pushes to `main` build the app, then require KC to approve the protected signing job before a separate job publishes it to the rolling `main-build` release that installed copies update from.
 
-- **Healthy:** the latest run on `main` is green in Actions, and Atlas's header offers the new build after a merge.
+- **Healthy:** the latest run on `main` is green in Actions, and the signing deployment has been approved before Atlas offers the new build.
 - **Run it:** push or open a pull request. To build the Mac app from a branch, run the workflow by hand with **macos** ticked.
-- **When it fails:** open the failed job. `Frontend (types, tests, build)` failures reproduce with `npm ci && npm run lint && npm test && npm run build`; `Desktop shell (Rust tests)` with `cargo test --manifest-path src-tauri/Cargo.toml`. A macOS job failure after the tests passed usually means a signing secret (`TAURI_SIGNING_PRIVATE_KEY`, `MACOS_SIGNING_CERT`) is missing or expired.
-- **Careful:** re-running a `main` run publishes a release again. Keep this repository off the re-run list.
+- **When it fails:** open the failed job. `Frontend (types, tests, build)` failures reproduce with `npm ci && npm run lint && npm test && npm run build`; `Desktop shell (Rust tests)` with `cargo test --manifest-path src-tauri/Cargo.toml`. A signing job waiting for approval is expected. A signing failure can mean a protected environment secret is missing or expired. See [CI signing security](../ci-signing-security.md).
+- **Careful:** manual branch builds receive no signing keys. Re-runs still need environment approval, and older or equal rolling versions are rejected.
 - **Stop it:** disable the workflow in Actions. Branch protection requires its checks, so merges block until it is back on.
 
 ## Repository Intelligence
