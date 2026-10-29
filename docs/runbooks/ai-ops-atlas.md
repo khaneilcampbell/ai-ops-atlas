@@ -11,6 +11,7 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 - **When it fails:** open the failed job. `Frontend (types, tests, build)` failures reproduce with `npm ci && npm run lint && npm test && npm run build`; `Desktop shell (Rust tests)` with `cargo test --manifest-path src-tauri/Cargo.toml`. A signing job waiting for approval is expected. A signing failure can mean a protected environment secret is missing or expired. See [CI signing security](../ci-signing-security.md).
 - **Careful:** manual branch builds receive no signing keys. Re-runs still need environment approval, and older or equal rolling versions are rejected.
 - **Stop it:** disable the workflow in Actions. Branch protection requires its checks, so merges block until it is back on.
+- **Updating the app:** pressing **Update** hands the unlocked keys, the current view and the window position to the new copy in memory (`src-tauri/src/handoff.rs`), so a signed update needs no Touch ID or Keychain password. If a prompt appears anyway, the new build failed the same-certificate check (for example an ad-hoc branch build) or the handoff timed out. Atlas then falls back to an ordinary unlock.
 
 ## Repository Intelligence
 
