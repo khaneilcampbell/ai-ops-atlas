@@ -1,3 +1,4 @@
+import { projectRepositories, LANDMARK_REPOSITORIES } from "../catalog/projects";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
 import { servicesOf, type ServiceUse } from "../catalog/roles";
@@ -198,6 +199,8 @@ function groupOf(p: Project, by: GroupBy, agents: Agent[]): { key: string; label
 }
 
 export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy: GroupBy = "none"): Layout {
+  const registered = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+  uncataloged = [...new Set(uncataloged)].filter(name => !registered.has(name));
   const agentsByProject = new Map<string, Agent[]>();
   for (const a of catalog.agents) agentsByProject.set(a.projectId, [...(agentsByProject.get(a.projectId) ?? []), a]);
 

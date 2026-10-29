@@ -23,12 +23,12 @@ describe("bundled catalog", () => {
       "khaneilcampbell/ai-ops-atlas",
       "khaneilcampbell/benjaire-dashboard",
       "khaneilcampbell/benjaire.com",
-      "khaneilcampbell/job-applications-workflow",
+      "khaneilcampbell/career-application-system",
       "khaneilcampbell/khaneilcampbell",
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",
-      "khaneilcampbell/project-intelligence-hub",
-      "khaneilcampbell/service-desk-dashboard",
+      "khaneilcampbell/projects-intelligence-hub",
+      "khaneilcampbell/service-desk-intelligence",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
   });

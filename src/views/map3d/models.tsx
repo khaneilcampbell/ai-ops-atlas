@@ -1,4 +1,4 @@
-import { toolBrand, TOOL_OFFICE_HEIGHT as OFFICE_H } from "./toolBrand";
+import { toolBrand, toolOfficeHeight } from "./toolBrand";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
@@ -545,14 +545,53 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
 export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
   const items = useMemo(() => {
     const y = TERRACE_H + 0.03;
-    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], doors: Inst[] = [];
+    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
     for (const k of kiosks) {
+      const OFFICE_H = toolOfficeHeight(k.name);
       const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
+      if (["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].includes(k.name)) {
+        const zara=k.name==="Zara",cafe=k.name==="Starbucks",chipotle=k.name==="Chipotle";
+        walls.push({p:[k.x,y,k.z],s:[w,OFFICE_H,d],c:chipotle?"#845544":brand.wall});
+        slabs.push({p:[k.x,y,k.z],s:[w*1.12,0.06,d*1.12],c:"#c2b7a4"});
+        slabs.push({p:[k.x,y+OFFICE_H,k.z],s:[w*1.1,0.08,d*1.12],c:brand.roof});
+        // Large storefront glazing and a central entrance distinguish shops from office towers.
+        for(const side of [-1,1]) {
+          windows.push({p:[k.x+side*w*0.3,y+0.12,k.z+d/2+0.012],s:[w*0.26,0.72,0.025],c:zara?"#fff6de":"#d1e1d9"});
+          accents.push({p:[k.x+side*w*0.48,y,k.z+d/2+0.025],s:[w*0.055,OFFICE_H,0.04],c:brand.primary});
+        }
+        doors.push({p:[k.x,y+0.03,k.z+d/2+0.028],s:[w*0.23,0.7,0.035],c:"#263e42"});
+        accents.push({p:[k.x+w*0.055,y+0.28,k.z+d/2+0.05],s:[0.012,0.16,0.015],c:"#c9b98d"});
+        if(cafe) {
+          slabs.push({p:[k.x,y+0.9,k.z+d/2+0.12],s:[w*1.12,0.07,0.36],c:brand.primary});
+          for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.4,y+0.06,k.z+d/2+0.28],s:[0.12,0.16,0.12],c:"#3e5842"});
+        } else if(zara) {
+          for(let floor=0;floor<3;floor++) for(const side of [-1,1]) windows.push({p:[k.x+side*w*0.25,y+1.05+floor*0.4,k.z+d/2+0.014],s:[w*0.33,0.3,0.025],c:"#ffeed1"});
+          slabs.push({p:[k.x,y+0.94,k.z+d/2+0.07],s:[w*1.05,0.04,0.22],c:"#171717"});
+        } else if(k.name==="Wells Fargo") {
+          // Classical branch portico: paired columns, broad steps and a triangular pediment.
+          for(const side of [-1,1]) {
+            accents.push({p:[k.x+side*w*0.36,y+0.12,k.z+d/2+0.17],s:[w*0.09,0.81,0.09],c:"#e9ddbc"});
+            slabs.push({p:[k.x+side*w*0.36,y+0.9,k.z+d/2+0.17],s:[w*0.15,0.065,0.15],c:"#d7b66c"});
+          }
+          for(let step=0;step<3;step++) slabs.push({p:[k.x,y+step*0.035,k.z+d/2+0.18-step*0.035],s:[w*0.94,0.035,0.36-step*0.07],c:"#d2c5a7"});
+          slabs.push({p:[k.x,y+0.95,k.z+d/2+0.15],s:[w*1.15,0.08,0.38],c:"#e4d7b7"});
+          // Gable ends provide the familiar triangular bank entrance silhouette.
+          pediments.push({p:[k.x,y+1.03,k.z+d/2+0.15],s:[0.38,0.3,w*1.12],r:Math.PI/2,c:"#d7b66c"});
+          accents.push({p:[k.x-w*0.32,y+0.2,k.z+d/2+0.08],s:[0.12,0.25,0.06],c:"#36454a"});
+        } else if(chipotle) {
+          for(let row=0;row<6;row++) accents.push({p:[k.x,y+0.1+row*0.16,k.z-d/2-0.01],s:[w,0.018,0.02],c:"#b98b72"});
+          slabs.push({p:[k.x,y+0.94,k.z+d/2+0.08],s:[w*1.1,0.06,0.25],c:"#57463c"});
+        } else {
+          slabs.push({p:[k.x,y+0.92,k.z+d/2+0.12],s:[w*1.12,0.09,0.32],c:"#bf292b"});
+          accents.push({p:[k.x,y+0.09,k.z+d/2+0.03],s:[w,0.07,0.04],c:"#bf292b"});
+        }
+        continue;
+      }
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
       // Six office floors with a regular curtain-wall grid and branded cornices.
-      for (let floor = 0; floor < 6; floor++) {
+      for (let floor = 0; floor < (OFFICE_H < 2 ? 3 : 6); floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * 0.36, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
           windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * 0.36, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
@@ -573,7 +612,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
       if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
     }
-    return { walls, slabs, accents, windows, domes, doors };
+    return { walls, slabs, accents, windows, domes, pediments, doors };
   }, [kiosks]);
   return <group>
     <Instanced items={items.walls} geometry={g.box} material={m.plain} pick={pick.of(kiosks.map(k => k.key))} />
@@ -581,6 +620,8 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
     <Instanced items={items.accents} geometry={g.box} material={m.plain} />
     <Instanced items={items.windows} geometry={g.box} material={m.glass} />
     <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
+    <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
+    <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />
     <Instanced items={items.doors} geometry={g.box} material={m.plain} />
     {kiosks.map(k => <ToolSign key={k.key} tool={k} geometry={g.plane} />)}
   </group>;
@@ -594,16 +635,22 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
     const gradient = ctx.createLinearGradient(0, 0, 512, 192);
     gradient.addColorStop(0, brand.primary); gradient.addColorStop(1, brand.secondary);
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, 512, 192);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = tool.name === "Zara" ? "#171717" : "#ffffff";
+    if(tool.name==="Zara") {ctx.fillStyle="#f5f0e6";ctx.fillRect(0,0,512,192);ctx.fillStyle="#171717";}
     ctx.font = tool.name === "Canva" ? "italic 110px Georgia, serif" : "600 100px system-ui, sans-serif";
+    if(tool.name==="Wells Fargo") {ctx.fillStyle="#f4d78e";ctx.font="bold 74px Georgia,serif";}
+    if(tool.name==="Zara")ctx.font="110px Georgia,serif";
+    if(tool.name==="Starbucks")ctx.font="bold 66px system-ui,sans-serif";
+    if(tool.name==="Chipotle")ctx.font="bold 78px system-ui,sans-serif";
+    if(tool.name==="Smashburger")ctx.font="bold 68px system-ui,sans-serif";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(tool.name === "Splunk" ? "splunk>" : tool.name, 256, 100, 460);
+    ctx.fillText(tool.name === "Splunk" ? "splunk>" : tool.name==="Zara"?"ZARA":tool.name==="Starbucks"?"STARBUCKS":tool.name==="Chipotle"?"CHIPOTLE":tool.name, 256, 100, 460);
     const map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
     return map;
   }, [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + OFFICE_H - 0.08;
+  const w = tool.size, y = TERRACE_H + toolOfficeHeight(tool.name) - 0.08;
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />
@@ -964,7 +1011,7 @@ const woodMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#8f6640"
 const darkMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#2a3138", roughness: 0.6 }));
 
 /** Residential landmark: Atlas-inspired green roofs, gold trim and a sheltered lobby. */
-export function Skyline({parks,g,m}:{parks:Scene3D["parks"];g:G;m:M}) {
+export function Skyline({parks,g,m,onSelect}:{parks:Scene3D["parks"];g:G;m:M;onSelect?:()=>void}) {
   const parts=useMemo(()=>{
     const walls:Inst[]=[],trim:Inst[]=[],roofs:Inst[]=[],glass:Inst[]=[],doors:Inst[]=[];
     for(const p of parks) {
@@ -988,17 +1035,10 @@ export function Skyline({parks,g,m}:{parks:Scene3D["parks"];g:G;m:M}) {
       }
       trim.push({p:[x,y+0.4,z+0.51],s:[0.64,0.035,0.04],c:"#d3b36e"});
       trim.push({p:[x,y,z+0.51],s:[0.018,0.4,0.035],c:"#d3b36e"});
-      // Timber benches face the front promenade, leaving the central lobby route clear.
-      for(const side of [-1,1]) {
-        const bx=x+side*0.75,bz=z+1.5;
-        trim.push({p:[bx,y+0.15,bz],s:[0.62,0.055,0.22],c:"#a27b51"});
-        trim.push({p:[bx,y+0.2,bz-0.1],s:[0.62,0.24,0.035],c:"#a27b51"});
-        for(const leg of [-1,1]) trim.push({p:[bx+leg*0.23,y,bz],s:[0.035,0.16,0.18],c:"#335b58"});
-      }
       trim.push({p:[x,y+0.43,z+0.67],s:[1.0,0.07,0.6],c:"#d3b36e"});
       trim.push({p:[x,y+4.9,z],s:[0.045,0.35,0.045],c:"#d3b36e"});
     }
     return {walls,trim,roofs,glass,doors};
   },[parks]);
-  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/></group>;
+  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber} pick={{keys:parts.walls.map(()=>"skyline"),over:()=>{},out:()=>{},click:()=>onSelect?.()}}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/></group>;
 }

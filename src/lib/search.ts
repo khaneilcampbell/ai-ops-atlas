@@ -1,4 +1,4 @@
-import { projectRepositories } from "../catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES } from "../catalog/projects";
 import type { Agent, Catalog, Project } from "../catalog/types";
 import type { RepoState } from "../github/types";
 import { repoData } from "./derive";
@@ -27,7 +27,7 @@ export interface RepoRow {
 }
 
 export function repoRows(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = []): RepoRow[] {
-  const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
+  const names = [...LANDMARK_REPOSITORIES.filter(name => name in repos), ...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   return names.map((name) => ({
     name,
     project: catalog.projects.find((p) => projectRepositories(p, catalog.agents).includes(name)),

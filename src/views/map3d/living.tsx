@@ -198,11 +198,12 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
         const lengths = route.slice(1).map((p, j) => Math.hypot(p.gx-route[j].gx, p.gy-route[j].gy));
         const len = lengths.reduce((a,b) => a+b, 0);
         // Walk to the end, pause, walk back.
-        const period = (len / STROLL_SPEED) * 2 + 6;
+        const pause = w.shopEntrance ? 8 : 3;
+        const period = (len / STROLL_SPEED) * 2 + pause*2;
         const ph = (((t + i * 7.3) % period) + period) % period;
         const leg = len / STROLL_SPEED;
-        const f = ph < leg ? ph / leg : ph < leg + 3 ? 1 : ph < leg * 2 + 3 ? 1 - (ph - leg - 3) / leg : 0;
-        let side = (ph < leg + 3 ? 1 : -1) * 0.1;
+        const f = ph < leg ? ph / leg : ph < leg + pause ? 1 : ph < leg * 2 + pause ? 1 - (ph - leg - pause) / leg : 0;
+        let side = (ph < leg + pause ? 1 : -1) * 0.1;
         let distance = f * len, segment = 0;
         while (segment < lengths.length - 1 && distance > lengths[segment]) distance -= lengths[segment++];
         const a = route[segment], b = route[segment+1];
@@ -213,17 +214,19 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
           const r=road[j-1], q=road[j], mx=(a.gx+b.gx)/2, mz=(a.gy+b.gy)/2;
           if ((Math.abs(dx)>0.9 && Math.abs(r[1]-q[1])<1e-6 && Math.abs(mz-r[1])<0.05 && mx>=Math.min(r[0],q[0]) && mx<=Math.max(r[0],q[0])) || (Math.abs(dz)>0.9 && Math.abs(r[0]-q[0])<1e-6 && Math.abs(mx-r[0])<0.05 && mz>=Math.min(r[1],q[1]) && mz<=Math.max(r[1],q[1]))) side = Math.sign(side)*0.265;
         }
+        if(w.shopEntrance) side *= Math.min(1,(1-f)*5);
+        const visitorScale=w.shopEntrance && f>0.96 ? 0 : 1;
         const x = a.gx + dx*distance - dz*side;
         const z = a.gy + dz*distance + dx*side;
         const step = moving ? Math.abs(Math.sin(t * 7 + i)) * 0.008 : 0;
         const sidewalkLift = Math.abs(side) > 0.2 ? 0.05 : 0;
-        o.rotation.set(0, Math.atan2(dx, dz) + (ph < leg+3 ? 0 : Math.PI), 0);
+        o.rotation.set(0, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI), 0);
         o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.02 + step, z);
-        o.scale.set(0.07, 0.16, 0.06);
+        o.scale.set(0.07*visitorScale, 0.16*visitorScale, 0.06*visitorScale);
         o.updateMatrix();
         bd.setMatrixAt(i, o.matrix);
         o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.21 + step, z);
-        o.scale.setScalar(0.035);
+        o.scale.setScalar(0.035*visitorScale);
         o.updateMatrix();
         hd.setMatrixAt(i, o.matrix);
       });
