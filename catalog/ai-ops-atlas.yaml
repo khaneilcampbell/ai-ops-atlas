@@ -14,7 +14,7 @@ project:
 agents:
   - id: atlas-ci
     name: Atlas CI
-    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Every push to main also builds, signs and publishes the macOS app that installed copies update from.
+    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; KC approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
@@ -25,8 +25,8 @@ agents:
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'
-      - 'GITHUB_TOKEN: contents write in the macOS job, to publish the main-build release'
-      - 'Secrets: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
+      - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
+      - 'Protected release-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
       title: Atlas Continuous Integration
       category: engineering
@@ -45,12 +45,12 @@ agents:
           - Build the web bundle
           - Rust fmt, clippy and tests
           - npm and cargo dependency audits
-          - Build, sign and publish the macOS app on every push to main
+          - Build validated main changes, request protected signing approval, then publish
         tools: [GitHub Actions, npm, cargo]
         inputs: [Pushes and pull requests]
         outputs:
           - Check results on the pull request
-          - Signed macOS app on the main-build release (from main) or as an artifact (manual dispatch)
+          - Signed macOS app on main-build after approval; unsigned artifact for manual branch builds
       goals:
         objective: Block merges that break the app.
         kpis:
@@ -62,22 +62,22 @@ agents:
         trigger_type: event
         environment: GitHub-hosted runner
       governance:
-        autonomy: 0
+        autonomy: 2
         data_sensitivity: public
-        risk: low
+        risk: medium
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        approval: KC approves the release-signing environment for each main build
+        credential_owner: KC (protected GitHub release-signing environment)
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
         known_issues:
-          - 'Autonomy 0 and low risk understate it: every push to main publishes a signed build that installed copies of Atlas offer as an update'
-          - Re-running a main run publishes the build again, so this repository should stay off the re-run list
+          - Signed updates require manual environment approval; older or equal versions are rejected
           - codeql.yml and release.yml also run in this repository but are not in the catalog
         improvements:
           - Add codeql.yml and release.yml to the catalog
           - Agree a run success target for the KPI
-        last_review: 2026-10-28
+        last_review: 2026-10-29
 
   - id: repo-intelligence
     name: Repository Intelligence Agent
