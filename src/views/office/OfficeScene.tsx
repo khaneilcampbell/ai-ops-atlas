@@ -7,6 +7,7 @@ import type { LightMode } from "../map3d/living";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
+import { OfficeFinish, OfficeLighting, readOfficeLook, type OfficeLook } from "./lighting";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -42,13 +43,17 @@ export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
   // Render continuously only while something on screen moves; otherwise only on camera changes.
   const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
+  const [look] = useState<OfficeLook>(readOfficeLook);
+  const phone = useMemo(() => window.matchMedia("(max-width: 700px)").matches, []);
+  const spots = useMemo(() => desks.map((d) => ({ x: d.ws.x, z: d.ws.z })), [desks]);
   return (
-    <Canvas shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas shadows={look === "classic" ? true : "percentage"} dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <OfficeCamera plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} />
+      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} look={look} desks={spots} />
       {desks.map((d) => (
         <AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light === "night"} selected={props.selected === d.ws.agentId} onSelect={props.onSelect} />
       ))}
+      <OfficeFinish look={look} phone={phone} />
     </Canvas>
   );
 }
@@ -185,6 +190,8 @@ const MAT = {
   ledOff: new THREE.MeshBasicMaterial({ color: "#3d4a41" }),
 };
 
+const SURFACES = { wall: MAT.wall, floor: MAT.floor, rug: MAT.rug, trim: MAT.trim };
+
 const shadow = { castShadow: true, receiveShadow: true } as const;
 
 function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, number]; m: THREE.Material; r?: [number, number, number] }) {
@@ -194,7 +201,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number }) {
+function OfficeEnvironment({ plan, wall, light, count, look, desks }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; look: OfficeLook; desks: { x: number; z: number }[] }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -206,24 +213,12 @@ function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wal
     MAT.pane.emissive.set(night ? "#2c3f66" : "#cfe6f2");
     MAT.pane.emissiveIntensity = night ? 0.6 : 0.55;
   }, [night]);
-  const sun = useRef<THREE.DirectionalLight>(null);
-  useEffect(() => {
-    const s = sun.current;
-    if (!s) return;
-    const c = s.shadow.camera;
-    c.left = c.bottom = -Math.max(w, d);
-    c.right = c.top = Math.max(w, d);
-    c.updateProjectionMatrix();
-  }, [w, d]);
   // Windows: three on the left wall, two on the back wall either side of the display.
   const leftWins = [-d / 3, 0, d / 3];
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
-      <hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.45 : 1.2]} />
-      <directionalLight ref={sun} castShadow position={[-6, 11, 7]} intensity={night ? 0.35 : 2.1} color={night ? "#a8b8e0" : "#fff0d2"} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005} shadow-normalBias={0.03} />
-      {/* After dark the room lights are on. */}
-      {night && <pointLight position={[0, H + 0.4, 0]} intensity={14} distance={Math.max(w, d) * 1.6} decay={1.6} color="#ffd9a0" />}
+      <OfficeLighting look={look} light={light} size={Math.max(w, d)} height={H} desks={desks} mats={SURFACES} />
 
       <mesh geometry={CYL} material={MAT.grass} position={[0, -0.32, 0]} scale={[Math.max(w, d) * 3.2, 0.5, Math.max(w, d) * 3.2]} receiveShadow />
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
