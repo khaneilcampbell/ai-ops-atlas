@@ -45,8 +45,9 @@
     padding: 4px max(4px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 4px) max(4px, env(safe-area-inset-left));
     border-right: 0; border-top: 1px solid var(--forest-line); z-index: 30;
   }
+  .sidebar { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
   .sidebar .grow { display: none; }
-  .nav-item { width: auto; flex: 1 1 0; min-width: 0; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
+  .nav-item { width: auto; flex: 0 0 76px; min-width: 76px; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
   .nav-item span { font-size: 8.5px; letter-spacing: 0.08em; }
   .nav-item .badge { top: 2px; right: calc(50% - 22px); min-width: 16px; height: 16px; font-size: 9.5px; }
   .nav-item.active { background: none; border-color: transparent; }
