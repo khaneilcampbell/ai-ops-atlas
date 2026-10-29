@@ -325,7 +325,7 @@ pub fn build(
         h.update(part.as_bytes());
         h.update([0]);
     }
-    let fingerprint = format!("{:x}", h.finalize());
+    let fingerprint: String = h.finalize().iter().map(|b| format!("{b:02x}")).collect();
     let note = if trimmed {
         "Some excerpts were shortened to fit the analysis budget.\n"
     } else {
