@@ -26,7 +26,7 @@ agents:
     permissions:
       - Reads Source/ and writes DOCX files in the project folder; no network
     registry:
-      title: Project Documentation Builder
+      title: Technical Documentation Specialist
       category: engineering
       subcategory: Documentation
       classification:
@@ -76,7 +76,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Project Intelligence Hub Continuous Integration
+      title: Documentation Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

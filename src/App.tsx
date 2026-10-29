@@ -31,13 +31,14 @@ import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
-  { view: "map", label: "Map", icon: "map" },
-  { view: "overview", label: "Mission", icon: "overview" },
+  { view: "map", label: "Projects", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
+  { view: "automations", label: "Automations", icon: "network" },
+  { view: "repos", label: "Repositories", icon: "repos" },
+  { view: "overview", label: "Mission", icon: "overview" },
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
-  { view: "repos", label: "Repos", icon: "repos" },
 ];
 
 export default function App() {
@@ -110,9 +111,9 @@ export default function App() {
 
       <nav className="sidebar" aria-label="Sections">
         {NAV.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
-            <span>{n.label}</span>
+            <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
             {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
           </button>
         ))}
@@ -130,7 +131,8 @@ export default function App() {
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
-          {view === "agents" && <AgentsView />}
+          {view === "agents" && <AgentsView key="agents" kind="agents" />}
+          {view === "automations" && <AgentsView key="automations" kind="automations" />}
           {view === "repos" && <ReposView />}
           {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
@@ -140,7 +142,7 @@ export default function App() {
       </main>
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
-      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent" && !phone) && <DetailPanel />}
+      {selection && view !== "map" && !((view === "agents" || view === "automations") && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
   );
 }
@@ -171,7 +173,8 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    return [...agents, ...rs].slice(0, 8);
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
+    return [...projects, ...agents, ...rs].slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.

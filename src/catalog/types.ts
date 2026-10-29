@@ -78,7 +78,10 @@ export interface Project {
   name: string;
   summary: string;
   status: Status;
+  /** Default repository for agent source paths and existing integrations. */
   repository: string;
+  /** Additional linked resources; building identity is always project.id. */
+  repositories?: string[];
   tags: string[];
   /** Infrastructure district declared in the manifest; Atlas infers one when this is absent. */
   district?: DistrictId;

@@ -1,3 +1,4 @@
+import { projectRepositories } from "../catalog/projects";
 import type { Catalog, Status } from "../catalog/types";
 import type { RepoState, WorkflowRun } from "../github/types";
 import { latestPerWorkflow, repoData } from "./derive";
@@ -56,7 +57,7 @@ function dayKey(t: number) {
  * snapshots already in memory; nothing is estimated or filled in.
  */
 export function workspaceMetrics(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[], now = Date.now(), windowDays = 14): Metrics {
-  const names = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository), uncataloged))];
+  const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p.name]));
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);

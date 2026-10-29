@@ -10,6 +10,28 @@ const plans = planVehicles(scene);
 const inside = (r: { x: number; z: number; w: number; d: number }, x: number, z: number, m = 0) => x >= r.x - m && x <= r.x + r.w + m && z >= r.z - m && z <= r.z + r.d + m;
 
 describe("decorative vehicles", () => {
+  it("sets city streets back from project walls to leave room for sidewalks", () => {
+    for (const tower of scene.towers) {
+      const bridges = scene.carBridges.filter(b => b.ends.includes(tower.projectId));
+      for (const bridge of bridges) {
+        const road = bridge.roads[bridge.ends.indexOf(tower.projectId)];
+        const entrance = road[0];
+        const edgeDistance = Math.max(Math.abs(entrance[0]-tower.x),Math.abs(entrance[1]-tower.z))-tower.size/2;
+        expect(edgeDistance).toBeGreaterThanOrEqual(0.49);
+      }
+    }
+  });
+
+  it("continues through neighboring districts on a connected city tour", () => {
+    for (const plan of plans) {
+      const districts = new Set<string>();
+      for (const leg of plan.legs) for (const t of scene.terraces) {
+        if (leg.a[0]>=t.x && leg.a[0]<=t.x+t.w && leg.a[1]>=t.z && leg.a[1]<=t.z+t.d) districts.add(t.id);
+      }
+      expect(districts.size).toBeGreaterThan(2);
+    }
+  });
+
   it("runs a small fleet, one per district", () => {
     expect(plans.length).toBeGreaterThanOrEqual(3);
     expect(plans.length).toBeLessThanOrEqual(MAX_VEHICLES);
@@ -26,10 +48,14 @@ describe("decorative vehicles", () => {
 
   it("stays on the paved paths and bridges, clear of every building and kiosk", () => {
     const paths = scene.paving.filter((p) => p.y === TERRACE_H);
-    for (const v of plans)
-      // Every 0.08s is under 0.03 of travel, finer than any wall's clearance.
-      for (let t = 0; t < v.period; t += 0.08) {
-        const { x, y, z } = vehicleAt(v, t);
+    const checked = new Set<string>();
+    for (const v of plans) for (const leg of v.legs) {
+      const samples = Math.max(1, Math.ceil(Math.hypot(leg.b[0]-leg.a[0],leg.b[1]-leg.a[1])/0.02));
+      // Sample every geometric leg, including its endpoints, independently of fleet size and speed.
+      for (let sample=0;sample<=samples;sample++) {
+        const f=sample/samples,x=leg.a[0]+(leg.b[0]-leg.a[0])*f,z=leg.a[1]+(leg.b[1]-leg.a[1])*f,y=leg.ya+(leg.yb-leg.ya)*f;
+        const key=[x,y,z].map(n=>n.toFixed(6)).join(":");
+        if(checked.has(key))continue;checked.add(key);
         const onDeck = decks.some((d) => inside(d, x, z, 0.01));
         expect(onDeck || paths.some((p) => inside(p, x, z, 0.01)), `${v.id} off the path at ${x},${z}`).toBe(true);
         // Off a bridge, vehicles keep to the paving; on one, to the deck's rise.
@@ -41,7 +67,8 @@ describe("decorative vehicles", () => {
         for (const k of scene.kiosks) expect(inside({ x: k.x - k.size / 2, z: k.z - k.size / 2, w: k.size, d: k.size }, x, z, 0.08), `${v.id} inside ${k.key}`).toBe(false);
         for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
       }
-  });
+    }
+  }, 15000);
 
   it("keeps fountains clear of the towers", () => {
     for (const f of scene.fountains)

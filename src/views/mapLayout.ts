@@ -1,5 +1,6 @@
+import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
-import { isAiAgent, servicesOf, type ServiceUse } from "../catalog/roles";
+import { servicesOf, type ServiceUse } from "../catalog/roles";
 import type { Agent, Catalog, Project, Status } from "../catalog/types";
 
 // Isometric projection: one grid unit is TW px across and TH px down per axis.
@@ -40,9 +41,9 @@ export interface District {
   oy: number;
   size: number;
   hq: { gx: number; gy: number; size: number; height: number };
-  /** Automations: each has a house on the district. */
+  /** Reserved outdoor worker lots; all registered workers now live inside. */
   lots: Lot[];
-  /** AI agents: they work at desks inside the headquarters and have no house. */
+  /** All registered agents and automations work inside this project building. */
   crew: Agent[];
   kiosks: Kiosk[];
 }
@@ -109,14 +110,6 @@ export interface Layout {
  * Ring of building slots around the central HQ. Slots far to the left and right on screen fill
  * first, then front before back, so a small district keeps its labels clear of the HQ label.
  */
-function slots(m: number, size: number): { gx: number; gy: number }[] {
-  const step = size / m;
-  const ring: { gx: number; gy: number }[] = [];
-  const inner = (i: number) => i > 0 && i < m - 1;
-  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) if (!(inner(i) && inner(j))) ring.push({ gx: (i + 0.5) * step, gy: (j + 0.5) * step });
-  const spread = (p: { gx: number; gy: number }) => Math.round(Math.abs(p.gx - p.gy) * 100);
-  return ring.sort((a, b) => spread(b) - spread(a) || b.gx + b.gy - (a.gx + a.gy) || a.gx - b.gx);
-}
 
 export function hash(s: string) {
   let h = 2166136261;
@@ -138,7 +131,7 @@ export function districtSize(lotCount: number) {
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
-  return { crew: agents.filter(isAiAgent), houses: agents.filter((a) => !isAiAgent(a)), services: servicesOf(agents) };
+  return { crew: agents, houses: [] as Agent[], services: orderToolsForWorkflow(servicesOf(agents)) };
 }
 
 interface Box {
@@ -295,7 +288,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const m = n ? ringFor(n) : 2;
       const hqSize = n ? size * 0.26 : size * 0.34;
       const lotSize = (size / m) * 0.52;
-      const spots = n ? slots(m, size).slice(0, n) : [];
+      const spots = n ? workflowToolSpots(n, size) : [];
       districts.push({
         project,
         group: blk.key,
@@ -303,7 +296,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: project.id === "benjaire-site" ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,

@@ -760,3 +760,30 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .copy-value > .selectable { overflow-wrap: anywhere; }
 .copy-value .copy-btn.compact { flex-shrink: 0; color: inherit; opacity: 0.75; }
 .copy-value .copy-btn.compact:hover, .copy-value .copy-btn.compact:focus-visible { opacity: 1; }
+
+/* Full destination names remain readable in the compact navigation rail. */
+.nav-item .nav-label-long { font-size: 9px; letter-spacing: 0.01em; }
+
+/* Symbol keys stay compact instead of inheriting the full-size map SVG rule. */
+.map-legend .health > svg { width: 14px; height: 14px; flex: none; }
+.map-legend { flex-wrap: wrap; max-width: calc(100% - 40px); }
+@media (max-width: 1300px) { .map-stage .map-legend { bottom: 72px; } }
+
+/* Tool inspectors explain the business process using the same quiet inspector surfaces. */
+.tool-operations { display: grid; gap: 24px; }
+.tool-outcomes { padding-left: 18px; margin: 10px 0 0; font-size: 13px; line-height: 1.65; }
+.tool-workflow-step { border: 1px solid var(--sage-200); border-radius: 10px; margin-top: 12px; overflow: hidden; }
+.tool-workflow-step summary { display: flex; align-items: center; gap: 10px; padding: 13px; cursor: pointer; background: var(--sage-100); }
+.tool-workflow-step summary strong { display: block; font-size: 13px; font-weight: 500; }
+.tool-workflow-step summary small { display: block; margin-top: 4px; color: var(--ink-2); font-size: 11px; }
+.tool-workflow-step summary::after { content: '+'; margin-left: auto; color: var(--gold-deep); }
+.tool-workflow-step[open] summary::after { content: '−'; }
+.tool-step-body { padding: 15px; display: grid; gap: 18px; }
+.tool-step-body p { margin: 0; font-size: 13px; line-height: 1.65; }
+.tool-step-body ul, .tool-step-body ol { padding-left: 18px; font-size: 12px; line-height: 1.65; margin: 8px 0 0; overflow-wrap: anywhere; }
+.tool-trigger { display: flex; gap: 9px; font-size: 12px; color: var(--ink-2); }
+.tool-trigger svg { flex: none; margin-top: 3px; }
+.tool-trigger strong { display: block; font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.tool-io { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tool-handoffs { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+@media(max-width: 600px) { .tool-io { grid-template-columns: 1fr; } }

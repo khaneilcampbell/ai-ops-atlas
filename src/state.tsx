@@ -1,3 +1,4 @@
+import { projectRepositories } from "./catalog/projects";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
@@ -11,9 +12,9 @@ import { isTauri } from "./lib/env";
 import { applyGithubEvent } from "./live/apply";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
-export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
-const VIEWS: View[] = ["overview", "agents", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
-export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
+export type View = "overview" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+const VIEWS: View[] = ["overview", "agents", "automations", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
+export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | { kind: "project"; id: string } | { kind: "service"; id: string } | null;
 
 export interface Settings {
   refreshMinutes: number;
@@ -67,7 +68,7 @@ interface AtlasState {
 
 const Ctx = createContext<AtlasState | null>(null);
 
-const repoNames = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository)))];
+const repoNames = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository)))];
 const known = new Set(repoNames.map((n) => n.toLowerCase()));
 
 function workflowsFor(repo: string): string[] {
@@ -115,7 +116,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
       .then((raw) => {
         const r = raw ? (JSON.parse(raw) as { view?: View; selection?: Selection }) : null;
         if (r?.view && VIEWS.includes(r.view)) setViewState(r.view);
-        if (r?.selection && (r.selection.kind === "agent" || r.selection.kind === "repo") && typeof r.selection.id === "string") select(r.selection);
+        if (r?.selection && (r.selection.kind === "agent" || r.selection.kind === "repo" || r.selection.kind === "project" || r.selection.kind === "service") && typeof r.selection.id === "string") select(r.selection);
       })
       .catch(() => undefined);
   }, []);

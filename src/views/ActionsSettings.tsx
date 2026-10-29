@@ -1,3 +1,4 @@
+import { projectRepositories } from "../catalog/projects";
 import { useMemo, useState } from "react";
 import { actionsApi } from "../actions/api";
 import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
@@ -21,7 +22,7 @@ export function ActionsSettings() {
   const [error, setError] = useState<string | null>(null);
 
   const allRepos = useMemo(
-    () => [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository), uncataloged))].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))].sort((a, b) => a.localeCompare(b)),
     [catalog, uncataloged],
   );
   const recent = useMemo(() => latestPerAttempt(audit).slice(0, 5), [audit]);

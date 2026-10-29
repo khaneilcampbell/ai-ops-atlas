@@ -1,3 +1,7 @@
+import { toolWorkflowRoads } from "./toolWorkflowLayout";
+import { toolBrand } from "./map3d/toolBrand";
+import { SYMBOLS } from "./map3d/symbols";
+import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
@@ -15,10 +19,8 @@ import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
 import {
-  FRAMEWORK_COLORS,
   hash,
   TH,
-  frameworkColor,
   iso,
   layoutMap,
   placeLabels,
@@ -59,8 +61,8 @@ type Kind = "house" | "tower" | "plain";
 const onFace = (a: Pt, b: Pt, u: number, v: number) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u - v });
 const quad = (a: Pt, b: Pt, u0: number, u1: number, v0: number, v1: number) => pts([onFace(a, b, u0, v0), onFace(a, b, u1, v0), onFace(a, b, u1, v1), onFace(a, b, u0, v1)]);
 
-function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, onLeave, selected, hovered, windows }: {
-  id: string; gx: number; gy: number; w: number; h: number; wall: string; roof: string; kind?: Kind; selected?: boolean; hovered?: boolean; windows?: boolean;
+function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, onLeave, selected, hovered, windows, worker }: {
+  id: string; gx: number; gy: number; w: number; h: number; wall: string; roof: string; worker?: "agent" | "automation"; kind?: Kind; selected?: boolean; hovered?: boolean; windows?: boolean;
   onClick?: () => void; onEnter?: (e: React.MouseEvent) => void; onLeave?: () => void;
 }) {
   const A = iso(gx, gy + w), B = iso(gx + w, gy + w), C = iso(gx + w, gy), D = iso(gx, gy);
@@ -187,6 +189,7 @@ function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, o
       {(selected || hovered) && <ellipse className={selected ? "sel-glow" : "hover-glow"} cx={base.x} cy={base.y} rx={w * 62 + 18} ry={w * 31 + 9} />}
       {selected && <ellipse className="sel-ring" cx={base.x} cy={base.y} rx={w * 48 + 10} ry={w * 24 + 5} />}
       <g className={`bldg ${hovered ? "hover" : ""} ${selected ? "selected" : ""}`}>{body}</g>
+      {worker && <g transform={`translate(${base.x - 9},${base.y - h - 21})`} pointerEvents="none"><rect width={18} height={18} rx={worker === "agent" ? 4 : 9} fill="#263c32" stroke="#c7d0bd"/><g transform="translate(2,2) scale(.58)" fill="none" stroke="#eff0df" strokeWidth={1.7}>{SYMBOLS[worker].stroke.map(d => <path key={d} d={d}/>)}</g></g>}
     </g>
   );
 }
@@ -380,8 +383,13 @@ function anchors(districts: District[], parks: Park[]) {
   for (const d of districts) {
     const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
     const hq = { x: c.x, y: c.y - d.hq.height / 2, district: d.project.id };
-    m.set(`repo:${d.project.repository}`, hq);
-    // AI agents work inside the headquarters.
+    m.set(`project:${d.project.id}`, hq);
+    for (const name of projectRepositories(d.project)) m.set(`repo:${name}`, hq);
+    for (const k of d.kiosks) {
+      const point = iso(k.gx + k.size / 2, k.gy + k.size / 2);
+      m.set(`service:${d.project.id}:${k.service.id}`, { ...point, district: d.project.id });
+    }
+    // All workers are inside the project building.
     for (const a of d.crew) m.set(`agent:${a.id}`, hq);
     for (const l of d.lots) {
       const p = iso(l.gx + l.size / 2, l.gy + l.size / 2);
@@ -393,7 +401,7 @@ function anchors(districts: District[], parks: Park[]) {
 }
 
 export function MapView() {
-  const { catalog, repos, uncataloged, select, selection, settings, setSettings, setView } = useAtlas();
+  const { catalog, repos, uncataloged, select, selection, setView } = useAtlas();
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -403,7 +411,8 @@ export function MapView() {
     ];
   }, [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapGroupBy2", "district"));
+  const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapProjectGrouping", "district"));
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -649,7 +658,8 @@ export function MapView() {
   }, [zoomAt, is3d]);
 
   // Follow selections made elsewhere (search, inspector links) so the building stays in view.
-  const selKey = selection ? `${selection.kind}:${selection.id}` : null;
+  const selectedProject = selection?.kind === "repo" ? catalog.projects.find(p => projectRepositories(p, catalog.agents).includes(selection.id)) : undefined;
+  const selKey = selectedProject ? `project:${selectedProject.id}` : selection ? `${selection.kind}:${selection.id}` : null;
   useEffect(() => {
     if (!selKey) return;
     const p = where.get(selKey);
@@ -675,15 +685,15 @@ export function MapView() {
 
   const k = cam.k;
   // Agent labels need room: show them once zoomed in far enough, earlier if "always show" is on.
-  const agentsShown = k >= (settings.showMapLabels ? 0.5 : 0.9);
+  const agentsShown = showNamesOnZoom && k >= 0.9;
   // Repository and district names grow as you zoom out so they stay readable.
   const nameScale = Math.min(2, Math.max(1, 0.85 / k));
   // Level of detail: windows, trees and footpaths only once there is room to see them.
   const detail = k >= 0.5 || layout.districts.length < 30;
   const focused = layout.districts.find((d) => d.project.id === focus) ?? layout.districts[0];
-  const isSelected = (kind: "agent" | "repo", id: string) => selection?.kind === kind && selection.id === id;
+  const isSelected = (kind: "agent" | "repo" | "project", id: string) => selection?.kind === kind && selection.id === id;
   const selectedDistrict = selKey ? where.get(selKey)?.district : undefined;
-  const selProject = selection?.kind === "repo" ? catalog.projects.find((p) => p.repository === selection.id)?.id : undefined;
+  const selProject = selection?.kind === "project" ? selection.id : selectedProject?.id;
   const mapLinks = useMemo(
     () => lensLinks(allLinks, lens, { showAll: linkPrefs.on, types: linkPrefs.types, selKey, selProject, automations: automationIds }),
     [allLinks, lens, linkPrefs.on, linkPrefs.types, selKey, selProject, automationIds],
@@ -741,8 +751,8 @@ export function MapView() {
       key === selKey || key === hover || (district && hover === `district:${district}`) ? 0 : district && (district === selectedDistrict || district === focus) ? 2 : null;
     for (const d of layout.districts) {
       const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
-      const key = `repo:${d.project.repository}`;
-      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${residentsLabel(d.crew.length, d.lots.length)}`);
+      const key = `project:${d.project.id}`;
+      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}`);
       // Pointer tip just above the tower's roof and mast.
       const y = c.y - d.hq.height - TH * d.hq.size * 0.5 - 14;
       const u = urgent(key, d.project.id);
@@ -766,7 +776,7 @@ export function MapView() {
               p={p}
               status={d.project.status}
               state={state}
-              onClick={() => select({ kind: "repo", id: d.project.repository })}
+              onClick={() => select({ kind: "project", id: d.project.id })}
               onEnter={() => setHover(key)}
               onLeave={() => setHover(null)}
             />
@@ -797,7 +807,7 @@ export function MapView() {
       const a = l.agent;
       const key = `agent:${a.id}`;
       const u = urgent(key, l.d.project.id);
-      if (!agentsShown && u !== 0) continue;
+      if (!agentsShown && l.d.project.id !== selectedDistrict && key !== selKey && key !== hover) continue;
       const c = iso(l.gx + l.size / 2, l.gy + l.size / 2);
       const text = a.status === "attention" ? `${short(a.name, 22)} · needs attention` : short(a.name, 32);
       const y = c.y - l.height - TH * l.size * 0.5 - 16;
@@ -820,11 +830,10 @@ export function MapView() {
       .sort((a, b) => b.priority - a.priority);
   }, [layout, lots, strays, k, nameScale, agentsShown, selKey, hover, selectedDistrict, focus, select]);
 
-  const usedFrameworks = FRAMEWORK_COLORS.filter(([re]) => catalog.agents.some((a) => re.test(a.framework)));
 
   const setGroupBy = (g: GroupBy) => {
     setGroupByState(g);
-    save("mapGroupBy2", g);
+    save("mapProjectGrouping", g);
   };
 
   /** Arrow keys move between districts in the direction pressed, measured on screen. */
@@ -848,7 +857,7 @@ export function MapView() {
     if (!best) return;
     const d = best.d;
     setFocus(d.project.id);
-    setAnnounce(`${d.project.name}. ${residentsLabel(d.crew.length, d.lots.length)}. Press Enter to inspect.`);
+    setAnnounce(`${d.project.name}. ${residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}. Press Enter to inspect.`);
     if (is3d) map3d.current?.reveal(d.ox + d.size / 2, d.oy + d.size / 2);
     else reveal(center(d));
   };
@@ -867,6 +876,10 @@ export function MapView() {
       const a = catalog.agents.find((x) => x.id === key.slice(6));
       return a ? { title: a.name, sub: `${a.framework} · ${statusLabel(a.status)} · last run ${relative(effectiveLastRun(a, repoData(repos[a.repository]))).toLowerCase()}` } : null;
     }
+    if (key.startsWith("project:")) {
+      const project = catalog.projects.find(p => p.id === key.slice(8));
+      return project ? { title: project.name, sub: `Project · ${projectRepositories(project, catalog.agents).length} linked repositories` } : null;
+    }
     const name = key.slice(5);
     const snap = repoData(repos[name]);
     if (!catalog.projects.some((p) => p.repository === name)) return { title: name, sub: snap?.pushedAt ? `Not in the catalog yet · pushed ${relative(snap.pushedAt)}` : "Not in the catalog yet" };
@@ -883,7 +896,7 @@ export function MapView() {
       else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      if (focused) select({ kind: "repo", id: focused.project.repository });
+      if (focused) select({ kind: "project", id: focused.project.id });
     } else if (e.key === "+" || e.key === "=") zoomBy(1.25);
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
@@ -968,7 +981,7 @@ export function MapView() {
               selKey={selKey}
               selectedDistrict={selectedDistrict}
               focus={focus}
-              showAgentLabels={settings.showMapLabels}
+              showAgentLabels={showNamesOnZoom}
               reduced={reduced}
               tipFor={tipFor}
               healthFor={healthFor}
@@ -1007,7 +1020,7 @@ export function MapView() {
                     d={d}
                     ramps={ramps.get(d.project.id)}
                     focused={d === focused}
-                    selected={isSelected("repo", d.project.repository) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
+                    selected={isSelected("project", d.project.id) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
                     hovered={!!hover && (hover === `district:${d.project.id}` || where.get(hover)?.district === d.project.id)}
                     detail={detail}
                     onFocus={() => setFocus(d.project.id)}
@@ -1052,13 +1065,13 @@ export function MapView() {
                 if (it.kind === "hq") {
                   const d = it.d;
                   if (!rectVisible(d.ox, d.oy, d.size, d.size)) return null;
-                  const snap = repoData(repos[d.project.repository]);
-                  const key = `repo:${d.project.repository}`;
+                  const key = `project:${d.project.id}`;
                   return (
                     <Box
                       key={`hq:${d.project.id}`}
                       id={d.project.id}
                       kind="tower"
+                      worker={d.crew.length > 0 ? "agent" : undefined}
                       gx={d.hq.gx}
                       gy={d.hq.gy}
                       w={d.hq.size}
@@ -1066,13 +1079,13 @@ export function MapView() {
                       wall="#ece5d2"
                       roof="#2f4535"
                       windows={detail}
-                      selected={isSelected("repo", d.project.repository)}
+                      selected={isSelected("project", d.project.id)}
                       hovered={hover === key}
                       onClick={() => {
                         setFocus(d.project.id);
-                        select({ kind: "repo", id: d.project.repository });
+                        select({ kind: "project", id: d.project.id });
                       }}
-                      onEnter={enter(key, d.project.repository, snap?.commits[0] ? `Latest commit ${relative(snap.commits[0].date)}: ${short(snap.commits[0].message, 40)}` : "Repository")}
+                      onEnter={enter(key, d.project.name, "Project building")}
                       onLeave={leave}
                     />
                   );
@@ -1086,13 +1099,14 @@ export function MapView() {
                     key={a.id}
                     id={a.id}
                     kind="house"
+                    worker="automation"
                     windows={detail}
                     gx={l.gx}
                     gy={l.gy}
                     w={l.size}
                     h={l.height}
                     wall={a.status === "retired" ? "#d4d6cc" : "#f2ecdc"}
-                    roof={a.status === "attention" ? "#c9a35a" : frameworkColor(a.framework)}
+                    roof="#58665f"
                     selected={isSelected("agent", a.id)}
                     hovered={hover === key}
                     onClick={() => {
@@ -1107,6 +1121,7 @@ export function MapView() {
               {labels.filter((b) => ptVisible({ x: b.x, y: b.top + b.dy })).map((b) => b.draw(b.dy))}
               {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
+            {layout.districts.flatMap(d => d.kiosks.map(k => <Box key={`tool:${d.project.id}:${k.service.id}`} id={`tool:${d.project.id}:${k.service.id}`} kind="tower" gx={k.gx} gy={k.gy} w={k.size} h={88} wall={toolBrand(k.service.name).wall} roof={toolBrand(k.service.name).primary} windows={detail} onClick={() => { setFocus(d.project.id); select({ kind: "service", id: `${d.project.id}:${k.service.id}` }); }} selected={selection?.kind === "service" && selection.id === `${d.project.id}:${k.service.id}`} onEnter={() => { setHover(`service:${d.project.id}:${k.service.id}`); setTip(null); }} onLeave={leave} />))}
           </svg>
           )}
 
@@ -1131,24 +1146,6 @@ export function MapView() {
               <div className="s">{tip.sub}</div>
             </div>
           )}
-
-          <div className="map-legend" aria-label="Roof colors by framework">
-            {is3d && lens !== "infrastructure" && (
-              <span className="health lens-note">
-                <b>{LENS_INFO[lens].label}</b> · {mapLinks.length ? `${mapLinks.length} ${mapLinks.length === 1 ? "link" : "links"} from manifests` : LENS_INFO[lens].empty}
-              </span>
-            )}
-            {usedFrameworks.map(([re, color, label]) => (
-              <span key={String(re)} className="health">
-                <i style={{ background: color, borderRadius: 2 }} />
-                {label}
-              </span>
-            ))}
-            <span className="health">
-              <i style={{ background: "#c9a35a", borderRadius: 2, outline: "1px solid #7d5f25" }} />
-              Needs attention
-            </span>
-          </div>
 
           <div className="map-controls">
             {is3d && (
@@ -1227,7 +1224,7 @@ export function MapView() {
             <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />
             </button>
-            <button className={`icon-btn ${settings.showMapLabels ? "on" : ""}`} onClick={() => setSettings({ showMapLabels: !settings.showMapLabels })} aria-label="Toggle agent labels" aria-pressed={settings.showMapLabels} title="Agent labels">
+            <button className={`icon-btn ${showNamesOnZoom ? "on" : ""}`} onClick={() => { setShowNamesOnZoom(!showNamesOnZoom); save("mapNamesOnZoom", !showNamesOnZoom); }} aria-label="Show agent names when zoomed in" aria-pressed={showNamesOnZoom} title="Show agent and automation names when zoomed in. Selecting a project always reveals its names.">
               <Icon name="labels" size={17} />
             </button>
             <button className="icon-btn" onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in (+)">
@@ -1247,13 +1244,16 @@ export function MapView() {
         <ul className="sr-only" aria-label="Projects on the map">
           {layout.districts.map((d) => (
             <li key={d.project.id}>
-              <button tabIndex={-1} onClick={() => select({ kind: "repo", id: d.project.repository })}>
-                {d.project.name}, {residentsLabel(d.crew.length, d.lots.length)}
+              <button tabIndex={-1} onClick={() => select({ kind: "project", id: d.project.id })}>
+                {d.project.name}, {residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}
               </button>
             </li>
           ))}
         </ul>
 
+        <ul className="sr-only" aria-label="Infrastructure tools">
+          {layout.districts.flatMap(d => d.kiosks.map(k => <li key={`${d.project.id}:${k.service.id}`}><button onClick={() => select({ kind: "service", id: `${d.project.id}:${k.service.id}` })}>{k.service.name} · {d.project.name}</button></li>))}
+        </ul>
         {is3d && mapLinks.length > 0 && (
           <ul className="sr-only" aria-label="Connections on the map">
             {mapLinks.map((l) => (
@@ -1272,7 +1272,7 @@ export function MapView() {
           </ul>
         )}
 
-        {focused && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
+        {focused && selection && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
       </div>
 
       {pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />}
@@ -1470,6 +1470,8 @@ function Connections({ d, exits }: { d: District; exits?: { gx: number; gy: numb
     const lc = { gx: l.gx + l.size / 2, gy: l.gy + l.size / 2 };
     return { id: l.agent.id, p: pts([iso(hc.gx, hc.gy), iso(lc.gx, hc.gy), iso(lc.gx, lc.gy)]) };
   });
+  toolWorkflowRoads(d.hq, d.kiosks).forEach((path, i) => lines.push({ id: `tool-flow:${i}`, p: pts(path.map(p => iso(p.gx, p.gy))) }));
+  d.kiosks.forEach((k, i) => lines.push({ id: `tool-door:${i}`, p: pts([iso(k.gx+k.size/2,k.gy+k.size), iso(k.gx+k.size/2,k.gy+k.size+0.25)]) }));
   // Clamp to the island top (which overhangs the lot by its margin) so paths meet the steps.
   const m = 0.45;
   const clamp = (v: number, lo: number) => Math.min(lo + d.size + m, Math.max(lo - m, v));
@@ -1542,7 +1544,7 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
         </span>
         <div>
           <div className="eyebrow">
-            {d.project.repository} · {residentsLabel(d.crew.length, d.lots.length)}
+            {d.project.repository} · {residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}
           </div>
           <h3>{d.project.name}</h3>
         </div>
@@ -1551,7 +1553,7 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
         <span className="health" style={{ color: "var(--on-dark-2)" }}>
           <i className={`h-${health}`} /> Repo {health === "good" ? "healthy" : health === "unknown" ? "not synced" : health === "warn" ? "needs a look" : "failing"}
         </span>
-        <button className="ghost-btn" onClick={() => select({ kind: "repo", id: d.project.repository })}>
+        <button className="ghost-btn" onClick={() => select({ kind: "project", id: d.project.id })}>
           <Icon name="repos" size={15} /> Inspect
         </button>
         <button

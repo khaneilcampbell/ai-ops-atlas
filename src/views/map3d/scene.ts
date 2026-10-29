@@ -1,5 +1,7 @@
+import { toolWorkflowRoads } from "../toolWorkflowLayout";
+import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
-import { frameworkColor, hash, treeSpots, type Layout } from "../mapLayout";
+import { hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 
@@ -12,7 +14,6 @@ export const TERRACE_M = 0.35;
 /** The sea sits this far below the meadow; the cliffs fill the gap. */
 export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
-const PATH_W = 0.55;
 const INNER_PATH_W = 0.32;
 const BROOK_W = 0.55;
 export const FLOOR_H = 0.32;
@@ -130,8 +131,8 @@ export interface Scene3D {
   fountains: { x: number; z: number; k?: number }[];
   /** Low path lights along each district's footpaths. */
   bollards: Point[];
-  /** Walkways between terraces at meadow level, end to end, for strollers. */
-  walks: { x0: number; z0: number; x1: number; z1: number }[];
+  /** Pedestrian paths and level footbridges, with optional continuous building-to-building routes. */
+  walks: { x0: number; z0: number; x1: number; z1: number; y?: number; bridge?: boolean; route?: { gx: number; gy: number }[] }[];
   parks: Park[];
   houses: House[];
   kiosks: Kiosk[];
@@ -185,18 +186,18 @@ export function buildScene(layout: Layout): Scene3D {
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
-    const floors = identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const floors = d.project.id === "benjaire-site" ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
     const size = d.hq.size * (identity.landmark ? 1.02 : 0.92);
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     towers.push({
-      key: `repo:${d.project.repository}`,
+      key: `project:${d.project.id}`,
       projectId: d.project.id,
       repository: d.project.repository,
       name: d.project.name,
       status: d.project.status,
-      agents: d.crew.length,
-      automations: d.lots.length,
+      agents: d.crew.filter(isAiAgent).length,
+      automations: d.crew.filter(a => !isAiAgent(a)).length + d.lots.length,
       identity,
       x: cx,
       z: cz,
@@ -205,7 +206,7 @@ export function buildScene(layout: Layout): Scene3D {
       height: floors * FLOOR_H,
     });
     // Paved plaza around the tower, and paths out to each house.
-    const pz = d.hq.size * 1.25;
+    const pz = d.hq.size * 1.25 + 1.0;
     paving.push({ x: cx - pz / 2, z: cz - pz / 2, w: pz, d: pz, y: top, h: 0.03 });
     for (const l of d.lots) {
       const a = l.agent;
@@ -224,7 +225,7 @@ export function buildScene(layout: Layout): Scene3D {
         d: l.size * 0.78,
         h: tall ? 0.8 : 0.5 + t * 0.14,
         roofH: 0.34 + hash(`${a.id}:r`) * 0.08,
-        roof: a.status === "attention" ? "#c9a35a" : frameworkColor(a.framework),
+        roof: "#58665f",
         wall: a.status === "retired" ? "#d4d6cc" : WALLS[Math.floor(hash(`${a.id}:w`) * WALLS.length)],
         hip: hash(`${a.id}:roof`) > 0.5,
         chimney: hash(`${a.id}:ch`) > 0.4,
@@ -234,7 +235,7 @@ export function buildScene(layout: Layout): Scene3D {
     for (const k of d.kiosks) {
       const kx = k.gx + k.size / 2;
       const kz = k.gy + k.size / 2;
-      paving.push(strip(cx, cz, kx, cz, INNER_PATH_W, top), strip(kx, cz, kx, kz, INNER_PATH_W, top));
+      paving.push(strip(kx, kz + Math.min(k.size, 0.9) * 0.4, kx, k.gy + k.size + 0.25, INNER_PATH_W, top));
       kiosks.push({
         key: `service:${d.project.id}:${k.service.id}`,
         projectId: d.project.id,
@@ -246,8 +247,15 @@ export function buildScene(layout: Layout): Scene3D {
         canopy: CANOPIES[Math.floor(hash(k.service.id) * CANOPIES.length)],
       });
     }
-    // A path light at each bend, on the outside corner, unless a house stands there.
-    for (const l of d.lots) {
+    for (const path of toolWorkflowRoads({ gx: d.hq.gx, gy: d.hq.gy, size: d.hq.size }, d.kiosks)) {
+      for (let i = 1; i < path.length; i++) paving.push(strip(path[i-1].gx, path[i-1].gy, path[i].gx, path[i].gy, INNER_PATH_W, top));
+      for (const p of path.slice(1,-1)) {
+        const b = { x: p.gx + INNER_PATH_W, y: top, z: p.gy + INNER_PATH_W, s: 1 };
+        if (!bollards.some(o => Math.hypot(o.x-b.x,o.z-b.z)<0.3)) bollards.push(b);
+      }
+    }
+    // Light the paths to supporting tool buildings as well as legacy lots.
+    for (const l of [...d.lots, ...d.kiosks]) {
       const lx = l.gx + l.size / 2;
       const lz = l.gy + l.size / 2;
       const b = { x: lx + Math.sign(lx - cx || 1) * (INNER_PATH_W / 2 + 0.07), y: top, z: cz - Math.sign(lz - cz || 1) * (INNER_PATH_W / 2 + 0.07), s: 1 };
@@ -281,7 +289,7 @@ export function buildScene(layout: Layout): Scene3D {
     const own = <T extends { projectId: string }>(xs: T[]) => xs.filter((x) => x.projectId === t.projectId);
     roadsOf.set(t.projectId, {
       tower: t,
-      ring: towerRing(t, d.hq.size * 1.25),
+      ring: towerRing(t, d.hq.size * 1.25 + 1.0),
       obstacles: [
         stairsOf(t),
         ...own(houses),
@@ -337,6 +345,26 @@ export function buildScene(layout: Layout): Scene3D {
     return br.axis === "x" ? { x: x0, z: br.a[1] - 0.3, w: Math.abs(br.b[0] - br.a[0]), d: 0.6 } : { x: br.a[0] - 0.3, z: z0, w: 0.6, d: Math.abs(br.b[1] - br.a[1]) };
   });
 
+  // A continuous pedestrian network links each front entrance to the dedicated footbridge.
+  const pedestrianJourneys = new Map<string, { gx: number; gy: number }[]>();
+  for (const w of layout.walks) {
+    const x = w.axis === "x";
+    const a = x ? { gx: w.a.gx + TERRACE_M, gy: w.a.gy } : { gx: w.a.gx, gy: w.a.gy + TERRACE_M };
+    const b = x ? { gx: w.b.gx - TERRACE_M, gy: w.b.gy } : { gx: w.b.gx, gy: w.b.gy - TERRACE_M };
+    const approaches = [w.from, w.to].map((id, i) => {
+      const d = byId.get(id);
+      if (!d) return [];
+      const entrance = { gx: d.hq.gx + d.hq.size / 2, gy: d.hq.gy + d.hq.size + 0.25 };
+      const path = toolWorkflowRoads(d.hq, d.kiosks, [entrance, i ? b : a])[0] ?? [];
+      for (let j = 1; j < path.length; j++) {
+        const slab = strip(path[j-1].gx, path[j-1].gy, path[j].gx, path[j].gy, INNER_PATH_W, top);
+        paving.push(slab); pavedIn.get(id)!.push(slab);
+      }
+      return path;
+    });
+    if (approaches.every(path => path.length > 1)) pedestrianJourneys.set(`${w.from}:${w.to}`, [...approaches[0], ...approaches[1].slice().reverse()]);
+  }
+
   for (const d of layout.districts) {
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
@@ -365,19 +393,19 @@ export function buildScene(layout: Layout): Scene3D {
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
     const cx = p.ox + p.w / 2;
     const cz = p.oy + p.h / 2;
-    parks.push({ id: p.id, label: "Room for the next project", x: p.ox, z: p.oy, w: p.w, d: p.h });
+    parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
-    fountains.push({ x: cx, z: cz });
-    ponds.push({ x: p.ox + p.w * 0.27, y: top, z: p.oy + p.h * 0.72, r: Math.min(p.w, p.h) * 0.16 });
+    fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
+    ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
-      if (Math.abs(s.gx - cx) < 1.4 && Math.abs(s.gy - cz) < 1.4) continue;
+      if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
       if (ponds.some((q) => Math.hypot(q.x - s.gx, q.z - s.gy) < q.r + 0.3)) continue;
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.26, kind: hash(`${s.gx}:${s.gy}`) > 0.9 ? "blossom" : "round" });
     }
   }
 
-  // Walkways between terraces, with steps down each terrace face.
+  // Level pedestrian bridges between terraces.
   const bridges: Scene3D["bridges"] = [];
   const walks: Scene3D["walks"] = [];
   for (const w of layout.walks) {
@@ -385,15 +413,36 @@ export function buildScene(layout: Layout): Scene3D {
     const a = x ? w.a.gx + TERRACE_M : w.a.gy + TERRACE_M;
     const b = x ? w.b.gx - TERRACE_M : w.b.gy - TERRACE_M;
     const c = x ? w.a.gy : w.a.gx;
-    paving.push(x ? strip(a, c, b, c, PATH_W, 0) : strip(c, a, c, b, PATH_W, 0));
-    // Strollers keep off the steps at either end.
-    walks.push(x ? { x0: a + 0.45, z0: c, x1: b - 0.45, z1: c } : { x0: c, z0: a + 0.45, x1: c, z1: b - 0.45 });
-    for (const [edge, dir] of [[a, 1], [b, -1]] as const)
-      for (let i = 0; i < 3; i++) {
-        const along = edge + dir * (i * 0.13) - (dir === 1 ? 0 : 0.13);
-        const h = (top * (3 - i)) / 4;
-        steps.push(x ? { x: along, z: c - PATH_W / 2, w: 0.13, d: PATH_W, y: h, h } : { x: c - PATH_W / 2, z: along, w: PATH_W, d: 0.13, y: h, h });
-      }
+    // Extend park-side bridge landings into Skyline's front promenade, around its wings.
+    for (const [id,endpoint] of [[w.from,x?{gx:a,gy:c}:{gx:c,gy:a}],[w.to,x?{gx:b,gy:c}:{gx:c,gy:b}]] as const) {
+      const park=parks.find(p=>p.id===id);
+      if(!park) continue;
+      const cx=park.x+park.w/2,cz=park.z+park.d/2;
+      const front=cz+1.05;
+      // Keep each bridge approach straight on arrival; turn only at the front promenade.
+      const side=endpoint.gx<cx?cx-1.95:cx+1.95;
+      const path=endpoint.gy<cz+0.75
+        ? [endpoint,{gx:side,gy:endpoint.gy},{gx:side,gy:front},{gx:cx,gy:front}]
+        : [endpoint,{gx:endpoint.gx,gy:front},{gx:cx,gy:front}];
+      for(let j=1;j<path.length;j++) paving.push(strip(path[j-1].gx,path[j-1].gy,path[j].gx,path[j].gy,0.4,top));
+      if(path.length>1) walks.push({x0:endpoint.gx,z0:endpoint.gy,x1:cx,z1:front,y:top,route:path});
+    }
+    // A level pedestrian boardwalk joins the terraces independently of the road bridge.
+    walks.push(x ? { x0: a, z0: c, x1: b, z1: c, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) } : { x0: c, z0: a, x1: c, z1: b, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) });
+  }
+
+  // People also stroll the narrow paved routes inside each district, including tool workflows.
+  for (const path of paving) {
+    if (Math.min(path.w, path.d) > 0.4 || Math.max(path.w, path.d) < 0.55 || path.y < top - 0.05) continue;
+    walks.push({ x0: path.x + (path.w > path.d ? 0.08 : path.w / 2), z0: path.z + (path.d > path.w ? 0.08 : path.d / 2), x1: path.x + (path.w > path.d ? path.w - 0.08 : path.w / 2), z1: path.z + (path.d > path.w ? path.d - 0.08 : path.d / 2), y: top });
+  }
+
+  // Residents approach the lobby, disappear inside, then return to the promenade.
+  for (const park of parks) {
+    const x=park.x+park.w/2,z=park.z+park.d/2;
+    paving.push(strip(x,z+0.25,x,park.z+park.d,0.5,top));
+    for(const side of [-1,1]) paving.push({x:x+side*0.75-0.5,z:z+1.24,w:1.0,d:0.48,y:top,h:0.03});
+    walks.push({x0:x,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top});
   }
 
   // Brooks run along the gaps between shelf rows, under small bridges, and fall into the sea at the shore.
@@ -432,8 +481,7 @@ export function buildScene(layout: Layout): Scene3D {
       } else ponds.push({ x: bx1, y: 0, z, r: 0.45 });
       if (s0) falls.push({ x: x0, z, axis: "x", dir: -1 });
       else ponds.push({ x: bx0, y: 0, z, r: 0.45 });
-      for (const w of layout.walks)
-        if (w.axis === "y" && w.a.gx > bx0 && w.a.gx < bx1 && w.a.gy < z && w.b.gy > z) bridges.push({ x: w.a.gx - 0.3, z: z - 0.45, w: 0.6, d: 0.9, axis: "z" });
+
     }
 
   // Break up the straight coastline with headlands, keeping clear of the waterfalls.
@@ -498,6 +546,8 @@ export function buildScene(layout: Layout): Scene3D {
 
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
+  for (let i=trees.length-1;i>=0;i--) if (paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
+
   return {
     land,
     terraces,

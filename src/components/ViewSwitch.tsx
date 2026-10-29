@@ -3,7 +3,7 @@ import { Icon, type IconName } from "./Icon";
 import { useAtlas, type View } from "../state";
 
 const MODES: { view: View; label: string; icon: IconName; key: string }[] = [
-  { view: "map", label: "Map", icon: "map", key: "1" },
+  { view: "map", label: "Projects", icon: "map", key: "1" },
   { view: "overview", label: "Mission Control", icon: "overview", key: "2" },
   { view: "grid", label: "Grid", icon: "grid", key: "3" },
 ];

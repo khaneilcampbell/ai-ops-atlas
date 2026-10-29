@@ -26,6 +26,14 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
   if (repository && !REPO_RE.test(repository)) r.fail("project.repository", 'must look like "owner/name"');
   if (!projectId || !repository) return { projects: [], agents: [] };
 
+  const repositories = r.list(p, "repositories", "project").flatMap((value, i) => {
+    if (typeof value !== "string" || !REPO_RE.test(value.trim())) {
+      r.fail(`project.repositories[${i}]`, 'must look like "owner/name"');
+      return [];
+    }
+    return [value.trim()];
+  });
+
   const agents: Agent[] = r.list(root, "agents", "file").flatMap((a, i) => {
     const path = `agents[${i}]`;
     const ao = r.obj(a, path);
@@ -84,6 +92,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     summary: r.str(p, "summary", "project") ?? "",
     status: r.status(p, "project"),
     repository,
+    repositories: [...new Set(repositories)],
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
     district: r.oneOf(p, "district", "project", DISTRICTS),
     links: r.links(p, "project"),

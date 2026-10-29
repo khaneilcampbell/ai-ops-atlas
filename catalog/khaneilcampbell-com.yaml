@@ -36,7 +36,7 @@ agents:
     permissions:
       - 'GitHub: push branches and open pull requests through Claude Code; only KC merges'
     registry:
-      title: Portfolio Engineering Assistant
+      title: Portfolio Web Developer
       category: engineering
       subcategory: Repository maintenance
       classification:
@@ -138,7 +138,7 @@ agents:
       - GITHUB_TOKEN with the repository's default permissions (the workflow sets none)
       - No repository secrets
     registry:
-      title: Portfolio Security Policy Check
+      title: Website Security Analyst
       category: security
       subcategory: Security configuration auditing
       classification:
@@ -198,7 +198,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: khaneilcampbell.com Continuous Integration
+      title: Portfolio Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

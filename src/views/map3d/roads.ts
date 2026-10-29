@@ -11,7 +11,7 @@ export const ENTRANCE = 0.26;
 /** And from the plaza's edge, so wheels stay on the paving. */
 const EDGE = 0.08;
 /** How far out from the tower's walls the plaza lane runs. */
-const LANE = 0.15;
+const LANE = 0.55;
 
 /** A bridge's deck width, and how far each lane's center sits from the middle of the road. */
 export const DECK_W = 0.46;
