@@ -7,10 +7,12 @@ import { liveCatalog, type HiddenRepo } from "./lib/live";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
+import { isTauri } from "./lib/env";
 import { applyGithubEvent } from "./live/apply";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
 export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+const VIEWS: View[] = ["overview", "agents", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
 
 export interface Settings {
@@ -104,6 +106,19 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const [selection, select] = useState<Selection>(null);
   const [filters, setFiltersState] = useState<Filters>(EMPTY_FILTERS);
   const inflight = useRef(false);
+
+  // Right after an update, reopen on the view the previous copy had on screen.
+  useEffect(() => {
+    if (!isTauri()) return;
+    void import("@tauri-apps/api/core")
+      .then(({ invoke }) => invoke<string | null>("take_resume"))
+      .then((raw) => {
+        const r = raw ? (JSON.parse(raw) as { view?: View; selection?: Selection }) : null;
+        if (r?.view && VIEWS.includes(r.view)) setViewState(r.view);
+        if (r?.selection && (r.selection.kind === "agent" || r.selection.kind === "repo") && typeof r.selection.id === "string") select(r.selection);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const refresh = useCallback(
     async (force = false, live = false) => {

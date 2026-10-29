@@ -10,6 +10,12 @@
 //! quits. Before this, every GitHub request read the Keychain again, and each self-update gave
 //! the app a new code signature the Keychain didn't recognise, so macOS asked for the login
 //! password over and over.
+//!
+//! Installing an update hands the unlocked secrets straight to the new copy (see `handoff`), so
+//! the restart needs neither Touch ID nor the Keychain. The new copy then saves the vault again
+//! as its own item, because Keychain items made by apps without an Apple team ID are tied to
+//! the exact build (its cdhash), so every update would otherwise ask for the login password
+//! once more at the next launch.
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -41,6 +47,9 @@ trait Store {
     fn get(&self, account: &str) -> Result<Option<String>, String>;
     fn set(&self, account: &str, value: &str) -> Result<(), String>;
     fn remove(&self, account: &str) -> Result<(), String>;
+    /// Adds a new item and fails if one is already there, so it can never overwrite (or prompt
+    /// to change) an item another build owns.
+    fn add(&self, account: &str, value: &str) -> Result<(), String>;
 }
 
 struct Keychain;
@@ -69,6 +78,22 @@ impl Store for Keychain {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(e) => Err(format!("Could not remove the credential: {e}")),
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn add(&self, account: &str, value: &str) -> Result<(), String> {
+        use security_framework::os::macos::keychain::{SecKeychain, SecPreferencesDomain};
+        SecKeychain::default_for_domain(SecPreferencesDomain::User)
+            .and_then(|k| k.add_generic_password(SERVICE, account, value.as_bytes()))
+            .map_err(|e| format!("Could not save to the Keychain: {e}"))
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn add(&self, account: &str, value: &str) -> Result<(), String> {
+        if self.get(account)?.is_some() {
+            return Err("Already saved.".into());
+        }
+        self.set(account, value)
     }
 }
 
@@ -143,6 +168,36 @@ fn unlock(
         verify()?;
     }
     Ok(secrets)
+}
+
+/// What the running copy holds, for handing to the updated copy. None unless unlocked with
+/// something saved, so a locked Atlas never passes anything on.
+// Only the macOS update restart uses this.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn snapshot() -> Option<BTreeMap<String, String>> {
+    let state = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    match &*state {
+        Lock::Unlocked(s) if !s.is_empty() => Some(s.clone()),
+        _ => None,
+    }
+}
+
+/// Takes the secrets the previous copy handed over, in place of the Touch ID unlock.
+pub(crate) fn adopt(secrets: BTreeMap<String, String>) {
+    *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Lock::Unlocked(secrets);
+}
+
+/// Removes the vault item, so the updated copy can save it again as its own.
+// Only the macOS update restart uses this.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn release_vault() -> Result<(), String> {
+    Keychain.remove(VAULT_ACCOUNT)
+}
+
+/// Saves the vault as a new item owned by this build. Fails if any vault item exists.
+pub(crate) fn add_vault(secrets: &BTreeMap<String, String>) -> Result<(), String> {
+    let json = serde_json::to_string(secrets).map_err(|e| e.to_string())?;
+    Keychain.add(VAULT_ACCOUNT, &json)
 }
 
 fn read(account: &str) -> Option<String> {
@@ -458,6 +513,12 @@ mod tests {
         fn remove(&self, account: &str) -> Result<(), String> {
             self.items.borrow_mut().remove(account);
             Ok(())
+        }
+        fn add(&self, account: &str, value: &str) -> Result<(), String> {
+            if self.items.borrow().contains_key(account) {
+                return Err("duplicate".into());
+            }
+            self.set(account, value)
         }
     }
 
