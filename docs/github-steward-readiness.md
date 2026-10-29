@@ -2,7 +2,7 @@
 
 Status: **not production ready.** Updated October 29, 2026.
 
-This checklist tracks the GitHub Steward workflow (Intel → GitHub Steward) toward a reviewable release. Each item has acceptance criteria and evidence. `[x]` means verified by a test or a recorded check. `[~]` means implemented and unit-tested, but not yet verified in a running desktop build. `[ ]` means open. Nothing here is released. The work is uncommitted on the local `codex/finish-active-agents` working tree, mixed with other workstreams, and the installed desktop app does not contain it.
+This checklist tracks the GitHub Steward workflow (Intel → GitHub Steward) toward a reviewable release. Each item has acceptance criteria and evidence. `[x]` means verified by a test or a recorded check. `[~]` means implemented and unit-tested, but not yet verified in a running desktop build. `[ ]` means open. Nothing here is released. The release candidate is the local branch `claude/github-steward-production` (not pushed). The installed desktop app does not contain it.
 
 ## Validation log
 
@@ -79,7 +79,7 @@ The desktop app is the production target. The Steward runs in Atlas's Rust side 
 
 ### P4: release
 
-- [ ] Steward changes isolated on their own branch, separate from unrelated workstreams. Shared files `src/App.tsx`, `src/views/Intelligence.tsx`, `catalog/ai-ops-atlas.yaml` also carry other work and need hunk-level separation.
+- [x] Steward changes isolated on local branch `claude/github-steward-production`, one commit on `origin/main` (3aa99c3), built without touching the shared working tree. Only Steward hunks were taken from `src/App.tsx`, `src/views/Intelligence.tsx` and the catalog. Inventory tests were updated for the one new catalog entry (41 agents). On that branch: 256 Vitest tests, 150 Rust tests, tsc, eslint, clippy and `npm run build` pass. Not pushed.
 - [ ] Desktop verification with the real token: unlock, manual check, pause mid-run, quit mid-run then relaunch (expects "interrupted"), "Continue without keys" with daily monitoring on (expects waiting), history import from the preview.
 - [ ] Signing and update: confirm the release workflow builds and signs with the new Rust module. No changes were made to signing, updater or workflows.
 - [ ] Release notes with residual risks; KC approval before push, merge, tag or install.
