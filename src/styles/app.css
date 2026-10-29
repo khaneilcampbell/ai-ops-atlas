@@ -310,6 +310,8 @@ table.table { width: 100%; border-collapse: collapse; }
 .ghost-btn { border: 1px solid rgba(201, 163, 90, 0.5); background: none; color: var(--gold); border-radius: 10px; padding: 6px 12px; display: inline-flex; gap: 6px; align-items: center; }
 .ghost-btn:hover { background: rgba(201, 163, 90, 0.12); }
 .ghost-btn.dark { color: var(--gold-deep); border-color: var(--gold); }
+/* In app.css, not office.css: the inspector shows this button before the office module loads. */
+.enter-building { margin-top: 12px; }
 
 /* ── Settings ────────────────────────────────────── */
 .setting { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--sage-100); }

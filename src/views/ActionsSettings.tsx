@@ -6,9 +6,6 @@ import { useActions } from "../actions/state";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
-import { CATALOG_REPO } from "../edit/api";
-
-const CATALOG_REPO_NAME = CATALOG_REPO.split("/")[1];
 
 /**
  * Settings for the approval-required actions. Each is off by default and needs its own
@@ -54,9 +51,8 @@ export function ActionsSettings() {
       </div>
       <div className="setting">
         <div className="grow muted small">
-          Atlas can do three things on GitHub: re-run the failed jobs of a failed workflow run, merge a pull request GitHub reports as ready, and open a pull request with an edit you made in
-          the app. Each is off until you turn it on here, works only on the repositories you tick, and every press asks for confirmation in a macOS dialog and is written to an audit log on
-          this Mac. Your read-only token above is never used for any of them.
+          Atlas can do two things on GitHub: re-run the failed jobs of a failed workflow run, and merge a pull request GitHub reports as ready. Each is off until you turn it on here, works only on
+          the repositories you tick, and every press asks for confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for either.
         </div>
       </div>
 
@@ -141,7 +137,6 @@ export function ActionsSettings() {
       )}
 
       <MergeSettings allRepos={allRepos} />
-      <EditSettings />
 
       <div className="setting">
         <div className="grow">
@@ -288,77 +283,6 @@ function MergeSettings({ allRepos }: { allRepos: string[] }) {
           )}
         </>
       )}
-      {error && (
-        <div className="setting">
-          <div className="notice bad">{error}</div>
-        </div>
-      )}
-    </>
-  );
-}
-
-/**
- * Editing files and catalog details from the app. Each save goes to a new atlas-edit/ branch and
- * a pull request, never straight to the default branch, so it reuses the repository's merge
- * token (Contents and Pull requests) and adds no new kind of token.
- */
-function EditSettings() {
-  const { status, reload } = useActions();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const sw = status?.config.edit_files ?? { enabled: false, repos: [] };
-  const tokens = status?.merge_tokens ?? [];
-  const listed = (r: string) => sw.repos.some((x) => x.toLowerCase() === r.toLowerCase());
-  const withToken = [...new Set([...tokens, ...sw.repos.map((r) => r.toLowerCase())])].sort();
-
-  const save = async (enabled: boolean, repos: string[]) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await actionsApi.setEditSettings(enabled, repos);
-      await reload();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="setting">
-        <div className="grow">
-          <div className="label">Edit files</div>
-          <div className="muted small">
-            Lets the Edit switch in the header change catalog details and text files (README, docs, config). Every save shows the exact diff first, then opens a pull request from a new
-            atlas-edit/ branch. Nothing is pushed to main; merge it from the PRs tab. No AI is used. Workflow files can&apos;t be edited. Uses each repository&apos;s merge token, so save one above
-            first; catalog edits go to {CATALOG_REPO_NAME}.
-          </div>
-        </div>
-        <input type="checkbox" className="toggle" aria-label="Allow editing files" checked={sw.enabled} disabled={busy} onChange={(e) => void save(e.target.checked, sw.repos)} />
-      </div>
-      {sw.enabled &&
-        (withToken.length > 0 ? (
-          <div className="repo-checks" role="group" aria-label="Repositories that allow edits">
-            {withToken.map((r) => (
-              <label key={r}>
-                <input
-                  type="checkbox"
-                  checked={listed(r)}
-                  disabled={busy || (!tokens.includes(r) && !listed(r))}
-                  onChange={(e) => void save(true, e.target.checked ? [...sw.repos, r] : sw.repos.filter((x) => x.toLowerCase() !== r))}
-                />
-                <span className="mono" title={r}>
-                  {r.split("/")[1]}
-                </span>
-              </label>
-            ))}
-          </div>
-        ) : (
-          <div className="setting">
-            <div className="muted small">Save a merge token for a repository above, then tick it here.</div>
-          </div>
-        ))}
       {error && (
         <div className="setting">
           <div className="notice bad">{error}</div>

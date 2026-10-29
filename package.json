@@ -33,8 +33,7 @@
     "postprocessing": "^6.39.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "^0.180.0",
-    "yaml": "^2.9.1"
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

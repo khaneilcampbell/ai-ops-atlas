@@ -20,7 +20,6 @@ export const actionsApi = {
   setMergeSettings: (enabled: boolean, repos: string[]) => call<ActionsStatus>("actions_merge_settings_set", { enabled, repos }),
   setMergeToken: (repo: string, token: string) => call<ActionsStatus>("merge_token_set", { repo, token }),
   clearMergeToken: (repo: string) => call<ActionsStatus>("merge_token_clear", { repo }),
-  setEditSettings: (enabled: boolean, repos: string[]) => call<ActionsStatus>("actions_edit_settings_set", { enabled, repos }),
   /** Read-only readiness check; nothing is sent or logged. */
   mergeCheck: (repo: string, number: number) => call<MergeCheck>("action_merge_check", { repo, number }),
   mergePr: (repo: string, number: number, seenSha: string) => call<Outcome>("action_merge_pr", { repo, number, seenSha }),

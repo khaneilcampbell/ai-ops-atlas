@@ -2,26 +2,21 @@
 //! GitHub, each on a repository the person has switched on and only after they approve that
 //! one change in a native dialog: re-run the failed jobs of a failed workflow run, and merge
 //! a pull request GitHub reports as ready (which also asks for Touch ID). Every press is
-//! audited. Nothing proposes or approves a merge on its own. It can also propose an edit to
-//! one text file: a new `atlas-edit/` branch, one commit and a pull request, never a change to
-//! the default branch.
+//! audited. Nothing proposes or approves a merge on its own.
 //!
 //! - `store`: the off switches (`actions.json`) and the audit log (`audit.jsonl`)
 //! - `rerun`: pre-flight checks, approval, audit and the single re-run request
 //! - `merge`: readiness checks, approval, Touch ID, audit and the single merge request
-//! - `edit`: version check, approval, audit and the branch, commit and pull request
 //! - `client`: the write-scoped HTTP client; the only code that sends a GitHub write
 //!
 //! Reads, including the pre-flight check of the run, still go through the read-only
 //! client in `github.rs` and its GET allowlist, which this module leaves untouched.
 
 pub mod client;
-pub mod edit;
 pub mod merge;
 pub mod rerun;
 pub mod store;
 
-use edit::{EditApprover, EditOutcome, EditPreview, EditRequest, Editor};
 use merge::{MergeApprover, MergeCheck, MergeOutcome, MergePreview, Merger};
 use rerun::{Approver, Outcome, Preview, Rerunner};
 use serde::Serialize;
@@ -35,7 +30,6 @@ pub struct Actions {
     client: Arc<client::WriteClient>,
     rerunner: Rerunner,
     merger: Merger,
-    editor: Editor,
 }
 
 /// Native confirmation, drawn by macOS rather than the web view, so nothing running in the
@@ -102,30 +96,6 @@ impl MergeApprover for NativeApprover {
     }
 }
 
-#[async_trait::async_trait]
-impl EditApprover for NativeApprover {
-    async fn approve(&self, p: &EditPreview) -> bool {
-        let (tx, rx) = tokio::sync::oneshot::channel();
-        let mut dialog = self
-            .app
-            .dialog()
-            .message(edit::dialog_text(p))
-            .title("Open a pull request with this edit?")
-            .kind(MessageDialogKind::Info)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Open pull request".into(),
-                "Cancel".into(),
-            ));
-        if let Some(w) = self.app.get_webview_window("main") {
-            dialog = dialog.parent(&w);
-        }
-        dialog.show(move |ok| {
-            let _ = tx.send(ok);
-        });
-        rx.await.unwrap_or(false)
-    }
-}
-
 fn actor() -> String {
     let user = std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
@@ -151,14 +121,6 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store.clone(),
         Arc::new(crate::github::Client::new()),
         client.clone(),
-        approver.clone(),
-        actor(),
-        Box::new(chrono::Utc::now),
-    );
-    let editor = Editor::new(
-        store.clone(),
-        Arc::new(crate::github::Client::new()),
-        client.clone(),
         approver,
         actor(),
         Box::new(chrono::Utc::now),
@@ -168,7 +130,6 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         client,
         rerunner,
         merger,
-        editor,
     });
     Ok(())
 }
@@ -314,7 +275,7 @@ pub async fn merge_token_set(
     Ok(status(&actions))
 }
 
-/// Removing a repository's merge token also takes it off the merge and edit lists.
+/// Removing a repository's merge token also takes it off the merge list.
 #[tauri::command]
 pub fn merge_token_clear(
     repo: String,
@@ -327,9 +288,6 @@ pub fn merge_token_clear(
         .token_logins
         .remove(&repo.to_ascii_lowercase());
     c.merge_pull_requests
-        .repos
-        .retain(|r| !r.eq_ignore_ascii_case(&repo));
-    c.edit_files
         .repos
         .retain(|r| !r.eq_ignore_ascii_case(&repo));
     actions.store.save_config(&c)?;
@@ -356,41 +314,6 @@ pub async fn action_merge_pr(
     app: AppHandle,
 ) -> Result<MergeOutcome, String> {
     let outcome = actions.merger.run(&repo, number, seen_sha.as_deref()).await;
-    app.emit("actions-changed", ()).ok();
-    Ok(outcome)
-}
-
-/// Editing uses each repository's merge token, so only repositories with one can be listed.
-#[tauri::command]
-pub fn actions_edit_settings_set(
-    enabled: bool,
-    repos: Vec<String>,
-    actions: tauri::State<'_, Actions>,
-    app: AppHandle,
-) -> Result<ActionsStatus, String> {
-    let repos = clean_repos(&repos)?;
-    let saved = crate::secrets::merge_token_repos();
-    if let Some(r) = repos
-        .iter()
-        .find(|r| !saved.contains(&r.to_ascii_lowercase()))
-    {
-        return Err(format!("Save a token for {r} before enabling edits on it."));
-    }
-    let mut c = actions.store.load_config();
-    c.edit_files.enabled = enabled;
-    c.edit_files.repos = repos;
-    actions.store.save_config(&c)?;
-    app.emit("actions-changed", ()).ok();
-    Ok(status(&actions))
-}
-
-#[tauri::command]
-pub async fn action_propose_edit(
-    request: EditRequest,
-    actions: tauri::State<'_, Actions>,
-    app: AppHandle,
-) -> Result<EditOutcome, String> {
-    let outcome = actions.editor.run(&request).await;
     app.emit("actions-changed", ()).ok();
     Ok(outcome)
 }
