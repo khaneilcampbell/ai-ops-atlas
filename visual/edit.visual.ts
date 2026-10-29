@@ -109,7 +109,7 @@ test("agent details edit shows the manifest diff before anything is sent", async
   const sent: unknown[] = [];
   await desktop(page, sent);
   await openAtlas(page);
-  await goTo(page, "Agents");
+  await goTo(page, "Automations");
   await page.locator('.reg-row[data-id="benjaire-contact-worker"]').click();
   await settle(page);
   await page.getByRole("button", { name: /^Edit$/ }).click();

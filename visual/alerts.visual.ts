@@ -20,7 +20,7 @@ const reports = [
 test("a reported failure raises an alert until it is dismissed", async ({ page }) => {
   await openAtlas(page, { storage: { liveAgentRuns: reports, "mission-tab": "overview" } });
   const pill = page.locator(".alert-pill");
-  await expect(pill).toHaveText("Benjaire Contact and Checkout Gateway failed");
+  await expect(pill).toHaveText("Inquiry Routing Coordinator failed");
   await goTo(page, "Mission");
   const card = page.locator("#agent-alerts");
   await expect(card.locator(".watch.failing")).toContainText("Flow forward timed out after 3 tries");
