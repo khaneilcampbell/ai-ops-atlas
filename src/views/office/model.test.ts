@@ -26,6 +26,19 @@ const run = (at: string, result: ExecutionRecord["result"]): ExecutionRecord => 
 const agent = { id: "atlas-ci", status: "active" as const };
 
 describe("office plan", () => {
+  it.each(catalog.projects)("keeps every registered agent at a desk in $repository", (project) => {
+    const agents = catalog.agents.filter((a) => a.projectId === project.id);
+    const plan = planOffice(project, agents);
+    expect(plan.buildingId).toBe(`repo:${project.repository}`);
+    expect(plan.workstations.map((w) => w.agentId)).toEqual(agents.map((a) => a.id));
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(agents.length);
+    for (const w of plan.workstations) {
+      expect(Number.isFinite(w.x) && Number.isFinite(w.z)).toBe(true);
+      expect(Math.abs(w.x) + 0.75).toBeLessThan(plan.w / 2);
+      expect(Math.abs(w.z) + 1).toBeLessThan(plan.d / 2);
+    }
+  });
+
   it("gives the AI Ops Atlas headquarters one desk per registered agent, in manifest order", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = catalog.agents.filter((a) => a.projectId === project.id);
