@@ -1,323 +1,172 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useActions } from "../../actions/state";
-import { Icon } from "../../components/Icon";
-import { ExternalLink, StatusPill } from "../../components/bits";
-import { useIntel } from "../../intel/state";
-import { repoData, verifiedState } from "../../lib/derive";
-import { useReducedMotion } from "../../lib/motion";
-import { formatDate, relative } from "../../lib/time";
-import { buildRegistry, type RegistryEntry } from "../../registry/registry";
-import type { ExecutionRecord } from "../../registry/types";
-import { useAtlas } from "../../state";
-import { CATEGORY_LABEL } from "../../registry/types";
-import type { LightMode } from "../map3d/living";
-import { AutonomyMeter, ListField, NA, OperationalPill } from "../agents/parts";
-import { ApprovalQueue } from "../../components/ApprovalQueue";
-import { useProposals } from "../../approvals/state";
-import type { Proposal } from "../../approvals/proposals";
-import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
-import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
-import { leaveBuilding, useOffice } from "./store";
-import { STATE_COLOR } from "./textures";
-import "../../styles/office.css";
+import type { Agent, Project } from "../../catalog/types";
+import type { AuditRecord, ActionsStatus } from "../../actions/types";
+import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
+import type { ExecutionRecord, Telemetry } from "../../registry/types";
+import { mainline } from "../../registry/telemetry";
 
-interface Row {
-  entry: RegistryEntry;
-  runtime: Runtime;
-  history: ExecutionRecord[];
+/**
+ * The data behind a virtual office: which project and building it belongs to, one workstation
+ * per registered agent, and each agent's runtime state as far as verified data can tell.
+ * Pure, so it can be tested and later fed by live telemetry, task queues or approvals.
+ */
+
+/** What a workstation shows. "unknown" when no live source can say what the agent is doing. */
+export type RuntimeState = "working" | "awaiting" | "failed" | "idle" | "offline" | "unknown";
+
+export const RUNTIME_LABEL: Record<RuntimeState, string> = {
+  working: "Working",
+  awaiting: "Awaiting approval",
+  failed: "Latest run failed",
+  idle: "Idle",
+  offline: "Offline",
+  unknown: "Status unavailable",
+};
+
+export interface Runtime {
+  state: RuntimeState;
+  /** Why, in a sentence, naming the source. */
+  reason: string;
+  /** The execution the state is based on, when there is one. */
+  basis: ExecutionRecord | null;
+  /** Where the state came from, for the inspector. */
+  source: string | null;
 }
 
-/** The office for the building that was entered, over the map, with its controls and inspector. */
-export default function OfficeLayer({ light }: { light: LightMode }) {
-  const { projectId, phase } = useOffice();
-  const { catalog, repos, setView } = useAtlas();
-  const { telemetry: intel } = useIntel();
-  const actions = useActions();
-  const pending = useProposals();
-  const reduced = useReducedMotion();
-  const [picked, setPicked] = useState<string | null>(null);
-  const api = useRef<OfficeApi | null>(null);
-  const project = catalog.projects.find((p) => p.id === projectId);
-  // Every registered agent keeps its office desk, regardless of runtime state or role.
-  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId), [catalog, projectId]);
-  const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
+export interface Workstation {
+  /** Stable across reloads: the project and agent ids, never a list position alone. */
+  id: string;
+  agentId: string;
+  /** Desk slot, in manifest order. */
+  slot: number;
+  x: number;
+  z: number;
+  /** Rotation about y; desks face the room's open front. */
+  ry: number;
+}
 
-  const rows = useMemo(() => {
-    const entries = buildRegistry({ projects: catalog.projects, agents }, repos, intel);
-    const data = { available: actions.available, status: actions.status, audit: actions.audit };
-    return new Map<string, Row>(
-      entries.map((entry) => {
-        const a = agents.find((x) => x.id === entry.profile.id)!;
-        const action = ACTION_AGENTS[a.id];
-        return [a.id, { entry, runtime: runtimeFor(a, entry.telemetry, data, pending.filter((p) => p.agentId === a.id).length), history: action ? actionExecutions(action, actions.audit) : entry.telemetry.executions }];
-      }),
-    );
-  }, [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending]);
+export interface OfficePlan {
+  projectId: string;
+  /** The map building this office is inside (the project's headquarters key on the map). */
+  buildingId: string;
+  /** Floor size; the room grows with the number of desks. */
+  w: number;
+  d: number;
+  workstations: Workstation[];
+}
 
-  const desks = useMemo<DeskData[]>(
-    () =>
-      (plan?.workstations ?? []).map((ws) => {
-        const r = rows.get(ws.agentId)!;
-        const a = agents.find((x) => x.id === ws.agentId)!;
-        const b = r.runtime.basis;
-        return {
-          ws,
-          name: r.entry.profile.title,
-          accent: accentFor(ws.slot, ws.id.split("/")[0]),
-          icon: toolIcon(a),
-          runtime: r.runtime,
-          // While waiting on KC, the monitor shows what the agent proposes, not its last run.
-          task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
-          when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
-        };
-      }),
-    [plan, rows, agents, pending],
-  );
+const DESK_DX = 2.35;
+const DESK_DZ = 2.5;
+const PER_ROW = 3;
 
-  // Escape closes the inspector, then leaves the building. Captured first so the map's own
-  // Escape handler (which clears the map selection) does not also fire.
-  const exit = useCallback(() => leaveBuilding(reduced), [reduced]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      if (picked) setPicked(null);
-      else exit();
+/** Desks in rows of three, centered, in manifest order so each agent keeps its desk. */
+export function planOffice(project: Pick<Project, "id" | "repository">, agents: Pick<Agent, "id">[]): OfficePlan {
+  const n = agents.length;
+  const cols = Math.min(PER_ROW, Math.max(1, n));
+  const rows = Math.max(1, Math.ceil(n / PER_ROW));
+  const w = Math.max(8.5, cols * DESK_DX + 3.6);
+  const d = Math.max(7, rows * DESK_DZ + 4.2);
+  const workstations = agents.map((a, i) => {
+    const row = Math.floor(i / PER_ROW);
+    const inRow = Math.min(PER_ROW, n - row * PER_ROW);
+    const col = i % PER_ROW;
+    return {
+      id: `${project.id}/${a.id}`,
+      agentId: a.id,
+      slot: i,
+      x: (col - (inRow - 1) / 2) * DESK_DX,
+      z: (row - (rows - 1) / 2) * DESK_DZ + 0.3,
+      ry: 0,
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [picked, exit]);
-
-  if (!project || !plan) return null;
-  const row = picked ? rows.get(picked) : undefined;
-  const states = [...new Set(desks.map((d) => d.runtime.state))];
-
-  return (
-    <div className={`office-layer phase-${phase ?? "inside"} ${light === "night" ? "night" : ""}`} role="region" aria-label={`${project.name} office`}>
-      <div className="office-stage">
-        <OfficeScene
-          plan={plan}
-          desks={desks}
-          wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
-          light={light}
-          reduced={reduced}
-          selected={picked}
-          onSelect={setPicked}
-          api={api}
-        />
-        <div className="office-head">
-          <button className="office-back" onClick={exit}>
-            <span aria-hidden>‹</span> Back to map
-          </button>
-          <div>
-            <div className="eyebrow">Headquarters · {project.repository}</div>
-            <h2>{project.name}</h2>
-          </div>
-          {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
-            <button className="office-awaiting" onClick={() => setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId)}>
-              <i /> {pending.filter((p) => agents.some((a) => a.id === p.agentId)).length} awaiting approval
-            </button>
-          )}
-        </div>
-
-        {desks.length === 0 && (
-          <div className="office-empty">
-            <h3>No agents work here yet</h3>
-            <p>This project has no agents registered in its manifest, so the office has no desks.</p>
-          </div>
-        )}
-
-        {desks.length > 0 && (
-          <div className="office-roster" aria-label="Select an agent">
-            {desks.map((d) => (
-              <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
-                <i style={{ background: STATE_COLOR[d.runtime.state] }} />
-                {d.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="office-legend" aria-label="Workstation states">
-          {states.map((s) => (
-            <span key={s}>
-              <i style={{ background: STATE_COLOR[s] }} />
-              {RUNTIME_LABEL[s]}
-            </span>
-          ))}
-        </div>
-
-        <div className="map-controls office-controls">
-          <button className="icon-btn" onClick={() => api.current?.orbit(-0.35)} aria-label="Orbit left" title="Orbit left">
-            <span aria-hidden>⟲</span>
-          </button>
-          <button className="icon-btn" onClick={() => api.current?.orbit(0.35)} aria-label="Orbit right" title="Orbit right">
-            <span aria-hidden>⟳</span>
-          </button>
-          <button className="icon-btn" onClick={() => api.current?.reset()} aria-label="Reset view" title="Reset view">
-            <Icon name="focus" size={17} />
-          </button>
-          <button className="icon-btn" onClick={() => api.current?.zoom(1.25)} aria-label="Zoom in" title="Zoom in">
-            <Icon name="plus" size={17} />
-          </button>
-          <button className="icon-btn" onClick={() => api.current?.zoom(0.8)} aria-label="Zoom out" title="Zoom out">
-            <Icon name="minus" size={17} />
-          </button>
-        </div>
-      </div>
-
-      {row && (
-        <AgentInspectionPanel
-          row={row}
-          onClose={() => setPicked(null)}
-          onProfile={() => {
-            leaveBuilding(true);
-            setView("agents");
-          }}
-          branch={repoData(repos[row.entry.profile.repository])?.defaultBranch ?? "HEAD"}
-        />
-      )}
-    </div>
-  );
+  });
+  return { projectId: project.id, buildingId: `project:${project.id}`, w, d, workstations };
 }
 
-const firstFor = (ps: Proposal[], agentId: string) => ps.find((p) => p.agentId === agentId);
+/**
+ * Agents whose live record is the desktop app's action audit log rather than a workflow or
+ * run log. Keyed by agent id, valued by the audit `action` name.
+ */
+export const ACTION_AGENTS: Record<string, string> = { "atlas-rerun-failed": "rerun_failed_jobs", "atlas-merge-pr": "merge_pull_request" };
 
-const RESULT_LABEL: Record<ExecutionRecord["result"], string> = { success: "Succeeded", failure: "Failed", running: "In progress", other: "Other" };
-
-/** AgentInspectionPanel: the registry profile plus what verified telemetry says right now. */
-function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; onClose: () => void; onProfile: () => void; branch: string }) {
-  const { entry, runtime, history } = row;
-  const p = entry.profile;
-  const t = entry.telemetry;
-  const errors = history.filter((e) => e.result === "failure").slice(0, 3);
-  const file = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
-  const lastVerified = history.find((e) => e.result === "success") ?? null;
-  return (
-    <aside className="panel docked office-panel" aria-label={`${p.title} details`}>
-      <div className="panel-head">
-        <div className="grow">
-          <div className="eyebrow">Agent · {p.project.name}</div>
-          <h2>{p.title}</h2>
-          {p.originalName && <div className="muted small">Manifest name: {p.originalName}</div>}
-          <div className="chips" style={{ marginTop: 10 }}>
-            <span className={`chip office-state s-${runtime.state}`}>
-              <i style={{ background: STATE_COLOR[runtime.state] }} />
-              {RUNTIME_LABEL[runtime.state]}
-            </span>
-            <OperationalPill op={entry.operational} />
-            <StatusPill status={entry.status} />
-          </div>
-        </div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close agent details">
-          <Icon name="close" />
-        </button>
-      </div>
-      <div className="panel-body selectable">
-        <section>
-          <div className="section-title">Current status</div>
-          <p style={{ margin: 0, fontSize: 13.5 }}>{runtime.reason}</p>
-          <div className="muted small">Source: {runtime.source ?? <NA kind="connected" />}</div>
-        </section>
-        {ACTION_AGENTS[p.id] && (
-          <section>
-            <div className="section-title">Awaiting your approval</div>
-            <ApprovalQueue agentId={p.id} compact />
-          </section>
-        )}
-        <section>
-          <div className="section-title">Autonomy</div>
-          <AutonomyMeter level={p.governance.autonomy} />
-          {p.governance.approval && <div className="muted small">Approval: {p.governance.approval}</div>}
-        </section>
-        <section>
-          <div className="section-title">Role</div>
-          <p style={{ margin: 0, fontSize: 14 }}>{p.mission.purpose}</p>
-          <div className="muted small">
-            {CATEGORY_LABEL[p.category]}
-            {p.subcategory ? ` · ${p.subcategory}` : ""}
-          </div>
-        </section>
-        <ListField title="Responsibilities" items={p.responsibilities.tasks} />
-        <dl className="kv">
-          <dt>Repository</dt>
-          <dd>
-            <ExternalLink href={p.repositoryUrl}>{p.repository}</ExternalLink>
-          </dd>
-          <dt>Framework</dt>
-          <dd>{p.framework}</dd>
-          {p.model && (
-            <>
-              <dt>Model</dt>
-              <dd>{p.model}</dd>
-            </>
-          )}
-          <dt>Runtime</dt>
-          <dd>{p.execution.environment ?? <NA />}</dd>
-          <dt>Trigger</dt>
-          <dd>{p.execution.trigger ?? <NA />}</dd>
-          <dt>Last verified</dt>
-          <dd>{lastVerified ? `${formatDate(lastVerified.at)} (${relative(lastVerified.at)})` : <NA kind="verified" />}</dd>
-        </dl>
-        <ListField title="Tools and integrations" items={p.responsibilities.tools} />
-        <section>
-          <div className="section-title">Recent task history</div>
-          {history.length === 0 ? (
-            <div className="muted small">{t.loaded || ACTION_AGENTS[p.id] ? "No executions observed yet." : runtime.reason}</div>
-          ) : (
-            <ul className="runs">
-              {history.slice(0, 8).map((e) => (
-                <li key={`${e.at}${e.label}`}>
-                  <i className={`h-${e.result === "success" ? "good" : e.result === "failure" ? "bad" : "unknown"}`} />
-                  <span className="grow">
-                    {e.url ? <ExternalLink href={e.url}>{e.label}</ExternalLink> : e.label}
-                    <span className="muted"> · {RESULT_LABEL[e.result]}</span>
-                  </span>
-                  <span className="muted small" title={new Date(e.at).toLocaleString()}>
-                    {relative(e.at)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        {errors.length > 0 && (
-          <section>
-            <div className="section-title">Recent failures</div>
-            <ul className="runs">
-              {errors.map((e) => (
-                <li key={`f${e.at}`}>
-                  <i className="h-bad" />
-                  <span className="grow">{e.url ? <ExternalLink href={e.url}>{e.label}</ExternalLink> : e.label}</span>
-                  <span className="muted small">{relative(e.at)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-        <section>
-          <div className="section-title">Sources</div>
-          <div className="links">
-            {p.docs.source && (
-              <ExternalLink href={file(p.docs.source)}>
-                <Icon name="external" size={14} /> Source on GitHub
-              </ExternalLink>
-            )}
-            {p.docs.technical && (
-              <ExternalLink href={file(p.docs.technical)}>
-                <Icon name="external" size={14} /> Technical notes
-              </ExternalLink>
-            )}
-            <ExternalLink href={p.repositoryUrl}>
-              <Icon name="external" size={14} /> Repository
-            </ExternalLink>
-          </div>
-        </section>
-        <button className="ghost-btn office-profile" onClick={onProfile}>
-          <Icon name="agents" size={15} /> Open full profile
-        </button>
-      </div>
-    </aside>
-  );
+/** Whether an action's switch is on in Settings. */
+function actionEnabled(action: string, status: ActionsStatus): boolean {
+  return action === "merge_pull_request" ? !!status.config.merge_pull_requests?.enabled : status.config.rerun_failed_jobs.enabled;
 }
 
+export interface ActionData {
+  /** False on the web build and in browsers: the actions live in the desktop app. */
+  available: boolean;
+  status: ActionsStatus | null;
+  audit: AuditRecord[];
+}
+
+/** Executions from the action audit log, one per button press, newest first. */
+export function actionExecutions(action: string, audit: AuditRecord[]): ExecutionRecord[] {
+  return latestPerAttempt(audit.filter((r) => r.action === action)).map((r) => {
+    const d = describeRecord(r);
+    return { at: r.at, result: d.result, label: `${STAGE_LABEL[r.stage]} · ${d.subject} on ${r.repo}`, url: d.url, source: "github" as const };
+  });
+}
+
+/** The longest a run can really be in progress (GitHub's job limit). */
+const MAX_RUN_MS = 6 * 3_600_000;
+
+const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/**
+ * What an agent is doing, from verified data only. Being registered or enabled never counts as
+ * working: only an execution observed in progress does. With no live source, or one that has
+ * not loaded, the state is "unknown" rather than a guess.
+ */
+export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0, now = Date.now()): Runtime {
+  if (agent.status === "retired" || agent.status === "paused") {
+    return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
+  }
+  if (t.source === "production") {
+    const basis = t.executions[0] ?? null;
+    if (!t.productionFresh) return { state: "unknown", reason: "Production reporting is stale (no report in 15 minutes).", basis, source: "Production reporting" };
+    if (basis?.result === "running" && now - Date.parse(basis.at) >= 15 * 60_000) return { state: "unknown", reason: "Run progress report is stale; heartbeat alone does not establish progress.", basis, source: "Production reporting" };
+    const state = basis?.result === "running" ? "working" : basis?.result === "failure" ? "failed" : "idle";
+    return { state, reason: "Recent authenticated production report.", basis, source: "Production reporting" };
+  }
+  // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
+  let executions = mainline(t.executions);
+  let loaded = t.loaded;
+  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : null;
+  const action = ACTION_AGENTS[agent.id];
+  if (action && actions) {
+    source = "Atlas action audit log";
+    if (!actions.available) return { state: "unknown", reason: "Runs only in the desktop app; its audit log is not visible here.", basis: null, source };
+    if (!actions.status) return { state: "unknown", reason: "The action switch and audit log have not loaded.", basis: null, source };
+    if (!actionEnabled(action, actions.status)) return { state: "offline", reason: "Switched off in Settings, so it cannot run.", basis: null, source };
+    executions = actionExecutions(action, actions.audit);
+    loaded = true;
+  }
+  if (!source) return { state: "unknown", reason: "No live telemetry source is declared for this agent.", basis: null, source: null };
+  if (!loaded) return { state: "unknown", reason: `${source} data has not loaded${t.source === "atlas-intel" ? "; it is only available in the desktop app" : ""}.`, basis: null, source };
+  const latest = executions[0];
+  // GitHub stops any job after 6 hours, so a run "in progress" older than that is a stale record.
+  if (latest?.result === "running" && now - Date.parse(latest.at) < MAX_RUN_MS) return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
+  // Proposed actions waiting for a person outrank the last result: the agent is blocked on KC.
+  if (pending > 0) return { state: "awaiting", reason: `${pending} proposed ${pending === 1 ? "action is" : "actions are"} waiting for your approval.`, basis: latest ?? null, source };
+  if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };
+  const done = executions.find((e) => e.result === "success" || e.result === "failure");
+  if (done?.result === "failure") return { state: "failed", reason: `The latest completed run failed (${when(done.at)}).`, basis: done, source };
+  return { state: "idle", reason: done ? `Not running. Last run succeeded ${when(done.at)}.` : `Not running. Last activity ${when(latest.at)}.`, basis: done ?? latest, source };
+}
+
+/** The technology icon on an agent's monitor and nameplate, from what its manifest declares. */
+export type ToolIcon = "github" | "sparkles" | "refresh" | "nodes";
+export function toolIcon(agent: Pick<Agent, "id" | "framework" | "model" | "observe">): ToolIcon {
+  if (ACTION_AGENTS[agent.id]) return "refresh";
+  if (agent.observe?.githubWorkflow || /github actions/i.test(agent.framework)) return "github";
+  if (agent.model || /claude|openai|llm|crewai|agent/i.test(agent.framework)) return "sparkles";
+  return "nodes";
+}
+
+const ACCENTS = ["#4fb8c9", "#c9a35a", "#8a78e0", "#d9783f", "#3f8f6b", "#3f7fc0", "#c0607a"];
+/** A distinct accent per desk: by slot, so neighbors never share one, rotated by the project. */
+export function accentFor(slot: number, projectId: string) {
+  let h = 0;
+  for (const c of projectId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return ACCENTS[(slot + h) % ACCENTS.length];
+}
