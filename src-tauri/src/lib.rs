@@ -1,11 +1,16 @@
 mod actions;
 mod github;
+mod handoff;
 mod intel;
 mod live;
 mod secrets;
+mod steward;
 mod usage_sync;
 
 pub fn run() {
+    // Right after an update: take over the previous copy's unlocked keys before anything asks.
+    handoff::receive();
+    handoff::remember_identity();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -16,12 +21,23 @@ pub fn run() {
         .setup(|app| {
             intel::setup(app)?;
             usage_sync::setup(app)?;
-            actions::setup(app)
+            steward::setup(app)?;
+            actions::setup(app)?;
+            handoff::window_ready(app);
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             github::github_get,
+            steward::steward_state,
+            steward::steward_run,
+            steward::steward_pause,
+            steward::steward_configure,
+            steward::steward_dismiss,
+            steward::steward_import,
             secrets::vault_status,
             secrets::vault_unlock,
+            handoff::update_relaunch,
+            handoff::take_resume,
             secrets::github_token_status,
             secrets::github_token_set,
             secrets::github_token_clear,

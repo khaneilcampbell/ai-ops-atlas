@@ -9,3 +9,14 @@ src-tauri/gen/
 test-results/
 playwright-report/
 visual/out/
+
+# Local signing material and environment files
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+*.keychain-db
+*.password
+__pycache__/

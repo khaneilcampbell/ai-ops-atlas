@@ -14,7 +14,7 @@ project:
 agents:
   - id: atlas-ci
     name: Atlas CI
-    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Every push to main also builds, signs and publishes the macOS app that installed copies update from.
+    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; KC approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
@@ -25,8 +25,8 @@ agents:
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'
-      - 'GITHUB_TOKEN: contents write in the macOS job, to publish the main-build release'
-      - 'Secrets: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
+      - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
+      - 'Protected macos-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
       title: Atlas Continuous Integration
       category: engineering
@@ -45,12 +45,12 @@ agents:
           - Build the web bundle
           - Rust fmt, clippy and tests
           - npm and cargo dependency audits
-          - Build, sign and publish the macOS app on every push to main
+          - Build validated main changes, request protected signing approval, then publish
         tools: [GitHub Actions, npm, cargo]
         inputs: [Pushes and pull requests]
         outputs:
           - Check results on the pull request
-          - Signed macOS app on the main-build release (from main) or as an artifact (manual dispatch)
+          - Signed macOS app on main-build after approval; unsigned artifact for manual branch builds
       goals:
         objective: Block merges that break the app.
         kpis:
@@ -62,22 +62,22 @@ agents:
         trigger_type: event
         environment: GitHub-hosted runner
       governance:
-        autonomy: 0
+        autonomy: 2
         data_sensitivity: public
-        risk: low
+        risk: medium
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        approval: KC approves the macos-signing environment for each main build
+        credential_owner: KC (protected GitHub macos-signing environment)
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
         known_issues:
-          - 'Autonomy 0 and low risk understate it: every push to main publishes a signed build that installed copies of Atlas offer as an update'
-          - Re-running a main run publishes the build again, so this repository should stay off the re-run list
+          - Signed updates require manual environment approval; older or equal versions are rejected
           - codeql.yml and release.yml also run in this repository but are not in the catalog
         improvements:
           - Add codeql.yml and release.yml to the catalog
           - Agree a run success target for the KPI
-        last_review: 2026-10-28
+        last_review: 2026-10-29
 
   - id: repo-intelligence
     name: Repository Intelligence Agent
@@ -331,4 +331,61 @@ agents:
           - A base branch with no required checks is always refused
         improvements:
           - Count merges and refusals by reason from audit.jsonl
+        last_review: 2026-10-28
+
+  - id: atlas-github-steward
+    name: GitHub Steward
+    purpose: "GitHub Steward: Collects bounded read-only observations for AI Ops Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
+    framework: Atlas read-only workflow
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
+    source: src-tauri/src/steward/check.rs
+    last_run: null
+    permissions:
+      - Existing Atlas GitHub connection, GET only
+      - Saves at most 30 observation summaries in device-local storage
+    registry:
+      title: Repository Maintenance Analyst
+      category: engineering
+      subcategory: Repository operations
+      classification:
+        type: C
+        confidence: verified
+        evidence: src/steward/check.ts implements a bounded deterministic GET-only check; no AI model calls
+      mission:
+        problem: Atlas needs one place to check its own CI and maintenance signals without granting a new agent write access.
+        outcomes: [Evidence-linked observations, Explicit unavailable checks, Bounded local run history]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read repository and commit metadata, Sample default-branch CI, Count dependency and code scanning alerts, Check maintenance file presence]
+        tools: [Atlas read-only GitHub transport]
+        inputs: [Manual or daily check request, Existing GitHub read credentials when available]
+        outputs: [Observation summaries in Intel → GitHub Steward]
+        limitations: [One fixed repository, No model reasoning, No execution while Atlas is closed, Alert access requires appropriate read permissions, No remote writes]
+      goals:
+        objective: Make repository observations reviewable while preserving approval boundaries.
+      execution:
+        trigger_type: scheduled
+        schedule: Optional daily at the selected device time while Atlas is open; off in new installations
+        environment: Atlas Intel view
+        stages: [Check pause state, Read bounded GitHub evidence, Classify observations and unavailable checks, Save local summary]
+      governance:
+        autonomy: 1
+        autonomy_note: Read-only observation; manual or opt-in daily checks. No code execution, remediation or paid model calls.
+        data_sensitivity: internal
+        approval: KC starts a check or enables the daily schedule; repository changes are not supported
+        credential_owner: KC (existing Atlas connection)
+        risk: low
+        audit_log: Latest 30 summaries in local storage; not immutable and not connected to registry telemetry
+      cost:
+        budget: No model spending; GitHub request limits apply
+      docs:
+        technical: docs/github-steward.md
+        runbook: docs/github-steward.md
+        known_issues:
+          - Scope and limits are compiled into the UI collector; the CLI JSON policy is separate
+          - Shared locking and persisted daily claims cover same-origin windows only; other devices and standalone collectors are independent
+          - Run history is device-local and is not yet surfaced as live registry telemetry
+          - Documentation quality, uptime, branch protections, billing and agent permissions are not assessed
         last_review: 2026-10-28
