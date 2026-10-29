@@ -1,3 +1,4 @@
+import { isAiAgent } from "../catalog/roles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { relative, formatDate } from "../lib/time";
@@ -32,12 +33,14 @@ interface Prefs {
 const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
 
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
-export function AgentsView() {
-  const { catalog, repos, filters, setFilters, select, selection } = useAtlas();
+export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
+  const { catalog: allCatalog, repos, filters, setFilters, select, selection } = useAtlas();
+  const title = kind === "automations" ? "Automations" : "Agents";
+  const catalog = useMemo(() => ({ ...allCatalog, agents: allCatalog.agents.filter(a => kind === "agents" ? isAiAgent(a) : !isAiAgent(a)) }), [allCatalog, kind]);
   const { telemetry: intel } = useIntel();
-  const [prefs, setPrefs] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...load<Partial<Prefs>>("registry-prefs", {}) }));
+  const [prefs, setPrefs] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) }));
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
-  useEffect(() => save("registry-prefs", prefs), [prefs]);
+  useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
   const list = useRef<HTMLDivElement>(null);
 
   const entries = useMemo(() => buildRegistry(catalog, repos, intel), [catalog, repos, intel]);
@@ -66,18 +69,15 @@ export function AgentsView() {
   };
 
   const anyFilter = filters.query || filters.project || prefs.category || prefs.classification || prefs.operational || prefs.runtime;
-  const b = summary.byClass;
 
   return (
     <div className="page wide">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Agent registry · read-only</div>
-          <h1>Agents</h1>
+          <div className="eyebrow">{title} registry · read-only</div>
+          <h1>{title}</h1>
           <p className="lede">
-            {summary.total} registered items: {b.A} AI agents, {b.B} AI-assisted workflows, {b.C} automations, {b.D} CI/CD pipelines
-            {b.E ? `, ${b.E} integration${b.E > 1 ? "s" : ""}` : ""}
-            {b.F ? `, ${b.F} planned` : ""}. {summary.operational.verified} verified running from live data.
+            {summary.total} {kind === "automations" ? "automations, pipelines, and integrations" : "AI agents and assisted workflows"} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
@@ -97,11 +97,11 @@ export function AgentsView() {
           <div className="filters" role="search">
             <label className="field">
               <Icon name="search" size={14} />
-              <input value={filters.query} onChange={(e) => setFilters({ query: e.target.value })} placeholder="Search agents, tools, functions" aria-label="Search agents" />
+              <input value={filters.query} onChange={(e) => setFilters({ query: e.target.value })} placeholder={`Search ${title.toLowerCase()}, tools, functions`} aria-label={`Search ${title.toLowerCase()}`} />
             </label>
             <Select label="Project" value={filters.project} onChange={(v) => setFilters({ project: v })} options={catalog.projects.filter((p) => p.agentIds.length).map((p) => ({ value: p.id, label: p.name }))} />
             <Select label="Function" value={prefs.category} onChange={(v) => set({ category: v })} options={CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABEL[c] }))} />
-            <Select label="Type" value={prefs.classification} onChange={(v) => set({ classification: v })} options={CLASSIFICATIONS.map((c) => ({ value: c, label: `${c} · ${CLASSIFICATION_INFO[c].label}` }))} />
+            <Select label="Type" value={prefs.classification} onChange={(v) => set({ classification: v })} options={CLASSIFICATIONS.filter(c => summary.byClass[c] > 0).map((c) => ({ value: c, label: `${c} · ${CLASSIFICATION_INFO[c].label}` }))} />
             <Select
               label="Status"
               value={prefs.operational}
@@ -122,14 +122,14 @@ export function AgentsView() {
                 Clear filters
               </button>
             )}
-            <span className="count">{rows.length} agents</span>
+            <span className="count">{rows.length} {title.toLowerCase()}</span>
           </div>
 
           {rows.length === 0 ? (
-            <div className="card empty">No agents match these filters.</div>
+            <div className="card empty">No {title.toLowerCase()} match these filters.</div>
           ) : (
             <div className="agents-split">
-              <div className="card agent-list reg-list-pane" ref={list} onKeyDown={onListKey} aria-label="Agents">
+              <div className="card agent-list reg-list-pane" ref={list} onKeyDown={onListKey} aria-label={title}>
                 {groups.map((g) => (
                   <section key={g.key}>
                     {prefs.group !== "none" && (

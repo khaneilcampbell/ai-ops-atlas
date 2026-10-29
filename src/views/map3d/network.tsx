@@ -24,8 +24,8 @@ export interface NetLink {
 type Hue = keyof typeof LINK_COLORS;
 /** "glow" is the soft sleeve around the selected or hovered link. */
 type Shade = LinkLevel | "glow";
-const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.95, weak: 0.55, dim: 0.06, glow: 0.16 };
-const RADIUS = 0.06;
+const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.7, weak: 0.22, dim: 0.04, glow: 0.16 };
+const RADIUS = 0.035;
 const MAX_PARTICLES = 160;
 const SPEED = 2.2; // world units per second
 

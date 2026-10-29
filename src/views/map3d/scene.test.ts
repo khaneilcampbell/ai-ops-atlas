@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { isAiAgent } from "../../catalog/roles";
 import { catalog } from "../../catalog";
 import type { Catalog } from "../../catalog/types";
 import { layoutMap } from "../mapLayout";
@@ -23,10 +22,28 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("buildScene", () => {
-  it("gives every project a tower and every automation a house", () => {
+  it("connects pedestrian crossings to both project entrances without walking through buildings", () => {
+    const scene = buildScene(layoutMap(catalog));
+    const journeys = scene.walks.filter(w => w.bridge && w.route?.length);
+    expect(journeys.length).toBeGreaterThan(0);
+    for (const w of journeys) {
+      const route = w.route!;
+      expect(route.length).toBeGreaterThanOrEqual(4);
+      for (let i=1; i<route.length; i++) {
+        const a=route[i-1], b=route[i];
+        expect(a.gx===b.gx || a.gy===b.gy).toBe(true);
+        for (const tower of [...scene.towers, ...scene.kiosks]) {
+          const crosses = Math.min(a.gx,b.gx)<tower.x+tower.size/2-0.01 && Math.max(a.gx,b.gx)>tower.x-tower.size/2+0.01 && Math.min(a.gy,b.gy)<tower.z+tower.size/2-0.01 && Math.max(a.gy,b.gy)>tower.z-tower.size/2+0.01;
+          expect(crosses).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("gives every project a tower containing all its workers and no worker houses", () => {
     const s = buildScene(layoutMap(catalog));
     expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.map((p) => p.id).sort());
-    expect(s.houses.map((h) => h.agent.id).sort()).toEqual(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id).sort());
+    expect(s.houses).toEqual([]);
     expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.length);
   });
 

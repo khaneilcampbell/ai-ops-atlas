@@ -24,7 +24,7 @@ describe("editManifest", () => {
     const f = "benjaire-com.yaml";
     const text = read(f);
     const r = readFields(text, { kind: "agent", id: "benjaire-contact-worker" })!;
-    expect(r.fields.title).toBe("Benjaire Contact and Checkout Gateway");
+    expect(r.fields.title).toBe("Inquiry Routing Coordinator");
     const after = {
       ...r.fields,
       name: "Contact Worker",

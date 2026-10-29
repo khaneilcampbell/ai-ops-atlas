@@ -52,7 +52,7 @@ describe("bundled registry", () => {
 
   it("keeps stable ids and the original name when a display title is set", () => {
     const ci = entries.find((e) => e.profile.id === "atlas-ci")!.profile;
-    expect(ci.title).toBe("Atlas Continuous Integration");
+    expect(ci.title).toBe("Build and Release Engineer");
     expect(ci.originalName).toBe("Atlas CI");
     expect(catalog.agents.find((a) => a.id === "atlas-ci")?.observe?.githubWorkflow).toBe("ci.yml");
   });
@@ -253,7 +253,7 @@ describe("directory", () => {
       ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(6);
-    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["site-audit"]);
+    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
     expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci"]);
   });
 

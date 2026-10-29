@@ -78,7 +78,7 @@ export function planOffice(project: Pick<Project, "id" | "repository">, agents: 
       ry: 0,
     };
   });
-  return { projectId: project.id, buildingId: `repo:${project.repository}`, w, d, workstations };
+  return { projectId: project.id, buildingId: `project:${project.id}`, w, d, workstations };
 }
 
 /**

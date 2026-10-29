@@ -1,6 +1,6 @@
 # Catalog manifests
 
-Each YAML file in this folder registers one project, its repository and the agents that belong to it. The app bundles every `*.yaml` file here at build time, and `npm test` validates them.
+Each YAML file in this folder registers one project, its linked repositories and the agents that belong to it. Each large map building represents a project, identified by its stable project ID. Repositories are resources in its detail panel. The app bundles every `*.yaml` file here at build time, and `npm test` validates them.
 
 ```yaml
 schema: atlas/v2                   # atlas/v1 still works; v2 adds the registry block
@@ -10,7 +10,8 @@ project:
   name: Multi-Agent Commerce Pipeline
   summary: One or two sentences on what the project does.
   status: active                   # active | idle | paused | attention | retired
-  repository: owner/repo           # GitHub repository, read-only
+  repository: owner/repo           # default repository for existing integrations
+  repositories: [owner/api, owner/web] # optional additional linked repositories
   tags: [crewai, shopify]          # optional
   links:                           # optional, https only
     - label: Case study

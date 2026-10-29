@@ -43,7 +43,7 @@ agents:
       - Storefront deploy key with write access to the storefront repository
       - Runs as root in the documented setup
     registry:
-      title: Commerce Pipeline Orchestrator
+      title: Commerce Operations Coordinator
       category: infrastructure
       subcategory: Workflow orchestration
       classification:
@@ -119,6 +119,7 @@ agents:
       - Serper search (SERPER_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Product Opportunity Analyst
       category: business
       subcategory: Market research
       classification:
@@ -178,6 +179,7 @@ agents:
       - Serper search (SERPER_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Market Research Analyst
       category: business
       subcategory: Market research
       classification:
@@ -235,6 +237,7 @@ agents:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Brand Strategist
       category: business
       subcategory: Product validation
       classification:
@@ -290,6 +293,7 @@ agents:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Visual Identity Director
       category: business
       subcategory: Product validation
       classification:
@@ -347,6 +351,7 @@ agents:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Brand Copywriter and SEO Strategist
       category: business
       subcategory: Product validation
       classification:
@@ -404,6 +409,7 @@ agents:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Product Launch Planner
       category: business
       subcategory: Product validation
       classification:
@@ -463,6 +469,7 @@ agents:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Canva account through the Canva MCP server (CANVA_MCP_TOKEN)
     registry:
+      title: Product Visualization Designer
       category: business
       subcategory: Workflow automation
       classification:
@@ -516,6 +523,7 @@ agents:
       - 'Stripe secret key (STRIPE_SECRET_KEY): products, prices and payment links'
       - Writes listings and run_log in SQLite
     registry:
+      title: Product Publishing Coordinator
       category: business
       subcategory: Workflow automation
       classification:
@@ -578,6 +586,7 @@ agents:
       - Writes listing tags and seo_review rows in SQLite
       - Storefront deploy key, through the loop's storefront deploy
     registry:
+      title: Search Optimization Specialist
       category: business
       subcategory: Workflow automation
       classification:
@@ -632,7 +641,7 @@ agents:
     permissions:
       - Reads outputs/pipeline.db; writes nothing
     registry:
-      title: Commerce Pipeline Health Reporter
+      title: Pipeline Health Analyst
       category: infrastructure
       subcategory: System health checks
       classification:
@@ -690,6 +699,7 @@ agents:
       - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
       - Writes deliveries rows in SQLite
     registry:
+      title: Digital Fulfillment Coordinator
       category: business
       subcategory: Order fulfillment
       classification:
@@ -746,6 +756,7 @@ agents:
       - 'Stripe secret key: reads checkout sessions'
       - Writes sales rows in SQLite
     registry:
+      title: Sales Reporting Specialist
       category: business
       subcategory: Sales reporting
       classification:
@@ -798,6 +809,7 @@ agents:
       - Reads outputs/pipeline.db
       - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
     registry:
+      title: Operations Reporting Coordinator
       category: business
       subcategory: Sales reporting
       classification:
@@ -851,6 +863,7 @@ agents:
       - Reads outputs/pipeline.db
       - Writes and deletes dated copies in backups/
     registry:
+      title: Database Backup Specialist
       category: infrastructure
       subcategory: Backups
       classification:
@@ -902,7 +915,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Commerce Pipeline Continuous Integration
+      title: Commerce Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

@@ -29,7 +29,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Benjaire Dashboard Continuous Integration
+      title: Dashboard Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

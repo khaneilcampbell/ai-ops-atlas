@@ -84,6 +84,7 @@ agents:
       - Reads private/career-database
       - Writes private/applications/<slug>/ and the tracker
     registry:
+      title: Resume Content Specialist
       category: career
       subcategory: Resume optimization
       classification:
@@ -188,7 +189,7 @@ agents:
     permissions:
       - Reads the career database folder; writes nothing and makes no network calls
     registry:
-      title: Career Data Quality Validator
+      title: Career Data Quality Analyst
       category: career
       subcategory: Data validation
       classification:
@@ -239,7 +240,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Career Workflow Continuous Integration
+      title: Career Workflow Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

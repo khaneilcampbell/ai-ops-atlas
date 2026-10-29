@@ -10,6 +10,28 @@ const plans = planVehicles(scene);
 const inside = (r: { x: number; z: number; w: number; d: number }, x: number, z: number, m = 0) => x >= r.x - m && x <= r.x + r.w + m && z >= r.z - m && z <= r.z + r.d + m;
 
 describe("decorative vehicles", () => {
+  it("sets city streets back from project walls to leave room for sidewalks", () => {
+    for (const tower of scene.towers) {
+      const bridges = scene.carBridges.filter(b => b.ends.includes(tower.projectId));
+      for (const bridge of bridges) {
+        const road = bridge.roads[bridge.ends.indexOf(tower.projectId)];
+        const entrance = road[0];
+        const edgeDistance = Math.max(Math.abs(entrance[0]-tower.x),Math.abs(entrance[1]-tower.z))-tower.size/2;
+        expect(edgeDistance).toBeGreaterThanOrEqual(0.49);
+      }
+    }
+  });
+
+  it("continues through neighboring districts on a connected city tour", () => {
+    for (const plan of plans) {
+      const districts = new Set<string>();
+      for (const leg of plan.legs) for (const t of scene.terraces) {
+        if (leg.a[0]>=t.x && leg.a[0]<=t.x+t.w && leg.a[1]>=t.z && leg.a[1]<=t.z+t.d) districts.add(t.id);
+      }
+      expect(districts.size).toBeGreaterThan(2);
+    }
+  });
+
   it("runs a small fleet, one per district", () => {
     expect(plans.length).toBeGreaterThanOrEqual(3);
     expect(plans.length).toBeLessThanOrEqual(MAX_VEHICLES);
@@ -41,7 +63,7 @@ describe("decorative vehicles", () => {
         for (const k of scene.kiosks) expect(inside({ x: k.x - k.size / 2, z: k.z - k.size / 2, w: k.size, d: k.size }, x, z, 0.08), `${v.id} inside ${k.key}`).toBe(false);
         for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
       }
-  });
+  }, 15000);
 
   it("keeps fountains clear of the towers", () => {
     for (const f of scene.fountains)

@@ -31,7 +31,7 @@ describe("office plan", () => {
     const agents = catalog.agents.filter((a) => a.projectId === project.id);
     expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward"]);
     const plan = planOffice(project, agents);
-    expect(plan.buildingId).toBe("repo:khaneilcampbell/ai-ops-atlas");
+    expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map((w) => w.id)).toEqual(["ai-ops-atlas/atlas-ci", "ai-ops-atlas/repo-intelligence", "ai-ops-atlas/atlas-engineering-review", "ai-ops-atlas/atlas-rerun-failed", "ai-ops-atlas/atlas-merge-pr", "ai-ops-atlas/atlas-github-steward"]);
     expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(6);
     // Stable: the same input always gives the same desks.

@@ -28,7 +28,7 @@ agents:
       - 'GITHUB_TOKEN: security-events write (upload results), actions read, contents read'
       - No repository secrets
     registry:
-      title: Service Desk CodeQL Scan
+      title: Application Security Analyst
       category: security
       subcategory: Vulnerability assessment
       classification:

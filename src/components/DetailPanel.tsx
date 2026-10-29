@@ -1,3 +1,7 @@
+import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
+import { ToolWorkflow } from "./ToolWorkflow";
+import { servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
+import { projectRepositories } from "../catalog/projects";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import { CopyValue, ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
@@ -26,7 +30,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   }, [select]);
 
   if (!selection) return null;
-  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
+  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -57,6 +61,59 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
       </button>
     </div>
   );
+}
+
+function ServiceDetail({ id }: { id: string }) {
+  const { catalog, select } = useAtlas();
+  const split = id.indexOf(":");
+  const project = catalog.projects.find(p => p.id === id.slice(0, split));
+  const service = project && servicesOf(catalog.agents.filter(a => a.projectId === project.id)).find(s => s.id === id.slice(split + 1));
+  if (!project || !service) return <Head eyebrow="Infrastructure tool" title="Not found" />;
+  const route = orderToolsForWorkflow(servicesOf(catalog.agents.filter(a => a.projectId === project.id)));
+  return <>
+    <Head eyebrow={`Infrastructure tool · ${project.name}`} title={service.name}>
+      <div className="chips" style={{ marginTop: 10 }}><span className="chip">Supporting infrastructure</span><span className="chip">{service.users.length} linked {service.users.length === 1 ? "worker" : "workers"}</span></div>
+    </Head>
+    <div className="panel-body selectable">
+      <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p></section>
+      <section><div className="section-title">Supports this project</div><button className="ghost-btn" onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} />{project.name}</button></section>
+      {route.length > 1 && <section><div className="section-title">Tool workflow · left to right around headquarters</div><div className="link-list">{route.map((tool, index) => <button key={tool.id} className="text-btn" aria-current={tool.id === service.id ? "step" : undefined} onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{index + 1}. {tool.name}{tool.id === service.id ? " · selected" : " →"}</button>)}</div><p className="muted small">Placement follows declared dependencies and documented workflow phases.</p></section>}
+      <ToolWorkflow service={service} projectAgents={catalog.agents.filter(a => a.projectId === project.id)} />
+      <section><div className="section-title">Linked repositories</div><div className="link-list">{[...new Set(service.users.map(a => a.repository))].map(name => <button key={name} className="text-btn" onClick={() => select({ kind: "repo", id: name })}><Icon name="repos" size={14}/>{name} →</button>)}</div></section>
+    </div>
+  </>;
+}
+
+/** A project owns its building and agents; repositories are linked resources. */
+function ProjectDetail({ id }: { id: string }) {
+  const { catalog, repos, select, view } = useAtlas();
+  const reduced = useReducedMotion();
+  const project = catalog.projects.find(p => p.id === id);
+  if (!project) return <Head eyebrow="Project" title="Not found" />;
+  const repositories = projectRepositories(project, catalog.agents);
+  return <>
+    <Head eyebrow="Project building" title={project.name}>
+      <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
+      <InspectorEditRow><EditDetailsButton target={project.file ? { kind: "project", file: project.file, name: project.name } : null} /></InspectorEditRow>
+      {view === "map" && webglAvailable() && <button className="ghost-btn enter-building" onClick={() => enterBuilding(project.id, reduced)}><Icon name="agents" size={15} /> Enter building</button>}
+    </Head>
+    <div className="panel-body selectable">
+      <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
+      <section aria-label="Linked repositories">
+        <div className="section-title">Linked repositories</div>
+        <ul className="runs">{repositories.map(name => {
+          const snapshot = repoData(repos[name]);
+          return <li key={name} style={{ flexWrap: "wrap", gap: 8 }}>
+            <span className="grow" style={{ minWidth: 0, overflowWrap: "anywhere" }}><ExternalLink href={`https://github.com/${name}`}><Icon name="repos" size={14} /> {name}</ExternalLink><span className="muted small" style={{ display: "block" }}>{name === project.repository ? "Default repository" : "Linked resource"}</span></span>
+            <HealthBadge health={snapshot ? overallHealth(repoHealth(snapshot, catalog.agents.filter(a => a.projectId === id && a.repository === name).length)) : "unknown"} />
+            <button className="text-btn" aria-label={`Inspect repository ${name}`} onClick={() => select({ kind: "repo", id: name })}>Inspect →</button>
+          </li>;
+        })}</ul>
+      </section>
+      <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
+      {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
+    </div>
+  </>;
 }
 
 function githubFileUrl(agent: Agent, branch = "HEAD") {
@@ -181,13 +238,12 @@ const REPO_TABS: { id: RepoTab; label: string }[] = [
 ];
 
 function RepoDetail({ name }: { name: string }) {
-  const { catalog, repos, select, view, setView, setFilters, clearFilters } = useAtlas();
-  const reduced = useReducedMotion();
+  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
   const [more, setMore] = useState(false);
   const [tab, setTab] = useState<RepoTab>("overview");
   const state = repos[name];
   const snap = repoData(state);
-  const project = catalog.projects.find((p) => p.repository === name);
+  const project = catalog.projects.find((p) => projectRepositories(p, catalog.agents).includes(name));
   const agents = catalog.agents.filter((a) => a.repository === name);
   const history = useMemo(() => activityFeed(catalog, repos, { repo: name }), [catalog, repos, name]);
   const indicators = repoHealth(snap, agents.length);
@@ -199,7 +255,7 @@ function RepoDetail({ name }: { name: string }) {
 
   return (
     <>
-      <Head eyebrow={project ? "Project" : "Repository · Not in the catalog yet"} title={project?.name ?? name.split("/")[1]}>
+      <Head eyebrow={project ? "Repository · Project resource" : "Repository · Not in the catalog yet"} title={name.split("/")[1]}>
         <div className="mono muted" style={{ marginTop: 4 }}>
           <CopyValue value={name} title="Copy repository name" />
         </div>
@@ -209,11 +265,7 @@ function RepoDetail({ name }: { name: string }) {
           {snap && <span className="chip">{snap.visibility}</span>}
           {snap?.archived && <span className="chip">Archived</span>}
         </div>
-        {project && view === "map" && webglAvailable() && (
-          <button className="ghost-btn enter-building" onClick={() => enterBuilding(project.id, reduced)}>
-            <Icon name="agents" size={15} /> Enter building
-          </button>
-        )}
+        {project && <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} /> Back to {project.name}</button>}
         <InspectorEditRow>
           <EditDetailsButton target={project?.file ? { kind: "project", file: project.file, name: project.name } : null} />
           <EditFilesButton repo={name} />

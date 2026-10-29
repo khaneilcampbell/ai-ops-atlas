@@ -124,6 +124,15 @@
             },
             "additionalProperties": false
           }
+        },
+        "repositories": {
+          "type": "array",
+          "description": "Additional repositories linked to this project; repository remains the default.",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"
+          }
         }
       }
     },
@@ -201,7 +210,10 @@
                 "type": "boolean"
               },
               "atlas_intel_runs": {
-                "enum": ["repository", "ecosystem"]
+                "enum": [
+                  "repository",
+                  "ecosystem"
+                ]
               },
               "agent_feed": {
                 "type": "boolean",
