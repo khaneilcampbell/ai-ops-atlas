@@ -113,7 +113,7 @@ export interface ExecutionRecord {
   url?: string;
   durationMs?: number | null;
   costUsd?: number | null;
-  source: "github" | "atlas-intel" | "agent-feed" | "manual";
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | "manual";
   /** A GitHub run on a branch other than the default one (a pull request, Dependabot). Kept in
    *  the history, but it doesn't decide the agent's status. */
   offMainline?: boolean;
@@ -122,9 +122,11 @@ export interface ExecutionRecord {
 /** Derived at runtime. Never stored in a manifest. */
 export interface Telemetry {
   /** Where live execution data comes from, or null when nothing is connected. */
-  source: "github" | "atlas-intel" | "agent-feed" | null;
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | null;
   /** True when Atlas has looked at the source (the repository or the agent was loaded). */
   loaded: boolean;
+  productionFresh?: boolean;
+  productionSeenAt?: string;
   executions: ExecutionRecord[];
   lastVerifiedRun: ExecutionRecord | null;
   lastAnyRun: ExecutionRecord | null;
@@ -136,4 +138,4 @@ export interface Telemetry {
 }
 
 /** "verified" = Atlas has seen a successful run; "configured" = only a configuration exists. */
-export type Operational = "verified" | "failing" | "configured" | "planned";
+export type Operational = "verified" | "failing" | "configured" | "planned" | "unknown";

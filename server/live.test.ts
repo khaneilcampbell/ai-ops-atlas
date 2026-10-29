@@ -144,3 +144,21 @@ describe("live hooks", () => {
     expect(agentRun({ ...ok, at: "yesterday" })).toBeNull();
   });
 });
+
+describe('production reporting', () => {
+  const report = { agentId: 'commerce-loop', eventId: 'event-1', kind: 'run', runId: 'cycle-1', status: 'success', costUsd: 0.02, privateOutput: 'secret' };
+  const request = (body: unknown, token = SYNC) => new Request('https://x/api/hooks/production', { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+  it('scopes credentials, strips extra fields and deduplicates retries', async () => {
+    const { receiveProduction } = await import('./live');
+    const d = fakeD1();
+    const env = { LIVE: d.db, PRODUCTION_AGENT_KEYS: JSON.stringify({ 'commerce-loop': { token: SYNC, repo: 'owner/commerce' } }) };
+    expect((await receiveProduction(request(report, 'bad'), env, NOW)).status).toBe(401);
+    expect((await receiveProduction(request({ ...report, agentId: 'other' }), env, NOW)).status).toBe(401);
+    expect((await receiveProduction(request({ ...report, costUsd: -1 }), env, NOW)).status).toBe(400);
+    expect((await receiveProduction(request(report), env, NOW)).status).toBe(202);
+    await receiveProduction(request(report), env, NOW);
+    expect(d.rows).toHaveLength(1);
+    expect(d.rows[0].body).not.toContain('secret');
+    expect(d.rows[0].repo).toBe('owner/commerce');
+  });
+});

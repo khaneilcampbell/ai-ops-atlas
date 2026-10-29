@@ -21,7 +21,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "docs", label: "Documentation" },
 ];
 
-const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed" } as const;
+const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting" } as const;
 
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
 export function Inspector({ entry }: { entry: RegistryEntry }) {

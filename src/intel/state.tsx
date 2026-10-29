@@ -79,10 +79,12 @@ export function IntelProvider({ children }: { children: ReactNode }) {
   const live = useLiveStatus();
   const telemetry = useMemo<IntelSource | null>(() => {
     const agentRuns = live.agentRuns;
-    if (status) return agentRuns ? { ...status, agentRuns } : status;
-    if (live.intelRuns || agentRuns) return { runs: live.intelRuns ?? [], agentRuns };
+    const production = live.production;
+    const observedAt = live.checkedAt;
+    if (status) return { ...status, agentRuns, production, observedAt };
+    if (live.intelRuns || agentRuns || production.length) return { runs: live.intelRuns ?? [], agentRuns, production, observedAt };
     return null;
-  }, [status, live.intelRuns, live.agentRuns]);
+  }, [status, live.intelRuns, live.agentRuns, live.production, live.checkedAt]);
 
   const value = useMemo<IntelState>(
     () => ({

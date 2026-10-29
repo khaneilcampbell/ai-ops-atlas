@@ -1,3 +1,4 @@
+import { STALE_MS, type ProductionEvent } from "../production/model";
 import type { Agent } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
 import type { Run } from "../intel/types";
@@ -26,12 +27,19 @@ const FEED_RESULT: Record<AgentRun["status"], ExecutionRecord["result"]> = { ok:
  * a pipeline outside Atlas reports to the live feed. Manifest
  * `last_run` and `history` are hand-written records, not telemetry, and are not used here.
  */
-export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null, agentRuns: AgentRun[] | null = null): Telemetry {
+export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null, agentRuns: AgentRun[] | null = null, production: ProductionEvent[] = [], now = Date.now()): Telemetry {
   let executions: ExecutionRecord[] = [];
   let source: Telemetry["source"] = null;
   let loaded = false;
+  const reports = production.filter(e => e.body.agentId === agent.id);
+  const latestReport = reports.reduce<ProductionEvent | undefined>((a,b) => !a || b.id > a.id ? b : a, undefined);
+  const productionFresh = !!latestReport && now - Date.parse(latestReport.at) < STALE_MS;
   const wf = agent.observe?.githubWorkflow;
-  if (wf) {
+  if (reports.length || (agent.registry?.governance?.autonomy === 3 && !agent.observe?.agentFeed)) {
+    source = reports.length ? "production" : null;
+    loaded = reports.length > 0;
+    executions = reports.filter(e => e.body.kind === "run").map(e => ({ at: e.at, result: e.body.status!, label: `Production run ${e.body.runId}`, durationMs: e.body.durationMs, costUsd: e.body.costUsd, source: "production" as const }));
+  } else if (wf) {
     source = "github";
     loaded = !!snap;
     // With the default branch unknown (older cached data), every run counts as before.
@@ -74,6 +82,8 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
   return {
     source,
     loaded,
+    productionFresh,
+    productionSeenAt: latestReport?.at,
     executions,
     lastVerifiedRun: counted.find((e) => e.result === "success") ?? null,
     lastAnyRun: counted[0] ?? null,
@@ -86,8 +96,9 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
 }
 
 /** Configured is not the same as working: only an observed successful run counts as verified. */
-export function operationalState(p: Pick<AgentProfile, "classification">, t: Telemetry): Operational {
+export function operationalState(p: Pick<AgentProfile, "classification"> & Partial<Pick<AgentProfile, "governance">>, t: Telemetry): Operational {
   if (p.classification === "F") return "planned";
+  if ((t.source === "production" || (p.governance?.autonomy === 3 && t.source !== "agent-feed")) && !t.productionFresh) return "unknown";
   const latest = mainline(t.executions).find((e) => e.result === "success" || e.result === "failure");
   if (latest?.result === "failure") return "failing";
   if (t.lastVerifiedRun) return "verified";
@@ -95,6 +106,7 @@ export function operationalState(p: Pick<AgentProfile, "classification">, t: Tel
 }
 
 export const OPERATIONAL_LABEL: Record<Operational, string> = {
+  unknown: "Production status unknown",
   verified: "Verified running",
   failing: "Latest run failed",
   configured: "Configured, not verified",
