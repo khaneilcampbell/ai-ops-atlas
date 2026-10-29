@@ -1,8 +1,8 @@
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
-import { REPO_RE, Reader } from "./reader";
+import { REPO_RE, Reader, type Raw } from "./reader";
 import { DISTRICTS } from "./taxonomy";
-import { CONNECTION_TYPES, SCHEMAS, type Agent, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
+import { CONNECTION_TYPES, SCHEMAS, type Agent, type AlertRules, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
 export function parseManifest(file: string, text: string, issues: ManifestIssue[]): Catalog {
@@ -36,6 +36,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     const framework = r.str(ao, "framework", path);
     if (!id || !name || !purpose || !framework) return [];
     const observe = ao.observe ? r.obj(ao.observe, `${path}.observe`) : null;
+    const alerts = ao.alerts ? r.obj(ao.alerts, `${path}.alerts`) : null;
     const agentRepo = r.str(ao, "repository", path, false) ?? repository;
     let registry = undefined;
     if (ao.registry !== undefined && ao.registry !== null) {
@@ -70,6 +71,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
               agentFeed: r.bool(observe, "agent_feed", `${path}.observe`),
             }
           : undefined,
+        alerts: alerts ? alertRules(r, alerts, `${path}.alerts`) : undefined,
         projectId,
         repository: agentRepo,
       },
@@ -103,6 +105,24 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
 }
 
 /** Merges manifests and reports duplicate ids across files. */
+const DURATION = /^(\d+)\s*(m|h|d)$/;
+const UNIT_MS = { m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
+
+/** "90m", "2h" or "8d" in milliseconds; null when it isn't one. */
+export function parseDuration(v: string): number | null {
+  const m = DURATION.exec(v.trim());
+  if (!m || Number(m[1]) <= 0) return null;
+  return Number(m[1]) * UNIT_MS[m[2] as keyof typeof UNIT_MS];
+}
+
+function alertRules(r: Reader, o: Raw, path: string): AlertRules {
+  const within = r.str(o, "report_within", path, false);
+  const reportWithinMs = within === undefined ? null : parseDuration(within);
+  if (within !== undefined && reportWithinMs === null) r.fail(`${path}.report_within`, 'must be a duration like "90m", "2h" or "8d"');
+  for (const k of Object.keys(o)) if (!["failures", "report_within", "not_running"].includes(k)) r.fail(`${path}.${k}`, "is not an alerts field");
+  return { failures: r.bool(o, "failures", path) ?? true, reportWithinMs, notRunning: r.str(o, "not_running", path, false) ?? null };
+}
+
 export function buildCatalog(files: Record<string, string>): { catalog: Catalog; issues: ManifestIssue[] } {
   const issues: ManifestIssue[] = [];
   const catalog: Catalog = { projects: [], agents: [] };

@@ -209,6 +209,27 @@
               }
             }
           },
+          "alerts": {
+            "type": "object",
+            "description": "Alerts for an unattended agent, from its live source (docs/alerts.md).",
+            "properties": {
+              "failures": {
+                "type": "boolean",
+                "description": "A failed run raises an alert. Defaults to true."
+              },
+              "report_within": {
+                "type": "string",
+                "pattern": "^[0-9]+ ?(m|h|d)$",
+                "description": "No report for this long means the agent has gone silent, for example 2h or 8d. Leave out for agents that only run when something happens."
+              },
+              "not_running": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why the agent is off on purpose. No alerts while set; shown as Not running."
+              }
+            },
+            "additionalProperties": false
+          },
           "capabilities": {
             "type": "array",
             "items": {

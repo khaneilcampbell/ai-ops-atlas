@@ -29,6 +29,10 @@ agents:
     source: site/worker/index.ts
     observe:
       agent_feed: true
+    # Customer-facing and unattended: a failed request alerts KC. It only runs when someone
+    # posts the form, so a quiet stretch is normal and there is no silence window.
+    alerts:
+      failures: true
     last_run: null
     permissions:
       - 'Cloudflare Email Routing: send to verified destination addresses only'
@@ -85,6 +89,10 @@ agents:
     trigger: Webhook from the contact Worker
     observe:
       agent_feed: true
+    # Customer-facing and unattended: a failed intake alerts KC. Runs per inquiry, so no
+    # silence window.
+    alerts:
+      failures: true
     last_run: null
     permissions:
       - 'Resend API: sending on benjaire.com only'

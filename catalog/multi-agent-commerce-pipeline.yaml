@@ -29,6 +29,11 @@ agents:
     source: loop.sh
     observe:
       agent_feed: true
+    # Reports at least once a week even in maintain mode (sleeps until Monday 00:00 UTC).
+    alerts:
+      failures: true
+      report_within: 8d
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     history:
       - at: 2026-10-12
@@ -450,6 +455,9 @@ agents:
     source: scripts/canva_image_generator.py
     observe:
       agent_feed: true
+    alerts:
+      failures: true
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
@@ -561,6 +569,9 @@ agents:
     source: scripts/seo_analyzer.py
     observe:
       agent_feed: true
+    alerts:
+      failures: true
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - Serper API (SERPER_API_KEY)
@@ -667,6 +678,12 @@ agents:
     source: scripts/order_delivery.py
     observe:
       agent_feed: true
+    # Emails buyers their files. The window assumes the delivery check reports on every pass,
+    # even with no orders; confirm that when the pipeline is rehosted.
+    alerts:
+      failures: true
+      report_within: 1h
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - 'Stripe secret key: reads checkout sessions'

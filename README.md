@@ -15,6 +15,7 @@ Atlas is **read-only**. It reads project manifests and GitHub data, and its one 
 | Details | A side panel for any agent or repository with its description, links, status and activity history |
 | Search | `⌘K` searches agents and repositories from anywhere |
 | Live updates | Workflow runs, pushes and Repository Intelligence runs appear as they happen on the Mac and the website, from GitHub App webhooks collected by the site. The header's **Live** pill shows the latest. See [docs/live-updates.md](docs/live-updates.md) |
+| Agent alerts | Unattended customer-facing agents raise an alert when they report a failure or go silent: a red header pill, Mission Control's Agent alerts list, optional Mac or browser notifications, and optional email from the site. Agents that are off on purpose show as Not running. See [docs/alerts.md](docs/alerts.md) |
 | Repository intelligence | Pick a repository and the agent reads it from GitHub, asks Claude for a structured assessment and saves a report. Verified facts are kept apart from Claude's unverified recommendations. **Intel** shows the agent's configuration, every run with its trace, and token and cost totals. See [docs/repository-intelligence.md](docs/repository-intelligence.md) |
 | Settings | Refresh interval, cache, map labels, an optional GitHub token, and the Anthropic key, budgets and schedule for the intelligence agent. Keys are stored in the macOS Keychain |
 

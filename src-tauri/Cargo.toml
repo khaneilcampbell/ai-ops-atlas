@@ -30,6 +30,7 @@ tauri-plugin-dialog = "2"
 # Without the default `zip` feature: macOS updates are .tar.gz, and zip 4.x has open advisories.
 tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
+tauri-plugin-notification = "2"
 
 # Touch ID for unlocking the saved keys once per launch.
 [target.'cfg(target_os = "macos")'.dependencies]

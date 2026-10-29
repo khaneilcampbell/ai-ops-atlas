@@ -25,6 +25,8 @@ import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 import { EditToggle } from "./components/edit/EditControls";
 import { useEditMode } from "./edit/mode";
+import { useAlertNotifications, useAlerts } from "./alerts/state";
+import { AlertPill } from "./views/AgentAlerts";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -47,6 +49,8 @@ export default function App() {
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
+  const alerts = useAlerts().open;
+  useAlertNotifications(alerts);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -79,6 +83,7 @@ export default function App() {
           {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
         </div>
         <LivePill />
+        <AlertPill open={alerts} />
         <VaultLockedPill />
         <UpdateButton />
         <EditToggle />
@@ -105,7 +110,7 @@ export default function App() {
           <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-current={view === n.view ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
-            {n.view === "overview" && attention.length > 0 && <span className="badge">{attention.length}</span>}
+            {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
           </button>
         ))}
         <div className="grow" />

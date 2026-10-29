@@ -10,6 +10,7 @@
 // read-only summary of each event is kept, never the whole payload.
 
 import { sameSecret } from "./usage";
+import { alertOnRun, type AlertEnv } from "./alerts";
 
 export interface D1Statement {
   bind(...values: unknown[]): D1Statement;
@@ -22,7 +23,7 @@ export interface D1 {
   batch(statements: D1Statement[]): Promise<unknown>;
 }
 
-export interface LiveEnv {
+export interface LiveEnv extends AlertEnv {
   /** D1 binding for the `atlas-live` database. */
   LIVE?: D1;
   /** The webhook secret typed into the GitHub App. */
@@ -204,6 +205,8 @@ export async function receiveAgents(req: Request, env: LiveEnv, now = Date.now()
   if (!run) return reply(400, { message: "Expected {project, agents, phase, status: ok|failed|skipped|paused, detail?, at}." });
   // The server's clock orders events; the body keeps the pipeline's own timestamp.
   await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "agent", kind: "agent_run", repo: null, delivery: null, body: run }], now);
+  // Emails only when alert email is set up; never holds up or fails the report.
+  await alertOnRun(env.LIVE, env, run, now);
   return reply(202, { stored: 1 });
 }
 

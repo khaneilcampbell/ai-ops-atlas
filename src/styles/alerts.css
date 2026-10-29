@@ -1,0 +1,33 @@
+/* Agent alerts: Mission Control's watch list and the header pill. */
+.agent-alerts { margin-bottom: 16px; }
+.agent-alerts .list-row.watch { align-items: center; cursor: default; }
+.agent-alerts .list-row .title { display: block; max-width: 100%; text-align: left; color: var(--ink); }
+.watch-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--sage-400); }
+.watch-dot.failing, .watch-dot.silent { background: var(--bad); }
+.watch-dot.ok { background: var(--good); }
+.watch-dot.not-running { background: transparent; border: 1.5px solid var(--sage-400); }
+.watch-chip.failing, .watch-chip.silent, .agent-alerts .chip.chip-bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+.watch-chip.ok { color: var(--good); border-color: rgba(79, 122, 82, 0.4); }
+.watch-chip.no-source, .watch-chip.no-reports { background: transparent; }
+.watch-chip.not-running { background: transparent; color: var(--ink-3); }
+.watch-spacer { width: 52px; flex: none; }
+.agent-alerts-foot { display: flex; gap: 16px; align-items: flex-start; }
+.agent-alerts-foot code { font-size: 11px; }
+.notify-switch { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); cursor: pointer; }
+
+.alert-pill {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 280px; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--bad); background: var(--bad); color: #fff; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.alert-pill:hover { filter: brightness(1.1); }
+.alert-pill .alert-text { overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 720px) {
+  .agent-alerts .list-row.watch { flex-wrap: wrap; row-gap: 4px; }
+  .agent-alerts .list-row.watch .grow { flex-basis: calc(100% - 30px); }
+  .agent-alerts .watch-spacer { display: none; }
+  .agent-alerts .list-row.watch .meta { white-space: normal; }
+  .agent-alerts-foot { flex-direction: column; gap: 8px; }
+  .alert-pill { padding: 5px 9px; font-size: 11px; max-width: 44px; }
+  .alert-pill .alert-text { display: none; }
+}
