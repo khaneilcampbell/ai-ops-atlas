@@ -175,6 +175,14 @@ pub struct VaultStatus {
     error: Option<String>,
 }
 
+/// True once this launch's unlock succeeded. Never prompts, so background work can ask first.
+pub fn unlocked() -> bool {
+    matches!(
+        *STATE.lock().unwrap_or_else(|e| e.into_inner()),
+        Lock::Unlocked(_)
+    )
+}
+
 #[tauri::command]
 pub fn vault_status() -> VaultStatus {
     let state = STATE.lock().unwrap_or_else(|e| e.into_inner());
