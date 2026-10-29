@@ -24,7 +24,7 @@ async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
-sha2 = "0.10"
+sha2 = "0.11"
 rand = "0.8"
 tauri-plugin-dialog = "2"
 # Without the default `zip` feature: macOS updates are .tar.gz, and zip 4.x has open advisories.
