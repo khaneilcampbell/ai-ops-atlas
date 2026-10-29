@@ -86,3 +86,5 @@ Setup:
 - Pipeline: `python scripts/atlas_feed.py ok "Loop" "test"` on the VPS prints nothing when
   Atlas stored it, `not sent: HTTP 401` for a key mismatch and `HTTP 503` when the secret isn't
   on the deployment yet. The test shows up under the Autonomous Loop agent.
+
+For scoped per-agent credentials, heartbeats, run duration/cost and stale reporting detection, see [Production reporting](production-observability.md). The existing phase feed remains supported.

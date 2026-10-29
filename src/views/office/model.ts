@@ -121,6 +121,13 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
+  if (t.source === "production") {
+    const basis = t.executions[0] ?? null;
+    if (!t.productionFresh) return { state: "unknown", reason: "Production reporting is stale (no report in 15 minutes).", basis, source: "Production reporting" };
+    if (basis?.result === "running" && now - Date.parse(basis.at) >= 15 * 60_000) return { state: "unknown", reason: "Run progress report is stale; heartbeat alone does not establish progress.", basis, source: "Production reporting" };
+    const state = basis?.result === "running" ? "working" : basis?.result === "failure" ? "failed" : "idle";
+    return { state, reason: "Recent authenticated production report.", basis, source: "Production reporting" };
+  }
   // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
   let executions = mainline(t.executions);
   let loaded = t.loaded;

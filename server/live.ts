@@ -1,3 +1,4 @@
+import { validReport } from "../src/production/model";
 // Live activity for the app and the hosted web build. GitHub sends workflow and push events to
 // /api/hooks/github (signed with GITHUB_WEBHOOK_SECRET); the Mac app adds its own agents' runs
 // at /api/hooks/atlas (USAGE_SYNC_TOKEN), and pipelines outside Atlas (the commerce loop on its
@@ -25,6 +26,7 @@ export interface D1 {
 export interface LiveEnv {
   /** D1 binding for the `atlas-live` database. */
   LIVE?: D1;
+  PRODUCTION_AGENT_KEYS?: string;
   /** The webhook secret typed into the GitHub App. */
   GITHUB_WEBHOOK_SECRET?: string;
   /** The Mac app's sync key, shared with usage sync. */
@@ -232,4 +234,23 @@ export async function readFeed(req: Request, env: LiveEnv, now = Date.now()): Pr
   if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Live updates aren't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
   if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
   return readEvents(new URL(req.url), env, now);
+}
+
+/** Each production credential can report only its own registered identity/repository. */
+export async function receiveProduction(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
+  if (!env.LIVE || !env.PRODUCTION_AGENT_KEYS) return reply(503, { message: "Production reporting is not configured." });
+  let keys: Record<string, { token: string; repo: string }>;
+  try { keys = JSON.parse(env.PRODUCTION_AGENT_KEYS); } catch { return reply(503, { message: "Invalid production reporting configuration." }); }
+  const text = await readBody(req);
+  if (text === null) return reply(413, { message: "Payload too large." });
+  let body: unknown;
+  try { body = JSON.parse(text); } catch { return reply(400, { message: "Body is not JSON." }); }
+  if (!validReport(body)) return reply(400, { message: "Invalid production report." });
+  const credential = Object.prototype.hasOwnProperty.call(keys ?? {}, body.agentId) ? keys[body.agentId] : null;
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!credential || typeof credential.repo !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(credential.repo) || typeof credential.token !== "string" || credential.token.length < 32 || !sameSecret(token, credential.token)) return reply(401, { message: "Invalid agent credential." });
+  const compact = { agentId: body.agentId, eventId: body.eventId, kind: body.kind, ...(body.kind === "run" ? { runId: body.runId, status: body.status, durationMs: body.durationMs, costUsd: body.costUsd } : {}) };
+  await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "atlas", kind: "production", repo: credential.repo, delivery: `production:${body.agentId}:${body.eventId}`, body: compact }], now);
+  return reply(202, { accepted: true });
 }
