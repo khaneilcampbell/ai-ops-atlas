@@ -27,6 +27,8 @@ import { EditToggle } from "./components/edit/EditControls";
 import { useEditMode } from "./edit/mode";
 import { useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
+import { startStewardScheduler } from "./steward/store";
+import { StewardNotice } from "./steward/Notice";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
@@ -39,6 +41,7 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 ];
 
 export default function App() {
+  useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
@@ -121,6 +124,7 @@ export default function App() {
       </nav>
 
       <main className="main">
+        <StewardNotice />
         {/* Keyed by view, so moving to another view also clears a crash. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}

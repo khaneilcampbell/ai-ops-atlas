@@ -332,3 +332,60 @@ agents:
         improvements:
           - Count merges and refusals by reason from audit.jsonl
         last_review: 2026-10-28
+
+  - id: atlas-github-steward
+    name: GitHub Steward
+    purpose: "GitHub Steward: Collects bounded read-only observations for AI Ops Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
+    framework: Atlas read-only workflow
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
+    source: src-tauri/src/steward/check.rs
+    last_run: null
+    permissions:
+      - Existing Atlas GitHub connection, GET only
+      - Saves at most 30 observation summaries in device-local storage
+    registry:
+      title: Repository Maintenance Analyst
+      category: engineering
+      subcategory: Repository operations
+      classification:
+        type: C
+        confidence: verified
+        evidence: src/steward/check.ts implements a bounded deterministic GET-only check; no AI model calls
+      mission:
+        problem: Atlas needs one place to check its own CI and maintenance signals without granting a new agent write access.
+        outcomes: [Evidence-linked observations, Explicit unavailable checks, Bounded local run history]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read repository and commit metadata, Sample default-branch CI, Count dependency and code scanning alerts, Check maintenance file presence]
+        tools: [Atlas read-only GitHub transport]
+        inputs: [Manual or daily check request, Existing GitHub read credentials when available]
+        outputs: [Observation summaries in Intel → GitHub Steward]
+        limitations: [One fixed repository, No model reasoning, No execution while Atlas is closed, Alert access requires appropriate read permissions, No remote writes]
+      goals:
+        objective: Make repository observations reviewable while preserving approval boundaries.
+      execution:
+        trigger_type: scheduled
+        schedule: Optional daily at the selected device time while Atlas is open; off in new installations
+        environment: Atlas Intel view
+        stages: [Check pause state, Read bounded GitHub evidence, Classify observations and unavailable checks, Save local summary]
+      governance:
+        autonomy: 1
+        autonomy_note: Read-only observation; manual or opt-in daily checks. No code execution, remediation or paid model calls.
+        data_sensitivity: internal
+        approval: KC starts a check or enables the daily schedule; repository changes are not supported
+        credential_owner: KC (existing Atlas connection)
+        risk: low
+        audit_log: Latest 30 summaries in local storage; not immutable and not connected to registry telemetry
+      cost:
+        budget: No model spending; GitHub request limits apply
+      docs:
+        technical: docs/github-steward.md
+        runbook: docs/github-steward.md
+        known_issues:
+          - Scope and limits are compiled into the UI collector; the CLI JSON policy is separate
+          - Shared locking and persisted daily claims cover same-origin windows only; other devices and standalone collectors are independent
+          - Run history is device-local and is not yet surfaced as live registry telemetry
+          - Documentation quality, uptime, branch protections, billing and agent permissions are not assessed
+        last_review: 2026-10-28
