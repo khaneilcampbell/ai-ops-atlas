@@ -7,8 +7,6 @@ import type { LightMode } from "../map3d/living";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
-import { OfficeFinish, OfficeLighting, SURFACE_COLORS } from "./lighting";
-import { AgentModel, Prop, Swap } from "./models";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -44,16 +42,14 @@ export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
   // Render continuously only while something on screen moves; otherwise only on camera changes.
   const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
-  const phone = useMemo(() => window.matchMedia("(max-width: 700px)").matches, []);
-  const spots = useMemo(() => desks.map((d) => ({ x: d.ws.x, z: d.ws.z })), [desks]);
   return (
-    <Canvas shadows="percentage" dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <OfficeCamera plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} desks={spots} />
+      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} />
+      <WorkflowFloor desks={desks} />
       {desks.map((d) => (
         <AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light === "night"} selected={props.selected === d.ws.agentId} onSelect={props.onSelect} />
       ))}
-      <OfficeFinish phone={phone} />
     </Canvas>
   );
 }
@@ -168,10 +164,10 @@ const RING = new THREE.RingGeometry(0.9, 0.98, 48);
 
 const std = (color: string, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o });
 const MAT = {
-  floor: patterned(SURFACE_COLORS.floor, "stone", { roughness: 0.75 }),
-  rug: std(SURFACE_COLORS.rug, { roughness: 1 }),
-  wall: std(SURFACE_COLORS.wall),
-  trim: std(SURFACE_COLORS.trim, { roughness: 0.6 }),
+  floor: patterned("#d8d2c3", "stone", { roughness: 0.75 }),
+  rug: std("#2f4535", { roughness: 1 }),
+  wall: std("#ece5d2"),
+  trim: std("#2f4535", { roughness: 0.6 }),
   frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
   grass: patterned("#8fae6a", "grass"),
   oak: std("#c49a6c", { roughness: 0.55 }),
@@ -199,7 +195,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; desks: { x: number; z: number }[] }) {
+function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -211,12 +207,24 @@ function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePl
     MAT.pane.emissive.set(night ? "#2c3f66" : "#cfe6f2");
     MAT.pane.emissiveIntensity = night ? 0.6 : 0.55;
   }, [night]);
-  // Windows: two on the left wall either side of the bookshelf, two on the back wall either side of the display.
-  const leftWins = [-d / 3, d / 3];
+  const sun = useRef<THREE.DirectionalLight>(null);
+  useEffect(() => {
+    const s = sun.current;
+    if (!s) return;
+    const c = s.shadow.camera;
+    c.left = c.bottom = -Math.max(w, d);
+    c.right = c.top = Math.max(w, d);
+    c.updateProjectionMatrix();
+  }, [w, d]);
+  // Windows: three on the left wall, two on the back wall either side of the display.
+  const leftWins = [-d / 3, 0, d / 3];
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
-      <OfficeLighting light={light} size={Math.max(w, d)} height={H} desks={desks} />
+      <hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.45 : 1.2]} />
+      <directionalLight ref={sun} castShadow position={[-6, 11, 7]} intensity={night ? 0.35 : 2.1} color={night ? "#a8b8e0" : "#fff0d2"} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005} shadow-normalBias={0.03} />
+      {/* After dark the room lights are on. */}
+      {night && <pointLight position={[0, H + 0.4, 0]} intensity={14} distance={Math.max(w, d) * 1.6} decay={1.6} color="#ffd9a0" />}
 
       <mesh geometry={CYL} material={MAT.grass} position={[0, -0.32, 0]} scale={[Math.max(w, d) * 3.2, 0.5, Math.max(w, d) * 3.2]} receiveShadow />
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
@@ -258,47 +266,18 @@ function OfficeEnvironment({ plan, wall, light, count, desks }: { plan: OfficePl
 
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
       <group position={[-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
-        <Swap fallback={<ProcRack />}>
-          <Prop name="rack" height={1.9} ry={RACK_RY} />
-        </Swap>
+        <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
+        {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
+          <group key={y}>
+            <Box p={[0.12, y, 0.315]} s={[0.4, 0.2, 0.01]} m={MAT.frame} />
+            <mesh geometry={BOX} material={i % 2 ? MAT.ledOff : MAT.led} position={[-0.2, y, 0.32]} scale={[0.03, 0.03, 0.01]} />
+          </group>
+        ))}
       </group>
-      <group position={[-w / 2 + 0.3, 0, 0]}>
-        <Swap fallback={null}>
-          <Prop name="bookshelf" height={2.0} ry={SHELF_RY} />
-        </Swap>
-      </group>
 
-      <PlantModel p={[w / 2 - 0.5, 0, -d / 2 + 0.5]} s={1.1} />
-      <PlantModel p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
-      <PlantModel p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
-    </group>
-  );
-}
-
-const RACK_RY = -Math.PI / 4;
-const SHELF_RY = 0;
-const DESK_RY = Math.PI / 2;
-const CHAIR_RY = Math.PI;
-
-function PlantModel({ p, s }: { p: [number, number, number]; s: number }) {
-  return (
-    <Swap fallback={<Plant p={p} s={s} />}>
-      <Prop name="plant" height={1.25 * s} position={p} />
-    </Swap>
-  );
-}
-
-/** The box-built rack, shown until the model loads. Its lights are decoration, not telemetry. */
-function ProcRack() {
-  return (
-    <group>
-      <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
-      {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
-        <group key={y}>
-          <Box p={[0.12, y, 0.315]} s={[0.4, 0.2, 0.01]} m={MAT.frame} />
-          <mesh geometry={BOX} material={i % 2 ? MAT.ledOff : MAT.led} position={[-0.2, y, 0.32]} scale={[0.03, 0.03, 0.01]} />
-        </group>
-      ))}
+      <Plant p={[w / 2 - 0.5, 0, -d / 2 + 0.5]} s={1.1} />
+      <Plant p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
+      <Plant p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
     </group>
   );
 }
@@ -354,9 +333,10 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
         </mesh>
       )}
       {/* Desk */}
-      <Swap fallback={<ProcDesk />}>
-        <Prop name="desk" height={0.765} width={1.5} ry={DESK_RY} />
-      </Swap>
+      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
+      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
       {/* Monitor and its soft spill on the desk */}
       <Box p={[0, 0.82, -0.2]} s={[0.22, 0.02, 0.16]} m={MAT.dark} />
       <Box p={[0, 0.94, -0.24]} s={[0.05, 0.22, 0.04]} m={MAT.dark} />
@@ -378,28 +358,8 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
         <meshBasicMaterial map={plate} toneMapped={false} transparent />
       </mesh>
       <AgentStatusIndicator state={state} reduced={reduced} />
-      <Swap fallback={<Chair />}>
-        <Prop name="chair" height={1.05} ry={CHAIR_RY} position={[0, 0, 0.66]} />
-      </Swap>
-      <Swap fallback={<AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />}>
-        <group position={[0, 0, AGENT_Z]}>
-          <AgentModel accent={d.accent} state={state} />
-        </group>
-      </Swap>
-    </group>
-  );
-}
-
-/** Where the agent sits: hips over the chair seat. */
-const AGENT_Z = 0.7;
-
-function ProcDesk() {
-  return (
-    <group>
-      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
-      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
+      <Chair />
+      <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
     </group>
   );
 }
@@ -484,4 +444,29 @@ function AgentStatusIndicator({ state, reduced }: { state: Runtime["state"]; red
       )}
     </group>
   );
+}
+
+const FLOOR_ZONES = {
+  coordination: {label:"Coordination",color:"#aa8951"},
+  research: {label:"Research",color:"#6a8d91"},
+  production: {label:"Production",color:"#7a9073"},
+  quality: {label:"Quality review",color:"#8d819b"},
+};
+
+/** Small floor inlays mark work areas without obscuring desks or implying live progress. */
+function WorkflowFloor({desks}:{desks:DeskData[]}) {
+  const textures=useMemo(()=>Object.fromEntries(Object.entries(FLOOR_ZONES).map(([key,zone])=>{
+    const canvas=document.createElement("canvas");canvas.width=512;canvas.height=96;
+    const ctx=canvas.getContext("2d")!;ctx.fillStyle=zone.color;ctx.font="500 38px system-ui,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(zone.label.toUpperCase()+"  →",256,48);
+    const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;return [key,map];
+  })),[]);
+  useEffect(()=>()=>Object.values(textures).forEach(t=>t.dispose()),[textures]);
+  return <group>{desks.map(({ws})=>{
+    const zone=FLOOR_ZONES[ws.zone];
+    return <group key={ws.id} position={[ws.x,0.025,ws.z]}>
+      <mesh rotation={[-Math.PI/2,0,0]} position={[0,0,0.15]} raycast={()=>null}><planeGeometry args={[2.12,2.22]}/><meshStandardMaterial color={zone.color} transparent opacity={0.075} depthWrite={false}/></mesh>
+      <mesh rotation={[-Math.PI/2,0,0]} position={[0,0.002,1.16]} raycast={()=>null}><planeGeometry args={[1.95,0.018]}/><meshBasicMaterial color={zone.color} transparent opacity={0.55} depthWrite={false}/></mesh>
+      <mesh rotation={[-Math.PI/2,0,0]} position={[0,0.003,1.03]} raycast={()=>null}><planeGeometry args={[1.72,0.25]}/><meshBasicMaterial map={textures[ws.zone]} transparent opacity={0.75} depthWrite={false}/></mesh>
+    </group>;
+  })}</group>;
 }

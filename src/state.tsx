@@ -1,4 +1,4 @@
-import { projectRepositories } from "./catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES } from "./catalog/projects";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
@@ -68,7 +68,7 @@ interface AtlasState {
 
 const Ctx = createContext<AtlasState | null>(null);
 
-const repoNames = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository)))];
+const repoNames = [...LANDMARK_REPOSITORIES, ...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository)))];
 const known = new Set(repoNames.map((n) => n.toLowerCase()));
 
 function workflowsFor(repo: string): string[] {
@@ -95,7 +95,11 @@ function fromCache(cache: Cache, extra: string[], maxAgeMs: number): Record<stri
 
 export function AtlasProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...load("settings", {}) }));
-  const [uncataloged, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
+  const [discoveredExtras, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
+  const uncataloged = useMemo(() => {
+    const known = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+    return discoveredExtras.filter(name => !known.has(name));
+  }, [discoveredExtras]);
   const [discovery, setDiscoveryState] = useState<AtlasState["discovery"]>(() => load("discovery", null));
   const [usage, setUsage] = useState<AtlasState["usage"]>(() => load("usage", null));
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));

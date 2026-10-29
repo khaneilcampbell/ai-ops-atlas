@@ -157,3 +157,10 @@ describe("district grouping", () => {
     expect(ids.filter((id) => !seen.has(id))).toEqual([]);
   });
 });
+
+it("does not draw a second building for a registered repository left in discovery cache", () => {
+  const name="khaneilcampbell/service-desk-intelligence";
+  const layout=layoutMap(catalog,[name]);
+  expect(layout.parks.flatMap(p=>p.strays).some(s=>s.name===name)).toBe(false);
+  expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(1);
+});

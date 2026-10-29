@@ -4,13 +4,13 @@ schema: atlas/v2
 
 project:
   id: career-optimizer
-  name: AI Career Application Optimization System
+  name: career-application-system
   summary: >-
     Human-in-the-loop workflow that turns a job posting into a tailored,
     ATS-readable resume from a verified career database, and tracks every
     application.
   status: active
-  repository: khaneilcampbell/job-applications-workflow
+  repository: khaneilcampbell/career-application-system
   tags: [claude, career, human-in-the-loop]
   district: career-portfolio
 

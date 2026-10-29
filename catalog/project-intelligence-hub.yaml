@@ -4,12 +4,12 @@ schema: atlas/v2
 
 project:
   id: intelligence-hub
-  name: Project Intelligence Hub
+  name: projects-intelligence-hub
   summary: >-
     Documentation for each engineering project: overview, deep dive, learning
     guide, development journal and roadmap, rendered to DOCX.
   status: active
-  repository: khaneilcampbell/project-intelligence-hub
+  repository: khaneilcampbell/projects-intelligence-hub
   tags: [documentation, claude]
   district: ai-engineering
 

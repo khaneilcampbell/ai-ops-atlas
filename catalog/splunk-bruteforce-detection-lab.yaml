@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: soc-lab
-  name: AI-Assisted SOC Brute Force Detection Lab
+  name: splunk-bruteforce-detection-lab
   summary: >-
     Simulates SMB brute-force activity in an isolated lab, detects it in
     Splunk and generates SOC case notes through the Splunk REST API.
@@ -16,7 +16,7 @@ project:
     - label: Case study
       url: https://khaneilcampbell.com/soc-automation-lab.html
     - label: Project docs
-      url: https://github.com/khaneilcampbell/project-intelligence-hub
+      url: https://github.com/khaneilcampbell/projects-intelligence-hub
 
 agents:
   - id: soc-case-notes

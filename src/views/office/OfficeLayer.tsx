@@ -112,6 +112,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           <div>
             <div className="eyebrow">Headquarters · {project.repository}</div>
             <h2>{project.name}</h2>
+            <div className="muted small">Desks grouped by role level · workflow runs left to right, back to front</div>
           </div>
           {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
             <button className="office-awaiting" onClick={() => setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId)}>
@@ -128,14 +129,17 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         )}
 
         {desks.length > 0 && (
-          <div className="office-roster" aria-label="Select an agent">
+          <details className="office-roster" aria-label="Select an agent">
+            <summary>Agents &amp; automations <span>{desks.length}</span></summary>
+            <div className="office-roster-list">
             {desks.map((d) => (
               <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
                 <i style={{ background: STATE_COLOR[d.runtime.state] }} />
                 {d.name}
               </button>
             ))}
-          </div>
+            </div>
+          </details>
         )}
 
         <div className="office-legend" aria-label="Workstation states">
