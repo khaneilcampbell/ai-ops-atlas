@@ -52,7 +52,6 @@
 
 .office-panel { animation: fade 0.18s ease; }
 .office-panel .office-profile { align-self: flex-start; color: var(--gold-deep); border-color: var(--gold); }
-.enter-building { margin-top: 12px; }
 
 @media (max-width: 900px) {
   .office-roster { max-width: calc(100% - 32px); bottom: 70px; }
