@@ -87,6 +87,7 @@ describe("automation categories", () => {
         "commerce-loop",
         "copy-strategist",
         "email-digest",
+        "github-opportunity-scout",
         "launch-planner",
         "market-analyst",
         "niche-scout",

@@ -5,7 +5,7 @@ schema: atlas/v2
 project:
   id: github-profile
   name: GitHub Profile
-  summary: The profile README shown on github.com/khaneilcampbell, and the GitHub building's own agent, which keeps pull requests across the ecosystem moving to production.
+  summary: The profile README shown on github.com/khaneilcampbell, and the GitHub building's own agents, which keep pull requests across the ecosystem moving to production and scout money opportunities in what Atlas already runs.
   status: active
   repository: khaneilcampbell/khaneilcampbell
   tags: [profile]
@@ -97,4 +97,87 @@ agents:
           - Without MERGE_FLOW_TOKEN only public repositories are readable
         improvements:
           - Bring behind branches up to date automatically, once KC approves that level 3 step
+        last_review: 2026-10-30
+  - id: github-opportunity-scout
+    name: Opportunity Scout
+    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories KC already has, plus a build-ready spec for the best one. Recommend-only; KC decides what gets built.
+    framework: GitHub Actions + Claude
+    model: Claude Opus 5.5 (Anthropic API), only when the registry changed
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: When the catalog changes on main, twice a week, or manual
+    source: ops/opportunity-scout/scout.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: opportunity-scout.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read every project and agent in the registry from the checkout, with no API reads
+      - Skip the model entirely when the registry and prompt are unchanged
+      - Propose at most 3 ideas with money mechanism, customer, reused agents, time to first dollar, running cost and risks
+      - Rank ideas by a fixed formula from 1 to 5 scores for revenue, effort, cost and risk
+      - Write a ready-to-build agent spec for the top idea, with a spend cap, a building and a human approval point
+      - Check every idea against the registry and flag unknown or inactive agents
+    permissions:
+      - 'GITHUB_TOKEN: contents read on ai-ops-atlas'
+      - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
+      - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
+    registry:
+      title: Opportunity Scout
+      category: business
+      subcategory: Opportunity research
+      classification:
+        type: B
+        confidence: verified
+        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or KC asks for a fresh look
+      mission:
+        problem: Atlas holds dozens of working agents, but nobody regularly asks which of them could earn money and what small agent would turn that into revenue.
+        outcomes: [Each registry change yields at most 3 ranked money ideas, The best idea arrives as a spec that can be built without another planning round, Every idea and spec keeps a human approval point]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read the registry from catalog files, Stop when nothing changed, Ask Claude for scored ideas and one spec, Rank and check them against the registry, Report in the job summary and Atlas's feed]
+        tools: [Anthropic Messages API with structured output, GitHub Actions cache for the last fingerprint and spend]
+        inputs: [catalog/*.yaml, Caps and model in ops/opportunity-scout/policy.json, Titles of the previous run's ideas]
+        outputs: [Job summary with ranked ideas and one agent spec, Optional one-line report in Atlas's live feed]
+        dependencies: [github-merge-flow]
+        limitations: [Never spends messages publishes merges or builds anything, Ideas come only from the registry with no market data, Estimates of revenue and time to first dollar are the model's judgment, The job summary is public on this repository]
+      goals:
+        objective: Turn what Atlas already runs into a short, honest list of money ideas and one cheap, safe agent to build next.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed scan hides registry changes
+            measure: run_success_rate
+          - name: Ideas built
+            kind: other
+            target: At least one spec a quarter that KC approves for building
+            basis: Ideas only matter when one turns into an agent
+      execution:
+        trigger_type: event
+        schedule: On catalog changes merged to main, Monday and Thursday at 13:41 UTC, or manual
+        environment: GitHub-hosted runner
+        stages: [Restore last fingerprint, Read registry, Stop when unchanged, Ideas within caps, Rank and check, Report, Save fingerprint]
+      governance:
+        autonomy: 1
+        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with KC.
+        data_sensitivity: internal
+        approval: None needed to run; KC approves any spec before it is built
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries; optional live feed reports
+      cost:
+        budget: At most 4 Claude runs a day and $1 a month, enforced in the script before each call
+        notes: Unchanged runs read local files and make no network calls. A changed run sends about 5,000 input tokens (the 16 KB registry digest) and gets about 2,000 back, roughly $0.06. Actions minutes are free on this public repository.
+      docs:
+        technical: ops/opportunity-scout/README.md
+        runbook: ops/opportunity-scout/README.md#runbook
+        known_issues:
+          - Without ANTHROPIC_API_KEY it only reports that the registry changed
+        improvements:
+          - Add a small, terms-respecting market signal once KC picks a niche
         last_review: 2026-10-30
