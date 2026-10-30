@@ -128,7 +128,7 @@ test("Skyline project panel links its repository before entering the district",a
   await selectBuilding(page,"Skyline");
   await expect(page.getByRole("region",{name:"Linked repositories"})).toBeVisible();
   await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
-  await expect(page.locator(".map-bar h3")).toHaveText("skyline");
+  await expect(page.locator(".map-bar h3")).toHaveText("Skyline");
   await expect(page.locator(".map-bar")).toContainText("No agents registered for this project");
   await shot(page,"skyline-project-repository");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
