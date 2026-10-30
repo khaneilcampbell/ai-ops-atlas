@@ -11,20 +11,20 @@ Opportunity Scout is the second agent in the GitHub building (project `github-pr
 3. Hashes that digest together with `prompt.md`. **If the hash matches the last run, it stops**: no Claude call, no summary, no feed report. Run history, links and `last_run` fields are not in the digest, so they never trigger a run.
 4. When the registry changed (or `fresh` was ticked), it asks Claude (`prompt.md`, model and caps in `policy.json`) for up to 3 ideas and one agent spec, as JSON that must match a closed schema. The SDK is installed only for that step. Caps are checked before the call: 4 runs a day and $1 a month, reserving the worst case first. A failed call still counts toward the daily cap.
 5. Ranks the ideas with a fixed formula, `(2 x revenue + effort + cost + risk) / 5`, where every scale runs 1 to 5 and 5 is best, so the ranking never depends on the model's arithmetic. Then it checks each claim against the registry: agents that don't exist are dropped, agents that are paused or planned are flagged, the spec's building must be a real project, its cap is lowered to $5 a month at most, and a spec without a human approval point is marked as not ready to build.
-6. Writes the job summary (ranked table, reuse and risks, the spec, and the checks) and, if configured, one line to Atlas's live feed, then saves the new fingerprint and the idea titles, so the next run doesn't repeat itself.
+6. Sends the whole report (ranked ideas, reuse and risks, the spec, and the checks) to Atlas, which keeps the newest 20 behind Cloudflare Access, and one line to Atlas's live feed. Writes the job summary, then saves the new fingerprint and the idea titles, so the next run doesn't repeat itself.
 
 At least one report goes out every 7 days (`heartbeatDays`) even when nothing changed, so a quiet agent is distinguishable from a dead one. A skipped call (no key, cap reached, failure) keeps the change pending, so the next run with room retries it.
 
 ## Privacy
 
-ai-ops-atlas is public, so its job summaries are public. The scout's inputs are the catalog files, which are already public in this repository, so by default the full report goes in the job summary. To keep ideas off the public page, set `"publishDetails": false` in `policy.json`: the summary then shows only titles and scores, and the headline still reaches Atlas's feed (behind Cloudflare Access). The cached state holds a fingerprint, timestamps, spend and the last idea titles, nothing else. Pull request runs are dry runs with no secrets.
+ai-ops-atlas is public, so its job summaries are public. Once Atlas has stored a report (`POST /api/hooks/reports`, 202), the summary only says how many ideas there are and where to find them: GitHub Profile building, Opportunity Scout, Reports. Atlas shows each report in full there, with its history and a Download PDF button; the PDF is built on the device, nothing else sees it. If Atlas isn't set up or refuses the report, the summary falls back to the full report, or to titles and scores with `"publishDetails": false` in `policy.json`. The cached state holds a fingerprint, timestamps, spend and the last idea titles, nothing else. Pull request runs are dry runs with no secrets.
 
 ## Setup
 
 Nothing is required for the first run: without a key it reads the registry and reports that it changed.
 
 1. **Ideas.** Add `ANTHROPIC_API_KEY` at https://github.com/khaneilcampbell/ai-ops-atlas/settings/secrets/actions/new. It is shared with Merge Flow; a key from a workspace with its own small spend limit is safest.
-2. **Atlas feed (optional).** Add `ATLAS_FEED_URL` (`https://ai-ops-atlas.pages.dev/api/hooks/agents`) and `ATLAS_FEED_TOKEN` (the site's `AGENT_FEED_TOKEN`) to see each headline in Atlas. See `docs/live-updates.md`.
+2. **Reports in Atlas.** Add `ATLAS_FEED_URL` (`https://ai-ops-atlas.pages.dev/api/hooks/agents`) and `ATLAS_FEED_TOKEN` (the site's `AGENT_FEED_TOKEN`). The scout sends the headline to that URL and the full report to the same site's `/api/hooks/reports` (or `ATLAS_REPORTS_URL` if set). See `docs/live-updates.md`.
 3. **First ideas.** Run the workflow by hand at https://github.com/khaneilcampbell/ai-ops-atlas/actions/workflows/opportunity-scout.yml with `fresh` ticked.
 
 ## Limits

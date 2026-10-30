@@ -173,7 +173,8 @@ def review(result, d, policy):
         if ideas and spec.get("idea") != ideas[0]["title"]:
             notes.append(f'The spec is for "{spec.get("idea")}", not the top-ranked idea "{ideas[0]["title"]}".')
         if spec.get("building") not in projects:
-            notes.append(f'The spec\'s building "{spec.get("building")}" is not an Atlas project.')
+            notes.append(f'The spec\'s building "{spec.get("building")}" is not an Atlas project; pick one before building.')
+            spec["building"] = "unassigned"
         cap = policy["spec"]["maxMonthlyCapUsd"]
         if not isinstance(spec.get("monthly_cap_usd"), (int, float)) or spec["monthly_cap_usd"] > cap:
             notes.append(f"The spec's cap was above ${cap:.0f} a month and was lowered to ${cap:.0f}.")
@@ -187,8 +188,12 @@ def cell(text):
     return str(text).replace("|", "/").replace("\n", " ")
 
 
-def report_markdown(r, d, publish_details=True):
+def report_markdown(r, d, publish_details=True, in_atlas=False):
     lines = ["## Opportunity Scout", "", f'Read {len(d["projects"])} projects and {len(d["agents"])} agents from the registry.', ""]
+    if in_atlas:
+        # This page is public; the full report is in Atlas behind Cloudflare Access.
+        what = f'{len(r["ideas"])} ideas' + (" and an agent spec" if r["spec"] else "")
+        return "\n".join(lines + [f"{what} are in Atlas: GitHub Profile building, Opportunity Scout, Reports.", ""])
     if not r["ideas"]:
         return "\n".join(lines + ["No ideas this run.", ""])
     lines += ["| # | Idea | How it earns | Customer | First $ | Cost/mo | Rev | Effort | Cost | Risk | Score |",
@@ -265,6 +270,59 @@ def post_feed(detail, status, now):
         return False
 
 
+# Field limits of Atlas's report check (src/reports/model.ts); longer text is clipped, never refused.
+LIMITS = {"title": 160, "customer": 400, "risks": 600, "idea": 160, "name": 120, "purpose": 600, "trigger": 300,
+          "schedule": 300, "approval_point": 400}
+
+
+def atlas_report(r, d, policy, cost, now):
+    """The full report in the shape Atlas stores. Every string is clipped to Atlas's limits."""
+    ideas = [{
+        "title": clip(i["title"], LIMITS["title"]), "mechanism": i["mechanism"], "customer": clip(i["customer"], LIMITS["customer"]),
+        "reuses": i["reuses"][:12], "days_to_first_dollar": max(0, min(int(i["days_to_first_dollar"]), 3650)),
+        "monthly_cost_usd": round(max(0.0, min(float(i["monthly_cost_usd"]), 10000.0)), 2),
+        "risks": clip(i["risks"], LIMITS["risks"]), "scores": dict(i["scores"]), "score": i["score"],
+    } for i in r["ideas"]]
+    spec = None
+    if r["spec"]:
+        s = r["spec"]
+        spec = {k: clip(s[k], LIMITS[k]) for k in ("idea", "name", "purpose", "trigger", "schedule", "approval_point")}
+        spec.update({"inputs": [clip(x, 300) for x in s["inputs"][:12]], "outputs": [clip(x, 300) for x in s["outputs"][:12]],
+                     "monthly_cap_usd": round(max(0.0, float(s["monthly_cap_usd"])), 2), "building": s["building"]})
+    run_id, repo = os.environ.get("GITHUB_RUN_ID"), os.environ.get("GITHUB_REPOSITORY")
+    return {
+        "agent": "github-opportunity-scout", "at": now.isoformat(timespec="seconds"),
+        "run_url": f"https://github.com/{repo}/actions/runs/{run_id}" if run_id and repo else None,
+        "model": policy["model"]["name"], "cost_usd": round(min(cost, 5.0), 4),
+        "registry": {"projects": len(d["projects"]), "agents": len(d["agents"])},
+        "ideas": ideas, "spec": spec, "notes": [clip(n, 400) for n in r["notes"][:12]],
+    }
+
+
+def reports_url():
+    """ATLAS_REPORTS_URL, or the feed's sibling route: /api/hooks/agents -> /api/hooks/reports."""
+    url = os.environ.get("ATLAS_REPORTS_URL")
+    feed = os.environ.get("ATLAS_FEED_URL") or ""
+    if not url and feed.rstrip("/").endswith("/api/hooks/agents"):
+        url = feed.rstrip("/")[: -len("agents")] + "reports"
+    return url
+
+
+def post_report(report):
+    """Optional: the full report to Atlas (stored behind Access). True only when Atlas stored it."""
+    url, token = reports_url(), os.environ.get("ATLAS_FEED_TOKEN")
+    if not url or not token:
+        return False
+    req = urllib.request.Request(url, data=json.dumps(report).encode(), method="POST",
+                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            return 200 <= res.status < 300
+    except OSError as e:
+        print(f"Atlas did not store the report: {getattr(e, 'code', type(e).__name__)}", file=sys.stderr)
+        return False
+
+
 def write_summary(text):
     path = os.environ.get("GITHUB_STEP_SUMMARY")
     if path:
@@ -304,7 +362,9 @@ def finish(args, state, dec, r, now, cost=0.0, attempted=False):
     policy = load_policy(args.policy)
     if r is not None:
         work = json.loads(Path(args.work).read_text())
-        write_summary(report_markdown(r, work["digest"], policy["publishDetails"]))
+        stored = post_report(atlas_report(r, work["digest"], policy, cost, now))
+        print("Report stored in Atlas." if stored else "Report not stored in Atlas; the job summary has it.")
+        write_summary(report_markdown(r, work["digest"], policy["publishDetails"], in_atlas=stored))
         post_feed(headline(r), "ok", now)
         state["last_ideas"] = [i["title"] for i in r["ideas"]]
         state["last_report_at"] = now.isoformat(timespec="seconds")

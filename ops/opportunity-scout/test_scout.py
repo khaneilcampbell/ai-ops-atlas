@@ -187,5 +187,55 @@ class Commands(unittest.TestCase):
             self.assertFalse(args.state.exists())
 
 
+class AtlasReport(unittest.TestCase):
+    def report(self):
+        r = sc.review({"ideas": [idea("Audit service", 5, 3, 4, 4, reuses=("site-audit", "nope")), idea("Cheap", 2, 5, 5, 5)], "spec": spec()}, DIGEST, POLICY)
+        with mock.patch.dict("os.environ", {"GITHUB_RUN_ID": "41036504662", "GITHUB_REPOSITORY": "khaneilcampbell/ai-ops-atlas"}):
+            return sc.atlas_report(r, DIGEST, POLICY, 0.0507, NOW)
+
+    def test_matches_the_fixture_atlas_checks(self):
+        # src/reports/model.test.ts validates the same fixture with Atlas's own check.
+        self.assertEqual(self.report(), json.loads(Path(__file__).with_name("fixtures").joinpath("report.json").read_text()))
+
+    def test_long_text_is_clipped_to_atlas_limits(self):
+        long = idea("T" * 500)
+        long["risks"] = "r" * 5000
+        r = sc.review({"ideas": [long], "spec": spec(purpose="p" * 2000, building="Not a project")}, DIGEST, POLICY)
+        rep = sc.atlas_report(r, DIGEST, POLICY, 0.01, NOW)
+        self.assertLessEqual(len(rep["ideas"][0]["title"]), 160)
+        self.assertLessEqual(len(rep["ideas"][0]["risks"]), 600)
+        self.assertLessEqual(len(rep["spec"]["purpose"]), 600)
+        self.assertEqual(rep["spec"]["building"], "unassigned")
+        self.assertIsNone(rep["run_url"])
+
+    def test_reports_url_follows_the_feed(self):
+        with mock.patch.dict("os.environ", {"ATLAS_FEED_URL": "https://ai-ops-atlas.pages.dev/api/hooks/agents"}, clear=True):
+            self.assertEqual(sc.reports_url(), "https://ai-ops-atlas.pages.dev/api/hooks/reports")
+        with mock.patch.dict("os.environ", {"ATLAS_FEED_URL": "https://example.com/other"}, clear=True):
+            self.assertIsNone(sc.reports_url())
+        with mock.patch.dict("os.environ", {"ATLAS_REPORTS_URL": "https://x.dev/api/hooks/reports"}, clear=True):
+            self.assertEqual(sc.reports_url(), "https://x.dev/api/hooks/reports")
+
+    def test_public_summary_hides_ideas_once_atlas_has_them(self):
+        r = sc.review({"ideas": [idea("Secret plan", 5, 3, 4, 4)], "spec": spec()}, DIGEST, POLICY)
+        text = sc.report_markdown(r, DIGEST, publish_details=True, in_atlas=True)
+        self.assertNotIn("Secret plan", text)
+        self.assertNotIn("Audit Seller", text)
+        self.assertIn("1 ideas and an agent spec are in Atlas", text)
+
+    def test_ideas_post_the_report_and_keep_the_summary_short(self):
+        with tempfile.TemporaryDirectory() as t, mock.patch.dict("os.environ", {"ANTHROPIC_API_KEY": "k", "GITHUB_STEP_SUMMARY": str(Path(t) / "sum.md")}, clear=True):
+            args = SimpleNamespace(policy=Path(__file__).with_name("policy.json"), catalog=CATALOG, state=Path(t) / "s.json",
+                                   work=Path(t) / "w.json", dry_run=False, fresh=False)
+            sc.cmd_scan(args, NOW)
+            reply = ({"ideas": [idea("Audit service", reuses=("site-audit",))], "spec": spec()}, 0.04, None)
+            with mock.patch.object(sc, "ask_claude", return_value=reply), mock.patch.object(sc, "post_report", return_value=True) as post:
+                sc.cmd_ideas(args, NOW)
+            sent = post.call_args.args[0]
+            self.assertEqual(sent["ideas"][0]["title"], "Audit service")
+            self.assertEqual(sent["cost_usd"], 0.04)
+            self.assertNotIn("Audit service", (Path(t) / "sum.md").read_text())
+
+
 if __name__ == "__main__":
     unittest.main()

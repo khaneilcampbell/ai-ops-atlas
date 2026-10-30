@@ -799,3 +799,14 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .m3-plaque.compact.secondary .t {font-size:11px;font-weight:500;line-height:16px;}
 .m3-plaque.compact.secondary::after {border-top-color:rgba(246,245,236,.92);}
 .m3-plaque.compact.hover {border-color:#c9a35a;}
+
+/* Agent reports (src/components/AgentReports.tsx) */
+.agent-reports { display: grid; gap: 16px; }
+.report-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.report-head select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--sage-200); background: transparent; color: inherit; }
+.report-table td { vertical-align: top; }
+.report-score { display: inline-block; min-width: 34px; text-align: center; padding: 2px 7px; border-radius: 999px; background: var(--gold-soft); color: var(--gold-deep); font-weight: 600; font-size: 12px; }
+.report-ideas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.report-spec-head { display: flex; align-items: center; gap: 8px; }
+.report-summary { display: grid; gap: 6px; }
+.report-top { display: flex; gap: 10px; align-items: flex-start; }

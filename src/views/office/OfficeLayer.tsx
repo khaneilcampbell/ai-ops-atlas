@@ -12,7 +12,9 @@ import { useAtlas } from "../../state";
 import { CATEGORY_LABEL } from "../../registry/types";
 import type { LightMode } from "../map3d/living";
 import { AutonomyMeter, ListField, NA, OperationalPill } from "../agents/parts";
+import { AgentReportSummary } from "../../components/AgentReports";
 import { ApprovalQueue } from "../../components/ApprovalQueue";
+import { isReportAgent } from "../../reports/model";
 import { useProposals } from "../../approvals/state";
 import type { Proposal } from "../../approvals/proposals";
 import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
@@ -227,6 +229,12 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
           <p style={{ margin: 0, fontSize: 13.5 }}>{runtime.reason}</p>
           <div className="muted small">Source: {runtime.source ?? <NA kind="connected" />}</div>
         </section>
+        {isReportAgent(p.id) && (
+          <section>
+            <div className="section-title">Latest report</div>
+            <AgentReportSummary agent={p.id} onOpen={onProfile} />
+          </section>
+        )}
         {ACTION_AGENTS[p.id] && (
           <section>
             <div className="section-title">Awaiting your approval</div>

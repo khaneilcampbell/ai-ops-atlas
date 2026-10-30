@@ -1,4 +1,5 @@
 mod actions;
+mod export;
 mod github;
 mod handoff;
 mod intel;
@@ -73,6 +74,8 @@ pub fn run() {
             usage_sync::usage_sync_push,
             live::live_feed,
             live::live_publish,
+            live::live_reports,
+            export::save_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AI Ops Atlas");
