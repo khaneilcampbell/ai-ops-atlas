@@ -44,8 +44,11 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     const target = mode === "night" ? 1 : 0;
     // Open in the saved mood without a transition; ease over about two seconds after that.
     if (first.current || reduced) night.value = target;
-    else if (night.value !== target) wake(100);
-    else night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+    else if (night.value !== target) {
+      // Keep drawing every frame until the change lands.
+      wake(100);
+      night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+    }
     first.current = false;
     if (Math.abs(night.value - target) < 0.002) night.value = target;
     const k = night.value;
