@@ -241,8 +241,9 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const s = (len * i) / posts;
     for (const v of [-edge, edge]) rails.push({ p: at(s, v, top(s)), s: [0.016, 0.09, 0.016], c: RAIL });
   }
-  // A dashed center line on the level span.
-  for (let s = r + 0.06; s < len - r - 0.06; s += 0.17) deck.push({ p: at(s + 0.04, 0, top(s)), s: [0.018, 0.003, 0.08], r: yaw, c: "#c9a35a" });
+  // A dashed center line on the level span, sitting clearly on the deck (whose top is 4 mm up)
+  // rather than flush with it, so the two never fight for the same depth.
+  for (let s = r + 0.06; s < len - r - 0.06; s += 0.17) deck.push({ p: at(s + 0.04, 0, top(s) + 0.004), s: [0.018, 0.005, 0.08], r: yaw, c: "#c9a35a" });
   // Pillars, in pairs, down to the meadow or into the brook.
   const n = Math.max(2, Math.round(len / 0.75));
   for (let i = 1; i <= n; i++) {
@@ -258,7 +259,7 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     for (const v of [-edge, edge]) {
       rails.push({ p: at(s, v, top(s)), s: [0.022, 0.2, 0.022], c: RAIL });
       lamps.push({ p: at(s, v, top(s) + 0.225), s: [0.026, 0.026, 0.026] });
-      pools.push({ p: at(s, v * 0.45, top(s) + 0.003), s: [0.34, 0.004, 0.34] });
+      pools.push({ p: at(s, v * 0.45, top(s) + 0.008), s: [0.34, 0.006, 0.34] });
     }
   return { deck, rails, piers, lamps, pools };
 }
@@ -302,8 +303,10 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       const alongX = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
       const length = Math.hypot(w.x1 - w.x0, w.z1 - w.z0), y = w.y ?? TERRACE_H;
       const x = (w.x0 + w.x1) / 2, z = (w.z0 + w.z1) / 2;
-      footDeck.push({ p: [x, y - 0.05, z], s: alongX ? [length, 0.08, 0.48] : [0.48, 0.08, length], c: "#b68c60" });
-      for(const end of [[w.x0,w.z0],[w.x1,w.z1]]) footDeck.push({p:[end[0],y-0.01,end[1]],s:alongX?[0.24,0.04,0.5]:[0.5,0.04,0.24],c:"#d4cfb9"});
+      // The deck stops just under the path level, so where it runs onto a terrace the paving shows.
+      footDeck.push({ p: [x, y - 0.05, z], s: alongX ? [length, 0.075, 0.48] : [0.48, 0.075, length], c: "#b68c60" });
+      // Stone landings stand a centimeter proud of the deck and the paths: flush tops flickered.
+      for(const end of [[w.x0,w.z0],[w.x1,w.z1]]) footDeck.push({p:[end[0],y-0.01,end[1]],s:alongX?[0.24,0.05,0.5]:[0.5,0.05,0.24],c:"#d4cfb9"});
       for (const side of [-1, 1]) {
         footRails.push({ p: [x + (alongX ? 0 : side * 0.24), y + 0.22, z + (alongX ? side * 0.24 : 0)], s: alongX ? [length, 0.035, 0.035] : [0.035, 0.035, length], c: "#76b5ae" });
         for (let d = 0; d <= length; d += 0.25) {
@@ -319,7 +322,8 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
         footDeck.push({p:[px,y-0.13,pz],s:alongX?[0.09,0.08,0.5]:[0.5,0.08,0.09],c:"#675440"});
       }
       // Visible timber planks distinguish the promenade from the stone vehicle deck.
-      for (let d = 0.04; d < length; d += 0.13) footDeck.push({ p: [w.x0 + (alongX ? d : 0), y, w.z0 + (alongX ? 0 : d)], s: alongX ? [0.018, 0.008, 0.46] : [0.46, 0.008, 0.018], c: "#775e46" });
+      // They sit on the deck and stop short of the landings, so no two tops share a height.
+      for (let d = 0.16; d < length - 0.12; d += 0.13) footDeck.push({ p: [w.x0 + (alongX ? d : 0), y + 0.025, w.z0 + (alongX ? 0 : d)], s: alongX ? [0.018, 0.01, 0.46] : [0.46, 0.01, 0.018], c: "#775e46" });
     }
     // Zebra markings at actual pedestrian/street intersections throughout the city.
     const crossings = new Set<string>();
@@ -397,7 +401,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
       banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, 0, 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, 0, 0.035)]),
       ponds: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.03, p.z], s: [p.r * 2, 0.058, p.r * 2] }) as Inst),
-      pondRims: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.02, p.z], s: [p.r * 2 + 0.16, 0.035, p.r * 2 + 0.16] }) as Inst),
+      pondRims: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.02, p.z], s: [p.r * 2 + 0.16, 0.044, p.r * 2 + 0.16] }) as Inst),
       bridges: scene.bridges.flatMap((b) => [
         slab(b, 0.05, 0.13),
         slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
@@ -560,7 +564,7 @@ function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
       {p:[x,y+h,z+depth/2],s:[w*1.12,0.025,depth],c:"#c3ad78"},
       {p:[x,y+0.025,z+depth*0.75],s:[w*0.65,0.01,depth*0.4],c:"#315c49"},
       ...[-1,1].map(side=>({p:[x+side*w*0.54,y,z+depth/2],s:[w*0.05,h,depth],c:"#c6a766"} as Inst)),
-      {p:[x,y,z+depth],s:[w*1.1,0.02,0.08],c:"#c6a766"},
+      {p:[x,y,z+depth],s:[w*1.1,0.03,0.08],c:"#c6a766"},
     ] as Inst[];
   }),[doors]);
   const reduced=useReducedMotion();
@@ -810,7 +814,7 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     // Architectural trim: slim corner pilasters that catch the light, and a ledge every few floors.
     if (style !== "timber") {
       const trim = style === "tech" ? "#7d8790" : style === "secure" ? "#c9ccd2" : style === "classic" ? "#efe7d5" : "#dfe2dc";
-      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) P.plain.push({ p: [t.x + (dx * s) / 2, FLOOR_BASE, t.z + (dz * s) / 2], s: [0.05, t.height, 0.05], c: trim });
+      for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) P.plain.push({ p: [t.x + (dx * s) / 2, FLOOR_BASE, t.z + (dz * s) / 2], s: [0.05, t.height + 0.012, 0.05], c: trim });
       if (style !== "tech") for (let i = 3; i < t.floors - 1; i += 3) P.plain.push({ p: [t.x, FLOOR_BASE + i * FLOOR_H - 0.012, t.z], s: [s * 1.025, 0.024, s * 1.025], c: trim });
     }
 

@@ -25,6 +25,7 @@ import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { FramePacer } from "./pacer";
+import { depthRange, shadowBox } from "./viewFit";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -740,8 +741,11 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [office.phase, office.projectId]);
 
-  // Light and shadows sized to the whole map.
+  // Light and shadows sized to the whole map; zoomed in, the shadow box follows the view (useFrame).
   const light = useRef<THREE.DirectionalLight>(null);
+  // A camera, not a plain Object3D: lookAt turns cameras to face down -z, as the shadow camera does.
+  const sunView = useMemo(() => new THREE.OrthographicCamera(), []);
+  const shadowKey = useRef("");
   useEffect(() => {
     const l = light.current;
     if (!l) return;
@@ -756,10 +760,15 @@ function World({
     c.near = 1;
     c.far = ext * 5;
     c.updateProjectionMatrix();
+    // The sun's own view, to place the close-up shadow box in (see shadowBox).
+    sunView.position.copy(l.position);
+    sunView.lookAt(center);
+    sunView.updateMatrixWorld();
+    shadowKey.current = "";
     return () => {
       three.remove(l.target);
     };
-  }, [center, ext, three]);
+  }, [center, ext, three, sunView]);
 
   // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
   const shadowSize = phone ? 2048 : power.shadowMap;
@@ -789,6 +798,42 @@ function World({
   }, [labels]);
   const nearRef = useRef<"far" | "mid" | "near">("far");
   const v = useMemo(() => new THREE.Vector3(), []);
+  const ahead = useMemo(() => new THREE.Vector3(), []);
+  const sunInverse = useMemo(() => new THREE.Matrix4(), []);
+
+  /** Keeps depth and shadows precise at this camera distance (see viewFit.ts). */
+  const steady = (dist: number) => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const { near, far } = depthRange(dist);
+    if (Math.abs(near - cam.near) > cam.near * 0.02 || Math.abs(far - cam.far) > cam.far * 0.02) {
+      cam.near = near;
+      cam.far = far;
+      cam.updateProjectionMatrix();
+    }
+    const l = light.current;
+    if (!l) return;
+    // Cover more of the ground ahead of the target, where the view reaches, than behind it.
+    ahead.copy(controls.target).sub(camera.position).setY(0);
+    if (ahead.lengthSq() > 1e-6) ahead.setLength(dist * 0.6);
+    ahead.add(controls.target).applyMatrix4(sunInverse.copy(sunView.matrixWorld).invert());
+    const box = shadowBox(dist, ahead, ext * 1.2, shadowSize);
+    const key = `${box.left},${box.top},${box.texel}`;
+    if (key === shadowKey.current) return;
+    const resized = !shadowKey.current.endsWith(`,${box.texel}`);
+    shadowKey.current = key;
+    const c = l.shadow.camera;
+    c.left = box.left;
+    c.right = box.right;
+    c.top = box.top;
+    c.bottom = box.bottom;
+    c.updateProjectionMatrix();
+    // About two texels of normal offset clears acne on faces turned away from the sun without
+    // lifting small shadows off the ground; it shrinks with the texels close up.
+    l.shadow.normalBias = Math.min(0.03, box.texel * 2);
+    // A new size redraws now, so a zoom never shows the old box stretched. A pan just moves the
+    // box, and the paced shadow updates catch up: the old map still lines up with its own box.
+    if (resized) gl.shadowMap.needsUpdate = true;
+  };
 
   useFrame((state) => {
     if (!reduced) time.value = state.clock.elapsedTime;
@@ -806,6 +851,7 @@ function World({
     const dist = camera.position.distanceTo(controls.target);
     fog.near = dist * 1.25;
     fog.far = dist * 3.2;
+    steady(dist);
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
     if (isNear !== nearRef.current) {
       nearRef.current = isNear;
@@ -905,7 +951,7 @@ function World({
       <Bloom />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />

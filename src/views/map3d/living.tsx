@@ -525,14 +525,14 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:nu
 
 function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M}) {
   const parts=useMemo(()=>{
-    const deck:Inst[]=[{p:[x,WATER_Y+0.13,z+0.55],s:[0.5,0.09,1.1],c:"#a7835d"},{p:[x,WATER_Y+0.13,z+1.05],s:[3.6,0.09,0.38],c:"#b89569"}];
+    const deck:Inst[]=[{p:[x,WATER_Y+0.13,z+0.55],s:[0.5,0.096,1.1],c:"#a7835d"},{p:[x,WATER_Y+0.13,z+1.05],s:[3.6,0.09,0.38],c:"#b89569"}];
     const posts:Inst[]=[],lights:Inst[]=[];
     const dockTop=WATER_Y+0.22, cityTop=TERRACE_H+0.03;
     const count=12, run=1.8, tread=run/count;
     const stairStart=z-run;
     const approachStart=cityZ-0.25, approachEnd=stairStart;
     const approachLength=Math.max(0.25,approachEnd-approachStart);
-    deck.push({p:[x,cityTop-0.09,(approachStart+approachEnd)/2],s:[0.8,0.09,approachLength],c:"#d4cfb9"});
+    deck.push({p:[x,cityTop-0.09,(approachStart+approachEnd)/2],s:[0.8,0.098,approachLength],c:"#d4cfb9"});
     const railStart=Math.max(shoreZ+0.02,approachStart);
     const railLength=Math.max(0,approachEnd-railStart);
     if(railLength>0) for(const side of [-1,1]) {
@@ -541,7 +541,7 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
       for(let i=0;i<=spans;i++) posts.push({p:[x+side*0.35,cityTop,railStart+i*railLength/spans],s:[0.025,0.32,0.025],c:"#335b58"});
     }
     // A broad stone stair descends from the city promenade to the pier's shore end.
-    deck.push({p:[x,cityTop-0.08,z-run-0.22],s:[0.8,0.08,0.44],c:"#d4cfb9"});
+    deck.push({p:[x,cityTop-0.08,z-run-0.22],s:[0.8,0.088,0.44],c:"#d4cfb9"});
     // The bottom landing overlaps the pier, keeping the final riser flush with the deck.
     deck.push({p:[x,dockTop-0.09,z+0.06],s:[0.76,0.09,0.28],c:"#b89569"});
     for(let i=0;i<count;i++) {
