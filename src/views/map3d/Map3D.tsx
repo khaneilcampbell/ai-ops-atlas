@@ -16,7 +16,7 @@ import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./
 import { Network, type NetLink } from "./network";
 import { Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
-import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
+import { ENTER_MS, LEAVE_MS, useOffice, enterBuilding } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
@@ -196,7 +196,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const health = healthFor(t.repository);
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
-      if (!state) {
+      if (state !== "selected") {
         const name = clip(t.name, 12, 168);
         out.push({
           id: `hq:${t.projectId}`,
@@ -205,12 +205,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           w: measure(name, 12, SANS, 600) + 40,
           h: 34,
           priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents),
-          className: `m3-plaque compact${net.focusSet && !net.focusSet.has(t.projectId) ? " dim" : ""}`,
+          className: `m3-plaque compact ${state}${net.focusSet && !net.focusSet.has(t.projectId) ? " dim" : ""}`,
           onClick: () => select(t.key),
           title: `${t.name} · ${health.label}`,
           node: (
             <div className="t">
-              <i className={t.status === "attention" ? "pulse" : undefined} style={{ background: STATUS_DOT[t.status] }} />
               {name}
               {mark}
             </div>
@@ -278,7 +277,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         h: 28,
         priority: urgent ? 0.5 : 6.5,
         className: `m3-pill quiet ${k.key === selKey ? "selected" : urgent ? "hover" : ""}${net.focusSet && !net.focusSet.has(k.projectId) ? " dim" : ""}`,
-        onClick: () => select(k.key),
+        onClick: () => enterBuilding(`skyline-business:${k.name}`,true),
         node: k.name,
       });
     }
@@ -305,10 +304,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
       out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
-    for(const shop of scene.retail) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,12,SANS,600)+40,h:34,priority:7,className:"m3-plaque compact",node:<div className="t">{shop.name}</div>,onClick:()=>select("repo:khaneilcampbell/skyline"),title:`${shop.name} · khaneilcampbell/skyline`});
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===shop.key)) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:hover===shop.key?0.5:7,className:"m3-plaque compact secondary",node:<div className="t">{shop.name}</div>,onClick:()=>enterBuilding(`skyline-business:${shop.name}`,true),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
+      if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:154,h:24,priority:1.5,className:"m3-pill hood district",node:"SKYLINE DISTRICT",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
-      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: 7, className: "m3-plaque compact", onClick:()=>select("repo:khaneilcampbell/skyline"), title: `Skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
+      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: 3, className: "m3-plaque compact", onClick:()=>enterBuilding("skyline-residences",true), title: `Enter Skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
@@ -338,6 +338,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     of: (keys) => ({
       ...pick.of(keys),
       over: (key) => { setHover(key); setTip(null); },
+      click:(key,e)=>{if(e.delta>4)return;const tool=scene.kiosks.find(k=>k.key===key);if(tool)enterBuilding(`skyline-business:${tool.name}`,true);else select(key);},
     }),
   };
   const terracePick: Pick = {
@@ -421,6 +422,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             className={l.className}
             title={l.title}
             style={{ width: l.w, visibility: "hidden" }}
+            role={l.onClick?"button":undefined}
+            tabIndex={l.onClick?0:undefined}
+            onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
             onClick={l.onClick}
             onMouseEnter={l.onClick ? () => setHover(l.key) : undefined}
             onMouseLeave={l.onClick ? () => setHover(null) : undefined}
@@ -778,7 +782,7 @@ function World({
       screen.set(l.id, { x, y });
       boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)] });
     }
-    const shown = placeLabels(boxes, 5);
+    const shown = placeLabels(boxes, 10);
     for (const l of labels) {
       const el = labelEls.current.get(l.id);
       if (!el) continue;
@@ -858,8 +862,8 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({keys,over:()=>{},out:()=>{},click:landmarkSelect})}} />
-      <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
+      <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({...kioskPick.of(keys),keys,click:key=>{const shop=scene.retail.find(k=>k.key===key);if(shop)enterBuilding(`skyline-business:${shop.name}`,true);else landmarkSelect();}})}} />
+      <Skyline parks={scene.parks} g={g} m={m} onSelect={()=>enterBuilding("skyline-residences",true)} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />

@@ -35,6 +35,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const actions = useActions();
   const pending = useProposals();
   const reduced = useReducedMotion();
+  const [floor,setFloor]=useState(-1);
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
@@ -89,6 +90,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   }, [picked, exit]);
 
   if (!project || !plan) return null;
+  const topFloor=floor===4||floor===-1;
   const row = picked ? rows.get(picked) : undefined;
   const states = [...new Set(desks.map((d) => d.runtime.state))];
 
@@ -97,6 +99,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
       <div className="office-stage">
         <OfficeScene
           plan={plan}
+          floor={floor}
           desks={desks}
           wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
           light={light}
@@ -105,17 +108,18 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           onSelect={setPicked}
           api={api}
         />
+        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,0,1,2,3,4].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":n===4?"Floor 4 · Agents":`Floor ${n}`}</button>)}</nav>
         <div className="office-head">
           <button className="office-back" onClick={exit}>
-            <span aria-hidden>‹</span> Back to map
+            <span aria-hidden>‹</span> Exit building
           </button>
           <div>
             <div className="eyebrow">Headquarters · {project.repository}</div>
             <h2>{project.name}</h2>
-            <div className="muted small">Desks grouped by role level · workflow runs left to right, back to front</div>
+            <div className="muted small">{`${floor===-1?"All floors · Lobby, hallways & elevator":floor===0?"Lobby":`Floor ${floor}`} · ${floor===4||floor===-1?"Agents on Floor 4":"Shared spaces"}`}</div>
           </div>
           {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
-            <button className="office-awaiting" onClick={() => setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId)}>
+            <button className="office-awaiting" onClick={() => {setFloor(4);setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId);}}>
               <i /> {pending.filter((p) => agents.some((a) => a.id === p.agentId)).length} awaiting approval
             </button>
           )}
@@ -128,7 +132,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           </div>
         )}
 
-        {desks.length > 0 && (
+        {desks.length > 0 && topFloor && (
           <details className="office-roster" aria-label="Select an agent">
             <summary>Agents &amp; automations <span>{desks.length}</span></summary>
             <div className="office-roster-list">

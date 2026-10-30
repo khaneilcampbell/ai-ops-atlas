@@ -1,3 +1,4 @@
+import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -109,7 +110,11 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
       const key = [w.x0,w.z0,w.x1,w.z1,w.y].join(":");
       if (seen.has(key) || Math.hypot(w.x1-w.x0,w.z1-w.z0)<0.02) return false;
       seen.add(key); return true;
-    }).flatMap(w => [w,w]);
+    }).flatMap(w => [w,w]).map(w => {
+      const route=w.route?.length ? w.route : [{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
+      const lengths=route.slice(1).map((p,j)=>Math.hypot(p.gx-route[j].gx,p.gy-route[j].gy));
+      return {...w,route,lengths,len:lengths.reduce((a,b)=>a+b,0)};
+    });
   }, [scene]);
 
   // A rounded loop around the island, clear of the cliffs and waterfalls.
@@ -121,6 +126,9 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     const shoreZ=shore ? shore.z+shore.d : b.z1;
     const coastZ=Math.max(shoreZ,...scene.land.filter(r=>harborX>=r.x && harborX<=r.x+r.w).map(r=>r.z+r.d));
     const pierZ=coastZ+1.8;
+    // Join the actual district promenade, rather than stopping at the cliff edge.
+    const sidewalks=scene.paving.filter(r=>harborX>=r.x && harborX<=r.x+r.w && r.z<shoreZ && r.z+r.d>shoreZ-2 && r.y>=TERRACE_H);
+    const cityWalkZ=sidewalks.length ? Math.max(...sidewalks.map(r=>Math.min(shoreZ-0.2,r.z+r.d/2))) : shoreZ-0.8;
     const curve = new THREE.CatmullRomCurve3(
       [
         [b.x0 - pad, b.z0 - pad],
@@ -138,7 +146,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     const dockX=harborX, dockZ=pierZ+1.4;
     let dockU=0, nearest=Infinity;
     for(let i=0;i<=1000;i++) { const q=curve.getPointAt(i/1000); const d=Math.hypot(q.x-dockX,q.z-dockZ); if(d<nearest) { nearest=d;dockU=i/1000; } }
-    return { curve, length: curve.getLength(), dockU, dockX, dockZ, pierZ, shoreZ };
+    return { curve, length: curve.getLength(), dockU, dockX, dockZ, pierZ, shoreZ, cityWalkZ };
   }, [scene]);
 
   const o = useMemo(() => new THREE.Object3D(), []);
@@ -163,25 +171,26 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
         const bob = Math.sin(t * 1.3 + i * 2) * 0.012;
         o.rotation.set(0, yaw, Math.sin(t * 0.9 + i) * 0.03);
         o.position.set(p.x, p.y + bob, p.z);
-        const size = 1 + (i % 3) * 0.18;
+        const size = [0.7, 1.15, 1.85][i % 3];
         o.scale.set(0.78*size, 0.12, 0.3*size);
         o.updateMatrix();
         h.setMatrixAt(i, o.matrix);
         o.position.set(p.x,p.y+0.11+bob,p.z);o.scale.set(0.76*size,0.025,0.28*size);o.updateMatrix();yachtDeck.current?.setMatrixAt(i,o.matrix);
-        o.position.set(p.x - Math.cos(yaw) * 0.08, p.y + 0.1 + bob, p.z + Math.sin(yaw) * 0.08);
+        o.position.set(p.x - Math.cos(yaw) * 0.08*size, p.y + 0.1 + bob, p.z + Math.sin(yaw) * 0.08*size);
         o.scale.set(0.32*size, 0.15, 0.2*size);
         o.updateMatrix();
         cb.setMatrixAt(i, o.matrix);
         o.position.y=p.y+0.25+bob;o.scale.set(0.25*size,0.025,0.23*size);o.updateMatrix();yachtRoof.current?.setMatrixAt(i,o.matrix);
-        o.position.set(p.x + Math.cos(yaw) * 0.26, p.y + 0.13 + bob, p.z - Math.sin(yaw) * 0.26);
+        o.position.set(p.x + Math.cos(yaw) * 0.26*size, p.y + 0.13 + bob, p.z - Math.sin(yaw) * 0.26*size);
         o.scale.setScalar(0.022);
         o.updateMatrix();
         l.setMatrixAt(i, o.matrix);
         for(let j=0;j<2;j++) {
           const along=(j?0.2:-0.2)*size;
           const px=p.x+Math.cos(yaw)*along, pz=p.z-Math.sin(yaw)*along;
-          o.rotation.set(0,yaw,0);o.position.set(px,p.y+0.13+bob,pz);o.scale.set(0.055,0.12,0.055);o.updateMatrix(); passengers.current?.setMatrixAt(i*2+j,o.matrix);
-          o.position.y=p.y+0.28+bob;o.scale.setScalar(0.03);o.updateMatrix();passengerHeads.current?.setMatrixAt(i*2+j,o.matrix);
+          const visible=pedestrianAllowed(scene.pedestrianExclusion,px,pz)?1:0;
+          o.rotation.set(0,yaw,0);o.position.set(px,p.y+0.13+bob,pz);o.scale.set(0.055*visible,0.12*visible,0.055*visible);o.updateMatrix(); passengers.current?.setMatrixAt(i*2+j,o.matrix);
+          o.position.y=p.y+0.28+bob;o.scale.setScalar(0.03*visible);o.updateMatrix();passengerHeads.current?.setMatrixAt(i*2+j,o.matrix);
         }
       }
       h.instanceMatrix.needsUpdate = cb.instanceMatrix.needsUpdate = l.instanceMatrix.needsUpdate = true;
@@ -193,10 +202,9 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     const bd = body.current;
     const hd = head.current;
     if (bd && hd) {
+      beginPedestrianFrame();
       walkers.forEach((w, i) => {
-        const route = w.route?.length ? w.route : [{ gx: w.x0, gy: w.z0 }, { gx: w.x1, gy: w.z1 }];
-        const lengths = route.slice(1).map((p, j) => Math.hypot(p.gx-route[j].gx, p.gy-route[j].gy));
-        const len = lengths.reduce((a,b) => a+b, 0);
+        const {route,lengths,len}=w;
         // Walk to the end, pause, walk back.
         const pause = w.shopEntrance ? 8 : 3;
         const period = (len / STROLL_SPEED) * 2 + pause*2;
@@ -215,9 +223,11 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
           if ((Math.abs(dx)>0.9 && Math.abs(r[1]-q[1])<1e-6 && Math.abs(mz-r[1])<0.05 && mx>=Math.min(r[0],q[0]) && mx<=Math.max(r[0],q[0])) || (Math.abs(dz)>0.9 && Math.abs(r[0]-q[0])<1e-6 && Math.abs(mx-r[0])<0.05 && mz>=Math.min(r[1],q[1]) && mz<=Math.max(r[1],q[1]))) side = Math.sign(side)*0.265;
         }
         if(w.shopEntrance) side *= Math.min(1,(1-f)*5);
-        const visitorScale=w.shopEntrance && f>0.96 ? 0 : 1;
+        let visitorScale=w.shopEntrance && f>0.96 ? 0 : 1;
         const x = a.gx + dx*distance - dz*side;
         const z = a.gy + dz*distance + dx*side;
+        if(!pedestrianAllowed(scene.pedestrianExclusion,x,z))visitorScale=0;
+        if(visitorScale>0) reportPedestrian(x,z);
         const step = moving ? Math.abs(Math.sin(t * 7 + i)) * 0.008 : 0;
         const sidewalkLift = Math.abs(side) > 0.2 ? 0.05 : 0;
         o.rotation.set(0, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI), 0);
@@ -258,7 +268,8 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   return (
     <group>
       <CityFlyover scene={scene} g={g} m={m} moving={moving} />
-      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.shoreZ} g={g} m={m} />
+      <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
+      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
       <instancedMesh ref={passengers} args={[g.cyl,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={passengerHeads} args={[g.ball,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
@@ -417,7 +428,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
-      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.set(1, 1, 1));
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)?1:0));
     });
     // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
@@ -472,9 +483,47 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 }
 
 /** Timber pier, berthing platform and navigation lights outside the southern shoreline. */
-function Marina({x,z,cityZ,g,m}:{x:number;z:number;cityZ:number;g:G;m:M}) {
+/** Visitors follow the stair treads in both directions, then stroll along the pier. */
+function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"] }) {
+  const bodies = useRef<THREE.InstancedMesh>(null);
+  const heads = useRef<THREE.InstancedMesh>(null);
+  const elapsed = useRef(0);
+  const object = useMemo(() => new THREE.Object3D(), []);
+  useEffect(() => {
+    const color = new THREE.Color();
+    for (let i=0;i<8;i++) {
+      bodies.current?.setColorAt(i,color.set(CLOTHES[i%CLOTHES.length]));
+      heads.current?.setColorAt(i,color.set(i%3 ? "#e3b994" : "#9c6b4a"));
+    }
+    if(bodies.current?.instanceColor) bodies.current.instanceColor.needsUpdate=true;
+    if(heads.current?.instanceColor) heads.current.instanceColor.needsUpdate=true;
+  }, []);
+  useFrame((_,dt) => {
+    if(moving) elapsed.current += Math.min(dt,0.1);
+    const start=cityZ-0.2, end=z+1.05, length=end-start;
+    const cityTop=TERRACE_H+0.03, dockTop=WATER_Y+0.22;
+    for(let i=0;i<8;i++) {
+      const phase=(elapsed.current*STROLL_SPEED+i*length/4)%(length*2);
+      const down=phase<length;
+      const along=start+(down?phase:length*2-phase);
+      const stairProgress=Math.max(0,Math.min(1,(along-(z-1.8))/1.8));
+      const tread=Math.min(12,Math.floor(stairProgress*12)+1);
+      const floor=along<z-1.8?cityTop:along>=z?dockTop:cityTop-(cityTop-dockTop)*tread/12;
+      object.rotation.set(0,down?0:Math.PI,0);
+      object.position.set(x+(down?-0.12:0.12),floor+0.02,along);
+      const visible=pedestrianAllowed(exclusion,object.position.x,along)?1:0;
+      object.scale.set(0.07*visible,0.16*visible,0.06*visible);object.updateMatrix();bodies.current?.setMatrixAt(i,object.matrix);
+      object.position.y=floor+0.21;object.scale.setScalar(0.035*visible);object.updateMatrix();heads.current?.setMatrixAt(i,object.matrix);
+    }
+    if(bodies.current) bodies.current.instanceMatrix.needsUpdate=true;
+    if(heads.current) heads.current.instanceMatrix.needsUpdate=true;
+  });
+  return <group><instancedMesh ref={bodies} args={[g.cyl,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/><instancedMesh ref={heads} args={[g.ball,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/></group>;
+}
+
+function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M}) {
   const parts=useMemo(()=>{
-    const deck:Inst[]=[{p:[x,WATER_Y+0.13,z+0.55],s:[0.5,0.09,1.1],c:"#a7835d"},{p:[x,WATER_Y+0.13,z+1.05],s:[2.2,0.09,0.38],c:"#b89569"}];
+    const deck:Inst[]=[{p:[x,WATER_Y+0.13,z+0.55],s:[0.5,0.09,1.1],c:"#a7835d"},{p:[x,WATER_Y+0.13,z+1.05],s:[3.6,0.09,0.38],c:"#b89569"}];
     const posts:Inst[]=[],lights:Inst[]=[];
     const dockTop=WATER_Y+0.22, cityTop=TERRACE_H+0.03;
     const count=12, run=1.8, tread=run/count;
@@ -482,9 +531,12 @@ function Marina({x,z,cityZ,g,m}:{x:number;z:number;cityZ:number;g:G;m:M}) {
     const approachStart=cityZ-0.25, approachEnd=stairStart;
     const approachLength=Math.max(0.25,approachEnd-approachStart);
     deck.push({p:[x,cityTop-0.09,(approachStart+approachEnd)/2],s:[0.8,0.09,approachLength],c:"#d4cfb9"});
-    for(const side of [-1,1]) {
-      posts.push({p:[x+side*0.38,cityTop+0.3,(approachStart+approachEnd)/2],s:[0.035,0.025,approachLength],c:"#76b5ae"});
-      for(let d=0;d<=approachLength;d+=0.25) posts.push({p:[x+side*0.38,cityTop,approachStart+d],s:[0.025,0.32,0.025],c:"#335b58"});
+    const railStart=Math.max(shoreZ+0.02,approachStart);
+    const railLength=Math.max(0,approachEnd-railStart);
+    if(railLength>0) for(const side of [-1,1]) {
+      posts.push({p:[x+side*0.35,cityTop+0.3,(railStart+approachEnd)/2],s:[0.035,0.025,railLength],c:"#76b5ae"});
+      const spans=Math.max(1,Math.ceil(railLength/0.25));
+      for(let i=0;i<=spans;i++) posts.push({p:[x+side*0.35,cityTop,railStart+i*railLength/spans],s:[0.025,0.32,0.025],c:"#335b58"});
     }
     // A broad stone stair descends from the city promenade to the pier's shore end.
     deck.push({p:[x,cityTop-0.08,z-run-0.22],s:[0.8,0.08,0.44],c:"#d4cfb9"});
@@ -501,9 +553,9 @@ function Marina({x,z,cityZ,g,m}:{x:number;z:number;cityZ:number;g:G;m:M}) {
     }
 
     for(const side of [-1,1]) for(const along of [0.15,0.95]) posts.push({p:[x+side*0.22,WATER_Y-0.45,z+along],s:[0.06,0.85,0.06],c:"#54493f"});
-    for(const side of [-1,1]) { posts.push({p:[x+side*1.02,WATER_Y-0.45,z+1.05],s:[0.07,0.85,0.07],c:"#54493f"}); lights.push({p:[x+side*1.02,WATER_Y+0.42,z+1.05],s:[0.055,0.055,0.055]}); }
+    for(const side of [-1,1]) { posts.push({p:[x+side*1.72,WATER_Y-0.45,z+1.05],s:[0.07,0.85,0.07],c:"#54493f"}); lights.push({p:[x+side*1.72,WATER_Y+0.42,z+1.05],s:[0.055,0.055,0.055]}); }
     return {deck,posts,lights};
-  },[x,z,cityZ]);
+  },[x,z,cityZ,shoreZ]);
   return <group><Instanced items={parts.deck} geometry={g.box} material={m.plain}/><Instanced items={parts.posts} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={m.lamp}/></group>;
 }
 

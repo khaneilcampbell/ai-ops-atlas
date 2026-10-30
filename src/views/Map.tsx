@@ -42,6 +42,7 @@ import { leaveBuilding, useOffice } from "./office/store";
 // three.js only loads when the 3D map is shown.
 const Map3D = lazy(() => import("./map3d/Map3D"));
 // The virtual office loads only when a building is entered.
+const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 
 type Pt = { x: number; y: number };
@@ -904,10 +905,10 @@ export function MapView() {
   };
 
   return (
-    <div className={`map-wrap ${selection || pickedLink ? "inspecting" : ""}`}>
+    <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
-          <OfficeLayer light={light} />
+          {(office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
@@ -1272,10 +1273,10 @@ export function MapView() {
           </ul>
         )}
 
-        {focused && selection && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
+        {!office.projectId && focused && selection && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
       </div>
 
-      {pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />}
+      {!office.projectId && (pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />)}
     </div>
   );
 }

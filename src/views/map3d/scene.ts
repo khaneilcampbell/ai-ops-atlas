@@ -116,6 +116,8 @@ export interface Park extends Rect {
 }
 
 export interface Scene3D {
+  /** Area reserved by an interior cutaway; outdoor crowds must stay outside. */
+  pedestrianExclusion?: Rect;
   land: Rect[];
   terraces: Terrace[];
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
@@ -396,28 +398,36 @@ export function buildScene(layout: Layout): Scene3D {
     const cx = p.ox + p.w / 2;
     const cz = p.oy + p.h / 2;
     parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
-    // Corner shops connect to a perimeter promenade, clear of Skyline’s central entrance.
-    for(const [i,name] of ["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].entries()) {
-      const x=name==="Starbucks"?cx:name==="Wells Fargo"?cx-(p.w/2-0.9):cx+(i%2===0?-1:1)*(p.w/2-0.9);
-      const z=cz+(["Zara","Wells Fargo"].includes(name)?-1:1)*(p.h/2-1.0);
-      retail.push({key:`retail:${p.id}:${i}`,projectId:p.id,name,users:[],x,z,size:0.85,canopy:"#c9a35a"});
-      paving.push(strip(x,z+0.34,x,["Zara","Wells Fargo"].includes(name)?cz-1.2:cz+2.65,0.32,top));
+    // Stagger the tall offices behind the low storefronts, with an open central lobby view.
+    const tenants = [
+      { name: "Anthropic", dx: -4.3, dz: -2.7, size: 1.4 },
+      { name: "OpenAI", dx: 4.3, dz: -2.7, size: 1.1 },
+      { name: "Zara", dx: 4.4, dz: 0.5, size: 0.85 },
+      { name: "Wells Fargo", dx: -4.4, dz: 0.5, size: 1.2 },
+      { name: "Smashburger", dx: -3.2, dz: 3, size: 0.85 },
+      { name: "Starbucks", dx: -0.8, dz: 3, size: 0.85 },
+      { name: "Chipotle", dx: 2.5, dz: 3, size: 0.85 },
+    ];
+    for (const tenant of tenants) {
+      const x = cx + tenant.dx, z = cz + tenant.dz;
+      retail.push({ key: `retail:${p.id}:${tenant.name}`, projectId: p.id, name: tenant.name, users: [], x, z, size: tenant.size, canopy: "#c9a35a" });
+      const promenadeZ = tenant.dz < 0 ? cz - 1.2 : cz + 3.9;
+      paving.push(strip(x, z + tenant.size * 0.4, x, promenadeZ, 0.32, top));
     }
-    // AI lab offices on the back promenade, either side of Skyline, each with its own walk in.
-    for(const [i,name] of ["Anthropic","OpenAI"].entries()) {
-      const x=cx+(i===0?-1.3:1.3),z=cz-(p.h/2-1.1);
-      retail.push({key:`retail:${p.id}:lab${i}`,projectId:p.id,name,users:[],x,z,size:0.95,canopy:"#c9a35a"});
-      paving.push(strip(x,z+0.34,x,cz-1.2,0.32,top));
+    for (const side of [-1, 1]) {
+      const x = cx + side * 5.4;
+      paving.push(strip(x, cz - 1.2, x, cz + 3.9, 0.4, top));
     }
-    paving.push(strip(cx-2.75,cz-1.2,cx+2.75,cz-1.2,0.4,top),strip(cx-2.75,cz-1.2,cx-2.75,cz+2.65,0.4,top),strip(cx+2.75,cz-1.2,cx+2.75,cz+2.65,0.4,top),strip(cx-2.75,cz+2.65,cx+2.75,cz+2.65,0.4,top));
+    paving.push(strip(cx-5.4,cz-1.2,cx+5.4,cz-1.2,0.4,top),strip(cx-5.4,cz+3.9,cx+5.4,cz+3.9,0.4,top));
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
     fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
     ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
       if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
+      if (retail.some(k => k.projectId === p.id && Math.abs(k.x-s.gx) < k.size/2+0.4 && Math.abs(k.z-s.gy) < k.size/2+0.5)) continue;
+      if (paving.some(q => inRect(q, s.gx, s.gy, 0.2))) continue;
       if (ponds.some((q) => Math.hypot(q.x - s.gx, q.z - s.gy) < q.r + 0.3)) continue;
-      if (retail.some((k) => k.projectId === p.id && Math.abs(k.x - s.gx) < k.size / 2 + 0.3 && Math.abs(k.z - s.gy) < k.size / 2 + 0.3)) continue;
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.26, kind: hash(`${s.gx}:${s.gy}`) > 0.9 ? "blossom" : "round" });
     }
   }
@@ -455,7 +465,7 @@ export function buildScene(layout: Layout): Scene3D {
   // Shop visitors leave the promenade, enter through the center door, and return after a visit.
   for(const shop of retail) {
     const park=parks.find(p=>p.id===shop.projectId)!;
-    const startZ=shop.z<park.z+park.d/2 ? park.z+park.d/2-1.2 : park.z+park.d/2+2.65;
+    const startZ=shop.z<park.z+park.d/2 ? park.z+park.d/2-1.2 : park.z+park.d/2+3.9;
     walks.push({x0:shop.x,z0:startZ,x1:shop.x,z1:shop.z+0.12,y:top,shopEntrance:true});
   }
 
@@ -463,7 +473,7 @@ export function buildScene(layout: Layout): Scene3D {
   for (const park of parks) {
     const x=park.x+park.w/2,z=park.z+park.d/2;
     paving.push(strip(x,z+0.25,x,z+1.2,0.5,top),strip(x,z+1.2,x+0.95,z+1.2,0.4,top),strip(x+0.95,z+1.2,x+0.95,park.z+park.d,0.4,top));
-    walks.push({x0:x+0.95,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top,route:[{gx:x+0.95,gy:park.z+park.d-0.15},{gx:x+0.95,gy:z+1.2},{gx:x,gy:z+1.2},{gx:x,gy:z+0.25}]});
+    walks.push({x0:x+0.95,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top,shopEntrance:true,route:[{gx:x+0.95,gy:park.z+park.d-0.15},{gx:x+0.95,gy:z+1.2},{gx:x,gy:z+1.2},{gx:x,gy:z+0.25}]});
   }
 
   // Brooks run along the gaps between shelf rows, under small bridges, and fall into the sea at the shore.
@@ -565,9 +575,53 @@ export function buildScene(layout: Layout): Scene3D {
     }
   });
 
+  // Reserve a lawn pocket for each fountain, clear of pedestrian routes and entrances.
+  const segmentDistance=(x:number,z:number,a:{gx:number;gy:number},b:{gx:number;gy:number})=>{
+    const dx=b.gx-a.gx,dz=b.gy-a.gy;
+    const t=Math.max(0,Math.min(1,((x-a.gx)*dx+(z-a.gy)*dz)/(dx*dx+dz*dz||1)));
+    return Math.hypot(x-a.gx-t*dx,z-a.gy-t*dz);
+  };
+  for(const fountain of fountains) {
+    const radius=FOUNTAIN_R*(fountain.k??1)+0.3;
+    const blocked=(x:number,z:number)=>walks.some(w=>{
+      const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
+      return route.slice(1).some((b,i)=>segmentDistance(x,z,route[i],b)<radius);
+    });
+    if(!blocked(fountain.x,fountain.z))continue;
+    const terrace=terraces.find(t=>inRect(t,fountain.x,fountain.z));
+    if(!terrace)continue;
+    let moved=false;
+    for(let z=terrace.z+0.7;z<terrace.z+terrace.d-0.7&&!moved;z+=0.4)for(let x=terrace.x+0.7;x<terrace.x+terrace.w-0.7;x+=0.4){
+      if(blocked(x,z)||paving.some(p=>inRect(p,x,z,radius))||houses.some(h=>Math.abs(h.x-x)<h.w/2+radius&&Math.abs(h.z-z)<h.d/2+radius)||kiosks.some(k=>Math.abs(k.x-x)<k.size/2+radius&&Math.abs(k.z-z)<k.size/2+radius)||towers.some(t=>Math.abs(t.x-x)<t.size/2+radius&&Math.abs(t.z-z)<t.size/2+radius)||retail.some(k=>Math.abs(k.x-x)<k.size/2+radius&&Math.abs(k.z-z)<k.size/2+radius)||trees.some(t=>Math.hypot(t.x-x,t.z-z)<radius+0.3))continue;
+      fountain.x=x;fountain.z=z;moved=true;break;
+    }
+  }
+
+  // A crowded terrace may have no safe decorative pocket. Keep the routes clear rather
+  // than leaving a basin on a walking lane after a failed relocation.
+  const safeFountains=fountains.filter(f=>walks.every(w=>{
+    const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
+    return route.slice(1).every((b,i)=>segmentDistance(f.x,f.z,route[i],b)>=FOUNTAIN_R*(f.k??1)+0.16);
+  }));
+
+  // Keep the marina stair corridor free, including trees on the lower coastal shelf.
+  const harborTerrace=terraces.reduce<(typeof terraces)[number] | undefined>((best,t)=>!best || t.z+t.d>best.z+best.d?t:best,undefined);
+  if(harborTerrace) {
+    const h=harborTerrace, dockX=h.x+h.w/2, edgeZ=h.z+h.d;
+    for(const tree of trees) {
+      if(Math.abs(tree.x-dockX)>0.9 || tree.z<edgeZ-1 || tree.z>edgeZ+3) continue;
+      for(const offset of [-1.4,1.4,-2,2,-2.6,2.6,-3.2,3.2]) {
+        const x=dockX+offset,z=edgeZ-0.9;
+        if(x<h.x+0.5 || x>h.x+h.w-0.5 || paving.some(p=>inRect(p,x,z,0.5)) || retail.some(k=>Math.hypot(k.x-x,k.z-z)<1) || trees.some(t=>t!==tree&&Math.hypot(t.x-x,t.z-z)<0.7)) continue;
+        tree.x=x;tree.z=z;tree.y=top;
+        break;
+      }
+    }
+  }
+
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
-  for (let i=trees.length-1;i>=0;i--) if (paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
+  for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
     land,
@@ -579,7 +633,7 @@ export function buildScene(layout: Layout): Scene3D {
     carBridges,
     ponds,
     falls,
-    fountains,
+    fountains:safeFountains,
     bollards,
     walks,
     parks,

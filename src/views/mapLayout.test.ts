@@ -164,3 +164,11 @@ it("does not draw a second building for a registered repository left in discover
   expect(layout.parks.flatMap(p=>p.strays).some(s=>s.name===name)).toBe(false);
   expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(1);
 });
+
+it("keeps one accessible Skyline district in every map grouping",()=>{
+  for(const group of ["none","district","status","tag"] as const){
+    const layout=layoutMap(catalog,[],group);
+    expect(layout.parks.filter(p=>!p.strays.length)).toHaveLength(1);
+    expect(overlaps(layout)).toEqual([]);
+  }
+});

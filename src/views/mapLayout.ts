@@ -215,7 +215,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const ordered = [...buckets.entries()].sort(([ka, a], [kb, b]) => a.rank - b.rank || a.label.localeCompare(b.label) || ka.localeCompare(kb));
 
   type Item = Box & { project?: Project; park?: true };
-  const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b]) => {
+  const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b],blockIndex) => {
     const items: Item[] = b.projects
       .map((project) => {
         const r = residents(agentsByProject.get(project.id) ?? []);
@@ -225,7 +225,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // Largest first packs tighter; ties keep catalog order.
       .sort((a, c) => c.w - a.w);
     // An empty park keeps the "room for the next project" corner of the original map.
-    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 8, h: 8 });
+    if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };
   });
