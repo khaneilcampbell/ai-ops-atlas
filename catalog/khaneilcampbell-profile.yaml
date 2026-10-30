@@ -89,7 +89,7 @@ agents:
         audit_log: GitHub Actions run history and job summaries; optional live feed reports
       cost:
         budget: At most 4 Claude briefs a day and $1 a month, enforced in the script before each call
-        notes: Unchanged runs make one GraphQL request (about 1 point of the 5,000 hourly budget) and no Claude call. Actions minutes are free on this public repository.
+        notes: Unchanged runs make one GraphQL request (about 50 KB and 5 points of the 5,000 hourly budget at 45 open pull requests) and no Claude call. Actions minutes are free on this public repository.
       docs:
         technical: ops/merge-flow/README.md
         runbook: ops/merge-flow/README.md#runbook
