@@ -50,3 +50,7 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+# Backport the upstream VariantStrIter soundness fix while Tauri pins GTK/glib 0.18.
+[patch.crates-io]
+glib = { path = "vendor/glib" }

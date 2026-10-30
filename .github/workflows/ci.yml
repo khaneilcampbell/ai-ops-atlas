@@ -61,8 +61,11 @@ jobs:
           workspaces: src-tauri
       - run: mkdir -p dist && touch dist/index.html
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo fmt --manifest-path ops/security/glib-regression/Cargo.toml --check
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Test glib soundness backport with optimizations
+        run: cargo test --manifest-path ops/security/glib-regression/Cargo.toml --release --locked
 
   audit:
     name: Dependency audit
