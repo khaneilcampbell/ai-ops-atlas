@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 // Visual checks for the web build. See docs/visual-testing.md.
-const PORT = 4173;
+const PORT = Number(process.env.ATLAS_VISUAL_PORT ?? 4173);
 
 export default defineConfig({
   testDir: ".",
@@ -43,7 +43,7 @@ export default defineConfig({
     command: `npx vite --port ${PORT} --strictPort`,
     cwd: "..",
     port: PORT,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.ATLAS_VISUAL_PORT,
     timeout: 60_000,
   },
 });

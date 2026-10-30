@@ -1,6 +1,8 @@
+import { doorOpenness, entranceOccupied } from "./doorTraffic";
+import { useReducedMotion } from "../../lib/motion";
 import { toolBrand, toolOfficeHeight } from "./toolBrand";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import type { ThreeEvent } from "@react-three/fiber";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
@@ -532,13 +534,54 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
       <Instanced items={items.ends} geometry={g.gableEnds} material={m.plain} />
       <Instanced items={items.gable} geometry={g.gable} material={m.roof} pick={pick.of(items.gableKeys)} />
       <Instanced items={items.hip} geometry={g.hip} material={m.roof} pick={pick.of(items.hipKeys)} />
-      <Instanced items={items.doors} geometry={g.box} material={m.plain} />
+      <EntranceDoors doors={items.doors} g={g} m={m} />
       <Instanced items={items.stoops} geometry={g.box} material={m.plain} shadow={false} />
       <Instanced items={items.chimneys} geometry={g.box} material={m.plain} />
       <Instanced items={items.solar} geometry={g.box} material={m.solar} />
       {houses.map(h => <mesh key={h.key} geometry={g.plane} material={automationSign} position={[h.x, TERRACE_H + h.h + h.roofH + 0.19, h.z + h.d * 0.18]} rotation={[0, Math.PI / 4, 0]} scale={[0.38, 0.38, 1]} raycast={noRaycast} />)}
     </group>
   );
+}
+
+/** Shared double sliding entrance; panels respond to actual pedestrians, not a timer. */
+function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
+  const mesh=useRef<THREE.InstancedMesh>(null),handles=useRef<THREE.InstancedMesh>(null);
+  const openings=useRef<number[]>([]);
+  const object=useMemo(()=>new THREE.Object3D(),[]);
+  const glass=useMemo(()=>focusable(new THREE.MeshPhysicalMaterial({color:"#b7d4cc",transparent:true,opacity:0.28,roughness:0.12,metalness:0.15,depthWrite:false})),[]);
+  useEffect(()=>()=>glass.dispose(),[glass]);
+  const foyer=useMemo<Inst[]>(()=>doors.flatMap(door=>{
+    const [x,y,z]=door.p,[w,h]=door.s,depth=Math.max(0.13,h*0.48);
+    return [
+      {p:[x,y,z+depth/2],s:[w*1.12,0.025,depth],c:"#d9cfb8"},
+      {p:[x,y,z+0.018],s:[w,h,0.025],c:"#ece5d2"},
+      {p:[x,y+h*0.16,z+depth*0.4],s:[w*0.56,h*0.24,depth*0.24],c:"#254936"},
+      {p:[x,y+h*0.4,z+0.035],s:[w*0.32,h*0.23,0.015],c:"#244c3d"},
+      {p:[x,y+h,z+depth/2],s:[w*1.12,0.025,depth],c:"#c3ad78"},
+      {p:[x,y+0.025,z+depth*0.75],s:[w*0.65,0.01,depth*0.4],c:"#315c49"},
+      ...[-1,1].map(side=>({p:[x+side*w*0.54,y,z+depth/2],s:[w*0.05,h,depth],c:"#c6a766"} as Inst)),
+      {p:[x,y,z+depth],s:[w*1.1,0.02,0.08],c:"#c6a766"},
+    ] as Inst[];
+  }),[doors]);
+  const reduced=useReducedMotion();
+  useFrame((_,dt)=>{
+    if(!mesh.current)return;
+    doors.forEach((door,i)=>{
+      const [x,y,z]=door.p,[w,h,d]=door.s,depth=Math.max(0.13,h*0.48);
+      const open=reduced?(entranceOccupied(x,z)?1:0):doorOpenness(openings.current[i]??0,entranceOccupied(x,z),dt);
+      openings.current[i]=open;
+      for(let side=0;side<2;side++){
+        const panelX=x+(side?1:-1)*w*(0.25+open*0.48);
+        object.position.set(panelX,y,z+depth+0.012);
+        object.scale.set(w*0.48,h,d);object.updateMatrix();mesh.current!.setMatrixAt(i*2+side,object.matrix);
+        object.position.set(panelX+(side?-1:1)*w*0.16,y+h*0.3,z+depth+0.035);
+        object.scale.set(0.012,h*0.3,0.012);object.updateMatrix();handles.current?.setMatrixAt(i*2+side,object.matrix);
+      }
+    });
+    mesh.current.instanceMatrix.needsUpdate=true;
+    if(handles.current)handles.current.instanceMatrix.needsUpdate=true;
+  });
+  return <group><Instanced items={foyer} geometry={g.box} material={m.plain}/><instancedMesh ref={mesh} args={[g.box,glass,doors.length*2]} frustumCulled={false}/><instancedMesh ref={handles} args={[g.box,m.metal,doors.length*2]} frustumCulled={false}/></group>;
 }
 
 /** Small branded business offices, kept below the project headquarters skyline. */
@@ -562,9 +605,15 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         doors.push({p:[k.x,y+0.03,k.z+d/2+0.028],s:[w*0.23,0.7,0.035],c:"#263e42"});
         accents.push({p:[k.x+w*0.055,y+0.28,k.z+d/2+0.05],s:[0.012,0.16,0.015],c:"#c9b98d"});
         if(cafe) {
+          // A pitched cafe roof and timber louvers give the coffeehouse a softer silhouette.
+          pediments.push({p:[k.x,y+OFFICE_H+0.08,k.z],s:[d*1.16,0.24,w*1.12],r:Math.PI/2,c:brand.roof});
+          for(let slat=0;slat<5;slat++) accents.push({p:[k.x+w/2+0.02,y+0.18,k.z+(slat-2)*d*0.17],s:[0.035,0.76,0.035],c:"#a48862"});
           slabs.push({p:[k.x,y+0.9,k.z+d/2+0.12],s:[w*1.12,0.07,0.36],c:brand.primary});
           for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.4,y+0.06,k.z+d/2+0.28],s:[0.12,0.16,0.12],c:"#3e5842"});
         } else if(zara) {
+          // Sculpted ivory crown and dark vertical fins frame a fashion-house facade.
+          slabs.push({p:[k.x,y+OFFICE_H+0.08,k.z],s:[w*0.8,0.24,d*0.78],c:"#eeeae0"});
+          for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.46,y+0.98,k.z+d/2+0.04],s:[0.045,1.72,0.08],c:"#181818"});
           for(let floor=0;floor<3;floor++) for(const side of [-1,1]) windows.push({p:[k.x+side*w*0.25,y+1.05+floor*0.4,k.z+d/2+0.014],s:[w*0.33,0.3,0.025],c:"#ffeed1"});
           slabs.push({p:[k.x,y+0.94,k.z+d/2+0.07],s:[w*1.05,0.04,0.22],c:"#171717"});
         } else if(k.name==="Wells Fargo") {
@@ -579,9 +628,15 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
           pediments.push({p:[k.x,y+1.03,k.z+d/2+0.15],s:[0.38,0.3,w*1.12],r:Math.PI/2,c:"#d7b66c"});
           accents.push({p:[k.x-w*0.32,y+0.2,k.z+d/2+0.08],s:[0.12,0.25,0.06],c:"#36454a"});
         } else if(chipotle) {
+          // Industrial brick parapet, metal rooftop vents and exposed facade joints.
+          slabs.push({p:[k.x,y+OFFICE_H+0.08,k.z-d*0.36],s:[w*1.08,0.2,d*0.16],c:"#845544"});
+          for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.24,y+OFFICE_H+0.08,k.z],s:[0.1,0.23,0.1],c:"#8d9593"});
           for(let row=0;row<6;row++) accents.push({p:[k.x,y+0.1+row*0.16,k.z-d/2-0.01],s:[w,0.018,0.02],c:"#b98b72"});
           slabs.push({p:[k.x,y+0.94,k.z+d/2+0.08],s:[w*1.1,0.06,0.25],c:"#57463c"});
         } else {
+          // A diner-style stepped red crown and cream checker trim distinguish Smashburger.
+          slabs.push({p:[k.x,y+OFFICE_H+0.08,k.z],s:[w*0.68,0.23,d*0.8],c:"#bf292b"});
+          for(let tile=0;tile<8;tile++) accents.push({p:[k.x+(tile-3.5)*w/8,y+0.18,k.z+d/2+0.025],s:[w/8,0.08,0.025],c:tile%2?"#f2e8d6":"#382c29"});
           slabs.push({p:[k.x,y+0.92,k.z+d/2+0.12],s:[w*1.12,0.09,0.32],c:"#bf292b"});
           accents.push({p:[k.x,y+0.09,k.z+d/2+0.03],s:[w,0.07,0.04],c:"#bf292b"});
         }
@@ -590,27 +645,39 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
+      if(k.name==="Anthropic") {
+        // Keep facade ribs between the lobby and the dedicated sign band.
+        for(let rib=0;rib<5;rib++) accents.push({p:[k.x+(rib-2)*w*0.21,y+0.72,k.z+d/2+0.025],s:[w*0.025,OFFICE_H-1.38,0.025],c:brand.primary});
+        slabs.push({p:[k.x,y+OFFICE_H+0.1,k.z-d*0.08],s:[w*0.62,0.14,d*0.6],c:brand.primary});
+      }
+      if(k.name==="OpenAI") {
+        // A layered glass pavilion with a floating green roof and an entrance portal.
+        for(let tier=0;tier<3;tier++) slabs.push({p:[k.x,y+OFFICE_H+0.1+tier*0.12,k.z],s:[w*(1.14-tier*0.16),0.06,d*(1.14-tier*0.16)],c:tier%2?"#e8eeeb":brand.primary});
+        for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
+      }
       // Six office floors with a regular curtain-wall grid and branded cornices.
-      for (let floor = 0; floor < (OFFICE_H < 2 ? 3 : 6); floor++) {
-        slabs.push({ p: [k.x, y + 0.48 + floor * 0.36, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
+      const floorCount=OFFICE_H < 2 ? 3 : 6;
+      const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
+      for (let floor = 0; floor < floorCount; floor++) {
+        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * 0.36, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * 0.36, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * 0.36, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * 0.36, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
+          windows.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
+          windows.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
         }
       }
       // Slim corner columns and a recessed rooftop plant room give the offices a corporate silhouette.
       for (const side of [-1, 1]) {
         accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
       }
-      slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
+      if(k.name!=="Anthropic") slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
       accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
       accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
       doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
       slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
-      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+      if (brand.stepped && k.name!=="Anthropic") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
     }
     return { walls, slabs, accents, windows, domes, pediments, doors };
   }, [kiosks]);
@@ -622,7 +689,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
     <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />
-    <Instanced items={items.doors} geometry={g.box} material={m.plain} />
+    <EntranceDoors doors={items.doors} g={g} m={m} />
     {kiosks.map(k => <ToolSign key={k.key} tool={k} geometry={g.plane} />)}
   </group>;
 }
@@ -652,7 +719,7 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
   }, [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + toolOfficeHeight(tool.name) - 0.08;
+  const w = tool.size, y = TERRACE_H + toolOfficeHeight(tool.name) - (tool.name==="Anthropic"?0.32:0.08);
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />
@@ -749,7 +816,7 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
 
     // Entrance: lit lobby on both visible faces, a canopy, stairs down to the plaza and
     // flowerbeds either side.
-    P.glass.push({ p: [t.x, FLOOR_BASE, front + 0.005], s: [s * 0.38, 0.24, 0.02] });
+    // Front entrance panels are animated separately from the fixed facade glass.
     P.glass.push({ p: [side + 0.005, FLOOR_BASE, t.z], s: [0.02, 0.24, s * 0.3] });
     P.plain.push({ p: [t.x, FLOOR_BASE + 0.26, front + 0.08], s: [s * 0.5, 0.03, 0.18], c: style === "timber" ? "#8f6640" : style === "secure" ? "#2a3d66" : "#2f4535" });
     P.steps.push({ p: [t.x, TERRACE_H, front + 0.1], s: [s * 0.44, 0.1, 0.2] });
@@ -937,6 +1004,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
+      <EntranceDoors doors={towers.map(t=>({p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]}))} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
@@ -1030,17 +1098,17 @@ export function Skyline({parks,g,m,onSelect}:{parks:Scene3D["parks"];g:G;m:M;onS
         doors.push({p:[x+offset,y,z],s:[width,0.4,0.95],c:"#28434a"});
       }
       // Double glass lobby doors, framed in brass, on the residents' approach path.
-      doors.push({p:[x,y,z+0.49],s:[0.56,0.39,0.025],c:"#1b3039"});
+
       for(const side of [-1,1]) {
-        trim.push({p:[x+side*0.3,y,z+0.51],s:[0.035,0.43,0.04],c:"#d3b36e"});
-        trim.push({p:[x+side*0.045,y+0.12,z+0.53],s:[0.012,0.13,0.012],c:"#ead59a"});
+        trim.push({p:[x+side*0.3,y,z+0.51],s:[0.035,0.55,0.04],c:"#d3b36e"});
+
       }
-      trim.push({p:[x,y+0.4,z+0.51],s:[0.64,0.035,0.04],c:"#d3b36e"});
-      trim.push({p:[x,y,z+0.51],s:[0.018,0.4,0.035],c:"#d3b36e"});
-      trim.push({p:[x,y+0.43,z+0.67],s:[1.0,0.07,0.6],c:"#d3b36e"});
+      trim.push({p:[x,y+0.54,z+0.51],s:[0.64,0.035,0.04],c:"#d3b36e"});
+
+      trim.push({p:[x,y+0.62,z+0.54],s:[0.76,0.035,0.24],c:"#d3b36e"});
       trim.push({p:[x,y+4.9,z],s:[0.045,0.35,0.045],c:"#d3b36e"});
     }
     return {walls,trim,roofs,glass,doors};
   },[parks]);
-  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber} pick={{keys:parts.walls.map(()=>"skyline"),over:()=>{},out:()=>{},click:()=>onSelect?.()}}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/></group>;
+  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber} pick={{keys:parts.walls.map(()=>"skyline"),over:()=>{},out:()=>{},click:()=>onSelect?.()}}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/><EntranceDoors doors={parks.map(p=>({p:[p.x+p.w/2,TERRACE_H+0.03,p.z+p.d/2+0.51],s:[0.56,0.52,0.025]}))} g={g} m={m}/></group>;
 }

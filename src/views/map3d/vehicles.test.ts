@@ -113,11 +113,15 @@ describe("decorative vehicles", () => {
   it("loops without jumping", () => {
     for (const v of plans) {
       let last = vehicleAt(v, 0);
+      let largestStep = 0;
       for (let t = 0.02; t <= v.period + 0.02; t += 0.02) {
         const p = vehicleAt(v, t);
-        expect(Math.hypot(p.x - last.x, p.z - last.z)).toBeLessThan(0.05);
+        largestStep = Math.max(largestStep, Math.hypot(p.x - last.x, p.z - last.z));
         last = p;
       }
+      // Keep every time sample, but report once per vehicle instead of creating
+      // hundreds of thousands of assertion objects on slower CI runners.
+      expect(largestStep, `${v.id} jumps along its route`).toBeLessThan(0.05);
     }
   });
 });

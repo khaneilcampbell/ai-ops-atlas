@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
+import FloorLabel from "./FloorLabel";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { patterned } from "../map3d/materials";
 import type { LightMode } from "../map3d/living";
+import { ElevatorLanding, MovingLift } from "./BuildingCirculation";
+import LobbyEntrance from "./LobbyEntrance";
+import {cutawayCameraRadius} from "./cameraFit";
+import CityOutside from "./CityOutside";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
@@ -27,6 +32,7 @@ export interface OfficeApi {
 }
 
 interface Props {
+  floor?:number;
   plan: OfficePlan;
   desks: DeskData[];
   wall: { title: string; repo: string; line: string };
@@ -43,15 +49,31 @@ export default function OfficeScene(props: Props) {
   // Render continuously only while something on screen moves; otherwise only on camera changes.
   const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
   return (
-    <Canvas shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
-      <OfficeCamera plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <OfficeEnvironment plan={props.plan} wall={props.wall} light={props.light} count={desks.length} />
-      <WorkflowFloor desks={desks} />
-      {desks.map((d) => (
-        <AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light === "night"} selected={props.selected === d.ws.agentId} onSelect={props.onSelect} />
-      ))}
+    <Canvas key={props.floor===-1?"all":"single"} style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+      <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
+      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
+      {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
+      {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
+        <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
+        {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
+        <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
+        {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
+        {level<4&&<SharedFloor plan={props.plan} floor={level}/>}
+        {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
+        {level===4&&<WorkflowFloor desks={desks}/>}
+        {level===4&&desks.map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
+      </group>)}
     </Canvas>
   );
+}
+
+function SharedFloor({plan,floor}:{plan:OfficePlan;floor:number}) {
+  const w=plan.w,d=plan.d;
+  return <group>
+    <Box p={[0,0.03,0]} s={[w*0.65,0.04,d*0.6]} m={MAT.rug}/>
+    {floor===0?<group><Box p={[0,0.55,-d*0.2]} s={[Math.min(4,w*0.5),1.1,0.85]} m={MAT.trim}/><Box p={[0,1.12,-d*0.2]} s={[Math.min(4.2,w*0.52),0.08,1]} m={MAT.oak}/>{[-1,1].map(side=><group key={side}><Box p={[side*w*0.27,0.3,d*0.17]} s={[1.7,0.5,0.8]} m={MAT.chair}/><Box p={[side*w*0.27,0.65,d*0.17-0.35]} s={[1.7,0.6,0.12]} m={MAT.chair}/></group>)}</group>:<group>{[-1,1].map(side=><group key={side}><Box p={[side*w*0.23,0.75,0]} s={[Math.min(2.5,w*0.3),0.12,2]} m={MAT.oak}/>{[-1,1].map(row=><Box key={row} p={[side*w*0.23,0.4,row*1.35]} s={[0.65,0.7,0.6]} m={MAT.chair}/>)}</group>)}</group>}
+    <Box p={[w/2-0.55,1.1,-d/2+0.15]} s={[0.9,2.2,0.08]} m={MAT.steel}/>
+  </group>;
 }
 
 // ---------------------------------------------------------------- camera
@@ -59,9 +81,9 @@ export default function OfficeScene(props: Props) {
 type Pose = { target: THREE.Vector3; r: number; phi: number; theta: number };
 const AZ = Math.PI / 4;
 
-function OfficeCamera({ plan, reduced, api, focus }: { plan: OfficePlan; reduced: boolean; api: Props["api"]; focus?: Workstation }) {
-  const { camera, gl, invalidate } = useThree();
-  const home = useMemo<Pose>(() => ({ target: new THREE.Vector3(0, 0.7, 0.2), r: Math.max(plan.w, plan.d) * 0.95 + 2.5, phi: 0.98, theta: AZ }), [plan.w, plan.d]);
+function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:boolean; plan: OfficePlan; reduced: boolean; api: Props["api"]; focus?: Workstation }) {
+  const { camera, gl, invalidate, size } = useThree();
+  const home = useMemo<Pose>(() => ({ target: new THREE.Vector3(0, allFloors?8.1:0.7, allFloors?0.9:0.2), r: allFloors?cutawayCameraRadius(plan.w,plan.d,size.width/size.height):(Math.max(plan.w,plan.d)*0.95+2.5)*Math.max(1,0.8/(size.width/size.height)), phi: allFloors?1.05:0.98, theta: AZ }), [plan.w, plan.d,allFloors,size.width,size.height]);
   const controls = useMemo(() => {
     const c = new OrbitControls(camera, gl.domElement);
     c.enableDamping = true;
@@ -122,7 +144,7 @@ function OfficeCamera({ plan, reduced, api, focus }: { plan: OfficePlan; reduced
   useEffect(() => {
     if (!focus) return;
     const c = current();
-    glide({ ...c, target: new THREE.Vector3(focus.x * 0.6, 0.8, focus.z * 0.6 + 0.2), r: Math.min(c.r, home.r * 0.82) });
+    glide({ ...c, target: new THREE.Vector3(focus.x * 0.6, allFloors?14.4:0.8, focus.z * 0.6 + 0.2), r: Math.min(c.r, home.r * 0.82) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.id]);
 
@@ -181,7 +203,7 @@ const MAT = {
   leaf: std("#4f7f4a", { roughness: 0.9, flatShading: true }),
   leaf2: std("#6a9a52", { roughness: 0.9, flatShading: true }),
   inactive: std("#8e938b"),
-  pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.55, roughness: 0.1, metalness: 0.1 }),
+  pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.02, transparent:true,opacity:0.14,depthWrite:false, roughness: 0.1, metalness: 0.1 }),
   led: new THREE.MeshBasicMaterial({ color: "#7fdc8e" }),
   ledOff: new THREE.MeshBasicMaterial({ color: "#3d4a41" }),
 };
@@ -195,7 +217,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number }) {
+function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -205,7 +227,7 @@ function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wal
   useEffect(() => {
     MAT.pane.color.set(night ? "#22314f" : "#cfe6f2");
     MAT.pane.emissive.set(night ? "#2c3f66" : "#cfe6f2");
-    MAT.pane.emissiveIntensity = night ? 0.6 : 0.55;
+    MAT.pane.emissiveIntensity = 0.02;
   }, [night]);
   const sun = useRef<THREE.DirectionalLight>(null);
   useEffect(() => {
@@ -221,19 +243,20 @@ function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wal
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
-      <hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.45 : 1.2]} />
-      <directionalLight ref={sun} castShadow position={[-6, 11, 7]} intensity={night ? 0.35 : 2.1} color={night ? "#a8b8e0" : "#fff0d2"} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005} shadow-normalBias={0.03} />
+      {lighting&&<hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.65 : 1.2]} />}
+      {lighting&&<directionalLight ref={sun} castShadow position={[-6, 11, 7]} intensity={night ? 0.35 : 2.1} color={night ? "#a8b8e0" : "#fff0d2"} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005} shadow-normalBias={0.03} />}
       {/* After dark the room lights are on. */}
-      {night && <pointLight position={[0, H + 0.4, 0]} intensity={14} distance={Math.max(w, d) * 1.6} decay={1.6} color="#ffd9a0" />}
+      {night && [-1,1].map(side=><group key={side}><pointLight position={[0,2.3,side*d*0.24]} intensity={30} distance={Math.max(w,d)*1.3} decay={1.6} color="#ffe1af"/><mesh position={[0,2.6,side*d*0.24]}><boxGeometry args={[1.2,0.045,0.5]}/><meshStandardMaterial color="#f1e3c4" emissive="#ffe2aa" emissiveIntensity={1.5}/></mesh></group>)}
 
-      <mesh geometry={CYL} material={MAT.grass} position={[0, -0.32, 0]} scale={[Math.max(w, d) * 3.2, 0.5, Math.max(w, d) * 3.2]} receiveShadow />
+
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
       <Box p={[0, 0.006, 0.25]} s={[w - 2.6, 0.012, d - 3]} m={MAT.rug} />
 
       {/* Back and left walls stand full height; the front two are cut down to a sill. */}
-      <Box p={[0, H / 2, -d / 2 - T / 2]} s={[w + T * 2, H, T]} m={MAT.wall} />
-      <Box p={[-w / 2 - T / 2, H / 2, 0]} s={[T, H, d]} m={MAT.wall} />
-      <Box p={[0, 0.16, d / 2 + T / 2]} s={[w + T * 2, 0.32, T]} m={MAT.wall} />
+      {[0.45,2.45].map((y,i)=><group key={y}><Box p={[0,y,-d/2-T/2]} s={[w+T*2,i?0.5:0.9,T]} m={MAT.wall}/><Box p={[-w/2-T/2,y,0]} s={[T,i?0.5:0.9,d]} m={MAT.wall}/></group>)}
+      {[-w/2-T,...backWins.map(x=>x+0.65)].map((start,i)=>{const end=i<backWins.length?backWins[i]-0.65:w/2+T;return end>start?<Box key={i} p={[(start+end)/2,1.55,-d/2-T/2]} s={[end-start,1.3,T]} m={MAT.wall}/>:null;})}
+      {[-d/2,...leftWins.map(z=>z+0.75)].map((start,i)=>{const end=i<leftWins.length?leftWins[i]-0.75:d/2;return end>start?<Box key={i} p={[-w/2-T/2,1.55,(start+end)/2]} s={[T,1.3,end-start]} m={MAT.wall}/>:null;})}
+      {[-1,1].map(side=><Box key={side} p={[side*(w/4+0.35),0.16,d/2+T/2]} s={[w/2-0.7+T*2,0.32,T]} m={MAT.wall}/>)}
       <Box p={[w / 2 + T / 2, 0.16, 0]} s={[T, 0.32, d]} m={MAT.wall} />
       <Box p={[0, H + 0.03, -d / 2 - T / 2]} s={[w + T * 2 + 0.04, 0.06, T + 0.04]} m={MAT.trim} />
       <Box p={[-w / 2 - T / 2, H + 0.03, 0]} s={[T + 0.04, 0.06, d]} m={MAT.trim} />
@@ -242,14 +265,14 @@ function OfficeEnvironment({ plan, wall, light, count }: { plan: OfficePlan; wal
 
       {leftWins.map((z) => (
         <group key={`l${z}`} position={[-w / 2 + 0.005, 1.55, z]}>
-          <Box p={[0, 0, 0]} s={[0.04, 1.3, 1.5]} m={MAT.frame} />
+          {[-1,1].map(side=><group key={side}><Box p={[0,side*0.65,0]} s={[0.04,0.06,1.5]} m={MAT.frame}/><Box p={[0,0,side*0.75]} s={[0.04,1.3,0.06]} m={MAT.frame}/></group>)}
           <Box p={[0.02, 0, 0]} s={[0.02, 1.18, 1.38]} m={MAT.pane} />
           <Box p={[0.04, 0, 0]} s={[0.02, 1.18, 0.04]} m={MAT.frame} />
         </group>
       ))}
       {backWins.map((x) => (
         <group key={`b${x}`} position={[x, 1.55, -d / 2 + 0.005]}>
-          <Box p={[0, 0, 0]} s={[1.3, 1.3, 0.04]} m={MAT.frame} />
+          {[-1,1].map(side=><group key={side}><Box p={[side*0.65,0,0]} s={[0.06,1.3,0.04]} m={MAT.frame}/><Box p={[0,side*0.65,0]} s={[1.3,0.06,0.04]} m={MAT.frame}/></group>)}
           <Box p={[0, 0, 0.02]} s={[1.18, 1.18, 0.02]} m={MAT.pane} />
           <Box p={[0, 0, 0.04]} s={[0.04, 1.18, 0.02]} m={MAT.frame} />
         </group>
