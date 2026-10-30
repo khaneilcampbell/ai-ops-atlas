@@ -102,3 +102,7 @@ src-tauri/src/intel/  Repository Intelligence Agent: collection, prompt, Claude 
 3. **Next:** a persistent background worker for scheduled analysis, and a CI failure triage agent (see the [agent roadmap](docs/repository-intelligence.md#10-roadmap-for-the-next-autonomous-agent)).
 4. **Then:** live n8n visibility (workflow executions and failures), filling in `last_run` and history automatically.
 5. **Later:** small project-specific adapters for CrewAI and local agents, and a local database if run history outgrows the cache.
+
+## License
+
+Copyright (c) 2026 Khaneil Campbell. All rights reserved. The code is public for viewing only, and no one may use, copy, modify or distribute it without written permission. See [LICENSE](LICENSE).

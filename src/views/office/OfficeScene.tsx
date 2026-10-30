@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePowerProfile } from "../../lib/power";
+import { FramePacer } from "../map3d/pacer";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import FloorLabel from "./FloorLabel";
@@ -16,6 +18,7 @@ import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./text
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
   ws: Workstation;
+  floor?: number;
   name: string;
   accent: string;
   icon: ToolIcon;
@@ -46,10 +49,11 @@ interface Props {
 /** VirtualOffice: an open-roof cutaway of a project's headquarters, one workstation per agent. */
 export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
-  // Render continuously only while something on screen moves; otherwise only on camera changes.
-  const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
+  // The lobby doors and the lift always move unless motion is reduced; the pacer sets their frame rate.
+  const power = usePowerProfile();
   return (
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, power.maxDpr]} frameloop="demand" camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+      <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
@@ -58,10 +62,10 @@ export default function OfficeScene(props: Props) {
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
-        {level<4&&<SharedFloor plan={props.plan} floor={level}/>}
+        {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
-        {level===4&&<WorkflowFloor desks={desks}/>}
-        {level===4&&desks.map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
+        {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
+        {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
       </group>)}
     </Canvas>
   );

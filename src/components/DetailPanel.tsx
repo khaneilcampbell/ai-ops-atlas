@@ -1,3 +1,7 @@
+import { AgentOutput } from "./AgentOutput";
+import { RepositoryNotice } from "./RepositoryNotice";
+import {CodexReviewHandoff} from "./CodexReviewHandoff";
+import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
 import { servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
@@ -9,7 +13,7 @@ import { activityFeed, attentionItems, effectiveLastRun, latestPerWorkflow, obse
 import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
-import type { Agent } from "../catalog/types";
+import type { Agent, Project } from "../catalog/types";
 import { IntelPanel } from "./IntelPanel";
 import { RerunButton } from "./RerunButton";
 import { PullRequests } from "./PullRequests";
@@ -29,7 +33,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   }, [select]);
 
   if (!selection) return null;
-  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
+  const body = selection.kind === "agent" ? <AgentDetail key={selection.id} id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -62,7 +66,54 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
   );
 }
 
-function ServiceDetail({ id }: { id: string }) {
+function EnterBuildingButton({id}:{id:string}) {
+  const {view}=useAtlas();
+  const reduced=useReducedMotion();
+  return view==="map"&&webglAvailable()?<button className="ghost-btn enter-building" onClick={()=>enterBuilding(id,reduced||id.startsWith("skyline-business:"))}><Icon name="agents" size={15}/> Enter building</button>:null;
+}
+
+function LinkedRepositories({project}:{project:Project}) {
+  const {catalog,repos,select}=useAtlas();
+  return <section aria-label="Linked repositories">
+    <div className="section-title">Linked repositories</div>
+    <ul className="runs">{projectRepositories(project,catalog.agents).map(name=>{
+      const snapshot=repoData(repos[name]);
+      return <li key={name} style={{flexWrap:"wrap",gap:8}}>
+        <span className="grow" style={{minWidth:0,overflowWrap:"anywhere"}}><ExternalLink href={`https://github.com/${name}`}><Icon name="repos" size={14}/> {name}</ExternalLink><span className="muted small" style={{display:"block"}}>{name===project.repository?"Default repository":"Linked resource"}</span></span>
+        <HealthBadge health={snapshot?overallHealth(repoHealth(snapshot,catalog.agents.filter(a=>a.projectId===project.id&&a.repository===name).length)):"unknown"}/>
+        <button className="text-btn" aria-label={`Inspect repository ${name}`} onClick={()=>select({kind:"repo",id:name})}>Inspect →</button>
+      </li>;
+    })}</ul>
+  </section>;
+}
+
+function SkylineBusinessDetail({name}:{name:string}) {
+  const {catalog,select}=useAtlas();
+  const project=catalog.projects.find(p=>p.id==="skyline");
+  const building=BUILDING_INTERIORS[name];
+  const assigned=catalog.agents.filter(a=>a.workplace?.building===name);
+  if(!project||!building)return <Head eyebrow="District building" title="Not found"/>;
+  return <>
+    <Head eyebrow="Skyline district · Business building" title={name}>
+      <div className="chips" style={{marginTop:10}}><span className="chip">{building.subtitle}</span><span className="chip">Part of {project.name}</span></div>
+      <EnterBuildingButton id={`skyline-business:${name}`}/>
+    </Head>
+    <div className="panel-body selectable">
+      <p style={{margin:0,fontSize:14}}>A prepared {name} building in Skyline, with a lobby, hallways, elevators, and four floors for {building.subtitle.toLowerCase()}.</p>
+      <LinkedRepositories project={project}/>
+      <section><div className="section-title">Project</div><button className="text-btn" onClick={()=>select({kind:"project",id:project.id})}>{project.name} →</button><p className="muted small">This building shares Skyline’s project repository.</p></section>
+      <section><div className="section-title">Prepared workspaces</div><ul>{building.rooms.map(room=><li key={room}>{room}</li>)}</ul></section>
+      <section><div className="section-title">Agents & automations</div>{assigned.length?<ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · Suite {a.workplace!.room} · {catalog.projects.find(p=>p.id===a.projectId)?.name}</span></li>)}</ul>:<p className="muted">No workers assigned to this building yet.</p>}</section>
+    </div>
+  </>;
+}
+
+function ServiceDetail({id}:{id:string}) {
+  const building=skylineBuildingName(id);
+  return building?<SkylineBusinessDetail name={building}/>:<ToolDetail id={id}/>;
+}
+
+function ToolDetail({ id }: { id: string }) {
   const { catalog, select } = useAtlas();
   const split = id.indexOf(":");
   const project = catalog.projects.find(p => p.id === id.slice(0, split));
@@ -72,42 +123,32 @@ function ServiceDetail({ id }: { id: string }) {
   return <>
     <Head eyebrow={`Infrastructure tool · ${project.name}`} title={service.name}>
       <div className="chips" style={{ marginTop: 10 }}><span className="chip">Supporting infrastructure</span><span className="chip">{service.users.length} linked {service.users.length === 1 ? "worker" : "workers"}</span></div>
+      <EnterBuildingButton id={`skyline-business:${service.name}`}/>
     </Head>
     <div className="panel-body selectable">
       <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p></section>
       <section><div className="section-title">Supports this project</div><button className="ghost-btn" onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} />{project.name}</button></section>
       {route.length > 1 && <section><div className="section-title">Tool workflow · left to right around headquarters</div><div className="link-list">{route.map((tool, index) => <button key={tool.id} className="text-btn" aria-current={tool.id === service.id ? "step" : undefined} onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{index + 1}. {tool.name}{tool.id === service.id ? " · selected" : " →"}</button>)}</div><p className="muted small">Placement follows declared dependencies and documented workflow phases.</p></section>}
       <ToolWorkflow service={service} projectAgents={catalog.agents.filter(a => a.projectId === project.id)} />
-      <section><div className="section-title">Linked repositories</div><div className="link-list">{[...new Set(service.users.map(a => a.repository))].map(name => <button key={name} className="text-btn" onClick={() => select({ kind: "repo", id: name })}><Icon name="repos" size={14}/>{name} →</button>)}</div></section>
+      <LinkedRepositories project={project}/>
     </div>
   </>;
 }
 
 /** A project owns its building and agents; repositories are linked resources. */
 function ProjectDetail({ id }: { id: string }) {
-  const { catalog, repos, select, view } = useAtlas();
-  const reduced = useReducedMotion();
+  const { catalog } = useAtlas();
   const project = catalog.projects.find(p => p.id === id);
   if (!project) return <Head eyebrow="Project" title="Not found" />;
   const repositories = projectRepositories(project, catalog.agents);
   return <>
     <Head eyebrow="Project building" title={project.name}>
       <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
-      {view === "map" && webglAvailable() && <button className="ghost-btn enter-building" onClick={() => enterBuilding(project.id, reduced)}><Icon name="agents" size={15} /> Enter building</button>}
+      <EnterBuildingButton id={project.id}/>
     </Head>
     <div className="panel-body selectable">
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
-      <section aria-label="Linked repositories">
-        <div className="section-title">Linked repositories</div>
-        <ul className="runs">{repositories.map(name => {
-          const snapshot = repoData(repos[name]);
-          return <li key={name} style={{ flexWrap: "wrap", gap: 8 }}>
-            <span className="grow" style={{ minWidth: 0, overflowWrap: "anywhere" }}><ExternalLink href={`https://github.com/${name}`}><Icon name="repos" size={14} /> {name}</ExternalLink><span className="muted small" style={{ display: "block" }}>{name === project.repository ? "Default repository" : "Linked resource"}</span></span>
-            <HealthBadge health={snapshot ? overallHealth(repoHealth(snapshot, catalog.agents.filter(a => a.projectId === id && a.repository === name).length)) : "unknown"} />
-            <button className="text-btn" aria-label={`Inspect repository ${name}`} onClick={() => select({ kind: "repo", id: name })}>Inspect →</button>
-          </li>;
-        })}</ul>
-      </section>
+      <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
     </div>
@@ -119,6 +160,7 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
 }
 
 function AgentDetail({ id }: { id: string }) {
+  const [tab, setTab] = useState<"overview" | "output">("overview");
   const { catalog, repos, select } = useAtlas();
   const agent = catalog.agents.find((a) => a.id === id);
   const history = useMemo(() => activityFeed(catalog, repos, { agent: id }), [catalog, repos, id]);
@@ -137,8 +179,19 @@ function AgentDetail({ id }: { id: string }) {
           <span className="chip">{agent.framework}</span>
         </div>
       </Head>
-      <div className="panel-body selectable">
+      <div className="panel-tabs" role="tablist" aria-label="Agent sections">
+        {(["overview", "output"] as const).map((name) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? "overview" : event.key === "End" ? "output" : name === "overview" ? "output" : "overview";
+          setTab(next);
+          document.getElementById(`agent-${id}-${next}-tab`)?.focus();
+        }}>{name === "overview" ? "Overview" : "Output"}</button>)}
+      </div>
+      <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
+        {tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
+        <CodexReviewHandoff agent={agent}/>
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>
@@ -216,6 +269,7 @@ function AgentDetail({ id }: { id: string }) {
             </ul>
           )}
         </div>
+        </>}
       </div>
     </>
   );
@@ -233,7 +287,7 @@ const REPO_TABS: { id: RepoTab; label: string }[] = [
 ];
 
 function RepoDetail({ name }: { name: string }) {
-  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
+  const { catalog, repos, refreshing, select, setView, setFilters, clearFilters } = useAtlas();
   const [more, setMore] = useState(false);
   const [tab, setTab] = useState<RepoTab>("overview");
   const state = repos[name];
@@ -274,10 +328,9 @@ function RepoDetail({ name }: { name: string }) {
         {tab === "overview" && (
           <>
           {state?.kind === "error" && (
-            <div className="notice">
-              <Icon name="alert" size={15} /> <CopyValue value={state.message} title="Copy error" />
-            </div>
+            <RepositoryNotice message={state.message}/>
           )}
+          {!snap && state?.kind !== "error" && (refreshing ? <p className="muted small">Checking GitHub…</p> : <RepositoryNotice message="No repository snapshot"/>)}
           {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
 
           {project && <ProjectOrganization project={project} agents={agents} latest={history[0]} />}

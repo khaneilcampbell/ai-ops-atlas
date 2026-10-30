@@ -1,0 +1,2 @@
+export const IMPROVEMENT_AGENT_ID="atlas-system-improvements";
+export const CODEX_REVIEW_PROMPT="Follow ops/system-improvements/codex-prompt.md for AI Ops Atlas. Produce a compact, read-only improvement report using current evidence. Identify at most three recommendations for production reliability, UI stability, performance, or usage. Do not modify code, merge, deploy, run paid services, or schedule further model calls. Automatic reports remain model-free.";

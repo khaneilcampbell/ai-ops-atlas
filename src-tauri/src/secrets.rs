@@ -28,6 +28,8 @@ const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
 const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
 const USAGE_SYNC_ACCOUNT: &str = "usage-sync-key";
+/// Manage agents: enable, disable and run the allow-listed agent workflows.
+const AGENTS_ACCOUNT: &str = "github-agents-token";
 /// One slot per repository: `github-merge-token:owner/name`, lowercase.
 const MERGE_PREFIX: &str = "github-merge-token:";
 /// The single item holding all of the above as JSON.
@@ -306,6 +308,42 @@ pub fn set_actions_token(token: &str) -> Result<(), String> {
 
 pub fn clear_actions_token() -> Result<(), String> {
     clear(ACTIONS_ACCOUNT)
+}
+
+/// The Manage agents token. Read only by the actions client at request time.
+pub fn read_agents_token() -> Option<String> {
+    read(AGENTS_ACCOUNT)
+}
+
+pub fn agents_token_present() -> bool {
+    read_agents_token().is_some()
+}
+
+/// Checks a Manage agents token's shape: fine-grained only, and not any other token Atlas
+/// holds, so managing agents never borrows read, re-run or merge rights.
+pub fn check_agents_token(token: &str, others: &[String]) -> Result<(), String> {
+    if !(token.starts_with("github_pat_") && looks_like_token(token)) {
+        return Err("Use a fine-grained token (starting with github_pat_) limited to the ai-ops-atlas repository.".into());
+    }
+    if others.iter().any(|o| o == token) {
+        return Err("That token is already saved for something else in Atlas. Create a separate one for managing agents.".into());
+    }
+    Ok(())
+}
+
+pub fn set_agents_token(token: &str) -> Result<(), String> {
+    let others: Vec<String> = with_secrets(|s| {
+        s.iter()
+            .filter(|(k, _)| k.as_str() != AGENTS_ACCOUNT)
+            .map(|(_, v)| v.clone())
+            .collect()
+    })?;
+    check_agents_token(token, &others)?;
+    write(AGENTS_ACCOUNT, Some(token))
+}
+
+pub fn clear_agents_token() -> Result<(), String> {
+    clear(AGENTS_ACCOUNT)
 }
 
 fn merge_account(repo: &str) -> String {

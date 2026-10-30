@@ -1,3 +1,4 @@
+import { useAlerts } from "../alerts/state";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
@@ -11,7 +12,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
-import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
+import { attentionItems, effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
@@ -402,7 +403,9 @@ function anchors(districts: District[], parks: Park[]) {
 }
 
 export function MapView() {
-  const { catalog, repos, uncataloged, select, selection, setView } = useAtlas();
+  const { catalog, repos, uncataloged, manifestIssues, select, selection, setView } = useAtlas();
+  const alerts = useAlerts().open;
+  const attentionCount = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged).length + alerts.length, [catalog, repos, manifestIssues, uncataloged, alerts.length]);
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -1140,6 +1143,9 @@ export function MapView() {
                 </div>
               ))}
             </dl>
+            <div className="map-next-step">
+              <button title="Open prioritized work in Mission Control. Repository checks and agent activity are separate; select a project for evidence." onClick={() => setView("overview")}><Icon name="overview" size={14}/><span>{attentionCount ? `${attentionCount} need review` : "Review workspace"}</span><b>Mission Control →</b></button>
+            </div>
           </section>
 
           {tip && (

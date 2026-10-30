@@ -300,7 +300,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: project.id === "benjaire-site" ? 112 : 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,

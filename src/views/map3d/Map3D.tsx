@@ -1,3 +1,5 @@
+import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
+import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -17,10 +19,12 @@ import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./
 import { Network, type NetLink } from "./network";
 import { Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
-import { ENTER_MS, LEAVE_MS, useOffice, enterBuilding } from "../office/store";
+import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
+import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { FramePacer } from "./pacer";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -113,12 +117,20 @@ const selOf = (key: string): Sel => {
 function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  for(const shop of scene.retail){
+    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+toolOfficeHeight(shop.name)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
+    m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
+  }
   const skyline=skylineProjectAnchor(scene);
   if(skyline)m.set("project:skyline",skyline);
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
     const hq = m.get(`project:${d.project.id}`);
-    if (hq) for (const a of d.crew) m.set(`agent:${a.id}`, hq);
+    for(const a of d.crew){
+      const workplace=a.workplace&&scene.retail.find(k=>k.name===a.workplace!.building);
+      const anchor=workplace?m.get(skylineBuildingKey(workplace.name)):hq;
+      if(anchor)m.set(`agent:${a.id}`,anchor);
+    }
   }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + TOOL_OFFICE_TOP, w: k.size, d: k.size * 0.8, project: k.projectId });
@@ -280,7 +292,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         h: 28,
         priority: urgent ? 0.5 : 6.5,
         className: `m3-pill quiet ${k.key === selKey ? "selected" : urgent ? "hover" : ""}${net.focusSet && !net.focusSet.has(k.projectId) ? " dim" : ""}`,
-        onClick: () => enterBuilding(`skyline-business:${k.name}`,true),
+        onClick: () => select(k.key),
         node: k.name,
       });
     }
@@ -307,7 +319,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
       out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===shop.key)) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:hover===shop.key?0.5:7,className:"m3-plaque compact secondary",node:<div className="t">{shop.name}</div>,onClick:()=>enterBuilding(`skyline-business:${shop.name}`,true),title:`${shop.name} · khaneilcampbell/skyline`});
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
       if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
@@ -341,7 +353,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     of: (keys) => ({
       ...pick.of(keys),
       over: (key) => { setHover(key); setTip(null); },
-      click:(key,e)=>{if(e.delta>4)return;const tool=scene.kiosks.find(k=>k.key===key);if(tool)enterBuilding(`skyline-business:${tool.name}`,true);else select(key);},
+      click:(key,e)=>{if(e.delta>4)return;const shop=scene.retail.find(k=>k.key===key);select(shop?skylineBuildingKey(shop.name):key);},
     }),
   };
   const terracePick: Pick = {
@@ -369,11 +381,16 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
   const activity = useBuildingActivity();
+  // Frame rate, pixels and shadow detail follow the Performance setting.
+  const power = usePowerProfile();
+  const drawing = visible && officePhase !== "inside";
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={phone ? [1, 1.5] : [1, 2]} frameloop={visible && officePhase !== "inside" ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={phone ? [1, Math.min(1.5, power.maxDpr)] : [1, power.maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+        <FramePacer profile={power} running={drawing} />
         <World
+          power={power}
           light={props.light}
           health={health}
           net={net}
@@ -424,7 +441,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             }}
             className={l.className}
             title={l.title}
-            style={{ width: l.w, visibility: "hidden" }}
+            style={{ width: l.w }}
             role={l.onClick?"button":undefined}
             tabIndex={l.onClick?0:undefined}
             onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
@@ -447,6 +464,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 });
 
 function World({
+  power,
   light: lightMode,
   health,
   net,
@@ -476,6 +494,7 @@ function World({
   phone,
   cover,
 }: {
+  power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
   net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
@@ -505,7 +524,9 @@ function World({
   phone: boolean;
   cover: number;
 }) {
-  const { camera, gl, size, scene: three } = useThree();
+  const { camera, gl, size, scene: three, invalidate } = useThree();
+  // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.
+  useEffect(() => invalidate());
   // Before anything measures the view: in portrait, hold the horizontal angle steady (see PORTRAIT_ASPECT).
   useLayoutEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
@@ -546,6 +567,7 @@ function World({
   movedRef.current = onMoved;
   useEffect(() => {
     const start = () => {
+      wake();
       touched.current = true;
       anim.current = null;
       framing.current = null;
@@ -554,9 +576,13 @@ function World({
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
     controls.disconnect();
     controls.connect(gl.domElement);
+    // Damping eases the camera on after a release; keep drawing every frame until it settles.
+    const change = () => wake(200);
     controls.addEventListener("start", start);
+    controls.addEventListener("change", change);
     return () => {
       controls.removeEventListener("start", start);
+      controls.removeEventListener("change", change);
       controls.disconnect();
     };
   }, [controls, gl]);
@@ -599,6 +625,7 @@ function World({
 
   const goto = (target: THREE.Vector3, dist: number, instant = false, ms = 420, dir = viewDir()) => {
     const to: [THREE.Vector3, THREE.Vector3] = [target.clone(), target.clone().addScaledVector(dir, dist)];
+    wake(ms + 100);
     if (instant || reduced) {
       controls.target.copy(to[0]);
       camera.position.copy(to[1]);
@@ -708,6 +735,7 @@ function World({
         camera.position.copy(to[1]);
         anim.current = null;
       } else anim.current = { t0: performance.now(), ms: LEAVE_MS + 300, from: [controls.target.clone(), camera.position.clone()], to };
+      wake(LEAVE_MS + 400);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [office.phase, office.projectId]);
@@ -733,6 +761,19 @@ function World({
     };
   }, [center, ext, three]);
 
+  // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
+  const shadowSize = phone ? 2048 : power.shadowMap;
+  const firstShadow = useRef(true);
+  useEffect(() => {
+    if (firstShadow.current) return void (firstShadow.current = false);
+    const l = light.current;
+    if (!l?.shadow.map) return;
+    l.shadow.map.dispose();
+    l.shadow.map = null;
+    gl.shadowMap.needsUpdate = true;
+    wake();
+  }, [shadowSize, gl]);
+
   const fog = useMemo(() => new THREE.Fog("#d3e4de", 40, 120), []);
   useEffect(() => {
     three.fog = fog;
@@ -753,6 +794,7 @@ function World({
     if (!reduced) time.value = state.clock.elapsedTime;
     const a = anim.current;
     if (a) {
+      wake(100);
       const p = Math.min(1, (performance.now() - a.t0) / a.ms);
       // Ease in and out so long glides start and land gently.
       const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -772,7 +814,7 @@ function World({
 
     // Re-place labels only when the view or the label set changed.
     const e = camera.matrixWorld.elements;
-    const sig = `${e[12].toFixed(3)},${e[13].toFixed(3)},${e[14].toFixed(3)},${size.width},${size.height},${labelSig.current}`;
+    const sig = `${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
     const boxes = [];
@@ -812,6 +854,7 @@ function World({
   useFrame((_, delta) => {
     const f = focusLevel.value;
     if (f === focusTarget) return;
+    wake(100);
     focusLevel.value = reduced ? focusTarget : THREE.MathUtils.clamp(f + Math.sign(focusTarget - f) * delta * 3.5, 0, 1);
   });
 
@@ -862,10 +905,11 @@ function World({
       <Bloom />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({...kioskPick.of(keys),keys,click:key=>{const shop=scene.retail.find(k=>k.key===key);if(shop)enterBuilding(`skyline-business:${shop.name}`,true);else landmarkSelect();}})}} />
+      <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
+      <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />

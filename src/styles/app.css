@@ -1,34 +1,3 @@
-:root {
-  --forest-900: #16211a;
-  --forest-800: #1d2b22;
-  --forest-700: #253629;
-  --forest-600: #314636;
-  --forest-line: rgba(233, 236, 223, 0.1);
-  --sage-50: #f1f2ea;
-  --sage-100: #e6e9dc;
-  --sage-200: #d3d9ca;
-  --sage-300: #c2cbb9;
-  --sage-400: #a9b4a0;
-  --ink: #1d2620;
-  --ink-2: #47524a;
-  --ink-3: #6c776d;
-  --on-dark: #e9ecdf;
-  --on-dark-2: #a9b3a5;
-  --gold: #c9a35a;
-  --gold-soft: rgba(201, 163, 90, 0.18);
-  --gold-deep: #7d5f25;
-  --good: #4f7a52;
-  --warn: #b0832d;
-  --bad: #a4483a;
-  --unknown: #8a948a;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(22, 33, 26, 0.06), 0 6px 20px rgba(22, 33, 26, 0.07);
-  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
-}
-
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
@@ -810,3 +779,20 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .report-spec-head { display: flex; align-items: center; gap: 8px; }
 .report-summary { display: grid; gap: 6px; }
 .report-top { display: flex; gap: 10px; align-items: flex-start; }
+
+/* Explain existing destinations and evidence without adding a competing panel. */
+.view-description{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.15}.view-description b{font-size:12px;font-weight:600}.view-description small{font-size:10px;color:var(--on-dark-2)}
+.sync-evidence{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.sync-evidence b{font-size:12px;font-weight:500}.sync-evidence small{font-size:10px;color:var(--on-dark-2)}
+.platform-label{color:var(--on-dark-2);border:1px solid var(--forest-line);border-radius:6px;padding:4px 7px;font-size:10px;white-space:nowrap}
+.map-next-step{margin-top:12px;max-width:350px}.map-next-step button{pointer-events:auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;border:1px solid #a58c52;background:#f5f1e5f2;color:#203c30;border-radius:9px;padding:9px 12px;cursor:pointer;font:500 12px var(--sans);box-shadow:0 2px 8px #14271d12}.map-next-step button b{font-weight:600}.map-next-step button:focus-visible{outline:3px solid #a87f27;outline-offset:3px}.map-next-step small{display:block;margin-top:6px;font-size:10px;line-height:1.5;color:inherit;max-width:310px}.map-stage.night .map-next-step button{background:#203c30f2;color:#f1ead8;border-color:#c9a35a}
+.repository-notice{align-items:flex-start;line-height:1.5}.repository-notice>svg{flex-shrink:0;margin-top:3px}.repository-notice strong{display:block;font-size:12px}.repository-notice p{font-size:12px;margin:5px 0 8px}.repository-notice .text-btn{font-size:12px;text-decoration:underline;text-underline-offset:3px}.repository-notice button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.hm-running{background:#d4ac58;box-shadow:0 0 0 2px #d4ac5833}
+@media(max-width:1450px){.platform-label{display:none}.view-description small{display:none}}
+@media(max-width:650px){.map-next-step{margin-top:7px;max-width:100%}.map-next-step button{padding:7px 10px;font-size:11px}.map-next-step small{display:none}.sync-evidence small{display:none}}
+
+.map-next-step button svg{width:14px!important;height:14px!important;flex:0 0 14px}.map-next-step button{width:fit-content;height:auto;min-height:36px}
+
+.repository-notice>svg{width:16px!important;height:16px!important;flex:0 0 16px}.repository-notice-actions{display:flex;gap:12px;flex-wrap:wrap}.repository-notice-actions button{min-height:32px}.repository-notice-actions button:disabled{opacity:.6;cursor:wait}
+
+/* Projection owns visibility; React must not reset placed city labels. */
+.m3-labels > div{visibility:hidden}

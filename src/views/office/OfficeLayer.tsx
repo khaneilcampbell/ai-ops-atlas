@@ -1,3 +1,4 @@
+import {projectOfficeAgents} from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -42,7 +43,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
   // Every registered worker belongs at a desk inside its project building.
-  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId), [catalog, projectId]);
+  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
 
   const rows = useMemo(() => {
@@ -65,6 +66,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const b = r.runtime.basis;
         return {
           ws,
+          floor: a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
@@ -92,7 +94,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   }, [picked, exit]);
 
   if (!project || !plan) return null;
-  const topFloor=floor===4||floor===-1;
+  const visibleDesks=desks.filter(d=>floor===-1||(d.floor??4)===floor);
+  const topFloor=visibleDesks.length>0;
   const row = picked ? rows.get(picked) : undefined;
   const states = [...new Set(desks.map((d) => d.runtime.state))];
 
@@ -110,7 +113,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           onSelect={setPicked}
           api={api}
         />
-        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,0,1,2,3,4].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":n===4?"Floor 4 · Agents":`Floor ${n}`}</button>)}</nav>
+        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":n===3&&projectId==="ai-ops-atlas"?"Floor 3 · Production":n===4?"Floor 4 · Agents":`Floor ${n}`}</button>)}</nav>
         <div className="office-head">
           <button className="office-back" onClick={exit}>
             <span aria-hidden>‹</span> Exit building
@@ -118,7 +121,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           <div>
             <div className="eyebrow">Headquarters · {project.repository}</div>
             <h2>{project.name}</h2>
-            <div className="muted small">{`${floor===-1?"All floors · Lobby, hallways & elevator":floor===0?"Lobby":`Floor ${floor}`} · ${floor===4||floor===-1?"Agents on Floor 4":"Shared spaces"}`}</div>
+            <div className="muted small">{`${floor===-1?"All floors · Lobby, hallways & elevator":floor===0?"Lobby":`Floor ${floor}`} · ${floor===4||floor===-1?"Agents by assigned floor":floor===3&&projectId==="ai-ops-atlas"?"Atlas system production":"Shared spaces"}`}</div>
           </div>
           {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
             <button className="office-awaiting" onClick={() => {setFloor(4);setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId);}}>
@@ -136,9 +139,9 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length > 0 && topFloor && (
           <details className="office-roster" aria-label="Select an agent">
-            <summary>Agents &amp; automations <span>{desks.length}</span></summary>
+            <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
             <div className="office-roster-list">
-            {desks.map((d) => (
+            {visibleDesks.map((d) => (
               <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
                 <i style={{ background: STATE_COLOR[d.runtime.state] }} />
                 {d.name}
