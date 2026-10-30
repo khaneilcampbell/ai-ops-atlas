@@ -28,8 +28,8 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        # Default branch code only: the run's head_sha is passed to the script as data, never checked out.
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
       - name: Collect bounded improvement evidence
         env:
