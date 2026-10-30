@@ -3,11 +3,13 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { isTauri } from "../lib/env";
 import { useAtlas } from "../state";
 
-const RECHECK_MS = 2 * 60 * 60 * 1000;
+const RECHECK_MS = 10 * 60 * 1000;
+// Coming back to the window checks again, but not more than once a minute.
+const FOCUS_GAP_MS = 60 * 1000;
 
 /**
  * Shown in the header once a newer build of main is published. The desktop app checks the
- * signed update feed on launch and every two hours; pressing the button downloads the
+ * signed update feed on launch, every ten minutes and whenever the window comes back into focus; pressing the button downloads the
  * update, verifies its signature and replaces the app. The new copy opens on the same view
  * and window position and takes over the unlocked keys, so there's no Touch ID prompt.
  */
@@ -19,17 +21,25 @@ export function UpdateButton() {
   useEffect(() => {
     if (!isTauri()) return;
     let live = true;
-    const look = () =>
-      check()
+    let last = 0;
+    const look = () => {
+      last = Date.now();
+      return check()
         .then((u) => live && u && setUpdate(u))
         // Offline or the feed is missing: try again at the next check.
         .catch(() => undefined);
+    };
+    const onFocus = () => {
+      if (Date.now() - last > FOCUS_GAP_MS) void look();
+    };
     const first = setTimeout(look, 5000);
     const every = setInterval(look, RECHECK_MS);
+    window.addEventListener("focus", onFocus);
     return () => {
       live = false;
       clearTimeout(first);
       clearInterval(every);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 
