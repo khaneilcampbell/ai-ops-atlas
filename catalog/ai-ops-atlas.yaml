@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: ai-ops-atlas
-  name: ai-ops-atlas
+  name: Atlas HQ
   summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
   status: active
   repository: khaneilcampbell/ai-ops-atlas

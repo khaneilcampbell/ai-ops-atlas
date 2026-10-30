@@ -40,13 +40,13 @@ test("map, night", async ({ page }) => {
 
 test("map, building selected", async ({ page }) => {
   await openAtlas(page);
-  await selectBuilding(page, "ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await check(page, "map-selected");
 });
 
 test("office", async ({ page }) => {
   await openAtlas(page);
-  await selectBuilding(page, "ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button", { name: "Enter building" }).click();
   await settle(page, 4);
   await waitForOffice(page);
@@ -86,7 +86,7 @@ test.describe("phone", () => {
   test("map, building selected", async ({ page }) => {
     await openAtlas(page);
     await waitForScene(page);
-    await selectBuilding(page, "ai-ops-atlas");
+    await selectBuilding(page, "Atlas HQ");
     await check(page, "phone-map-selected");
   });
 });
