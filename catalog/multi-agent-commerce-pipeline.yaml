@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: multi-agent-commerce-pipeline
+  name: Commerce Pipeline
   summary: >-
     Autonomous pipeline that researches a niche, builds digital products with
     Canva, sells them through Stripe on a static storefront, emails buyers

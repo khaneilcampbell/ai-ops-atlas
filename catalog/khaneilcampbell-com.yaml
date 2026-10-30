@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: portfolio-site
-  name: khaneilcampbell.com
+  name: Portfolio Site
   summary: >-
     Static portfolio at khaneilcampbell.com, served by GitHub Pages and built
     with Claude as a working partner.

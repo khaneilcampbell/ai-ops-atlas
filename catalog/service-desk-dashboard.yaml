@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: service-desk
-  name: service-desk-intelligence
+  name: Service Desk
   summary: >-
     Streamlit dashboard that turns service desk ticket data into volume, backlog, SLA health, recurring issue and workload insight. Runs on synthetic tickets.
   status: active

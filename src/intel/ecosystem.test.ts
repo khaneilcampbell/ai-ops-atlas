@@ -37,7 +37,7 @@ describe("engineering review context", () => {
     expect(me.autonomy).toBe(1);
     expect(me.kind).toBe("A");
     expect(me.telemetry).toBe(true);
-    expect(me.project).toBe("ai-ops-atlas");
+    expect(me.project).toBe("Atlas HQ");
   });
 
   it("keeps review runs and repository runs apart", () => {
