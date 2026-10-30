@@ -1,4 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { actionsApi } from "../../actions/api";
+import { useActions } from "../../actions/state";
+import type { AgentOp, Outcome } from "../../actions/types";
 import { ExternalLink } from "../../components/bits";
 import { Icon } from "../../components/Icon";
 import { formatDate, relative } from "../../lib/time";
@@ -25,9 +28,14 @@ function nextLabel(iso: string, now = Date.now()) {
 const runResult = (r: { status: string; conclusion: string | null }) => (r.status !== "completed" ? "Running" : r.conclusion === "success" ? "Succeeded" : r.conclusion ? r.conclusion.replace(/_/g, " ") : "Unknown");
 const EVENT_LABEL: Record<string, string> = { schedule: "Schedule", workflow_dispatch: "Manual", push: "Push", workflow_run: "After CI", pull_request: "Pull request" };
 
-/** Manage agents: every agent Atlas can manage, from the allow-list in src/manage/agents.json. Read-only for now. */
+/** Where controls can work: never on the web, and in the Mac app only once its token is saved. */
+type Mode = "web" | "no-token" | "ready";
+
+/** Manage agents: every agent Atlas can manage, from the allow-list in src/manage/agents.json. */
 export function Manage({ open }: { open: (id: string) => void }) {
   const { catalog, setView, select } = useAtlas();
+  const actions = useActions();
+  const mode: Mode = !actions.available ? "web" : actions.status?.agents_token ? "ready" : "no-token";
   const [data, setData] = useState<ManageData | null>(lastData);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
@@ -86,11 +94,24 @@ export function Manage({ open }: { open: (id: string) => void }) {
       </div>
 
       <div className="notice manage-note" role="note">
-        <Icon name="lock" size={14} />
-        <span>
-          <strong>Read-only for now.</strong> Enable, disable, Run now, and schedule or cap changes are coming to the Mac app next, each with a confirm step and an audit log. The web app stays
-          read-only.
-        </span>
+        <Icon name={mode === "ready" ? "key" : "lock"} size={14} />
+        {mode === "web" ? (
+          <span>
+            <strong>Read-only here.</strong> Enable, disable and Run now work in the Mac app, where each change asks for confirmation and Touch ID and is logged.
+          </span>
+        ) : mode === "no-token" ? (
+          <span>
+            <strong>Controls are off.</strong> Save a Manage agents token in Settings → Actions to enable, disable and run these agents.{" "}
+            <button className="text-btn" onClick={() => setView("settings")}>
+              Open Settings
+            </button>
+          </span>
+        ) : (
+          <span>
+            <strong>Controls are on.</strong> Open an agent's details to enable, disable or run it. Each change shows before and after, asks for Touch ID and is written to the audit log. Schedule
+            and cap changes come next.
+          </span>
+        )}
       </div>
 
       {problems.length > 0 && (
@@ -191,7 +212,7 @@ export function Manage({ open }: { open: (id: string) => void }) {
                   {on && (
                     <tr className="manage-detail-row">
                       <td colSpan={6} id={`manage-${r.agent.id}`}>
-                        <Detail row={r} name={name} open={open} />
+                        <Detail row={r} name={name} open={open} mode={mode} refresh={refresh} />
                       </td>
                     </tr>
                   )}
@@ -208,11 +229,12 @@ export function Manage({ open }: { open: (id: string) => void }) {
   );
 }
 
-function Detail({ row: r, name, open }: { row: ManageRow; name: string; open: (id: string) => void }) {
+function Detail({ row: r, name, open, mode, refresh }: { row: ManageRow; name: string; open: (id: string) => void; mode: Mode; refresh: () => Promise<void> }) {
   const repo = MANIFEST.repository;
   const wfUrl = `https://github.com/${repo}/actions/workflows/${r.agent.workflow}`;
   return (
     <div className="manage-detail">
+      {mode === "ready" && <Controls row={r} name={name} refresh={refresh} />}
       <div className="manage-detail-links">
         <ExternalLink href={wfUrl}>Workflow on GitHub</ExternalLink>
         <ExternalLink href={`https://github.com/${repo}/blob/main/.github/workflows/${r.agent.workflow}`}>Schedule file</ExternalLink>
@@ -254,6 +276,54 @@ function Detail({ row: r, name, open }: { row: ManageRow; name: string; open: (i
       )}
       <h3 className="manage-sub">Latest report</h3>
       <div className="na-block">Reports and monthly spend aren't sent to Atlas yet. The next update adds them; until then the report is on the run page.</div>
+    </div>
+  );
+}
+
+const OP_LABEL: Record<AgentOp, string> = { enable: "Enable", disable: "Disable", run_now: "Run now" };
+
+/**
+ * Enable, Disable and Run now. The page only asks: the Mac app reads the workflow again,
+ * shows before and after in a macOS dialog, asks for Touch ID, writes the audit log, and
+ * refuses if what GitHub reports no longer matches what this page showed.
+ */
+function Controls({ row: r, name, refresh }: { row: ManageRow; name: string; refresh: () => Promise<void> }) {
+  const [busy, setBusy] = useState<AgentOp | null>(null);
+  const [result, setResult] = useState<Outcome | { stage: "failed"; message: string } | null>(null);
+  const known = r.workflowState !== null;
+  const enabled = r.workflowState === "active";
+
+  const go = async (op: AgentOp) => {
+    setBusy(op);
+    setResult(null);
+    try {
+      setResult(await actionsApi.agentAction(r.agent.id, op, r.workflowState));
+    } catch (e) {
+      setResult({ stage: "failed", message: String(e) });
+    } finally {
+      setBusy(null);
+      await refresh();
+    }
+  };
+
+  const ok = result && (result.stage === "started" || result.stage === "changed");
+  return (
+    <div className="manage-controls" role="group" aria-label={`Controls for ${name}`}>
+      {known ? (
+        <>
+          <button className="btn" disabled={!!busy} onClick={() => void go(enabled ? "disable" : "enable")}>
+            <Icon name={enabled ? "pause" : "play"} size={13} /> {busy === "disable" || busy === "enable" ? "Waiting for approval…" : OP_LABEL[enabled ? "disable" : "enable"]}
+          </button>
+          <button className="btn primary" disabled={!!busy || !enabled} onClick={() => void go("run_now")} title={enabled ? undefined : "Enable this agent before running it"}>
+            <Icon name="play" size={13} /> {busy === "run_now" ? "Waiting for approval…" : "Run now"}
+          </button>
+        </>
+      ) : (
+        <span className="muted small">Controls need the agent's current state from GitHub. Press Refresh.</span>
+      )}
+      <span className={`small ${result ? (ok ? "manage-ok" : "manage-bad") : "muted"}`} aria-live="polite">
+        {result ? result.message : "Changes ask for confirmation and Touch ID."}
+      </span>
     </div>
   );
 }

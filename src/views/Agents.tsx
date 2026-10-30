@@ -76,7 +76,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     <div className="page wide">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">{title} registry · read-only</div>
+          <div className="eyebrow">{title} registry{prefs.sub === "manage" ? "" : " · read-only"}</div>
           <h1>{title}</h1>
           <p className="lede">
             {summary.total} {kind === "automations" ? "automations, pipelines, and integrations" : "AI agents and assisted workflows"} supporting your projects. {summary.operational.verified} verified running from live data.

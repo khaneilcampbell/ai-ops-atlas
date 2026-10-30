@@ -111,6 +111,11 @@
 .manage-detail-links { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 12.5px; }
 .manage-detail .runs-table tbody tr { cursor: default; }
 .manage-sub { margin: 6px 0 0; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; color: var(--ink-3); }
+.manage-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; border: 1px solid var(--sage-200); border-radius: var(--radius-sm); background: var(--sage-50); }
+.manage-controls .btn { display: inline-flex; align-items: center; gap: 6px; }
+.manage-controls .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.manage-ok { color: #2f5b33; }
+.manage-bad { color: var(--bad); }
 .manage-building { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; margin: 2px 0 0 -6px; }
 .manage-foot { margin: 0 2px; max-width: 90ch; }
 

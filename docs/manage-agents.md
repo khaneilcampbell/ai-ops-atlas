@@ -2,7 +2,29 @@
 
 Agents → **Manage agents** lists the agents Atlas can manage: the ones that run on GitHub Actions in this repository. Each row shows status, schedule (in words, UTC, with the next run), the last run, the monthly cap and the building the agent works in. The building opens the map with that building selected. **Details** shows the last 10 runs on main.
 
-This first version is **read-only**. Enable/disable, Run now, and schedule or cap changes come next, in the Mac app only, each with a before/after diff, a native confirm, Touch ID and an audit line. Schedule and cap changes will open a pull request, never commit to main. The web app stays read-only.
+## Controls (Mac app only)
+
+In the Mac app, an agent's **Details** has **Enable/Disable** and **Run now**. The web app stays read-only.
+
+Each press goes through `src-tauri/src/actions/agents.rs`:
+
+1. The page sends only the agent id and the operation (`enable`, `disable`, `run_now`). The repository and workflow file come from the allow-list compiled into the app; an id that isn't on it is refused and logged as "(not on the allow-list)".
+2. Refused without a Manage agents token, within 60 seconds of the last change to the same agent, or after 20 agent changes in an hour.
+3. The workflow's state is read again from GitHub. If it no longer matches what the page showed, nothing is sent ("refresh and try again"). Enabling an enabled agent, disabling a disabled one, or running a disabled one is refused.
+4. A macOS dialog shows **Before** and **After** (and, for Run now, that it uses default inputs and may spend within the agent's cap), then Touch ID.
+5. An `attempted` line is written to the audit log (`audit.jsonl`) before the one request: `PUT …/actions/workflows/{file}/enable|disable` or `POST …/dispatches` with `ref: main` and no inputs. The outcome is a second line. Both show in Activity and in Settings → Actions.
+
+Schedule and cap changes come next, as pull requests with a diff, never commits to main.
+
+### Token
+
+Settings → Actions → **Manage agents**: a separate fine-grained token, Only select repositories → `ai-ops-atlas`, Repository permissions → **Actions: Read and write** (Metadata read is added automatically). Create it at https://github.com/settings/personal-access-tokens/new. Atlas checks the account and that the token can see the repository, refuses a token already saved for something else, and keeps it in the Touch ID vault. It is read only by `actions/client.rs` at request time and never reaches the web view or the logs. Removing it turns the controls off.
+
+GitHub can't limit a token to single workflows, so the allow-list does that. The token could also start Atlas's own CI or release workflows if it were used outside Atlas, which is why it is limited to one repository and kept only in the vault.
+
+### Rollback
+
+Remove the token in Settings (controls off at once), or revert the PR. Agents disabled from Atlas stay disabled until enabled again, from Atlas or on GitHub's workflow page (`…/actions/workflows/<file>` → Enable workflow).
 
 ## The allow-list: `src/manage/agents.json`
 
