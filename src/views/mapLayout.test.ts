@@ -172,3 +172,11 @@ it("keeps one accessible Skyline district in every map grouping",()=>{
     expect(overlaps(layout)).toEqual([]);
   }
 });
+
+it("registers Skyline without duplicating its existing residential district", () => {
+  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/skyline");
+  const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
+  expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
+  expect(layout.parks.filter(p => !p.strays.length)).toHaveLength(1);
+  expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
+});

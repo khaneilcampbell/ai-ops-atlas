@@ -396,7 +396,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
-          landmarkSelect={()=>select("repo:khaneilcampbell/skyline")}
+          landmarkSelect={()=>select("project:skyline")}
           kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}

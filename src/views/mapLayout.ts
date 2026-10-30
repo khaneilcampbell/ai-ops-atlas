@@ -206,7 +206,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
 
   // Bucket projects into neighborhoods, then pack each neighborhood on its own.
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
-  for (const p of catalog.projects) {
+  // Skyline already has its custom residential district; do not add a duplicate office.
+  for (const p of catalog.projects.filter(p => p.id !== "skyline")) {
     const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
     b.projects.push(p);

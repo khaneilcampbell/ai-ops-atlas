@@ -29,6 +29,7 @@ describe("districts", () => {
       "commerce-pipeline": "business-operations",
       "intelligence-hub": "ai-engineering",
       "soc-lab": "security-infrastructure",
+      "skyline": "business-operations",
       "service-desk": "security-infrastructure",
       "portfolio-site": "career-portfolio",
       "github-profile": "career-portfolio",
