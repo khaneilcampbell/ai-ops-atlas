@@ -23,6 +23,8 @@ pub const MAX_MERGES_PER_HOUR: usize = 5;
 pub const ACTION_AGENT_ENABLE: &str = "agent_enable";
 pub const ACTION_AGENT_DISABLE: &str = "agent_disable";
 pub const ACTION_AGENT_RUN: &str = "agent_run";
+pub const ACTION_AGENT_SCHEDULE: &str = "agent_schedule";
+pub const ACTION_AGENT_CAP: &str = "agent_cap";
 /// The same agent can't be changed or started again from Atlas within this window.
 pub const AGENT_COOLDOWN_SECONDS: i64 = 60;
 /// Manage agents actions Atlas will send across all agents in any rolling hour.
@@ -251,7 +253,11 @@ pub fn agent_rate_block(log: &[AuditRecord], agent: &str, now: DateTime<Utc>) ->
         r.stage == Stage::Attempted
             && matches!(
                 r.action.as_str(),
-                ACTION_AGENT_ENABLE | ACTION_AGENT_DISABLE | ACTION_AGENT_RUN
+                ACTION_AGENT_ENABLE
+                    | ACTION_AGENT_DISABLE
+                    | ACTION_AGENT_RUN
+                    | ACTION_AGENT_SCHEDULE
+                    | ACTION_AGENT_CAP
             )
     });
     let cooldown = now - Duration::seconds(AGENT_COOLDOWN_SECONDS);

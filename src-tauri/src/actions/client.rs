@@ -3,6 +3,7 @@
 //! re-run uses the separate Actions token; a merge uses that repository's own merge token;
 //! Manage agents uses its own agents token. Never the read-only one.
 
+use super::agent_config::{valid_branch, valid_path, ConfigWriteApi};
 use super::agents::{AgentOp, AgentWriteApi};
 use super::merge::{MergeApi, MERGE_METHOD};
 use super::rerun::{SendError, WriteApi, WriteResponse};
@@ -49,6 +50,27 @@ pub fn workflow_url(repo: &str, workflow: &str, op: AgentOp) -> Option<String> {
     };
     (valid_repo(repo) && file_ok)
         .then(|| format!("https://api.github.com/repos/{repo}/actions/workflows/{workflow}/{tail}"))
+}
+
+/// The three endpoints a schedule or cap change uses. `None` unless the repository is a plain
+/// owner/name, the branch an `atlas/…` name and the file one the allow-list may name.
+pub fn config_url(repo: &str, what: ConfigTarget<'_>) -> Option<String> {
+    if !valid_repo(repo) {
+        return None;
+    }
+    let base = format!("https://api.github.com/repos/{repo}");
+    match what {
+        ConfigTarget::Branch => Some(format!("{base}/git/refs")),
+        ConfigTarget::File(path) => valid_path(path).then(|| format!("{base}/contents/{path}")),
+        ConfigTarget::Pull => Some(format!("{base}/pulls")),
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum ConfigTarget<'a> {
+    Branch,
+    File(&'a str),
+    Pull,
 }
 
 /// Maps a send error to text without the request, which would carry the auth header.
@@ -244,10 +266,104 @@ impl AgentWriteApi for WriteClient {
     }
 }
 
+impl WriteClient {
+    async fn send_agents(
+        &self,
+        req: reqwest::RequestBuilder,
+        body: serde_json::Value,
+    ) -> Result<WriteResponse, SendError> {
+        let token = crate::secrets::read_agents_token()
+            .ok_or_else(|| SendError::NotSent("No Manage agents token is saved".into()))?;
+        let res = req
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .bearer_auth(token)
+            .json(&body)
+            .send()
+            .await
+            .map_err(send_error)?;
+        Ok(write_response(res).await)
+    }
+}
+
+#[async_trait::async_trait]
+impl ConfigWriteApi for WriteClient {
+    async fn has_token(&self) -> bool {
+        crate::secrets::read_agents_token().is_some()
+    }
+
+    async fn create_branch(
+        &self,
+        repo: &str,
+        branch: &str,
+        sha: &str,
+    ) -> Result<WriteResponse, SendError> {
+        let url = config_url(repo, ConfigTarget::Branch)
+            .filter(|_| valid_branch(branch) && sha.len() == 40)
+            .ok_or_else(|| SendError::NotSent("Invalid repository or branch".into()))?;
+        let body = serde_json::json!({ "ref": format!("refs/heads/{branch}"), "sha": sha });
+        self.send_agents(self.http.post(url), body).await
+    }
+
+    async fn put_file(
+        &self,
+        repo: &str,
+        path: &str,
+        branch: &str,
+        blob_sha: &str,
+        message: &str,
+        content: &str,
+    ) -> Result<WriteResponse, SendError> {
+        use base64::Engine;
+        // Never main: the change only ever lands on the new atlas/ branch.
+        let url = config_url(repo, ConfigTarget::File(path))
+            .filter(|_| valid_branch(branch))
+            .ok_or_else(|| SendError::NotSent("Invalid repository, file or branch".into()))?;
+        let body = serde_json::json!({
+            "message": message,
+            "content": base64::engine::general_purpose::STANDARD.encode(content),
+            "sha": blob_sha,
+            "branch": branch,
+        });
+        self.send_agents(self.http.put(url), body).await
+    }
+
+    async fn open_pull(
+        &self,
+        repo: &str,
+        branch: &str,
+        title: &str,
+        body: &str,
+    ) -> Result<WriteResponse, SendError> {
+        let url = config_url(repo, ConfigTarget::Pull)
+            .filter(|_| valid_branch(branch))
+            .ok_or_else(|| SendError::NotSent("Invalid repository or branch".into()))?;
+        let body = serde_json::json!({
+            "title": title,
+            "head": branch,
+            "base": super::agent_config::BASE_BRANCH,
+            "body": body,
+        });
+        self.send_agents(self.http.post(url), body).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{merge_url, rerun_url, workflow_url};
+    use super::{config_url, merge_url, rerun_url, workflow_url, ConfigTarget};
     use crate::actions::agents::AgentOp;
+
+    #[test]
+    fn builds_only_the_config_endpoints() {
+        let repo = "khaneilcampbell/ai-ops-atlas";
+        assert_eq!(
+            config_url(repo, ConfigTarget::File("ops/merge-flow/policy.json")).as_deref(),
+            Some("https://api.github.com/repos/khaneilcampbell/ai-ops-atlas/contents/ops/merge-flow/policy.json")
+        );
+        assert!(config_url(repo, ConfigTarget::File("src/main.rs")).is_none());
+        assert!(config_url(repo, ConfigTarget::File("ops/../src/x.json")).is_none());
+        assert!(config_url("a/b/c", ConfigTarget::Pull).is_none());
+    }
 
     #[test]
     fn builds_only_the_workflow_endpoints() {

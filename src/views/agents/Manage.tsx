@@ -1,12 +1,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { actionsApi } from "../../actions/api";
 import { useActions } from "../../actions/state";
-import type { AgentOp, Outcome } from "../../actions/types";
+import type { AgentOp, ConfigChange, ConfigOutcome, Outcome } from "../../actions/types";
 import { ExternalLink } from "../../components/bits";
 import { Icon } from "../../components/Icon";
 import { formatDate, relative } from "../../lib/time";
 import { fetchManageData, MANAGE_STATUS_LABEL, manageRows, type ManageData, type ManageRow, type ManageStatus } from "../../manage/data";
-import { MANIFEST } from "../../manage/manifest";
+import { describeCron, parseCron } from "../../manage/cron";
+import { capProblem, HARD_MAX_CAP_USD, MANIFEST, scheduleProblem } from "../../manage/manifest";
 import { useAtlas } from "../../state";
 
 // Kept for the session, so switching tabs and back shows the last answer at once. A new
@@ -109,7 +110,7 @@ export function Manage({ open }: { open: (id: string) => void }) {
         ) : (
           <span>
             <strong>Controls are on.</strong> Open an agent's details to enable, disable or run it. Each change shows before and after, asks for Touch ID and is written to the audit log. Schedule
-            and cap changes come next.
+            and cap changes open a pull request, so nothing changes until you merge it.
           </span>
         )}
       </div>
@@ -235,6 +236,7 @@ function Detail({ row: r, name, open, mode, refresh }: { row: ManageRow; name: s
   return (
     <div className="manage-detail">
       {mode === "ready" && <Controls row={r} name={name} refresh={refresh} />}
+      {mode === "ready" && <ConfigForms row={r} name={name} />}
       <div className="manage-detail-links">
         <ExternalLink href={wfUrl}>Workflow on GitHub</ExternalLink>
         <ExternalLink href={`https://github.com/${repo}/blob/main/.github/workflows/${r.agent.workflow}`}>Schedule file</ExternalLink>
@@ -323,6 +325,96 @@ function Controls({ row: r, name, refresh }: { row: ManageRow; name: string; ref
       )}
       <span className={`small ${result ? (ok ? "manage-ok" : "manage-bad") : "muted"}`} aria-live="polite">
         {result ? result.message : "Changes ask for confirmation and Touch ID."}
+      </span>
+    </div>
+  );
+}
+
+/** Plain words for a schedule the person is typing, or null while it doesn't parse. */
+function scheduleWords(text: string): string | null {
+  try {
+    parseCron(text);
+    return describeCron(text);
+  } catch {
+    return null;
+  }
+}
+
+/** Change schedule and Change cap. Each opens a pull request; the page checks the value as it's typed and Rust checks it again. */
+function ConfigForms({ row: r, name }: { row: ManageRow; name: string }) {
+  const a = r.agent;
+  const [schedule, setSchedule] = useState(a.schedule);
+  const [cap, setCap] = useState(a.cap ? a.cap.usd.toFixed(2) : "");
+  const [busy, setBusy] = useState<ConfigChange["field"] | null>(null);
+  const [result, setResult] = useState<ConfigOutcome | { stage: "failed"; message: string; url?: null } | null>(null);
+
+  const sText = schedule.trim();
+  const sProblem = sText === a.schedule ? null : scheduleProblem(a, sText);
+  const sChanged = sText !== a.schedule;
+  const capNum = cap.trim() === "" ? NaN : Number(cap);
+  const cProblem = a.cap && cap.trim() !== a.cap.usd.toFixed(2) ? capProblem(a.cap, capNum) : null;
+  const cChanged = !!a.cap && Number.isFinite(capNum) && Math.abs(capNum - a.cap.usd) > 1e-9;
+
+  const submit = async (change: ConfigChange) => {
+    setBusy(change.field);
+    setResult(null);
+    try {
+      setResult(await actionsApi.agentConfigChange(a.id, change));
+    } catch (e) {
+      setResult({ stage: "failed", message: String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const ok = result?.stage === "opened";
+  const sid = `sched-${a.id}`;
+  const cid = `cap-${a.id}`;
+
+  return (
+    <div className="manage-config" role="group" aria-label={`Change ${name}'s schedule or cap`}>
+      <form
+        className="manage-config-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (sChanged && !sProblem) void submit({ field: "schedule", value: sText });
+        }}
+      >
+        <label htmlFor={sid}>Schedule (cron, UTC)</label>
+        <input id={sid} className="mono" value={schedule} onChange={(e) => setSchedule(e.target.value)} spellCheck={false} autoComplete="off" aria-invalid={!!sProblem} aria-describedby={`${sid}-hint`} />
+        <button className="btn" type="submit" disabled={!!busy || !sChanged || !!sProblem}>
+          {busy === "schedule" ? "Waiting for approval…" : "Open pull request"}
+        </button>
+        <span id={`${sid}-hint`} className={`small ${sProblem ? "manage-bad" : "muted"}`}>
+          {sProblem ?? (sChanged ? `New: ${scheduleWords(sText) ?? sText}. Was: ${scheduleWords(a.schedule) ?? a.schedule}.` : `Now: ${scheduleWords(a.schedule) ?? a.schedule}. At least ${a.paid ? "4 hours" : "15 minutes"} between runs.`)}
+        </span>
+      </form>
+      {a.cap && (
+        <form
+          className="manage-config-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (cChanged && !cProblem) void submit({ field: "cap", value: capNum });
+          }}
+        >
+          <label htmlFor={cid}>Monthly cap (USD)</label>
+          <input id={cid} inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} autoComplete="off" aria-invalid={!!cProblem} aria-describedby={`${cid}-hint`} />
+          <button className="btn" type="submit" disabled={!!busy || !cChanged || !!cProblem}>
+            {busy === "cap" ? "Waiting for approval…" : "Open pull request"}
+          </button>
+          <span id={`${cid}-hint`} className={`small ${cProblem ? "manage-bad" : "muted"}`}>
+            {cProblem ?? (cChanged ? `New: ${usd(capNum)} a month. Was: ${usd(a.cap.usd)}.` : `Now: ${usd(a.cap.usd)} a month. At most ${usd(Math.min(a.cap.maxUsd, HARD_MAX_CAP_USD))}.`)}
+          </span>
+        </form>
+      )}
+      <span className={`small ${result ? (ok ? "manage-ok" : "manage-bad") : "muted"}`} aria-live="polite">
+        {result ? (
+          <>
+            {result.message}{" "}
+            {ok && result.url && <ExternalLink href={result.url}>Review the pull request</ExternalLink>}
+          </>
+        ) : (
+          "Atlas opens a pull request with the before and after. Nothing changes until you merge it."
+        )}
       </span>
     </div>
   );

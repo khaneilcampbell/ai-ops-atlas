@@ -62,4 +62,13 @@ describe("describeRecord, Manage agents", () => {
     expect(d.result).toBe("success");
     expect(describeRecord({ ...base, action: "agent_run", stage: "refused" }).title).toBe("Run agent: Not allowed");
   });
+
+  it("links schedule and cap changes to the pull request Atlas opened", () => {
+    const base = { id: "2", at: "2026-10-30T12:00:00Z", actor: "kc", github_login: null, repo: "khaneilcampbell/ai-ops-atlas", run_id: 0, agent: "github-merge-flow", workflow: ".github/workflows/merge-flow.yml", run_number: null, attempt_before: null, head_sha: null, branch: "atlas/github-merge-flow-schedule-20261030-120000", reason: null, http_status: 201, request_id: null, message: null };
+    const d = describeRecord({ ...base, action: "agent_schedule", stage: "opened", pull_number: 140, title: "Manage agents: change github-merge-flow's schedule to 23 */6 * * *" });
+    expect(d.title).toBe("Change agent schedule: Pull request opened");
+    expect(d.url).toBe("https://github.com/khaneilcampbell/ai-ops-atlas/pull/140");
+    expect(d.result).toBe("success");
+    expect(describeRecord({ ...base, action: "agent_cap", stage: "refused" }).url).toBe("https://github.com/khaneilcampbell/ai-ops-atlas/pulls");
+  });
 });

@@ -70,6 +70,7 @@ pub fn run() {
             actions::agents_token_set,
             actions::agents_token_clear,
             actions::agent_action,
+            actions::agent_config_change,
             usage_sync::usage_sync_status,
             usage_sync::usage_sync_set_url,
             usage_sync::usage_sync_new_key,
