@@ -12,6 +12,6 @@ Scope: PR #125, CodeQL Rust analysis 2061691451. The seven results were reviewed
 
 The release-mode harness covers iterator operations, pointer-slice truncate/reuse, Object/GValue clone/drop, boxed clone/drop, valid/invalid URI out-parameters, absent hostname, and UUID validation. Tests complement the source review; passing tests alone do not establish memory safety.
 
-Results are resolved individually with the reason `false positive` and an explanation linked to this file. Reopen if a reproducible typed path or changed upstream implementation invalidates this assessment. Original Dependabot alert #16 remains a separate version-based advisory; the two-line VariantStrIter patch is documented in `src-tauri/vendor/glib/ATLAS-PATCH.md`.
+Proposed resolution, pending owner approval: dismiss these seven results individually with the reason `false positive` and an explanation linked to this file. No findings have been dismissed as part of this review. Reopen if a reproducible typed path or changed upstream implementation invalidates this assessment. Original Dependabot alert #16 remains a separate version-based advisory; the two-line VariantStrIter patch is documented in `src-tauri/vendor/glib/ATLAS-PATCH.md`.
 
 References: https://docs.github.com/en/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/resolve-alerts and https://codeql.github.com/codeql-query-help/rust/rust-access-invalid-pointer/ .
