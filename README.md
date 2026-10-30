@@ -2,6 +2,10 @@
 
 A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
 
+![The AI Ops Atlas workspace map: an isometric island at night where each project is a district, its repository is the lit tower in the middle and its agents are the houses around it](docs/screenshots/workspace-map.webp)
+
+*The workspace map. Ten projects, fourteen agents and twenty-seven automations on one island; the header's **Live** pill shows the latest CI result, and the footer lists the selected repository's agents.*
+
 Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. The two exceptions, both in the Mac app only, are **Re-run failed jobs** on a failed GitHub Actions run and **Merge pull request** on a pull request GitHub reports ready (every required check green, no changes requested, not a draft). Each is off by default, limited to repositories you tick, approved in a macOS dialog each time (merges also ask for Touch ID), uses its own write-scoped token (one per repository for merges), and is audited. See [docs/actions.md](docs/actions.md). Nothing else in the app can change a repository or start an external agent.
 
 ## What it does
@@ -18,6 +22,10 @@ Atlas is **read-only**. It reads project manifests and GitHub data, and its one 
 | Agent alerts | Unattended customer-facing agents raise an alert when they report a failure or go silent: a red header pill, Mission Control's Agent alerts list, optional Mac or browser notifications, and optional email from the site. Agents that are off on purpose show as Not running. See [docs/alerts.md](docs/alerts.md) |
 | Repository intelligence | Pick a repository and the agent reads it from GitHub, asks Claude for a structured assessment and saves a report. Verified facts are kept apart from Claude's unverified recommendations. **Intel** shows the agent's configuration, every run with its trace, and token and cost totals. See [docs/repository-intelligence.md](docs/repository-intelligence.md) |
 | Settings | Refresh interval, cache, map labels, an optional GitHub token, and the Anthropic key, budgets and schedule for the intelligence agent. Keys are stored in the macOS Keychain |
+
+![Hovering a district on the workspace map shows its automation count, status and CI result](docs/screenshots/workspace-map-hover.webp)
+
+*Hovering a district shows its automations, whether they are active, and whether CI is passing. The legend at the bottom colors buildings by framework (CrewAI, Claude, GitHub Actions, Splunk, n8n, Shell, Python) and flags anything that needs attention.*
 
 ## Run it
 
