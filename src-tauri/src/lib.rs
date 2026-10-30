@@ -1,4 +1,5 @@
 mod actions;
+mod export;
 mod github;
 mod handoff;
 mod intel;
@@ -77,6 +78,8 @@ pub fn run() {
             usage_sync::usage_sync_push,
             live::live_feed,
             live::live_publish,
+            live::live_reports,
+            export::save_pdf,
             power::power_on_battery,
         ])
         .run(tauri::generate_context!())

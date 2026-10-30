@@ -94,6 +94,7 @@ export function describe(e: LiveEvent): string | null {
     const r = e.body as Partial<AgentRun>;
     return `${r.phase ?? "Pipeline phase"} ${RUN_WORD[r.status ?? ""] ?? "reported"} · ${r.project ?? "pipeline"}`;
   }
+  if (e.kind === "agent_report") return `New report · ${typeof e.body?.agent === "string" ? e.body.agent : "agent"}`;
   if (e.kind === "intel_run") {
     const r = e.body as Partial<Run>;
     return `Repository Intelligence ${r.status ?? "updated"} · ${(r.repo ?? repo).split("/").pop()}`;

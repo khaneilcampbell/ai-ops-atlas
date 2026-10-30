@@ -1,6 +1,7 @@
 import { AgentOutput } from "../../components/AgentOutput";
 import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
+import { AgentReports } from "../../components/AgentReports";
 import { Icon } from "../../components/Icon";
 import { CopyButton, ExternalLink, StatusPill } from "../../components/bits";
 import { attentionItems, repoData } from "../../lib/derive";
@@ -9,11 +10,13 @@ import type { RegistryEntry } from "../../registry/registry";
 import { documentationChecks } from "../../registry/profile";
 import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
+import { isReportAgent } from "../../reports/model";
 import { useAtlas } from "../../state";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
-type Tab = "output" | "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
-const TABS: { id: Tab; label: string }[] = [
+type Tab = "report" | "output" | "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
+const ALL_TABS: { id: Tab; label: string }[] = [
+  { id: "report", label: "Reports" },
   { id: "overview", label: "Overview" },
   { id: "output", label: "Output" },
   { id: "goals", label: "Goals" },
@@ -28,8 +31,11 @@ const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log",
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
 export function Inspector({ entry }: { entry: RegistryEntry }) {
   const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
-  const [tab, setTab] = useState<Tab>("overview");
   const { profile: p, telemetry: t } = entry;
+  // Agents that store full reports open on them: that's what they're for.
+  const reports = isReportAgent(p.id) ? p.id : null;
+  const TABS = reports ? ALL_TABS : ALL_TABS.filter((x) => x.id !== "report");
+  const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
   const snap = repoData(repos[p.repository]);
   const branch = snap?.defaultBranch ?? "HEAD";
@@ -136,6 +142,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       </div>
 
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
+        {tab === "report" && reports && <AgentReports agent={reports} />}
+
         {tab !== "output" && <CodexReviewHandoff agent={agent}/>}
         {tab === "output" && <AgentOutput agent={agent}/>}
         {tab === "overview" && (

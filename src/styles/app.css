@@ -769,6 +769,17 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .m3-plaque.compact.secondary::after {border-top-color:rgba(246,245,236,.92);}
 .m3-plaque.compact.hover {border-color:#c9a35a;}
 
+/* Agent reports (src/components/AgentReports.tsx) */
+.agent-reports { display: grid; gap: 16px; }
+.report-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.report-head select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--sage-200); background: transparent; color: inherit; }
+.report-table td { vertical-align: top; }
+.report-score { display: inline-block; min-width: 34px; text-align: center; padding: 2px 7px; border-radius: 999px; background: var(--gold-soft); color: var(--gold-deep); font-weight: 600; font-size: 12px; }
+.report-ideas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.report-spec-head { display: flex; align-items: center; gap: 8px; }
+.report-summary { display: grid; gap: 6px; }
+.report-top { display: flex; gap: 10px; align-items: flex-start; }
+
 /* Explain existing destinations and evidence without adding a competing panel. */
 .view-description{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.15}.view-description b{font-size:12px;font-weight:600}.view-description small{font-size:10px;color:var(--on-dark-2)}
 .sync-evidence{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.sync-evidence b{font-size:12px;font-weight:500}.sync-evidence small{font-size:10px;color:var(--on-dark-2)}
