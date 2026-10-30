@@ -7,6 +7,14 @@ test.use({deviceScaleFactor:1});
 const out=join(import.meta.dirname,"out");
 async function shot(page:import("@playwright/test").Page,name:string){mkdirSync(out,{recursive:true});await page.screenshot({path:join(out,name+".png")});}
 
+async function waitForFloorMarkers(page:import("@playwright/test").Page,count:number){
+  // The test clock is paused; keep drawing frames while the lazy WebGL/Html roots initialize.
+  for(let i=0;i<20&&(await page.locator("[data-floor-label]").count())!==count;i++){
+    await page.waitForTimeout(150);await settle(page,2);
+  }
+  await expect(page.locator("[data-floor-label]")).toHaveCount(count);
+}
+
 test("project interiors: all floors, top-floor agents, lobby and exit",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
@@ -15,7 +23,7 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
   await settle(page,2);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
-  await expect(page.locator("[data-floor-label]")).toHaveCount(5);
+  await waitForFloorMarkers(page,5);
   for(const n of [0,1,2,3,4])await expect(page.locator(`[data-floor-label="${n}"]`)).toHaveText(n===0?"Lobby":`Floor ${n}`);
   await shot(page,"interior-project-all");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,2);await waitForOffice(page);
@@ -36,7 +44,7 @@ test("Skyline night interior: shared navigation and exterior clearance",async({p
   await expect(page.locator(".skyline-interior.night")).toBeVisible();
   const nav=page.getByRole("navigation",{name:"Choose Skyline floor"});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
-  await expect(page.locator("[data-floor-label]")).toHaveCount(5);
+  await waitForFloorMarkers(page,5);
   await shot(page,"interior-skyline-night-all");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
   await shot(page,"interior-skyline-night-lobby");
