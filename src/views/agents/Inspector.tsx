@@ -1,3 +1,4 @@
+import { AgentOutput } from "../../components/AgentOutput";
 import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
 import { Icon } from "../../components/Icon";
@@ -11,9 +12,10 @@ import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type
 import { useAtlas } from "../../state";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
-type Tab = "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
+type Tab = "output" | "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "output", label: "Output" },
   { id: "goals", label: "Goals" },
   { id: "workflow", label: "Workflow" },
   { id: "operations", label: "Operations" },
@@ -134,7 +136,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       </div>
 
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
-        <CodexReviewHandoff agent={agent}/>
+        {tab !== "output" && <CodexReviewHandoff agent={agent}/>}
+        {tab === "output" && <AgentOutput agent={agent}/>}
         {tab === "overview" && (
           <div className="reg-cols">
             <dl className="kv">

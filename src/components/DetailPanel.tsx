@@ -1,3 +1,4 @@
+import { AgentOutput } from "./AgentOutput";
 import { RepositoryNotice } from "./RepositoryNotice";
 import {CodexReviewHandoff} from "./CodexReviewHandoff";
 import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
@@ -32,7 +33,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   }, [select]);
 
   if (!selection) return null;
-  const body = selection.kind === "agent" ? <AgentDetail id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
+  const body = selection.kind === "agent" ? <AgentDetail key={selection.id} id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -159,6 +160,7 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
 }
 
 function AgentDetail({ id }: { id: string }) {
+  const [tab, setTab] = useState<"overview" | "output">("overview");
   const { catalog, repos, select } = useAtlas();
   const agent = catalog.agents.find((a) => a.id === id);
   const history = useMemo(() => activityFeed(catalog, repos, { agent: id }), [catalog, repos, id]);
@@ -177,7 +179,17 @@ function AgentDetail({ id }: { id: string }) {
           <span className="chip">{agent.framework}</span>
         </div>
       </Head>
-      <div className="panel-body selectable">
+      <div className="panel-tabs" role="tablist" aria-label="Agent sections">
+        {(["overview", "output"] as const).map((name) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? "overview" : event.key === "End" ? "output" : name === "overview" ? "output" : "overview";
+          setTab(next);
+          document.getElementById(`agent-${id}-${next}-tab`)?.focus();
+        }}>{name === "overview" ? "Overview" : "Output"}</button>)}
+      </div>
+      <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
+        {tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <CodexReviewHandoff agent={agent}/>
         <dl className="kv">
@@ -257,6 +269,7 @@ function AgentDetail({ id }: { id: string }) {
             </ul>
           )}
         </div>
+        </>}
       </div>
     </>
   );
