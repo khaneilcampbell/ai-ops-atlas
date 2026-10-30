@@ -27,6 +27,9 @@ export interface Agent {
   framework: string;
   model?: string;
   runtime?: string;
+  /** Physical workplace; project/repository ownership remains unchanged. */
+  officeFloor?: number;
+  workplace?: {building:string;floor:number;room:string};
   status: Status;
   trigger?: string;
   source?: string;
