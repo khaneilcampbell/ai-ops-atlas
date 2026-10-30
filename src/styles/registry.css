@@ -92,3 +92,39 @@
 .goals-table td { vertical-align: top; }
 .goals-table .title { font-weight: 500; }
 .goals-table .meta { color: var(--ink-3); font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+
+/* Manage agents */
+.manage { display: flex; flex-direction: column; gap: 12px; }
+.manage-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.manage-head h2 { margin: 0; font-size: 18px; }
+.manage-head p { margin: 4px 0 0; }
+.manage-head .btn { display: inline-flex; align-items: center; gap: 6px; }
+.manage-note strong { font-weight: 500; }
+.manage-note svg { flex-shrink: 0; margin-top: 2px; }
+.manage-card { overflow-x: auto; padding: 0; }
+.manage-table { width: 100%; border-collapse: collapse; }
+.manage-table td { vertical-align: top; }
+.manage-table .manage-toggle { text-align: right; white-space: nowrap; }
+.manage-table tbody tr.manage-detail-row { cursor: default; }
+.manage-table tbody tr.manage-detail-row:hover td { background: none; }
+.manage-detail { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 6px; }
+.manage-detail-links { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 12.5px; }
+.manage-detail .runs-table tbody tr { cursor: default; }
+.manage-sub { margin: 6px 0 0; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; color: var(--ink-3); }
+.manage-building { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; margin: 2px 0 0 -6px; }
+.manage-foot { margin: 0 2px; max-width: 90ch; }
+
+/* Phones: each agent becomes a card with labelled fields. Child selectors keep the nested runs table a table. */
+@media (max-width: 760px) {
+  .manage .manage-table > thead { display: none; }
+  .manage table.manage-table, .manage .manage-detail table.runs-table { min-width: 0; }
+  .manage .manage-table, .manage .manage-table > tbody, .manage .manage-table > tbody > tr, .manage .manage-table > tbody > tr > td { display: block; width: auto; box-sizing: border-box; }
+  .manage .manage-table > tbody > tr:not(.manage-detail-row) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 14px; padding: 14px 16px; border-bottom: 1px solid var(--sage-100); }
+  .manage .manage-table > tbody > tr > td, .manage .manage-table > tbody > tr:hover > td, .manage .manage-table > tbody > tr.selected > td { padding: 0; border: 0; background: none; min-width: 0; }
+  .manage .manage-table > tbody > tr.selected { background: var(--gold-soft); }
+  .manage .manage-table > tbody > tr > td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
+  .manage .manage-table > tbody > tr > td[data-label="Agent"] { grid-column: 1 / -1; }
+  .manage .manage-table > tbody > tr > td.manage-toggle { grid-column: 1 / -1; text-align: left; }
+  .manage .manage-table > tbody > tr.manage-detail-row > td { padding: 4px 16px 14px; border-bottom: 1px solid var(--sage-100); }
+  .manage .manage-detail .runs-table td, .manage .manage-detail .runs-table th { padding: 6px 8px; }
+}
