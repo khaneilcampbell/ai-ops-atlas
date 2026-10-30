@@ -50,19 +50,16 @@ mod tests {
         assert!(restored.is::<glib::Object>());
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, glib::Boxed)]
-    #[boxed_type(name = "AtlasGlibRegressionBoxed")]
-    struct OwnedBoxed(String);
-
     #[test]
     fn boxed_values_clone_and_drop_independently() {
-        let value = OwnedBoxed("owned".into()).to_value();
+        // Exercise GLib's production boxed value type instead of generating a
+        // test-only unsafe conversion layer with the Boxed derive macro.
+        let bytes = glib::Bytes::from_owned(b"owned".to_vec());
+        let value = bytes.to_value();
         let copied = value.clone();
         drop(value);
-        assert_eq!(
-            copied.get::<OwnedBoxed>().unwrap(),
-            OwnedBoxed("owned".into())
-        );
+        drop(bytes);
+        assert_eq!(copied.get::<glib::Bytes>().unwrap().as_ref(), b"owned");
     }
 
     #[test]

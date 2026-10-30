@@ -15,3 +15,7 @@ The release-mode harness covers iterator operations, pointer-slice truncate/reus
 Proposed resolution, pending owner approval: dismiss these seven results individually with the reason `false positive` and an explanation linked to this file. No findings have been dismissed as part of this review. Reopen if a reproducible typed path or changed upstream implementation invalidates this assessment. Original Dependabot alert #16 remains a separate version-based advisory; the two-line VariantStrIter patch is documented in `src-tauri/vendor/glib/ATLAS-PATCH.md`.
 
 References: https://docs.github.com/en/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/resolve-alerts and https://codeql.github.com/codeql-query-help/rust/rust-access-invalid-pointer/ .
+
+## Follow-up: test-only derive finding #11
+
+Adding a custom `glib::Boxed` derive to the regression harness generated another copy of the same unsafe generic adapter and triggered the same incompatible-pointer flow at the test derive. Instead of adding another dismissal or suppressing analysis, the harness now exercises `glib::Bytes`, GLib's existing production boxed type. It still checks GValue boxing, clone, independent ownership and teardown after both original owners are dropped. It does not introduce an extra unsafe adapter solely for a test. Alert #11 is left for CodeQL to reassess as code-fixed when that derive is removed.
