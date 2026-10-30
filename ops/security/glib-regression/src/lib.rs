@@ -22,19 +22,20 @@ mod tests {
 
     #[test]
     fn pointer_slice_truncation_keeps_storage_usable() {
-        use glib::{collections::PtrSlice, GString};
-        let mut values: PtrSlice<GString> = ["one", "two", "three"]
-            .into_iter()
-            .map(GString::from)
-            .collect();
+        use glib::{collections::PtrSlice, Object};
+        let one = Object::new::<Object>();
+        let two = Object::new::<Object>();
+        let three = Object::new::<Object>();
+        let mut values: PtrSlice<Object> = [one.clone(), two, three].into_iter().collect();
         values.truncate(1);
         assert_eq!(values.len(), 1);
-        assert_eq!(values[0].as_str(), "one");
-        values.push(GString::from("four"));
-        assert_eq!(values[1].as_str(), "four");
+        assert_eq!(values[0], one);
+        let four = Object::new::<Object>();
+        values.push(four.clone());
+        assert_eq!(values[1], four);
         values.truncate(0);
-        values.push(GString::from("reused"));
-        assert_eq!(values[0].as_str(), "reused");
+        values.push(one.clone());
+        assert_eq!(values[0], one);
     }
 
     #[test]
