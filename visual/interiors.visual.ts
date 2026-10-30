@@ -18,7 +18,7 @@ async function waitForFloorMarkers(page:import("@playwright/test").Page,count:nu
 test("project interiors: all floors, top-floor agents, lobby and exit",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
-  await selectBuilding(page,"ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();
   await settle(page,2);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
@@ -79,7 +79,7 @@ test("branded business interior opens with its own workspace navigation",async({
 test("phone: floor navigation and exit stay accessible",async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await openAtlas(page);
-  await selectBuilding(page,"ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,4);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
   await expect(page.getByRole("button",{name:"Enter building",exact:true})).toHaveCount(0);
@@ -95,7 +95,7 @@ test("phone: floor navigation and exit stay accessible",async({page})=>{
 
 test("deep commerce building: full night cutaway stays framed and lit",async({page})=>{
   await openAtlas(page,{light:"night"});
-  await selectBuilding(page,"multi-agent-commerce-pipeline");
+  await selectBuilding(page,"Commerce Pipeline");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);await waitForOffice(page);
   await expect(page.getByRole("navigation",{name:"Building floor navigation"}).getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
   await shot(page,"interior-commerce-night-all");
@@ -105,7 +105,7 @@ test("deep commerce building: full night cutaway stays framed and lit",async({pa
 test("floor switching preserves the renderer in project and Skyline buildings",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
-  await selectBuilding(page,"ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();
   await settle(page,2);await waitForOffice(page);
   for(const kind of ["office","skyline"] as const){
@@ -133,7 +133,7 @@ test("Skyline project panel links its repository before entering the district",a
   await selectBuilding(page,"Skyline");
   await expect(page.getByRole("region",{name:"Linked repositories"})).toBeVisible();
   await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
-  await expect(page.locator(".map-bar h3")).toHaveText("skyline");
+  await expect(page.locator(".map-bar h3")).toHaveText("Skyline");
   await expect(page.locator(".map-bar")).toContainText("No agents registered for this project");
   await shot(page,"skyline-project-repository");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);

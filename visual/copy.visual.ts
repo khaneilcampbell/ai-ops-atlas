@@ -29,7 +29,7 @@ test("map drag stays a pan, inspector text is selectable and copyable", async ({
   expect(await stage.evaluate((el) => getComputedStyle(el).userSelect)).toBe("none");
   expect(await page.locator(".nav-item").first().evaluate((el) => getComputedStyle(el).userSelect)).toBe("none");
 
-  await selectBuilding(page, "ai-ops-atlas");
+  await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button", { name: "Inspect repository khaneilcampbell/ai-ops-atlas", exact: true }).click();
   const name = page.locator(".panel-head .copy-value .selectable").first();
   await expect(name).toHaveText("khaneilcampbell/ai-ops-atlas");
