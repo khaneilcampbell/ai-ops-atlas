@@ -70,6 +70,16 @@ class Triage(unittest.TestCase):
         self.assertEqual([p["lane"] for p in report["prs"]], ["failing", "behind", "ready"])
         self.assertEqual(report["prs"][0]["failing"], ["Frontend"])
 
+    def test_null_nodes_from_a_partial_read_are_skipped(self):
+        failing = pr(3, rollup="FAILURE", contexts=[None, {"__typename": "CheckRun", "name": "Build", "conclusion": "FAILURE"}])
+        blank = pr(4)
+        blank["commits"] = {"nodes": [None]}
+        data = {"r0": repo("o/secret", [failing, None, blank], private=True, merged=[None])}
+        report = mf.triage(data, ["o/secret"], POLICY, NOW)
+        self.assertEqual(report["open"], 2)
+        self.assertEqual(report["prs"][0]["failing"], ["Build"])
+        self.assertTrue(report["prs"][1]["no_checks"])
+
     def test_fingerprint_ignores_comment_churn(self):
         a = mf.triage(self.data(), ["o/public", "o/secret", "o/gone"], POLICY, NOW)
         d = self.data()
@@ -92,6 +102,18 @@ class Triage(unittest.TestCase):
         self.assertIn('r0: repository(owner: "a", name: "b")', q)
         self.assertIn('r1: repository(owner: "c", name: "d")', q)
         self.assertIn("first: 20", q)
+
+
+class Fetch(unittest.TestCase):
+    def test_gateway_error_is_retried_once(self):
+        ok = mock.MagicMock()
+        ok.__enter__.return_value.read.return_value = b'{"data": {}}'
+        bad = mf.urllib.error.HTTPError(mf.GRAPHQL, 502, "Bad Gateway", {}, None)
+        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[bad, ok]) as op, mock.patch.object(mf.time, "sleep"):
+            self.assertEqual(mf.fetch("q", "t", 5), ({"data": {}}, 12))
+        self.assertEqual(op.call_count, 2)
+        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[bad, bad]), mock.patch.object(mf.time, "sleep"):
+            self.assertRaises(mf.urllib.error.HTTPError, mf.fetch, "q", "t", 5)
 
 
 class Decide(unittest.TestCase):

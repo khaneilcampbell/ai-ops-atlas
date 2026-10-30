@@ -14,6 +14,8 @@ import os
 import re
 import statistics
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -58,14 +60,21 @@ def build_query(repos, open_limit, merged_limit):
     return "query { rateLimit { cost remaining } " + " ".join(parts) + " }"
 
 
-def fetch(query, token, timeout):
+def fetch(query, token, timeout, attempts=2):
+    """One request; GitHub's GraphQL gateway sometimes answers 502/503/504, so that gets one retry."""
     req = urllib.request.Request(
         GRAPHQL, data=json.dumps({"query": query}).encode(), method="POST",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "atlas-merge-flow"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as res:
-        body = res.read()
-    return json.loads(body), len(body)
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as res:
+                body = res.read()
+            return json.loads(body), len(body)
+        except urllib.error.HTTPError as e:
+            if e.code not in {502, 503, 504} or attempt == attempts - 1:
+                raise
+            time.sleep(5)
 
 
 def parse_time(s):
@@ -75,6 +84,8 @@ def parse_time(s):
 def failing_checks(rollup):
     names = []
     for c in ((rollup or {}).get("contexts") or {}).get("nodes") or []:
+        if not c:  # GraphQL nulls an item the token may not read, such as an app's check run on a private repo
+            continue
         if c.get("__typename") == "CheckRun" and c.get("conclusion") in FAILED:
             names.append(c.get("name") or "check")
         elif c.get("__typename") == "StatusContext" and c.get("state") in {"FAILURE", "ERROR"}:
@@ -85,7 +96,7 @@ def failing_checks(rollup):
 def lane(pr):
     """The one thing holding this pull request up, from GitHub's own merge state."""
     commits = (pr.get("commits") or {}).get("nodes") or []
-    rollup = (commits[0].get("commit") or {}).get("statusCheckRollup") if commits else None
+    rollup = ((commits[0] or {}).get("commit") or {}).get("statusCheckRollup") if commits else None
     checks = (rollup or {}).get("state")
     merge_state = pr.get("mergeStateStatus")
     if pr.get("isDraft"):
@@ -118,8 +129,10 @@ def triage(data, repos, policy, now):
         private = bool(node.get("isPrivate"))
         seen += 1
         for pr in (node.get("open") or {}).get("nodes") or []:
+            if not pr:
+                continue
             commits = (pr.get("commits") or {}).get("nodes") or []
-            rollup = (commits[0].get("commit") or {}).get("statusCheckRollup") if commits else None
+            rollup = ((commits[0] or {}).get("commit") or {}).get("statusCheckRollup") if commits else None
             the_lane = lane(pr)
             prs.append({
                 "repo": node["nameWithOwner"], "private": private, "number": pr["number"],
@@ -130,7 +143,7 @@ def triage(data, repos, policy, now):
                 "no_checks": rollup is None,
             })
         for m in (node.get("merged") or {}).get("nodes") or []:
-            merged = parse_time(m["mergedAt"]) if m.get("mergedAt") else None
+            merged = parse_time(m["mergedAt"]) if m and m.get("mergedAt") else None
             if merged and merged > now - timedelta(days=30):
                 merge_hours.append((merged - parse_time(m["createdAt"])).total_seconds() / 3600)
     prs.sort(key=lambda p: (LANES.index(p["lane"]), -p["age_hours"]))
