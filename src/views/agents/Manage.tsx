@@ -26,7 +26,13 @@ function nextLabel(iso: string, now = Date.now()) {
   const today = new Date(now).getUTCDate() === d.getUTCDate() && d.getTime() - now < 86_400_000;
   return `${today ? "today" : DAYS[d.getUTCDay()]} ${hm}`;
 }
-const runResult = (r: { status: string; conclusion: string | null }) => (r.status !== "completed" ? "Running" : r.conclusion === "success" ? "Succeeded" : r.conclusion ? r.conclusion.replace(/_/g, " ") : "Unknown");
+const RESULT_WORDS: Record<string, string> = { success: "Succeeded", failure: "Failed", cancelled: "Cancelled", skipped: "Skipped", timed_out: "Timed out" };
+const runResult = (r: { status: string; conclusion: string | null }) => {
+  if (r.status !== "completed") return "Running";
+  if (!r.conclusion) return "Unknown";
+  const words = RESULT_WORDS[r.conclusion] ?? r.conclusion.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
 const EVENT_LABEL: Record<string, string> = { schedule: "Schedule", workflow_dispatch: "Manual", push: "Push", workflow_run: "After CI", pull_request: "Pull request" };
 
 /** Where controls can work: never on the web, and in the Mac app only once its token is saved. */
