@@ -68,7 +68,7 @@ interface AtlasState {
 
 const Ctx = createContext<AtlasState | null>(null);
 
-const repoNames = [...LANDMARK_REPOSITORIES, ...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository)))];
+const repoNames = [...new Set([...LANDMARK_REPOSITORIES, ...catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)), ...catalog.agents.map((a) => a.repository)])];
 const known = new Set(repoNames.map((n) => n.toLowerCase()));
 
 function workflowsFor(repo: string): string[] {

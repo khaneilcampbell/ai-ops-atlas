@@ -1,3 +1,4 @@
+import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -112,6 +113,8 @@ const selOf = (key: string): Sel => {
 function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  const skyline=skylineProjectAnchor(scene);
+  if(skyline)m.set("project:skyline",skyline);
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
     const hq = m.get(`project:${d.project.id}`);
@@ -308,7 +311,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     for (const p of scene.parks) {
       if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:154,h:24,priority:1.5,className:"m3-pill hood district",node:"SKYLINE DISTRICT",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
-      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: 3, className: "m3-plaque compact", onClick:()=>enterBuilding("skyline-residences",true), title: `Enter Skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
+      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: selKey==="project:skyline"?0:3, className: `m3-plaque compact${selKey==="project:skyline"?" selected":""}`, onClick:()=>select("project:skyline"), title: `skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
@@ -396,7 +399,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
-          landmarkSelect={()=>select("repo:khaneilcampbell/skyline")}
+          landmarkSelect={()=>select("project:skyline")}
           kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}
@@ -863,7 +866,7 @@ function World({
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({...kioskPick.of(keys),keys,click:key=>{const shop=scene.retail.find(k=>k.key===key);if(shop)enterBuilding(`skyline-business:${shop.name}`,true);else landmarkSelect();}})}} />
-      <Skyline parks={scene.parks} g={g} m={m} onSelect={()=>enterBuilding("skyline-residences",true)} />
+      <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Html, OrbitControls } from "@react-three/drei";
 import {Box,Person,Sofa} from "./InteriorPrimitives";
 import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
@@ -69,6 +70,18 @@ function BusinessSuite({x,z,name,accent,bank,labels,hospitality,fashion}:{x:numb
     {labels&&<Html position={[x,2.5,z-2]} center><span className="skyline-room-label">{name}</span></Html>}
   </group>;
 }
+/** Keep the renderer alive when changing floor views; reset only the camera pose. */
+function SkylineCamera({allFloors}:{allFloors:boolean}) {
+  const controls=useRef<OrbitControlsImpl>(null);
+  const {camera,invalidate}=useThree();
+  useLayoutEffect(()=>{
+    camera.position.set(...(allFloors?[24,17,30]:[14,14,18]) as [number,number,number]);
+    const target=controls.current?.target;
+    if(target){target.set(0,allFloors?8:0,0);camera.lookAt(target);controls.current?.update();}
+    invalidate();
+  },[allFloors,camera,invalidate]);
+  return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
+}
 export default function SkylineInterior({building="Skyline",light}:{building?:string;light:LightMode}) {
   const [floor,setFloor]=useState(-1);
   const reduced=useReducedMotion();
@@ -80,7 +93,7 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
   const agents=catalog.agents.filter(isAiAgent);
   useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.stopPropagation();leaveBuilding(true);}};window.addEventListener("keydown",close,true);return()=>window.removeEventListener("keydown",close,true);},[]);
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${building} interior`}>
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} key={floor===-1?"all":"single"} frameloop="demand" shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><OrbitControls makeDefault target={floor===-1?[0,8,0]:[0,0,0]} minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
       {floor===-1&&<MovingLift reduced={reduced}/>}
       <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/>

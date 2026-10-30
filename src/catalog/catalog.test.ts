@@ -29,6 +29,7 @@ describe("bundled catalog", () => {
       "khaneilcampbell/multi-agent-commerce-pipeline",
       "khaneilcampbell/projects-intelligence-hub",
       "khaneilcampbell/service-desk-intelligence",
+      "khaneilcampbell/skyline",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
   });
