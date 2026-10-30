@@ -130,7 +130,7 @@ jobs:
           version="$base.$GITHUB_RUN_NUMBER"
           npx tauri build --bundles app --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":false}}"
           ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/AI Ops Atlas.app" unsigned-app.zip
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-macos-app
           path: unsigned-app.zip
@@ -175,7 +175,7 @@ jobs:
           npx --no-install tauri signer sign AI-Ops-Atlas.app.tar.gz >/dev/null
           test -s AI-Ops-Atlas.app.tar.gz.sig
           ditto -c -k --keepParent "$dir/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-macos-app
           path: |
