@@ -76,3 +76,11 @@ test("phone: floor navigation and exit stay accessible",async({page})=>{
   await page.getByRole("button",{name:"Exit building",exact:true}).click();await settle(page,4);
   await expect(page.locator(".office-layer")).toHaveCount(0);
 });
+
+test("deep commerce building: full night cutaway stays framed and lit",async({page})=>{
+  await openAtlas(page,{light:"night"});
+  await selectBuilding(page,"multi-agent-commerce-pipeline");
+  await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);await waitForOffice(page);
+  await expect(page.getByRole("navigation",{name:"Building floor navigation"}).getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
+  await shot(page,"interior-commerce-night-all");
+});

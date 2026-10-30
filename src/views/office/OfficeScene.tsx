@@ -7,6 +7,7 @@ import { patterned } from "../map3d/materials";
 import type { LightMode } from "../map3d/living";
 import { ElevatorLanding, MovingLift } from "./BuildingCirculation";
 import LobbyEntrance from "./LobbyEntrance";
+import {cutawayCameraRadius} from "./cameraFit";
 import CityOutside from "./CityOutside";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
@@ -50,10 +51,10 @@ export default function OfficeScene(props: Props) {
   return (
     <Canvas key={props.floor===-1?"all":"single"} style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <CityOutside projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
+      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
-        {props.floor===-1&&<Html position={[-props.plan.w/2-0.7,0.5,0]} center><span className="skyline-room-label">{level===0?"Business lobby":level===4?"Floor 4 · Agents":`Floor ${level}`}</span></Html>}
+        {props.floor===-1&&<Html position={[-props.plan.w/2-0.7,0.28,props.plan.d/2+0.6]} center><span className="skyline-room-label">{level===0?"Business lobby":level===4?"Floor 4 · Agents":`Floor ${level}`}</span></Html>}
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
@@ -82,7 +83,7 @@ const AZ = Math.PI / 4;
 
 function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:boolean; plan: OfficePlan; reduced: boolean; api: Props["api"]; focus?: Workstation }) {
   const { camera, gl, invalidate, size } = useThree();
-  const home = useMemo<Pose>(() => ({ target: new THREE.Vector3(0, allFloors?7:0.7, 0.2), r: (Math.max(plan.w, plan.d) * (allFloors?1.45:0.95) + (allFloors?26:2.5))*Math.max(1,0.8/(size.width/size.height)), phi: allFloors?1.05:0.98, theta: AZ }), [plan.w, plan.d,allFloors,size.width,size.height]);
+  const home = useMemo<Pose>(() => ({ target: new THREE.Vector3(0, allFloors?8.1:0.7, allFloors?0.9:0.2), r: allFloors?cutawayCameraRadius(plan.w,plan.d,size.width/size.height):(Math.max(plan.w,plan.d)*0.95+2.5)*Math.max(1,0.8/(size.width/size.height)), phi: allFloors?1.05:0.98, theta: AZ }), [plan.w, plan.d,allFloors,size.width,size.height]);
   const controls = useMemo(() => {
     const c = new OrbitControls(camera, gl.domElement);
     c.enableDamping = true;
@@ -242,10 +243,10 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: 
   const backWins = [-w / 2 + w * 0.17, w / 2 - w * 0.17];
   return (
     <group>
-      {lighting&&<hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.45 : 1.2]} />}
+      {lighting&&<hemisphereLight args={[night ? "#9fb4d8" : "#fff6e4", night ? "#2a3328" : "#8a9a7a", night ? 0.65 : 1.2]} />}
       {lighting&&<directionalLight ref={sun} castShadow position={[-6, 11, 7]} intensity={night ? 0.35 : 2.1} color={night ? "#a8b8e0" : "#fff0d2"} shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005} shadow-normalBias={0.03} />}
       {/* After dark the room lights are on. */}
-      {night && <pointLight position={[0, H + 0.4, 0]} intensity={14} distance={Math.max(w, d) * 1.6} decay={1.6} color="#ffd9a0" />}
+      {night && [-1,1].map(side=><group key={side}><pointLight position={[0,2.3,side*d*0.24]} intensity={30} distance={Math.max(w,d)*1.3} decay={1.6} color="#ffe1af"/><mesh position={[0,2.6,side*d*0.24]}><boxGeometry args={[1.2,0.045,0.5]}/><meshStandardMaterial color="#f1e3c4" emissive="#ffe2aa" emissiveIntensity={1.5}/></mesh></group>)}
 
 
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
