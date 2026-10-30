@@ -59,7 +59,10 @@ mod tests {
 
     #[test]
     fn names_are_safe_pdfs() {
-        assert_eq!(clean_name("opportunity-scout-2026-10-30"), "opportunity-scout-2026-10-30.pdf");
+        assert_eq!(
+            clean_name("opportunity-scout-2026-10-30"),
+            "opportunity-scout-2026-10-30.pdf"
+        );
         assert_eq!(clean_name("../../etc/passwd"), "etcpasswd.pdf");
         assert_eq!(clean_name("Report.PDF"), "Report.PDF");
         assert_eq!(clean_name("///"), "report.pdf");
