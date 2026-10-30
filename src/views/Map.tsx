@@ -692,6 +692,7 @@ export function MapView() {
   // Level of detail: windows, trees and footpaths only once there is room to see them.
   const detail = k >= 0.5 || layout.districts.length < 30;
   const focused = layout.districts.find((d) => d.project.id === focus) ?? layout.districts[0];
+  const barProject = catalog.projects.find(p => p.id === (selection?.kind === "project" ? selection.id : focus)) ?? focused?.project;
   const isSelected = (kind: "agent" | "repo" | "project", id: string) => selection?.kind === kind && selection.id === id;
   const selectedDistrict = selKey ? where.get(selKey)?.district : undefined;
   const selProject = selection?.kind === "project" ? selection.id : selectedProject?.id;
@@ -1273,7 +1274,7 @@ export function MapView() {
           </ul>
         )}
 
-        {!office.projectId && focused && selection && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
+        {!office.projectId && barProject && selection && <ProjectBar d={{project:barProject,crew:catalog.agents.filter(a=>a.projectId===barProject.id),lots:[]}} onOpenList={() => setView("agents")} />}
       </div>
 
       {!office.projectId && (pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />)}
@@ -1532,7 +1533,7 @@ function NeighborhoodLabel({ n, scale }: { n: Neighborhood; scale: number }) {
   );
 }
 
-function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) {
+function ProjectBar({ d, onOpenList }: { d: Pick<District,"project"|"crew"|"lots">; onOpenList: () => void }) {
   const { repos, select, setFilters, clearFilters } = useAtlas();
   const agents: Agent[] = [...d.crew, ...d.lots.map((l) => l.agent)];
   const snap = repoData(repos[d.project.repository]);

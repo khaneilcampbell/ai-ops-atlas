@@ -40,7 +40,7 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
 test("Skyline night interior: shared navigation and exterior clearance",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page,{light:"night"});
-  await selectBuilding(page,"Skyline");await settle(page,4);
+  await selectBuilding(page,"Skyline");await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,4);
   await expect(page.locator(".skyline-interior.night")).toBeVisible();
   const nav=page.getByRole("navigation",{name:"Choose Skyline floor"});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
@@ -117,7 +117,20 @@ test("floor switching preserves the renderer in project and Skyline buildings",a
     }
     await region.getByRole("button",{name:kind==="office"?"Exit building":"Exit Skyline and return to city",exact:true}).click();await settle(page,3);
     await expect(region).toHaveCount(0);
-    if(kind==="office"){await selectBuilding(page,"Skyline");await settle(page,2);}
+    if(kind==="office"){await selectBuilding(page,"Skyline");await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,2);}
   }
   expect(errors).toEqual([]);
+});
+
+
+test("Skyline project panel links its repository before entering the district",async({page})=>{
+  await openAtlas(page);
+  await selectBuilding(page,"Skyline");
+  await expect(page.getByRole("region",{name:"Linked repositories"})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
+  await expect(page.locator(".map-bar h3")).toHaveText("skyline");
+  await expect(page.locator(".map-bar")).toContainText("No agents registered for this project");
+  await shot(page,"skyline-project-repository");
+  await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
+  await expect(page.getByRole("region",{name:"Skyline interior"})).toBeVisible();
 });
