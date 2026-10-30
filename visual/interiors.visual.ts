@@ -15,6 +15,8 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
   await settle(page,2);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
+  await expect(page.locator("[data-floor-label]")).toHaveCount(5);
+  for(const n of [0,1,2,3,4])await expect(page.locator(`[data-floor-label="${n}"]`)).toHaveText(n===0?"Lobby":`Floor ${n}`);
   await shot(page,"interior-project-all");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,2);await waitForOffice(page);
   await expect(page.locator(".office-roster")).toHaveCount(0);
@@ -34,6 +36,7 @@ test("Skyline night interior: shared navigation and exterior clearance",async({p
   await expect(page.locator(".skyline-interior.night")).toBeVisible();
   const nav=page.getByRole("navigation",{name:"Choose Skyline floor"});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
+  await expect(page.locator("[data-floor-label]")).toHaveCount(5);
   await shot(page,"interior-skyline-night-all");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
   await shot(page,"interior-skyline-night-lobby");

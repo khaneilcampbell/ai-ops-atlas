@@ -4,3 +4,5 @@
 .skyline-interior-head{z-index:30}.skyline-floor-picker{z-index:30;border:1px solid #b99c62;box-shadow:0 6px 24px #172b2326;max-height:calc(100% - 220px);overflow-y:auto}.skyline-floor-picker strong{font:600 10px system-ui;text-transform:uppercase;letter-spacing:.08em;color:#52634f;padding:3px 5px 5px}.skyline-interior-note{z-index:25;pointer-events:none}.skyline-floor-picker button{min-height:40px}.skyline-interior-head button{white-space:nowrap}
 
 .skyline-interior.night{background:#101b2c}.skyline-interior.night .skyline-interior-head>div,.skyline-interior.night .skyline-floor-picker,.skyline-interior.night .skyline-interior-note{background:rgba(23,39,33,.96);color:#e9e7d8}.skyline-interior.night h2{color:#f3ead7}.skyline-interior.night small,.skyline-interior.night .skyline-floor-picker strong{color:#d4b575}.skyline-interior.night .skyline-interior-note span{color:#b5c4b7}
+
+.building-floor-label{display:inline-block;min-width:64px;text-align:center;white-space:nowrap;padding:6px 10px;box-shadow:0 2px 7px #162c231a;pointer-events:none}

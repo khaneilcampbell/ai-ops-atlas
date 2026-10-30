@@ -4,6 +4,7 @@ import { Html, OrbitControls } from "@react-three/drei";
 import {Box,Person,Sofa} from "./InteriorPrimitives";
 import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
 import { useReducedMotion } from "../../lib/motion";
+import FloorLabel from "./FloorLabel";
 import LobbyEntrance from "./LobbyEntrance";
 import {toolBrand} from "../map3d/toolBrand";
 import CityOutside from "./CityOutside";
@@ -85,7 +86,8 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
       <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/>
       {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}
       {(floor===-1?[0,1,2,3,4]:[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
-      {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><Html position={[-8.4,0.3,0]} center><span className="skyline-room-label">Floor {level}</span></Html></group>}
+      {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
+      <FloorLabel level={level} width={16}/>
       <group>
         <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?28:5} distance={15} decay={2}/>
         {[-4,4].map(x=><group key={x}><pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={10} decay={2}/><mesh position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}

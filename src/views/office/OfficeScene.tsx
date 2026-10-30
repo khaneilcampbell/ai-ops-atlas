@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { Html } from "@react-three/drei";
+import FloorLabel from "./FloorLabel";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { patterned } from "../map3d/materials";
 import type { LightMode } from "../map3d/living";
@@ -54,7 +54,7 @@ export default function OfficeScene(props: Props) {
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
-        {props.floor===-1&&<Html position={[-props.plan.w/2-0.7,0.28,props.plan.d/2+0.6]} center><span className="skyline-room-label">{level===0?"Business lobby":level===4?"Floor 4 · Agents":`Floor ${level}`}</span></Html>}
+        <FloorLabel level={level} width={props.plan.w}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
