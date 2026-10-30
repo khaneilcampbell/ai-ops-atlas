@@ -18,7 +18,7 @@ To stop or undo something an agent sent or published, start with [stop-and-rollb
 
 - **Healthy:** `systemctl status commerce-pipeline` is active and `logs/loop.log` has a cycle in the last hour (or says maintain mode until Monday).
 - **Run it:** `systemctl start commerce-pipeline`, or one cycle by hand with `./loop.sh --once`.
-- **When it fails:** a stopped service with exit 78 is a configuration error (bad credential or missing `.env`); fix what `logs/loop.log` names and `systemctl restart commerce-pipeline`. systemd gives up after 5 crashes in 10 minutes. An alert email arrives after a phase fails twice in a row.
+- **When it fails:** a stopped service with exit 78 is a configuration error (bad credential or missing `.env`); fix what `logs/loop.log` names and `systemctl restart commerce-pipeline`. systemd gives up after 5 crashes in 10 minutes. An alert email arrives after a phase fails twice in a row, or after one failure of a daily phase (sales sync, digest, backup). The daily digest opens with a status line: paused or running, phases failing now, backup age and drafts awaiting approval.
 - **Stop it:** `systemctl stop commerce-pipeline` (or `kill $(cat logs/loop.pid)` when run by hand).
 
 ## Brand Builder crew
