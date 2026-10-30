@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "enabled": true,
+  "agent": { "project": "ai-ops-atlas", "id": "autopilot-weekly-digest" },
+  "days": 7,
+  "staleAfterDays": 7,
+  "repositories": [
+    "khaneilcampbell/ai-ops-atlas",
+    "khaneilcampbell/benjaire.com",
+    "khaneilcampbell/benjaire-dashboard",
+    "khaneilcampbell/career-application-system",
+    "khaneilcampbell/khaneilcampbell",
+    "khaneilcampbell/khaneilcampbell.com",
+    "khaneilcampbell/multi-agent-commerce-pipeline",
+    "khaneilcampbell/projects-intelligence-hub",
+    "khaneilcampbell/service-desk-intelligence",
+    "khaneilcampbell/skyline",
+    "khaneilcampbell/splunk-bruteforce-detection-lab"
+  ]
+}

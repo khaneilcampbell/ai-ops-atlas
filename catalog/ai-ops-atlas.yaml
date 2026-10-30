@@ -390,6 +390,211 @@ agents:
           - Documentation quality, uptime, branch protections, billing and agent permissions are not assessed
         last_review: 2026-10-28
 
+  - id: autopilot-uptime
+    name: Uptime Watch
+    purpose: Checks the live sites, the Benjaire contact form route and that Atlas web stays behind Cloudflare Access every 15 minutes, and alerts when a check fails twice in a row. Plain HTTP GETs; never submits a form.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every 15 minutes, or manual
+    source: ops/autopilot/uptime.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: autopilot-uptime.yml
+      agent_feed: true
+    alerts:
+      failures: true
+      report_within: 26h
+    last_run: null
+    capabilities:
+      - Check each URL in ops/autopilot/uptime.json for status, page text and headers, with one retry
+      - Alert after two failed runs in a row, remind every 12 hours, and send a recovered note
+      - Keep a short incident log for the weekly digest
+    permissions:
+      - 'GITHUB_TOKEN: contents read'
+      - 'RESEND_API_KEY (optional): send-only email key'
+      - 'NOTIFY_WEBHOOK_URL (optional): chat webhook'
+      - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
+    registry:
+      title: Site Uptime Monitor
+      category: engineering
+      subcategory: Reliability
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: ops/autopilot/uptime.py makes fixed GET requests and compares them with the config; no AI model
+      mission:
+        problem: A broken site or contact form is found by a customer, not by KC.
+        outcomes: [An outage reaches KC within about 30 minutes, One blip never pages anyone, Atlas web losing its Access gate is caught]
+        beneficiaries: [KC, Benjaire customers]
+      responsibilities:
+        tasks: [Request each configured URL, Compare status text and headers, Count consecutive failures, Send down reminder and recovered alerts]
+        tools: [HTTP GET, Resend email API, Webhook, Atlas live feed, GitHub Actions cache for state]
+        inputs: [ops/autopilot/uptime.json]
+        outputs: [Job summary, Email or webhook alert, Atlas feed report, Failed run on a new outage]
+        limitations: [GET only so the contact check proves the route not delivery, Checks run from GitHub's network, Scheduled runs can start a few minutes late]
+      goals:
+        objective: Hear about a site outage before a customer reports it.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed outside real outages
+            target_value: 95
+            direction: min
+            basis: A failed run is either an outage or a broken checker
+            measure: run_success_rate
+      execution:
+        trigger_type: scheduled
+        schedule: Every 15 minutes
+        environment: GitHub-hosted runner
+        stages: [Restore state, Check each URL, Retry failures once, Decide alerts, Send alerts, Save state when it changed]
+      governance:
+        autonomy: 1
+        autonomy_note: Runs and alerts on its own; changes nothing anywhere.
+        data_sensitivity: public
+        approval: None needed; it only reads public pages
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries
+      cost:
+        budget: No model spending
+        notes: About 2,900 short runs a month, free on this public repository.
+      docs:
+        technical: ops/autopilot/README.md
+        runbook: ops/autopilot/README.md#runbook
+
+  - id: autopilot-spend-guard
+    name: Spend Guard
+    purpose: Totals API spend against each monthly cap every 6 hours and pauses the paid step of the agents behind a budget once it passes 80%. Recommend-only until SPEND_GUARD_TOKEN is set.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every 6 hours, or manual
+    source: ops/autopilot/spend_guard.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: autopilot-spend-guard.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read month-to-date and today's Anthropic cost per workspace from the cost report
+      - Read spend ledgers that agents keep themselves, such as Merge Flow's
+      - Project month-end spend and alert when a budget crosses its line
+      - Set the SPEND_GUARD_PAUSED repository variable to the agents over budget
+    permissions:
+      - 'ANTHROPIC_ADMIN_KEY (optional): Anthropic Admin API key, used only for GET cost_report'
+      - 'SPEND_GUARD_TOKEN (optional): fine-grained, Variables read and write on ai-ops-atlas only'
+      - 'RESEND_API_KEY, NOTIFY_WEBHOOK_URL, ATLAS_FEED_TOKEN (optional): alerts'
+    registry:
+      title: API Spend Controller
+      category: engineering
+      subcategory: Cost control
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: ops/autopilot/spend_guard.py sums report amounts and compares them with fixed caps; no AI model
+      mission:
+        problem: Unattended agents can spend past a cap before anyone looks at a billing page.
+        outcomes: [Paid agent steps stop at 80% of a cap, KC hears when a budget crosses its line, Daily and projected spend are visible]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read cost sources, Compare with caps, Set the pause variable, Alert on crossings]
+        tools: [Anthropic Admin API cost report, GitHub Actions variables API, Resend email API, Atlas live feed]
+        inputs: [ops/autopilot/spend-guard.json, Merge Flow ledger from its Actions cache]
+        outputs: [SPEND_GUARD_PAUSED variable, Job summary, Alerts, Saved state for the weekly digest]
+        dependencies: [github-merge-flow]
+        limitations: [Agents must read SPEND_GUARD_PAUSED to be paused, Mac app agents keep their own in-app caps, Cost report data lags a few minutes]
+      goals:
+        objective: Never pass a monthly API cap by surprise.
+        review_frequency: Monthly
+      execution:
+        trigger_type: scheduled
+        schedule: Every 6 hours at :17
+        environment: GitHub-hosted runner
+        stages: [Restore state and ledgers, Read spend, Compare with caps, Update pause variable, Alert on crossings, Save state]
+      governance:
+        autonomy: 2
+        autonomy_note: Pauses only the paid step of agents listed in its config, and only with its own narrow token; it unpauses them when spend drops back or a new month starts.
+        data_sensitivity: internal
+        approval: KC sets the caps and the agents to pause in spend-guard.json
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries
+      cost:
+        budget: No model spending
+        notes: Cost report reads are free; four runs a day.
+      docs:
+        technical: ops/autopilot/README.md
+        runbook: ops/autopilot/README.md#runbook
+
+  - id: autopilot-weekly-digest
+    name: Weekly Digest
+    purpose: Every Monday, one message with last week's merged pull requests, agent and workflow runs, spend, uptime and the short list of what needs KC.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Mondays 12:00 UTC, or manual
+    source: ops/autopilot/weekly_digest.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: autopilot-digest.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read merged and open pull requests of 11 repositories in one GraphQL request
+      - Count each repository's workflow runs and failures for the week
+      - Reuse the spend guard's and uptime checker's last state
+      - List what needs KC first
+    permissions:
+      - 'GITHUB_TOKEN: contents, actions and pull requests read on ai-ops-atlas'
+      - 'MERGE_FLOW_TOKEN (optional, reused): read-only on the listed repositories; add Actions read for private run counts'
+      - 'RESEND_API_KEY, NOTIFY_WEBHOOK_URL, ATLAS_FEED_TOKEN (optional): delivery'
+    registry:
+      title: Weekly Operations Reporter
+      category: engineering
+      subcategory: Reporting
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: ops/autopilot/weekly_digest.py assembles counts and lists from GitHub data and saved state; no AI model
+      mission:
+        problem: The week's progress and open loose ends are spread across 11 repositories and several dashboards.
+        outcomes: [One Monday message says what shipped, What needs KC is listed first, Spend and uptime are in the same place]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read merged and open pull requests, Count workflow runs, Read spend and uptime state, Send the digest]
+        tools: [GitHub GraphQL and REST APIs (read), Resend email API, Atlas live feed]
+        inputs: [ops/autopilot/digest.json, Spend guard and uptime state from the Actions cache]
+        outputs: [Email or webhook digest, Public-safe job summary, Atlas feed report]
+        dependencies: [autopilot-spend-guard, autopilot-uptime, github-merge-flow]
+        limitations: [First 100 merged and 100 open pull requests, First 100 runs per repository]
+      goals:
+        objective: Start each week knowing what shipped and what is waiting on KC.
+        review_frequency: Monthly
+      execution:
+        trigger_type: scheduled
+        schedule: Mondays at 12:00 UTC
+        environment: GitHub-hosted runner
+        stages: [Restore saved state, One GraphQL read, Run lists, Compose, Deliver]
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        data_sensitivity: internal
+        approval: None needed to run
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries
+      cost:
+        budget: No model spending
+        notes: One GraphQL request and about 11 REST requests a week.
+      docs:
+        technical: ops/autopilot/README.md
+        runbook: ops/autopilot/README.md#runbook
+
   - id: atlas-system-improvements
     name: Atlas System Improvements
     model: Automatic reports use no model; manual reviews use an explicitly selected Codex model

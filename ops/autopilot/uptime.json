@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "enabled": true,
+  "agent": { "project": "ai-ops-atlas", "id": "autopilot-uptime" },
+  "timeoutSeconds": 10,
+  "retryDelaySeconds": 5,
+  "slowMs": 4000,
+  "failAfter": 2,
+  "remindHours": 12,
+  "heartbeatHours": 24,
+  "failJobOnAlert": true,
+  "checks": [
+    {
+      "name": "Benjaire HQ",
+      "url": "https://benjaire.com/",
+      "expectStatus": [200]
+    },
+    {
+      "name": "Benjaire contact page",
+      "url": "https://benjaire.com/contact",
+      "expectStatus": [200],
+      "expectText": "id=\"inquiry\""
+    },
+    {
+      "name": "Benjaire contact endpoint",
+      "url": "https://benjaire.com/api/contact",
+      "method": "GET",
+      "expectStatus": [405]
+    },
+    {
+      "name": "Portfolio site",
+      "url": "https://khaneilcampbell.com/",
+      "expectStatus": [200]
+    },
+    {
+      "name": "Atlas web stays behind Access",
+      "url": "https://ai-ops-atlas.pages.dev/",
+      "followRedirects": false,
+      "expectStatus": [302, 303],
+      "expectHeaders": { "location": "cloudflareaccess.com" }
+    }
+  ]
+}

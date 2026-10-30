@@ -1,0 +1,59 @@
+# Autopilot weekly digest (ops/autopilot/weekly_digest.py): Monday summary of merged pull requests, agent runs,
+# spend, uptime and what needs KC. One GraphQL read plus one run list per repository; no model calls.
+name: Autopilot weekly digest
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and print only (send nothing)
+        type: boolean
+        default: false
+  pull_request:
+    paths: [ops/autopilot/**, ops/merge-flow/merge_flow.py, .github/workflows/autopilot-digest.yml]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            ops/autopilot
+            ops/merge-flow
+      # Read-only copies of what the spend guard and uptime checker last saw.
+      - name: Restore spend guard state
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: spend-guard-state.json
+          key: spend-guard-state-${{ github.run_id }}
+          restore-keys: spend-guard-state-
+      - name: Restore uptime state
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: uptime-state.json
+          key: uptime-state-${{ github.run_id }}
+          restore-keys: uptime-state-
+      - name: Digest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DIGEST_TOKEN: ${{ github.event_name != 'pull_request' && secrets.MERGE_FLOW_TOKEN || '' }}
+          ATLAS_PAUSED_AGENTS: ${{ vars.SPEND_GUARD_PAUSED }}
+          RESEND_API_KEY: ${{ github.event_name != 'pull_request' && secrets.RESEND_API_KEY || '' }}
+          NOTIFY_EMAIL_TO: ${{ vars.NOTIFY_EMAIL_TO }}
+          NOTIFY_EMAIL_FROM: ${{ vars.NOTIFY_EMAIL_FROM }}
+          NOTIFY_WEBHOOK_URL: ${{ github.event_name != 'pull_request' && secrets.NOTIFY_WEBHOOK_URL || '' }}
+          ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
+          ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+        run: python3 ops/autopilot/weekly_digest.py ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}

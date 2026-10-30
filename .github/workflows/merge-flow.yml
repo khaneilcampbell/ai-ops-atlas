@@ -54,6 +54,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ github.event_name != 'pull_request' && secrets.ANTHROPIC_API_KEY || '' }}
           ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
           ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+          # Set by the spend guard (ops/autopilot) when a budget passes its line; skips the Claude brief only.
+          ATLAS_PAUSED_AGENTS: ${{ vars.SPEND_GUARD_PAUSED }}
         run: python3 ops/merge-flow/merge_flow.py triage ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}
       - name: Install the Claude SDK
         if: steps.triage.outputs.brief == 'true'

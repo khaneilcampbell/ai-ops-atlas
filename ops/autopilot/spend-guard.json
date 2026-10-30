@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "enabled": true,
+  "agent": { "project": "ai-ops-atlas", "id": "autopilot-spend-guard" },
+  "repository": "khaneilcampbell/ai-ops-atlas",
+  "pauseVariable": "SPEND_GUARD_PAUSED",
+  "pauseAtPercent": 80,
+  "action": "pause",
+  "budgets": [
+    {
+      "id": "anthropic-org",
+      "label": "Anthropic (whole organization)",
+      "monthlyCapUsd": 20,
+      "source": { "type": "anthropic_cost_report" },
+      "pauses": ["github-merge-flow"]
+    },
+    {
+      "id": "merge-flow",
+      "label": "Merge Flow briefs",
+      "monthlyCapUsd": 1,
+      "source": { "type": "ledger", "file": "merge-flow-state.json", "key": "spend" },
+      "pauses": ["github-merge-flow"]
+    }
+  ]
+}

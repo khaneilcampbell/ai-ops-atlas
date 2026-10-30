@@ -1,0 +1,66 @@
+# Autopilot spend guard (ops/autopilot/spend_guard.py): totals API spend against monthly caps and pauses the paid
+# step of listed agents at 80%. No model calls; the Anthropic cost report read is free.
+name: Autopilot spend guard
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Measure and print only (no pausing, alerts or saved state)
+        type: boolean
+        default: false
+  pull_request:
+    paths: [ops/autopilot/**, .github/workflows/autopilot-spend-guard.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autopilot-spend-guard-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: ops/autopilot
+      - name: Restore last state
+        if: env.DRY_RUN != 'true'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: spend-guard-state.json
+          key: spend-guard-state-${{ github.run_id }}
+          restore-keys: spend-guard-state-
+      # Merge Flow keeps its own spend ledger in its cache; the guard reads it, never writes it.
+      - name: Restore Merge Flow ledger
+        if: env.DRY_RUN != 'true'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: merge-flow-state.json
+          key: merge-flow-state-${{ github.run_id }}
+          restore-keys: merge-flow-state-
+      - name: Guard
+        env:
+          ANTHROPIC_ADMIN_KEY: ${{ github.event_name != 'pull_request' && secrets.ANTHROPIC_ADMIN_KEY || '' }}
+          SPEND_GUARD_TOKEN: ${{ github.event_name != 'pull_request' && secrets.SPEND_GUARD_TOKEN || '' }}
+          RESEND_API_KEY: ${{ github.event_name != 'pull_request' && secrets.RESEND_API_KEY || '' }}
+          NOTIFY_EMAIL_TO: ${{ vars.NOTIFY_EMAIL_TO }}
+          NOTIFY_EMAIL_FROM: ${{ vars.NOTIFY_EMAIL_FROM }}
+          NOTIFY_WEBHOOK_URL: ${{ github.event_name != 'pull_request' && secrets.NOTIFY_WEBHOOK_URL || '' }}
+          ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
+          ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+        run: python3 ops/autopilot/spend_guard.py ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}
+      - name: Save state
+        if: env.DRY_RUN != 'true' && hashFiles('spend-guard-state.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: spend-guard-state.json
+          key: spend-guard-state-${{ github.run_id }}

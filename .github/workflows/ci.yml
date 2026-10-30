@@ -98,6 +98,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/merge-flow -p 'test_*.py'
+      - run: python3 -m unittest discover -s ops/autopilot -p 'test_*.py'
       - run: python3 -m venv "$RUNNER_TEMP/scout" && "$RUNNER_TEMP/scout/bin/pip" install --quiet pyyaml && "$RUNNER_TEMP/scout/bin/python" -m unittest discover -s ops/opportunity-scout -p 'test_*.py'
       - run: python3 ops/security/audit.py --local
 
