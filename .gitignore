@@ -20,3 +20,5 @@ visual/out/
 *.keychain-db
 *.password
 __pycache__/
+# Design Consistency run files
+design-consistency-*.json

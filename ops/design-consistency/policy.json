@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "enabled": true,
+  "mode": "propose",
+  "tokens": "src/styles/tokens.css",
+  "baseline": "ops/design-consistency/baseline.json",
+  "catalog": "catalog",
+  "css": ["src/styles/*.css"],
+  "tsx": ["src/components/*.tsx", "src/views/*.tsx", "src/views/agents/*.tsx"],
+  "exclude": ["src/views/Map.tsx", "src/views/map3d/*", "src/views/office/*"],
+  "nearColorDistance": 24,
+  "maxCodeEditsPerPR": 80,
+  "maxFindingsPerCall": 20,
+  "maxRunsPerDay": 4,
+  "model": {
+    "name": "claude-opus-5-5",
+    "effort": "low",
+    "maxTokens": 4000,
+    "monthlyBudgetUsd": 1.0,
+    "inputUsdPerMTok": 4.0,
+    "outputUsdPerMTok": 20.0,
+    "worstCaseInputTokens": 8000
+  },
+  "neverDo": ["merge", "push to main", "approve", "change settings", "spend beyond the cap", "message people"]
+}
