@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ConnectionType } from "../../catalog/types";
+import { wake } from "../../lib/power";
 import { LINK_COLORS, type ConnectionStatus } from "../../lib/connections";
 import { night } from "./materials";
 
@@ -135,6 +136,8 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
       }
     }
     mesh.count = n;
+    // Particles travel fast enough that 30 frames a second would show; keep full rate while they flow.
+    if (n && moving) wake(100);
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });

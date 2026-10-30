@@ -3,6 +3,7 @@ mod github;
 mod handoff;
 mod intel;
 mod live;
+mod power;
 mod secrets;
 mod steward;
 mod usage_sync;
@@ -76,6 +77,7 @@ pub fn run() {
             usage_sync::usage_sync_push,
             live::live_feed,
             live::live_publish,
+            power::power_on_battery,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AI Ops Atlas");

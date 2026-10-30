@@ -8,7 +8,6 @@ import {Box,Person} from "./InteriorPrimitives";
 export function ElevatorLanding({level,reduced,labels,lobbyWalk=true}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean}) {
   const doors=useRef<THREE.Group>(null),visitor=useRef<THREE.Group>(null);
   useFrame((state)=>{
-    if(!reduced)state.invalidate();
     const lift=elevatorAt(reduced?0:state.clock.elapsedTime);
     const phase=lift.phase;
     const f=phase<2?phase/2:phase<3?1:Math.max(0,1-(phase-3)/2);
@@ -37,7 +36,6 @@ export function ElevatorLanding({level,reduced,labels,lobbyWalk=true}:{level:num
 export function MovingLift({reduced}:{reduced:boolean}) {
   const car=useRef<THREE.Group>(null);
   useFrame((state)=>{
-    if(!reduced)state.invalidate();
     if(car.current)car.current.position.y=elevatorAt(reduced?0:state.clock.elapsedTime).height;
   });
   return <group ref={car}><Box p={[8.6,0.1,0]} s={[1.8,0.2,1.8]} color="#bba36f"/><Box p={[9.4,1.3,0]} s={[0.1,2.4,1.8]} color="#4f6b5d"/><Person x={8.6} z={0.25} color="#506b85"/></group>;
