@@ -77,7 +77,7 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-ops-ci", "benjaire-site-ci", "career-ci", "commerce-tests", "hub-ci", "site-ci", "soc-lab-ci"],
+      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-ops-ci", "benjaire-site-ci", "career-ci", "commerce-tests", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
