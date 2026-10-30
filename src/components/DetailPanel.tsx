@@ -1,3 +1,4 @@
+import { RepositoryNotice } from "./RepositoryNotice";
 import {CodexReviewHandoff} from "./CodexReviewHandoff";
 import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
@@ -273,7 +274,7 @@ const REPO_TABS: { id: RepoTab; label: string }[] = [
 ];
 
 function RepoDetail({ name }: { name: string }) {
-  const { catalog, repos, select, setView, setFilters, clearFilters } = useAtlas();
+  const { catalog, repos, refreshing, select, setView, setFilters, clearFilters } = useAtlas();
   const [more, setMore] = useState(false);
   const [tab, setTab] = useState<RepoTab>("overview");
   const state = repos[name];
@@ -314,10 +315,9 @@ function RepoDetail({ name }: { name: string }) {
         {tab === "overview" && (
           <>
           {state?.kind === "error" && (
-            <div className="notice">
-              <Icon name="alert" size={15} /> <CopyValue value={state.message} title="Copy error" />
-            </div>
+            <RepositoryNotice message={state.message}/>
           )}
+          {!snap && state?.kind !== "error" && (refreshing ? <p className="muted small">Checking GitHub…</p> : <RepositoryNotice message="No repository snapshot"/>)}
           {(snap?.description ?? project?.summary) && <p style={{ margin: 0, fontSize: 14 }}>{snap?.description ?? project?.summary}</p>}
 
           {project && <ProjectOrganization project={project} agents={agents} latest={history[0]} />}

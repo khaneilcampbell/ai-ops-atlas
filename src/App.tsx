@@ -1,3 +1,4 @@
+import { isHostedWeb, isTauri } from "./lib/env";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
@@ -59,6 +60,13 @@ export default function App() {
     return times[times.length - 1];
   }, [repos]);
 
+  const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
+  const loadedRepositories = [...trackedRepositories].filter(name => {
+    const state = repos[name];
+    return state?.kind === "ok" || (state?.kind === "error" && state.data);
+  }).length;
+  const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
+
   return (
     <div className="shell">
       <header className="header">
@@ -76,12 +84,13 @@ export default function App() {
         <div className="spacer" />
         <ViewSwitch />
         <GlobalSearch />
-        <div className="refresh" title={lastFetched ? `GitHub data fetched ${new Date(lastFetched).toLocaleString()}` : "GitHub data not fetched yet"}>
+        <div className="refresh" title={lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet"}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
             <Icon name="refresh" size={16} className={refreshing ? "spin" : undefined} />
           </button>
-          {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
+          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{loadedRepositories}/{trackedRepositories.size} repositories loaded</small></span>
         </div>
+        <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
         <LivePill />
         <AlertPill open={alerts} />
         <VaultLockedPill />
