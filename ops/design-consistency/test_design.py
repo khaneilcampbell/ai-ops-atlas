@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent))
 import design  # noqa: E402
@@ -163,6 +165,12 @@ class Deciding(unittest.TestCase):
         self.assertEqual(design.decide(self.found(), POLICY, {}, NOW, None, True, dry_run=True)["skipped"], "dry run")
         self.assertEqual(design.decide([], POLICY, {}, NOW, None, True)["skipped"], "nothing to fix")
 
+    def test_waits_a_day_after_github_refused_the_pr(self):
+        blocked = {"pr_blocked": (NOW - design.timedelta(hours=2)).isoformat()}
+        self.assertIn("would not let Actions", design.decide(self.found(), POLICY, blocked, NOW, None, True)["skipped"])
+        blocked = {"pr_blocked": (NOW - design.timedelta(days=2)).isoformat()}
+        self.assertTrue(design.decide(self.found(), POLICY, blocked, NOW, None, True)["fix"])
+
     def test_daily_and_monthly_caps(self):
         full_day = {"runs": {"day": "2026-10-30", "count": 4}}
         self.assertIn("daily cap of 4", design.budget(full_day, POLICY, NOW, False))
@@ -234,6 +242,26 @@ class Reporting(unittest.TestCase):
         self.assertIn("| `src/styles/app.css:3` | `#20372c` | `var(--ink)` |", body)
         self.assertIn('say "merge"', body)
         self.assertIn("No model was called", body)
+
+    def test_refused_pr_warns_deletes_the_branch_and_does_not_fail(self):
+        with tempfile.TemporaryDirectory() as t:
+            tmp = Path(t)
+            f = {"file": "src/styles/app.css", "line": 3, "value": "#20372c", "new": "var(--ink)", "reason": "", "rule": "color"}
+            (tmp / "r.json").write_text(json.dumps({"mode": "code", "applied": [f], "kept": [], "refused": [], "cost": 0.0}))
+            args = SimpleNamespace(result=tmp / "r.json", shots=None, branch="design-consistency/run-1", base="main",
+                                   state=tmp / "s.json", work=tmp / "w.json")
+            denied = design.urllib.error.HTTPError("u", 403, "Forbidden", {}, None)
+            calls = []
+
+            def gh(method, path, body=None):
+                calls.append((method, path))
+                if method == "POST":
+                    raise denied
+
+            with mock.patch.object(design, "gh", side_effect=gh), mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "o/r"}, clear=True):
+                self.assertIsNone(design.cmd_pr(args, NOW))
+            self.assertIn(("DELETE", "/repos/o/r/git/refs/heads/design-consistency/run-1"), calls)
+            self.assertEqual(json.loads(args.state.read_text())["pr_blocked"], NOW.isoformat())
 
     def test_scan_summary_counts_backlog_and_new(self):
         found = design.mark_new(css(".a { padding: 5px; }\n"), {})
