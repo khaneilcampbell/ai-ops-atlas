@@ -44,6 +44,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   attempted: "Sent",
   started: "Started",
   merged: "Merged",
+  changed: "Changed",
   // Written only by in-app editing, which has been removed; older audit lines still use it.
   opened: "Pull request opened",
   failed: "Failed",
@@ -52,13 +53,22 @@ export const STAGE_LABEL: Record<Stage, string> = {
 
 /** How the activity feed, the office and Settings name one audit record. */
 export function describeRecord(r: AuditRecord): { title: string; subject: string; url: string; result: "success" | "failure" | "running" | "other" } {
-  const result = r.stage === "started" || r.stage === "merged" || r.stage === "opened" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
+  const result = r.stage === "started" || r.stage === "merged" || r.stage === "changed" || r.stage === "opened" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : r.stage === "attempted" ? "running" : "other";
   if (r.action === "merge_pull_request") {
     const n = r.pull_number ?? 0;
     return {
       title: `Merge pull request: ${STAGE_LABEL[r.stage]}`,
       subject: `#${n}${r.title ? ` ${r.title}` : ""}`,
       url: `https://github.com/${r.repo}/pull/${n}`,
+      result,
+    };
+  }
+  if (r.action === "agent_enable" || r.action === "agent_disable" || r.action === "agent_run") {
+    const verb = r.action === "agent_enable" ? "Enable agent" : r.action === "agent_disable" ? "Disable agent" : "Run agent";
+    return {
+      title: `${verb}: ${STAGE_LABEL[r.stage]}`,
+      subject: r.workflow ?? r.agent ?? "Agent",
+      url: `https://github.com/${r.repo}/actions${r.workflow ? `/workflows/${r.workflow}` : ""}`,
       result,
     };
   }

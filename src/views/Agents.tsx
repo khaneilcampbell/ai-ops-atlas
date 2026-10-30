@@ -10,15 +10,17 @@ import { CATEGORIES, CATEGORY_LABEL, CLASSIFICATION_INFO, CLASSIFICATIONS, type 
 import { useAtlas } from "../state";
 import { Goals } from "./agents/Goals";
 import { Inspector } from "./agents/Inspector";
+import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
 import "../styles/registry.css";
 
-type Sub = "directory" | "portfolio" | "goals";
+type Sub = "directory" | "portfolio" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
   { id: "goals", label: "Goals & performance" },
+  { id: "manage", label: "Manage agents" },
 ];
 
 interface Prefs {
@@ -74,14 +76,14 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     <div className="page wide">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">{title} registry · read-only</div>
+          <div className="eyebrow">{title} registry{prefs.sub === "manage" ? "" : " · read-only"}</div>
           <h1>{title}</h1>
           <p className="lede">
             {summary.total} {kind === "automations" ? "automations, pipelines, and integrations" : "AI agents and assisted workflows"} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.map((s) => (
+          {SUBS.filter((s) => s.id !== "manage" || kind === "agents").map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -91,6 +93,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
 
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
+      {prefs.sub === "manage" && kind === "agents" && <Manage open={open} />}
 
       {prefs.sub === "directory" && (
         <>
