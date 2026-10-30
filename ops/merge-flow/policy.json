@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "enabled": true,
+  "mode": "recommend",
+  "repositories": [
+    "khaneilcampbell/ai-ops-atlas",
+    "khaneilcampbell/benjaire.com",
+    "khaneilcampbell/benjaire-dashboard",
+    "khaneilcampbell/career-application-system",
+    "khaneilcampbell/khaneilcampbell",
+    "khaneilcampbell/khaneilcampbell.com",
+    "khaneilcampbell/multi-agent-commerce-pipeline",
+    "khaneilcampbell/projects-intelligence-hub",
+    "khaneilcampbell/service-desk-intelligence",
+    "khaneilcampbell/skyline",
+    "khaneilcampbell/splunk-bruteforce-detection-lab"
+  ],
+  "openPullRequestsPerRepository": 20,
+  "mergedPullRequestsPerRepository": 10,
+  "staleAfterDays": 7,
+  "requestTimeoutSeconds": 20,
+  "heartbeatHours": 24,
+  "brief": {
+    "model": "claude-opus-5-5",
+    "effort": "low",
+    "maxTokens": 1500,
+    "maxPullRequests": 15,
+    "maxPerDay": 4,
+    "monthlyBudgetUsd": 1.0,
+    "inputUsdPerMTok": 4.0,
+    "outputUsdPerMTok": 20.0
+  },
+  "neverDo": ["merge", "approve", "push", "comment", "close", "re-run", "change settings"]
+}
