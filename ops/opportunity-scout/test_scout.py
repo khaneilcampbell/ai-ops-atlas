@@ -201,7 +201,8 @@ class AtlasReport(unittest.TestCase):
         long = idea("T" * 500)
         long["risks"] = "r" * 5000
         r = sc.review({"ideas": [long], "spec": spec(purpose="p" * 2000, building="Not a project")}, DIGEST, POLICY)
-        rep = sc.atlas_report(r, DIGEST, POLICY, 0.01, NOW)
+        with mock.patch.dict("os.environ", {}, clear=True):  # no GITHUB_RUN_ID, as outside Actions
+            rep = sc.atlas_report(r, DIGEST, POLICY, 0.01, NOW)
         self.assertLessEqual(len(rep["ideas"][0]["title"]), 160)
         self.assertLessEqual(len(rep["ideas"][0]["risks"]), 600)
         self.assertLessEqual(len(rep["spec"]["purpose"]), 600)
