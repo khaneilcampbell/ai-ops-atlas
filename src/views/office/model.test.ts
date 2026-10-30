@@ -1,3 +1,4 @@
+import {projectOfficeAgents} from "../../catalog/workplaces";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,8 +27,8 @@ const run = (at: string, result: ExecutionRecord["result"]): ExecutionRecord => 
 const agent = { id: "atlas-ci", status: "active" as const };
 
 describe("office plan", () => {
-  it.each(catalog.projects)("keeps every registered agent at its own desk inside the $name office", (project) => {
-    const agents = catalog.agents.filter((a) => a.projectId === project.id);
+  it.each(catalog.projects)("keeps each worker assigned to the $name office at its own desk", (project) => {
+    const agents = projectOfficeAgents(catalog.agents,project.id);
     const plan = planOffice(project, agents);
     expect(plan.workstations.map((w) => w.agentId).sort()).toEqual(agents.map((a) => a.id).sort());
     expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(agents.length);
@@ -40,13 +41,13 @@ describe("office plan", () => {
 
   it("gives the AI Ops Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
-    const agents = catalog.agents.filter((a) => a.projectId === project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward"]);
+    const agents = projectOfficeAgents(catalog.agents,project.id);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());
     expect(plan.workstations.map(w=>w.tier)).toEqual([...plan.workstations.map(w=>w.tier)].sort((a,b)=>["central","coordinator","specialized"].indexOf(a)-["central","coordinator","specialized"].indexOf(b)));
-    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(6);
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(agents.length);
     // Stable: the same input always gives the same desks.
     expect(planOffice(project, agents)).toEqual(plan);
   });

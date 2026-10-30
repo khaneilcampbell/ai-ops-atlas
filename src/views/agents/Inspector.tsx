@@ -1,3 +1,4 @@
+import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
 import { Icon } from "../../components/Icon";
 import { CopyButton, ExternalLink, StatusPill } from "../../components/bits";
@@ -133,6 +134,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       </div>
 
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
+        <CodexReviewHandoff agent={agent}/>
         {tab === "overview" && (
           <div className="reg-cols">
             <dl className="kv">
