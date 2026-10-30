@@ -1,3 +1,4 @@
+import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -17,7 +18,7 @@ import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./
 import { Network, type NetLink } from "./network";
 import { Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
-import { ENTER_MS, LEAVE_MS, useOffice, enterBuilding } from "../office/store";
+import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
@@ -113,6 +114,10 @@ const selOf = (key: string): Sel => {
 function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  for(const shop of scene.retail){
+    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+toolOfficeHeight(shop.name)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
+    m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
+  }
   const skyline=skylineProjectAnchor(scene);
   if(skyline)m.set("project:skyline",skyline);
   // AI agents work inside their headquarters, so they share its anchor.
@@ -280,7 +285,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         h: 28,
         priority: urgent ? 0.5 : 6.5,
         className: `m3-pill quiet ${k.key === selKey ? "selected" : urgent ? "hover" : ""}${net.focusSet && !net.focusSet.has(k.projectId) ? " dim" : ""}`,
-        onClick: () => enterBuilding(`skyline-business:${k.name}`,true),
+        onClick: () => select(k.key),
         node: k.name,
       });
     }
@@ -307,7 +312,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
       out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
     }
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===shop.key)) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:hover===shop.key?0.5:7,className:"m3-plaque compact secondary",node:<div className="t">{shop.name}</div>,onClick:()=>enterBuilding(`skyline-business:${shop.name}`,true),title:`${shop.name} · khaneilcampbell/skyline`});
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
       if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:154,h:24,priority:1.5,className:"m3-pill hood district",node:"SKYLINE DISTRICT",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
@@ -341,7 +346,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     of: (keys) => ({
       ...pick.of(keys),
       over: (key) => { setHover(key); setTip(null); },
-      click:(key,e)=>{if(e.delta>4)return;const tool=scene.kiosks.find(k=>k.key===key);if(tool)enterBuilding(`skyline-business:${tool.name}`,true);else select(key);},
+      click:(key,e)=>{if(e.delta>4)return;const shop=scene.retail.find(k=>k.key===key);select(shop?skylineBuildingKey(shop.name):key);},
     }),
   };
   const terracePick: Pick = {
@@ -865,7 +870,7 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({...kioskPick.of(keys),keys,click:key=>{const shop=scene.retail.find(k=>k.key===key);if(shop)enterBuilding(`skyline-business:${shop.name}`,true);else landmarkSelect();}})}} />
+      <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
