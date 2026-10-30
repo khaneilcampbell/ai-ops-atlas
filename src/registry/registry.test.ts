@@ -45,18 +45,19 @@ describe("bundled registry", () => {
   });
 
 
-  it("registers the improvement analyst as observable automation with no model", () => {
+  it("registers the improvement analyst as observable automation with manual Codex and model-free automatic reporting", () => {
     const agent=catalog.agents.find(a=>a.id==="atlas-system-improvements")!;
     expect(agent.projectId).toBe("ai-ops-atlas");
-    expect(agent.registry?.classification?.type).toBe("D");
+    expect(agent.registry?.classification?.type).toBe("B");
     expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
-    expect(agent.model).toBe("None (deterministic automation)");
+    expect(agent.model).toContain("no model");
+    expect(agent.workplace).toEqual({building:"OpenAI",floor:4,room:"401"});
     expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 5, C: 16, D: 11, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 6, C: 16, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 

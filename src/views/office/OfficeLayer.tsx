@@ -1,3 +1,4 @@
+import {projectOfficeAgents} from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -40,7 +41,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
   // Every registered worker belongs at a desk inside its project building.
-  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId), [catalog, projectId]);
+  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
 
   const rows = useMemo(() => {

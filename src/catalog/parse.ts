@@ -1,3 +1,4 @@
+import {WORKPLACE_BUILDINGS} from "./workplaces";
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader, type Raw } from "./reader";
@@ -43,6 +44,19 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     const purpose = r.str(ao, "purpose", path);
     const framework = r.str(ao, "framework", path);
     if (!id || !name || !purpose || !framework) return [];
+    let workplace:Agent["workplace"];
+    if(ao.workplace!==undefined){
+      const w=r.obj(ao.workplace,`${path}.workplace`);
+      if(w){
+        const building=r.oneOf(w,"building",`${path}.workplace`,WORKPLACE_BUILDINGS);
+        if(w.building===undefined)r.fail(`${path}.workplace.building`,"is required");
+        const floor=w.floor,room=r.str(w,"room",`${path}.workplace`);
+        if(typeof floor!=="number"||!Number.isInteger(floor)||floor<1||floor>4)r.fail(`${path}.workplace.floor`,"must be an integer from 1 to 4");
+        if(room&&!/^[1-4]0[1-4]$/.test(room))r.fail(`${path}.workplace.room`,"must identify a room from 101 to 404");
+        else if(room&&Number(room[0])!==floor)r.fail(`${path}.workplace.room`,"must match the workplace floor");
+        if(building&&typeof floor==="number"&&Number.isInteger(floor)&&floor>=1&&floor<=4&&room&&/^[1-4]0[1-4]$/.test(room)&&Number(room[0])===floor)workplace={building,floor,room};
+      }
+    }
     const observe = ao.observe ? r.obj(ao.observe, `${path}.observe`) : null;
     const alerts = ao.alerts ? r.obj(ao.alerts, `${path}.alerts`) : null;
     const agentRepo = r.str(ao, "repository", path, false) ?? repository;
@@ -63,6 +77,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         framework,
         model: r.str(ao, "model", path, false),
         runtime: r.str(ao, "runtime", path, false),
+        workplace,
         status: r.status(ao, path),
         trigger: r.str(ao, "trigger", path, false),
         source: r.str(ao, "source", path, false),
@@ -155,6 +170,13 @@ export function buildCatalog(files: Record<string, string>): { catalog: Catalog;
       seenAgents.add(a.id);
       catalog.agents.push(a);
     }
+  }
+  const workplaces=new Set<string>();
+  for(const a of catalog.agents){
+    if(!a.workplace)continue;
+    const key=`${a.workplace.building}/${a.workplace.room}`;
+    if(workplaces.has(key))issues.push({file:catalog.projects.find(p=>p.id===a.projectId)?.file??a.projectId,message:`workplace ${key} is assigned to more than one worker`});
+    workplaces.add(key);
   }
   // A declared connection must point at something in the catalog; it is never guessed.
   for (const p of catalog.projects)

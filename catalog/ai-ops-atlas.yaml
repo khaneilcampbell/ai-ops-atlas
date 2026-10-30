@@ -392,42 +392,44 @@ agents:
 
   - id: atlas-system-improvements
     name: Atlas System Improvements
-    model: None (deterministic automation)
-    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no AI model calls and never changes code.
-    framework: GitHub Actions
-    runtime: GitHub-hosted runner, Python standard library
+    model: Automatic reports use no model; manual reviews use an explicitly selected Codex model
+    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Codex reviews are available on request from the OpenAI building, Floor 4, Suite 401.
+    workplace: {building: OpenAI, floor: 4, room: "401"}
+    framework: GitHub Actions + Codex (manual)
+    runtime: GitHub-hosted Python reports; local Codex CLI for manual reviews
     status: idle
     trigger: After main-branch push CI completes, or manually from GitHub Actions on main
     source: ops/system-improvements/report.py
     observe:
       github_workflow: system-improvements.yml
     last_run: null
-    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact]
+    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Codex reads supplied source excerpts only]
     registry:
-      title: System Improvement Analyst
-      version: 1.0.0
+      title: AI Production Improvement Analyst
+      version: 1.1.0
+      tier: specialized
       category: engineering
       subcategory: Continuous improvement
       automation_category: maintenance
       classification:
-        type: D
+        type: B
         confidence: verified
-        evidence: ops/system-improvements/report.py uses fixed deterministic checks and two bounded GET requests; no model SDK, model calls, or remediation path
+        evidence: Automatic reporting uses fixed checks; ops/system-improvements/codex_review.py adds a separately requested, read-only Codex review. Manual review has not been run.
       mission:
         problem: Atlas needs reviewable system improvement candidates without recurring model usage or repeated full builds.
-        outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero model calls]
+        outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero automatic model calls]
         beneficiaries: [KC, Atlas maintainers]
       responsibilities:
         tasks: [Sample recent main-branch CI evidence, Check the assessed commit's status, Flag floor-dependent renderer remount patterns, Identify large source modules as refactoring candidates, Publish a compact report]
         tools: [Python standard library, GitHub read-only REST API, GitHub Actions summary and artifact]
         inputs: [Completed main-branch CI push run or manual request, Exact assessed commit]
         outputs: [Markdown run summary, JSON and Markdown report artifact retained 14 days]
-        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, No AI calls or automatic code changes, Not a security audit or visual correctness check]
+        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Codex review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
       goals:
         objective: Surface small evidence-backed improvements while minimizing usage.
       execution:
         trigger_type: event
-        environment: GitHub Actions, main branch only
+        environment: GitHub Actions for automatic reports; local Codex for requested reviews
         stages: [Read bounded source evidence, Read two bounded GitHub endpoints, Rank improvement candidates, Publish report]
       governance:
         autonomy: 1
@@ -438,7 +440,7 @@ agents:
         risk: low
         audit_log: GitHub Actions run summary and report artifact
       cost:
-        budget: Zero model tokens or paid AI calls; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
+        budget: Automatic reports use zero model tokens; manual Codex review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
       docs:
         technical: docs/system-improvements.md
         runbook: docs/system-improvements.md
