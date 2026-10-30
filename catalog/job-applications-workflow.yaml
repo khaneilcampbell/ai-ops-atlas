@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: career-optimizer
-  name: career-application-system
+  name: Career Applications
   summary: >-
     Human-in-the-loop workflow that turns a job posting into a tailored,
     ATS-readable resume from a verified career database, and tracks every

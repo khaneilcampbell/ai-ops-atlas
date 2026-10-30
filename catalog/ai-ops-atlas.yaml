@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: ai-ops-atlas
-  name: ai-ops-atlas
+  name: Atlas HQ
   summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
   status: active
   repository: khaneilcampbell/ai-ops-atlas
@@ -445,3 +445,154 @@ agents:
         technical: docs/system-improvements.md
         runbook: docs/system-improvements.md
         last_review: 2026-10-30
+
+  - id: atlas-ui-improvement-designer
+    name: AI UI Improvement Designer
+    model: No automatic model calls; manual Codex review only
+    purpose: Reviews Atlas city maps, building interiors, labels, navigation, accessibility, and responsive layouts. Reuses existing CI reports and user-supplied screenshots to suggest at most three small design improvements. Reports only; no automatic edits or model runs.
+    workplace: {building: OpenAI, floor: 4, room: "402"}
+    framework: Codex (manual review)
+    runtime: Manually requested Codex session
+    status: idle
+    trigger: Explicit maintainer request only; no schedule
+    source: ops/system-improvements/ui-design-prompt.md
+    last_run: null
+    permissions: [Read supplied screenshots and source excerpts, Read existing CI evidence]
+    registry:
+      title: AI UI Improvement Designer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: UI design improvement
+      classification:
+        type: B
+        confidence: verified
+        evidence: Manual review prompt and catalog registration only; no autonomous runner or model calls.
+      mission:
+        problem: Atlas needs focused UI improvements without recurring model usage.
+        outcomes: [Three or fewer evidence-backed UI recommendations, Clear verification steps, Preserve Atlas visual identity]
+        beneficiaries: [KC, Atlas users]
+      responsibilities:
+        tasks: [Review label clarity and visual hierarchy, Check building and path clearance, Assess floor navigation and entrances, Review accessibility and day-night contrast, Propose small prioritized improvements]
+        tools: [Manually requested Codex review, Existing CI report, User-supplied screenshots]
+        inputs: [Explicit review request, Current screenshots, Focused source excerpts, Existing CI evidence]
+        outputs: [Compact design report with evidence and a next validation step]
+        limitations: [No scheduled model runs, No automatic code edits or deployments, No visual claims without screenshots, At most three recommendations, Reuses existing reports rather than rerunning CI]
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex session
+        stages: [Review supplied evidence, Identify confirmed UI issues, Rank three or fewer improvements, Return review for approval]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only. Implementation requires a separate user request.
+        data_sensitivity: internal
+        approval: Explicit user request starts each Codex review.
+        risk: low
+      cost:
+        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Codex allowance only when requested.
+      docs:
+        technical: docs/ui-improvement-designer.md
+        runbook: docs/ui-improvement-designer.md
+        last_review: 2026-10-30
+
+  - id: atlas-production-coordinator
+    name: Atlas Production Coordinator
+    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Production Coordinator
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+
+  - id: atlas-reliability-reviewer
+    name: Atlas Reliability Reviewer
+    purpose: Reviews existing test failures, building transitions, navigation, and error reports for reproducible reliability issues. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Reliability Reviewer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+
+  - id: atlas-performance-reviewer
+    name: Atlas Performance Reviewer
+    purpose: Reviews supplied rendering and usage evidence for focused performance improvements without repeated builds or model loops. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Performance Reviewer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.

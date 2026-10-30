@@ -57,6 +57,9 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         if(building&&typeof floor==="number"&&Number.isInteger(floor)&&floor>=1&&floor<=4&&room&&/^[1-4]0[1-4]$/.test(room)&&Number(room[0])===floor)workplace={building,floor,room};
       }
     }
+    const officeFloor = ao.office_floor;
+    if (officeFloor !== undefined && (typeof officeFloor !== "number" || !Number.isInteger(officeFloor) || officeFloor < 1 || officeFloor > 4)) r.fail(`${path}.office_floor`, "must be an integer from 1 to 4");
+    if (officeFloor !== undefined && workplace) r.fail(`${path}.office_floor`, "cannot be combined with an external workplace");
     const observe = ao.observe ? r.obj(ao.observe, `${path}.observe`) : null;
     const alerts = ao.alerts ? r.obj(ao.alerts, `${path}.alerts`) : null;
     const agentRepo = r.str(ao, "repository", path, false) ?? repository;
@@ -78,6 +81,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         model: r.str(ao, "model", path, false),
         runtime: r.str(ao, "runtime", path, false),
         workplace,
+        officeFloor: typeof officeFloor === "number" && Number.isInteger(officeFloor) && officeFloor >= 1 && officeFloor <= 4 ? officeFloor : undefined,
         status: r.status(ao, path),
         trigger: r.str(ao, "trigger", path, false),
         source: r.str(ao, "source", path, false),

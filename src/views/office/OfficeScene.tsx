@@ -16,6 +16,7 @@ import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./text
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
   ws: Workstation;
+  floor?: number;
   name: string;
   accent: string;
   icon: ToolIcon;
@@ -58,10 +59,10 @@ export default function OfficeScene(props: Props) {
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
-        {level<4&&<SharedFloor plan={props.plan} floor={level}/>}
+        {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
-        {level===4&&<WorkflowFloor desks={desks}/>}
-        {level===4&&desks.map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
+        {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
+        {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
       </group>)}
     </Canvas>
   );

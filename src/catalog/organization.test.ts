@@ -97,7 +97,7 @@ describe("automation categories", () => {
         "visual-director",
       ],
       monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
+      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
       maintenance: ["atlas-github-steward", "atlas-system-improvements", "career-db-validator", "db-backup", "docs-builder", "site-audit", "site-builder"],
     });
   });

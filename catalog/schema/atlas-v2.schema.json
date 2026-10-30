@@ -679,6 +679,12 @@
               }
             },
             "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building."
+          },
+          "office_floor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Floor in the owning project office. Defaults to 4."
           }
         }
       }

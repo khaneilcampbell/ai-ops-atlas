@@ -1,3 +1,4 @@
+import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
 import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
@@ -318,7 +319,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
-      if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:154,h:24,priority:1.5,className:"m3-pill hood district",node:"SKYLINE DISTRICT",title:"Skyline district"});
+      if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: selKey==="project:skyline"?0:3, className: `m3-plaque compact${selKey==="project:skyline"?" selected":""}`, onClick:()=>select("project:skyline"), title: `skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
     }
@@ -875,6 +876,7 @@ function World({
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
+      <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
