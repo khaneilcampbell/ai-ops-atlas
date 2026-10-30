@@ -1,0 +1,79 @@
+# Opportunity Scout (ops/opportunity-scout): ranked money ideas and one agent spec from Atlas's own registry.
+# Read-only. Reads catalog files from the checkout; Claude only when the registry changed (or a fresh look is asked for).
+name: Opportunity scout
+
+on:
+  push:
+    branches: [main]
+    paths: [catalog/**, ops/opportunity-scout/prompt.md, ops/opportunity-scout/policy.json]
+  # Twice a week keeps the saved state from expiring (Actions evicts caches unused for 7 days).
+  schedule:
+    - cron: "41 13 * * 1,4"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Read and count only (no model call, no feed, no saved state)
+        type: boolean
+        default: false
+      fresh:
+        description: Ask for new ideas even if the registry is unchanged (daily and monthly caps still apply)
+        type: boolean
+        default: false
+  # Tests the agent itself on pull requests that change it, in dry-run mode.
+  pull_request:
+    paths: [ops/opportunity-scout/**, .github/workflows/opportunity-scout.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opportunity-scout-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            catalog
+            ops/opportunity-scout
+      - name: Restore last scan
+        if: env.DRY_RUN != 'true'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: opportunity-scout-state.json
+          key: opportunity-scout-state-${{ github.run_id }}
+          restore-keys: opportunity-scout-state-
+      - name: Set up Python
+        run: python3 -m venv "$RUNNER_TEMP/scout" && "$RUNNER_TEMP/scout/bin/pip" install --quiet pyyaml
+      - name: Scan
+        id: scan
+        env:
+          ANTHROPIC_API_KEY: ${{ github.event_name != 'pull_request' && secrets.ANTHROPIC_API_KEY || '' }}
+          ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
+          ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+        run: >-
+          "$RUNNER_TEMP/scout/bin/python" ops/opportunity-scout/scout.py scan
+          ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }} ${{ inputs.fresh == true && '--fresh' || '' }}
+      - name: Install the Claude SDK
+        if: steps.scan.outputs.ideas == 'true'
+        run: '"$RUNNER_TEMP/scout/bin/pip" install --quiet --upgrade anthropic'
+      - name: Ideas
+        if: steps.scan.outputs.ideas == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ github.event_name != 'pull_request' && secrets.ANTHROPIC_API_KEY || '' }}
+          ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
+          ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+        run: '"$RUNNER_TEMP/scout/bin/python" ops/opportunity-scout/scout.py ideas'
+      - name: Save scan
+        if: env.DRY_RUN != 'true' && hashFiles('opportunity-scout-state.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: opportunity-scout-state.json
+          key: opportunity-scout-state-${{ github.run_id }}
