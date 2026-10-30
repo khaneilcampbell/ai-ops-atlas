@@ -36,6 +36,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: python3 -m unittest discover -s ops/system-improvements -p 'test_*.py'
       - run: npm run build
       - run: npm run build:web
 
@@ -60,8 +61,11 @@ jobs:
           workspaces: src-tauri
       - run: mkdir -p dist && touch dist/index.html
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo fmt --manifest-path ops/security/glib-regression/Cargo.toml --check
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Test glib soundness backport with optimizations
+        run: cargo test --manifest-path ops/security/glib-regression/Cargo.toml --release --locked
 
   audit:
     name: Dependency audit
@@ -95,6 +99,7 @@ jobs:
       - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/merge-flow -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/autopilot -p 'test_*.py'
+      - run: python3 -m venv "$RUNNER_TEMP/scout" && "$RUNNER_TEMP/scout/bin/pip" install --quiet pyyaml && "$RUNNER_TEMP/scout/bin/python" -m unittest discover -s ops/opportunity-scout -p 'test_*.py'
       - run: python3 ops/security/audit.py --local
 
   macos:

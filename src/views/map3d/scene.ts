@@ -190,7 +190,7 @@ export function buildScene(layout: Layout): Scene3D {
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
-    const floors = d.project.id === "benjaire-site" ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
     const size = d.hq.size * (identity.landmark ? 1.02 : 0.92);
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
@@ -419,11 +419,15 @@ export function buildScene(layout: Layout): Scene3D {
       paving.push(strip(x, cz - 1.2, x, cz + 3.9, 0.4, top));
     }
     paving.push(strip(cx-5.4,cz-1.2,cx+5.4,cz-1.2,0.4,top),strip(cx-5.4,cz+3.9,cx+5.4,cz+3.9,0.4,top));
+    // Rear observation-wheel plaza connects to the promenade without crossing the lobby.
+    paving.push(strip(cx + 2.15, cz - 3.5, cx + 2.15, cz - 1.2, 0.4, top));
+    paving.push(strip(cx, cz - 3.5, cx + 2.15, cz - 3.5, 0.4, top));
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
     fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
     ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
+      if (Math.abs(s.gx-cx) < 2.3 && Math.abs(s.gy-(cz-3.5)) < 1.05) continue;
       if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
       if (retail.some(k => k.projectId === p.id && Math.abs(k.x-s.gx) < k.size/2+0.4 && Math.abs(k.z-s.gy) < k.size/2+0.5)) continue;
       if (paving.some(q => inRect(q, s.gx, s.gy, 0.2))) continue;

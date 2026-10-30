@@ -96,6 +96,7 @@ describe("automation categories", () => {
         "commerce-loop",
         "copy-strategist",
         "email-digest",
+        "github-opportunity-scout",
         "launch-planner",
         "market-analyst",
         "niche-scout",
@@ -106,8 +107,8 @@ describe("automation categories", () => {
         "visual-director",
       ],
       monitoring: ["autopilot-spend-guard", "autopilot-uptime", "autopilot-weekly-digest", "health-report"],
-      intelligence: ["atlas-engineering-review", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
-      maintenance: ["atlas-github-steward", "career-db-validator", "db-backup", "docs-builder", "site-audit", "site-builder"],
+      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
+      maintenance: ["atlas-github-steward", "atlas-system-improvements", "career-db-validator", "db-backup", "docs-builder", "site-audit", "site-builder"],
     });
   });
 
