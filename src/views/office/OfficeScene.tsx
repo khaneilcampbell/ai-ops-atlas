@@ -49,7 +49,7 @@ export default function OfficeScene(props: Props) {
   // Render continuously only while something on screen moves; otherwise only on camera changes.
   const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
   return (
-    <Canvas key={props.floor===-1?"all":"single"} style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
