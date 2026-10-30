@@ -647,6 +647,44 @@
                 }
               }
             }
+          },
+          "workplace": {
+            "type": "object",
+            "required": [
+              "building",
+              "floor",
+              "room"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "building": {
+                "enum": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Wells Fargo",
+                  "Starbucks",
+                  "Smashburger",
+                  "Chipotle",
+                  "Zara"
+                ]
+              },
+              "floor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "room": {
+                "type": "string",
+                "pattern": "^[1-4]0[1-4]$"
+              }
+            },
+            "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building."
+          },
+          "office_floor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Floor in the owning project office. Defaults to 4."
           }
         }
       }
