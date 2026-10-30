@@ -143,7 +143,7 @@ test("Skyline project panel links its repository before entering the district",a
 
 test("tool buildings show their purpose and workers before explicit entry",async({page})=>{
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
-  await selectBuilding(page,"multi-agent-commerce-pipeline");
+  await selectBuilding(page,"Commerce Pipeline");
   const tool=page.locator(".m3-pill",{hasText:"Canva"}).first();
   await tool.dispatchEvent("click");await settle(page,2);
   const inspector=page.getByRole("complementary",{name:"Inspector"});
