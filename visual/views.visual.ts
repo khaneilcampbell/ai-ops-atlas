@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForScene } from "./atlas";
@@ -21,7 +21,24 @@ async function check(page: Page, name: string) {
     await page.screenshot({ path: join(OUT, `${name}.png`), animations: "disabled", caret: "hide" });
     return;
   }
+  // A view added since the last baseline update has nothing to compare with yet: keep the
+  // screenshot as a result instead of failing, until the next update run records it.
+  if (!existsSync(test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }))) {
+    test.info().annotations.push({ type: "no baseline", description: `${name}.png is new; run the visual workflow with 'update' to record it.` });
+    await page.screenshot({ path: test.info().outputPath(`${name}.png`), animations: "disabled", caret: "hide" });
+    return;
+  }
   await expect(page).toHaveScreenshot(`${name}.png`);
+}
+
+/** Agents → Manage agents, with one agent's details open. */
+async function openManage(page: Page) {
+  await openAtlas(page, { storage: { "registry-prefs-agents": { sub: "manage" } } });
+  await goTo(page, "Agents");
+  await expect(page.getByRole("heading", { name: "Manage agents" })).toBeVisible();
+  await expect(page.locator(".manage-table .status").first()).toHaveText("Enabled");
+  await page.getByRole("button", { name: /Details for Merge Flow/ }).click();
+  await settle(page, 1);
 }
 
 test("map, day", async ({ page }) => {
@@ -69,6 +86,19 @@ test("mission control, active agents", async ({ page }) => {
   await check(page, "active-agents");
 });
 
+test("agents, manage", async ({ page }) => {
+  await openManage(page);
+  // Keyboard: the details button is reachable and toggles.
+  const toggle = page.getByRole("button", { name: /Hide for Merge Flow/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await check(page, "agents-manage");
+  // The building opens the map with that building selected.
+  await page.getByRole("button", { name: "Show GitHub Profile on the map" }).first().click();
+  await settle(page);
+  await expect(page.locator(".map-stage")).toBeVisible();
+  await expect(page.getByText("GitHub Profile").first()).toBeVisible();
+});
+
 // iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -88,5 +118,12 @@ test.describe("phone", () => {
     await waitForScene(page);
     await selectBuilding(page, "Atlas HQ");
     await check(page, "phone-map-selected");
+  });
+
+  test("agents, manage", async ({ page }) => {
+    await openManage(page);
+    // No sideways scroll on a phone.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await check(page, "phone-agents-manage");
   });
 });

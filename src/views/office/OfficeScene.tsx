@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePowerProfile } from "../../lib/power";
+import { FramePacer } from "../map3d/pacer";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import FloorLabel from "./FloorLabel";
@@ -47,10 +49,11 @@ interface Props {
 /** VirtualOffice: an open-roof cutaway of a project's headquarters, one workstation per agent. */
 export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
-  // Render continuously only while something on screen moves; otherwise only on camera changes.
-  const moving = !reduced && desks.some((d) => d.runtime.state === "working" || d.runtime.state === "awaiting" || d.runtime.state === "failed");
+  // The lobby doors and the lift always move unless motion is reduced; the pacer sets their frame rate.
+  const power = usePowerProfile();
   return (
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, 2]} frameloop={moving ? "always" : "demand"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, power.maxDpr]} frameloop="demand" camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+      <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}

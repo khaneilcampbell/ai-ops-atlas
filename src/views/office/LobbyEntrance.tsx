@@ -9,7 +9,6 @@ export default function LobbyEntrance({z,width=2,height=2.4}:{z:number;width?:nu
   const doors=useRef<THREE.Group>(null),opening=useRef(0);
   const reduced=useReducedMotion();
   useFrame((state,dt)=>{
-    if(!reduced)state.invalidate();
     const lift=elevatorAt(reduced?0:state.clock.elapsedTime);
     const target=!reduced&&lift.landing===0&&(lift.phase<1||lift.phase>4)?1:0;
     opening.current+=(target-opening.current)*(1-Math.exp(-Math.min(dt,0.1)*10));
