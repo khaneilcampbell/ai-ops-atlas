@@ -38,15 +38,25 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 41 agents discoverable with no manifest problems", () => {
+  it("keeps all 11 projects and 42 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(11);
-    expect(entries).toHaveLength(41);
+    expect(entries).toHaveLength(42);
+  });
+
+
+  it("registers the improvement analyst as observable automation with no model", () => {
+    const agent=catalog.agents.find(a=>a.id==="atlas-system-improvements")!;
+    expect(agent.projectId).toBe("ai-ops-atlas");
+    expect(agent.registry?.classification?.type).toBe("D");
+    expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
+    expect(agent.model).toBe("None (deterministic automation)");
+    expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 5, C: 16, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 5, C: 16, D: 11, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -260,7 +270,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(41);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(42);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -277,7 +287,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(29);
+    expect(s.observable).toBe(30);
   });
 });
 

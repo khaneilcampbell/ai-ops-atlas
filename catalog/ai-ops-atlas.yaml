@@ -389,3 +389,57 @@ agents:
           - Run history is device-local and is not yet surfaced as live registry telemetry
           - Documentation quality, uptime, branch protections, billing and agent permissions are not assessed
         last_review: 2026-10-28
+
+  - id: atlas-system-improvements
+    name: Atlas System Improvements
+    model: None (deterministic automation)
+    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no AI model calls and never changes code.
+    framework: GitHub Actions
+    runtime: GitHub-hosted runner, Python standard library
+    status: idle
+    trigger: After main-branch push CI completes, or manually from GitHub Actions on main
+    source: ops/system-improvements/report.py
+    observe:
+      github_workflow: system-improvements.yml
+    last_run: null
+    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact]
+    registry:
+      title: System Improvement Analyst
+      version: 1.0.0
+      category: engineering
+      subcategory: Continuous improvement
+      automation_category: maintenance
+      classification:
+        type: D
+        confidence: verified
+        evidence: ops/system-improvements/report.py uses fixed deterministic checks and two bounded GET requests; no model SDK, model calls, or remediation path
+      mission:
+        problem: Atlas needs reviewable system improvement candidates without recurring model usage or repeated full builds.
+        outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero model calls]
+        beneficiaries: [KC, Atlas maintainers]
+      responsibilities:
+        tasks: [Sample recent main-branch CI evidence, Check the assessed commit's status, Flag floor-dependent renderer remount patterns, Identify large source modules as refactoring candidates, Publish a compact report]
+        tools: [Python standard library, GitHub read-only REST API, GitHub Actions summary and artifact]
+        inputs: [Completed main-branch CI push run or manual request, Exact assessed commit]
+        outputs: [Markdown run summary, JSON and Markdown report artifact retained 14 days]
+        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, No AI calls or automatic code changes, Not a security audit or visual correctness check]
+      goals:
+        objective: Surface small evidence-backed improvements while minimizing usage.
+      execution:
+        trigger_type: event
+        environment: GitHub Actions, main branch only
+        stages: [Read bounded source evidence, Read two bounded GitHub endpoints, Rank improvement candidates, Publish report]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only. Does not open issues or pull requests, rerun CI, merge, deploy, or change credentials.
+        data_sensitivity: internal
+        approval: A maintainer reviews findings and separately authorizes any implementation.
+        credential_owner: GitHub ephemeral GITHUB_TOKEN, contents and actions read only
+        risk: low
+        audit_log: GitHub Actions run summary and report artifact
+      cost:
+        budget: Zero model tokens or paid AI calls; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
+      docs:
+        technical: docs/system-improvements.md
+        runbook: docs/system-improvements.md
+        last_review: 2026-10-30

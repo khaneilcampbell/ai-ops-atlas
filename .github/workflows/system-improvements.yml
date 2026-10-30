@@ -1,0 +1,46 @@
+name: Atlas system improvements
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: atlas-system-improvements
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: System Improvement Analyst
+    if: >-
+      github.repository == 'khaneilcampbell/ai-ops-atlas' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Collect bounded improvement evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          python3 ops/system-improvements/report.py --sha "$REPORT_SHA" --output "$RUNNER_TEMP/atlas-improvements"
+          cat "$RUNNER_TEMP/atlas-improvements/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: atlas-system-improvements
+          path: ${{ runner.temp }}/atlas-improvements/
+          retention-days: 14
+          if-no-files-found: error

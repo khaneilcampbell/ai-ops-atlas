@@ -36,6 +36,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: python3 -m unittest discover -s ops/system-improvements -p 'test_*.py'
       - run: npm run build
       - run: npm run build:web
 
