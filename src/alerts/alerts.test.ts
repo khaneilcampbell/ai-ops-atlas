@@ -111,7 +111,7 @@ agents:
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
     const watched = catalog.agents.filter((a) => a.alerts);
-    expect(watched.map((a) => a.id).sort()).toEqual(["benjaire-contact-worker", "benjaire-flow-intake", "canva-mockups", "commerce-loop", "order-delivery", "seo-maintainer"]);
+    expect(watched.map((a) => a.id).sort()).toEqual(["autopilot-uptime", "benjaire-contact-worker", "benjaire-flow-intake", "canva-mockups", "commerce-loop", "order-delivery", "seo-maintainer"]);
     for (const a of watched) {
       expect(a.observe?.agentFeed).toBe(true);
       expect(!!a.alerts!.notRunning).toBe(a.projectId === "commerce-pipeline");

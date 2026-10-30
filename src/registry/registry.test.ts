@@ -38,15 +38,15 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 42 agents discoverable with no manifest problems", () => {
+  it("keeps all 11 projects and 45 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(11);
-    expect(entries).toHaveLength(42);
+    expect(entries).toHaveLength(45);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 6, C: 16, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 6, C: 19, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("bundled registry", () => {
       expect(action.profile.governance.approval).toBeTruthy();
       expect(action.profile.governance.permissions.length).toBeGreaterThan(0);
     }
-    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr"]);
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr", "autopilot-spend-guard"]);
   });
 });
 
@@ -260,7 +260,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(42);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(45);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -277,7 +277,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(30);
+    expect(s.observable).toBe(33);
   });
 });
 

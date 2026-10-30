@@ -1,0 +1,58 @@
+# Autopilot uptime (ops/autopilot/uptime.py): checks the live sites and the contact form route, alerts when one stays down.
+# Plain HTTP GETs, no model calls, never submits a form. Alerts by email or webhook when configured; a new outage also fails the run.
+name: Autopilot uptime
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Check and print only (no alerts, no saved state)
+        type: boolean
+        default: false
+  pull_request:
+    paths: [ops/autopilot/**, .github/workflows/autopilot-uptime.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autopilot-uptime-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          sparse-checkout: ops/autopilot
+      - name: Restore last state
+        if: env.DRY_RUN != 'true'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: uptime-state.json
+          key: uptime-state-${{ github.run_id }}
+          restore-keys: uptime-state-
+      - name: Check
+        id: check
+        env:
+          RESEND_API_KEY: ${{ github.event_name != 'pull_request' && secrets.RESEND_API_KEY || '' }}
+          NOTIFY_EMAIL_TO: ${{ vars.NOTIFY_EMAIL_TO }}
+          NOTIFY_EMAIL_FROM: ${{ vars.NOTIFY_EMAIL_FROM }}
+          NOTIFY_WEBHOOK_URL: ${{ github.event_name != 'pull_request' && secrets.NOTIFY_WEBHOOK_URL || '' }}
+          ATLAS_FEED_URL: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_URL || '' }}
+          ATLAS_FEED_TOKEN: ${{ github.event_name != 'pull_request' && secrets.ATLAS_FEED_TOKEN || '' }}
+        run: python3 ops/autopilot/uptime.py ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}
+      # Saved even when the check step fails (an outage), so the next run knows an alert already went out.
+      - name: Save state
+        if: always() && env.DRY_RUN != 'true' && steps.check.outputs.state_changed == 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: uptime-state.json
+          key: uptime-state-${{ github.run_id }}

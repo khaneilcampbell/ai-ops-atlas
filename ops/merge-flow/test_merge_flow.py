@@ -149,6 +149,12 @@ class Decide(unittest.TestCase):
     def test_no_key_no_brief(self):
         self.assertEqual(mf.decide({"version": 1}, self.report(pr(7)), POLICY, NOW, False)["brief_skipped"], "no ANTHROPIC_API_KEY")
 
+    def test_spend_guard_pause_skips_only_the_brief(self):
+        d = mf.decide({"version": 1}, self.report(pr(7)), POLICY, NOW, True, paused=True)
+        self.assertFalse(d["brief"])
+        self.assertTrue(d["report"])
+        self.assertEqual(d["brief_skipped"], "paused by the spend guard")
+
 
 class Commands(unittest.TestCase):
     def run_triage(self, tmp, data):

@@ -189,7 +189,7 @@ def brief_budget(state, policy, now):
     return None
 
 
-def decide(state, report, policy, now, has_key):
+def decide(state, report, policy, now, has_key, paused=False):
     """Whether this run reports, and whether it asks Claude for a brief."""
     fp = fingerprint(report)
     changed = fp != state.get("fingerprint")
@@ -203,6 +203,8 @@ def decide(state, report, policy, now, has_key):
         why_not = "nothing needs action"
     elif not has_key:
         why_not = "no ANTHROPIC_API_KEY"
+    elif paused:
+        why_not = "paused by the spend guard"
     else:
         why_not = brief_budget(state, policy, now)
     return {"fingerprint": fp, "changed": changed, "report": changed or heartbeat, "brief": why_not is None, "brief_skipped": why_not}
@@ -312,7 +314,9 @@ def cmd_triage(args, now=None):
         raise SystemExit("GitHub returned no data: " + "; ".join(e.get("type", "error") for e in result.get("errors", [])))
     report = triage(result["data"], repos, policy, now)
     state = load_state(args.state)
-    d = decide(state, report, policy, now, bool(os.environ.get("ANTHROPIC_API_KEY")) and not args.dry_run)
+    # The spend guard (ops/autopilot) lists agents over budget in the SPEND_GUARD_PAUSED variable.
+    paused = "github-merge-flow" in {a.strip() for a in os.environ.get("ATLAS_PAUSED_AGENTS", "").split(",")}
+    d = decide(state, report, policy, now, bool(os.environ.get("ANTHROPIC_API_KEY")) and not args.dry_run, paused)
     rate = result["data"].get("rateLimit") or {}
     # Counts only: this log is public. Titles of private repositories never reach it.
     print(f'1 request, {size} bytes, cost {rate.get("cost")}, {rate.get("remaining")} left. {report["repositories"]} repositories, '

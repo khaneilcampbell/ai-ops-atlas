@@ -41,12 +41,12 @@ describe("office plan", () => {
   it("gives the AI Ops Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = catalog.agents.filter((a) => a.projectId === project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward"]);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "autopilot-uptime", "autopilot-spend-guard", "autopilot-weekly-digest"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());
     expect(plan.workstations.map(w=>w.tier)).toEqual([...plan.workstations.map(w=>w.tier)].sort((a,b)=>["central","coordinator","specialized"].indexOf(a)-["central","coordinator","specialized"].indexOf(b)));
-    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(6);
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(9);
     // Stable: the same input always gives the same desks.
     expect(planOffice(project, agents)).toEqual(plan);
   });
