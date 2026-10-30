@@ -193,3 +193,7 @@ agents:
       tier: coordinator            # central | coordinator | specialized
       automation_category: business  # ci | security | monitoring | business | intelligence | maintenance
 ```
+
+## Physical workplaces
+
+An agent can keep its existing project/repository ownership while working in a district business building. Declare, for example, `workplace: {building: OpenAI, floor: 4, room: "401"}`. Floors 1–4 and rooms 101–404 are supported; room and floor must match, and each room can have only one worker. Assigned workers are seated at that workplace rather than duplicated in the project office.

@@ -1,3 +1,5 @@
+import {workplaceAgent} from "../../catalog/workplaces";
+import {BUILDING_INTERIORS as BUSINESS} from "../../catalog/buildings";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
@@ -46,17 +48,7 @@ function ResidenceDetails({x,z}:{x:number;z:number}) {
     <mesh position={[x+3,0.95,z+1.5]}><sphereGeometry args={[0.42,12,12]}/><meshStandardMaterial color="#4b6b3d"/></mesh>
   </group>;
 }
-const BUSINESS:Record<string,{accent:string;subtitle:string;rooms:string[]}>={
-  Anthropic:{accent:"#bd7658",subtitle:"RESEARCH & SAFETY",rooms:["Research lab","Safety evaluation","Model development","Research review"]},
-  OpenAI:{accent:"#16866d",subtitle:"APPLIED AI & ENGINEERING",rooms:["Model engineering","Product studio","Evaluation lab","Operations center"]},
-  Starbucks:{accent:"#00754a",subtitle:"COFFEEHOUSE & HOSPITALITY",rooms:["Coffee bar","Guest lounge","Barista training","Hospitality planning"]},
-  Smashburger:{accent:"#bf292b",subtitle:"RESTAURANT OPERATIONS",rooms:["Kitchen & preparation","Guest dining","Order coordination","Restaurant planning"]},
-  Chipotle:{accent:"#93432f",subtitle:"KITCHEN & GUEST EXPERIENCE",rooms:["Food preparation","Guest dining","Order coordination","Team training"]},
-  Zara:{accent:"#242424",subtitle:"FASHION & RETAIL",rooms:["Design studio","Collection showroom","Merchandising","Retail operations"]},
-  Canva:{accent:"#00aeb8",subtitle:"DESIGN & CREATIVE PRODUCTION",rooms:["Brand studio","Design production","Creative review","Publishing coordination"]},
-  Stripe:{accent:"#635bff",subtitle:"PAYMENTS INFRASTRUCTURE",rooms:["Payment operations","Billing coordination","Risk review","Integration studio"]},
-  "Wells Fargo":{accent:"#a71d30",subtitle:"BANKING & FINANCIAL OPERATIONS",rooms:["Client advisory","Accounts & payments","Risk review","Financial operations"]},
-};
+
 function BusinessSuite({x,z,name,accent,bank,labels,hospitality,fashion}:{x:number;z:number;name:string;accent:string;bank:boolean;labels:boolean;hospitality:boolean;fashion:boolean}) {
   return <group>
     <ResidenceDetails x={x} z={z}/>
@@ -90,7 +82,8 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
   useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
   const [picked,setPicked]=useState<string|null>(null);
   const {catalog}=useAtlas();
-  const agents=catalog.agents.filter(isAiAgent);
+  const agents=catalog.agents.filter(a=>isAiAgent(a)&&!a.workplace);
+  const assigned=catalog.agents.filter(a=>a.workplace?.building===building);
   useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.stopPropagation();leaveBuilding(true);}};window.addEventListener("keydown",close,true);return()=>window.removeEventListener("keydown",close,true);},[]);
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${building} interior`}>
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1}/>
@@ -120,16 +113,16 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
         <Box p={[0,0.02,0]} s={[16,0.035,2]} color="#315c49"/>
         {[-1,1].flatMap(side=>[-1,1].map((row,index)=>{
           const slot=(level-1)*4+(side===-1?0:2)+index;
-          const agent=business?undefined:agents[slot];
           const suite=business?.rooms[((level-1)+index+(side===1?2:0))%4];
           const x=side*4,z=row*3.5, room=`${level}0${(side===-1?0:2)+index+1}`;
+          const agent=business?workplaceAgent(assigned,building,level,room):agents[slot];
           return <group key={room}>
             {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} bank={building==="Wells Fargo"} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
             <Box p={[x,0.06,row*1.1]} s={[0.85,0.04,0.6]} color="#bca371"/>
             <Box p={[x,0.025,z]} s={[7.4,0.04,4.6]} color={row===-1?"#eee4d0":"#ded9cc"}/><Box p={[side*0.15,0.65,z]} s={[0.12,1.3,4.7]} color="#c9bea5"/>
             {!business&&<group><Box p={[x+1.8,0.4,z-0.7]} s={[1.7,0.6,2]} color="#657c70"/><Box p={[x+1.8,0.74,z-1.4]} s={[1.5,0.12,0.5]} color="#f8f1e2"/></group>}
-            <Sofa x={x-1.4} z={z+0.5}/><Box p={[x-1.7,0.75,z-1.3]} s={[1.7,0.12,0.7]} color="#b89760"/><Box p={[x-1.7,1.08,z-1.48]} s={[0.7,0.42,0.06]} color="#203c32"/>{!business&&<Person x={x-1.7} z={z-0.6} color={["#806c9e","#496e84","#b58b49","#5a8067"][slot%4]}/>}
-            {floor!==-1&&<Html position={[x,1.85,z]} center><button className="skyline-room-label" onClick={()=>setPicked(`${room} · ${suite??agent?.name??"Available residence"}`)}>{floor===-1?room:`${business?"Suite":"Apartment"} ${room}`}{floor!==-1&&<span>{suite??agent?.name??"Available residence"}</span>}</button></Html>}
+            <Sofa x={x-1.4} z={z+0.5}/><Box p={[x-1.7,0.75,z-1.3]} s={[1.7,0.12,0.7]} color="#b89760"/><Box p={[x-1.7,1.08,z-1.48]} s={[0.7,0.42,0.06]} color="#203c32"/>{(!business||agent)&&<Person x={business?x+1.6:x-1.7} z={business?z+0.7:z-0.6} color={["#806c9e","#496e84","#b58b49","#5a8067"][slot%4]}/>}
+            {(floor!==-1||agent?.workplace)&&<Html position={[x,1.85,z]} center><button className="skyline-room-label" onClick={()=>setPicked(`${room} · ${agent?.name??suite??"Available residence"}`)}>{`${business?"Suite":"Apartment"} ${room}`}<span>{agent?.name??suite??"Available residence"}</span></button></Html>}
           </group>;
         }))}
       </group>}
@@ -137,7 +130,7 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
       {[-7,7].map(x=><group key={x}><Box p={[x,0.35,-5]} s={[0.6,0.7,0.6]} color="#b49a67"/><mesh position={[x,1.2,-5]}><sphereGeometry args={[0.55,12,12]}/><meshStandardMaterial color="#426844"/></mesh></group>)}
     </Canvas>
     <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${building} and return to city`}>← Exit building</button><div><small>{building.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":floor===0?"Grand lobby":`Floor ${floor} · ${business?"Workspaces":"Agent residences"}`}</h2></div></header>
-    <nav className="skyline-floor-picker" aria-label={`Choose ${building} floor`}><strong>Floor navigation</strong>{[-1,0,1,2,3,4].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
-    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + 4 ${business?"workspace":"apartment"} floors · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?"Prepared workspaces · No agents assigned yet":"4 furnished apartments · Select a residence")}<span>{business?"Workspace preview · Agent assignments and live operations are not configured":"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
+    <nav className="skyline-floor-picker" aria-label={`Choose ${building} floor`}><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
+    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + 4 ${business?"workspace":"apartment"} floors · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
   </section>;
 }

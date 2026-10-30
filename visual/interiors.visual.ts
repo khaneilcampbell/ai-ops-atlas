@@ -63,6 +63,11 @@ test("branded business interior opens with its own workspace navigation",async({
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
   for(let i=0;i<6;i++){await page.getByRole("button",{name:"Zoom in",exact:true}).click();await settle(page,1);}
   await page.locator(".m3-plaque.secondary",{hasText:"Anthropic"}).dispatchEvent("click");await settle(page,4);
+  await expect(page.getByRole("region",{name:"Anthropic interior"})).toHaveCount(0);
+  await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Anthropic",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
+  await shot(page,"anthropic-building-details");
+  await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
   await expect(page.getByRole("region",{name:"Anthropic interior"})).toBeVisible();
   const nav=page.getByRole("navigation",{name:"Choose Anthropic floor"});
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
@@ -133,4 +138,20 @@ test("Skyline project panel links its repository before entering the district",a
   await shot(page,"skyline-project-repository");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
   await expect(page.getByRole("region",{name:"Skyline interior"})).toBeVisible();
+});
+
+
+test("tool buildings show their purpose and workers before explicit entry",async({page})=>{
+  await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
+  await selectBuilding(page,"Commerce Pipeline");
+  const tool=page.locator(".m3-pill",{hasText:"Canva"}).first();
+  await tool.dispatchEvent("click");await settle(page,2);
+  const inspector=page.getByRole("complementary",{name:"Inspector"});
+  await expect(inspector.getByRole("heading",{name:"Canva",exact:true})).toBeVisible();
+  await expect(inspector).toContainText("Purpose");
+  await expect(page.getByRole("region",{name:"Canva interior"})).toHaveCount(0);
+  await inspector.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
+  await expect(page.getByRole("region",{name:"Canva interior"})).toBeVisible();
+  await page.getByRole("button",{name:"Exit Canva and return to city"}).click();await settle(page,2);
+  await expect(inspector.getByRole("heading",{name:"Canva",exact:true})).toBeVisible();
 });
