@@ -21,6 +21,8 @@ import { ENTER_MS, LEAVE_MS, useOffice, enterBuilding } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
+import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { FramePacer } from "./pacer";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -369,11 +371,16 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
   const activity = useBuildingActivity();
+  // Frame rate, pixels and shadow detail follow the Performance setting.
+  const power = usePowerProfile();
+  const drawing = visible && officePhase !== "inside";
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={phone ? [1, 1.5] : [1, 2]} frameloop={visible && officePhase !== "inside" ? "always" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas shadows dpr={phone ? [1, Math.min(1.5, power.maxDpr)] : [1, power.maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+        <FramePacer profile={power} running={drawing} />
         <World
+          power={power}
           light={props.light}
           health={health}
           net={net}
@@ -447,6 +454,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 });
 
 function World({
+  power,
   light: lightMode,
   health,
   net,
@@ -476,6 +484,7 @@ function World({
   phone,
   cover,
 }: {
+  power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
   net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
@@ -505,7 +514,9 @@ function World({
   phone: boolean;
   cover: number;
 }) {
-  const { camera, gl, size, scene: three } = useThree();
+  const { camera, gl, size, scene: three, invalidate } = useThree();
+  // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.
+  useEffect(() => invalidate());
   // Before anything measures the view: in portrait, hold the horizontal angle steady (see PORTRAIT_ASPECT).
   useLayoutEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
@@ -546,6 +557,7 @@ function World({
   movedRef.current = onMoved;
   useEffect(() => {
     const start = () => {
+      wake();
       touched.current = true;
       anim.current = null;
       framing.current = null;
@@ -554,9 +566,13 @@ function World({
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
     controls.disconnect();
     controls.connect(gl.domElement);
+    // Damping eases the camera on after a release; keep drawing every frame until it settles.
+    const change = () => wake(200);
     controls.addEventListener("start", start);
+    controls.addEventListener("change", change);
     return () => {
       controls.removeEventListener("start", start);
+      controls.removeEventListener("change", change);
       controls.disconnect();
     };
   }, [controls, gl]);
@@ -599,6 +615,7 @@ function World({
 
   const goto = (target: THREE.Vector3, dist: number, instant = false, ms = 420, dir = viewDir()) => {
     const to: [THREE.Vector3, THREE.Vector3] = [target.clone(), target.clone().addScaledVector(dir, dist)];
+    wake(ms + 100);
     if (instant || reduced) {
       controls.target.copy(to[0]);
       camera.position.copy(to[1]);
@@ -708,6 +725,7 @@ function World({
         camera.position.copy(to[1]);
         anim.current = null;
       } else anim.current = { t0: performance.now(), ms: LEAVE_MS + 300, from: [controls.target.clone(), camera.position.clone()], to };
+      wake(LEAVE_MS + 400);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [office.phase, office.projectId]);
@@ -733,6 +751,19 @@ function World({
     };
   }, [center, ext, three]);
 
+  // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
+  const shadowSize = phone ? 2048 : power.shadowMap;
+  const firstShadow = useRef(true);
+  useEffect(() => {
+    if (firstShadow.current) return void (firstShadow.current = false);
+    const l = light.current;
+    if (!l?.shadow.map) return;
+    l.shadow.map.dispose();
+    l.shadow.map = null;
+    gl.shadowMap.needsUpdate = true;
+    wake();
+  }, [shadowSize, gl]);
+
   const fog = useMemo(() => new THREE.Fog("#d3e4de", 40, 120), []);
   useEffect(() => {
     three.fog = fog;
@@ -753,6 +784,7 @@ function World({
     if (!reduced) time.value = state.clock.elapsedTime;
     const a = anim.current;
     if (a) {
+      wake(100);
       const p = Math.min(1, (performance.now() - a.t0) / a.ms);
       // Ease in and out so long glides start and land gently.
       const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -812,6 +844,7 @@ function World({
   useFrame((_, delta) => {
     const f = focusLevel.value;
     if (f === focusTarget) return;
+    wake(100);
     focusLevel.value = reduced ? focusTarget : THREE.MathUtils.clamp(f + Math.sign(focusTarget - f) * delta * 3.5, 0, 1);
   });
 
@@ -862,7 +895,7 @@ function World({
       <Bloom />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={phone ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={{of:keys=>({...kioskPick.of(keys),keys,click:key=>{const shop=scene.retail.find(k=>k.key===key);if(shop)enterBuilding(`skyline-business:${shop.name}`,true);else landmarkSelect();}})}} />
