@@ -1,6 +1,6 @@
 import type {Agent} from "./types";
 
-export const WORKPLACE_BUILDINGS=["OpenAI","Anthropic","Wells Fargo","Starbucks","Smashburger","Chipotle","Zara","Canva","Stripe"] as const;
+export const WORKPLACE_BUILDINGS=["OpenAI","Anthropic","Wells Fargo","Starbucks","Smashburger","Chipotle","Zara"] as const;
 export function projectOfficeAgents(agents:Agent[],projectId:string){
   return agents.filter(a=>a.projectId===projectId&&!a.workplace);
 }

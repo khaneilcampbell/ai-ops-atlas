@@ -1,3 +1,4 @@
+import {CodexReviewHandoff} from "./CodexReviewHandoff";
 import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
@@ -88,6 +89,7 @@ function SkylineBusinessDetail({name}:{name:string}) {
   const {catalog,select}=useAtlas();
   const project=catalog.projects.find(p=>p.id==="skyline");
   const building=BUILDING_INTERIORS[name];
+  const assigned=catalog.agents.filter(a=>a.workplace?.building===name);
   if(!project||!building)return <Head eyebrow="District building" title="Not found"/>;
   return <>
     <Head eyebrow="Skyline district · Business building" title={name}>
@@ -99,7 +101,7 @@ function SkylineBusinessDetail({name}:{name:string}) {
       <LinkedRepositories project={project}/>
       <section><div className="section-title">Project</div><button className="text-btn" onClick={()=>select({kind:"project",id:project.id})}>{project.name} →</button><p className="muted small">This building shares Skyline’s project repository.</p></section>
       <section><div className="section-title">Prepared workspaces</div><ul>{building.rooms.map(room=><li key={room}>{room}</li>)}</ul></section>
-      <section><div className="section-title">Agents & automations</div><p className="muted">No workers assigned to this building yet.</p></section>
+      <section><div className="section-title">Agents & automations</div>{assigned.length?<ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · Suite {a.workplace!.room} · {catalog.projects.find(p=>p.id===a.projectId)?.name}</span></li>)}</ul>:<p className="muted">No workers assigned to this building yet.</p>}</section>
     </div>
   </>;
 }
@@ -176,6 +178,7 @@ function AgentDetail({ id }: { id: string }) {
       </Head>
       <div className="panel-body selectable">
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
+        <CodexReviewHandoff agent={agent}/>
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>

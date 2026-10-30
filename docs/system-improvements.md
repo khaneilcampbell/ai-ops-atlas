@@ -12,7 +12,7 @@ The agent identifies recent sampled main-branch failures, unfinished or failed c
 
 ## Manual Codex review
 
-The role appears in **Agents**, as an AI-assisted workflow. Its profile offers **Copy Codex review prompt** for a manually requested review in Codex. It still belongs to the Atlas project and `khaneilcampbell/ai-ops-atlas` repository; OpenAI is its workplace, not a different repository owner. The automated report workflow remains the only source of GitHub run telemetry; local Codex reviews are not presented as verified production runs.
+The role appears in **Agents**, as an AI-assisted workflow. Select **OpenAI → AI Production Improvement Analyst** in its building panel, or open the role from Agents. Its profile offers **Copy Codex review prompt** for a manually requested review in Codex. It still belongs to the Atlas project and `khaneilcampbell/ai-ops-atlas` repository; OpenAI is its workplace, not a different repository owner. The automated report workflow remains the only source of GitHub run telemetry; local Codex reviews are not presented as verified production runs.
 
 The local launcher is a dry run by default:
 

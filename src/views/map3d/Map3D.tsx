@@ -123,7 +123,11 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
     const hq = m.get(`project:${d.project.id}`);
-    if (hq) for (const a of d.crew) m.set(`agent:${a.id}`, hq);
+    for(const a of d.crew){
+      const workplace=a.workplace&&scene.retail.find(k=>k.name===a.workplace!.building);
+      const anchor=workplace?m.get(skylineBuildingKey(workplace.name)):hq;
+      if(anchor)m.set(`agent:${a.id}`,anchor);
+    }
   }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + TOOL_OFFICE_TOP, w: k.size, d: k.size * 0.8, project: k.projectId });

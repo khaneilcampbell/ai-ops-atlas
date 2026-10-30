@@ -1,4 +1,4 @@
-import {CODEX_REVIEW_PROMPT,IMPROVEMENT_AGENT_ID} from "../../catalog/improvementReview";
+import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
 import { Icon } from "../../components/Icon";
 import { CopyButton, ExternalLink, StatusPill } from "../../components/bits";
@@ -134,7 +134,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       </div>
 
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
-        {p.id===IMPROVEMENT_AGENT_ID&&<div style={{marginBottom:16}}><p className="muted small">{agent.workplace?.building} · Floor {agent.workplace?.floor} · Suite {agent.workplace?.room}. Automatic reports use no model; manual Codex reviews consume your model allowance.</p><CopyButton text={()=>CODEX_REVIEW_PROMPT} label="Copy Codex review prompt"/></div>}
+        <CodexReviewHandoff agent={agent}/>
         {tab === "overview" && (
           <div className="reg-cols">
             <dl className="kv">

@@ -121,7 +121,7 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
             <Box p={[x,0.06,row*1.1]} s={[0.85,0.04,0.6]} color="#bca371"/>
             <Box p={[x,0.025,z]} s={[7.4,0.04,4.6]} color={row===-1?"#eee4d0":"#ded9cc"}/><Box p={[side*0.15,0.65,z]} s={[0.12,1.3,4.7]} color="#c9bea5"/>
             {!business&&<group><Box p={[x+1.8,0.4,z-0.7]} s={[1.7,0.6,2]} color="#657c70"/><Box p={[x+1.8,0.74,z-1.4]} s={[1.5,0.12,0.5]} color="#f8f1e2"/></group>}
-            <Sofa x={x-1.4} z={z+0.5}/><Box p={[x-1.7,0.75,z-1.3]} s={[1.7,0.12,0.7]} color="#b89760"/><Box p={[x-1.7,1.08,z-1.48]} s={[0.7,0.42,0.06]} color="#203c32"/>{(!business||agent)&&<Person x={x-1.7} z={z-0.6} color={["#806c9e","#496e84","#b58b49","#5a8067"][slot%4]}/>}
+            <Sofa x={x-1.4} z={z+0.5}/><Box p={[x-1.7,0.75,z-1.3]} s={[1.7,0.12,0.7]} color="#b89760"/><Box p={[x-1.7,1.08,z-1.48]} s={[0.7,0.42,0.06]} color="#203c32"/>{(!business||agent)&&<Person x={business?x+1.6:x-1.7} z={business?z+0.7:z-0.6} color={["#806c9e","#496e84","#b58b49","#5a8067"][slot%4]}/>}
             {(floor!==-1||agent?.workplace)&&<Html position={[x,1.85,z]} center><button className="skyline-room-label" onClick={()=>setPicked(`${room} · ${agent?.name??suite??"Available residence"}`)}>{`${business?"Suite":"Apartment"} ${room}`}<span>{agent?.name??suite??"Available residence"}</span></button></Html>}
           </group>;
         }))}
