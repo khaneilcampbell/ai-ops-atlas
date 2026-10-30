@@ -96,3 +96,11 @@ describe("uncataloged repositories", () => {
     expect(items.map((i) => i.id)).toEqual(["repo:me/other:ci"]);
   });
 });
+
+it("keeps running checks distinct from passed checks, including cached evidence", () => {
+  const running = { ...run("CI", null), status: "in_progress" };
+  const data = snap({runs:[running]});
+  expect(verifiedState({kind:"ok",data,stale:false})).toEqual({kind:"running",label:"CI running",stale:false});
+  expect(verifiedState({kind:"error",message:"Network unavailable",data})).toEqual({kind:"running",label:"CI running · last known",stale:true});
+  expect(verifiedState({kind:"ok",data:snap({runs:[running,run("Security","failure")]}),stale:false}).kind).toBe("failing");
+});

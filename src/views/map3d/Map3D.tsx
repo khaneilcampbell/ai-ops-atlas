@@ -442,7 +442,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             }}
             className={l.className}
             title={l.title}
-            style={{ width: l.w, visibility: "hidden" }}
+            style={{ width: l.w }}
             role={l.onClick?"button":undefined}
             tabIndex={l.onClick?0:undefined}
             onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
@@ -860,7 +860,7 @@ function World({
 
     // Re-place labels only when the view or the label set changed.
     const e = camera.matrixWorld.elements;
-    const sig = `${e[12].toFixed(3)},${e[13].toFixed(3)},${e[14].toFixed(3)},${size.width},${size.height},${labelSig.current}`;
+    const sig = `${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
     const boxes = [];

@@ -1,4 +1,5 @@
 mod actions;
+mod export;
 mod github;
 mod handoff;
 mod intel;
@@ -67,6 +68,9 @@ pub fn run() {
             actions::merge_token_clear,
             actions::action_merge_check,
             actions::action_merge_pr,
+            actions::agents_token_set,
+            actions::agents_token_clear,
+            actions::agent_action,
             usage_sync::usage_sync_status,
             usage_sync::usage_sync_set_url,
             usage_sync::usage_sync_new_key,
@@ -74,6 +78,8 @@ pub fn run() {
             usage_sync::usage_sync_push,
             live::live_feed,
             live::live_publish,
+            live::live_reports,
+            export::save_pdf,
             power::power_on_battery,
         ])
         .run(tauri::generate_context!())

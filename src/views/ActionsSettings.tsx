@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { actionsApi } from "../actions/api";
 import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../actions/rerun";
 import { useActions } from "../actions/state";
+import { MANIFEST } from "../manage/manifest";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
@@ -51,8 +52,8 @@ export function ActionsSettings() {
       </div>
       <div className="setting">
         <div className="grow muted small">
-          Atlas can do two things on GitHub: re-run the failed jobs of a failed workflow run, and merge a pull request GitHub reports as ready. Each is off until you turn it on here, works only on
-          the repositories you tick, and every press asks for confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for either.
+          Atlas can do three kinds of things on GitHub: re-run the failed jobs of a failed workflow run, merge a pull request GitHub reports as ready, and enable, disable or run the agents in Manage agents. Each is off until you turn it on here, works only on
+          the repositories or agents you allow, and every press asks for confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for any of them.
         </div>
       </div>
 
@@ -138,6 +139,8 @@ export function ActionsSettings() {
 
       <MergeSettings allRepos={allRepos} />
 
+      <AgentsSettings />
+
       <div className="setting">
         <div className="grow">
           <div className="label">Audit log</div>
@@ -153,7 +156,7 @@ export function ActionsSettings() {
         <ul className="audit-list">
           {recent.map((r) => (
             <li key={r.id}>
-              <span className={`result r-${r.stage === "started" || r.stage === "merged" || r.stage === "opened" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : "other"}`}>{STAGE_LABEL[r.stage]}</span>
+              <span className={`result r-${r.stage === "started" || r.stage === "merged" || r.stage === "changed" || r.stage === "opened" ? "success" : r.stage === "failed" || r.stage === "unknown" ? "failure" : "other"}`}>{STAGE_LABEL[r.stage]}</span>
               <span className="grow">
                 {describeRecord(r).subject} · <span className="mono">{r.repo}</span>
                 {r.message && <div className="muted small">{r.message}</div>}
@@ -164,6 +167,88 @@ export function ActionsSettings() {
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * Manage agents: one fine-grained token for the allow-listed agents' repository. Saving it
+ * turns on Enable, Disable and Run now in Agents → Manage agents; removing it turns them off.
+ */
+function AgentsSettings() {
+  const { status, reload } = useActions();
+  const { setView } = useAtlas();
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const has = !!status?.agents_token;
+
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      await reload();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Manage agents</div>
+          <div className="muted small">
+            {has
+              ? `On. Token saved in your macOS Keychain${status?.config.agents_token_login ? ` for ${status.config.agents_token_login}` : ""}. Enable, Disable and Run now work in Agents → Manage agents, only for the agents on Atlas's allow-list. Removing the token turns them off.`
+              : `Off. Save a separate fine-grained token to turn on Enable, Disable and Run now for the agents on Atlas's allow-list: Only select repositories (just ${MANIFEST.repository.split("/")[1]}), with Actions: Read and write and nothing else.`}
+          </div>
+        </div>
+        {has ? (
+          <button className="btn" disabled={busy} onClick={() => run(() => actionsApi.clearAgentsToken())}>
+            Remove
+          </button>
+        ) : (
+          <button className="btn" onClick={() => setView("agents")}>
+            See agents
+          </button>
+        )}
+      </div>
+      <div className="setting">
+        <label className="field grow" style={{ flex: 1 }}>
+          <Icon name="key" size={14} />
+          <input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={has ? "Replace the Manage agents token" : "github_pat_…"}
+            style={{ width: "100%" }}
+            aria-label="Manage agents token"
+          />
+        </label>
+        <button
+          className="btn primary"
+          disabled={!value.trim() || busy}
+          onClick={() =>
+            run(async () => {
+              await actionsApi.setAgentsToken(value.trim());
+              setValue("");
+            })
+          }
+        >
+          Check and save
+        </button>
+      </div>
+      {error && (
+        <div className="setting">
+          <div className="notice bad">{error}</div>
+        </div>
+      )}
+    </>
   );
 }
 

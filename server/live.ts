@@ -66,7 +66,7 @@ const SCHEMA = [
 ];
 
 const ready = new WeakSet<D1>();
-async function ensureSchema(db: D1) {
+export async function ensureSchema(db: D1) {
   if (ready.has(db)) return;
   await db.batch(SCHEMA.map((s) => db.prepare(s)));
   ready.add(db);
@@ -143,7 +143,7 @@ export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()
   return reply(202, { stored: c.kind });
 }
 
-function bearerOk(req: Request, secret: string | undefined): boolean {
+export function bearerOk(req: Request, secret: string | undefined): boolean {
   const auth = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   return !!token && !!secret && secret.length >= 32 && sameSecret(token, secret);
