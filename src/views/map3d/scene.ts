@@ -190,7 +190,7 @@ export function buildScene(layout: Layout): Scene3D {
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
-    const floors = d.project.id === "benjaire-site" ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
     const size = d.hq.size * (identity.landmark ? 1.02 : 0.92);
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
