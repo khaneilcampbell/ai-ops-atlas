@@ -20,3 +20,5 @@ visual/out/
 *.keychain-db
 *.password
 __pycache__/
+
+ops/security/glib-regression/target/
