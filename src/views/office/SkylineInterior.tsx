@@ -1,4 +1,5 @@
 import {workplaceAgent} from "../../catalog/workplaces";
+import {BUILDING_INTERIORS as BUSINESS} from "../../catalog/buildings";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
@@ -47,17 +48,7 @@ function ResidenceDetails({x,z}:{x:number;z:number}) {
     <mesh position={[x+3,0.95,z+1.5]}><sphereGeometry args={[0.42,12,12]}/><meshStandardMaterial color="#4b6b3d"/></mesh>
   </group>;
 }
-const BUSINESS:Record<string,{accent:string;subtitle:string;rooms:string[]}>={
-  Anthropic:{accent:"#bd7658",subtitle:"RESEARCH & SAFETY",rooms:["Research lab","Safety evaluation","Model development","Research review"]},
-  OpenAI:{accent:"#16866d",subtitle:"APPLIED AI & ENGINEERING",rooms:["Model engineering","Product studio","Evaluation lab","Operations center"]},
-  Starbucks:{accent:"#00754a",subtitle:"COFFEEHOUSE & HOSPITALITY",rooms:["Coffee bar","Guest lounge","Barista training","Hospitality planning"]},
-  Smashburger:{accent:"#bf292b",subtitle:"RESTAURANT OPERATIONS",rooms:["Kitchen & preparation","Guest dining","Order coordination","Restaurant planning"]},
-  Chipotle:{accent:"#93432f",subtitle:"KITCHEN & GUEST EXPERIENCE",rooms:["Food preparation","Guest dining","Order coordination","Team training"]},
-  Zara:{accent:"#242424",subtitle:"FASHION & RETAIL",rooms:["Design studio","Collection showroom","Merchandising","Retail operations"]},
-  Canva:{accent:"#00aeb8",subtitle:"DESIGN & CREATIVE PRODUCTION",rooms:["Brand studio","Design production","Creative review","Publishing coordination"]},
-  Stripe:{accent:"#635bff",subtitle:"PAYMENTS INFRASTRUCTURE",rooms:["Payment operations","Billing coordination","Risk review","Integration studio"]},
-  "Wells Fargo":{accent:"#a71d30",subtitle:"BANKING & FINANCIAL OPERATIONS",rooms:["Client advisory","Accounts & payments","Risk review","Financial operations"]},
-};
+
 function BusinessSuite({x,z,name,accent,bank,labels,hospitality,fashion}:{x:number;z:number;name:string;accent:string;bank:boolean;labels:boolean;hospitality:boolean;fashion:boolean}) {
   return <group>
     <ResidenceDetails x={x} z={z}/>
