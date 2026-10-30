@@ -105,4 +105,4 @@ src-tauri/src/intel/  Repository Intelligence Agent: collection, prompt, Claude 
 
 ## License
 
-AI Ops Atlas is released under the [MIT License](LICENSE). Copyright (c) 2026 Khaneil Campbell.
+Copyright (c) 2026 Khaneil Campbell. All rights reserved. The code is public for viewing only, and no one may use, copy, modify or distribute it without written permission. See [LICENSE](LICENSE).
