@@ -53,7 +53,8 @@ async function shoot(page: Page, clock: number, views: { name: string; offset: [
 async function render(page: Page, list: { name: string; eye: number[]; target: number[] }[]) {
   return page.evaluate(async (list) => {
     const source = await (await fetch("/src/views/map3d/HillsCommunity.tsx")).text();
-    const url = source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1]!;
+    const url = source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];
+    if (!url) throw new Error("Fiber import not found");
     const fiber: typeof import("@react-three/fiber") = await import(url);
     const canvas = document.querySelector("canvas")!;
     const state = fiber._roots.get(canvas)!.store.getState();
