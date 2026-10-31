@@ -8,13 +8,14 @@ import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMater
 import {FINANCIAL as F,financialKey,FINANCIAL_PARK_KEY,type FinancialPlan} from './financialPlan';
 import {TRANSPORT} from './transportScale';
 import {TERRACE_H} from './scene';
-/** Static instanced skyline; shared windows switch with Atlas day/night preferences. */
+import {beacon,FINANCIAL_NIGHT,financialCrownMaterial,financialWindows,takeCrown} from './financialNight';
+/** Static instanced skyline; windows, crowns and lobbies glow with the map's night value (financialNight.ts). */
 export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:PickHandlerSet;night:boolean}){
- const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement);return {ivory:css.getPropertyValue('--sage-50').trim()||'#f7f7f0',green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a',water:new THREE.MeshStandardMaterial({color:'#6daeb6',roughness:.35,emissive:'#225d67',emissiveIntensity:0}),window:new THREE.MeshStandardMaterial({color:'#72a7b3',roughness:.36,emissive:'#ffe0a6',emissiveIntensity:0})}},[]);
- useEffect(()=>{materials.window.color.set(night?'#e8d8a9':'#72a7b3');materials.window.emissiveIntensity=night?.65:0;materials.water.emissiveIntensity=night?.2:0},[night,materials]);
- useEffect(()=>()=>{materials.window.dispose();materials.water.dispose()},[materials]);
+ const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement);return {ivory:css.getPropertyValue('--sage-50').trim()||'#f7f7f0',green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a',water:new THREE.MeshStandardMaterial({color:'#6daeb6',roughness:.35,emissive:'#225d67',emissiveIntensity:0}),window:financialWindows(new THREE.MeshStandardMaterial({color:'#72a7b3',roughness:.36})),crown:financialCrownMaterial()}},[]);
+ useEffect(()=>{materials.water.emissiveIntensity=night?.2:0},[night,materials]);
+ useEffect(()=>()=>{materials.window.dispose();materials.crown.dispose();materials.water.dispose()},[materials]);
  const parts=useMemo(()=>{
- const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],clearKeys:string[]=[],bevelled:Inst[]=[],plants:Inst[]=[],lights:Inst[]=[],keys:string[]=[];if(!a)return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys};
+ const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],clearKeys:string[]=[],bevelled:Inst[]=[],plants:Inst[]=[],lights:Inst[]=[],keys:string[]=[],crown:Inst[]=[],bevelledCrown:Inst[]=[];if(!a)return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys,crown,bevelledCrown};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
  const pane=(key:string,p:Inst)=>{glass.push(p);keys.push(key)};
 
@@ -26,8 +27,15 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  for(const crossing of F.crossings){curbSpans.push([previous,crossing-.35]);previous=crossing+.35;}curbSpans.push([previous,a.w-.2]);
  for(const z of [F.streetZ-TRANSPORT.cityWidth/2-.04,F.streetZ+TRANSPORT.cityWidth/2+.04])for(const [lo,hi]of curbSpans)solid.push(box((lo+hi)/2,.055,z,hi-lo,.055,.07,'#cfcbbd'));
  for(const x of F.crossings){solid.push(box(x,.04,12.15,.6,.045,.4,'#e4ddcd'),box(x,.055,13.6,.6,.045,1.1,'#e4ddcd'));for(let z=12.42;z<=12.98;z+=.12)solid.push(box(x,.069,z,.55,.008,.055,'#f7f7f0'));}
+ // Night extras: a lit lobby ceiling, glowing accent crown and, on the tallest roofs, a red beacon.
+ const nightExtras=(b:{id:string;x:number;z:number;height:number},from:number,width:number,depth:number,fromBevelled=bevelled.length)=>{
+  const brand=financialBrand(b.id);if(!brand)return;
+  takeCrown(solid,from,TERRACE_H+b.height,brand.accent,crown);takeCrown(bevelled,fromBevelled,TERRACE_H+b.height,brand.accent,bevelledCrown);
+  glow.push(box(b.x,1.04,b.z,width-.3,.02,depth-.3,'#ffffff'));
+  if(b.height>=FINANCIAL_NIGHT.beaconMinHeight){const top=[...solid.slice(from),...bevelled.slice(fromBevelled),...crown,...bevelledCrown].filter(p=>Math.abs(p.p[0]-a.x-b.x)<width/2&&Math.abs(p.p[2]-a.z-b.z)<depth/2).reduce((y,p)=>Math.max(y,p.p[1]+p.s[1]),0);if(top>0)crown.push(beacon(a.x+b.x,top+.035,a.z+b.z));}
+ };
  for(const b of a.buildings){
-  const dimensions=financialDimensions(b.id);
+  const dimensions=financialDimensions(b.id),from=solid.length,fromBevelled=bevelled.length;
   if(financialBrand(b.id)?.architecture){
    const mesh=financialArchitecture(b.id,b.height,materials),key=financialKey(b.id);
    const place=(p:Inst):Inst=>({...p,p:[a.x+b.x+p.p[0],TERRACE_H+p.p[1],a.z+b.z+p.p[2]]});
@@ -39,6 +47,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
    const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
    for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
    for(const side of [-1,1])lights.push(box(b.x+side*.6,.15,b.z+dimensions.depth/2+.35,.04,.12,.04,'#ffffff'));
+   if(mesh.solid.length)nightExtras(b,from,dimensions.width,dimensions.depth,fromBevelled);
    continue;
   }
   const {x,z,height:h}=b,brand=financialBrand(b.id),body=brand?.body??materials.ivory,trim=brand?.trim??'#aabbb8',accent=brand?.accent??materials.gold,key=financialKey(b.id),w=F.towerWidth,d=F.towerDepth;
@@ -75,6 +84,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
   const doorZ=z+d/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
   for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
   for(const side of [-1,1]){solid.push(box(x+side*1.6,.08,z+d/2+.2,.08,.3,.08,materials.green));lights.push(box(x+side*.6,.15,z+d/2+.35,.04,.12,.04,'#ffffff'));}
+  nightExtras(b,from,w,d);
  }
  // Keep the original eastern gates open; the western waterfront stays protected.
  solid.push(box(.18,0,a.d/2,.18,.35,a.d-.4,'#c6c3b4'),box(a.w-.18,0,5.7,.18,.35,11,'#c6c3b4'),box(a.w-.18,0,14.65,.18,.35,.2,'#c6c3b4'));
@@ -82,9 +92,8 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  for(let x=.4;x<a.w-.3;x+=.5)solid.push(box(x,.23,a.d-.18,.025,.27,.025,materials.green));
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
  for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.14,14.5,.06,.12,.06,'#ffffff'));
- return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys};
+ return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys,crown,bevelledCrown};
  },[a,materials]);
- const windows=useMemo(()=>parts.glass.map(p=>({...p,c:night?'#ffffff':p.c})),[parts,night]);
  const bevelGeometry=useMemo(()=>{
   const cx=.34/3.6,cz=.34/2.8,shape=new THREE.Shape();
   const points=[[-.5+cx,-.5],[.5-cx,-.5],[.5,-.5+cz],[.5,.5-cz],[.5-cx,.5],[-.5+cx,.5],[-.5,.5-cz],[-.5,-.5+cz]];
@@ -93,8 +102,8 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  },[]);
  useEffect(()=>()=>bevelGeometry.dispose(),[bevelGeometry]);
  const curtain=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
- const interiorGlow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#eee4cb',emissive:'#ffe0a0',emissiveIntensity:0,roughness:.7}),[]);
- useEffect(()=>{interiorGlow.emissiveIntensity=night?.8:.02;},[night,interiorGlow]);
+ const interiorGlow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#eee4cb',emissive:FINANCIAL_NIGHT.warm,emissiveIntensity:0,roughness:.7}),[]);
+ useEffect(()=>{interiorGlow.emissiveIntensity=night?FINANCIAL_NIGHT.interior:.02;},[night,interiorGlow]);
  useEffect(()=>()=>{curtain.dispose();interiorGlow.dispose();},[curtain,interiorGlow]);
  const lobbyGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#c8e2e7',transparent:true,opacity:.28,depthWrite:false,roughness:.18}),[]);
  useEffect(()=>()=>lobbyGlass.dispose(),[lobbyGlass]);
@@ -115,5 +124,5 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  return {solid,plants,water,lights};
  },[a,materials]);
  if(!a)return null;
- return <><FinancialSigns plan={a} night={night} pick={pick}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d],c:'#82a871'}]:[]} geometry={g.box} material={m.plain} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={windows} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
+ return <><FinancialSigns plan={a} night={night} pick={pick}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d],c:'#82a871'}]:[]} geometry={g.box} material={m.plain} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.crown} geometry={g.box} material={materials.crown}/><Instanced items={parts.bevelledCrown} geometry={bevelGeometry} material={materials.crown}/><Instanced items={parts.glass} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
 }
