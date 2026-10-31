@@ -687,6 +687,11 @@ export function buildScene(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
+  const communityRail=planCommunityRail(community,financial);
+  const xs = land.flatMap((r) => [r.x, r.x + r.w]);
+  if(freight)xs.push(...freight.highway.map(p=>p[0]));
+  const zs = land.flatMap((r) => [r.z, r.z + r.d]);
+  if(freight)zs.push(...freight.highway.map(p=>p[1]));
   // Join the terminal entrance to the district across the meadow, unless a street, path or stream runs there.
   const forecourtLand:Rect[]=[];
   const forecourt=airport?airportForecourt(airport,terraces):undefined;
@@ -700,11 +705,6 @@ export function buildScene(layout: Layout): Scene3D {
       for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
     }
   }
-  const communityRail=planCommunityRail(community,financial);
-  const xs = land.flatMap((r) => [r.x, r.x + r.w]);
-  if(freight)xs.push(...freight.highway.map(p=>p[0]));
-  const zs = land.flatMap((r) => [r.z, r.z + r.d]);
-  if(freight)zs.push(...freight.highway.map(p=>p[1]));
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
