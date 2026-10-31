@@ -136,7 +136,7 @@ function ServiceDetail({id}:{id:string}) {
 
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
-    <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span></Head>
+    <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
     <div className="panel-body selectable"><p>A four-floor wave-style mall where each shop is one agent or service that clients can buy. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
       <dl className="kv"><dt>Owning agent</dt><dd>Marketplace Steward · Planned, not running</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>

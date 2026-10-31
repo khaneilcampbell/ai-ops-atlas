@@ -44,6 +44,7 @@ const Map3D = lazy(() => import("./map3d/Map3D"));
 // The virtual office loads only when a building is entered.
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
+const MallInterior = lazy(() => import("./office/MallInterior"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -914,7 +915,7 @@ export function MapView() {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
-          {(office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
