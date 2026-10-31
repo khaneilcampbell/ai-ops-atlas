@@ -34,3 +34,16 @@ describe('Atlas Marketplace interior', () => {
     expect(new Set(units.map(u=>u.id)).size).toBe(units.length);
   });
 });
+
+describe('Atlas Marketplace escalators', () => {
+  it('zigzag: each lands on the bridge the next one leaves from', async () => {
+    const {bridgeSide,escalatorFor}=await import('./mallInteriorPlan');
+    for(let l=0;l<MALL_IN.levels-1;l++){
+      const e=escalatorFor(l);
+      expect(Math.sign(e.from)).toBe(bridgeSide(l));
+      expect(Math.sign(e.to)).toBe(bridgeSide(l+1));
+      expect(Math.atan2(e.rise,e.run)*180/Math.PI).toBeCloseTo(30,0);
+      expect(e.steps).toBeGreaterThan(10);
+    }
+  });
+});

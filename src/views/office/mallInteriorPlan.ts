@@ -52,3 +52,16 @@ export function mallUnits():MallUnit[]{
  }
  return out;
 }
+
+/**
+ * Escalators cross the atrium in a zigzag, as in the section drawing. Each one starts on a landing
+ * bridge that reaches out from one side of a floor and climbs at 30° to a bridge on the other side
+ * of the floor above, clear of the funnel tree's stem (it runs in front of it, at z).
+ */
+export const ESCALATOR={z:3,width:1.1,slope:Math.PI/6,stepDepth:.4,bridgeReach:6.2} as const;
+/** Which side (−1 west, +1 east) of a floor its landing bridge reaches out from. */
+export const bridgeSide=(level:number)=>level%2===0?-1:1;
+export function escalatorFor(level:number){
+ const run=MALL_IN.floor/Math.tan(ESCALATOR.slope),s=bridgeSide(level);
+ return {level,from:s*run/2,to:-s*run/2,run,rise:MALL_IN.floor,steps:Math.round(run/ESCALATOR.stepDepth)};
+}
