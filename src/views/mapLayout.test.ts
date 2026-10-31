@@ -52,9 +52,11 @@ describe("layoutMap", () => {
     const layout = layoutMap(catalog);
     const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
     const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
-    expect([...housed, ...inside].sort()).toEqual(catalog.agents.map((a) => a.id).sort());
+    // Skyline has its own custom district instead of a generic office building.
+    const seated = catalog.agents.filter((a) => a.projectId !== "skyline");
+    expect([...housed, ...inside].sort()).toEqual(seated.map((a) => a.id).sort());
     expect(housed).toEqual([]);
-    expect(inside).toHaveLength(catalog.agents.length);
+    expect(inside).toHaveLength(seated.length);
   });
 
   it("puts a kiosk only for services a manifest names", () => {

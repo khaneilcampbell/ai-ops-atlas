@@ -44,7 +44,7 @@ describe("buildScene", () => {
     const s = buildScene(layoutMap(catalog));
     expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => p.id !== "skyline").map((p) => p.id).sort());
     expect(s.houses).toEqual([]);
-    expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.length);
+    expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.filter((a) => a.projectId !== "skyline").length);
   });
 
   it("keeps kiosks clear of houses, towers and each other", () => {

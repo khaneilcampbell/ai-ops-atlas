@@ -95,6 +95,7 @@ describe("automation categories", () => {
         "sales-sync",
         "seo-maintainer",
         "shopify-publisher",
+        "skyline-inquiry-assistant",
         "visual-director",
       ],
       monitoring: ["health-report"],
