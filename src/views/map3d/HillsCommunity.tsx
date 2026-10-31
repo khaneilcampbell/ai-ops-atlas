@@ -60,7 +60,7 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
 }
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
-const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.06,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
+const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
 /** Elevated track, platforms and stair approaches share the same sampled route as the train. */
 export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,night}:{plan?:RailPlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
  const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0);
@@ -125,11 +125,11 @@ export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,
  {[0,1,2].map(i=>{const start=railPoint(deck,(deck.length-p.length)/2+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
   {/* Bullet train: low white body, a continuous window band, gold line, and gangways between cars. */}
   <Instanced geometry={g.box} material={m.plain} items={BULLET_BODY(palette.gold)}/>
-  <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.07,.5],c:'#f4f4ef'}]}/>
+  <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'}]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.256,.2,0],s:[.015,.24,.9],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
-  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.275,.16,.24]} rotation={[0,side*Math.PI/2,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
+  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.26,.16,.24]} rotation={[0,side*Math.PI/2,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.ball} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
-  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.32,i===0?-.78:.78],s:[.16,.1,.4]}]}/></>}
+  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
  </group>;})}
  {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.ball,m.plain,count]} frustumCulled={false}/></>}
  </>;
