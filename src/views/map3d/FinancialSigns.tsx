@@ -15,7 +15,11 @@ function sign(brand:FinancialBrand){
  }else if(brand.symbol==='feather'){
   c.fillStyle=brand.accent;c.beginPath();c.moveTo(85,290);c.bezierCurveTo(80,140,190,58,299,59);c.bezierCurveTo(300,179,229,253,125,268);c.closePath();c.fill();c.strokeStyle=brand.signBackground;c.lineWidth=12;c.beginPath();c.moveTo(93,302);c.lineTo(252,105);c.stroke();
  }
- if(brand.symbol==='benjaire'){
+ if(brand.symbol==='experian'){
+  // A cluster of brand-colour dots beside a lowercase wordmark, drawn on the shared sign canvas.
+  for(const [x,y,r,color]of [[176,150,74,'#1d4f91'],[278,96,44,'#6d2077'],[282,214,54,'#af1685'],[96,262,38,'#af1685'],[188,286,30,'#26478d'],[356,160,22,'#6d2077']] as const){c.fillStyle=color;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();}
+  c.fillStyle=brand.signText;c.textBaseline='middle';c.textAlign='left';c.font='500 200px sans-serif';c.fillText(brand.signLines[0],430,190,1060);
+ }else if(brand.symbol==='benjaire'){
   c.save();c.translate(52,56);c.scale(.42,.42);const ink=c.createLinearGradient(0,0,583,608);for(const [at,color]of [[0,'#18191c'],[.3,'#34373c'],[.52,'#6e737a'],[.74,'#34373c'],[1,'#18191c']] as const)ink.addColorStop(at,color);c.fillStyle=ink;c.fill(new Path2D(BENJAIRE_MONOGRAM));c.restore();
   c.save();c.translate(355,70);c.strokeStyle=brand.signText;c.lineWidth=18;c.lineJoin='round';c.stroke(new Path2D(BENJAIRE_WORDMARK));c.restore();
   c.fillStyle=brand.signText;c.font='500 94px sans-serif';c.textAlign='center';c.fillText('FINANCE',895,305,1080);
