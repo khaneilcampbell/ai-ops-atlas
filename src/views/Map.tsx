@@ -1196,7 +1196,7 @@ export function MapView() {
               </button>
             )}
             {is3d && (
-              <button className={`icon-btn ${traffic ? "on" : ""}`} onClick={() => setTraffic(!traffic)} aria-pressed={traffic} aria-label="Traffic" title={traffic ? "Hide the little vehicles" : "Show the little vehicles"}>
+              <button className={`icon-btn ${traffic ? "on" : ""}`} onClick={() => setTraffic(!traffic)} aria-pressed={traffic} aria-label="Traffic" title={traffic ? "Hide road traffic" : "Show road traffic"}>
                 <Icon name="car" size={17} />
               </button>
             )}
