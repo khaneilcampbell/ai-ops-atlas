@@ -46,8 +46,10 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     const target = mode === "night" ? 1 : 0;
     // Open in the saved mood without a transition; ease over about two seconds after that.
     if (first.current || reduced) night.value = target;
-    else if (night.value !== target) wake(100);
-    else night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+    else if (night.value !== target) {
+      night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+      wake(100);
+    }
     first.current = false;
     if (Math.abs(night.value - target) < 0.002) night.value = target;
     const k = night.value;
@@ -412,7 +414,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 
   if (!plans.length) return null;
   return (
-    <group>
+    <group name="atlas-road-traffic">
       {plans.map(v=><VehicleBadge key={v.id} plan={v} moving={moving} />)}
       <instancedMesh ref={body} args={[g.box, m.plain, parts.length]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={heads} args={[g.ball, mats.head, plans.length * 2]} frustumCulled={false} raycast={() => null} />

@@ -954,7 +954,7 @@ function World({
       <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
       <CommunityRail plan={scene.communityRail} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
       <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
-      <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic}/>
+      <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
       <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>
       <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>
       <Airport night={lightMode==="night"} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
