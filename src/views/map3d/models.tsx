@@ -12,6 +12,7 @@ import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
+import { RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -730,6 +731,8 @@ const SPIRE_H = 1.1;
 export function towerTop(t: Tower) {
   // Atlas HQ is drawn by AtlasHq: a sloped glass roof, no lantern or board.
   if (t.identity.landmark) return FLOOR_BASE + hqTop(t.size / HQ.refSize) + 0.04;
+  // Benjaire HQ is drawn by RibbonTower: a hollow crown, no hip roof or finial.
+  if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }
@@ -786,9 +789,9 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const top = FLOOR_BASE + t.height;
     const r = (k: string) => hash(`${t.key}:${k}`);
 
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark ? "#d8d1c1" : style === "tech" ? "#5d666e" : "#8d8a80" });
-    // The landmark keeps its plinth; the building itself is AtlasHq.
-    if (t.identity.landmark) continue;
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark || isRibbonTower(t.projectId) ? "#d8d1c1" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    // Atlas HQ and Benjaire HQ keep their plinths; the buildings are AtlasHq and RibbonTower.
+    if (t.identity.landmark || isRibbonTower(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
@@ -976,7 +979,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
         const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
         if (!c) return [];
         // Atlas HQ leaves most of its plinth open, so its health is a thin edge ring, not a slab.
-        if (t.identity.landmark) {
+        if (t.identity.landmark || isRibbonTower(t.projectId)) {
           const w = t.size * 1.16, e = 0.05;
           return [-1, 1].flatMap((k) => [
             { p: [t.x, TERRACE_H + 0.15, t.z + (k * (w - e)) / 2], s: [w, 0.022, e], c } as Inst,
@@ -999,7 +1002,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(t=>isRibbonTower(t.projectId)?{p:[t.x+t.size*0.12,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[t.size*0.2,0.14,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
@@ -1009,7 +1012,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
       <Instanced items={P.dishes} geometry={g.dish} material={m.plain} />
-      {towers.filter((t) => !t.identity.landmark).map((t) => (
+      {towers.filter((t) => !t.identity.landmark && !isRibbonTower(t.projectId)).map((t) => (
         <BuildingIdentitySigns key={t.key} t={t} g={g} />
       ))}
     </group>
