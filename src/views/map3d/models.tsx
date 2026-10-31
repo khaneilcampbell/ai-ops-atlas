@@ -11,6 +11,7 @@ import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -710,7 +711,8 @@ export interface PickHandlerSet {
   of: (keys: string[]) => Pick;
 }
 
-const FLOOR_BASE = TERRACE_H + 0.15;
+/** Headquarters stand on a plinth; their floors start here. */
+export const FLOOR_BASE = TERRACE_H + 0.15;
 /** Rooftop name boards and billboards stand this high above the roof. */
 const BOARD_LIFT = 0.42;
 
@@ -726,6 +728,8 @@ const LANTERN_H = 1.0;
 const SPIRE_H = 1.1;
 
 export function towerTop(t: Tower) {
+  // The GitHub HQ is drawn by GithubTower: a roof garden and the core's crown, no board.
+  if (isGithubTower(t.projectId)) return FLOOR_BASE + githubTowerTop(t.customHeight ?? t.height) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }
@@ -782,7 +786,9 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const top = FLOOR_BASE + t.height;
     const r = (k: string) => hash(`${t.key}:${k}`);
 
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: style === "tech" ? "#5d666e" : "#8d8a80" });
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: isGithubTower(t.projectId) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    // The GitHub HQ keeps its plinth; the building itself is GithubTower.
+    if (isGithubTower(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
@@ -984,7 +990,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>({p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]}))} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(t=>isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
@@ -994,7 +1000,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
       <Instanced items={P.dishes} geometry={g.dish} material={m.plain} />
-      {towers.map((t) => (
+      {towers.filter((t) => !isGithubTower(t.projectId)).map((t) => (
         <BuildingIdentitySigns key={t.key} t={t} g={g} />
       ))}
     </group>
