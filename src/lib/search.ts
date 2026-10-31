@@ -40,3 +40,10 @@ export function repoMatches(r: RepoRow, q: string) {
   const d = repoData(r.state);
   return matches(q, r.name, r.project?.name, r.project?.summary, d?.description, d?.language, ...Object.keys(d?.languages ?? {}), ...(r.project?.tags ?? []));
 }
+
+/** Exact names and known aliases precede broad description matches; other order stays stable. */
+export function prioritizeExact<T extends {title:string;aliases?:readonly string[]}>(rows:T[],query:string):T[]{
+ const key=(value:string)=>norm(value).trim().replace(/\s+/g,' '),wanted=key(query);
+ const exact=(row:T)=>Number([row.title,...row.aliases??[]].some(value=>key(value)===wanted));
+ return [...rows].sort((a,b)=>exact(b)-exact(a));
+}

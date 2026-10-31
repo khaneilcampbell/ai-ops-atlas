@@ -1,3 +1,4 @@
+import {financialDimensions,financialHeight} from './financialArchitecture';
 import {financialBrand} from "./financialBrands";
 import type {Rect,Scene3D} from './scene';
 import type {Pt} from './roads';
@@ -11,10 +12,10 @@ export const financialKey=(id:string)=>`service:financial:${id}`;
 export const FINANCIAL={width:44,originalWidth:20,expansion:24,depth:15,streetZ:12.7,northWalkZ:11.95,promenadeZ:14.1,towerWidth:3,towerDepth:2.6,crossings:[10,20,34],parkTreeRadius:.65,perimeterTreeRadius:.6,park:{x:15.5,z:2.3,w:9,d:9.3}} as const;
 const BUILDING_LAYOUT=[
  {id:'banks',name:'Banks',x:4,z:4,rise:1.32,style:'glass',role:'Account Review Analyst',purpose:'Planned read-only account overview from local statements or approved aggregated data.'},
- {id:'residence',name:'Residence',x:15.7,z:4.3,rise:1.24,style:'balcony',role:'Residence Planning Coordinator',purpose:'Planned residential spaces and household financial planning.'},
- {id:'budget',name:'Spending & Budget',x:3.5,z:9,rise:1.08,style:'stepped',role:'Budget Review Analyst',purpose:'Planned spending categories, budgets and variance reviews from local imports.'},
+ {id:'residence',name:'Residence',x:3.5,z:9,rise:1.24,style:'balcony',role:'Residence Planning Coordinator',purpose:'Planned residential spaces and household financial planning.'},
+ {id:'budget',name:'Spending & Budget',x:14.5,z:9.5,rise:1.08,style:'stepped',role:'Budget Review Analyst',purpose:'Planned spending categories, budgets and variance reviews from local imports.'},
  {id:'investments',name:'Investments',x:9.8,z:6.8,rise:1.48,style:'crown',role:'Investment Records Analyst',purpose:'Planned read-only holdings and statement summaries. No trading or money movement.'},
- {id:'records',name:'Bills & Records',x:16,z:9.5,rise:1.12,style:'articulated',role:'Bills & Records Coordinator',purpose:'Planned subscription, bill, tax and receipt organization. No automatic payments.'},
+ {id:'records',name:'Bills & Records',x:15.7,z:4.3,rise:1.12,style:'articulated',role:'Bills & Records Coordinator',purpose:'Planned subscription, bill, tax and receipt organization. No automatic payments.'},
  {id:'insurance',name:'Insurance',x:-20,z:4,rise:1.18,style:'articulated',role:'Insurance Records Analyst',purpose:'Planned local policy, coverage and renewal records. No purchases or provider messaging.'},
  {id:'business-finance',name:'Business Finance',x:-13,z:4.2,rise:1.35,style:'glass',role:'Business Finance Analyst',purpose:'Planned read-only business cash-flow and statement reviews from local imports.'},
  {id:'financial-planning',name:'Financial Planning',x:-20,z:9,rise:1.1,style:'stepped',role:'Financial Planning Analyst',purpose:'Planned budgeting and scenario reviews. No transactions or investment execution.'},
@@ -37,12 +38,12 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const z=Math.min(core.z,stadium.z-2)-d-CITY_SPACING.gap;
  const park=financialPark();
  if(s.land.some(r=>x<r.x+r.w&&x+w>r.x&&z<r.z+r.d&&z+d>r.z))return;
- const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.map(b=>({...b,x:b.x+FINANCIAL.expansion,height:referenceHeight*b.rise,approach:[] as Pt[]}));
+ const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
  const blocks=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  blocks.push({x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.airport){const r=airportFootprint(s.airport);blocks.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d});}
- const towerBoxes=buildings.map(b=>({x:x+b.x,z:z+b.z,w:FINANCIAL.towerWidth+.5,d:FINANCIAL.towerDepth+.5}));
- for(let i=0;i<buildings.length;i++){const b=buildings[i];b.approach=routeAround([x+b.x,z+b.z+FINANCIAL.towerDepth/2+.3],[x+b.x,z+FINANCIAL.northWalkZ],towerBoxes.filter((_,j)=>i!==j),.35)??[];if(!b.approach.length)return;}
+ const towerBoxes=buildings.map(b=>({x:x+b.x,z:z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
+ for(let i=0;i<buildings.length;i++){const b=buildings[i];b.approach=routeAround([x+b.x,z+b.z+financialDimensions(b.id).d/2+.35],[x+b.x,z+FINANCIAL.northWalkZ],towerBoxes.filter((_,j)=>i!==j),.35)??[];if(!b.approach.length)return;}
  const perimeterTrees:Pt[]=[];
  for(const offset of [0,FINANCIAL.expansion])for(const [px,pz]of [[1.2,1.4],[7.7,2],[18.6,2],[1,10.8],[7,10.8],[13,10.8],[18.7,10.9]]){
   const local:Pt=[px+offset,pz],world:Pt=[x+local[0],z+local[1]],radius=FINANCIAL.perimeterTreeRadius;

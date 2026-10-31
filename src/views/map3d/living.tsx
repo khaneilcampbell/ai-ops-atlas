@@ -1,3 +1,4 @@
+import {flightClearance,privateJetPose} from './flightClearance';
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
@@ -504,6 +505,7 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
 /** Executive jet; shared geometry and the existing decorative waterfront circuit. */
 function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) {
   const group=useRef<THREE.Group>(null), time=useRef(0);
+  const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   const jet=useMemo(()=>({
     body:[
       {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
@@ -528,11 +530,10 @@ function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) 
   useFrame((_,dt)=>{
     if(moving)time.current+=Math.min(dt,0.1);
     if(!group.current)return;
-    const b=scene.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
+    const pose=privateJetPose(scene.bounds,safeFlight.altitude,time.current);
     group.current.visible=true;
-    const rx=(b.x1-b.x0)/2+3,rz=(b.z1-b.z0)/2+3,t=time.current*0.085;
-    group.current.position.set(cx+Math.cos(t)*rx,8.5+Math.sin(t*2)*0.2,cz+Math.sin(t)*rz);
-    group.current.rotation.set(0,Math.atan2(-Math.cos(t)*rz,-Math.sin(t)*rx),Math.sin(t)*0.035);
+    group.current.position.set(pose.x,TERRACE_H+pose.y,pose.z);
+    group.current.rotation.set(0,pose.yaw,pose.roll);
   });
   return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
 }

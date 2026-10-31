@@ -1,3 +1,4 @@
+import {financialDimensions} from './financialArchitecture';
 import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
@@ -24,7 +25,7 @@ describe('Hills community and elevated service',()=>{
  expect(r.route[0]).toEqual(c.station);expect(r.route[r.route.length-1]).toEqual(r.financial);expect(r.financial[0]).toBeGreaterThan(f.x+f.w+2);
  expect(railPoint(r,0)).toMatchObject({x:r.hills[0],z:r.hills[1]});expect(railPoint(r,r.length)).toMatchObject({x:r.financial[0],z:r.financial[1]});
  expect(r.hillsWalk[r.hillsWalk.length-1][1]).toBe(C.platformRise);expect(r.financialWalk[0][1]).toBe(C.platformRise);expect(r.financialWalk[r.financialWalk.length-1][1]).toBe(0);
- expect(pathClear(r.financialWalk.filter(p=>p[1]===0).map(p=>[p[0],p[2]]),f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:3,d:2.6})),.15),'onward walk reaches the bank without crossing towers').toBe(true);
+ expect(pathClear(r.financialWalk.filter(p=>p[1]===0).map(p=>[p[0],p[2]]),f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})),.15),'onward walk reaches the bank without crossing towers').toBe(true);
  });
  it('keeps doors open only when stopped and completes a continuous round trip',()=>{const length=160,travel=length/C.speed;
  expect(railState(0,length)).toMatchObject({distance:0,doors:1,phase:'hills'});expect(railState(C.dwell+travel/2,length)).toMatchObject({distance:80,doors:0,phase:'outbound'});
