@@ -318,9 +318,18 @@ table.table { width: 100%; border-collapse: collapse; }
 @keyframes ring { 0% { opacity: 0.95; transform: scale(0.85); } 70% { opacity: 0.25; transform: scale(1.12); } 100% { opacity: 0; transform: scale(1.2); } }
 .map-controls { align-items: center; }
 .map-controls .sep { width: 1px; height: 22px; background: var(--sage-200); margin: 0 4px; }
-.map-group select { border: 0; background: none; color: var(--ink-2); height: 34px; padding: 0 6px; border-radius: 8px; cursor: pointer; }
-.map-group select:hover { background: var(--sage-100); }
-.map-group select:focus-visible { outline: 2px solid var(--gold); }
+/* Map toolbar dropdowns (components/MapSelect.tsx): a drawn face sized to the chosen option, with
+   the native select laid invisibly on top. Same height, radius and states as the icon buttons. */
+.map-group { position: relative; display: inline-flex; flex: none; height: 34px; border-radius: 10px; color: var(--ink-2); cursor: pointer; }
+.map-group-face { display: inline-flex; align-items: center; gap: var(--space-3); height: 100%; padding: 0 var(--space-5) 0 var(--space-6); border-radius: inherit; font-size: var(--text-md); font-weight: 500; white-space: nowrap; }
+.map-group-value.short { display: none; }
+.map-stage .map-group-chev { flex: none; display: block; width: 10px; height: 10px; color: var(--ink-3); }
+.map-group:hover .map-group-face { background: var(--sage-100); }
+.map-group:focus-within .map-group-face { background: var(--sage-100); }
+.map-group:has(select:focus-visible) .map-group-face { outline: 2px solid var(--gold); outline-offset: 2px; }
+.map-group select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; margin: 0; font: inherit; font-size: 16px; cursor: inherit; appearance: none; }
+.map-group.disabled { cursor: default; }
+.map-group.disabled .map-group-face { opacity: .55; background: none; }
 
 /* Docked inspector beside the map */
 .panel.docked {
@@ -809,5 +818,4 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 /* Compact view guidance stays above controls and clear of the inspector. */
 .map-view-context{position:absolute;right:20px;bottom:70px;max-width:min(460px,calc(100% - 40px));display:flex;gap:8px;flex-wrap:wrap;padding:6px 10px;border-radius:8px;background:var(--sage-50);color:var(--ink-2);font-size:11px;pointer-events:none;z-index:2;box-shadow:var(--shadow)}
 .map-view-context strong{color:var(--forest-700)}
-.map-controls .map-group select:disabled{opacity:.55;cursor:default}
 @media(max-width:700px){.map-view-context{display:none}.map-controls{max-width:calc(100% - 16px);right:8px;overflow-x:auto}.map-controls .icon-btn{flex-shrink:0}.map-group{flex-shrink:0}}
