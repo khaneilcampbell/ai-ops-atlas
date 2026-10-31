@@ -1,3 +1,4 @@
+import {TRANSPORT} from "./transportScale";
 // Where the decorative vehicles can drive: the lane round each headquarters, and the road bridges
 // that join neighboring districts. Pure data, shared by the scene (which paves and builds them)
 // and the vehicles (which drive them), so both agree on every coordinate.
@@ -14,10 +15,10 @@ const EDGE = 0.08;
 const LANE = 0.55;
 
 /** A bridge's deck width, and how far each lane's center sits from the middle of the road. */
-export const DECK_W = 0.46;
-export const LANE_OFF = 0.1;
+export const DECK_W = TRANSPORT.bridgeWidth;
+export const LANE_OFF = TRANSPORT.cityLaneOffset;
 /** Width of the paved road from a plaza out to its bridge. */
-export const ROAD_W = 0.44;
+export const ROAD_W = TRANSPORT.cityWidth;
 /** The deck rises this much over its ramps, so it reads as a bridge rather than a plank. */
 export const RISE = 0.07;
 const RAMP = 0.42;

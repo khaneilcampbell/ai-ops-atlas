@@ -1,3 +1,4 @@
+import {FINANCIAL_BUILDINGS} from "../map3d/financialPlan";
 import {workplaceAgent} from "../../catalog/workplaces";
 import {BUILDING_INTERIORS as BUSINESS} from "../../catalog/buildings";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -65,9 +66,11 @@ function BusinessSuite({x,z,name,accent,bank,labels,hospitality,fashion}:{x:numb
   </group>;
 }
 /** Keep the renderer alive when changing floor views; reset only the camera pose. */
-function SkylineCamera({allFloors}:{allFloors:boolean}) {
+function SkylineCamera({allFloors,floor}:{allFloors:boolean;floor:number}) {
   const controls=useRef<OrbitControlsImpl>(null);
   const {camera,invalidate}=useThree();
+  // Refresh once after the new floor commits, including when Battery saver stops the frame loop.
+  useEffect(()=>{const frame=requestAnimationFrame(()=>invalidate());return()=>cancelAnimationFrame(frame);},[floor,invalidate]);
   useLayoutEffect(()=>{
     camera.position.set(...(allFloors?[24,17,30]:[14,14,18]) as [number,number,number]);
     const target=controls.current?.target;
@@ -76,11 +79,12 @@ function SkylineCamera({allFloors}:{allFloors:boolean}) {
   },[allFloors,camera,invalidate]);
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
 }
-export default function SkylineInterior({building="Skyline",light}:{building?:string;light:LightMode}) {
+export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
   const [floor,setFloor]=useState(-1);
-  const reduced=useReducedMotion();
+  const reduced=useReducedMotion()||building==="Atlas Hills"||FINANCIAL_BUILDINGS.some(b=>b.name===building);
   const power=usePowerProfile();
   const business=building==="Skyline"?undefined:BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
+  const brandedFinancial=["Chase","Robinhood","Navy Federal Credit Union"].includes(building);
   const isNight=light==="night";
   useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
   const [picked,setPicked]=useState<string|null>(null);
@@ -89,12 +93,12 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
   const assigned=catalog.agents.filter(a=>a.workplace?.building===building);
   useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.stopPropagation();leaveBuilding(true);}};window.addEventListener("keydown",close,true);return()=>window.removeEventListener("keydown",close,true);},[]);
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${building} interior`}>
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1}/>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
       {floor===-1&&<MovingLift reduced={reduced}/>}
       <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/>
       {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}
-      {(floor===-1?[0,1,2,3,4]:[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
+      {(floor===-1?Array.from({length:maxFloor+1},(_,i)=>i):[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
       {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
       <FloorLabel level={level} width={16} depth={12}/>
       <group>
@@ -103,12 +107,12 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
       </group>
       <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1}/>
       {level===0 ? <group>
-        {business&&<group>{building==="Wells Fargo"?<group>
+        {business&&!brandedFinancial&&<group>{building==="Wells Fargo"?<group>
           {[-1.5,0,1.5].map(x=><group key={x}><Box p={[x,1.46,-3]} s={[0.65,0.38,0.08]} color="#344a41"/><Box p={[x+0.6,1.65,-3]} s={[0.04,0.8,0.65]} color="#b99957"/></group>)}
           <Box p={[-6.5,1,-4]} s={[1,2,0.7]} color="#a71d30"/><Box p={[-6.5,1.25,-3.62]} s={[0.65,0.5,0.05]} color="#a9c8c3"/>
         </group>:<group><Box p={[-5.8,1.5,-5.6]} s={[3,1.7,0.15]} color="#223d32"/><Html position={[-5.8,1.6,-5.45]} center><span className="skyline-room-label">{business.subtitle}</span></Html></group>}</group>}
         <Box p={[0,0.6,-3]} s={[5,1.2,1.1]} color={business?.accent??"#234b3c"}/><Box p={[0,1.23,-3]} s={[5.2,0.1,1.25]} color="#c9a35a"/><Box p={[0,1.5,-3.3]} s={[0.7,0.4,0.06]} color="#172a25"/><Person x={0} z={-4.1} color="#344c41"/>
-        {floor!==-1&&<Html position={[0,2.8,-5.8]} center><div className="skyline-wall-sign">{building.toUpperCase()}<span>{business?.subtitle??"PRIVATE RESIDENCES"}</span></div></Html>}
+        {floor!==-1&&<Html position={[0,2.8,-5.8]} center><div className={`skyline-wall-sign${brandedFinancial?" financial-wall-sign":""}`}>{building.toUpperCase()}<span>{business?.subtitle??"PRIVATE RESIDENCES"}</span></div></Html>}
         <Sofa x={-4.5} z={1}/><Sofa x={4.5} z={1}/>{[-4.5,4.5].map(x=><group key={x}><Box p={[x,0.35,2.6]} s={[1.4,0.6,0.8]} color="#b89859"/><Person x={x+0.3} z={0.5} color="#5e796a"/></group>)}
         <LobbyEntrance z={5.85} width={2.3}/>{floor!==-1&&<Html position={[0,2.8,5.8]} center><span className="skyline-room-label">Main entrance</span></Html>}
         <Box p={[0,0.02,3]} s={[3,0.03,5]} color="#315c49"/>
@@ -120,7 +124,7 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
           const x=side*4,z=row*3.5, room=`${level}0${(side===-1?0:2)+index+1}`;
           const agent=business?workplaceAgent(assigned,building,level,room):agents[slot];
           return <group key={room}>
-            {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} bank={building==="Wells Fargo"} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
+            {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} bank={["Wells Fargo","Chase","Navy Federal Credit Union"].includes(building)} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
             <Box p={[x,0.06,row*1.1]} s={[0.85,0.04,0.6]} color="#bca371"/>
             <Box p={[x,0.025,z]} s={[7.4,0.04,4.6]} color={row===-1?"#eee4d0":"#ded9cc"}/><Box p={[side*0.15,0.65,z]} s={[0.12,1.3,4.7]} color="#c9bea5"/>
             {!business&&<group><Box p={[x+1.8,0.4,z-0.7]} s={[1.7,0.6,2]} color="#657c70"/><Box p={[x+1.8,0.74,z-1.4]} s={[1.5,0.12,0.5]} color="#f8f1e2"/></group>}
@@ -133,7 +137,7 @@ export default function SkylineInterior({building="Skyline",light}:{building?:st
       {[-7,7].map(x=><group key={x}><Box p={[x,0.35,-5]} s={[0.6,0.7,0.6]} color="#b49a67"/><mesh position={[x,1.2,-5]}><sphereGeometry args={[0.55,12,12]}/><meshStandardMaterial color="#426844"/></mesh></group>)}
     </Canvas>
     <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${building} and return to city`}>← Exit building</button><div><small>{building.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":floor===0?"Grand lobby":`Floor ${floor} · ${business?"Workspaces":"Agent residences"}`}</h2></div></header>
-    <nav className="skyline-floor-picker" aria-label={`Choose ${building} floor`}><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
-    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + 4 ${business?"workspace":"apartment"} floors · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
+    <nav className="skyline-floor-picker" aria-label={`Choose ${building} floor`}><strong>Floor navigation</strong>{[-1,...Array.from({length:maxFloor},(_,i)=>maxFloor-i),0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
+    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + ${maxFloor} ${business?"workspace":"apartment"} ${maxFloor===1?"floor":"floors"} · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
   </section>;
 }

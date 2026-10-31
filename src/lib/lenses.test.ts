@@ -34,3 +34,10 @@ describe("map lenses", () => {
     expect(ids(lensLinks(links, "automations", ctx))).toEqual(["repo:site-ci", "dep:c~d"]);
   });
 });
+
+it("respects connection type switches in every view, including selected projects",()=>{
+ const disabled={...ctx,showAll:true,selKey:"repo:me/shop",selProject:"shop",types:{github:false,agent:false,n8n:false,dependency:false}};
+ for(const lens of ["infrastructure","agents","automations"] as const)expect(lensLinks(links,lens,disabled)).toEqual([]);
+ expect(ids(lensLinks(links,"agents",{...ctx,types:{...ctx.types,n8n:false}}))).toEqual(["dep:a~b"]);
+ expect(ids(lensLinks(links,"automations",{...ctx,types:{...ctx.types,github:false}}))).toEqual(["dep:c~d"]);
+});
