@@ -10,7 +10,8 @@ export function planHighwayAccess(highway:Pt[],links:{id?:string;road:Pt[]}[],bo
  const out:HighwayAccess[]=[];
  const bezier=(a:Pt,b:Pt,c:Pt,d:Pt)=>Array.from({length:25},(_,i):Pt=>{const t=i/24,u=1-t;return [u*u*u*a[0]+3*u*u*t*b[0]+3*u*t*t*c[0]+t*t*t*d[0],u*u*u*a[1]+3*u*u*t*b[1]+3*u*t*t*c[1]+t*t*t*d[1]];});
  for(const link of links){
-  if(!['bmw-dealership','skyline-airport','financial-district','profile-stadium'].includes(link.id??'')||!link.road.length)continue;
+  // BMW shares the Financial District street (and its ramp) since moving beside the district.
+  if(!['skyline-airport','financial-district','profile-stadium'].includes(link.id??'')||!link.road.length)continue;
   const anchors=link.road.flatMap((p,i)=>{if(!i)return [p];const a=link.road[i-1],n=Math.max(1,Math.ceil(Math.hypot(p[0]-a[0],p[1]-a[1])/2));return Array.from({length:n},(_,j):Pt=>[a[0]+(p[0]-a[0])*(j+1)/n,a[1]+(p[1]-a[1])*(j+1)/n]);});
   // Compare a bounded set of nearby anchors on each side after districts move.
   const candidates=(['left','right','top','bottom'] as const).flatMap(side=>{

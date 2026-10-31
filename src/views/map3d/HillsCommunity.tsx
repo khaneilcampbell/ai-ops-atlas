@@ -89,10 +89,6 @@ export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPl
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
   for(const dx of [-2,2])lights.push(box(x+dx,C.platformRise+1.08,z+.85,.8,.025,.12,night?'#ffe6b7':'#e4dfcf'));
  }
- const bridgeX=p.financialLand.x-C.financialShoreGap/2,bridgeZ=p.financial[1]+5.9;
- solid.push(box(bridgeX,0,bridgeZ,C.financialShoreGap+.2,.105,.6,'#d6d0bd'));
- for(const side of [-1,1]){solid.push(box(bridgeX,.45,bridgeZ+side*.28,C.financialShoreGap+.2,.035,.035,palette.green));for(const dx of [-1,0,1])solid.push(box(bridgeX+dx,.105,bridgeZ+side*.28,.035,.35,.035,palette.green));}
- solid.push({p:[bridgeX,-1.2,bridgeZ],s:[.18,TERRACE_H+1.2,.35],c:'#bdb59e'});
  for(const path of [p.financialWalk,p.hillsWalk])for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0)strip([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',paths);
  for(const path of [p.financialWalk,p.hillsWalk]){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,night,palette,deck]);
@@ -101,7 +97,7 @@ export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPl
   people.current.forEach((person,i)=>{if(!person)return;person.visible=!commuter.aboard;if(!person.visible)return;const path=commuter.hills?commutes[i]:p.financialWalk,point=walkPoint(path,commuter.progress);person.position.set(point[0]+commuterLane(i),TERRACE_H+(point[1]>0?Math.ceil(point[1]/(C.platformRise/15))*(C.platformRise/15)+.02:.105),point[2]);});
  });
  if(!p||!deck)return null;
- return <><Instanced items={[{p:[p.financialLand.x+p.financialLand.w/2,0,p.financialLand.z+p.financialLand.d/2],s:[p.financialLand.w,TERRACE_H,p.financialLand.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
+ return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
  {[0,1,2].map(i=>{const start=railPoint(deck,(deck.length-p.length)/2+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
   <Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,0],s:[.52,.16,1.02],c:'#f0f0e5'},{p:[0,.65,0],s:[.48,.07,.96],c:palette.green},{p:[0,.04,0],s:[.55,.06,1],c:palette.gold},{p:[0,-.055,0],s:[.42,.06,.65],c:'#394b49'}]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.266,.22,0],s:[.015,.33,.85],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
