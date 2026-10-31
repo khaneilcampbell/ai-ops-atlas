@@ -12,11 +12,14 @@ async function views(page:import('@playwright/test').Page,list:View[]){
  },list);
 }
 // In the default "By district" layout the estate's corner is at (5, 44.725); the mansion centre is (18, 54.725).
-const VIEWS:View[]=[['front',[16,2,55.5],[25,7.5,67]],['close',[18,2,56.5],[21.5,3.2,62.5]],['pool',[11.5,1.2,55],[16,5,63]],['side',[18,2.2,54.7],[29,5,57]],['roof',[18,3.6,54.7],[22.5,11,61]],['context',[15,1,56],[32,19,76]]];
+const VIEWS:View[]=[['front',[16,2,55.5],[25,7.5,67]],['close',[18,2,56.5],[21.5,3.2,62.5]],['pool',[11.5,1.2,55],[16,5,63]],['side',[18,2.2,54.7],[29,5,57]],['roof',[18,3.6,54.7],[22.5,11,61]],['context',[15,1,56],[32,19,76]],
+ // Hills community (houses, shops, clubs) south of the estate wall, in the same mansion theme.
+ ['community',[15,1,80],[30,13,97]],['community-close',[10,1,77],[14.5,4.2,85.5]]];
+const ONLY=process.env.VIEWS?.split(',');
 for(const light of ['day','night'] as const)test(`Hills mansion, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
- for(const s of await views(page,VIEWS))writeFileSync(`${out}/${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ for(const s of await views(page,VIEWS.filter(v=>!ONLY||ONLY.includes(v[0]))))writeFileSync(`${out}/${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  expect(errors).toEqual([]);
 });
 test('Hills mansion on a phone',async({page})=>{
