@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-10-31 · The Atlas Hills mansion is now a modern hillside house: stacked white terraces, dark wood, tall glass that glows at night, a rooftop helipad, a glass-edged pool, palms and pink flowers
 
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
