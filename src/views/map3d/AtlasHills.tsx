@@ -6,16 +6,16 @@ import {TERRACE_H} from './scene';
 import {mansionParts,MANSION_COLORS} from './hillsMansion';
 /** A static estate: shared instanced boxes and faceted planting; the house itself comes from hillsMansion. */
 export default function AtlasHills({plan:a,g,m,pick,night}:{plan?:HillsPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night:boolean}){
- const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement),color=(name:string,fallback:string)=>css.getPropertyValue(name).trim()||fallback;return {ivory:color('--sage-50','#f7f7f0'),green:color('--forest-700','#294237'),gold:color('--gold','#d0ad69'),window:new THREE.MeshStandardMaterial({color:'#4f6b75',emissive:'#ffe0a6',emissiveIntensity:0,roughness:.4}),water:new THREE.MeshStandardMaterial({color:'#6daeb6',emissive:'#326f7a',emissiveIntensity:0,roughness:.3})}},[]);
- useEffect(()=>{materials.window.color.set(night?'#ffe8b8':'#4f6b75');materials.window.emissiveIntensity=night?1.15:0;materials.water.emissiveIntensity=night?.35:0},[night,materials]);
- useEffect(()=>()=>{materials.window.dispose();materials.water.dispose()},[materials]);
+ const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement),color=(name:string,fallback:string)=>css.getPropertyValue(name).trim()||fallback;return {ivory:color('--sage-50','#f7f7f0'),green:color('--forest-700','#294237'),gold:color('--gold','#d0ad69'),window:new THREE.MeshStandardMaterial({color:'#bcd6dc',emissive:'#ffe0a6',emissiveIntensity:0,roughness:.08,metalness:.1,transparent:true,opacity:.22,depthWrite:false}),room:new THREE.MeshStandardMaterial({emissive:'#ffcf8a',emissiveIntensity:0,roughness:.9}),water:new THREE.MeshStandardMaterial({color:'#6daeb6',emissive:'#326f7a',emissiveIntensity:0,roughness:.3})}},[]);
+ useEffect(()=>{materials.window.color.set(night?'#ffe8b8':'#bcd6dc');materials.window.emissiveIntensity=night?.35:0;materials.room.emissiveIntensity=night?.85:0;materials.water.emissiveIntensity=night?.35:0},[night,materials]);
+ useEffect(()=>()=>{materials.window.dispose();materials.water.dispose();materials.room.dispose()},[materials]);
  const parts=useMemo(()=>{
- const solid:Inst[]=[],glass:Inst[]=[],plants:Inst[]=[],water:Inst[]=[],lights:Inst[]=[];if(!a)return {solid,glass,plants,water,lights};
+ const solid:Inst[]=[],glass:Inst[]=[],plants:Inst[]=[],water:Inst[]=[],lights:Inst[]=[],glow:Inst[]=[],round:Inst[]=[];if(!a)return {solid,glass,plants,water,lights,glow,round};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
  const rect=(r:{x:number;z:number;w:number;d:number},y:number,h:number,c:string)=>box(r.x,y,r.z,r.w,h,r.d,c);
  // Stacked white slabs, timber and black-framed glass (hillsMansion.ts), shifted onto the parcel.
  const house=mansionParts(),at=(i:Inst):Inst=>({...i,p:[a.x+i.p[0],TERRACE_H+i.p[1],a.z+i.p[2]]});
- solid.push(...house.solid.map(at));glass.push(...house.glass.map(at));plants.push(...house.plants.map(at));lights.push(...house.lights.map(at));
+ solid.push(...house.solid.map(at));glass.push(...house.glass.map(at));plants.push(...house.plants.map(at));lights.push(...house.lights.map(at));glow.push(...house.glow.map(at));round.push(...house.round.map(at));
  // Raised entrance landing and three matching steps connect to the courtyard.
  solid.push(box(13,.15,12.85,1.6,.12,.7,'#d8d2c2'));
  for(let i=0;i<3;i++)solid.push(box(13,.05+i*(.22/3),13.8-i*.24,1.6,.22/3,.24,'#d8d2c2'));
@@ -46,8 +46,8 @@ export default function AtlasHills({plan:a,g,m,pick,night}:{plan?:HillsPlan;g:Re
  for(const [x,z]of [[9.8,13.1],[16.4,13.2],[7.4,13.9],[4.9,13.6],[17.6,8]])plants.push(box(x,.06,z,.55,.4,.5,MANSION_COLORS.pink));
  for(let x=9;x<18;x+=.6)if(Math.abs(x-13)>.6)plants.push(box(x,.06,17.9,.5,.4,.4,'#63875e'));
  for(const [x,z]of [[12.1,12.6],[13.9,12.6],[7.1,1.2],[8.4,1],[8.3,8],[8.3,15.6],[18.5,16.4]])lights.push(box(x,.12,z,.07,.12,.07,'#ffffff'));
- return {solid,glass,plants,water,lights};
+ return {solid,glass,plants,water,lights,glow,round};
  },[a,materials]);
  if(!a)return null;
- return <><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={materials.window} pick={{...pick,keys:parts.glass.map(()=>HILLS_KEY)}}/><Instanced items={parts.water} geometry={g.box} material={materials.water}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/></>;
+ return <><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={materials.window} shadow={false} pick={{...pick,keys:parts.glass.map(()=>HILLS_KEY)}}/><Instanced items={parts.round} geometry={g.cyl} material={m.plain}/><Instanced items={parts.glow} geometry={g.box} material={materials.room}/><Instanced items={parts.water} geometry={g.box} material={materials.water}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/></>;
 }
