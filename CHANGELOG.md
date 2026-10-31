@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-10-31 · Ground crew now work outside at the airport: fuel trucks, bag loaders and baggage trains at the parked jets, a cargo tug, crew walking out from the terminal and a marshaller at the runway hold point. They never go near the runway (#167)
 - 2026-10-31 · Airport jets now look like large Boeing-style airliners: long slim body, swept wings, big underwing engines and a swept tail, still in Delta, Emirates, American, Southwest and Qatar colours (#164)
 - 2026-10-31 · Airport offices and hangars now look like Atlas HQ (blue glass bands, white fins, gold crown), and every airport building is 1.5x taller to stand with the Financial District, Marketplace and Marketing Agency (#164)
 - 2026-10-31 · Airport front entrance: a curved canopy over the kerb, revolving glass doors, the sign on the canopy and a zebra crossing; a landside plaza now joins the airport to the district across from it, and the airport buildings use Atlas HQ's blue, gold and white (#164)
