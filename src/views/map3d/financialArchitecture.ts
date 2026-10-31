@@ -13,7 +13,11 @@ export function financialDimensions(id:string){
  const depth=architecture?2.8:2.6,projection=architecture==='biophilic'?BALCONY.projection:0;
  return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+(architecture?.7:.5),depth+projection*2+.12),top:architecture?1.1:1.2};
 }
-export function financialHeight(id:string,reference:number,rise:number){return Math.max(reference*rise,id==='records'?WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT:0);}
+/** Circa is the district's tallest: its main roof clears the Wells Fargo-scaled tower's roof by CIRCA.lead. */
+export function financialHeight(id:string,reference:number,rise:number){
+ const wellsFargo=WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT;
+ return Math.max(reference*rise,id==='records'?wellsFargo:id==='circa'?wellsFargo+CIRCA.lead:0);
+}
 export const financialSignLevel=(id:string,height:number)=>financialBrand(id)?.architecture==='deco'?height*.5:height;
 export interface TowerPalette{ivory:string;green:string;gold:string}
 export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}

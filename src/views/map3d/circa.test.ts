@@ -68,9 +68,10 @@ describe('Circa twin towers',()=>{
   for(const water of [...parts.roundWater,...parts.lapWater])for(const [x,z]of CIRCA.tower.centres)expect(Math.hypot(water.p[0]-x,water.p[2]-z)).toBeGreaterThan(reach);
  });
 
- it('does not raise the aircraft corridor',()=>{
-  const s=buildScene(layoutMap(catalog)),without={...s,financial:{...s.financial!,buildings:s.financial!.buildings.filter(b=>b.id!=='circa')}};
-  expect(flightClearance(s).altitude).toBe(flightClearance(without).altitude);
+ for(const grouping of ['none','district','status','tag'] as const)it(`is the tallest building in the Financial District and aircraft stay clear above it (${grouping})`,()=>{
+  const s=buildScene(layoutMap(catalog,[],grouping)),f=s.financial!,circa=f.buildings.find(b=>b.id==='circa')!,top=(b:typeof circa)=>b.height+financialDimensions(b.id).top;
+  for(const b of f.buildings.filter(b=>b.id!=='circa')){expect(circa.height,b.id).toBeGreaterThan(top(b));expect(top(circa),b.id).toBeGreaterThan(top(b)+.5);}
+  expect(flightClearance(s).altitude).toBeGreaterThanOrEqual(top(circa)+4);
  });
 
  it('has an unofficial planned identity, search, owning role and desk view, without a sign',()=>{

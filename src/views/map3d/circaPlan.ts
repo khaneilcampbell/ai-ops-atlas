@@ -12,8 +12,10 @@ export const CIRCA={
  /** Building centre, district-local. */
  x:-4.6,z:6.2,
  rise:1.04,
+ /** Circa's roof rises this far above the tallest other Financial District tower (the Wells Fargo-scaled one). */
+ lead:1.2,
  podium:{w:7.4,d:8.6,h:1.65,retail:.4},
- tower:{rx:1.25,rz:.95,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:27,balconySide:.1},
+ tower:{rx:1.25,rz:.95,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:46,balconySide:.1},
  crown:.6,
  /** Minimum distance from the highway centreline to any corner of the parcel. */
  highwayClearance:1.2,
