@@ -108,7 +108,7 @@ jobs:
         run: |
           py=python3; [ -x "$RUNNER_TEMP/design/bin/python" ] && py="$RUNNER_TEMP/design/bin/python"
           "$py" ops/design-consistency/design.py fix
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.fix.outputs.changed == 'true'
         with:
           node-version: 22
