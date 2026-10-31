@@ -119,7 +119,14 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  // Flower beds: a soil planter with three clumps of blooms.
  for(const b of a.park.beds){solid.push(box(b.x+b.w/2,.02,b.z+b.d/2,b.w,.05,b.d,'#7d6a52'));for(const k of [-1,0,1])plants.push(box(b.x+b.w/2+(k===0?.05:-.04),.1,b.z+b.d/2+k*b.d*.3,.17,.11,.16,b.c));}
  for(const [x,z,r]of a.park.shrubs)plants.push(box(x,r*.55,z,r,r*.8,r,'#5f8a58'));
- for(const [x,z]of a.park.trees){solid.push(box(x,.02,z,.09,.7,.09,'#8b7f65'));plants.push(box(x,1.3,z,F.parkTreeRadius,.8,F.parkTreeRadius,'#6e9369'));}
+ // Palms (KC, 2026-10-31): a ringed trunk and a crown of drooping fronds, each a flattened ball
+ // pushed out from the top and tipped down, with a few coconuts. Same instanced meshes as before.
+ for(const [i,[x,z]]of a.park.trees.entries()){const top=1.75+(i%3)*.12;
+  solid.push(box(x,.02,z,.11,top*.5,.11,'#9a8a68'),box(x,.02+top*.5,z,.09,top*.5,.09,'#8e7f5f'));
+  for(const y of [.45,.9,1.35])if(y<top)solid.push(box(x,y,z,.12,.03,.12,'#7d6f53'));
+  for(let k=0;k<7;k++){const t=k/7*Math.PI*2+i*.4;plants.push({...box(x+Math.sin(t)*.42,top-.05,z+Math.cos(t)*.42,.16,.06,.55,k%2?'#5c8f4e':'#6ea35a'),r:t,rx:.42});}
+  plants.push(box(x,top+.02,z,.16,.12,.16,'#5c8f4e'));
+  for(const t of [.6,2.7,4.8])plants.push(box(x+Math.sin(t)*.09,top-.12,z+Math.cos(t)*.09,.06,.06,.06,'#8a6a3e'));}
  for(const [x,z]of a.park.benches){solid.push(box(x,.015,z,1.3,.025,.75,'#d4cebe'),box(x,.18,z,1,.08,.35,'#b68c60'),box(x,.26,z+.15,1,.4,.07,'#b68c60'));for(const side of [-1,1])solid.push(box(x+side*.38,.04,z,.07,.14,.28,materials.green));}
  for(const [x,z]of a.park.lights){solid.push(box(x,.02,z,.05,.28,.05,materials.green));lights.push(box(x,.3,z,.07,.05,.07,'#ffffff'));}
  return {solid,plants,water,lights};
