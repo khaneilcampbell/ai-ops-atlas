@@ -32,8 +32,8 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
 }
 /**
  * Room for the Atlas Marketplace: the boulevard runs this much further east of the city, and the
- * green between it and the Skyline park reaches this much further north, so the mall's lot is
- * about twice the Atlas Hills mansion's footprint.
+ * green between it and the Skyline park reaches north to the city's terraces (or this far, if none),
+ * so the mall's lot is about twice the Atlas Hills mansion's footprint and joins the city.
  */
 export const MALL_LOT={east:4,north:3} as const;
 type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'dealership'|'parks'|'land'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
@@ -56,7 +56,12 @@ export function planNeighborhoodLinks(s:Input){
    candidates.push({x:east-CITY_SPACING.causewayWidth/2,z:Math.min(start[1],target[1]),w:CITY_SPACING.causewayWidth,d:Math.abs(start[1]-target[1])});
    const skyline=s.parks.find(p=>p.label==='Skyline');
    if(skyline&&h.z>=skyline.z+skyline.d&&h.z-skyline.z-skyline.d<2&&walkX>skyline.x+skyline.w+2){
-    const north=mallRoom?MALL_LOT.north:0,green={x:skyline.x+skyline.w,z:skyline.z-north,w:east+CITY_SPACING.causewayWidth/2-skyline.x-skyline.w,d:h.z-skyline.z+north};
+    const x0=skyline.x+skyline.w,x1=east+CITY_SPACING.causewayWidth/2;
+    // The green runs north until it meets the city's own terraces, so the Marketplace lot, the Skyline
+    // park and the city are one landmass with no channel between them.
+    const above=s.coreLand.filter(r=>r.x<x1&&r.x+r.w>x0+1.5&&r.z+r.d<=skyline.z+.01).map(r=>r.z+r.d);
+    const top=mallRoom?(above.length?Math.max(...above):skyline.z-MALL_LOT.north):skyline.z;
+    const green={x:x0,z:top,w:x1-x0,d:h.z-top};
     candidates.push(green);
     const promenade:Pt=[skyline.x+skyline.w/2+5.4,skyline.z+skyline.d/2+3.9],gate:Pt=[h.x+HILLS.walkGateX,h.z+.5];
     walks.push([promenade,[walkX,promenade[1]]],[[gate[0],promenade[1]],gate]);
