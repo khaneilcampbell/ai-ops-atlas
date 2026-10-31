@@ -15,7 +15,7 @@ export function freightSpeed(point:Pt,highway:Pt[]):number{
 /** How close (centre to centre) a freight point may run to a district street before it joins it. */
 export const FREIGHT_STREET_SNAP=1;
 /** Turning radius where the truck joins or leaves a shared street, so a whole semi stays on the road. */
-export const FREIGHT_STREET_TURN=.9;
+export const FREIGHT_STREET_TURN=1.5;
 /** Snap points that hug a street onto it, keep one entry and one exit per shared run, and report those joins. */
 export function snapToStreets(route:Pt[],streets:Pt[][],snap:number):{route:Pt[];joins:Pt[]}{
  if(!streets.length)return {route,joins:[]};
