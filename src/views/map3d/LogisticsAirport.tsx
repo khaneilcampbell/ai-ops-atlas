@@ -5,6 +5,7 @@ import AirportCampus from "./AirportCampus";
 import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
+import {terminalParts} from "./airportTerminal";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -81,53 +82,28 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     const y=TERRACE_H,x=a.x,z=a.z;
     const box=(px:number,py:number,pz:number,w:number,h:number,d:number,c:string):Inst=>({p:[px,py,pz],s:[w,h,d],c});
     const cubes:Inst[]=[
-      box(x+1.5,y,z+6,5,.045,12,"#d5c8ac"),
-      box(x+1.5,y+.05,z+6,3.8,.10,10.5,"#eef0eb"),
-      box(x+1.5,y+1.25,z+6,3.8,.10,10.5,"#eef0eb"),
-      box(x+1.5,y+2.45,z+6,4.2,.16,11,"#f0f1ed"),
-      box(x+1.5,y+2.61,z+6,2.7,.3,5.5,"#e5e8e3"),
-      box(x+1.5,y+2.91,z+6,2.9,.06,5.8,"#294237"),
-      box(x-.43,y+.05,z+6,.04,1.25,2,"#20372c"),
-      box(x-.46,y+1.4,z+6,.045,.25,3,"#c9a35a"),
-      box(x+1.5,y,z-3,.65,3.7,.65,"#e2d4b6"),
-      box(x+1.5,y+3.7,z-3,1.35,.7,1.25,"#355e5b"),
-      box(x+1.5,y+4.4,z-3,1.5,.12,1.4,"#294237"),
+      // Entrance doors under the fan canopy.
+      box(x-.42,y+.06,z+6,.05,.8,1.4,"#20372c"),
       box(x+15,y+.015,z+7.5,2.2,.045,21,"#2b3335"),
-      box(x+3.65,y+.22,z+6,.55,.03,14.5,"#d9d8ca"),
-      box(x+3.65,y+.54,z+6,.75,.04,14.8,"#294237"),
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
       box(x+2,y+.05,z+18,2.2,1.05,2,"#eadfc8"),
       box(x+2,y+1.1,z+18,2.5,.12,2.3,"#294237"),
     ];
-    const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[box(x+1.5,y+4.95,z-3,.5,.5,.5,'#f4f1e6')];
-    // Warm glazed cab panels sit outside the tower shaft and below its roof.
-    for(const side of [-1,1])glass.push(box(x+1.5+side*.685,y+3.82,z-3,.025,.44,1.08,'#ffffff'),box(x+1.5,y+3.82,z-3+side*.635,1.18,.44,.025,'#ffffff'));
-    // Glazed terminal with a visible check-in hall and upper passenger lounge.
-    for(const yy of [.15,1.35]){
-     for(const zz of [1.2,3.6,6,8.4,10.8])for(const xx of [-.4,3.4])cubes.push(box(x+xx,y+yy,z+zz,.07,1.1,.07,'#9eaaa8'));
-     for(const zz of [1.2,10.8])glass.push(box(x+1.5,y+yy,z+zz,3.7,1.08,.025,'#ffffff'));
-     for(const xx of [-.4,3.4]){
-      glass.push(box(x+xx,y+yy,z+6,.025,1.08,9.6,'#ffffff'));
-      interiorLights.push(box(x+xx,y+yy+.98,z+6,.04,.035,9.6,'#fff2d1'));
-     }
-     for(const zz of [2.4,5,7.6,9.4]){
-      interiorLights.push(box(x+1.5,y+yy+1.02,z+zz,2.8,.025,.14,'#fff2d1'));
-      for(const xx of [.4,2.4])cubes.push(box(x+xx,y+yy,z+zz,.44,.26,.28,'#294237'),box(x+xx,y+yy+.26,z+zz+.11,.44,.22,.08,'#355f5b'));
-     }
+    const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
+    // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
+    for(const zz of [3.4,5.2,6.8,8.6]){
+     interiorLights.push(box(x+1.6,y+1.12,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+1.82,z+zz,1.6,.025,.12,'#fff2d1'));
+     for(const xx of [1,2.3])cubes.push(box(x+xx,y+.06,z+zz,.44,.26,.28,'#294237'),box(x+xx,y+.32,z+zz+.11,.44,.22,.08,'#355f5b'));
     }
-    for(const zz of [3,5,7,9])cubes.push(box(x+.05,y+.15,z+zz,.5,.4,.7,'#e8e5d9'),box(x+.05,y+.55,z+zz,.55,.04,.75,'#c9a35a'),box(x+.1,y+.59,z+zz,.04,.23,.25,'#254b58'));
+    for(const zz of [4,6,8])cubes.push(box(x+.2,y+.06,z+zz,.5,.4,.7,'#e8e5d9'),box(x+.2,y+.46,z+zz,.55,.04,.75,'#c9a35a'),box(x+.25,y+.5,z+zz,.04,.23,.25,'#254b58'));
     // Public arrivals forecourt and a separate landside display parking area.
-    cubes.push(box(x+AIRPORT_TERMINAL.arrivalsX,y+.035,z+2.4,.64,.025,20,'#424b50'),box(x-.85,y+.04,z+5,.48,.05,13.4,'#e6d6b4'),box(x+1,y+.035,z-6.4,4.4,.025,3.2,'#424b50'));
+    cubes.push(box(x+AIRPORT_TERMINAL.arrivalsX,y+.035,z+2.4,.64,.025,20,'#424b50'),box(x-.85,y+.04,z+5,.48,.05,13.4,'#e6d6b4')); // The oval car park itself is part of the terminal shapes.
     for(const [i,bay] of airportParkingBays().entries()){
      const px=x+bay.x,pz=z+bay.z,model=MODELS[i%2?'gwagon':'bmw'];
      for(const p of model.parts)cubes.push({p:[px+p.at[2]*SCALE,y+.065+p.at[1]*SCALE,pz-p.at[0]*SCALE],s:p.size.map(v=>v*SCALE) as [number,number,number],r:Math.PI/2,c:p.color??['#386b92','#e6e8e3','#303b40'][i%3]});
      for(const side of [-1,1])cubes.push(box(px+side*.32,y+.066,pz,.02,.008,.95,'#eee8d5'));
-    }
-    for(const side of [-1,1])for(let zz=-1.25;zz<13.25;zz+=.5){
-     if(AIRPORT_LAYOUT.gateZ.some(g=>Math.abs(zz-(g+AIRCRAFT_LAYOUT.doorZ))<.45))continue;
-     glass.push(box(x+3.65+side*.29,y+.25,z+zz,.02,.27,.48,'#ffffff'));
     }
     // Remote stands add parked jets without increasing airborne traffic.
     for(const stand of AIRPORT_REMOTE_STANDS){
@@ -139,9 +115,9 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(const gateZ of AIRPORT_LAYOUT.gateZ){
       const bridge=boardingBridge(gateZ);
       // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
-      cubes.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+BOARDING_LAYOUT.ceiling,z+bridge.z,bridge.w+.2,.04,.5,"#294237"));
+      cubes.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+BOARDING_LAYOUT.ceiling,z+bridge.z,bridge.w+.2,.04,.5,"#e9ebe6"));
       for(const side of [-1,1])cubes.push(box(x+5.1,y+.35,z+gateZ-.8+side*.2,3.2,.04,.02,"#456b73"));
-      cubes.push(box(x+7,y+.065,z+gateZ, .035,.012,2.8,"#d6bd6e"),box(x+9.2,y+.065,z+gateZ,4.4,.01,.025,'#d6bd6e'));
+      cubes.push(box(x+7,y+.065,z+gateZ, .035,.012,2.8,"#d6bd6e"));
       for(const side of [-1,1]){
        glass.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor+.03,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
        for(let xx=BOARDING_LAYOUT.fromX;xx<bridge.x+bridge.w/2;xx+=.65)cubes.push(box(x+xx,y+BOARDING_LAYOUT.floor,z+bridge.z+side*.21,.035,.32,.035,'#c2ccc7'));
@@ -169,11 +145,37 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
     {[...AIRPORT_REMOTE_STANDS,{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)}/></group>)}
+    <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
-    <AirportSign x={a.x-.48} z={a.z+6} y={TERRACE_H+1.6}/>
+    <AirportSign x={a.x-.48} z={a.z+6} y={TERRACE_H+1.55} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)}/></group>)}
   </group>;
+}
+
+/** The redesigned terminal, tower and car park: ten instanced draws sharing three extra geometries. */
+function TerminalShapes({a,g,m,glazing,night}:{a:AirportPlan;g:Geometry;m:Materials;glazing:THREE.Material;night:boolean}){
+ const res=useMemo(()=>{
+  const disc=new THREE.CylinderGeometry(.5,.5,1,40).translate(0,.5,0);
+  const flare=new THREE.CylinderGeometry(.5,.36,1,28).translate(0,.5,0);
+  const tint=new THREE.MeshStandardMaterial({color:'#9ad2c4',roughness:.22,metalness:.15,emissive:'#f4d496',emissiveIntensity:0});
+  return {disc,flare,tint};
+ },[]);
+ useEffect(()=>{res.tint.emissiveIntensity=night?.55:0;res.tint.color.set(night?'#c9dccf':'#9ad2c4');},[res,night]);
+ useEffect(()=>()=>{res.disc.dispose();res.flare.dispose();res.tint.dispose();},[res]);
+ const parts=useMemo(()=>terminalParts(a.x,TERRACE_H,a.z),[a]);
+ return <>
+  <Instanced items={parts.shell} geometry={g.box} material={m.plain}/>
+  <Instanced items={parts.discs} geometry={res.disc} material={m.plain}/>
+  <Instanced items={parts.domes} geometry={g.ball} material={m.plain}/>
+  <Instanced items={parts.lines} geometry={g.box} material={m.plain} shadow={false}/>
+  <Instanced items={parts.glassDiscs} geometry={res.disc} material={glazing} shadow={false}/>
+  <Instanced items={parts.glassBoxes} geometry={g.box} material={glazing} shadow={false}/>
+  <Instanced items={parts.cab} geometry={res.flare} material={glazing} shadow={false}/>
+  <Instanced items={parts.tintBalls} geometry={g.ball} material={res.tint}/>
+  <Instanced items={parts.tintDiscs} geometry={res.disc} material={res.tint}/>
+  <Instanced items={parts.tintBoxes} geometry={g.box} material={res.tint}/>
+ </>;
 }
 
 /** A single existing frame callback moves small boarding groups and two cargo vehicles. */
@@ -183,12 +185,13 @@ function BoardingActivity({x,z,g,m}:{x:number;z:number;g:Geometry;m:Materials}){
  return <>{[AIRPORT_LAYOUT.gateZ[0],AIRPORT_LAYOUT.gateZ[3]].map(gate=><group key={gate} position={[x+3.55,TERRACE_H+BOARDING_LAYOUT.floor+.03,z+gate+AIRCRAFT_LAYOUT.doorZ]}><Instanced items={bodies} geometry={g.box} material={m.plain}/><Instanced items={heads} geometry={g.ball} material={m.plain}/></group>)}</>;
 }
 
-function AirportSign({x,y,z}:{x:number;y:number;z:number}){
+function AirportSign({x,y,z,mirrored=false}:{x:number;y:number;z:number;mirrored?:boolean}){
  const resources=useMemo(()=>{
   const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;const c=canvas.getContext('2d')!;
   c.fillStyle='#edf0e9';c.fillRect(0,0,1024,256);c.fillStyle='#294237';c.font='500 112px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('ATLAS AIRPORT',512,130,970);c.fillStyle='#c9a35a';c.fillRect(0,237,1024,19);
   const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;const material=new THREE.MeshBasicMaterial({map,toneMapped:false,side:THREE.DoubleSide});const geometry=new THREE.PlaneGeometry(2,.5);return {map,material,geometry};
  },[]);
  useEffect(()=>()=>{resources.map.dispose();resources.material.dispose();resources.geometry.dispose();},[resources]);
- return <mesh position={[x,y,z]} rotation={[0,-Math.PI/2,0]} material={resources.material} geometry={resources.geometry} raycast={()=>null}/>;
+ // The west-facing campus is drawn mirrored; flip the sign back so it reads left to right.
+ return <mesh position={[x,y,z]} rotation={[0,-Math.PI/2,0]} scale={[mirrored?-1:1,1,1]} material={resources.material} geometry={resources.geometry} raycast={()=>null}/>;
 }
