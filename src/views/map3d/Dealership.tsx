@@ -9,7 +9,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {TERRACE_H} from './scene';
 import {DEALERSHIP as D,dealershipUpperFloors,DEALERSHIP_KEY,SHOWROOM_FRONT,type DealershipPlan} from './dealershipPlan';
 import {ROAD_W} from './roads';
-type Parts={solid:Inst[];round:Inst[];lights:Inst[];glass:Inst[]};
+type Parts={solid:Inst[];round:Inst[];lights:Inst[];ambient:Inst[];glass:Inst[]};
 /** Display cars use precisely the moving fleet's geometry, rotated toward the entrance. */
 function car(parts:Parts,x:number,y:number,z:number,color:string,suv:boolean){
  for(const p of MODELS[suv?'gwagon':'bmw'].parts)parts.solid.push({p:[x-p.at[2]*SCALE,y+p.at[1]*SCALE,z+p.at[0]*SCALE],s:[p.size[0]*SCALE,p.size[1]*SCALE,p.size[2]*SCALE],r:-Math.PI/2,c:p.color??color});
@@ -29,12 +29,15 @@ function signage(){
 export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=false}:{night?:boolean;traffic?:boolean;reduced?:boolean;plan?:DealershipPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
  const sign=useMemo(signage,[]);
  const glow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#fff1cd',emissive:'#ffdca1',emissiveIntensity:.1}),[]);
- useEffect(()=>{glow.emissiveIntensity=night?1.25:.04;},[glow,night]);
+ useEffect(()=>{glow.emissiveIntensity=night?1.4:.05;},[glow,night]);
+ const ambient=useMemo(()=>new THREE.MeshStandardMaterial({color:'#d9c9ad',emissive:'#e2b170',emissiveIntensity:0,roughness:.8}),[]);
+ useEffect(()=>{ambient.emissiveIntensity=night?.32:0;},[ambient,night]);
+ useEffect(()=>()=>ambient.dispose(),[ambient]);
  useEffect(()=>()=>glow.dispose(),[glow]);
  const glass=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
  useEffect(()=>()=>{sign.texture.dispose();sign.material.dispose();sign.geometry.dispose();glass.dispose();},[sign,glass]);
  const parts=useMemo(()=>{
-  const p:Parts={solid:[],round:[],lights:[],glass:[]};if(!a)return p;
+  const p:Parts={solid:[],round:[],lights:[],ambient:[],glass:[]};if(!a)return p;
   const x=a.x,z=a.z,y=TERRACE_H;
   const box=(dx:number,dy:number,dz:number,w:number,h:number,d:number,c:string):Inst=>({p:[x+dx,y+dy,z+dz],s:[w,h,d],c});
   // Curtain-wall tower sized from the Financial District (plan.showroom): a clear central atrium
@@ -42,7 +45,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   const r=a.showroom,H=r.height,F=D.mezzanineY,levels=dealershipUpperFloors(r.floors),cx=r.cx,cz=r.cz;
   const W=r.w/2,Lx=cx-W,Rx=cx+W,B=cz-r.d/2,Fz=cz+r.d/2,wing=W-.67,wings=[cx-.65-wing/2,cx+.65+wing/2],perWing=Math.max(1,Math.floor(wing/1.1));
   const bays=(c:number)=>Array.from({length:perWing},(_,k)=>c+(k-(perWing-1)/2)*wing/perWing);
-  p.lights.push(box(cx,.04,cz,r.w,.06,r.d,'#ffffff'));p.solid.push(box(cx,.1,B,r.w,H-.1,.08,'#e3e7e5'));
+  p.ambient.push(box(cx,.04,cz,r.w,.06,r.d,'#ffffff'));p.solid.push(box(cx,.1,B,r.w,H-.1,.08,'#e3e7e5'));
   p.solid.push(box(cx,H,cz,r.w+.25,.1,r.d+.25,'#edf0ef'),box(cx,H+.1,cz,r.w,.035,r.d,'#aab5bb'));
   // Roof-edge fascia carries the sign above the glazing, with no duplicate roof mesh.
   p.solid.push(box(cx,H-.85,Fz+.03,r.w,.85,.08,'#f8f9f7'),box(cx,H-.89,Fz+.08,r.w,.025,.02,'#2876bb'));
@@ -63,7 +66,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   const rail=r.d-.92;
   for(const level of levels){
   for(const xx of wings){
-   p.lights.push(box(xx,level-.09,cz,wing,.09,r.d-.1,'#ffffff'));
+   p.ambient.push(box(xx,level-.09,cz,wing,.09,r.d-.1,'#ffffff'));
    p.glass.push(box(xx,level,Fz-.14,wing-.03,.47,.014,'#ffffff'));
    p.solid.push(box(xx,level+.47,Fz-.14,wing,.025,.03,'#647883'));
   }
@@ -74,11 +77,15 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   for(let floor=0;floor<r.floors-1;floor++)for(let i=0;i<D.stairCount;i++)p.solid.push(box(cx+.9-i*.16,floor*F+F*i/D.stairCount+.1,B+.45,.18,.09,.5,'#aab7be'));
   // Ground-floor reception and lounge beside the side service door.
   const desk=Rx-.75;p.solid.push(box(desk,.1,cz+.35,1.3,.45,.5,'#e4e2db'),box(desk,.55,cz+.35,1.4,.045,.6,'#294237'),box(desk,.59,cz+.35,.25,.17,.045,'#203744'),box(Rx-1.3,.1,Fz-.45,.35,.24,.4,'#294237'),box(Rx-.55,.1,Fz-.45,.35,.24,.4,'#294237'));
-  // Night lighting, like the district towers: a lit ceiling under every slab and a warm back
-  // wall on every storey, so the whole glass tower glows through its curtain wall after dark.
-  for(const [i,top] of [...levels,H].entries()){const floor=i?levels[i-1]:0;
-   p.lights.push(box(cx,top-.13,cz,r.w-.14,.025,r.d-.14,'#ffffff'));
-   p.lights.push(box(cx,floor+.12,B+.06,r.w-.14,top-floor-.3,.02,'#ffffff'));}
+  // Luxury showroom lighting (KC, 2026-10-31): a low, warm wash on floors, ceilings and back
+  // walls, and a small bright spotlight over every display car, so the cars are what shines.
+  const tops=[...levels,H];
+  for(const [i,top] of tops.entries()){const floor=i?levels[i-1]:0;
+   p.ambient.push(box(cx,top-.13,cz,r.w-.14,.025,r.d-.14,'#ffffff'));
+   p.ambient.push(box(cx,floor+.12,B+.06,r.w-.14,top-floor-.3,.02,'#ffffff'));}
+  const spot=(bx:number,top:number,bz:number)=>p.lights.push(box(bx,top-.16,bz,.22,.02,.22,'#ffffff'));
+  for(const bx of bays(wings[0]))spot(bx,tops[0],cz+.3);
+  levels.forEach((_,i)=>{for(const bx of [...bays(wings[0]),...bays(wings[1])])spot(bx,tops[i+1],cz+.2);});
   const colors=['#2163ad','#e7e9e6','#a5abb0','#202b35'];
   bays(wings[0]).forEach((bx,k)=>car(p,x+bx,y+.1,z+cz+.3,colors[k%4],false));
   levels.forEach((level,i)=>[...bays(wings[0]),...bays(wings[1])].forEach((bx,k)=>car(p,x+bx,y+level,z+cz+.2,colors[(i+k)%4],k>=perWing&&k%2===0)));
@@ -98,7 +105,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   return p;
  },[a]);
  if(!a)return null;
- return <><Instanced items={[{p:[a.lot.x+a.lot.w/2,0,a.lot.z+a.lot.d/2],s:[a.lot.w,TERRACE_H,a.lot.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+a.showroom.cx,TERRACE_H+a.showroom.height-.425,a.z+SHOWROOM_FRONT+.08]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
+ return <><Instanced items={[{p:[a.lot.x+a.lot.w/2,0,a.lot.z+a.lot.d/2],s:[a.lot.w,TERRACE_H,a.lot.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.ambient} geometry={g.box} material={ambient}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+a.showroom.cx,TERRACE_H+a.showroom.height-.425,a.z+SHOWROOM_FRONT+.08]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
 }
 
 function Garage({plan,g,m,moving}:{plan:DealershipPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean}){
