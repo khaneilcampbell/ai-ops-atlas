@@ -19,13 +19,13 @@ test("reports-only improvement analyst is discoverable with its OpenAI workplace
 test("OpenAI building seats the Atlas improvement role on its top floor",async({page})=>{
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
   for(let i=0;i<6;i++){await page.getByRole("button",{name:"Zoom in",exact:true}).click();await settle(page,1);}
-  await page.locator(".m3-plaque.secondary",{hasText:"OpenAI"}).dispatchEvent("click");await settle(page,2);
+  await page.locator('.m3-plaque[title^="OpenAI ·"]').dispatchEvent("click");await settle(page,2);
   const inspector=page.getByRole("complementary",{name:"Inspector"});
   await expect(inspector.getByRole("button",{name:"AI Production Improvement Analyst →",exact:true})).toBeVisible();
   await expect(inspector).toContainText("Floor 4 · Suite 401");
   await inspector.getByRole("button",{name:"AI Production Improvement Analyst →",exact:true}).click();await settle(page,1);
   await expect(inspector.getByRole("button",{name:"Copy Codex review prompt",exact:true})).toBeVisible();
-  await page.locator(".m3-plaque.secondary",{hasText:"OpenAI"}).dispatchEvent("click");await settle(page,1);
+  await page.locator('.m3-plaque[title^="OpenAI ·"]').dispatchEvent("click");await settle(page,1);
   await inspector.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
   const nav=page.getByRole("navigation",{name:"Choose OpenAI floor"});
   await nav.getByRole("button",{name:"Floor 4",exact:true}).click();await settle(page,3);
