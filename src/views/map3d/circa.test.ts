@@ -72,7 +72,11 @@ describe('Circa twin towers',()=>{
   expect(Math.max(...all.map(p=>p.p[1]+p.s[1]))).toBeGreaterThanOrEqual(.85);
   // The band stays on the podium: above the entrance and below the deck parapet.
   expect(S.y1).toBeLessThanOrEqual(P.h);
-  expect(CIRCA.entrance.w).toBeGreaterThanOrEqual(2.2);expect(CIRCA.entrance.w).toBeLessThanOrEqual(2.8);
+  // Sized like the district's other front doors: canopy 1.1 to 1.8 wide, doors about .74 wide and .65 tall.
+  expect(CIRCA.entrance.w).toBeGreaterThanOrEqual(1.1);expect(CIRCA.entrance.w).toBeLessThanOrEqual(1.8);
+  expect(Math.abs(door.w-.74)).toBeLessThan(.05);expect(Math.abs(door.h-.65)).toBeLessThan(.05);
+  // The see-through lobby behind the podium glass is wider than the entry itself.
+  expect(CIRCA.entrance.lobby).toBeGreaterThanOrEqual(CIRCA.entrance.w);
   // Lobby parts sit in the street-face recess or the pavilion, never deeper into the podium.
   for(const p of all)expect(p.p[2]).toBeGreaterThan(P.d/2-.06-CIRCA.entrance.recess-1e-9);
   // The whole complex keeps the entrance and no old portal box.

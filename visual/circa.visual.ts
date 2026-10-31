@@ -24,3 +24,18 @@ test('Circa on a phone',async({page})=>{
  await openAtlas(page,{light:'day',storage:{mapProjectGrouping:'none'}});await waitForScene(page);await settle(page,2);
  await page.screenshot({path:'artifacts/circa/phone-default.png'});
 });
+
+// The lobby inside "Enter building" (SkylineInterior + CircaLobby).
+for(const light of ['day','night'] as const)test(`Circa lobby inside Enter building, ${light}`,async({page})=>{
+ test.setTimeout(400_000);mkdirSync('artifacts/circa',{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
+ await page.evaluate(async()=>{const m=await import('/src/views/office/store.ts' as string);m.enterBuilding('skyline-business:Circa',true);});
+ await settle(page,4);
+ await page.getByRole('button',{name:'Lobby',exact:true}).click();
+ for(let i=0;i<6;i++){await page.waitForTimeout(300);await settle(page,2);}
+ await page.screenshot({path:`artifacts/circa/interior-lobby-${light}.png`});
+ await page.getByRole('button',{name:'All floors',exact:true}).click();
+ for(let i=0;i<6;i++){await page.waitForTimeout(300);await settle(page,2);}
+ await page.screenshot({path:`artifacts/circa/interior-all-${light}.png`});
+ if(errors.length)throw new Error(errors.join('\n'));
+});

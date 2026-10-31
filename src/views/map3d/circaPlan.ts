@@ -18,7 +18,9 @@ export const CIRCA={
  tower:{rx:1.25,rz:.95,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:46,balconySide:.1},
  crown:.6,
  /** Glass entrance pavilion centred on the street face; everything stays below the LED band (screen.y0). */
- entrance:{w:2.8,depth:.62,canopy:.3,recess:1.3},
+ // w/depth: the projecting entry, sized like the district's other front doors (canopies 1.1 to 1.8 wide, doors .74 x .65).
+ // lobby: the wider see-through lobby recessed behind the podium glass.
+ entrance:{w:1.8,lobby:2.8,depth:.4,canopy:.3,recess:1.75},
  /** Minimum distance from the highway centreline to any corner of the parcel. */
  highwayClearance:1.2,
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
@@ -67,10 +69,10 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
 
  // Podium: dark garage core behind the LED band.
  // Garage core, with a double-height lobby carved out behind the glass entrance on the street face.
- {const cw=P.w-.12,cd=P.d-.12,ex=E.w/2,lobbyTop=CIRCA.screen.y0-.04,back=cd/2-E.recess,sideW=(cw/2-ex);
+ {const cw=P.w-.12,cd=P.d-.12,ex=E.lobby/2,lobbyTop=CIRCA.screen.y0-.04,back=cd/2-E.recess,sideW=(cw/2-ex);
   for(const side of [-1,1])box(out.solid,side*(ex+sideW/2),0,0,sideW,P.h,cd,palette.core);
-  box(out.solid,0,0,(-cd/2+back)/2,E.w,P.h,back+cd/2,palette.core);
-  box(out.solid,0,lobbyTop,back+E.recess/2,E.w,P.h-lobbyTop,E.recess,palette.core);}
+  box(out.solid,0,0,(-cd/2+back)/2,E.lobby,P.h,back+cd/2,palette.core);
+  box(out.solid,0,lobbyTop,back+E.recess/2,E.lobby,P.h-lobbyTop,E.recess,palette.core);}
  // Double-height retail glass on the street and east faces fills the space under the LED band.
  const shopH=CIRCA.screen.y0-.12;
  for(const side of [-1,1]){const x0=E.w/2+.02,x1=hw-.15;box(out.storefront,side*(x0+x1)/2,.04,hd-.04,x1-x0,shopH,.04,'#ffffff');}
@@ -180,33 +182,33 @@ export function circaScreenPath(samples=240):Pt[]{
  * and an arc floor lamp on a blue-grey rug. No signage or logos.
  * Returns the doorway's centre x and width so tests can check it meets the front walk.
  */
-export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'lobbyFinish'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}):{door:{x:number;w:number}}{
- const P=CIRCA.podium,E=CIRCA.entrance,hd=P.d/2,top=CIRCA.screen.y0-.04,front=hd+E.depth,glassH=top-.07,back=hd-.06-E.recess,ex=E.w/2;
- const inner=ex-.03,floor=.03;
+export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'lobbyFinish'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}):{door:{x:number;w:number;h:number}}{
+ const P=CIRCA.podium,E=CIRCA.entrance,hd=P.d/2,top=CIRCA.screen.y0-.04,front=hd+E.depth,glassH=top-.07,back=hd-.06-E.recess,ex=E.w/2,lx=E.lobby/2;
+ const inner=lx-.03,floor=.03;
  const marble='#f3efe8',vein='#b9b4ad',walnut='#5b3a26',walnutLight='#76503a',black='#1b1b1d',tile='#a6a49f',grout='#8e8c87',slat='#8d8e8f',soffit='#5f6062',glow='#ffffff';
  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r?:number,rx?:number)=>t.push({p:[x,y,z],s:[w,h,d],c,...(r===undefined?{}:{r}),...(rx===undefined?{}:{rx})});
  const vest=back+.55;
  // Floors: light marble through the lounge and pavilion; grey stone tiles in the elevator vestibule.
- box(out.lobbyFinish,0,0,(vest+front)/2,E.w,floor,front-vest,marble);
- box(out.solid,0,0,(back+vest)/2,E.w,floor,vest-back,tile);
+ box(out.lobbyFinish,0,0,(vest+hd)/2,E.lobby,floor,hd-vest,marble);box(out.lobbyFinish,0,0,(hd+front)/2,E.w,floor,front-hd,marble);
+ box(out.solid,0,0,(back+vest)/2,E.lobby,floor,vest-back,tile);
  for(let x=-inner+.3;x<inner;x+=.3)box(out.solid,x,floor,(back+vest)/2,.006,.002,vest-back,grout);
- box(out.solid,0,floor,back+.28,E.w-.06,.002,.006,grout);
+ box(out.solid,0,floor,back+.28,E.lobby-.06,.002,.006,grout);
  // Storefront: near-frameless glass in slim black mullions, black roof edge and canopy edge.
  box(out.entryGlass,0,floor,front,E.w,glassH,.015,glow);
  for(const side of [-1,1])box(out.entryGlass,side*ex,floor,hd+E.depth/2,.015,glassH,E.depth,glow);
- for(const x of [-ex,-ex*.62,-.36,.36,ex*.62,ex])box(out.solid,x,floor,front,.016,glassH,.03,black);
+ for(const x of [-ex,-.38,.38,ex])box(out.solid,x,floor,front,.016,glassH,.03,black);
  for(const side of [-1,1])box(out.solid,side*ex,floor,hd+.02,.016,glassH,.03,black);
  box(out.solid,0,floor+glassH,hd+E.depth/2,E.w+.04,.025,E.depth+.04,palette.white);
  box(out.solid,0,floor+glassH+.005,front+.005,E.w+.04,.02,.012,black);
- box(out.entryGlass,0,top-.02,front+E.canopy/2,E.w+.4,.012,E.canopy,glow);
- box(out.solid,0,top-.026,front+E.canopy,E.w+.4,.022,.02,black);
- // Centre double glass doors: black frame, transom and long vertical pulls.
- const doorW=.72,doorH=Math.min(.52,glassH-.06);
+ box(out.entryGlass,0,top-.02,front+E.canopy/2,E.w+.2,.012,E.canopy,glow);
+ box(out.solid,0,top-.026,front+E.canopy,E.w+.2,.022,.02,black);
+ // Centre double glass doors, the same size as the district's other front doors: black frame, transom, long pulls.
+ const doorW=.74,doorH=Math.min(.65,glassH-.1);
  box(out.solid,0,floor+doorH,front,doorW+.03,.02,.035,black);box(out.solid,0,floor+doorH+.12,front,E.w,.012,.025,black);
  box(out.solid,0,floor,front,.012,doorH,.03,black);
- for(const side of [-1,1]){box(out.solid,side*.05,floor+.14,front+.02,.008,.24,.008,'#c9c4bb');box(out.solid,side*.05,floor+.14,front-.02,.008,.24,.008,'#c9c4bb');}
+ for(const side of [-1,1]){box(out.solid,side*.05,floor+.18,front+.02,.008,.3,.008,'#c9c4bb');box(out.solid,side*.05,floor+.18,front-.02,.008,.3,.008,'#c9c4bb');}
  // Elevator vestibule: walnut back wall in two-tone book-matched strips, two dark elevator doors with black surrounds.
- box(out.lobbyFinish,0,floor,back+.02,E.w-.06,glassH,.04,walnut);
+ box(out.lobbyFinish,0,floor,back+.02,E.lobby-.06,glassH,.04,walnut);
  for(let x=-inner+.08,i=0;x<inner-.04;x+=.1,i++)if(Math.abs(Math.abs(x)-.36)>.22)box(out.lobbyFinish,x,floor+.02,back+.045,.05,glassH-.04,.008,i%2?walnutLight:walnut);
  for(const x of [-.36,.36]){box(out.solid,x,floor,back+.043,.36,.6,.012,black);box(out.solid,x,floor,back+.05,.3,.56,.008,'#3d3b38');box(out.solid,x,floor,back+.055,.004,.56,.004,'#26241f');box(out.lobbyGlow,x,floor+.64,back+.05,.12,.012,.006,glow);}
  // Two sculptural textured pillars framing the vestibule.
@@ -216,28 +218,28 @@ export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDru
  // East wall: a sculpted wavy walnut wall of vertical slats whose depth follows a slow wave.
  for(let z=back+.06,i=0;z<hd+.05;z+=.05,i++){const d=.03+.08*(1+Math.sin(i*.55))/2;box(out.lobbyFinish,inner-d/2,floor,z,d,glassH,.036,i%3?walnut:walnutLight);}
  // Ceiling: dark grey soffit with lighter linear slats and a grid of black spotlights with warm lenses.
- box(out.lobbyFinish,0,top-.02,(back+hd)/2,E.w-.04,.02,hd-back,soffit);
- for(let z=back+.05;z<hd;z+=.07)box(out.lobbyFinish,0,top-.045,z,E.w-.1,.025,.026,slat);
- for(const x of [-.9,-.45,0,.45,.9])for(const z of [back+.3,back+.75,back+1.2]){out.rounds.push({p:[x,top-.07,z],s:[.04,.025,.04],c:black});box(out.lobbyGlow,x,top-.073,z,.022,.004,.022,glow);}
+ box(out.lobbyFinish,0,top-.02,(back+hd)/2,E.lobby-.04,.02,hd-back,soffit);
+ for(let z=back+.05;z<hd;z+=.07)box(out.lobbyFinish,0,top-.045,z,E.lobby-.1,.025,.026,slat);
+ for(const x of [-.9,-.45,0,.45,.9])for(const z of [back+.35,back+.9,back+1.45]){out.rounds.push({p:[x,top-.07,z],s:[.04,.025,.04],c:black});box(out.lobbyGlow,x,top-.073,z,.022,.004,.022,glow);}
  // Reception: white marble base with a walnut top, a glow reveal, and vertical pendant rods above.
- const desk:[number,number]=[.42,back+.86];
+ const desk:[number,number]=[.5,back+.9];
  box(out.lobbyFinish,desk[0],floor,desk[1],.72,.13,.16,marble);box(out.lobbyFinish,desk[0],floor+.13,desk[1],.76,.02,.2,walnut);box(out.lobbyGlow,desk[0],floor+.01,desk[1]+.082,.68,.008,.006,glow);
  for(let i=0;i<6;i++){const x=desk[0]-.25+i*.1,len=.12+.05*(i%2);box(out.solid,x,floor+glassH-.3+len,desk[1],.003,top-.07-(floor+glassH-.3+len),.003,black);box(out.lobbyGlow,x,floor+glassH-.3,desk[1],.014,len,.014,glow);}
  // Centre: round dark pedestal table with a white bouquet under a diamond chandelier.
- const ct:[number,number]=[-.28,hd-.08];
+ const ct:[number,number]=[-.45,back+.92];
  out.rounds.push({p:[ct[0],floor,ct[1]],s:[.07,.12,.07],c:'#2a2623'},{p:[ct[0],floor+.12,ct[1]],s:[.2,.02,.2],c:'#2a2623'},{p:[ct[0],floor+.14,ct[1]],s:[.04,.05,.04],c:'#dcdcdc'});
  out.leaves.push({p:[ct[0],floor+.17,ct[1]],s:[.08,.07,.08],c:'#f7f4ee'});
  box(out.solid,ct[0],floor+glassH-.2,ct[1],.003,top-.07-(floor+glassH-.2),.003,black);
  box(out.lobbyGlow,ct[0],floor+glassH-.36,ct[1],.12,.12,.12,glow,Math.PI/4,Math.PI/4);
  // West lounge: black tufted leather chairs facing across a glass table on a black-and-white hide rug.
- const wl:[number,number]=[-.72,hd+.3];
+ const wl:[number,number]=[-.72,hd-.33];
  box(out.solid,wl[0],floor,wl[1],.62,.004,.46,'#efece6');
  for(const [dx,dz,w,d] of [[-.18,-.1,.14,.1],[.12,.08,.16,.12],[.2,-.14,.08,.07],[-.05,.15,.1,.06]] as const)box(out.solid,wl[0]+dx,floor+.004,wl[1]+dz,w,.002,d,'#1c1c1c');
  for(const side of [-1,1]){const x=wl[0]+side*.22;box(out.solid,x,floor+.004,wl[1],.16,.07,.18,black);box(out.solid,x+side*.07,floor+.074,wl[1],.04,.1,.18,black);for(const dz of [-.05,.05])box(out.solid,x+side*.045,floor+.11,wl[1]+dz,.004,.04,.004,'#3a3a3c');}
  box(out.entryGlass,wl[0],floor+.004,wl[1],.16,.06,.12,glow);box(out.solid,wl[0],floor+.064,wl[1],.16,.004,.12,'#cfd6da');
  // East lounge: navy velvet sofa with pillows facing cognac leather sling chairs, dark wood table on a metal base,
  // all on a blue-grey rug, with an arc floor lamp reaching over.
- const el:[number,number]=[.62,hd+.32];
+ const el:[number,number]=[.62,hd-.32];
  box(out.solid,el[0],floor,el[1],.7,.004,.5,'#7c8a96');
  box(out.solid,el[0],floor+.004,el[1]-.16,.5,.07,.16,'#26314f');box(out.solid,el[0],floor+.074,el[1]-.23,.5,.09,.04,'#26314f');
  for(const dx of [-.16,.16])box(out.solid,el[0]+dx,floor+.074,el[1]-.19,.1,.06,.03,'#e9e4da');
@@ -247,13 +249,13 @@ export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDru
  out.rounds.push({p:[lamp[0],floor,lamp[1]],s:[.08,.02,.08],c:'#2a2a2a'},{p:[lamp[0],floor+.02,lamp[1]],s:[.01,.42,.01],c:'#2a2a2a'});
  for(let i=0;i<4;i++)box(out.solid,lamp[0]-.05-i*.08,floor+.44-i*i*.012,lamp[1]+.04,.08,.008,.008,'#2a2a2a');
  box(out.lobbyGlow,lamp[0]-.34,floor+.33,lamp[1]+.04,.08,.05,.08,glow);
- // A pair of olive trees in stone pots at the storefront corners.
- for(const x of [-(inner-.14),inner-.14]){const z=front-.13;out.rounds.push({p:[x,floor,z],s:[.14,.12,.14],c:'#e0d9cc'});box(out.solid,x,floor+.12,z,.012,.16,.012,'#6f5a43');out.leaves.push({p:[x,floor+.24,z],s:[.13,.16,.13],c:'#8a9a6a'});}
+ // A pair of olive trees in stone pots in the entry's front corners.
+ for(const x of [-(ex-.12),ex-.12]){const z=front-.12;out.rounds.push({p:[x,floor,z],s:[.13,.12,.13],c:'#e0d9cc'});box(out.solid,x,floor+.12,z,.012,.16,.012,'#6f5a43');out.leaves.push({p:[x,floor+.24,z],s:[.13,.16,.13],c:'#8a9a6a'});}
  // Outside: planter benches, two short lit bollards and a stone landing meeting the walk.
  for(const side of [-1,1]){box(out.solid,side*(ex+.38),0,front-.12,.5,.1,.22,palette.wood);box(out.solid,side*(ex+.38),.1,front-.12,.46,.05,.18,palette.green);out.leaves.push({p:[side*(ex+.38),.2,front-.12],s:[.2,.16,.2],c:palette.green});}
  for(const side of [-1,1]){out.rounds.push({p:[side*(doorW/2+.25),0,front+.36],s:[.06,.12,.06],c:black});box(out.lobbyGlow,side*(doorW/2+.25),.1,front+.36,.05,.015,.05,glow);}
  box(out.solid,0,0,front+.2,E.w+.6,.025,.4,'#e8e2d4');
- return {door:{x:0,w:doorW}};
+ return {door:{x:0,w:doorW,h:doorH}};
 }
 
 export const circaPieceCount=(p:CircaParts)=>Object.values(p).reduce((n,list)=>n+list.length,0);
