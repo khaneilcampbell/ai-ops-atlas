@@ -1,5 +1,5 @@
-import { expect, it } from "vitest";
-import { planAirport,airportFootprint } from "./airport";
+import { describe, expect, it } from "vitest";
+import { planAirport,airportFootprint,pathCrossesRect,AIRPORT_LAYOUT } from "./airport";
 it("reserves space beyond every existing land parcel with a connected paved approach",()=>{
  const land=[{x:0,z:0,w:5,d:8},{x:8,z:3,w:6,d:8}];
  const paving=[{x:12,z:5,w:1,d:.6,y:.6,h:.03}];
@@ -72,4 +72,27 @@ it('reserves enlarged land for remote aircraft and landside parking without runw
   const b=vehicleBounds('gwagon');expect(bay.x-b.halfWidth).toBeGreaterThan(t.arrivalsX+.32);
   expect(bay.z+b.front).toBeLessThan(-3-.65);expect(bay.z-b.front).toBeGreaterThan(l.landZ);
  }
+});
+
+describe('airport forecourt', () => {
+  it('joins the terminal entrance to the district terrace across from it in the district layout', async () => {
+    const {catalog} = await import('../../catalog');
+    const {layoutMap} = await import('../mapLayout');
+    const {buildScene} = await import('./scene');
+    const s = buildScene(layoutMap(catalog, [], 'district'));
+    const f = s.airportForecourt!, a = s.airport!;
+    expect(f).toBeDefined();
+    const ez = a.z + AIRPORT_LAYOUT.terminalZ;
+    expect(f.z).toBeLessThanOrEqual(ez);
+    expect(f.z + f.d).toBeGreaterThanOrEqual(ez);
+    // It touches both the airport land and a district terrace, and no street crosses it.
+    const land = airportFootprint(a);
+    expect([land.x, land.x + land.w].some(x => Math.abs(x - f.x) < 1e-6 || Math.abs(x - (f.x + f.w)) < 1e-6)).toBe(true);
+    expect(s.terraces.some(t => Math.abs(t.x - (f.x + f.w)) < 1e-6 || Math.abs(t.x + t.w - f.x) < 1e-6)).toBe(true);
+    for (const c of s.transportConnections) expect(pathCrossesRect(c.road, f)).toBe(false);
+  });
+  it('detects a path over a rectangle', () => {
+    expect(pathCrossesRect([[0, 0], [4, 0]], {x: 1, z: -1, w: 1, d: 2})).toBe(true);
+    expect(pathCrossesRect([[0, 3], [4, 3]], {x: 1, z: -1, w: 1, d: 2})).toBe(false);
+  });
 });

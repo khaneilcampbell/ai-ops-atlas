@@ -5,7 +5,8 @@ import AirportCampus from "./AirportCampus";
 import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
-import {terminalParts} from "./airportTerminal";
+import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
+import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -73,8 +74,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
   const [visible,setVisible]=useState(()=>document.visibilityState!=="hidden");
   useEffect(()=>{const on=()=>setVisible(document.visibilityState!=="hidden");document.addEventListener("visibilitychange",on);return()=>document.removeEventListener("visibilitychange",on)},[]);
   const animate=airportAnimationEnabled(moving,power.pauseInBackground,visible);
-  const glazing=useMemo(()=>new THREE.MeshPhysicalMaterial({color:'#8ec8dc',transparent:true,opacity:.2,roughness:.14,metalness:.04,depthWrite:false}),[]);
-  useEffect(()=>{glazing.color.set(night?'#f5e4be':'#8ec8dc');glazing.emissive.set('#f4d496');glazing.emissiveIntensity=night?1.1:0;glazing.opacity=night?.58:.2;},[glazing,night]);
+  const glazing=useMemo(()=>new THREE.MeshPhysicalMaterial({color:HQ.glassLight,transparent:true,opacity:.2,roughness:.14,metalness:.04,depthWrite:false}),[]);
+  useEffect(()=>{glazing.color.set(night?'#f5e4be':HQ.glassLight);glazing.emissive.set('#f4d496');glazing.emissiveIntensity=night?1.1:0;glazing.opacity=night?.58:.2;},[glazing,night]);
   useEffect(()=>()=>glazing.dispose(),[glazing]);
   useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);});
   const parts=useMemo(()=>{
@@ -82,14 +83,12 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     const y=TERRACE_H,x=a.x,z=a.z;
     const box=(px:number,py:number,pz:number,w:number,h:number,d:number,c:string):Inst=>({p:[px,py,pz],s:[w,h,d],c});
     const cubes:Inst[]=[
-      // Entrance doors under the fan canopy.
-      box(x-.42,y+.06,z+6,.05,.8,1.4,"#20372c"),
       box(x+15,y+.015,z+7.5,2.2,.045,21,"#2b3335"),
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
-      box(x+2,y+.05,z+18,2.2,1.05,2,"#eadfc8"),
-      box(x+2,y+1.1,z+18,2.5,.12,2.3,"#294237"),
+      box(x+2,y+.05,z+18,2.2,1.05,2,HQ.white),
+      box(x+2,y+1.1,z+18,2.5,.12,2.3,HQ.glassDeep),
     ];
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
     // Airside service building: a window band on every side, lit with the terminal glazing at night.
@@ -97,10 +96,12 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+1.12,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+1.82,z+zz,1.6,.025,.12,'#fff2d1'));
-     for(const xx of [1,2.3])cubes.push(box(x+xx,y+.06,z+zz,.44,.26,.28,'#294237'),box(x+xx,y+.32,z+zz+.11,.44,.22,.08,'#355f5b'));
+     for(const xx of [1,2.3])cubes.push(box(x+xx,y+.06,z+zz,.44,.26,.28,HQ.glassDeep),box(x+xx,y+.32,z+zz+.11,.44,.22,.08,HQ.glass));
     }
-    for(const zz of [4,6,8])cubes.push(box(x+.2,y+.06,z+zz,.5,.4,.7,'#e8e5d9'),box(x+.2,y+.46,z+zz,.55,.04,.75,'#c9a35a'),box(x+.25,y+.5,z+zz,.04,.23,.25,'#254b58'));
+    for(const zz of [4,6,8])cubes.push(box(x+.2,y+.06,z+zz,.5,.4,.7,'#e8e5d9'),box(x+.2,y+.46,z+zz,.55,.04,.75,HQ.gold),box(x+.25,y+.5,z+zz,.04,.23,.25,'#254b58'));
     // Public arrivals forecourt and a separate landside display parking area.
+    // Zebra crossing from the landside plaza to the entrance doors.
+    for(let i=-2;i<=2;i++)cubes.push(box(x+AIRPORT_TERMINAL.arrivalsX+i*.13,y+.05,z+AIRPORT_TERMINAL.z,.07,.012,.75,'#f4f4ee'));
     cubes.push(box(x+AIRPORT_TERMINAL.arrivalsX,y+.035,z+2.4,.64,.025,20,'#424b50'),box(x-.85,y+.04,z+5,.48,.05,13.4,'#e6d6b4')); // The oval car park itself is part of the terminal shapes.
     for(const [i,bay] of airportParkingBays().entries()){
      const px=x+bay.x,pz=z+bay.z,model=MODELS[i%2?'gwagon':'bmw'];
@@ -118,7 +119,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
       const bridge=boardingBridge(gateZ);
       // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
       cubes.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+BOARDING_LAYOUT.ceiling,z+bridge.z,bridge.w+.2,.04,.5,"#e9ebe6"));
-      for(const side of [-1,1])cubes.push(box(x+5.1,y+.35,z+gateZ-.8+side*.2,3.2,.04,.02,"#456b73"));
+      for(const side of [-1,1])cubes.push(box(x+5.1,y+.35,z+gateZ-.8+side*.2,3.2,.04,.02,HQ.glassDeep));
       cubes.push(box(x+7,y+.065,z+gateZ, .035,.012,2.8,"#d6bd6e"));
       for(const side of [-1,1]){
        glass.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor+.03,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
@@ -126,9 +127,9 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
       }
       cubes.push(box(x+bridge.x+bridge.w/2-.15,y+.05,z+bridge.z,.09,.17,.09,'#c2c7be'));
     }
-    for(const gz of AIRPORT_LAYOUT.gateZ)cubes.push(box(x+9.7,y+.05,z+gz+1.8,.05,2.35,.05,'#63786c'),box(x+9.7,y+2.4,z+gz+1.8,.3,.035,.08,'#63786c'));
-    for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,"#294237"));
-    cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,"#294237"));
+    for(const gz of AIRPORT_LAYOUT.gateZ)cubes.push(box(x+9.7,y+.05,z+gz+1.8,.05,2.35,.05,HQ.rib),box(x+9.7,y+2.4,z+gz+1.8,.3,.035,.08,HQ.rib));
+    for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,HQ.glassDeep));
+    cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,HQ.glassDeep));
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
     cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
     for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
@@ -149,7 +150,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     {[...AIRPORT_REMOTE_STANDS,{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
-    <AirportSign x={a.x-.48} z={a.z+6} y={TERRACE_H+1.55} mirrored={a.west}/>
+    <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)}/></group>)}
   </group>;
@@ -160,10 +161,10 @@ function TerminalShapes({a,g,m,glazing,night}:{a:AirportPlan;g:Geometry;m:Materi
  const res=useMemo(()=>{
   const disc=new THREE.CylinderGeometry(.5,.5,1,40).translate(0,.5,0);
   const flare=new THREE.CylinderGeometry(.5,.36,1,28).translate(0,.5,0);
-  const tint=new THREE.MeshStandardMaterial({color:'#9ad2c4',roughness:.22,metalness:.15,emissive:'#f4d496',emissiveIntensity:0});
+  const tint=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.22,metalness:.15,emissive:'#f4d496',emissiveIntensity:0});
   return {disc,flare,tint};
  },[]);
- useEffect(()=>{res.tint.emissiveIntensity=night?.55:0;res.tint.color.set(night?'#c9dccf':'#9ad2c4');},[res,night]);
+ useEffect(()=>{res.tint.emissiveIntensity=night?.55:0;res.tint.color.set(night?'#fff3d6':'#ffffff');},[res,night]);
  useEffect(()=>()=>{res.disc.dispose();res.flare.dispose();res.tint.dispose();},[res]);
  const parts=useMemo(()=>terminalParts(a.x,TERRACE_H,a.z),[a]);
  return <>
@@ -190,8 +191,8 @@ function BoardingActivity({x,z,g,m}:{x:number;z:number;g:Geometry;m:Materials}){
 function AirportSign({x,y,z,mirrored=false}:{x:number;y:number;z:number;mirrored?:boolean}){
  const resources=useMemo(()=>{
   const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;const c=canvas.getContext('2d')!;
-  c.fillStyle='#edf0e9';c.fillRect(0,0,1024,256);c.fillStyle='#294237';c.font='500 112px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('ATLAS AIRPORT',512,130,970);c.fillStyle='#c9a35a';c.fillRect(0,237,1024,19);
-  const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;const material=new THREE.MeshBasicMaterial({map,toneMapped:false,side:THREE.DoubleSide});const geometry=new THREE.PlaneGeometry(2,.5);return {map,material,geometry};
+  c.fillStyle=HQ.glassDeep;c.fillRect(0,0,1024,256);c.fillStyle=HQ.whiteBright;c.font='500 112px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('ATLAS AIRPORT',512,130,970);c.fillStyle=HQ.gold;c.fillRect(0,237,1024,19);
+  const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;const material=new THREE.MeshBasicMaterial({map,toneMapped:false,side:THREE.DoubleSide});const geometry=new THREE.PlaneGeometry(1.8,.45);return {map,material,geometry};
  },[]);
  useEffect(()=>()=>{resources.map.dispose();resources.material.dispose();resources.geometry.dispose();},[resources]);
  // The west-facing campus is drawn mirrored; flip the sign back so it reads left to right.

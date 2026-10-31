@@ -56,6 +56,24 @@ export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): Airpo
   return { x: edge + 1.2, z: accessZ - 6, accessX: access.x+access.w-.1, accessZ };
 }
 
+/** Landside plaza joining the terminal entrance to the district terrace across from it (KC, 2026-10-31):
+ * terrace-height land over the meadow gap, centred on the entrance and clipped to the facing terrace. */
+export const AIRPORT_FORECOURT={reach:5,half:3.2} as const;
+export function airportForecourt(a:AirportPlan,terraces:Rect[]):Rect|undefined{
+ const f=airportFootprint(a),edge=a.west?f.x+f.w:f.x,ez=a.z+AIRPORT_LAYOUT.terminalZ;
+ const gap=(t:Rect)=>a.west?t.x-edge:edge-(t.x+t.w);
+ const facing=terraces.filter(t=>t.z<=ez&&t.z+t.d>=ez&&gap(t)>.05&&gap(t)<=AIRPORT_FORECOURT.reach).sort((p,q)=>gap(p)-gap(q))[0];
+ if(!facing)return undefined;
+ const z0=Math.max(facing.z,ez-AIRPORT_FORECOURT.half),z1=Math.min(facing.z+facing.d,ez+AIRPORT_FORECOURT.half);
+ return {x:a.west?edge:facing.x+facing.w,z:z0,w:gap(facing),d:z1-z0};
+}
+/** True when a polyline passes over the rectangle (with a margin). */
+export function pathCrossesRect(path:[number,number][],r:Rect,margin=0):boolean{
+ const inside=(x:number,z:number)=>x>r.x-margin&&x<r.x+r.w+margin&&z>r.z-margin&&z<r.z+r.d+margin;
+ if(path.length===1)return inside(path[0][0],path[0][1]);
+ return path.slice(1).some((b,i)=>{const p=path[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-p[0],b[1]-p[1])/.05));for(let k=0;k<=n;k++)if(inside(p[0]+(b[0]-p[0])*k/n,p[1]+(b[1]-p[1])*k/n))return true;return false;});
+}
+
 /** Something tall near the departure path, in departure coordinates: centre, half width/depth and roof height. */
 export interface FlightObstacle { x:number; z:number; hw:number; hd:number; h:number }
 export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number; obstacles?:FlightObstacle[] }

@@ -3,10 +3,12 @@ import * as THREE from 'three';
 import {AIRPORT_BUILDINGS,airportBuildingKey} from './airportBuildings';
 import {type AirportPlan} from './airport';
 import {TERRACE_H} from './scene';
+import {ATLAS_HQ_COLORS as HQ} from './airportPalette';
 import {Instanced,type Inst,type useMaterials,type useGeometries,type Pick} from './models';
 /** Static campus detail shares one set of instanced buffers and a faceted hangar roof. */
 export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night:boolean}){
- const palette=useMemo(()=>{const css=getComputedStyle(document.documentElement);return {white:css.getPropertyValue('--sage-50').trim()||'#f7f7f0',green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#d0ad69',blue:css.getPropertyValue('--airport-glass').trim()||'#83bed2'}},[]);
+ // Atlas HQ's family colours: cool white metal, deep blue trim, gold, blue glass and roofs.
+ const palette=useMemo(()=>({white:HQ.white,green:HQ.glassDeep,gold:HQ.gold,blue:HQ.glass}),[]);
  const resources=useMemo(()=>{const s=new THREE.Shape();s.moveTo(-.5,0);for(let i=0;i<=12;i++){const t=Math.PI-i*Math.PI/12;s.lineTo(Math.cos(t)*.5,Math.sin(t)*.8)}s.lineTo(.5,0);s.closePath();const roof=new THREE.ExtrudeGeometry(s,{depth:1,bevelEnabled:false,steps:1});const material=new THREE.MeshStandardMaterial({color:palette.blue,flatShading:true,roughness:.8});const windows=new THREE.MeshStandardMaterial({color:palette.blue,emissive:'#f4d496',emissiveIntensity:0,roughness:.4});const river=new THREE.BufferGeometry();const v:number[]=[];const edge=(z:number,side:number)=>[24+.35*Math.sin(z*.14)+side*.675,0,z];for(let z=-13;z<25;z+=.5){const a=edge(z,-1),b=edge(z,1),c=edge(z+.5,-1),d=edge(z+.5,1);v.push(...a,...c,...b,...b,...c,...d)}river.setAttribute('position',new THREE.Float32BufferAttribute(v,3));river.computeVertexNormals();const water=new THREE.MeshStandardMaterial({color:'#83bdca',roughness:.8,side:THREE.DoubleSide});const hit=new THREE.MeshBasicMaterial({visible:false});return {roof,material,windows,hit,river,water}},[palette]);
  useEffect(()=>{resources.windows.color.set(night?'#f9d99a':palette.blue);resources.windows.emissiveIntensity=night?1.1:0},[night,resources,palette]);
  useEffect(()=>()=>{resources.roof.dispose();resources.material.dispose();resources.windows.dispose();resources.hit.dispose();resources.river.dispose();resources.water.dispose()},[resources]);
@@ -15,7 +17,7 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
  for(const b of AIRPORT_BUILDINGS){hits.push(box(b.x,0,b.z,b.w,b.h,b.d,palette.white));keys.push(airportBuildingKey(b.id));if(b.kind==='terminal'||b.kind==='tower')continue;
   walls.push(box(b.x,0,b.z,b.w,b.kind==='hangar'?1.4:b.h,b.d,palette.white));
   if(b.kind==='office'){
-   walls.push(box(b.x,b.h,b.z,b.w+.16,.1,b.d+.16,palette.white),box(b.x,b.h+.1,b.z,.85,.3,.9,'#a9b4a0'));
+   walls.push(box(b.x,b.h,b.z,b.w+.16,.1,b.d+.16,palette.white),box(b.x,b.h+.1,b.z,.85,.3,.9,HQ.roof));
    for(let y=.4;y<b.h-.3;y+=.62){for(let x=-b.w/2+.3;x<b.w/2-.1;x+=.52)for(const side of [-1,1])glass.push(box(b.x+x,y,b.z+side*(b.d/2+.015),.35,.38,.025,'#ffffff'));for(let z=-b.d/2+.3;z<b.d/2-.1;z+=.52)for(const side of [-1,1])glass.push(box(b.x+side*(b.w/2+.015),y,b.z+z,.025,.38,.35,'#ffffff'))}
   }else glass.push(box(b.x,.1,b.z+b.d/2+.02,b.w*.82,1.2,.035,'#ffffff'),box(b.x,1.36,b.z+b.d/2+.035,b.w*.92,.035,.04,'#ffffff'));
   if(b.kind==='hangar'){const front=b.z+b.d/2+1.4;walls.push(box((b.x+21.8)/2,0,front,21.8-b.x+.35,.055,.35,'#e5dfce'));}

@@ -13,6 +13,8 @@ const VIEWS: View[] = [
   { name: "airside", eye: [14, 6, 12], target: [4, 1, 6] },
   { name: "tower", eye: [-5, 6, -9], target: [1.5, 3, -3] },
   { name: "top", eye: [8, 40, 6.5], target: [8, 0, 6] },
+  { name: "entrance", eye: [-7.5, 3.6, 0.5], target: [0, 0.8, 6] },
+  { name: "landside", eye: [-13, 9, 6], target: [-2, 0, 6] },
 ];
 
 async function shots(page: Page, views: View[]) {

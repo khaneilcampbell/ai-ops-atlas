@@ -9,7 +9,7 @@ import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
-import { airportFootprint, planAirport, type AirportPlan } from "./airport";
+import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
@@ -142,6 +142,8 @@ export interface Scene3D {
   land: Rect[];
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
+  /** Terrace-height land joining the airport entrance to the district across from it. */
+  airportForecourt?: Rect;
   terraces: Terrace[];
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
@@ -685,6 +687,19 @@ export function buildScene(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
+  // Join the terminal entrance to the district across the meadow, unless a street, path or stream runs there.
+  const forecourtLand:Rect[]=[];
+  const forecourt=airport?airportForecourt(airport,terraces):undefined;
+  if(forecourt&&airport){
+    const ground=[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(x=>[x.collector,...x.ramps])]:[])];
+    const blocked=ground.some(p=>pathCrossesRect(p,forecourt,.35))||[...brooks,...bridges].some(r=>r.x<forecourt.x+forecourt.w&&r.x+r.w>forecourt.x&&r.z<forecourt.z+forecourt.d&&r.z+r.d>forecourt.z);
+    if(!blocked){
+      forecourtLand.push(forecourt);
+      const ez=airport.z+AIRPORT_LAYOUT.terminalZ;
+      paving.push(strip(forecourt.x,ez,forecourt.x+forecourt.w,ez,1.4,top));
+      for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
+    }
+  }
   const communityRail=planCommunityRail(community,financial);
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
@@ -704,6 +719,7 @@ export function buildScene(layout: Layout): Scene3D {
     freight,
     land,
     neighborhoodLand:neighborhood.land,
+    airportForecourt:forecourtLand[0],
     terraces,
     paving,
     steps,
