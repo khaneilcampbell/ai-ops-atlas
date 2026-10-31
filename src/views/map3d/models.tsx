@@ -66,6 +66,9 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
       args={[geometry, material, items.length]}
       castShadow={shadow}
       receiveShadow
+      // Each box's place lives in the instance matrices; the mesh itself never moves, so skip
+      // recomposing its own matrix every frame (a parent group can still move it).
+      matrixAutoUpdate={false}
       raycast={pick ? undefined : noRaycast}
       onPointerOver={
         pick
