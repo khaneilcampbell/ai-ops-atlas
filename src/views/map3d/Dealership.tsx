@@ -29,7 +29,7 @@ function signage(){
 export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=false}:{night?:boolean;traffic?:boolean;reduced?:boolean;plan?:DealershipPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
  const sign=useMemo(signage,[]);
  const glow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#fff1cd',emissive:'#ffdca1',emissiveIntensity:.1}),[]);
- useEffect(()=>{glow.emissiveIntensity=night?1.7:.08;},[glow,night]);
+ useEffect(()=>{glow.emissiveIntensity=night?1.25:.04;},[glow,night]);
  useEffect(()=>()=>glow.dispose(),[glow]);
  const glass=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
  useEffect(()=>()=>{sign.texture.dispose();sign.material.dispose();sign.geometry.dispose();glass.dispose();},[sign,glass]);
@@ -42,7 +42,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   const r=a.showroom,H=r.height,F=D.mezzanineY,levels=dealershipUpperFloors(r.floors),cx=r.cx,cz=r.cz;
   const W=r.w/2,Lx=cx-W,Rx=cx+W,B=cz-r.d/2,Fz=cz+r.d/2,wing=W-.67,wings=[cx-.65-wing/2,cx+.65+wing/2],perWing=Math.max(1,Math.floor(wing/1.1));
   const bays=(c:number)=>Array.from({length:perWing},(_,k)=>c+(k-(perWing-1)/2)*wing/perWing);
-  p.solid.push(box(cx,.04,cz,r.w,.06,r.d,'#e7e8e4'),box(cx,.1,B,r.w,H-.1,.08,'#e3e7e5'));
+  p.lights.push(box(cx,.04,cz,r.w,.06,r.d,'#ffffff'));p.solid.push(box(cx,.1,B,r.w,H-.1,.08,'#e3e7e5'));
   p.solid.push(box(cx,H,cz,r.w+.25,.1,r.d+.25,'#edf0ef'),box(cx,H+.1,cz,r.w,.035,r.d,'#aab5bb'));
   // Roof-edge fascia carries the sign above the glazing, with no duplicate roof mesh.
   p.solid.push(box(cx,H-.85,Fz+.03,r.w,.85,.08,'#f8f9f7'),box(cx,H-.89,Fz+.08,r.w,.025,.02,'#2876bb'));
@@ -63,7 +63,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   const rail=r.d-.92;
   for(const level of levels){
   for(const xx of wings){
-   p.solid.push(box(xx,level-.09,cz,wing,.09,r.d-.1,'#c6cfd3'));
+   p.lights.push(box(xx,level-.09,cz,wing,.09,r.d-.1,'#ffffff'));
    p.glass.push(box(xx,level,Fz-.14,wing-.03,.47,.014,'#ffffff'));
    p.solid.push(box(xx,level+.47,Fz-.14,wing,.025,.03,'#647883'));
   }
@@ -74,7 +74,11 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   for(let floor=0;floor<r.floors-1;floor++)for(let i=0;i<D.stairCount;i++)p.solid.push(box(cx+.9-i*.16,floor*F+F*i/D.stairCount+.1,B+.45,.18,.09,.5,'#aab7be'));
   // Ground-floor reception and lounge beside the side service door.
   const desk=Rx-.75;p.solid.push(box(desk,.1,cz+.35,1.3,.45,.5,'#e4e2db'),box(desk,.55,cz+.35,1.4,.045,.6,'#294237'),box(desk,.59,cz+.35,.25,.17,.045,'#203744'),box(Rx-1.3,.1,Fz-.45,.35,.24,.4,'#294237'),box(Rx-.55,.1,Fz-.45,.35,.24,.4,'#294237'));
-  for(const yy of [...levels.map(level=>level-.17),H-.16])for(const xx of wings)p.lights.push(box(xx,yy,cz,Math.min(.8,wing*.7),.025,.5,'#ffffff'));
+  // Night lighting, like the district towers: a lit ceiling under every slab and a warm back
+  // wall on every storey, so the whole glass tower glows through its curtain wall after dark.
+  for(const [i,top] of [...levels,H].entries()){const floor=i?levels[i-1]:0;
+   p.lights.push(box(cx,top-.13,cz,r.w-.14,.025,r.d-.14,'#ffffff'));
+   p.lights.push(box(cx,floor+.12,B+.06,r.w-.14,top-floor-.3,.02,'#ffffff'));}
   const colors=['#2163ad','#e7e9e6','#a5abb0','#202b35'];
   bays(wings[0]).forEach((bx,k)=>car(p,x+bx,y+.1,z+cz+.3,colors[k%4],false));
   levels.forEach((level,i)=>[...bays(wings[0]),...bays(wings[1])].forEach((bx,k)=>car(p,x+bx,y+level,z+cz+.2,colors[(i+k)%4],k>=perWing&&k%2===0)));
