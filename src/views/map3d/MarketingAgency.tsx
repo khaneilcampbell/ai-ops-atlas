@@ -69,7 +69,9 @@ const noRaycast=()=>null;
  * Benjaire Marketing Agency (exterior, phase 1). Six static meshes, no lights of its own: the
  * screen, copper, glass, pools, wordmark and slot. Night only raises emissive maps.
  */
-export function MarketingAgency({plan:a,g,m,pick,night=false}:{plan?:AgencyPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
+export function MarketingAgency({plan:a,g,m,pick,night=false,building=true}:{plan?:AgencyPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean;
+ /** False draws only the raised ground and the pools, for the interior's view out. */
+ building?:boolean}){
  // The raised ground: the lot and its causeways, at terrace height in the terrace material.
  const plinth=useMemo(()=>(a?.plinth??[]).map((r):Inst=>({p:[r.x+r.w/2,0,r.z+r.d/2],s:[r.w,TERRACE_H,r.d]})),[a]);
  const geo=useMemo(()=>{
@@ -101,10 +103,12 @@ export function MarketingAgency({plan:a,g,m,pick,night=false}:{plan?:AgencyPlan;
  const wx=a.x+AGENCY.word.x,wy=TERRACE_H+AGENCY.word.y;
  return <group name="benjaire-marketing-agency">
   <Instanced items={plinth} geometry={g.box} material={m.terrace}/>
-  <mesh geometry={geo.shell} material={mats.shell} castShadow receiveShadow {...click}/>
-  <mesh geometry={geo.copper} material={mats.copper} castShadow {...click}/>
-  <mesh geometry={geo.glass} material={mats.glass} {...click}/>
+  {building&&<>
+   <mesh geometry={geo.shell} material={mats.shell} castShadow receiveShadow {...click}/>
+   <mesh geometry={geo.copper} material={mats.copper} castShadow {...click}/>
+   <mesh geometry={geo.glass} material={mats.glass} {...click}/>
+  </>}
   <mesh geometry={geo.pools} material={mats.pool} receiveShadow raycast={noRaycast}/>
-  <mesh position={[wx,wy,a.z+AGENCY.depth+.012]} material={mats.word} raycast={noRaycast}><planeGeometry args={[AGENCY.word.w,AGENCY.word.h]}/></mesh>
+  {building&&<mesh position={[wx,wy,a.z+AGENCY.depth+.012]} material={mats.word} raycast={noRaycast}><planeGeometry args={[AGENCY.word.w,AGENCY.word.h]}/></mesh>}
  </group>;
 }
