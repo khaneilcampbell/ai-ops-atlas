@@ -18,7 +18,8 @@
     "visual:update": "BASELINE=1 playwright test -c visual",
     "visual:shots": "SHOTS=1 playwright test -c visual",
     "visual:compare": "node visual/compare.mjs",
-    "measure:power": "POWER=1 playwright test -c visual power"
+    "measure:power": "POWER=1 playwright test -c visual power",
+    "measure:perf": "PERF=1 playwright test -c visual perf"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
