@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#166)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
 - 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#PR)
