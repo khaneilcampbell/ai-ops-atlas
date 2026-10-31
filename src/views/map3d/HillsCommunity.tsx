@@ -6,6 +6,7 @@ import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMater
 import {TERRACE_H} from './scene';
 import {COMMUNITY as C,communityKey,commuterStage,railDeck,railPoint,railState,walkPoint,type CommunityPlan,type RailPlan,type Point3} from './hillsCommunityPlan';
 import {TRANSPORT} from './transportScale';
+import {MANSION_COLORS} from './hillsMansion';
 import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
 function useCommunityPalette(){return useMemo(()=>{const css=getComputedStyle(document.documentElement);return {green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a'};},[]);}
@@ -30,19 +31,22 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  for(let z=1.22;z<1.8;z+=.12)solid.push(box(7.95,.069,z,.48,.008,.06,'#f7f7f0'));
  for(const b of p.buildings){if(b.kind==='station'||b.kind==='golf')continue;
  const {x,z,w,d,h}=b,key=communityKey(b.id),house=b.kind==='house';
- solid.push(box(x,0,z,w+.25,.12,d+.25,'#cfc7b6'),box(x,.12,z,w,h,d,b.color),box(x,h+.12,z,w+.25,.1,d+.25,'#53675e'));
- if(house){solid.push(box(x+.25,h+.22,z,w*.65,.22,d*.65,'#dfd9cb'));solid.push(box(x+.7,1.2,z+d/2+.3,1.1,.09,.6,'#c8b789'));for(const dx of [.2,1.2])solid.push(box(x+dx,1.29,z+d/2+.55,.025,.35,.025,palette.green));solid.push(box(x+.7,1.65,z+d/2+.55,1.05,.025,.025,palette.green));
+ // Mansion theme (hillsMansion.ts): stone plinth, white stacked volumes, a cantilevered slab, timber fin, glass bands.
+ const M=MANSION_COLORS,low=h*.55,glassTint=night?'#ffe9b9':'#5f7f88';
+ solid.push(box(x,0,z,w+.25,.12,d+.25,M.stone),box(x,.12,z,w,low,d,M.concrete),box(x,.12+low,z+.12,w+.3,.08,d+.35,M.concrete));
+ solid.push(box(x+w*.12,.2+low,z-.1,w*.7,h-low-.08,d*.8,M.concrete),box(x+w*.12,.12+h,z-.05,w*.82,.08,d*.92,M.concrete),box(x-w/2-.03,.12,z,.06,h,d*.6,M.timber));
+ for(const side of [-1,1]){glass.push(box(x,.25,z+side*(d/2+.02),w*.86,low-.22,.03,glassTint));keys.push(key);for(let k=1;k<4;k++)solid.push(box(x-w*.43+k*w*.86/4,.25,z+side*(d/2+.04),.035,low-.22,.035,M.frame));}
+ glass.push(box(x+w*.12,.3+low,z-.1+d*.4+.02,w*.6,h-low-.3,.03,glassTint));keys.push(key);
+ for(const [k,c]of [M.green,M.pink,M.green].entries())plants.push(box(x+w*.3+k*.35,.26+low,z+d/2+.12,.18,.12,.16,c));
+ if(house){
  // A short garage drive meets the local street; the fourth home's drive meets the side street.
  if(b.id==='home-4')strip([p.x+x-w/2,p.z+z],[p.x+21,p.z+z],.65,.04,.025,'#888c83');else strip([p.x+x-.8,p.z+z+d/2],[p.x+x-.8,p.z+27],.65,.04,.025,'#888c83');
- solid.push(box(x-.7,.15,z+d/2+.025,.95,.8,.035,'#596965'));}
+ solid.push(box(x-.7,.15,z+d/2+.05,.95,.8,.035,M.timber));}
  else solid.push(box(x,.14,z+d/2+.35,w*.9,.05,.7,'#d2c4a0'));
- for(const side of [-1,1])for(let col=0;col<4;col++){if(house&&side===1&&col<3)continue;glass.push(box(x-w/2+.45+col*(w-.9)/3,.55,z+side*(d/2+.025),.45,house?.65:h*.62,.035,night?'#ffe9b9':'#8eb7c2'));keys.push(key);}
- if(house&&h>2)for(const side of [-1,1])for(const dx of [-.9,.9]){glass.push(box(x+dx,1.5,z+side*(d/2+.025),.5,.55,.035,night?'#ffe9b9':'#8eb7c2'));keys.push(key);}
  // Dedicated front door and path, kept free of canopy columns and vegetation.
- glass.push(box(x+.65,.15,z+d/2+.05,.38,.85,.045,night?'#ffe9b9':'#7caaa9'));keys.push(key);
- if(b.kind==='shop')for(const dx of [-1.15,0,1.15])solid.push(box(x+dx,1.25,z+d/2+.24,.95,.1,.55,palette.green));
- if(b.kind==='gym')solid.push(box(x,h+.22,z,w*.6,.35,d*.55,'#91b4b8'));
- if(b.id==='social'){solid.push(box(x,h+.23,z,w*.6,.35,d*.6,'#d8d0be'));for(const dx of [-w/2,w/2])solid.push(box(x+dx,h+.22,z,.025,.35,d,'#294237'));}
+ glass.push(box(x+.65,.15,z+d/2+.05,.38,Math.min(.85,low-.1),.045,night?'#ffe9b9':'#3e3f3d'));keys.push(key);
+ if(b.kind==='gym')solid.push(box(x+w*.12,h+.2,z-.05,w*.5,.35,d*.5,'#91b4b8'));
+ if(b.id==='social')solid.push(box(x+w*.12,h+.2,z-.05,w*.5,.3,d*.5,MANSION_COLORS.timber));
  if(b.kind==='spa')solid.push(box(x+2.6,.06,z,.45,.025,1.6,'#83b5b7'));
  if(b.kind==='cafe')for(const dx of [-1.4,1.4]){solid.push(box(x+dx,.04,z+2.2,.06,.45,.06,palette.green),box(x+dx,.49,z+2.2,.5,.04,.5,'#c2b28b'));}
  if(b.kind==='spa')for(const dz of [-1,0,1])plants.push(box(x+2.5,.05,z+dz,.35,.55,.35,'#64875d'));
