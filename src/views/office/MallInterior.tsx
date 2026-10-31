@@ -12,7 +12,7 @@ import {ribbon} from '../map3d/mallShapes';
 import type {Pt} from '../map3d/roads';
 import {Box,Person} from './InteriorPrimitives';
 import {leaveBuilding} from './store';
-import {MALL_IN,MALL_LEVELS,MALL_SHAPE,mallUnits,type MallUnit,type UnitKind} from './mallInterior';
+import {MALL_IN,MALL_LEVELS,MALL_SHAPE,mallUnits,type MallUnit,type UnitKind} from './mallInteriorPlan';
 import '../../styles/skyline.css';
 
 const FH=MALL_IN.floor;

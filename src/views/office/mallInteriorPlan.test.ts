@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {MALL_SHOPS} from '../map3d/mallPlan';
-import {MALL_IN,MALL_LEVELS,mallUnits} from './mallInterior';
+import {MALL_IN,MALL_LEVELS,mallUnits} from './mallInteriorPlan';
 
 describe('Atlas Marketplace interior', () => {
   const units=mallUnits();
