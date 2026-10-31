@@ -4,6 +4,7 @@ import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
 import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
+import {liveryFor,type Livery} from "./airlineLiveries";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -14,40 +15,53 @@ import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
 type Materials=ReturnType<typeof useMaterials>;
 
-function Aircraft({g,m,circuit,clock,slot,parked}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number}) {
-  const ref=useRef<Group>(null);
-  const parts=useMemo(()=>({
+const WHEELS=[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z] as [number,number,number],s:[.055,.065,.065] as [number,number,number],c:"#202b36"})));
+/** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
+const GEAR_TOP=.2;
+
+function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery}) {
+  const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
+  const parts=useMemo(()=>{
+    const l=livery;
+    return {
     body:[
-      {p:[0,.34,0],s:[.23,.21,1.4],c:"#ffffff"},
-      {p:[0,.245,0],s:[.225,.10,1.28],c:"#00205b"},
-      {p:[0,.43,-1.02],s:[.16,.075,.19],c:"#193252"},
-      {p:[-.48,.21,-.18],s:[.14,.14,.32],c:"#005daa"},
-      {p:[.48,.21,-.18],s:[.14,.14,.32],c:"#005daa"},
-      {p:[-.48,.21,-.46],s:[.105,.105,.035],c:"#193252"},
-      {p:[.48,.21,-.46],s:[.105,.105,.035],c:"#193252"},
-      ...[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z],s:[.055,.065,.065],c:"#202b36"}))),
+      {p:[0,.34,0],s:[.23,.21,1.4],c:l.fuselage},
+      {p:[0,.245,0],s:[.225,.10,1.28],c:l.belly},
+      {p:[0,.43,-1.02],s:[.16,.075,.19],c:l.cockpit},
+      {p:[-.48,.21,-.18],s:[.14,.14,.32],c:l.engine},
+      {p:[.48,.21,-.18],s:[.14,.14,.32],c:l.engine},
+      {p:[-.48,.21,-.46],s:[.105,.105,.035],c:l.intake},
+      {p:[.48,.21,-.46],s:[.105,.105,.035],c:l.intake},
+      ...(parked?WHEELS:[]),
     ] as Inst[],
+    gear:WHEELS.map(w=>({...w,p:[w.p[0],w.p[1]-GEAR_TOP,w.p[2]]})) as Inst[],
     wings:[
-      {p:[-.67,.30,.13],s:[1.35,.055,.4],r:-.32,c:"#e5ecf3"},
-      {p:[.67,.30,.13],s:[1.35,.055,.4],r:.32,c:"#e5ecf3"},
-      {p:[0,.36,1.02],s:[1.12,.045,.26],c:"#e5ecf3"},
-      {p:[0,.39,1.03],s:[.07,.53,.36],c:"#00205b"},
-      {p:[0,.48,1.04],s:[.075,.08,.34],c:"#009cde"},
-      {p:[0,.72,1.04],s:[.075,.08,.34],c:"#005daa"},
-      {p:[-1.29,.34,.34],s:[.055,.20,.24],c:"#005daa"},
-      {p:[1.29,.34,.34],s:[.055,.20,.24],c:"#005daa"},
-      {p:[AIRCRAFT_LAYOUT.doorX,AIRCRAFT_LAYOUT.doorY,AIRCRAFT_LAYOUT.doorZ],s:[.02,AIRCRAFT_LAYOUT.doorHeight,.12],c:"#193252"},
-      ...[-1,1].flatMap(side=>Array.from({length:12},(_,i)=>({p:[side*.222,.39,-.82+i*.15],s:[.018,.055,.055],c:"#193252"}))),
+      {p:[-.67,.30,.13],s:[1.35,.055,.4],r:-.32,c:l.wing},
+      {p:[.67,.30,.13],s:[1.35,.055,.4],r:.32,c:l.wing},
+      {p:[0,.36,1.02],s:[1.12,.045,.26],c:l.wing},
+      {p:[0,.39,1.03],s:[.07,.53,.36],c:l.tail},
+      {p:[0,.48,1.04],s:[.075,.08,.34],c:l.tailLow},
+      {p:[0,.72,1.04],s:[.075,.08,.34],c:l.tailHigh},
+      {p:[-1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
+      {p:[1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
+      {p:[AIRCRAFT_LAYOUT.doorX,AIRCRAFT_LAYOUT.doorY,AIRCRAFT_LAYOUT.doorZ],s:[.02,AIRCRAFT_LAYOUT.doorHeight,.12],c:l.windows},
+      ...[-1,1].flatMap(side=>Array.from({length:12},(_,i)=>({p:[side*.222,.39,-.82+i*.15],s:[.018,.055,.055],c:l.windows}))),
     ] as Inst[],
-  }),[]);
+  };},[livery,parked]);
   useFrame(()=>{
     if(!ref.current||parked)return;
     const pose=fleetPose(clock.current,slot,circuit);
     ref.current.position.set(pose.x,pose.y,pose.z);
-    ref.current.rotation.set(pose.pitch,pose.yaw,0);
+    // Heading first, then nose pitch, then bank about the fuselage.
+    ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
     ref.current.visible=pose.visible;
+    if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
-  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined}><Instanced items={parts.body} geometry={g.ball} material={m.plain}/><Instanced items={parts.wings} geometry={g.box} material={m.plain}/></group>;
+  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined}>
+    <Instanced items={parts.body} geometry={g.ball} material={m.plain}/>
+    <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
+    {!parked&&<group ref={gearRef} position={[0,GEAR_TOP,0]}><Instanced items={parts.gear} geometry={g.ball} material={m.plain} shadow={false}/></group>}
+  </group>;
 }
 
 /** Shared geometry and materials; departures use the existing scene frame loop. */
@@ -153,11 +167,11 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,night=fals
     <Instanced items={parts.glass} geometry={g.box} material={glazing} pick={{...pick,keys:parts.glass.map(()=>AIRPORT_KEY)}}/>
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
-    {[...AIRPORT_REMOTE_STANDS,{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand}/></group>)}
+    {[...AIRPORT_REMOTE_STANDS,{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)}/></group>)}
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x-.48} z={a.z+6} y={TERRACE_H+1.6}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
-    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit}/></group>)}
+    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)}/></group>)}
   </group>;
 }
 

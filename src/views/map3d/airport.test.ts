@@ -29,14 +29,14 @@ it("rolls along the runway before climbing and pauses between departures",async(
  expect(roll.y).toBe(start.y);
  expect(air.y).toBeGreaterThan(roll.y);
  expect(air.z).toBeLessThan(roll.z);
- expect(departurePose(170).visible).toBe(false);
+ expect(departurePose(175).visible).toBe(false);
  expect(departurePose(180)).toEqual(start);
  expect(departurePose(18,false)).toEqual(start);
 });
 
 it("circles the city twice with continuous positions and respects reduced motion",async()=>{
  const {departurePose}=await import('./airport');
- for(const t of [18,30,90,150]){const a=departurePose(t-.001),b=departurePose(t);expect(Math.hypot(a.x-b.x,a.z-b.z,a.y-b.y)).toBeLessThan(.05);}
+ for(const t of [18,30,40,90,150,160]){const a=departurePose(t-.001),b=departurePose(t);expect(Math.hypot(a.x-b.x,a.z-b.z,a.y-b.y)).toBeLessThan(.05);}
  expect(departurePose(60).visible).toBe(true);
  expect(departurePose(120).x).toBeCloseTo(departurePose(60).x);
  expect(departurePose(120).z).toBeCloseTo(departurePose(60).z);
