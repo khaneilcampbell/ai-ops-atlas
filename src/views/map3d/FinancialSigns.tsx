@@ -29,7 +29,7 @@ function sign(brand:FinancialBrand){
  return {brand,texture,material,geometry:new THREE.PlaneGeometry(FINANCIAL_SIGN.width,FINANCIAL_SIGN.height)};
 }
 export function FinancialSigns({plan,night,pick}:{plan?:FinancialPlan;night:boolean;pick:PickHandlerSet}){
- const signs=useMemo(()=>FINANCIAL_BRANDS.map(sign),[]);
+ const signs=useMemo(()=>FINANCIAL_BRANDS.filter(b=>!b.noSign).map(sign),[]);
  useEffect(()=>{for(const s of signs)s.material.emissiveIntensity=night?.35:0},[night,signs]);
  useEffect(()=>()=>{for(const s of signs){s.material.dispose();s.geometry.dispose();s.texture.dispose()}},[signs]);
  if(!plan)return null;

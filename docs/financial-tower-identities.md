@@ -4,7 +4,7 @@ Four existing IDs retain their placement and gain distinct, static procedural ar
 
 | Stable ID | Display name | Architecture |
 |---|---|---|
-| residence | Circa | Wraparound balconies, recessed sky gardens, planted roof, residential suites |
+| residence | Garden Residences (was Circa) | Wraparound balconies, recessed sky gardens, planted roof, residential suites |
 | harbor-residence | The Ritz-Carlton | Warm stone, champagne crown, hotel arrival canopy and guest suites |
 | records | Wells Fargo | Bevelled glazing, metal rims, red/gold fascia, bank reception |
 | financial-planning | Vanguard | Modern Art Deco setbacks, planted terraces, corporate research and meeting rooms |
@@ -78,3 +78,7 @@ The shared geometry envelope continues to drive entrances, freight avoidance, st
 ### Final merge validation
 
 Integrated the latest main-branch WebGL recovery and adaptive quality changes. Full suite: **485 tests passed**; lint and type checks passed. Browser review: **15 passed, 1 intentionally skipped**, covering desktop/phone layouts, day/night map, office, and building navigation. A final desktop/phone check also passed and confirmed the blimp is above the skyline. Commercial planes, private jets, the blimp and balloon baskets now share roof-clearance planning. Screenshots: [desktop](screenshots/pr-153/desktop-day.png), [phone](screenshots/pr-153/phone-day.png). No visual baselines were replaced.
+
+## Circa twin towers (west waterfront parcel)
+
+The `residence` tower was renamed **Garden Residences** so the name Circa belongs to the new twin-tower landmark (stable ID `circa`), on a waterfront parcel west of Navy Federal Credit Union and Vanguard, beside the highway. It is the tallest Financial District building (its roof clears the Wells Fargo-scaled tower by `CIRCA.lead`). It is a stylized, unofficial landmark inspired by the 2018 Downtown Los Angeles complex: two elliptical glass towers with balcony ribs on one side, an eight-storey podium with street retail and louvered parking, a wave-shaped emissive LED band wrapping all four sides of the podium, a glass entry on the street face sized like the district's other front doors (`CIRCA.entrance.w` 1.8, doors .74 by .65, canopy at the shared door height), opening into a wider lobby (`CIRCA.entrance.lobby` 2.8) seen through the podium glass opening into a lobby recessed `CIRCA.entrance.recess` into the podium (a stylized, logo-free take on a modern residential lobby: black-framed storefront with centre double doors, slatted grey ceiling with black spotlights, faceted marble west wall, sculpted wavy walnut east wall, walnut elevator vestibule on grey stone tile with two sculptural pillars, marble-and-walnut reception under pendant rods, a diamond chandelier over a round flower table, and two lounges; the same design is the ground floor inside "Enter building", `src/views/office/CircaLobby.tsx`), and stays below the band, which sits at y .94 to 1.6 on the podium (`CIRCA.entrance`, `circaEntrance()`; Circa skips the shared plinth and door landing) (abstract placeholder content, scrolls only when motion is allowed) and a rooftop pool deck. Geometry lives in `circaPlan.ts` (pure, tested) and `CircaTowers.tsx` (instanced, no lights). The highway's north-west run keeps at least 1.2 units from the parcel in every grouping (`CIRCA_HIGHWAY_GAP` in `cityPerimeter.ts`).
