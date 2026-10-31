@@ -75,8 +75,11 @@ describe('Benjaire Marketing Agency interior plan',()=>{
   // No per-frame work in the interior itself; people move on frames the pacer already draws.
   expect(src).not.toMatch(/useFrame/);expect(src).not.toMatch(/WalkTester|Walk-through test/);
   expect(src).toMatch(/scripted illustrations, not running agents/);
-  const files=readdirSync(new URL('.',import.meta.url)).map(f=>f.toLowerCase());
-  expect(new Set(files).size).toBe(files.length);
+  // Import paths have no extension, so on a case-insensitive Mac 'AgencyCrowd.tsx' and
+  // 'agencyCrowd.ts' are the same module. Compare names without extension, ignoring case.
+  const stems=readdirSync(new URL('.',import.meta.url)).filter(f=>/\.(ts|tsx)$/.test(f)&&!/\.test\.ts$/.test(f)).map(f=>f.replace(/\.(ts|tsx)$/,''));
+  const clash=stems.filter((f,i)=>stems.findIndex(g=>g.toLowerCase()===f.toLowerCase())!==i);
+  expect(clash,`case-clashing modules: ${clash.join(', ')}`).toEqual([]);
  });
 
  describe('walk-through test route',()=>{

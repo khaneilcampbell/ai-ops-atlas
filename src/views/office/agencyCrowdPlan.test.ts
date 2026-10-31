@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {agencyCrowd,hallSeats,poseAt} from './agencyCrowd';
+import {agencyCrowd,hallSeats,poseAt} from './agencyCrowdPlan';
 import {AGENCY_ROOMS,INTERIOR,SLOT_DOOR_Z,SLOT_HALF,atriumOpen,slotX} from './agencyInteriorPlan';
 
 const crowd=agencyCrowd(),S=INTERIOR.storey,W=INTERIOR.width/2,D=INTERIOR.depth/2,a=INTERIOR.atrium,l=INTERIOR.lift;
@@ -48,6 +48,6 @@ describe('Benjaire Marketing Agency people',()=>{
   const src=readFileSync(new URL('./AgencyCrowd.tsx',import.meta.url),'utf8');
   expect(src.match(/<instancedMesh/g)).toHaveLength(2);expect(src).not.toMatch(/Light|invalidate|setInterval|requestAnimationFrame/);
   expect(src.match(/useFrame\(/g)).toHaveLength(1);
-  const plan=readFileSync(new URL('./agencyCrowd.ts',import.meta.url),'utf8');expect(plan).not.toMatch(/fetch\(|anthropic|model:/i);
+  const plan=readFileSync(new URL('./agencyCrowdPlan.ts',import.meta.url),'utf8');expect(plan).not.toMatch(/fetch\(|anthropic|model:/i);
  });
 });

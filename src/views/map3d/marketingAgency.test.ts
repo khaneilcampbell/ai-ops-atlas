@@ -91,8 +91,11 @@ describe('Benjaire Marketing Agency',()=>{
  });
 
  it('keeps file names in the map folder distinct regardless of letter case',()=>{
+  // Compare module names without extension too: imports omit it, so Foo.tsx and foo.ts clash on a Mac.
   const names=readdirSync(new URL('.',import.meta.url)).map(n=>n.toLowerCase());
   expect(new Set(names).size).toBe(names.length);
+  const stems=names.filter(n=>/\.(ts|tsx)$/.test(n)&&!/\.test\.ts$/.test(n)).map(n=>n.replace(/\.(ts|tsx)$/,''));
+  expect(stems.filter((n,i)=>stems.indexOf(n)!==i)).toEqual([]);
  });
 
  for(const g of ['none','status','tag'] as GroupBy[])it(`never covers other land or roads in the ${g} grouping`,()=>{

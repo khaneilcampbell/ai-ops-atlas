@@ -1,11 +1,11 @@
 import {useLayoutEffect,useMemo,useRef} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
-import {poseAt,type CrowdPerson} from './agencyCrowd';
+import {poseAt,type CrowdPerson} from './agencyCrowdPlan';
 
 const SKIN=['#c79875','#a8744f','#e0b48e','#8a5a3c','#d9a27c'];
 /**
- * One floor's people as two instanced meshes (bodies and heads), posed from agencyCrowd's
+ * One floor's people as two instanced meshes (bodies and heads), posed from agencyCrowdPlan's
  * scripted paths. It draws on the frames the interior's FramePacer already paces, so it adds no
  * render loop of its own; with `animate` off (reduced motion) everyone holds a still pose.
  */

@@ -13,7 +13,7 @@ import {AGENCY_NAME} from '../map3d/marketingAgencyPlan';
 import CityOutside from './CityOutside';
 import FloorLabel from './FloorLabel';
 import AgencyCrowd from './AgencyCrowd';
-import {agencyCrowd,hallSeats} from './agencyCrowd';
+import {agencyCrowd,hallSeats} from './agencyCrowdPlan';
 import {leaveBuilding} from './store';
 import {AGENCY_FLOORS,AGENCY_OWNER,AGENCY_ROOMS,INTERIOR,SLOT_HALF,atriumOpen,entranceX,flightEnd,slotX,stairLanding,stairSteps,type AgencyRoom} from './agencyInteriorPlan';
 import '../../styles/skyline.css';
