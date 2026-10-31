@@ -92,6 +92,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
       box(x+2,y+1.1,z+18,2.5,.12,2.3,"#294237"),
     ];
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
+    // Airside service building: a window band on every side, lit with the terminal glazing at night.
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+1.12,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+1.82,z+zz,1.6,.025,.12,'#fff2d1'));
