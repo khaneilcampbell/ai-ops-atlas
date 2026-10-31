@@ -1,3 +1,7 @@
+import {financialBrand} from "../map3d/financialBrands";
+import {HILLS} from "../map3d/hillsPlan";
+import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
+import {airportPoint} from "../map3d/airport";
 import {clearInteriorFootprint} from "./exteriorClearance";
 import {useMemo} from "react";
 import {useAtlas} from "../../state";
@@ -15,7 +19,12 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   const g=useGeometries(),m=useMaterials();
   const park=source.parks.find(p=>p.label==="Skyline");
   const pick=useMemo<PickHandlerSet>(()=>({of:keys=>({keys,over:()=>{},out:()=>{},click:()=>{}})}),[]);
-  const anchor=projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building);
+  const airportBuilding=AIRPORT_BUILDINGS.find(b=>b.name===building);
+  const airportAnchor=airportBuilding&&source.airport?{x:airportPoint(source.airport,airportBuilding.x,airportBuilding.z)[0],z:source.airport.z+airportBuilding.z}:undefined;
+  const hillsAnchor=building==="Atlas Hills"&&source.hills?{x:source.hills.x+HILLS.mansion.x,z:source.hills.z+HILLS.mansion.z}:undefined;
+  const financialBuilding=source.financial?.buildings.find(b=>b.name===building||financialBrand(b.id)?.legacyName===building);
+  const financialAnchor=financialBuilding&&source.financial?{x:source.financial.x+financialBuilding.x,z:source.financial.z+financialBuilding.z}:undefined;
+  const anchor=financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building));
   const scale=Math.max(4,span/4),cx=anchor?.x??(park?park.x+park.w/2:0),cz=anchor?.z??(park?park.z+park.d/2:0);
   const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(span/2+2)/scale),[source,cx,cz,span,scale]);
   const visible=(p:{x:number;z:number})=>!allFloors||p.x<cx||p.z<cz||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;

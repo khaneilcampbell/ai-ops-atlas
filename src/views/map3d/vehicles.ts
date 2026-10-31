@@ -1,3 +1,4 @@
+import {lanePath} from "./highway";
 import { hash } from "../mapLayout";
 import { crossing, ringPath, towerRing, type Pt, type Pt3 } from "./roads";
 import type { Scene3D } from "./scene";
@@ -7,7 +8,7 @@ import type { Scene3D } from "./scene";
 // bridges to its neighbors' plazas and back. Pure data, so the routes can be checked against the map
 // without rendering anything.
 
-export type VehicleKind = "sedan" | "van" | "service" | "sports" | "amazon" | "ups" | "bus";
+export type VehicleKind = "sedan" | "van" | "service" | "sports" | "amazon" | "ups" | "bus" | "taxi" | "pickup" | "semi" | "gwagon" | "bmw" | "convertible";
 
 export type { Pt };
 
@@ -32,13 +33,19 @@ export interface VehiclePlan {
   period: number;
   /** Where in its loop the vehicle starts, in seconds, so they don't move in step. */
   offset: number;
+  serviceWindow?: {start:number;duration:number};
 }
 
 /** At most this many vehicles, one per district, in the busiest districts. */
 export const MAX_VEHICLES = 24;
-const SPEED = 0.3; // world units per second, before each vehicle's own variation
+const SPEED = 0.36; // world units per second, before each vehicle's own variation
 const FLEET: { kind: VehicleKind; color: string }[] = [
-  { kind: "sports", color: "#3577c4" },
+  { kind: "taxi", color: "#edbd35" },
+  { kind: "pickup", color: "#17232c" },
+  { kind: "semi", color: "#293f4d" },
+  { kind: "gwagon", color: "#161e24" },
+  { kind: "bmw", color: "#3577c4" },
+  { kind: "convertible", color: "#b94034" },
   { kind: "amazon", color: "#294657" },
   { kind: "ups", color: "#553722" },
   { kind: "bus", color: "#f1eee1" },
@@ -61,7 +68,7 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     return ring ? [[t.projectId,ring] as const] : [];
   }));
   const origins=scene.towers.filter(t => rings.has(t.projectId) && scene.carBridges.some(b=>b.ends.includes(t.projectId)));
-  return Array.from({length:origins.length ? MAX_VEHICLES : 0},(_,i)=>origins[i%origins.length]).map((t,i) => {
+  const city = Array.from({length:origins.length ? MAX_VEHICLES : 0},(_,i)=>origins[i%origins.length]).map((t,i) => {
     const points: Pt3[] = [], visited = new Set<string>();
     const append = (path: Pt3[]) => { for (const p of path) if (!points.length || Math.hypot(p[0]-points[points.length-1][0],p[2]-points[points.length-1][2],p[1]-points[points.length-1][1])>1e-7) points.push(p); };
     const tour = (id:string, arrival?:Pt) => {
@@ -90,6 +97,7 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     const period=legs.reduce((n,l)=>n+l.dur,0);
     return {id:`${t.key}:traffic:${i}`,...FLEET[i%FLEET.length],legs,period,offset:hash(`${t.key}:${i}:offset`)*period};
   });
+  return city;
 }
 
 /**
@@ -114,4 +122,47 @@ export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z:
     u -= l.dur;
   }
   return at(v.legs[v.legs.length - 1], 1);
+}
+
+/** Service visits are decorative and share the exact driveway/bridge centerline. */
+export function planDealershipTraffic(scene:Pick<Scene3D,'dealership'>):VehiclePlan[]{
+ const d=scene.dealership;if(!d)return [];
+ const source=[...d.road,...d.drive.slice(1),[d.x+8.86,d.z+2.1] as Pt].filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7);
+ return [{id:'bmw-service-out',interval:60,path:[...source].reverse(),kind:'bmw' as const,color:'#3577c4'}, {id:'bmw-service-in',interval:90,path:source,kind:'gwagon' as const,color:'#202a30'}].map(v=>{
+  const path=lanePath(v.path,.12);
+  const legs:Leg[]=path.slice(1).map((b,i)=>({a:path[i],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[i][0],b[1]-path[i][1])/.9,hold:false}));
+  const duration=legs.reduce((n,l)=>n+l.dur,0),end=v.path[v.path.length-1];
+  legs.push({a:end,b:end,ya:.03,yb:.03,dur:Math.max(.1,v.interval-duration),hold:true});
+  return {id:v.id,kind:v.kind,color:v.color,legs,period:v.interval,offset:0,serviceWindow:{start:v.interval,duration}};
+ });
+}
+export function vehicleVisible(v:VehiclePlan,seconds:number){return !v.serviceWindow||(seconds>=v.serviceWindow.start&&seconds%v.period<v.serviceWindow.duration);}
+
+/** Door follows the same service-visit schedule as the cars, with time to clear the opening. */
+export function dealershipGarageOpen(plans:VehiclePlan[],seconds:number):number{
+ let open=0;
+ for(const v of plans){if(!v.serviceWindow)continue;const cycle=Math.floor(seconds/v.period);
+  for(const n of [cycle,cycle+1]){if(n<1)continue;const event=n*v.period+(v.id.endsWith('-in')?v.serviceWindow.duration:0),start=event-(v.id.endsWith('-in')?3:2),end=event+(v.id.endsWith('-in')?2:4);
+   open=Math.max(open,Math.max(0,Math.min(1,seconds-start,end-seconds)));
+  }
+ }
+ return open;
+}
+
+/** Highway cruising is faster than city driving, with evenly spaced traffic in both lanes. */
+export const HIGHWAY_TRAFFIC_SPEED=1.55;
+export const HIGHWAY_TRAFFIC_COUNT=16;
+export function planHighwayTraffic(scene:Pick<Scene3D,'freight'>):VehiclePlan[]{
+ if(!scene.freight)return [];
+ const fleet:VehicleKind[]=['taxi','pickup','bmw','van','gwagon','convertible','sedan','semi'];
+ const road=scene.freight.highway;
+ const lanes=[road,[...road].reverse()].map(center=>{
+  const path=lanePath(center);
+  const legs:Leg[]=path.slice(1).map((b,j)=>({a:path[j],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[j][0],b[1]-path[j][1])/HIGHWAY_TRAFFIC_SPEED,hold:false}));
+  return {legs,period:legs.reduce((sum,l)=>sum+l.dur,0)};
+ });
+ return Array.from({length:HIGHWAY_TRAFFIC_COUNT},(_,i)=>{
+  const lane=lanes[i%2],slot=Math.floor(i/2),kind=fleet[(slot+(i%2)*3)%fleet.length];
+  return {id:`highway-${i}-${kind}`,kind,color:['#d7aa43','#172326','#e5dfcf','#2163ad','#91a4ac','#813f38'][i%6],...lane,offset:lane.period*(slot+.25+(i%2)*.35)/(HIGHWAY_TRAFFIC_COUNT/2)};
+ });
 }

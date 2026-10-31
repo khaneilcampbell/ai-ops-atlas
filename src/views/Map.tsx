@@ -1,4 +1,3 @@
-import { useAlerts } from "../alerts/state";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
@@ -12,7 +11,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
-import { attentionItems, effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
+import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
@@ -403,9 +402,7 @@ function anchors(districts: District[], parks: Park[]) {
 }
 
 export function MapView() {
-  const { catalog, repos, uncataloged, manifestIssues, select, selection, setView } = useAtlas();
-  const alerts = useAlerts().open;
-  const attentionCount = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged).length + alerts.length, [catalog, repos, manifestIssues, uncataloged, alerts.length]);
+  const { catalog, repos, uncataloged, select, selection, setView } = useAtlas();
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -416,7 +413,7 @@ export function MapView() {
   }, [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapProjectGrouping", "district"));
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
   const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -453,7 +450,7 @@ export function MapView() {
   const [linksMenu, setLinksMenu] = useState(false);
   const [linkSel, setLinkSel] = useState<string | null>(null);
   const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
-  const linkCounts = useMemo(() => Object.fromEntries(CONNECTION_TYPES.map((t) => [t, connections.filter((c) => c.type === t).length])) as Record<ConnectionType, number>, [connections]);
+
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
     () =>
@@ -473,8 +470,11 @@ export function MapView() {
     setLensState(l);
     save("mapLens", l);
     setLinkSel(null);
+    setLinksMenu(false);
+    setLinkPrefs({on:l!=="infrastructure"});
   };
   const automationIds = useMemo(() => new Set(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id)), [catalog]);
+  const linkCounts=useMemo(()=>{const eligible=lensLinks(allLinks,lens,{showAll:true,types:LINK_DEFAULTS.types,selKey:null,automations:automationIds});return Object.fromEntries(CONNECTION_TYPES.map(t=>[t,eligible.filter(l=>l.type===t).length])) as Record<ConnectionType,number>;},[allLinks,lens,automationIds]);
   const pickedLink = linkSel && is3d && allLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
   // A building selection replaces a connection selection, wherever it was made.
   useEffect(() => {
@@ -492,6 +492,8 @@ export function MapView() {
   };
   const setMode = (m: "3d" | "2d") => {
     setModeState(m);
+    setLinksMenu(false);
+    setLinkSel(null);
     save("mapMode", m);
   };
 
@@ -912,7 +914,7 @@ export function MapView() {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
-          {(office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {(office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
@@ -1143,9 +1145,6 @@ export function MapView() {
                 </div>
               ))}
             </dl>
-            <div className="map-next-step">
-              <button title="Open prioritized work in Mission Control. Repository checks and agent activity are separate; select a project for evidence." onClick={() => setView("overview")}><Icon name="overview" size={14}/><span>{attentionCount ? `${attentionCount} need review` : "Review workspace"}</span><b>Mission Control →</b></button>
-            </div>
           </section>
 
           {tip && (
@@ -1155,11 +1154,12 @@ export function MapView() {
             </div>
           )}
 
+          <div className="map-view-context" role="status">{is3d?<><strong>{LENS_INFO[lens].label}</strong><span>{lens==="infrastructure"?(linkPrefs.on?"Showing enabled connection types":"Select a project to inspect its workers and connections"):mapLinks.length?`${mapLinks.length} declared links · Select a project to see its workers`:LENS_INFO[lens].empty}</span></>:<><strong>Flat map</strong><span>Project overview · Switch to 3D for connection views and interiors</span></>}</div>
           <div className="map-controls">
-            {is3d && (
-              <label className="map-group" title={LENS_INFO[lens].hint}>
+            {(
+              <label className="map-group" title={is3d?LENS_INFO[lens].hint:"Connection views are available in 3D. Your selection is saved."}>
                 <span className="sr-only">Map view</span>
-                <select value={lens} onChange={(e) => setLens(e.target.value as MapLens)}>
+                <select aria-label="Map view" disabled={!is3d} value={lens} onChange={(e) => setLens(e.target.value as MapLens)}>
                   {MAP_LENSES.map((l) => (
                     <option key={l} value={l}>
                       {LENS_INFO[l].label}
@@ -1203,7 +1203,7 @@ export function MapView() {
             {is3d && (
               <div className="map-menu-wrap">
                 <button
-                  className={`icon-btn ${linkPrefs.on ? "on" : ""}`}
+                  className={`icon-btn ${linkPrefs.on || lens!=="infrastructure" ? "on" : ""}`}
                   onClick={() => setLinksMenu(!linksMenu)}
                   aria-expanded={linksMenu}
                   aria-haspopup="dialog"
@@ -1214,10 +1214,10 @@ export function MapView() {
                 </button>
                 {linksMenu && (
                   <ConnectionsMenu
-                    prefs={linkPrefs}
+                    prefs={{...linkPrefs,on:linkPrefs.on||lens!=="infrastructure"}}
                     counts={linkCounts}
                     picked={!!pickedLink}
-                    onChange={setLinkPrefs}
+                    onChange={p=>{setLinkPrefs(p);if(p.on===false){setLensState("infrastructure");save("mapLens","infrastructure");}setLinkSel(null);}}
                     onClear={() => setLinkSel(null)}
                     onClose={() => setLinksMenu(false)}
                   />
@@ -1322,24 +1322,24 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
     <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
       <label className="row strong">
         <input type="checkbox" checked={prefs.on} onChange={(e) => onChange({ on: e.target.checked })} />
-        Show connections
+        Show all connections in this view
       </label>
       <div className="group">
         {CONNECTION_TYPES.map((t) => (
-          <label key={t} className={`row ${prefs.on ? "" : "off"}`}>
-            <input type="checkbox" disabled={!prefs.on} checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
+          <label key={t} className="row">
+            <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
             <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
             {CONNECTION_LABEL[t]}
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
         ))}
       </div>
-      <label className={`row ${prefs.on ? "" : "off"}`}>
-        <input type="checkbox" disabled={!prefs.on} checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
+      <label className="row">
+        <input type="checkbox" checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
         Selected building only
       </label>
-      <label className={`row ${prefs.on ? "" : "off"}`}>
-        <input type="checkbox" disabled={!prefs.on} checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
+      <label className="row">
+        <input type="checkbox" checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
         Pause animation
       </label>
       <button className="text-btn" disabled={!picked} onClick={onClear}>

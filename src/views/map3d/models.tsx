@@ -1,3 +1,5 @@
+import {bridgePoint,clipConnectionRails} from "./connectionGeometry";
+import {TRANSPORT} from "./transportScale";
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
 import { toolBrand, toolOfficeHeight } from "./toolBrand";
@@ -8,7 +10,7 @@ import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -199,7 +201,7 @@ const DECK_T = 0.07;
  * green, pairs of pillars standing in the meadow or the brook below, and a lantern at each corner
  * that lights with the rest of the map at night.
  */
-function bridgeParts(br: CarBridge, brooks: Rect[]) {
+export function bridgeParts(br: CarBridge, brooks: Rect[], width: number = DECK_W, groundLevel = 0, raised = true) {
   const len = dist(br.a, br.b);
   const r = rampOf(len);
   const x = br.axis === "x";
@@ -210,13 +212,13 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const pz = br.a[1] + (x ? v : s);
     return [px, y, pz];
   };
-  const top = (s: number) => TERRACE_H + 0.03 + deckRise(len, s);
+  const top = (s: number) => TERRACE_H + (raised ? 0.03 + deckRise(len, s) : 0.055);
   const deck: Inst[] = [];
   const rails: Inst[] = [];
   const piers: Inst[] = [];
   const lamps: Inst[] = [];
   const pools: Inst[] = [];
-  const edge = DECK_W / 2 - 0.016;
+  const edge = width / 2 - 0.016;
   // Ramps and the level span, each a tilted slab, with a rail along each side.
   const spans: [number, number][] = [
     [-0.04, r],
@@ -231,7 +233,7 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const l = Math.hypot(run, y1 - y0);
     const m = (s0 + s1) / 2;
     const ym = (y0 + y1) / 2;
-    deck.push({ p: at(m, 0, ym - DECK_T), s: [DECK_W, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
+    deck.push({ p: at(m, 0, ym - DECK_T), s: [width, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym + 0.085), s: [0.024, 0.016, l], r: yaw, rx: tilt, c: RAIL });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym), s: [0.03, 0.03, l], r: yaw, rx: tilt, c: "#cfc4ab" });
   }
@@ -248,10 +250,10 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
   for (let i = 1; i <= n; i++) {
     const s = (len * i) / (n + 1);
     const [px, , pz] = at(s, 0, 0);
-    const ground = brooks.some((b) => px >= b.x && px <= b.x + b.w && pz >= b.z && pz <= b.z + b.d) ? -0.03 : 0;
+    const ground = brooks.some((b) => px >= b.x && px <= b.x + b.w && pz >= b.z && pz <= b.z + b.d) ? -0.03 : groundLevel;
     const under = top(s) - DECK_T;
     for (const v of [-0.13, 0.13]) piers.push({ p: at(s, v, ground), s: [0.1, under - ground, 0.1] });
-    rails.push({ p: at(s, 0, under - 0.05), s: [DECK_W + 0.02, 0.05, 0.1], r: yaw, c: "#cfc4ab" });
+    rails.push({ p: at(s, 0, under - 0.05), s: [width + 0.02, 0.05, 0.1], r: yaw, c: "#cfc4ab" });
   }
   // Lanterns at the four corners, with a pool of light on the deck at night.
   for (const s of [0.06, len - 0.06])
@@ -279,8 +281,8 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       for(let d=0.16;d<length-0.1;d+=0.3) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:"#e1ce8e"});
     };
     for(const br of scene.carBridges) for(const road of br.roads) {
-      for(let i=1;i<road.length;i++) street(road[i-1],road[i],0.4,true);
-      for(const p of road.slice(1,-1)) streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[0.4,0.008,0.4],c:"#424b50"});
+      for(let i=1;i<road.length;i++) street(road[i-1],road[i],ROAD_W,true);
+      for(const p of road.slice(1,-1)) streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:"#424b50"});
     }
     for(const t of scene.towers) {
       const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
@@ -293,7 +295,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
         const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
         for(let i=1;i<path.length;i++) {
           const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
-          if(drawn.has(key))continue;drawn.add(key);street(path[i-1],path[i],0.4,true);
+          if(drawn.has(key))continue;drawn.add(key);street(path[i-1],path[i],ROAD_W,true);
         }
       }
     }
@@ -302,12 +304,13 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       const alongX = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
       const length = Math.hypot(w.x1 - w.x0, w.z1 - w.z0), y = w.y ?? TERRACE_H;
       const x = (w.x0 + w.x1) / 2, z = (w.z0 + w.z1) / 2;
-      footDeck.push({ p: [x, y - 0.05, z], s: alongX ? [length, 0.08, 0.48] : [0.48, 0.08, length], c: "#b68c60" });
+      footDeck.push({ p: [x, y - 0.05, z], s: alongX ? [length, 0.08, TRANSPORT.walkWidth] : [TRANSPORT.walkWidth, 0.08, length], c: "#b68c60" });
       for(const end of [[w.x0,w.z0],[w.x1,w.z1]]) footDeck.push({p:[end[0],y-0.01,end[1]],s:alongX?[0.24,0.04,0.5]:[0.5,0.04,0.24],c:"#d4cfb9"});
       for (const side of [-1, 1]) {
         footRails.push({ p: [x + (alongX ? 0 : side * 0.24), y + 0.22, z + (alongX ? side * 0.24 : 0)], s: alongX ? [length, 0.035, 0.035] : [0.035, 0.035, length], c: "#76b5ae" });
         for (let d = 0; d <= length; d += 0.25) {
-          footRails.push({ p: [w.x0 + (alongX ? d : side * 0.24), y, w.z0 + (alongX ? side * 0.24 : d)], s: [0.025, 0.24, 0.025], c: "#335b58" });
+          const point=bridgePoint([w.x0,w.z0],[w.x1,w.z1],d,side*.24);
+          footRails.push({ p: [point[0], y, point[1]], s: [0.025, 0.24, 0.025], c: "#335b58" });
         }
       }
       // Paired piles and crossbeams support the span rather than leaving a floating walkway.
@@ -319,36 +322,8 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
         footDeck.push({p:[px,y-0.13,pz],s:alongX?[0.09,0.08,0.5]:[0.5,0.08,0.09],c:"#675440"});
       }
       // Visible timber planks distinguish the promenade from the stone vehicle deck.
-      for (let d = 0.04; d < length; d += 0.13) footDeck.push({ p: [w.x0 + (alongX ? d : 0), y, w.z0 + (alongX ? 0 : d)], s: alongX ? [0.018, 0.008, 0.46] : [0.46, 0.008, 0.018], c: "#775e46" });
+      for (let d = 0.04; d < length; d += 0.13) {const point=bridgePoint([w.x0,w.z0],[w.x1,w.z1],d);footDeck.push({ p: [point[0], y, point[1]], s: alongX ? [0.018, 0.008, 0.46] : [0.46, 0.008, 0.018], c: "#775e46" });}
     }
-    // Zebra markings at actual pedestrian/street intersections throughout the city.
-    const crossings = new Set<string>();
-    for(const walk of scene.walks) {
-      const route=walk.route?.length?walk.route:[{gx:walk.x0,gy:walk.z0},{gx:walk.x1,gy:walk.z1}];
-      for(let i=1;i<route.length;i++) {
-        const a=route[i-1],b=route[i],walkX=Math.abs(b.gx-a.gx)>Math.abs(b.gy-a.gy);
-        for(const road of streets) {
-          const roadX=road.s[0]>road.s[2];
-          if(walkX===roadX)continue;
-          const x=walkX?road.p[0]:a.gx,z=walkX?a.gy:road.p[2];
-          if(x<Math.min(a.gx,b.gx)-0.001||x>Math.max(a.gx,b.gx)+0.001||z<Math.min(a.gy,b.gy)-0.001||z>Math.max(a.gy,b.gy)+0.001)continue;
-          if(x<road.p[0]-road.s[0]/2||x>road.p[0]+road.s[0]/2||z<road.p[2]-road.s[2]/2||z>road.p[2]+road.s[2]/2)continue;
-          // A crossing must fit fully on this street segment and connect both curbs.
-          // Do not paint on bridge ramps or duplicate short junction filler squares.
-          if(Math.max(road.s[0],road.s[2])<0.5)continue;
-          const along=roadX?x:z,center=roadX?road.p[0]:road.p[2],span=roadX?road.s[0]:road.s[2];
-          if(Math.abs(along-center)>span/2-0.18)continue;
-          const halfRoad=(roadX?road.s[2]:road.s[0])/2;
-          const low=walkX?Math.min(a.gx,b.gx):Math.min(a.gy,b.gy),high=walkX?Math.max(a.gx,b.gx):Math.max(a.gy,b.gy);
-          const across=walkX?x:z;
-          if(low>across-halfRoad-0.04||high<across+halfRoad+0.04)continue;
-          const key=`${x.toFixed(2)}:${z.toFixed(2)}:${roadX}`;
-          if([...crossings].some(k=>{const [px,pz,axis]=k.split(":");return axis===String(roadX)&&Math.hypot(Number(px)-x,Number(pz)-z)<0.32;}))continue;crossings.add(key);
-          for(let stripe=-2;stripe<=2;stripe++) markings.push({p:[x+(roadX?stripe*0.065:0),TERRACE_H+0.052,z+(roadX?0:stripe*0.065)],s:roadX?[0.035,0.008,road.s[2]*0.9]:[road.s[0]*0.9,0.008,0.035],c:"#f5f0df"});
-        }
-      }
-    }
-
     // Trim every sidewalk against the complete street network, including intersecting roads.
     // Independent curb strips otherwise project across junctions and cover the asphalt.
     const clearOfStreets = (item: Inst): Inst[] => {
@@ -365,7 +340,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     };
     return {
       deck: [...all.flatMap((b) => b.deck), ...streets, ...sidewalks.flatMap(clearOfStreets), ...markings, ...footDeck.flatMap(p=>p.c==="#d4cfb9"?clearOfStreets(p):[p])],
-      rails: [...all.flatMap((b) => b.rails), ...footRails],
+      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails],scene.freight?.localJunctions??[],.95),
       piers: [...all.flatMap((b) => b.piers), ...footPiers],
       lamps: all.flatMap((b) => b.lamps),
       pools: all.flatMap((b) => b.pools),
@@ -392,6 +367,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
+      neighborhood: (scene.neighborhoodLand??[]).map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
       steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
@@ -434,6 +410,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
       <Instanced items={items.terraces} geometry={g.box} material={m.terrace} pick={onTerrace} />
+      <Instanced items={items.neighborhood} geometry={g.box} material={m.terrace} />
       <Instanced items={items.paving} geometry={g.box} material={m.stone} shadow={false} />
       <Instanced items={items.steps} geometry={g.box} material={m.step} />
       <Instanced items={items.brooks} geometry={g.box} material={m.brook} shadow={false} />

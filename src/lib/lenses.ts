@@ -36,11 +36,12 @@ export interface LensContext {
 }
 
 export function lensLinks<T extends LensLink>(all: T[], lens: MapLens, ctx: LensContext): T[] {
-  if (lens === "agents") return all.filter((l) => l.type === "agent" || l.type === "n8n" || l.type === "dependency");
+  const enabled=all.filter(l=>ctx.types[l.type]);
+  if (lens === "agents") return enabled.filter((l) => l.type === "agent" || l.type === "n8n" || l.type === "dependency");
   // "repo:<agent id>" links say which repository hosts an item's source or workflow.
-  if (lens === "automations") return all.filter((l) => l.type === "n8n" || (l.id.startsWith("repo:") && ctx.automations.has(l.id.slice(5))));
-  if (ctx.showAll) return all.filter((l) => ctx.types[l.type]);
+  if (lens === "automations") return enabled.filter((l) => l.type === "n8n" || (l.id.startsWith("repo:") && ctx.automations.has(l.id.slice(5))));
+  if (ctx.showAll) return enabled;
   const { selKey, selProject } = ctx;
   if (!selKey) return [];
-  return all.filter((l) => l.a === selKey || l.b === selKey || (!!selProject && (l.pa === selProject || l.pb === selProject)));
+  return enabled.filter((l) => l.a === selKey || l.b === selKey || (!!selProject && (l.pa === selProject || l.pb === selProject)));
 }
