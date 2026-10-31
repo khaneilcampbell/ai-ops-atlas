@@ -127,7 +127,7 @@ export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z:
 /** Service visits are decorative and share the exact driveway/bridge centerline. */
 export function planDealershipTraffic(scene:Pick<Scene3D,'dealership'>):VehiclePlan[]{
  const d=scene.dealership;if(!d)return [];
- const source=[...d.service,...d.drive.slice(1),[d.x+8.86,d.z+2.1] as Pt].filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7);
+ const source=[...d.service,...d.drive.slice(1),[d.x+d.showroom.cx+d.showroom.w/2+.06,d.z+d.showroom.cz] as Pt].filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7);
  return [{id:'bmw-service-out',interval:60,path:[...source].reverse(),kind:'bmw' as const,color:'#3577c4'}, {id:'bmw-service-in',interval:90,path:source,kind:'gwagon' as const,color:'#202a30'}].map(v=>{
   const path=lanePath(v.path,.12);
   const legs:Leg[]=path.slice(1).map((b,i)=>({a:path[i],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[i][0],b[1]-path[i][1])/.9,hold:false}));

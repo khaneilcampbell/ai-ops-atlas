@@ -4,7 +4,7 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {pathClear,type Pt} from './roads';
-import {DEALERSHIP as d,planDealership} from './dealershipPlan';
+import {DEALERSHIP as d,SHOWROOM_FRONT,dealershipShowroom,planDealership} from './dealershipPlan';
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`places and connects the dealership safely in ${group} grouping`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),a=s.dealership!,f=s.financial!;
  expect(a).toBeDefined();
@@ -33,9 +33,25 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`places an
  }
 });
 it('does not create disconnected dealership land without the Financial District street',()=>{expect(planDealership({})).toBeUndefined();expect(planDealership({financial:{x:0,z:0,w:10,d:10,road:[],street:[],sidewalk:[]}})).toBeUndefined();});
-it('fits three evenly spaced upper galleries below the four-story roof',async()=>{
+it('fits evenly spaced upper galleries below the roof',async()=>{
  const {dealershipUpperFloors}=await import('./dealershipPlan');
  const floors=dealershipUpperFloors();expect(d.floorCount).toBe(4);expect(floors).toHaveLength(3);
  for(let i=0;i<floors.length;i++){expect(floors[i]-(floors[i-1]??0)).toBeCloseTo(d.mezzanineY);expect(floors[i]+.9).toBeLessThan(d.height-.1);}
  expect(d.height).toBeCloseTo(3.05+2*d.mezzanineY);
+});
+for(const group of ['none','district','status','tag'] as GroupBy[])it(`scales BMW with the Financial District towers in ${group} grouping`,()=>{
+ // KC, 2026-10-31: the showroom takes the district's tower footprint and stays within its skyline.
+ const s=buildScene(layoutMap(catalog,[],group)),a=s.dealership!,r=a.showroom,f=s.financial!,dims=f.buildings.map(b=>financialDimensions(b.id));
+ expect(r.w).toBeCloseTo(Math.max(...dims.map(x=>x.width)));expect(r.d).toBeCloseTo(Math.max(...dims.map(x=>x.depth)));
+ const lowest=Math.min(...f.buildings.map(b=>b.height));
+ expect(r.height).toBeLessThanOrEqual(lowest);expect(r.height).toBeGreaterThan(lowest-d.mezzanineY);
+ expect(r.floors).toBe(Math.round(r.height/d.mezzanineY));
+ // Same front line and door as before; the showroom stays on its block and clear of the display bays.
+ expect(r.cz+r.d/2).toBeCloseTo(SHOWROOM_FRONT);expect(r.cx-r.w/2).toBeGreaterThan(0);expect(r.cx+r.w/2+.5).toBeLessThan(a.w);
+ for(const car of a.cars)expect(car.z-.7).toBeGreaterThan(a.z+SHOWROOM_FRONT);
+ // The service drive ends at the side garage door.
+ expect(a.drive[a.drive.length-1]).toEqual([a.x+r.cx+r.w/2+.06,a.z+r.cz]);
+});
+it('keeps the original showroom without a district to scale from',()=>{
+ const r=dealershipShowroom();expect([r.w,r.d,r.height,r.floors]).toEqual([d.showroomWidth,d.showroomDepth,d.height,d.floorCount]);
 });
