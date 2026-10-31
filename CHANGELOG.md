@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
+- 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
 - 2026-10-31 · Fixed the blank map: the new roads and highway are lighter to draw, and the map restarts itself if graphics fail
 - 2026-10-31 · The Update button now says what changed, and the app checks for updates every 10 minutes and when you return to it
 - 2026-10-31 · Fixed the map's day/night lighting change and made road traffic visible again (#149)

@@ -20,6 +20,7 @@ import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { LEVELS, resetGovernor, useQualityLevel } from "../../lib/governor";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
@@ -419,10 +420,14 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const activity = useBuildingActivity();
   // Frame rate, pixels and shadow detail follow the Performance setting.
   const power = usePowerProfile();
+  // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
+  const quality = LEVELS[useQualityLevel()];
+  const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
   const drawing = visible && officePhase !== "inside";
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
+  useEffect(() => resetGovernor(), [power, glKey]);
   const glCanvas = useRef<HTMLCanvasElement | null>(null);
   const restarts = useRef(0);
   const onGlCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
@@ -441,7 +446,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, power.maxDpr)] : [1, power.maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FramePacer profile={power} running={drawing} />
         <World
           power={power}
@@ -817,7 +822,8 @@ function World({
   }, [center, ext, three]);
 
   // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
-  const shadowSize = phone ? 2048 : power.shadowMap;
+  const quality = LEVELS[useQualityLevel()];
+  const shadowSize = Math.min(phone ? 2048 : power.shadowMap, quality.shadowMap);
   const firstShadow = useRef(true);
   useEffect(() => {
     if (firstShadow.current) return void (firstShadow.current = false);
