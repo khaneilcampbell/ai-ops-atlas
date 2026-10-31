@@ -7,6 +7,7 @@ import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
+import {planMall,type MallPlan} from "./mallPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { airportFootprint, planAirport, type AirportPlan } from "./airport";
@@ -136,6 +137,8 @@ export interface Scene3D {
   transportConnections:DistrictConnection[];
   stadium?: StadiumPlan;
   dealership?:DealershipPlan;
+  /** Atlas Marketplace mall on the open lot beside the Skyline park. */
+  mall?:MallPlan;
   freight?: FreightPlan;
   /** Area reserved by an interior cutaway; outdoor crowds must stay outside. */
   pedestrianExclusion?: Rect;
@@ -685,6 +688,8 @@ export function buildScene(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
+  const mall=planMall({parks,land,towers,kiosks,retail,hills,links:connections,roads:[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])]});
+  if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
   const communityRail=planCommunityRail(community,financial);
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
@@ -701,6 +706,7 @@ export function buildScene(layout: Layout): Scene3D {
     transportConnections:connections,
     stadium,
     dealership,
+    mall,
     freight,
     land,
     neighborhoodLand:neighborhood.land,
