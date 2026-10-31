@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
-import {CIRCA,circaParts,circaPieceCount,circaScreenPath} from './circaPlan';
+import {CIRCA,circaEntrance,circaParts,circaPieceCount,circaScreenPath} from './circaPlan';
 import {financialDimensions} from './financialArchitecture';
 import {financialBrand} from './financialBrands';
 import {FINANCIAL} from './financialPlan';
@@ -54,6 +54,24 @@ describe('Circa twin towers',()=>{
   expect(Math.max(...screen.map(p=>p[1]))).toBeGreaterThan(P.d/2);expect(Math.min(...screen.map(p=>p[1]))).toBeLessThan(-P.d/2);
   expect(screen[0][0]).toBeCloseTo(screen.at(-1)![0]);expect(screen[0][1]).toBeCloseTo(screen.at(-1)![1]);
   expect(Number.isInteger(CIRCA.screen.repeats)).toBe(true);
+ });
+
+ it('has a large glass entrance on the street face that stays below and clear of the LED band',()=>{
+  const entry={solid:[],entryGlass:[],entryDrums:[],lobbyGlow:[],rounds:[],leaves:[]} as Parameters<typeof circaEntrance>[0];
+  circaEntrance(entry,palette);
+  const all=Object.values(entry).flat(),P=CIRCA.podium,S=CIRCA.screen,band=circaScreenPath();
+  expect(entry.entryGlass.length).toBeGreaterThan(0);expect(entry.entryDrums.length).toBe(2);expect(entry.lobbyGlow.length).toBeGreaterThan(0);
+  // Below the band: every part's top sits at least .04 under its bottom edge, so nothing covers it.
+  for(const p of all)expect(p.p[1]+p.s[1]).toBeLessThanOrEqual(S.y0-.04+1e-9);
+  // Clear of the band's footprint is then automatic; also check it really steps out past the band's outer wave.
+  const front=Math.max(...entry.entryGlass.map(p=>p.p[2]));
+  expect(front).toBeGreaterThan(Math.max(...band.filter(([x])=>Math.abs(x)<1.2).map(([,z])=>z)));
+  // Centred on the front walk (the approach starts at the building's x) and inside the palm gap.
+  const doors=entry.entryDrums.map(p=>p.p[0]);expect(Math.abs((Math.min(...doors)+Math.max(...doors))/2)).toBeLessThan(.1);
+  expect(CIRCA.entrance.w).toBeGreaterThanOrEqual(2.2);expect(CIRCA.entrance.w).toBeLessThanOrEqual(2.8);
+  for(const p of all)expect(p.p[2]).toBeGreaterThan(P.d/2-.05);
+  // The whole complex keeps the entrance and no old portal box.
+  const parts=circaParts(9,palette);expect(parts.entryGlass).toEqual(entry.entryGlass);
  });
 
  it('stays within the map piece budget with one screen mesh and no lights',()=>{

@@ -44,11 +44,13 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
    glass:new THREE.MeshStandardMaterial({color:'#5f8fb4',roughness:.18,metalness:.45,emissive:'#ffcf86',emissiveIntensity:0}),
    storefront:new THREE.MeshStandardMaterial({color:'#36525e',roughness:.2,metalness:.3,emissive:'#ffd9a0',emissiveIntensity:0}),
    floors:new THREE.MeshStandardMaterial({color:'#f2f1ec',roughness:.6,emissive:'#ffd59a',emissiveIntensity:0}),
+   entry:new THREE.MeshStandardMaterial({color:'#cfe6f2',roughness:.12,metalness:0,transparent:true,opacity:.28,depthWrite:false}),
+   lobby:new THREE.MeshStandardMaterial({color:'#f4ead8',roughness:.6,emissive:'#ffd9a0',emissiveIntensity:.15}),
    water:new THREE.MeshStandardMaterial({color:'#46c3cf',roughness:.25,emissive:'#1a7f8c',emissiveIntensity:.05}),
    led:new THREE.MeshStandardMaterial({color:'#000000',emissive:'#ffffff',emissiveMap:texture,emissiveIntensity:.85,roughness:.5,side:THREE.DoubleSide})};
  },[]);
- useEffect(()=>{res.glass.color.set(night?'#2c4868':'#6f9cc0');res.glass.emissive.set(night?'#5d82b3':'#000000');res.glass.emissiveIntensity=night?.35:0;res.floors.emissiveIntensity=night?.55:0;res.storefront.emissiveIntensity=night?.7:0;res.water.emissiveIntensity=night?.5:.05;res.led.emissiveIntensity=night?1.15:.85;},[night,res]);
- useEffect(()=>()=>{res.ellipse.dispose();res.half.dispose();res.texture.dispose();res.screen.dispose();res.glass.dispose();res.storefront.dispose();res.water.dispose();res.floors.dispose();res.led.dispose();},[res]);
+ useEffect(()=>{res.glass.color.set(night?'#2c4868':'#6f9cc0');res.glass.emissive.set(night?'#5d82b3':'#000000');res.glass.emissiveIntensity=night?.35:0;res.floors.emissiveIntensity=night?.55:0;res.entry.opacity=night?.18:.28;res.lobby.emissiveIntensity=night?1.1:.15;res.storefront.emissiveIntensity=night?.7:0;res.water.emissiveIntensity=night?.5:.05;res.led.emissiveIntensity=night?1.15:.85;},[night,res]);
+ useEffect(()=>()=>{res.ellipse.dispose();res.half.dispose();res.texture.dispose();res.screen.dispose();res.glass.dispose();res.storefront.dispose();res.water.dispose();res.entry.dispose();res.lobby.dispose();res.floors.dispose();res.led.dispose();},[res]);
  // The screen scrolls only on frames the pacer already draws, and holds still for reduced motion.
  useFrame((_,delta)=>{if(moving&&b)res.texture.offset.x=(res.texture.offset.x+Math.min(delta,.1)*.025)%1;});
 
@@ -72,7 +74,7 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   box(site,-s.w/2,0,s.d-.18,s.w,.23,.16,'#c6c3b4');box(site,-s.w/2,.5,s.d-.18,s.w,.035,.035,res.palette.green);
   for(let x=-s.w+.4;x<0;x+=.5)box(site,x,.23,s.d-.18,.025,.27,.025,res.palette.green);
   for(let x=-s.w+1;x<-.5;x+=2.5){box(site,x,.02,14.5,.05,.28,.05,res.palette.green);box(lamps,x,.3,14.5,.07,.05,.07,'#ffffff');}
-  return {solid:[...place(local.solid),...site],marks,lamps,storefront:place(local.storefront),towerGlass:place(local.towerGlass),slabs:place(local.slabs),balconies:place(local.balconies),roundWater:place(local.roundWater),lapWater:place(local.lapWater),rounds:place(local.rounds),leaves:place(local.leaves),fronds:place(local.fronds),terrace:[{p:[s.x+s.w/2,0,s.z+s.d/2],s:[s.w,TERRACE_H,s.d]} as Inst],origin:[ox,TERRACE_H,oz] as [number,number,number]};
+  return {solid:[...place(local.solid),...site],marks,lamps,storefront:place(local.storefront),towerGlass:place(local.towerGlass),slabs:place(local.slabs),balconies:place(local.balconies),roundWater:place(local.roundWater),lapWater:place(local.lapWater),rounds:place(local.rounds),leaves:place(local.leaves),fronds:place(local.fronds),entryGlass:place(local.entryGlass),entryDrums:place(local.entryDrums),lobbyGlow:place(local.lobbyGlow),terrace:[{p:[s.x+s.w/2,0,s.z+s.d/2],s:[s.w,TERRACE_H,s.d]} as Inst],origin:[ox,TERRACE_H,oz] as [number,number,number]};
  },[a,b,res]);
  if(!parts)return null;
  const picked=pick.of([KEY]);
@@ -91,6 +93,9 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   <Instanced items={parts.lapWater} geometry={g.box} material={res.water} shadow={false}/>
   <Instanced items={parts.leaves} geometry={g.ball} material={m.plain}/>
   <Instanced items={parts.fronds} geometry={g.box} material={m.plain}/>
+  <Instanced items={parts.lobbyGlow} geometry={g.box} material={res.lobby} shadow={false} pick={keyed(parts.lobbyGlow.length)}/>
+  <Instanced items={parts.entryGlass} geometry={g.box} material={res.entry} shadow={false} pick={keyed(parts.entryGlass.length)}/>
+  <Instanced items={parts.entryDrums} geometry={res.ellipse} material={res.entry} shadow={false} pick={keyed(parts.entryDrums.length)}/>
   <mesh geometry={res.screen} material={res.led} position={parts.origin} onPointerOver={e=>{e.stopPropagation();picked.over(KEY,e)}} onPointerOut={picked.out} onClick={e=>{e.stopPropagation();picked.click(KEY,e)}}/>
  </group>;
 }

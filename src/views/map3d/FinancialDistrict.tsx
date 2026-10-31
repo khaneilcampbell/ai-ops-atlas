@@ -32,14 +32,16 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
   if(financialBrand(b.id)?.architecture){
    const mesh=financialArchitecture(b.id,b.height,materials),key=financialKey(b.id);
    const place=(p:Inst):Inst=>({...p,p:[a.x+b.x+p.p[0],TERRACE_H+p.p[1],a.z+b.z+p.p[2]]});
-   solid.push(box(b.x,.04,b.z,dimensions.w,.12,dimensions.d,'#d4d0bf'),...mesh.solid.map(place));
+   // Circa (twin) draws its own entrance pavilion and landing, so it gets no plinth, door landing or door lamps here.
+   const twin=financialBrand(b.id)?.architecture==='twin';
+   if(!twin)solid.push(box(b.x,.04,b.z,dimensions.w,.12,dimensions.d,'#d4d0bf'));solid.push(...mesh.solid.map(place));
    bevelled.push(...mesh.bevelled.map(place));plants.push(...mesh.leaves.map(place));
    for(const p of mesh.glass)pane(key,place(p));
    for(const p of mesh.clearGlass){clearGlass.push(place(p));clearKeys.push(key);}glow.push(...mesh.glow.map(place));
    // Sliding entrance panes are shared with the visitor simulation.
-   const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
+   const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;if(!twin)solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
    for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
-   for(const side of [-1,1])lights.push(box(b.x+side*.6,.15,b.z+dimensions.depth/2+.35,.04,.12,.04,'#ffffff'));
+   if(!twin)for(const side of [-1,1])lights.push(box(b.x+side*.6,.15,b.z+dimensions.depth/2+.35,.04,.12,.04,'#ffffff'));
    continue;
   }
   const {x,z,height:h}=b,brand=financialBrand(b.id),body=brand?.body??materials.ivory,trim=brand?.trim??'#aabbb8',accent=brand?.accent??materials.gold,key=financialKey(b.id),w=F.towerWidth,d=F.towerDepth;
