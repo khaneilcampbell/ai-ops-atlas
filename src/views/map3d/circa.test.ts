@@ -47,11 +47,11 @@ describe('Circa twin towers',()=>{
    expect(Math.abs(p.p[2])+(kind==='fronds'?.3:rz),kind).toBeLessThanOrEqual(box.d/2+1.05);
    expect(p.p[1]+p.s[1],kind).toBeLessThanOrEqual(height+box.top+1e-6);
   }
-  // The wave screen hangs on the north face, the lap pool, colonnade and cabana side of the deck.
+  // The wave screen hangs on the street face, under the round pool and the cabanas.
   const screen=circaScreenPath();
-  for(const [x,z]of screen){expect(Math.abs(x)).toBeLessThanOrEqual(CIRCA.podium.w/2);expect(z).toBeLessThan(-CIRCA.podium.d/2);expect(Math.abs(z)).toBeLessThanOrEqual(box.d/2);}
-  expect(screen[0][0]).toBeGreaterThan(screen.at(-1)![0]);
-  const lap=parts.lapWater[0].p;expect(lap[2]).toBeLessThan(0);
+  for(const [x,z]of screen){expect(Math.abs(x)).toBeLessThanOrEqual(CIRCA.podium.w/2);expect(z).toBeGreaterThan(CIRCA.podium.d/2);expect(Math.abs(z)).toBeLessThanOrEqual(box.d/2);}
+  expect(screen[0][0]).toBeLessThan(screen.at(-1)![0]);
+  const pool=parts.roundWater.at(-1)!.p;expect(pool[2]).toBeGreaterThan(0);
  });
 
  it('stays within the map piece budget with one screen mesh and no lights',()=>{

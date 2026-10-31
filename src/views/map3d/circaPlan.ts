@@ -20,8 +20,6 @@ export const CIRCA={
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
  maxPieces:1200,
  screen:{y0:.46,y1:1.5,inset:.12,waves:1.5,amplitude:.22},
- /** Second, flat screen on the street front, west of the entrance. */
- frontScreen:{x0:-3.45,x1:-.9,y0:.5,y1:1.48,offset:.13},
 } as const;
 
 export interface CircaParts{
@@ -64,9 +62,9 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
  box(out.solid,hw+.12,P.retail-.04,0,.3,.05,P.d+.1,palette.white);
  // Entrance portal at the street door.
  box(out.solid,0,P.retail,hd+.2,1.2,.06,.42,palette.trim);
- // Vertical louvers screen the parking levels on the south, east and west faces; the north face carries the LED screen.
+ // Vertical louvers screen the parking levels on the north, east and west faces; the street (south) face carries the LED screen.
  const louverY=P.retail+.06,louverH=P.h-louverY-.1;
- for(let x=-hw+.12;x<=hw-.1;x+=.2)box(out.solid,x,louverY,hd+.03,.035,louverH,.1,palette.white);
+ for(let x=-hw+.12;x<=hw-.1;x+=.2)box(out.solid,x,louverY,-hd-.03,.035,louverH,.1,palette.white);
  for(let z=-hd+.12;z<=hd-.1;z+=.2)for(const side of [-1,1])box(out.solid,side*(hw+.03),louverY,z,.1,louverH,.035,palette.white);
  // Floor bands every two parking levels.
  for(const y of [louverY,louverY+louverH/2])for(const side of [-1,1]){box(out.solid,0,y-.03,side*(hd+.02),P.w+.06,.04,.14,palette.white);box(out.solid,side*(hw+.02),y-.03,0,.14,.04,P.d+.06,palette.white);}
@@ -126,12 +124,12 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
 }
 
 /**
- * Wave-shaped LED screen on the north facade, above the lap pool, colonnade and cabanas.
- * Building-local (x,z) samples run east to west, so the texture reads left to right from the north.
+ * Wave-shaped LED screen on the street (south) facade, under the round pool and the cabanas.
+ * Building-local (x,z) samples run west to east, so the texture reads left to right from the street.
  */
 export function circaScreenPath(samples=40):Pt[]{
  const P=CIRCA.podium,S=CIRCA.screen,span=P.w-.5,points:Pt[]=[];
- for(let i=0;i<=samples;i++){const t=i/samples,x=span/2-t*span;points.push([x,-P.d/2-S.inset-S.amplitude*(1+Math.sin(t*Math.PI*2*S.waves))/2]);}
+ for(let i=0;i<=samples;i++){const t=i/samples,x=-span/2+t*span;points.push([x,P.d/2+S.inset+S.amplitude*(1+Math.sin(t*Math.PI*2*S.waves))/2]);}
  return points;
 }
 

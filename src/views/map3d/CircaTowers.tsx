@@ -22,7 +22,7 @@ function screenTexture(){
  return texture;
 }
 
-/** A vertical ribbon along the wave-shaped north facade, on the pool and cabana side. */
+/** A vertical ribbon along the wave-shaped street facade, on the pool and cabana side. */
 function screenGeometry(){
  const path=circaScreenPath(),S=CIRCA.screen,positions:number[]=[],uvs:number[]=[],index:number[]=[];
  path.forEach(([x,z],i)=>{const u=i/(path.length-1);positions.push(x,S.y0,z,x,S.y1,z);uvs.push(u,0,u,1);if(i)index.push(2*i-2,2*i,2*i-1,2*i-1,2*i,2*i+1);});
@@ -38,11 +38,8 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   const palette={white:token('--sage-50','#f7f7f0'),stone:'#e3ddcf',trim:'#c9cfcc',core:'#5f6b72',green:'#5f8f5d',turquoise:'#3fb7b2',wood:'#8e6f4e'};
   const ellipse=new THREE.CylinderGeometry(.5,.5,1,40).translate(0,.5,0);
   const half=new THREE.CylinderGeometry(.5,.5,1,24,1,false,-Math.PI/2,Math.PI).translate(0,.5,0);
-  const texture=screenTexture(),screen=screenGeometry(),F2=CIRCA.frontScreen,front=new THREE.PlaneGeometry(F2.x1-F2.x0,F2.y1-F2.y0);
-  // Show a slice of the same scrolling texture, so both screens share one material.
-  const uv=front.getAttribute('uv');for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)*.32);
-  front.translate((F2.x0+F2.x1)/2,(F2.y0+F2.y1)/2,CIRCA.podium.d/2+F2.offset);
-  return {palette,ellipse,half,texture,screen,front,
+  const texture=screenTexture(),screen=screenGeometry();
+  return {palette,ellipse,half,texture,screen,
    glass:new THREE.MeshStandardMaterial({color:'#5f8fb4',roughness:.18,metalness:.45,emissive:'#ffcf86',emissiveIntensity:0}),
    storefront:new THREE.MeshStandardMaterial({color:'#36525e',roughness:.2,metalness:.3,emissive:'#ffd9a0',emissiveIntensity:0}),
    floors:new THREE.MeshStandardMaterial({color:'#f2f1ec',roughness:.6,emissive:'#ffd59a',emissiveIntensity:0}),
@@ -50,7 +47,7 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
    led:new THREE.MeshStandardMaterial({color:'#000000',emissive:'#ffffff',emissiveMap:texture,emissiveIntensity:.85,roughness:.5,side:THREE.DoubleSide})};
  },[]);
  useEffect(()=>{res.glass.color.set(night?'#2c4868':'#6f9cc0');res.glass.emissive.set(night?'#5d82b3':'#000000');res.glass.emissiveIntensity=night?.35:0;res.floors.emissiveIntensity=night?.55:0;res.storefront.emissiveIntensity=night?.7:0;res.water.emissiveIntensity=night?.5:.05;res.led.emissiveIntensity=night?1.15:.85;},[night,res]);
- useEffect(()=>()=>{res.ellipse.dispose();res.half.dispose();res.texture.dispose();res.screen.dispose();res.front.dispose();res.glass.dispose();res.storefront.dispose();res.water.dispose();res.floors.dispose();res.led.dispose();},[res]);
+ useEffect(()=>()=>{res.ellipse.dispose();res.half.dispose();res.texture.dispose();res.screen.dispose();res.glass.dispose();res.storefront.dispose();res.water.dispose();res.floors.dispose();res.led.dispose();},[res]);
  // The screen scrolls only on frames the pacer already draws, and holds still for reduced motion.
  useFrame((_,delta)=>{if(moving&&b)res.texture.offset.x=(res.texture.offset.x+Math.min(delta,.1)*.025)%1;});
 
@@ -93,7 +90,6 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   <Instanced items={parts.lapWater} geometry={g.box} material={res.water} shadow={false}/>
   <Instanced items={parts.leaves} geometry={g.ball} material={m.plain}/>
   <Instanced items={parts.fronds} geometry={g.box} material={m.plain}/>
-  <mesh geometry={res.front} material={res.led} position={parts.origin} onPointerOver={e=>{e.stopPropagation();picked.over(KEY,e)}} onPointerOut={picked.out} onClick={e=>{e.stopPropagation();picked.click(KEY,e)}}/>
   <mesh geometry={res.screen} material={res.led} position={parts.origin} onPointerOver={e=>{e.stopPropagation();picked.over(KEY,e)}} onPointerOut={picked.out} onClick={e=>{e.stopPropagation();picked.click(KEY,e)}}/>
  </group>;
 }

@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /** Circa preview shots: wide context with Navy Federal, Vanguard and the highway, a close-up of the LED screen, and the deck. */
 // World positions in the default (no grouping) layout: Circa's centre is about (-13.5, -12.6).
-const views=[["overview",[-9,3,-12],[-8,15,12]],["dusk",[-12,5,-12],[-4,4,6]],['screen',[-13.5,1.4,-16.9],[-19,4.5,-25]],['west',[-13.5,1.6,-13],[-23,7,-11]],['deck',[-13.4,2.3,-12.6],[-9,11,-3]],['towers',[-13.4,6,-12.6],[-14,3,0]]] as const;
+const views=[["overview",[-9,3,-12],[-8,15,12]],["dusk",[-12,5,-12],[-4,4,6]],['screen',[-13.5,1.4,-8.3],[-9,4.5,-0.5]],['west',[-13.5,1.6,-13],[-23,7,-11]],['deck',[-13.4,2.3,-12.6],[-9,11,-3]],['towers',[-13.4,6,-12.6],[-14,3,0]]] as const;
 for(const light of ['day','night'] as const)test(`Circa twin towers, ${light}`,async({page})=>{
  test.setTimeout(600_000);
  mkdirSync('artifacts/circa',{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
