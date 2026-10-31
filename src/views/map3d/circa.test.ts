@@ -58,16 +58,16 @@ describe('Circa twin towers',()=>{
 
  it('has a large glass entrance on the street face that stays below and clear of the LED band',()=>{
   const entry={solid:[],entryGlass:[],entryDrums:[],lobbyGlow:[],lobbyFinish:[],rounds:[],leaves:[]} as Parameters<typeof circaEntrance>[0];
-  circaEntrance(entry,palette);
+  const {door}=circaEntrance(entry,palette);
   const all=Object.values(entry).flat(),P=CIRCA.podium,S=CIRCA.screen,band=circaScreenPath();
-  expect(entry.entryGlass.length).toBeGreaterThan(0);expect(entry.entryDrums.length).toBe(2);expect(entry.lobbyGlow.length).toBeGreaterThan(0);
+  expect(entry.entryGlass.length).toBeGreaterThan(0);expect(entry.entryDrums.length).toBe(0);expect(entry.lobbyGlow.length).toBeGreaterThan(0);
   // Below the band: every part's top sits at least .04 under its bottom edge, so nothing covers it.
   for(const p of all)expect(p.p[1]+p.s[1]).toBeLessThanOrEqual(S.y0-.04+1e-9);
   // Clear of the band's footprint is then automatic; also check it really steps out past the band's outer wave.
   const front=Math.max(...entry.entryGlass.map(p=>p.p[2]));
   expect(front).toBeGreaterThan(Math.max(...band.filter(([x])=>Math.abs(x)<1.2).map(([,z])=>z)));
   // Centred on the front walk (the approach starts at the building's x) and inside the palm gap.
-  const doors=entry.entryDrums.map(p=>p.p[0]);expect(Math.abs((Math.min(...doors)+Math.max(...doors))/2)).toBeLessThan(.1);
+  expect(Math.abs(door.x)).toBeLessThan(.1);expect(door.w).toBeGreaterThanOrEqual(.6);
   // As tall as the other Financial District entrances (their shared door canopy sits at .85).
   expect(Math.max(...all.map(p=>p.p[1]+p.s[1]))).toBeGreaterThanOrEqual(.85);
   // The band stays on the podium: above the entrance and below the deck parapet.

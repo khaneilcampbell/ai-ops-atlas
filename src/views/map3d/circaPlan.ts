@@ -170,52 +170,90 @@ export function circaScreenPath(samples=240):Pt[]{
 }
 
 /**
- * Entrance pavilion and lobby, building-local. Every part stays at least .04 below the LED band's bottom edge.
- * Near-frameless clear glass steps out from the street face; behind it a double-height lobby runs
- * CIRCA.entrance.recess deep into the podium: book-matched marble, a walnut wall with a backlit onyx panel,
- * linear pendant lights, a stone reception desk, a lounge, gold columns and potted olive trees.
+ * Entrance and lobby, building-local. Every part stays at least .04 below the LED band's bottom edge.
+ * A black-framed glass storefront with centre double doors steps out from the street face; behind it a
+ * double-height lobby runs CIRCA.entrance.recess deep into the podium. Stylized, unofficial take on a modern
+ * residential lobby: slatted grey ceiling with black spotlights, faceted white marble on the west wall, a
+ * sculpted wavy walnut wall on the east, an elevator vestibule in walnut with a grey stone tile floor and two
+ * sculptural pillars, a marble-and-walnut reception desk under pendant rods, a diamond chandelier over a round
+ * flower table, black tufted lounge chairs on a cowhide-pattern rug, and a navy sofa with cognac sling chairs
+ * and an arc floor lamp on a blue-grey rug. No signage or logos.
+ * Returns the doorway's centre x and width so tests can check it meets the front walk.
  */
-export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'lobbyFinish'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}){
+export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'lobbyFinish'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}):{door:{x:number;w:number}}{
  const P=CIRCA.podium,E=CIRCA.entrance,hd=P.d/2,top=CIRCA.screen.y0-.04,front=hd+E.depth,glassH=top-.07,back=hd-.06-E.recess,ex=E.w/2;
- const depth=front-back,mid=(front+back)/2,inner=ex-.03;
- const marble='#f3efe8',vein='#d9d1c4',walnut='#5b3a26',gold='#c9b07a',stone='#ebe5da',linen='#e9e0d0',onyx='#ffffff';
- const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string)=>t.push({p:[x,y,z],s:[w,h,d],c});
- // Floor: white marble through pavilion and lobby, a darker border and a round medallion at the centre.
- box(out.lobbyFinish,0,0,mid,E.w,.03,depth,marble);
- for(const side of [-1,1])box(out.solid,side*(inner-.04),.03,mid,.03,.002,depth-.1,vein);
- out.rounds.push({p:[0,.03,mid+.1],s:[.62,.003,.62],c:vein},{p:[0,.031,mid+.1],s:[.5,.003,.5],c:marble});
- // Near-frameless glass: front and sides, slim gold fins at the corners and between bays, a thin roof and a glass canopy.
- box(out.entryGlass,0,.03,front,E.w,glassH,.015,'#ffffff');
- for(const side of [-1,1])box(out.entryGlass,side*ex,.03,hd+E.depth/2,.015,glassH,E.depth,'#ffffff');
- for(const x of [-ex,-ex/2,ex/2,ex])box(out.solid,x,.03,front,.014,glassH,.03,gold);
- for(const side of [-1,1])box(out.solid,side*ex,.03,hd+.02,.014,glassH,.03,gold);
- box(out.solid,0,.03+glassH,hd+E.depth/2,E.w+.04,.025,E.depth+.04,palette.white);
- box(out.solid,0,.03+glassH+.005,front+.005,E.w+.04,.02,.012,gold);
- box(out.entryGlass,0,top-.02,front+E.canopy/2,E.w+.4,.012,E.canopy,'#ffffff');
- box(out.solid,0,top-.026,front+E.canopy,E.w+.4,.022,.02,gold);
- // Two glass revolving doors with gold crowns, and a slim transom rail.
- const doorH=Math.min(.5,glassH-.04);
- for(const x of [-.42,.42]){out.entryDrums.push({p:[x,.03,front],s:[.34,doorH,.34],c:'#ffffff'});out.rounds.push({p:[x,.03+doorH,front],s:[.36,.03,.36],c:gold});box(out.solid,x,.03,front,.01,doorH-.01,.32,gold);}
- box(out.solid,0,.03+doorH+.03,front,E.w,.012,.02,gold);
- // Lobby walls: walnut back wall with a backlit onyx panel and gold reveals; marble side walls with walnut fins.
- box(out.solid,0,.03,back+.02,E.w-.06,glassH,.04,walnut);
- box(out.lobbyGlow,0,.12,back+.045,1.0,glassH-.26,.012,onyx);
- for(const side of [-1,1])box(out.solid,side*.52,.12,back+.05,.012,glassH-.26,.015,gold);
- for(const side of [-1,1]){box(out.lobbyFinish,side*(inner-.01),.03,(back+hd)/2,.02,glassH,hd-back,stone);for(let z=back+.2;z<hd-.05;z+=.22)box(out.solid,side*(inner-.03),.03,z,.02,glassH,.04,walnut);}
- // Ceiling: white soffit with three linear pendant lights on fine rods.
- box(out.lobbyFinish,0,top-.02,(back+hd)/2,E.w-.04,.02,hd-back,palette.white);
- for(const z of [back+.35,back+.75,hd+.15]){box(out.lobbyGlow,0,glassH-.14,z,E.w*.55,.018,.03,onyx);for(const x of [-E.w*.25,E.w*.25])box(out.solid,x,glassH-.122,z,.006,top-(glassH-.122)-.02,.006,gold);}
- // Reception: stone-topped walnut desk in front of the onyx wall.
- box(out.solid,0,.03,back+.32,1.0,.13,.16,walnut);box(out.lobbyFinish,0,.16,back+.32,1.06,.015,.2,stone);box(out.lobbyGlow,0,.04,back+.415,.96,.008,.006,onyx);
- // Lounge: linen sofas facing a dark stone table on a rug, gold columns and potted olive trees.
- box(out.solid,0,.03,mid+.25,1.1,.004,.6,'#8c7b6a');
- for(const side of [-1,1]){box(out.lobbyFinish,side*.42,.034,mid+.25,.16,.07,.5,linen);box(out.lobbyFinish,side*.5,.104,mid+.25,.04,.06,.5,linen);}
- box(out.solid,0,.034,mid+.25,.26,.05,.26,'#2d2a26');
- for(const side of [-1,1])out.rounds.push({p:[side*(ex-.32),.03,hd+.1],s:[.07,glassH-.03,.07],c:gold});
- for(const [x,z] of [[-(inner-.18),back+.2],[inner-.18,back+.2],[-(inner-.18),front-.15],[inner-.18,front-.15]] as const){out.rounds.push({p:[x,.03,z],s:[.14,.12,.14],c:'#e0d9cc'});box(out.solid,x,.15,z,.012,.16,.012,'#6f5a43');out.leaves.push({p:[x,.27,z],s:[.13,.16,.13],c:'#8a9a6a'});}
- // Outside: planter benches either side of the door and a stone landing meeting the walk.
+ const inner=ex-.03,floor=.03;
+ const marble='#f3efe8',vein='#b9b4ad',walnut='#5b3a26',walnutLight='#76503a',black='#1b1b1d',tile='#a6a49f',grout='#8e8c87',slat='#8d8e8f',soffit='#5f6062',glow='#ffffff';
+ const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r?:number,rx?:number)=>t.push({p:[x,y,z],s:[w,h,d],c,...(r===undefined?{}:{r}),...(rx===undefined?{}:{rx})});
+ const vest=back+.55;
+ // Floors: light marble through the lounge and pavilion; grey stone tiles in the elevator vestibule.
+ box(out.lobbyFinish,0,0,(vest+front)/2,E.w,floor,front-vest,marble);
+ box(out.solid,0,0,(back+vest)/2,E.w,floor,vest-back,tile);
+ for(let x=-inner+.3;x<inner;x+=.3)box(out.solid,x,floor,(back+vest)/2,.006,.002,vest-back,grout);
+ box(out.solid,0,floor,back+.28,E.w-.06,.002,.006,grout);
+ // Storefront: near-frameless glass in slim black mullions, black roof edge and canopy edge.
+ box(out.entryGlass,0,floor,front,E.w,glassH,.015,glow);
+ for(const side of [-1,1])box(out.entryGlass,side*ex,floor,hd+E.depth/2,.015,glassH,E.depth,glow);
+ for(const x of [-ex,-ex*.62,-.36,.36,ex*.62,ex])box(out.solid,x,floor,front,.016,glassH,.03,black);
+ for(const side of [-1,1])box(out.solid,side*ex,floor,hd+.02,.016,glassH,.03,black);
+ box(out.solid,0,floor+glassH,hd+E.depth/2,E.w+.04,.025,E.depth+.04,palette.white);
+ box(out.solid,0,floor+glassH+.005,front+.005,E.w+.04,.02,.012,black);
+ box(out.entryGlass,0,top-.02,front+E.canopy/2,E.w+.4,.012,E.canopy,glow);
+ box(out.solid,0,top-.026,front+E.canopy,E.w+.4,.022,.02,black);
+ // Centre double glass doors: black frame, transom and long vertical pulls.
+ const doorW=.72,doorH=Math.min(.52,glassH-.06);
+ box(out.solid,0,floor+doorH,front,doorW+.03,.02,.035,black);box(out.solid,0,floor+doorH+.12,front,E.w,.012,.025,black);
+ box(out.solid,0,floor,front,.012,doorH,.03,black);
+ for(const side of [-1,1]){box(out.solid,side*.05,floor+.14,front+.02,.008,.24,.008,'#c9c4bb');box(out.solid,side*.05,floor+.14,front-.02,.008,.24,.008,'#c9c4bb');}
+ // Elevator vestibule: walnut back wall in two-tone book-matched strips, two dark elevator doors with black surrounds.
+ box(out.lobbyFinish,0,floor,back+.02,E.w-.06,glassH,.04,walnut);
+ for(let x=-inner+.08,i=0;x<inner-.04;x+=.1,i++)if(Math.abs(Math.abs(x)-.36)>.22)box(out.lobbyFinish,x,floor+.02,back+.045,.05,glassH-.04,.008,i%2?walnutLight:walnut);
+ for(const x of [-.36,.36]){box(out.solid,x,floor,back+.043,.36,.6,.012,black);box(out.solid,x,floor,back+.05,.3,.56,.008,'#3d3b38');box(out.solid,x,floor,back+.055,.004,.56,.004,'#26241f');box(out.lobbyGlow,x,floor+.64,back+.05,.12,.012,.006,glow);}
+ // Two sculptural textured pillars framing the vestibule.
+ for(const side of [-1,1])for(let y=floor,i=0;y<floor+glassH-.04;y+=.04,i++)out.rounds.push({p:[side*.82,y,vest-.08],s:i%2?[.13,.04,.13]:[.16,.04,.16],c:i%2?'#cfc8bb':'#b9b1a3'});
+ // West wall: faceted white marble, panels folded at alternating angles with grey veins.
+ for(let z=back+.14,i=0;z<hd+.05;z+=.25,i++){const r=i%2?.28:-.28;box(out.lobbyFinish,-(inner-.06),floor,z,.03,glassH,.27,marble,r);box(out.solid,-(inner-.08),floor+.1,z+(i%2?-.04:.05),.004,glassH-.2,.006,vein,r+.4);}
+ // East wall: a sculpted wavy walnut wall of vertical slats whose depth follows a slow wave.
+ for(let z=back+.06,i=0;z<hd+.05;z+=.05,i++){const d=.03+.08*(1+Math.sin(i*.55))/2;box(out.lobbyFinish,inner-d/2,floor,z,d,glassH,.036,i%3?walnut:walnutLight);}
+ // Ceiling: dark grey soffit with lighter linear slats and a grid of black spotlights with warm lenses.
+ box(out.lobbyFinish,0,top-.02,(back+hd)/2,E.w-.04,.02,hd-back,soffit);
+ for(let z=back+.05;z<hd;z+=.07)box(out.lobbyFinish,0,top-.045,z,E.w-.1,.025,.026,slat);
+ for(const x of [-.9,-.45,0,.45,.9])for(const z of [back+.3,back+.75,back+1.2]){out.rounds.push({p:[x,top-.07,z],s:[.04,.025,.04],c:black});box(out.lobbyGlow,x,top-.073,z,.022,.004,.022,glow);}
+ // Reception: white marble base with a walnut top, a glow reveal, and vertical pendant rods above.
+ const desk:[number,number]=[.42,back+.86];
+ box(out.lobbyFinish,desk[0],floor,desk[1],.72,.13,.16,marble);box(out.lobbyFinish,desk[0],floor+.13,desk[1],.76,.02,.2,walnut);box(out.lobbyGlow,desk[0],floor+.01,desk[1]+.082,.68,.008,.006,glow);
+ for(let i=0;i<6;i++){const x=desk[0]-.25+i*.1,len=.12+.05*(i%2);box(out.solid,x,floor+glassH-.3+len,desk[1],.003,top-.07-(floor+glassH-.3+len),.003,black);box(out.lobbyGlow,x,floor+glassH-.3,desk[1],.014,len,.014,glow);}
+ // Centre: round dark pedestal table with a white bouquet under a diamond chandelier.
+ const ct:[number,number]=[-.28,hd-.08];
+ out.rounds.push({p:[ct[0],floor,ct[1]],s:[.07,.12,.07],c:'#2a2623'},{p:[ct[0],floor+.12,ct[1]],s:[.2,.02,.2],c:'#2a2623'},{p:[ct[0],floor+.14,ct[1]],s:[.04,.05,.04],c:'#dcdcdc'});
+ out.leaves.push({p:[ct[0],floor+.17,ct[1]],s:[.08,.07,.08],c:'#f7f4ee'});
+ box(out.solid,ct[0],floor+glassH-.2,ct[1],.003,top-.07-(floor+glassH-.2),.003,black);
+ box(out.lobbyGlow,ct[0],floor+glassH-.36,ct[1],.12,.12,.12,glow,Math.PI/4,Math.PI/4);
+ // West lounge: black tufted leather chairs facing across a glass table on a black-and-white hide rug.
+ const wl:[number,number]=[-.72,hd+.3];
+ box(out.solid,wl[0],floor,wl[1],.62,.004,.46,'#efece6');
+ for(const [dx,dz,w,d] of [[-.18,-.1,.14,.1],[.12,.08,.16,.12],[.2,-.14,.08,.07],[-.05,.15,.1,.06]] as const)box(out.solid,wl[0]+dx,floor+.004,wl[1]+dz,w,.002,d,'#1c1c1c');
+ for(const side of [-1,1]){const x=wl[0]+side*.22;box(out.solid,x,floor+.004,wl[1],.16,.07,.18,black);box(out.solid,x+side*.07,floor+.074,wl[1],.04,.1,.18,black);for(const dz of [-.05,.05])box(out.solid,x+side*.045,floor+.11,wl[1]+dz,.004,.04,.004,'#3a3a3c');}
+ box(out.entryGlass,wl[0],floor+.004,wl[1],.16,.06,.12,glow);box(out.solid,wl[0],floor+.064,wl[1],.16,.004,.12,'#cfd6da');
+ // East lounge: navy velvet sofa with pillows facing cognac leather sling chairs, dark wood table on a metal base,
+ // all on a blue-grey rug, with an arc floor lamp reaching over.
+ const el:[number,number]=[.62,hd+.32];
+ box(out.solid,el[0],floor,el[1],.7,.004,.5,'#7c8a96');
+ box(out.solid,el[0],floor+.004,el[1]-.16,.5,.07,.16,'#26314f');box(out.solid,el[0],floor+.074,el[1]-.23,.5,.09,.04,'#26314f');
+ for(const dx of [-.16,.16])box(out.solid,el[0]+dx,floor+.074,el[1]-.19,.1,.06,.03,'#e9e4da');
+ box(out.solid,el[0],floor+.004,el[1],.06,.04,.06,'#555a5f');box(out.solid,el[0],floor+.044,el[1],.26,.02,.12,'#3a2a1f');
+ for(const dx of [-.14,.14]){const x=el[0]+dx;box(out.solid,x,floor+.004,el[1]+.17,.14,.012,.14,'#2a2a2a');box(out.solid,x,floor+.03,el[1]+.17,.13,.03,.12,'#9a5a2e');box(out.solid,x,floor+.05,el[1]+.235,.13,.08,.02,'#9a5a2e',0,-.3);}
+ const lamp:[number,number]=[inner-.14,el[1]-.2];
+ out.rounds.push({p:[lamp[0],floor,lamp[1]],s:[.08,.02,.08],c:'#2a2a2a'},{p:[lamp[0],floor+.02,lamp[1]],s:[.01,.42,.01],c:'#2a2a2a'});
+ for(let i=0;i<4;i++)box(out.solid,lamp[0]-.05-i*.08,floor+.44-i*i*.012,lamp[1]+.04,.08,.008,.008,'#2a2a2a');
+ box(out.lobbyGlow,lamp[0]-.34,floor+.33,lamp[1]+.04,.08,.05,.08,glow);
+ // A pair of olive trees in stone pots at the storefront corners.
+ for(const x of [-(inner-.14),inner-.14]){const z=front-.13;out.rounds.push({p:[x,floor,z],s:[.14,.12,.14],c:'#e0d9cc'});box(out.solid,x,floor+.12,z,.012,.16,.012,'#6f5a43');out.leaves.push({p:[x,floor+.24,z],s:[.13,.16,.13],c:'#8a9a6a'});}
+ // Outside: planter benches, two short lit bollards and a stone landing meeting the walk.
  for(const side of [-1,1]){box(out.solid,side*(ex+.38),0,front-.12,.5,.1,.22,palette.wood);box(out.solid,side*(ex+.38),.1,front-.12,.46,.05,.18,palette.green);out.leaves.push({p:[side*(ex+.38),.2,front-.12],s:[.2,.16,.2],c:palette.green});}
+ for(const side of [-1,1]){out.rounds.push({p:[side*(doorW/2+.25),0,front+.36],s:[.06,.12,.06],c:black});box(out.lobbyGlow,side*(doorW/2+.25),.1,front+.36,.05,.015,.05,glow);}
  box(out.solid,0,0,front+.2,E.w+.6,.025,.4,'#e8e2d4');
+ return {door:{x:0,w:doorW}};
 }
 
 export const circaPieceCount=(p:CircaParts)=>Object.values(p).reduce((n,list)=>n+list.length,0);

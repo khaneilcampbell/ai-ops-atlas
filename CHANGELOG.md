@@ -1,10 +1,10 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#156)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
-- 2026-10-31 · Added Circa, twin curved glass towers, the tallest in the Financial District, with a pool deck and a big LED screen wrapped around the whole podium and a big glass front entrance opening into a marble, walnut and gold lobby you can see into, west of Navy Federal and Vanguard by the highway. The garden-balcony tower is now called Garden Residences (#156)
+- 2026-10-31 · Added Circa, twin curved glass towers, the tallest in the Financial District, with a pool deck and a big LED screen wrapped around the whole podium and a black-framed glass front opening into a lobby you can see into, with marble and wavy walnut walls, a slatted ceiling, a reception desk and lounges, west of Navy Federal and Vanguard by the highway. The garden-balcony tower is now called Garden Residences (#156)
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
 - 2026-10-31 · Fixed the blank map: the new roads and highway are lighter to draw, and the map restarts itself if graphics fail
