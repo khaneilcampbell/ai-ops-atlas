@@ -21,7 +21,7 @@ export const GARDEN={
 
 /** Flower fills, from the design tokens' gold, blush and ivory. */
 const BLOOMS=['#d0ad69','#e7b7c0','#f3efe4'];
-const HEDGE='#3f6b45',GRAVEL='#e8dcc0',STONE='#efe9da',PAVING='#e6d6b4';
+const HEDGE='#3f6b45',LAWN='#6f9d55',GRAVEL='#e8dcc0',STONE='#efe9da',PAVING='#e6d6b4';
 
 /** A box standing on the terrace: y is the height of its base above the terrace top. */
 export interface GardenBox {x:number;z:number;w:number;d:number;h:number;y:number;c:string}
@@ -33,14 +33,18 @@ export interface MallGarden {
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
 
-/** Four hedge sides and a flower fill: one parterre bed. */
-function bed(out:GardenBox[],x:number,z:number,w:number,d:number,bloom:string){
- const t=GARDEN.hedgeT,h=GARDEN.hedgeH;
+/**
+ * One parterre bed: four hedge sides round a lawn, with raised rows of flowers running its long way
+ * (offsets are fractions of the short side), so it reads as planting rather than a painted slab.
+ */
+function bed(out:GardenBox[],x:number,z:number,w:number,d:number,rows:[number,string][]){
+ const t=GARDEN.hedgeT,h=GARDEN.hedgeH,iw=w-2*t,id=d-2*t,long=iw>=id;
  out.push({x,z:z-d/2+t/2,w,d:t,h,y:0,c:HEDGE},{x,z:z+d/2-t/2,w,d:t,h,y:0,c:HEDGE},
-  {x:x-w/2+t/2,z,w:t,d:d-2*t,h,y:0,c:HEDGE},{x:x+w/2-t/2,z,w:t,d:d-2*t,h,y:0,c:HEDGE},
-  {x,z,w:w-2*t,d:d-2*t,h:.06,y:0,c:bloom});
+  {x:x-w/2+t/2,z,w:t,d:id,h,y:0,c:HEDGE},{x:x+w/2-t/2,z,w:t,d:id,h,y:0,c:HEDGE},
+  {x,z,w:iw,d:id,h:.04,y:0,c:LAWN});
+ const short=long?id:iw,len=(long?iw:id)-.16,row=Math.min(.16,short*.2);
+ for(const [f,c] of rows)out.push(long?{x,z:z+f*short,w:len,d:row,h:.09,y:0,c}:{x:x+f*short,z,w:row,d:len,h:.09,y:0,c});
 }
-
 /**
  * Lays the garden out on the green that the mall backs on to. Returns nothing when that green is
  * missing, too small, or has something standing on it, so nothing is ever drawn over a building.
@@ -86,8 +90,9 @@ export function planMallGarden(mall:MallPlan,land:Rect[],blockers:Rect[],y:numbe
    const z=start+k*(len+GARDEN.bedGap)+len/2;
    for(const side of [-1,1]){
     const x=axis+side*(bx0+bx1)/2;
-    bed(boxes,x,z,bx1-bx0,len,BLOOMS[(k+(side>0?1:0))%BLOOMS.length]);
-    bushes.push({x,y,z,s:.15});
+    const a=BLOOMS[(k+(side>0?1:0))%BLOOMS.length],b=BLOOMS[(k+(side>0?1:0)+1)%BLOOMS.length];
+    bed(boxes,x,z,bx1-bx0,len,[[-.36,a],[-.18,b],[.18,b],[.36,a]]);
+    bushes.push({x,y,z,s:.19});
    }
   }
  }
@@ -104,7 +109,9 @@ export function planMallGarden(mall:MallPlan,land:Rect[],blockers:Rect[],y:numbe
  const f=mall.fountain,pw=Math.min(2.4,mall.plaza.w/2-f.r-1.4);
  if(pw>1)for(const side of [-1,1]){
   const x=f.x+side*(f.r+.7+pw/2);
-  bed(boxes,x,f.z,pw,.7,BLOOMS[0]);
+  bed(boxes,x,f.z,pw,.7,[[-.28,BLOOMS[0]],[.28,BLOOMS[1]]]);
+  // Clipped box balls down the bed's middle.
+  for(let i=0;i<4;i++)bushes.push({x:x-pw/2+.3+i*(pw-.6)/3,y,z:f.z,s:.11});
   trees.push({x:x+side*(pw/2+.35),y,z:f.z,s:.24,kind:'blossom'});
  }
  return {rect,axis,canal,basin,boxes,trees,bushes,bollards};
