@@ -24,6 +24,11 @@ pub const RUN_BRANCH: &str = "main";
 #[derive(Debug, Clone, Deserialize)]
 pub struct ManagedCap {
     pub usd: f64,
+    /// The policy file and dotted key that hold the cap, for cap changes.
+    pub file: String,
+    pub key: String,
+    #[serde(rename = "maxUsd")]
+    pub max_usd: f64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
