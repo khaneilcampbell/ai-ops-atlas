@@ -1,4 +1,6 @@
-import { expect, type Page } from "@playwright/test";
+import { existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { PNG } from "pngjs";
 import { answer, NOW } from "./github";
 
@@ -111,4 +113,33 @@ export async function waitForOffice(page: Page, tries = 60) {
     await settle(page, 1);
   }
   throw new Error("The office never drew: its canvas was never sized.");
+}
+
+// SHOTS=1 skips the comparison and writes the screenshots to visual/out/ instead, for looking at.
+// BASELINE=1 writes them straight over the baselines. One capture of a frozen frame is enough;
+// Playwright's own update mode retakes each until two match, which is slow with software WebGL.
+const SHOTS = !!process.env.SHOTS;
+const BASELINE = !!process.env.BASELINE;
+const OUT = join(import.meta.dirname, "out");
+
+/** Compares the page, or one part of it, with visual/baselines/<local|ci>/<name>.png. */
+export async function check(target: Page | Locator, name: string) {
+  const opts = { animations: "disabled", caret: "hide" } as const;
+  if (BASELINE) {
+    await target.screenshot({ path: test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }), ...opts });
+    return;
+  }
+  if (SHOTS) {
+    mkdirSync(OUT, { recursive: true });
+    await target.screenshot({ path: join(OUT, `${name}.png`), ...opts });
+    return;
+  }
+  // A view added since the last baseline update has nothing to compare with yet: keep the
+  // screenshot as a result instead of failing, until the next update run records it.
+  if (!existsSync(test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }))) {
+    test.info().annotations.push({ type: "no baseline", description: `${name}.png is new; run the visual workflow with 'update' to record it.` });
+    await target.screenshot({ path: test.info().outputPath(`${name}.png`), ...opts });
+    return;
+  }
+  await expect(target).toHaveScreenshot(`${name}.png`);
 }

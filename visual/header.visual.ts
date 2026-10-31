@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openAtlas, settle } from "./atlas";
+import { check, openAtlas, settle } from "./atlas";
 
 /**
  * The top bar at the widths people use. The plain web build shows fewer pills than the Mac app,
@@ -58,7 +58,7 @@ for (const w of WIDTHS) {
     await openAtlas(page);
     await desktopChrome(page);
     await expectHeaderFits(page);
-    await expect(page.locator(".header")).toHaveScreenshot(`header-${w.name}.png`);
+    await check(page.locator(".header"), `header-${w.name}`);
   });
 }
 
@@ -69,6 +69,6 @@ test.describe("phone", () => {
     await openAtlas(page);
     await desktopChrome(page, false);
     await expectHeaderFits(page);
-    await expect(page.locator(".header")).toHaveScreenshot("header-phone.png");
+    await check(page.locator(".header"), "header-phone");
   });
 });
