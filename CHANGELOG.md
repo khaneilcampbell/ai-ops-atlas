@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
+- 2026-10-31 · Atlas HQ rebuilt as a curving glass tower: a blue tower with a sloped roof, a gold wing that sways in an S, a ribbed podium with a roof garden and a glass lobby under a wavy canopy
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
 - 2026-10-31 · Fixed the blank map: the new roads and highway are lighter to draw, and the map restarts itself if graphics fail
