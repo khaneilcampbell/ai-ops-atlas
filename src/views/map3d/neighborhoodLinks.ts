@@ -30,6 +30,12 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
  }
  return out;
 }
+/**
+ * Room for the Atlas Marketplace: the boulevard runs this much further east of the city, and the
+ * green between it and the Skyline park reaches this much further north, so the mall's lot is
+ * about twice the Atlas Hills mansion's footprint.
+ */
+export const MALL_LOT={east:4,north:3} as const;
 type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'dealership'|'parks'|'land'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
 /** Adjacent neighborhood streets and public green space use the same routes as the meshes. */
 export function planNeighborhoodLinks(s:Input){
@@ -40,7 +46,8 @@ export function planNeighborhoodLinks(s:Input){
   return out;
  };
  if(core&&h&&d){
-  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road[0],east=Math.max(core.x+core.w+.9,start[0]),walkX=east-.9;
+  const sky=s.parks.find(p=>p.label==='Skyline'),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
+  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road[0],east=Math.max(core.x+core.w+.9,start[0])+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
   const road=route([start,[east,start[1]],[east,target[1]],target],.4);
   const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[0][1]],d.walk[0]],.3);
   if(road&&walk){
@@ -49,7 +56,7 @@ export function planNeighborhoodLinks(s:Input){
    candidates.push({x:east-CITY_SPACING.causewayWidth/2,z:Math.min(start[1],target[1]),w:CITY_SPACING.causewayWidth,d:Math.abs(start[1]-target[1])});
    const skyline=s.parks.find(p=>p.label==='Skyline');
    if(skyline&&h.z>=skyline.z+skyline.d&&h.z-skyline.z-skyline.d<2&&walkX>skyline.x+skyline.w+2){
-    const green={x:skyline.x+skyline.w,z:skyline.z,w:east+CITY_SPACING.causewayWidth/2-skyline.x-skyline.w,d:h.z-skyline.z};
+    const north=mallRoom?MALL_LOT.north:0,green={x:skyline.x+skyline.w,z:skyline.z-north,w:east+CITY_SPACING.causewayWidth/2-skyline.x-skyline.w,d:h.z-skyline.z+north};
     candidates.push(green);
     const promenade:Pt=[skyline.x+skyline.w/2+5.4,skyline.z+skyline.d/2+3.9],gate:Pt=[h.x+HILLS.walkGateX,h.z+.5];
     walks.push([promenade,[walkX,promenade[1]]],[[gate[0],promenade[1]],gate]);

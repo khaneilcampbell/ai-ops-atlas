@@ -7,7 +7,7 @@ export const MALL_KEY='service:atlas-marketplace';
  * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
  * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
  */
-export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.11,innerFinStep:.18,maxW:8.4,maxD:9.4,plantStep:.95,canopyR:1.5} as const;
+export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.5} as const;
 
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
@@ -45,7 +45,9 @@ export function planMall(s:Input):MallPlan|undefined{
  const xs=boulevard.road.slice(1).flatMap((b,i)=>{const a=boulevard.road[i];return Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[1])>4?[a[0]]:[];});
  if(!xs.length)return;
  const east=Math.min(...xs)-1.2,west=park.x+park.w+MALL.gap;
- const north=park.z-.6;let south=s.hills.z-.45;
+ // The green east of the park may reach further north than the park (MALL_LOT); start from it.
+ const green=s.land.find(r=>Math.abs(r.x-(park.x+park.w))<.01&&r.z<park.z-.01);
+ const north=green?green.z:park.z-.6;let south=s.hills.z-.45;
  // A road running across the lot (the highway's local collector does) ends the lot on its near side.
  for(const road of s.roads??[])for(let i=1;i<road.length;i++){
   const [a,b]=[road[i-1],road[i]];
