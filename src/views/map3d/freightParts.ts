@@ -4,7 +4,8 @@ import {ROAD_W} from "./roads";
 import {HIGHWAY,offsetRoad,distanceToRoad,roadStrips,roadProfile} from "./highway";
 import type {Inst} from "./models";
 import {TERRACE_H} from "./scene";
-import type {FreightPlan} from "./freight";
+import {FREIGHT_STREET_TURN,type FreightPlan} from "./freight";
+import {TRANSPORT} from "./transportScale";
 import {mergeSegments} from "./mergeSegments";
 
 /**
@@ -25,6 +26,13 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
  const paths=[plan.highway,plan.route,...access.flatMap(a=>[a.collector,...a.ramps])];
  const collectors=new Set(access.map(a=>a.collector));
  const profiles=new Map(paths.map(p=>[p,collectors.has(p)?collectorProfile(p):roadProfile(p)]));
+ // Where the truck route turns onto or off a shared district street, its deck narrows to the
+ // street's own width, so the turn reads as a street corner instead of a fan of wide highway boxes.
+ const streetJoins=plan.localJunctions.filter(j=>(plan.streets??[]).some(st=>distanceToRoad(j,st)<1e-6));
+ const nearJoin=(p:[number,number],reach:number)=>streetJoins.some(j=>Math.hypot(j[0]-p[0],j[1]-p[1])<reach);
+ if(streetJoins.length){const r=profiles.get(plan.route)!;profiles.set(plan.route,{...r,widths:r.widths.map((w,i)=>{
+  const d=Math.min(...streetJoins.map(j=>Math.hypot(j[0]-r.points[i][0],j[1]-r.points[i][1]))),k=Math.max(0,Math.min(1,(d-FREIGHT_STREET_TURN*1.6)/1.5));
+  return TRANSPORT.cityWidth+(w-TRANSPORT.cityWidth)*k;})});}
  const roadLines=(path:[number,number][],offset:number,junctions:[number,number][]=[] )=>{
   if(!collectors.has(path))return roadStrips(path,offset,junctions);
   const p=profiles.get(path)!,line=offsetRoad(p.points,p.widths.map(w=>Math.abs(offset)<.1?offset:Math.sign(offset)*(Math.abs(offset)+(w-HIGHWAY.width)/2)));
@@ -73,7 +81,7 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
  };
  for(const path of paths){
   // Edge lines, centre dashes and curbs stop where the truck route shares a district street.
-  const offStreet=(q:{a:[number,number];b:[number,number]})=>path!==plan.route||!(plan.streets??[]).some(st=>distanceToRoad([(q.a[0]+q.b[0])/2,(q.a[1]+q.b[1])/2],st)<HIGHWAY.barrier+.12);
+  const offStreet=(q:{a:[number,number];b:[number,number]})=>{if(path!==plan.route)return true;const m:[number,number]=[(q.a[0]+q.b[0])/2,(q.a[1]+q.b[1])/2];return !nearJoin(m,FREIGHT_STREET_TURN*1.6+1.5)&&!(plan.streets??[]).some(st=>distanceToRoad(m,st)<HIGHWAY.barrier+.12);};
   for(const side of [-1,1]){
    for(const q of mergeSegments(roadLines(path,side*HIGHWAY.shoulder,path===plan.highway?plan.exits:openings).filter(q=>offStreet(q)&&(path!==plan.route||distanceToRoad(q.a,plan.highway)>.2))))strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#ede8d6");
    if(path===plan.highway)for(const q of mergeSegments(roadLines(path,side*.045,plan.exits)))strip(q.a,q.b,.022,.01,TERRACE_H+.09,"#d5b76b");
