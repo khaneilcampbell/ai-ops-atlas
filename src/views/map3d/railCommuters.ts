@@ -20,7 +20,21 @@ export const COMMUTER_GROUPS=[
  [{home:'cafe',work:'circa'},{home:'home-4',work:'amex'},{home:'mansion',work:'ritz'},{home:'home-1',work:'circa'},{home:'shops',work:'amex'},{home:'mansion',work:'ritz'}],
  [{home:'gym',work:'circa'},{home:'home-2',work:'amex'},{home:'mansion',work:'ritz'},{home:'social',work:'circa'},{home:'spa',work:'amex'},{home:'mansion',work:'ritz'}],
 ] as const;
-export const RAIL_COMMUTER_COUNT=COMMUTER_GROUPS.reduce((n,g)=>n+g.length,0);
+/**
+ * KC, 2026-10-31: more people in the Financial District who take the train to Atlas Hills
+ * businesses and the mansion. Each person here works in a Financial District office and spends
+ * the time between trains at a Hills place: the café, shops, fitness, spa, social club,
+ * clubhouse, golf clubhouse or the mansion. `work` names a Financial District building id.
+ * The mansion destination is its front door from the Hills plan, so a redesign of the house on
+ * the same lot keeps working.
+ */
+export const VISITOR_GROUPS=[
+ [{home:'cafe',work:'banks'},{home:'mansion',work:'investments'},{home:'shops',work:'records'},{home:'gym',work:'insurance'},{home:'spa',work:'business-finance'},{home:'golf-club',work:'financial-planning'}],
+ [{home:'social',work:'residence'},{home:'clubhouse',work:'banks'},{home:'mansion',work:'business-finance'},{home:'cafe',work:'investments'},{home:'golf-club',work:'insurance'},{home:'shops',work:'financial-planning'}],
+ [{home:'spa',work:'records'},{home:'gym',work:'banks'},{home:'mansion',work:'residence'},{home:'clubhouse',work:'investments'},{home:'cafe',work:'insurance'},{home:'social',work:'business-finance'}],
+ [{home:'golf-club',work:'banks'},{home:'shops',work:'residence'},{home:'mansion',work:'financial-planning'},{home:'spa',work:'investments'},{home:'gym',work:'records'},{home:'clubhouse',work:'insurance'}],
+] as const;
+export const RAIL_COMMUTER_COUNT=[...COMMUTER_GROUPS,...VISITOR_GROUPS].reduce((n,g)=>n+g.length,0);
 
 export interface CommuterRoute {points:Point3[];lengths:number[];length:number}
 export interface RailCommuter {
@@ -65,9 +79,11 @@ function financialRoute(f:FinancialPlan,r:RailPlan,building:FinancialPlan['build
 
 export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|undefined,r:RailPlan|undefined):CommuterPlan|undefined{
  if(!c||!f||!r)return;
- const tower=(key:keyof typeof COMMUTER_TOWERS)=>f.buildings.find(b=>b.id===COMMUTER_TOWERS[key]&&b.approach.length>1)??f.buildings.find(b=>b.id===COMMUTER_TOWERS.amex&&b.approach.length>1);
+ const towerId=(key:string)=>key in COMMUTER_TOWERS?COMMUTER_TOWERS[key as keyof typeof COMMUTER_TOWERS]:key;
+ const tower=(key:string)=>f.buildings.find(b=>b.id===towerId(key)&&b.approach.length>1)??f.buildings.find(b=>b.id===COMMUTER_TOWERS.amex&&b.approach.length>1);
  const dwell=COMMUNITY.dwell,travel=r.length/COMMUNITY.speed,cycle=2*(travel+dwell),doors=[-1.3,-.8,-.3,.2,.7,1.2];
- const trips=COMMUTER_GROUPS.flatMap((g,group)=>g.map((trip,k)=>({...trip,group,k})));
+ const groups=[...COMMUTER_GROUPS,...VISITOR_GROUPS] as readonly (readonly {home:string;work:string}[])[];
+ const trips=groups.flatMap((g,group)=>g.map((trip,k)=>({...trip,group,k})));
  if(trips.some(t=>!tower(t.work)))return;
  const commuters=trips.map(({home,work,group,k},i):RailCommuter=>{
   // Circa is optional (its own pull request); until it exists its guests use American Express.
@@ -82,12 +98,13 @@ export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|unde
  const returnCycles=Math.max(1,...commuters.map(p=>Math.ceil(need(p.financial.length/p.pace,p.financialLead,p.alight)/cycle)));
  const homeCycles=Math.max(1,...commuters.map(p=>Math.ceil(need(p.hills.length/p.pace,p.hillsLead,p.alight)/cycle)));
  const periodCycles=returnCycles+1+homeCycles;
- // The two groups ride different trains, half a round of trips apart.
- commuters.forEach(p=>{p.offset=p.group*Math.max(1,Math.floor(periodCycles/2));});
+ // KC's two groups ride different trains, half a round of trips apart; the visitor groups fill
+ // the trains in between, so most trains carry someone.
+ commuters.forEach(p=>{p.offset=p.group<2?p.group*Math.max(1,Math.floor(periodCycles/2)):(p.group-2)*Math.max(1,Math.floor(periodCycles/VISITOR_GROUPS.length))+1;});
  return {travel,cycle,returnCycles,periodCycles,commuters};
 }
 
-function along(route:CommuterRoute,distance:number,lane:number){
+export function along(route:CommuterRoute,distance:number,lane:number){
  const d=Math.max(0,Math.min(route.length,distance));let i=1;
  while(i<route.lengths.length-1&&route.lengths[i]<d)i++;
  const a=route.points[i-1],b=route.points[i],len=route.lengths[i]-route.lengths[i-1]||1,t=(d-route.lengths[i-1])/len;
