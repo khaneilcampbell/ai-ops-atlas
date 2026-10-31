@@ -95,7 +95,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
-     interiorLights.push(box(x+1.6,y+1.12,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+1.82,z+zz,1.6,.025,.12,'#fff2d1'));
+     interiorLights.push(box(x+1.6,y+TERMINAL_HUB.mezzanine-.08,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+TERMINAL_HUB.glass-.03,z+zz,1.6,.025,.12,'#fff2d1'));
      for(const xx of [1,2.3])cubes.push(box(x+xx,y+.06,z+zz,.44,.26,.28,HQ.glassDeep),box(x+xx,y+.32,z+zz+.11,.44,.22,.08,HQ.glass));
     }
     for(const zz of [4,6,8])cubes.push(box(x+.2,y+.06,z+zz,.5,.4,.7,'#e8e5d9'),box(x+.2,y+.46,z+zz,.55,.04,.75,HQ.gold),box(x+.25,y+.5,z+zz,.04,.23,.25,'#254b58'));

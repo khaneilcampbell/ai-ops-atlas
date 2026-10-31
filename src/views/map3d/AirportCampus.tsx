@@ -1,6 +1,6 @@
 import {useMemo,useEffect} from 'react';
 import * as THREE from 'three';
-import {AIRPORT_BUILDINGS,airportBuildingKey} from './airportBuildings';
+import {AIRPORT_BUILDINGS,AIRPORT_STOREY_SCALE as S,airportBuildingKey} from './airportBuildings';
 import {type AirportPlan} from './airport';
 import {TERRACE_H} from './scene';
 import {ATLAS_HQ_COLORS as HQ} from './airportPalette';
@@ -15,11 +15,19 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
  const parts=useMemo(()=>{const walls:Inst[]=[],glass:Inst[]=[],trees:Inst[]=[],trunks:Inst[]=[],keys:string[]=[],hits:Inst[]=[];
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
  for(const b of AIRPORT_BUILDINGS){hits.push(box(b.x,0,b.z,b.w,b.h,b.d,palette.white));keys.push(airportBuildingKey(b.id));if(b.kind==='terminal'||b.kind==='tower')continue;
-  walls.push(box(b.x,0,b.z,b.w,b.kind==='hangar'?1.4:b.h,b.d,palette.white));
+  walls.push(box(b.x,0,b.z,b.w,b.kind==='hangar'?1.4*S:b.h,b.d,palette.white));
   if(b.kind==='office'){
-   walls.push(box(b.x,b.h,b.z,b.w+.16,.1,b.d+.16,palette.white),box(b.x,b.h+.1,b.z,.85,.3,.9,HQ.roof));
-   for(let y=.4;y<b.h-.3;y+=.62){for(let x=-b.w/2+.3;x<b.w/2-.1;x+=.52)for(const side of [-1,1])glass.push(box(b.x+x,y,b.z+side*(b.d/2+.015),.35,.38,.025,'#ffffff'));for(let z=-b.d/2+.3;z<b.d/2-.1;z+=.52)for(const side of [-1,1])glass.push(box(b.x+side*(b.w/2+.015),y,b.z+z,.025,.38,.35,'#ffffff'))}
-  }else glass.push(box(b.x,.1,b.z+b.d/2+.02,b.w*.82,1.2,.035,'#ffffff'),box(b.x,1.36,b.z+b.d/2+.035,b.w*.92,.035,.04,'#ffffff'));
+   // Atlas HQ language: blue glass curtain wall in floor bands, white slabs and fins, gold crown, grey plant.
+   walls.push(box(b.x,b.h,b.z,b.w+.12,.08,b.d+.12,palette.white),box(b.x,b.h-.14,b.z,b.w+.06,.14,b.d+.06,palette.gold),box(b.x,b.h+.08,b.z,.85,.26,.9,HQ.roof));
+   for(let y=.3;y<b.h-.35;y+=.5){
+    const band=Math.min(.4,b.h-.2-y);
+    for(const side of [-1,1])glass.push(box(b.x,y,b.z+side*(b.d/2+.012),b.w-.08,band,.02,'#ffffff'),box(b.x+side*(b.w/2+.012),y,b.z,.02,band,b.d-.08,'#ffffff'));
+   }
+   for(let x=-b.w/2+.2;x<=b.w/2-.15;x+=.4)for(const side of [-1,1])walls.push(box(b.x+x,.25,b.z+side*(b.d/2+.03),.035,b.h-.4,.05,HQ.fin));
+   for(let z=-b.d/2+.2;z<=b.d/2-.15;z+=.4)for(const side of [-1,1])walls.push(box(b.x+side*(b.w/2+.03),.25,b.z+z,.05,b.h-.4,.035,HQ.fin));
+   // Glass lobby under a gold-edged canopy.
+   walls.push(box(b.x,.6,b.z+b.d/2+.3,1.3,.05,.6,palette.white),box(b.x,.58,b.z+b.d/2+.6,1.3,.06,.03,HQ.goldDeep));
+  }else{glass.push(box(b.x,.1,b.z+b.d/2+.02,b.w*.82,1.2*S,.035,'#ffffff'));walls.push(box(b.x,1.32*S,b.z+b.d/2+.035,b.w*.92,.06,.05,HQ.goldDeep));}
   if(b.kind==='hangar'){const front=b.z+b.d/2+1.4;walls.push(box((b.x+21.8)/2,0,front,21.8-b.x+.35,.055,.35,'#e5dfce'));}
   if(b.kind==='office'){const side=b.x+b.w/2+.45,front=b.z+b.d/2+.65;walls.push(box((b.x+side)/2,0,front,side-b.x+.35,.055,.35,'#e5dfce'),box(side,0,(front-13.98)/2,.35,.055,front+13.98,'#e5dfce'));}
   walls.push(box(b.x,0,b.z+b.d/2+.8,.48,.055,1.6,'#e5dfce'),box(b.x,.05,b.z+b.d/2+.025,.35,.65,.04,palette.green));
@@ -32,5 +40,5 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
  // A shallow river bend occupies the outer strip, away from road and bridge landings.
 
  return {walls,glass,trees,trunks,hits,keys};},[a,palette]);
- return <><mesh position={[a.x,TERRACE_H+.045,a.z]} geometry={resources.river} material={resources.water}/><Instanced items={parts.walls} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={resources.windows}/><Instanced items={parts.trunks} geometry={g.box} material={m.plain}/><Instanced items={parts.trees} geometry={g.ball} material={m.plain}/>{AIRPORT_BUILDINGS.filter(b=>b.kind==='hangar').map(b=><mesh key={b.id} position={[a.x+b.x,TERRACE_H+1.4,a.z+b.z-b.d/2]} scale={[b.w,.9,b.d]} geometry={resources.roof} material={resources.material} castShadow receiveShadow/>)}<Instanced items={parts.hits} geometry={g.box} material={resources.hit} pick={{...pick,keys:parts.keys}}/></>;
+ return <><mesh position={[a.x,TERRACE_H+.045,a.z]} geometry={resources.river} material={resources.water}/><Instanced items={parts.walls} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={resources.windows}/><Instanced items={parts.trunks} geometry={g.box} material={m.plain}/><Instanced items={parts.trees} geometry={g.ball} material={m.plain}/>{AIRPORT_BUILDINGS.filter(b=>b.kind==='hangar').map(b=><mesh key={b.id} position={[a.x+b.x,TERRACE_H+1.4*S,a.z+b.z-b.d/2]} scale={[b.w,.9*S,b.d]} geometry={resources.roof} material={resources.material} castShadow receiveShadow/>)}<Instanced items={parts.hits} geometry={g.box} material={resources.hit} pick={{...pick,keys:parts.keys}}/></>;
 }

@@ -1,13 +1,14 @@
 import type {Inst} from './models';
 import {AIRPORT_LAYOUT,AIRCRAFT_LAYOUT} from './airport';
 import {ATLAS_HQ_COLORS as HQ} from './airportPalette';
+import {AIRPORT_STOREY_SCALE as S} from './airportBuildings';
 
 /** Atlas Airport terminal, redesigned (KC, 2026-10-31): an oval glass hub under a white ribbed shell,
  * a glazed pier with rounded ends, a twisted control tower and an oval car park. Procedural shapes only,
  * airport-local coordinates, all drawn with shared instanced meshes (no new lights or textures). */
-export const TERMINAL_HUB={x:1.5,z:6,rx:1.9,rz:5,glass:1.85,eave:1.92} as const;
+export const TERMINAL_HUB={x:1.5,z:6,rx:1.9,rz:5,glass:1.85*S,eave:1.92*S,dome:.42*S,mezzanine:1.2*S} as const;
 export const TERMINAL_PIER={x:3.65,width:.7,from:-1.45,to:13.95,floor:.2,glass:.36} as const;
-export const CONTROL_TOWER={x:1.5,z:-3,segments:25,step:.15,twist:.17,cab:3.75} as const;
+export const CONTROL_TOWER={x:1.5,z:-3,segments:25,step:.15*S,twist:.17,cab:3.75*S} as const;
 /** Landside entrance: a solid canopy over the kerb on the hub's street face, two revolving doors. */
 export const TERMINAL_ENTRANCE={from:150,to:210,inner:.05,outer:.85,height:1.02,columns:[160,180,200],columnRing:.6,doorZ:[-.75,.75],doorRadius:.27,doorHeight:.72} as const;
 export const CAR_PARK={x:1,z:-6.4,w:5,d:3.6} as const;
@@ -51,15 +52,15 @@ export function terminalParts(ox:number,oy:number,oz:number):TerminalParts{
   // Hub: plinth, glass drum, mezzanine, white eave, green-glass band, shallow dome and glass oculus.
   parts.discs.push({p:at(h.x,0,h.z),s:[2*h.rx+.5,.06,2*h.rz+.5],c:SLAB});
   parts.glassDiscs.push({p:at(h.x,.06,h.z),s:[2*h.rx,h.glass-.06,2*h.rz],c:TINT});
-  parts.discs.push({p:at(h.x+.25,1.2,h.z),s:[2*h.rx-1.2,.07,2*h.rz-1.6],c:WHITE});
+  parts.discs.push({p:at(h.x+.25,h.mezzanine,h.z),s:[2*h.rx-1.2,.07,2*h.rz-1.6],c:WHITE});
   parts.tintDiscs.push({p:at(h.x,h.glass-.04,h.z),s:[2*h.rx+.36,.08,2*h.rz+.36],c:HQ.gold});
   parts.discs.push({p:at(h.x,h.eave-.04,h.z),s:[2*h.rx+.62,.1,2*h.rz+.62],c:WHITE});
-  parts.domes.push({p:at(h.x,h.eave+.04,h.z),s:[h.rx+.18,.42,h.rz+.18],c:WHITE});
-  parts.tintBalls.push({p:at(h.x,h.eave+.07,h.z),s:[h.rx*.5,.56,h.rz*.56],c:HQ.glass});
+  parts.domes.push({p:at(h.x,h.eave+.04,h.z),s:[h.rx+.18,h.dome,h.rz+.18],c:WHITE});
+  parts.tintBalls.push({p:at(h.x,h.eave+.07,h.z),s:[h.rx*.5,h.dome*1.33,h.rz*.56],c:HQ.glass});
   // Ribbed shell: radial white fins all round the drum, rising into the eave.
   for(const r of hubRim(44,.02))parts.shell.push({p:at(r.x,.06,r.z),s:[.045,h.eave-.02,.2],r:r.yaw,c:RIB});
   // Roof ribs over the dome, like the meridians of a shell.
-  for(let i=0;i<10;i++){const a=i/10*Math.PI,reach=1/Math.hypot(Math.sin(a)/(h.rx+.2),Math.cos(a)/(h.rz+.2));parts.domes.push({p:at(h.x,h.eave+.04,h.z),s:[.035,.435,reach],r:a,c:RIB});}
+  for(let i=0;i<10;i++){const a=i/10*Math.PI,reach=1/Math.hypot(Math.sin(a)/(h.rx+.2),Math.cos(a)/(h.rz+.2));parts.domes.push({p:at(h.x,h.eave+.04,h.z),s:[.035,h.dome+.015,reach],r:a,c:RIB});}
   // Landside entrance: a solid curved canopy over the kerb with a gold fascia, on three slim columns,
   // and two glazed revolving doors set into the drum.
   const e=TERMINAL_ENTRANCE,rim=(deg:number,grow:number)=>{const a=deg*Math.PI/180;return [h.x+(h.rx+grow)*Math.cos(a),h.z+(h.rz+grow)*Math.sin(a)] as const;};
