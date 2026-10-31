@@ -1,5 +1,5 @@
 import {financialDimensions} from './financialArchitecture';
-import {planCommunity,planCommunityRail,financialStationLand,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
+import {planCommunity,planCommunityRail,financialParkStation,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
@@ -656,19 +656,19 @@ export function buildScene(layout: Layout): Scene3D {
   }
   const stadium=planStadium(land,paving,terraces.find(t=>t.id==="github-profile"));
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
-  const dealership=planDealership({land,paving,carBridges,towers,kiosks,retail});
-  if(dealership)land.push({x:dealership.x,z:dealership.z,w:dealership.w,d:dealership.d});
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   const community=planCommunity(hills);
-  if(community&&financial)land.push(financialStationLand(financial));
+  // BMW takes the waterfront parcel east of the district; the train now stops in Financial Park.
+  const dealership=planDealership({financial});
+  if(dealership)land.push(dealership.lot);
   const connections=districtConnections(airport,stadium,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
-  if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk});
+  if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
   if(hills)connections.push({id:"atlas-hills",road:hills.road,walk:hills.walk});
-  const neighborhood=planNeighborhoodLinks({hills,financial,stadium,dealership,parks,land,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
+  const neighborhood=planNeighborhoodLinks({hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
   for(const path of neighborhood.walks){
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
@@ -679,13 +679,13 @@ export function buildScene(layout: Layout): Scene3D {
     const route=link.walk.map(([gx,gy])=>({gx,gy}));
     walks.push({x0:route[0].gx,z0:route[0].gy,x1:route[route.length-1].gx,z1:route[route.length-1].gy,y:top+.08,route});
   }
-  const freight=planFreight({compactParcels:hills&&financial&&stadium&&airport?{core:cityEnvelope(cityLand)!,hills,financial,stadium:{x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4},airport:airportFootprint(airport)}:undefined,airport,stadium,towers,kiosks,retail,fountains,land,carBridges,connections,reserved:[...(community&&financial?(()=>{const r=financialStationLand(financial);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[]),...(financial?[{x:financial.x+financial.park.x+financial.park.w/2,z:financial.z+financial.park.z+financial.park.d/2,w:financial.park.w,d:financial.park.d}]:[]),...(financial?financial.buildings.map(b=>({x:financial.x+b.x,z:financial.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})):[]),...(dealership?[{x:dealership.x+dealership.w/2,z:dealership.z+dealership.d/2,w:dealership.w,d:dealership.d}]:[]),...(hills?[{x:hills.x+hills.w/2,z:hills.z+hills.d/2,w:hills.w,d:hills.d}]:[])]});
+  const freight=planFreight({streets:financial?[financial.street]:[],compactParcels:hills&&financial&&stadium&&airport?{core:cityEnvelope(cityLand)!,hills,financial,stadium:{x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4},airport:airportFootprint(airport)}:undefined,airport,stadium,towers,kiosks,retail,fountains,land,carBridges,connections,reserved:[...(community&&financial?(()=>{const r=financialParkStation(financial);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[]),...(financial?[{x:financial.x+financial.park.x+financial.park.w/2,z:financial.z+financial.park.z+financial.park.d/2,w:financial.park.w,d:financial.park.d}]:[]),...(financial?financial.buildings.map(b=>({x:financial.x+b.x,z:financial.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})):[]),...(dealership?[{x:dealership.lot.x+dealership.lot.w/2,z:dealership.lot.z+dealership.lot.d/2,w:dealership.lot.w,d:dealership.lot.d}]:[]),...(hills?[{x:hills.x+hills.w/2,z:hills.z+hills.d/2,w:hills.w,d:hills.d}]:[])]});
   if(freight){
     const nearRoad=(x:number,z:number)=>distanceToRoad([x,z],freight.cityAccess)<.4 || freight.route.slice(1).some((b,i)=>{const a=freight.route[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.65;}) || (Math.abs(x-freight.lot.x)<1.3&&Math.abs(z-freight.lot.z)<1.2);
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
-  const communityRail=planCommunityRail(community,financial);
+  const communityRail=planCommunityRail(community,financial,dealership?.lot);
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);

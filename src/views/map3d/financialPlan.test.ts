@@ -1,10 +1,10 @@
 import {financialDimensions} from './financialArchitecture';
-import {expect,it} from 'vitest';
+import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,TERRACE_H} from './scene';
 import {towerTop} from './models';
-import {FINANCIAL as F,FINANCIAL_BUILDINGS} from './financialPlan';
+import {FINANCIAL as F,FINANCIAL_BUILDINGS,financialPark} from './financialPlan';
 import {distanceToRoad} from './highway';
 import {airportFootprint} from './airport';
 import {pathClear} from './roads';
@@ -32,4 +32,17 @@ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans 
  expect(pathClear(f.road,boxes,.3)).toBe(true);expect(pathClear(f.walk,boxes,.3)).toBe(true);
  expect(distanceToRoad(f.road.at(-1)!,f.street)).toBeLessThan(.001);expect(distanceToRoad(f.walk.at(-1)!,f.sidewalk)).toBeLessThan(.001);
  expect(scene.freight?.access.some(a=>a.id==='financial-district')).toBe(true);
+});
+
+describe('Financial Park central green',()=>{
+ it('has a stepped fountain on the axis, gardens either side, and keeps planting off the paths',()=>{
+  const p=financialPark();
+  expect(p.pools.length).toBe(4);
+  for(let i=1;i<p.pools.length;i++){expect(p.pools[i].rise).toBeLessThan(p.pools[i-1].rise);expect(p.pools[i].z).toBeGreaterThan(p.pools[i-1].z+p.pools[i-1].d);}
+  for(const q of p.pools){expect(q.x).toBeGreaterThanOrEqual(p.pool.x);expect(q.z+q.d).toBeLessThanOrEqual(p.pool.z+p.pool.d+1e-9);}
+  expect(p.rings.filter(r=>r.x<20).length).toBe(2);expect(p.rings.filter(r=>r.x>20).length).toBe(2);
+  for(const [x,z,r]of p.shrubs)for(const path of p.paths)expect(distanceToRoad([x,z],path)).toBeGreaterThan(r+.2);
+  for(const b of p.beds)for(const path of p.paths)expect(distanceToRoad([b.x+b.w/2,b.z+b.d/2],path)).toBeGreaterThan(b.w/2+.2);
+  for(const r of p.rings)for(const path of p.paths)expect(distanceToRoad([r.x,r.z],path)).toBeGreaterThan(r.r+.25);
+ });
 });

@@ -22,10 +22,37 @@ const BUILDING_LAYOUT=[
  {id:'harbor-residence',name:'Harbor Residence',x:-12.5,z:9.2,rise:1.22,style:'balcony',role:'Harbor Residence Coordinator',purpose:'Planned residential and household organization spaces. No financial services connected.'},
 ] as const;
 export const FINANCIAL_BUILDINGS=BUILDING_LAYOUT.map(b=>{const brand=financialBrand(b.id);return {...b,name:brand?.name??b.name,role:brand?.role??b.role,purpose:brand?.purpose??b.purpose};});
-export interface FinancialPark extends Rect {paths:Pt[][];pool:Rect;trees:Pt[];benches:Pt[];lights:Pt[]}
-export function financialPark():FinancialPark{return {...FINANCIAL.park,
- paths:[[[21.8,FINANCIAL.northWalkZ],[21.8,2.75]],[[15.95,2.75],[24.05,2.75],[24.05,11.15],[15.95,11.15],[15.95,2.75]],[[15.95,8.3],[24.05,8.3]],[[18.6,8.3],[18.6,9.1]],[[24.05,6.8],[23.6,6.8]]],
- pool:{x:17.8,z:4.6,w:2.6,d:1.5},trees:[[17.2,3.95],[23,4.2],[17.2,9.7],[23,9.7]],benches:[[18.6,9.5],[23,6.8]],lights:[[16.8,7.4],[23.2,10.6],[20.8,3.5],[20.8,10.7]]};}
+export interface FinancialPark extends Rect {
+ paths:Pt[][];
+ /** Whole stepped fountain (kept for path and visitor clearance); `pools` are its basins, highest first. */
+ pool:Rect;pools:(Rect&{rise:number})[];
+ trees:Pt[];benches:Pt[];lights:Pt[];
+ /** Sculpture-garden rings (round lawns edged by a narrow path), flower beds, shrubs and paved plazas. */
+ rings:{x:number;z:number;r:number}[];beds:(Rect&{c:string})[];shrubs:[number,number,number][];plazas:Rect[];sculptures:Pt[];
+}
+/**
+ * Financial Park, after a downtown central green (KC, 2026-10-31): a stepped fountain runs down the
+ * middle between two promenades, the station plaza is the head of the axis, and sculpture-garden
+ * rings, flower beds and shrubs fill the lawns either side. The east promenade (x 21.8) is the
+ * station path, so the stairs still land on it.
+ */
+export function financialPark():FinancialPark{
+ const pools=[5.55,7.05,8.55,10.05].map((z,i)=>({x:19.5,z:z-.45,w:1,d:.9,rise:.16-i*.03}));
+ const beds:(Rect&{c:string})[]=[];const colors=['#d98b9a','#e6c35c','#b48bc9','#ece6d6'];
+ for(const [i,z]of [5.2,6.75,8.25,9.75].entries())for(const x of [18.9,21.1])beds.push({x:x-.25,z,w:.5,d:.9,c:colors[(i+(x>20?2:0))%colors.length]});
+ return {...FINANCIAL.park,
+ paths:[[[21.8,FINANCIAL.northWalkZ],[21.8,4.55]],
+  [[16.6,4.55],[23.4,4.55],[24.05,5.2],[24.05,10.5],[23.4,11.15],[16.6,11.15],[15.95,10.5],[15.95,5.2],[16.6,4.55]],
+  [[18.2,4.55],[18.2,11.15]]],
+ pool:{x:19.5,z:5.1,w:1,d:5.4},pools,
+ trees:[[15.9,3],[19.6,3],[23.6,3.1],[17.05,9.4],[22.95,6.3],[22.95,9.4]],
+ benches:[[17.05,7.85],[22.95,7.85]],
+ lights:[[18.75,6.3],[21.25,6.3],[18.75,9.3],[21.25,9.3],[20.9,4.05]],
+ rings:[{x:17.05,z:6.3,r:.7},{x:17.05,z:9.4,r:.7},{x:22.95,z:6.3,r:.7},{x:22.95,z:9.4,r:.7}],
+ beds,
+ shrubs:[[16.42,7.85,.2],[17.75,7.85,.2],[22.3,7.85,.2],[23.6,7.85,.2],[18.3,3.2,.25],[20.55,3.3,.22],[16.8,3.6,.22],[23.9,4,.2]],
+ plazas:[{x:18.2,z:4.55,w:3.6,d:.5},{x:18.2,z:10.65,w:3.6,d:.5}],
+ sculptures:[[17.05,6.3]]};}
 export interface FinancialPlan extends Rect {perimeterTrees:Pt[];park:FinancialPark;originalX:number;referenceHeight:number;road:Pt[];walk:Pt[];street:Pt[];sidewalk:Pt[];buildings:(Omit<typeof FINANCIAL_BUILDINGS[number],'x'>&{x:number;height:number;approach:Pt[]})[]}
 /** Conservative live tower envelope includes every existing crown style, including HQ spires. */
 export function headquartersEnvelope(towers:Scene3D['towers']){

@@ -1,3 +1,4 @@
+import {pathClear} from './roads';
 import {vehicleBounds} from "./vehicleModels";
 import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
@@ -30,7 +31,7 @@ describe('shared transportation plan',()=>{
   }
   for(let i=1;i<f.truck.legs.length;i++)expect(f.truck.legs[i].a).toEqual(f.truck.legs[i-1].b);
   expect(f.truck.legs[f.truck.legs.length-1].b).toEqual(f.truck.legs[0].a);
-  expect(Math.max(...f.route.map(p=>p[0])),'freight reaches the nearest highway edge instead of detouring through BMW').toBeLessThan(s.dealership!.x);
+  {const lot=s.dealership!.lot;expect(pathClear(f.route.filter(p=>distanceToRoad(p,f.highway)>.001),[{x:lot.x+lot.w/2,z:lot.z+lot.d/2,w:lot.w,d:lot.d}],.3),'freight reaches the highway without detouring through BMW').toBe(true);}
   const links=s.transportConnections;
   for(const link of links)for(const junction of roadIntersections(f.highway,link.road)){
    expect(f.exits.some(p=>Math.hypot(p[0]-junction[0],p[1]-junction[1])<.01),'district highway junction is planned').toBe(true);
