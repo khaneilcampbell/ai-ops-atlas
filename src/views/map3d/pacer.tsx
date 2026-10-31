@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { isBusy, onWake, useWindowFocused, wake, type PowerProfile } from "../../lib/power";
+import { feed } from "../../lib/governor";
 
 /**
  * Paces an on-demand canvas (frameloop "demand") to the power profile: every display frame
@@ -23,6 +24,15 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
     };
   }, [gl, profile.shadowHz]);
   const lastShadow = useRef(-Infinity);
+  // Frames drawn back to back (while busy, or every frame on Best) tell the quality governor how
+  // long a frame really takes; paced idle frames don't.
+  const lastFrame = useRef<{ t: number; busy: boolean }>({ t: -Infinity, busy: false });
+  useFrame(() => {
+    const now = performance.now();
+    const busy = isBusy(now) || profile.idleFps === Infinity;
+    if (busy && lastFrame.current.busy) feed(now - lastFrame.current.t, now);
+    lastFrame.current = { t: now, busy };
+  });
   useFrame(() => {
     if (gl.shadowMap.autoUpdate) return;
     const now = performance.now();
