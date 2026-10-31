@@ -39,9 +39,10 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
       {p:[-.67,.30,.13],s:[1.35,.055,.4],r:-.32,c:l.wing},
       {p:[.67,.30,.13],s:[1.35,.055,.4],r:.32,c:l.wing},
       {p:[0,.36,1.02],s:[1.12,.045,.26],c:l.wing},
-      {p:[0,.39,1.03],s:[.07,.53,.36],c:l.tail},
-      {p:[0,.48,1.04],s:[.075,.08,.34],c:l.tailLow},
-      {p:[0,.72,1.04],s:[.075,.08,.34],c:l.tailHigh},
+      // Fin reaches up to the top band so both livery bands sit on the tail, not above it.
+      {p:[0,.44,1.03],s:[.07,.62,.36],c:l.tail},
+      {p:[0,.5,1.04],s:[.075,.08,.34],c:l.tailLow},
+      {p:[0,.67,1.04],s:[.075,.08,.34],c:l.tailHigh},
       {p:[-1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
       {p:[1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
       {p:[AIRCRAFT_LAYOUT.doorX,AIRCRAFT_LAYOUT.doorY,AIRCRAFT_LAYOUT.doorZ],s:[.02,AIRCRAFT_LAYOUT.doorHeight,.12],c:l.windows},

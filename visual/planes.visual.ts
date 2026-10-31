@@ -19,7 +19,7 @@ const SHOTS: { name: string; clock: number; offset: [number, number, number]; lo
 /** Finds the airport's clock and the departure aircraft through React Three Fiber's tree, sets the clock,
  * draws a frame, then renders each camera view. */
 async function shoot(page: Page, clock: number, views: { name: string; offset: [number, number, number]; look?: [number, number, number]; target: "slot0" | "gates" }[]) {
-  return page.evaluate(
+  await page.evaluate(
     async ({ clock, views }) => {
       const source = await (await fetch("/src/views/map3d/HillsCommunity.tsx")).text();
       const url = source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];
@@ -87,10 +87,10 @@ for (const light of ["day", "night"] as const) test(`airport takeoff and liverie
   }
   // Queue and parked jets with their liveries, before any departure.
   const at = await shoot(page, atDeparture(-3), []);
-  const [px, py, pz] = at.groups[1];
-  const [qx, qy, qz] = at.groups[0];
+    const [qx, qy, qz] = at.groups[0];
   save(await render(page, [
-    { name: "5-gates", eye: [px + 9, py + 5, pz + 10], target: [px + 2, py, pz + 6] },
+    { name: "5-fleet-east", eye: [qx + 9, qy + 6, qz - 5], target: [qx, qy + 0.3, qz - 5] },
+    { name: "5-fleet-west", eye: [qx - 9, qy + 6, qz - 5], target: [qx, qy + 0.3, qz - 5] },
     { name: "6-queue", eye: [qx + 3, qy + 2.2, qz - 6], target: [qx - 1.5, qy + 0.3, qz + 2] },
   ]), `-${light}`);
   expect(errors).toEqual([]);
@@ -105,5 +105,5 @@ test("airport on a phone", async ({ page }) => {
   await settle(page, 2);
   const at = await shoot(page, atDeparture(9.9), []);
   const [x, y, z] = at.groups[0];
-  save(await render(page, [{ name: "phone-rotation", eye: [x + 4, y + 2.5, z + 3.5], target: [x, y + 0.3, z - 1] }]));
+  save(await render(page, [{ name: "phone-rotation", eye: [x + 7, y + 4, z + 7], target: [x, y + 0.5, z - 1] }]));
 });
