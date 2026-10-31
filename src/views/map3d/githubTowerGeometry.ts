@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {GITHUB_TOWER,type Box3,type GithubTowerPlan} from './githubTowerPlan';
+import {GITHUB_ANNEX,type GithubAnnex} from './githubAnnex';
 
 /** The GitHub tower's static meshes, merged by material so the whole building is a few draw calls. */
 
@@ -93,4 +94,31 @@ export function githubTowerGeometry(p:GithubTowerPlan):GithubTowerGeometry{
  }
  garden.push(box(p.roofGarden));
  return {concrete:merge(concrete),glass:merge(glass),lobby:merge(lobby),rails:merge(rails),garden:merge(garden)};
+}
+
+export interface GithubAnnexGeometry {concrete:THREE.BufferGeometry;glass:THREE.BufferGeometry;garden:THREE.BufferGeometry}
+
+/**
+ * The glass podium in world space, standing on `ground` (the terrace top): each storey a rounded
+ * band of floor-to-ceiling glass under a rounded concrete slab with a planted lip, stepping back
+ * toward the top, plus the glass skybridge to the tower.
+ */
+export function githubAnnexGeometry(a:GithubAnnex,ground:number):GithubAnnexGeometry{
+ const A=GITHUB_ANNEX,concrete:THREE.BufferGeometry[]=[],glass:THREE.BufferGeometry[]=[],garden:THREE.BufferGeometry[]=[];
+ const up=(b:Box3):Box3=>({...b,y0:b.y0+ground,y1:b.y1+ground});
+ for(const [i,raw] of a.tiers.entries()){
+  const t=up(raw),r=Math.min(A.radius,(t.x1-t.x0)/2-.01,(t.z1-t.z0)/2-.01),inset=.04;
+  glass.push(roundedSlab({...t,x0:t.x0+inset,x1:t.x1-inset,z0:t.z0+inset,z1:t.z1-inset,y1:t.y1-A.slab},Math.max(.02,r-inset)));
+  concrete.push(roundedSlab({...t,y0:t.y1-A.slab},r));
+  // A thin floor plate at the base of the ground storey, so the glass sits on something.
+  if(!i)concrete.push(roundedSlab({...t,y1:t.y0+.025},r));
+ }
+ // Roof garden on the top tier.
+ const top=up(a.tiers[a.tiers.length-1]);
+ garden.push(roundedSlab({x0:top.x0+.12,x1:top.x1-.12,z0:top.z0+.12,z1:top.z1-.12,y0:top.y1,y1:top.y1+.025},Math.max(.05,A.radius-.12)));
+ // Skybridge: a glass tube between a floor and a roof slab.
+ const b=up(a.skybridge);
+ concrete.push(box({...b,y1:b.y0+.04}),box({...b,y0:b.y1-.035}));
+ glass.push(box({...b,y0:b.y0+.04,y1:b.y1-.035,...(a.side.endsWith('x')?{z0:b.z0+.02,z1:b.z1-.02}:{x0:b.x0+.02,x1:b.x1-.02})}));
+ return {concrete:merge(concrete),glass:merge(glass),garden:merge(garden)};
 }

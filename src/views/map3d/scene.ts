@@ -4,6 +4,7 @@ import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeGithubTower} from "./githubTowerPlan";
+import {planGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
@@ -149,6 +150,8 @@ export interface Scene3D {
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
   terraces: Terrace[];
+  /** Land added beside the GitHub terrace for its glass podium, when a side is free. */
+  githubAnnex?: GithubAnnex;
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
   steps: Slab[];
@@ -699,7 +702,42 @@ export function buildScene(layout: Layout): Scene3D {
   if(freight)zs.push(...freight.highway.map(p=>p[1]));
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
+  // The GitHub tower's glass podium takes open ground beside its terrace, planned last so it only
+  // uses land nothing else needs (see githubAnnex.ts).
+  const githubAnnex=planAnnex();
+  function planAnnex(){
+    const tower=towers.find(t=>t.projectId==="github-profile"),own=terraces.find(t=>t.id==="github-profile");
+    if(!tower||!own)return undefined;
+    const ownCentre:[number,number]=[own.x+own.w/2,own.z+own.d/2];
+    const lines:[number,number][][]=[];
+    const collect=(v:unknown,depth=0):void=>{
+      if(depth>4||!v||typeof v!=="object")return;
+      if(Array.isArray(v)){
+        if(v.length&&v.every(p=>Array.isArray(p)&&p.length===2&&typeof p[0]==="number"))lines.push(v as [number,number][]);
+        else v.forEach(x=>collect(x,depth+1));
+        return;
+      }
+      Object.values(v).forEach(x=>collect(x,depth+1));
+    };
+    collect([carBridges.map(b=>b.roads),connections,freight,communityRail,community]);
+    lines.push(...walks.filter(w=>w.route).map(w=>w.route!.map(p=>[p.gx,p.gy] as [number,number])));
+    const blocked=[
+      ...land.filter(r=>r.w*r.d>=3&&!inRect(r,...ownCentre)),
+      ...terraces.filter(t=>t!==own),...parks,...brooks,...bridges,
+      ...paving.filter(r=>!inRect(own,r.x+r.w/2,r.z+r.d/2)),
+      ...[...towers,...kiosks,...retail].filter(b=>b!==tower).map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),
+      ...(freight?.land??[]).filter(r=>r.w*r.d>=3&&!inRect(r,...ownCentre)),
+    ];
+    const annex=planGithubAnnex({tower,terrace:own,blocked,lines,ponds});
+    if(!annex)return undefined;
+    terraces.push({id:"github-profile",park:false,...annex.terrace});
+    land.push(annex.land);
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(annex.land,items[i].x,items[i].z,.2))items.splice(i,1);
+    return annex;
+  }
+
   return {
+    githubAnnex,
     financial,
     community,
     communityRail,

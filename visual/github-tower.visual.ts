@@ -17,7 +17,7 @@ async function views(page:import('@playwright/test').Page,list:View[]){
 // The GitHub HQ stands at (12.25, 29.25) in the default "By district" layout; the map looks at it from +x/+z.
 const [X,Z]=[12.25,29.25];
 const at=(dx:number,y:number,dz:number):[number,number,number]=>[X+dx,y,Z+dz];
-const VIEWS:View[]=[['front',at(0,4.2,0),at(11,6.5,8)],['close',at(.3,2.6,.6),at(2.8,3.4,4.2)],['terraces',at(.2,5.5,.4),at(3.2,6.2,3.6)],['roof',at(0,8,0),at(3.6,11,4.6)],['side',at(0,4,0),at(10,5,2)],['context',at(0,3.5,0),at(14,12,16)]];
+const VIEWS:View[]=[['front',at(0,4.2,0),at(11,6.5,8)],['close',at(.3,2.6,.6),at(2.8,3.4,4.2)],['terraces',at(.2,5.5,.4),at(3.2,6.2,3.6)],['roof',at(0,8,0),at(3.6,11,4.6)],['side',at(0,4,0),at(10,5,2)],['context',at(0,3.5,0),at(14,12,16)],['podium',at(3,1,.3),at(7.5,3.6,6.5)],['podium-top',at(2.5,1,0),at(5.5,7.5,6)]];
 test.skip(!process.env.GITHUB_TOWER_SHOTS,'Screenshots only: set GITHUB_TOWER_SHOTS=1');
 for(const light of ['day','night'] as const)test(`GitHub tower, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

@@ -78,3 +78,38 @@ describe('GitHub tower',()=>{
   for(const g of Object.values(geo))g.dispose();
  });
 });
+
+describe('GitHub glass podium and its new land',()=>{
+ const city=buildScene(layoutMap(catalog,[],'district'));
+ const t=city.towers.find(x=>x.projectId===GITHUB_TOWER.projectId)!;
+ const own=city.terraces.find(x=>x.id===GITHUB_TOWER.projectId)!;
+ const annex=city.githubAnnex!;
+ const within=(b:{x0:number;x1:number;z0:number;z1:number},r:{x:number;z:number;w:number;d:number})=>b.x0>=r.x-1e-9&&b.x1<=r.x+r.w+1e-9&&b.z0>=r.z-1e-9&&b.z1<=r.z+r.d+1e-9;
+ it('grows the GitHub terrace onto open ground in the default By district map',()=>{
+  expect(annex).toBeDefined();
+  expect(city.terraces.filter(x=>x.id===GITHUB_TOWER.projectId)).toHaveLength(2);
+  expect(city.land).toContainEqual(annex.land);
+  // Nothing else stands, grows or drives on the new land.
+  for(const r of city.terraces)if(r.id!==GITHUB_TOWER.projectId)expect(r.x<annex.land.x+annex.land.w&&r.x+r.w>annex.land.x&&r.z<annex.land.z+annex.land.d&&r.z+r.d>annex.land.z).toBe(false);
+  const on=(x:number,z:number)=>x>annex.land.x&&x<annex.land.x+annex.land.w&&z>annex.land.z&&z<annex.land.z+annex.land.d;
+  for(const p of [...city.trees,...city.bushes,...city.rocks])expect(on(p.x,p.z)).toBe(false);
+  for(const b of [...city.towers,...city.kiosks,...city.retail])expect(on(b.x,b.z)).toBe(false);
+  for(const r of city.carBridges.flatMap(b=>b.roads).flat())expect(on(r[0],r[1])).toBe(false);
+  for(const w of city.walks)for(const p of w.route??[])expect(on(p.gx,p.gy)).toBe(false);
+ });
+ it('stands three storeys of glass on the GitHub land, clear of the ring road, stepping back',()=>{
+  const ring=towerRing(t,(t.size/.92)*1.25+1)!,road=ring.x1-t.x+TRANSPORT.cityWidth/2;
+  const ground={x:Math.min(own.x,annex.terrace.x),z:Math.min(own.z,annex.terrace.z),w:own.w+(annex.side.endsWith('x')?annex.terrace.w:0),d:own.d+(annex.side.endsWith('z')?annex.terrace.d:0)};
+  expect(annex.tiers).toHaveLength(3);
+  for(const [i,b] of annex.tiers.entries()){
+   expect(within(b,ground)).toBe(true);
+   // Outside the ring road on every side.
+   expect(Math.max(Math.abs(b.x0-t.x),Math.abs(b.x1-t.x),Math.abs(b.z0-t.z),Math.abs(b.z1-t.z))).toBeGreaterThan(road);
+   const nearest=annex.side.endsWith('x')?Math.min(Math.abs(b.x0-t.x),Math.abs(b.x1-t.x)):Math.min(Math.abs(b.z0-t.z),Math.abs(b.z1-t.z));
+   expect(nearest).toBeGreaterThan(road);
+   if(i){const below=annex.tiers[i-1];expect(b.y0).toBeCloseTo(below.y1);expect((b.x1-b.x0)*(b.z1-b.z0)).toBeLessThan((below.x1-below.x0)*(below.z1-below.z0));}
+  }
+  // The skybridge clears traffic on the ring road beneath it.
+  expect(annex.skybridge.y0).toBeGreaterThan(.5);
+ });
+});
