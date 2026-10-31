@@ -11,8 +11,9 @@ import {toolOfficeHeight} from './toolBrand';
  * - Project headquarters: storeys 1.5x taller (0.32 to 0.48), so a 14-storey HQ (6.7) tops the
  *   mall's roof. Footprints stay: district traffic runs right by the plinths, and 1.1x already
  *   puts cars inside the walls.
- * - Skyline shops (1.3x) and the Skyline residence (1.35x): the whole building grows evenly (doors,
- *   windows, signs). 1.4x shops push the highway ramps off their route in the 'none' and 'status' maps.
+ * - Skyline shops (1.25x) and the Skyline residence (1.35x): the whole building grows evenly (doors,
+ *   windows, signs). 1.4x shops push the highway ramps off their route in the 'none' and 'status' maps,
+ *   and 1.3x reroutes the freight line beside the Financial District street (with #158).
  * - The Financial District keeps rising with the headquarters (its HQ-relative rule), so it still
  *   stands above them.
  * - Not scaled: the airport offices
@@ -23,7 +24,7 @@ export const CITY_SCALE={
  /** Project headquarters: height of one storey, and footprint, against the old 0.32 storey. */
  hq:{storey:1.5,footprint:1},
  /** Skyline tenants (Anthropic, OpenAI, Zara, Wells Fargo, Smashburger, Starbucks, Chipotle). */
- shop:1.3,
+ shop:1.25,
  /** The Skyline residence in the middle of the park. */
  skyline:1.35,
 } as const;
