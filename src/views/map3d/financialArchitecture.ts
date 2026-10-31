@@ -20,11 +20,11 @@ export function financialHeight(id:string,reference:number,rise:number){
 }
 export const financialSignLevel=(id:string,height:number)=>financialBrand(id)?.architecture==='deco'?height*.5:height;
 export interface TowerPalette{ivory:string;green:string;gold:string}
-export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}
+export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];tintedGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}
 /** Local coordinates, bases at y=0. Rendering, bounds and clearance tests share dimensions. */
 export function financialArchitecture(id:string,height:number,palette:TowerPalette):ArchitecturePlan{
- const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
- const out={solid,glass,clearGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
+ const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],tintedGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
+ const out={solid,glass,clearGlass,tintedGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
  if(!brand?.architecture||brand.architecture==='twin')return out;
  const {width:w,depth:d}=financialDimensions(id),{body,trim,accent}=brand;
  const box=(target:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>target.push({p:[x,y,z],s:[w,h,d],c,r});
@@ -58,7 +58,7 @@ export function financialArchitecture(id:string,height:number,palette:TowerPalet
    const y=1.15+floor*step;
    slab(y,w,d,trim,.05);
    if(y+step>top+1e-9){box(solid,0,y+.05,0,w,step-.05,d,body);continue;}
-   box(clearGlass,0,y+.05,0,w,step-.05,d,brand.glass);
+   box(tintedGlass,0,y+.05,0,w,step-.05,d,'#ffffff');
    // Warm floor panel: pale by day, lit through the glass at night (shared emissive material).
    box(glow,0,y+.05,0,w-.2,.012,d-.2,'#ffffff');
    for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*1.05,y+.062,sz*.82,.62,.14,.34,seat[(floor+(sx>0?1:0))%2]);

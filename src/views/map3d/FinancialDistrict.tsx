@@ -1,4 +1,4 @@
-import {CLEAR_ARCHITECTURAL_GLASS} from './architecturalGlass';
+import {CLEAR_ARCHITECTURAL_GLASS,TINTED_OFFICE_GLASS} from './architecturalGlass';
 import {financialArchitecture,financialDimensions} from './financialArchitecture';
 import {FinancialSigns} from "./FinancialSigns";
 import {financialBrand,financialSignPlacement,FINANCIAL_SIGN} from "./financialBrands";
@@ -15,7 +15,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
  useEffect(()=>{materials.window.color.set(night?'#e8d8a9':'#72a7b3');materials.window.emissiveIntensity=night?.65:0;materials.water.emissiveIntensity=night?.2:0},[night,materials]);
  useEffect(()=>()=>{materials.window.dispose();materials.water.dispose()},[materials]);
  const parts=useMemo(()=>{
- const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],clearKeys:string[]=[],bevelled:Inst[]=[],plants:Inst[]=[],lights:Inst[]=[],keys:string[]=[];if(!a)return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys};
+ const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],tinted:Inst[]=[],tintedKeys:string[]=[],glow:Inst[]=[],clearKeys:string[]=[],bevelled:Inst[]=[],plants:Inst[]=[],lights:Inst[]=[],keys:string[]=[];if(!a)return {solid,glass,clearGlass,tinted,tintedKeys,glow,clearKeys,bevelled,plants,lights,keys};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
  const pane=(key:string,p:Inst)=>{glass.push(p);keys.push(key)};
 
@@ -37,7 +37,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
    if(!twin)solid.push(box(b.x,.04,b.z,dimensions.w,.12,dimensions.d,'#d4d0bf'));solid.push(...mesh.solid.map(place));
    bevelled.push(...mesh.bevelled.map(place));plants.push(...mesh.leaves.map(place));
    for(const p of mesh.glass)pane(key,place(p));
-   for(const p of mesh.clearGlass){clearGlass.push(place(p));clearKeys.push(key);}glow.push(...mesh.glow.map(place));
+   for(const p of mesh.clearGlass){clearGlass.push(place(p));clearKeys.push(key);}for(const p of mesh.tintedGlass){tinted.push(place(p));tintedKeys.push(key);}glow.push(...mesh.glow.map(place));
    // Sliding entrance panes are shared with the visitor simulation.
    const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;if(!twin)solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
    for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
@@ -87,7 +87,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
  for(let x=.4;x<a.w-.3;x+=.5)solid.push(box(x,.23,a.d-.18,.025,.27,.025,materials.green));
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
  for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.14,14.5,.06,.12,.06,'#ffffff'));
- return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys};
+ return {solid,glass,clearGlass,tinted,tintedKeys,glow,clearKeys,bevelled,plants,lights,keys};
  },[a,materials]);
  const windows=useMemo(()=>parts.glass.map(p=>({...p,c:night?'#ffffff':p.c})),[parts,night]);
  const bevelGeometry=useMemo(()=>{
@@ -98,6 +98,8 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
  },[]);
  useEffect(()=>()=>bevelGeometry.dispose(),[bevelGeometry]);
  const curtain=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
+ const officeGlass=useMemo(()=>new THREE.MeshPhysicalMaterial(TINTED_OFFICE_GLASS),[]);
+ useEffect(()=>()=>officeGlass.dispose(),[officeGlass]);
  const interiorGlow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#eee4cb',emissive:'#ffe0a0',emissiveIntensity:0,roughness:.7}),[]);
  useEffect(()=>{interiorGlow.emissiveIntensity=night?.8:.02;},[night,interiorGlow]);
  useEffect(()=>()=>{curtain.dispose();interiorGlow.dispose();},[curtain,interiorGlow]);
@@ -120,5 +122,5 @@ export function FinancialDistrict({plan:a,g,m,pick,night,moving=false}:{plan?:Fi
  return {solid,plants,water,lights};
  },[a,materials]);
  if(!a)return null;
- return <><FinancialSigns plan={a} night={night} pick={pick}/><CircaTowers plan={a} g={g} m={m} night={night} pick={pick} moving={moving}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d],c:'#82a871'}]:[]} geometry={g.box} material={m.plain} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={windows} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
+ return <><FinancialSigns plan={a} night={night} pick={pick}/><CircaTowers plan={a} g={g} m={m} night={night} pick={pick} moving={moving}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d],c:'#82a871'}]:[]} geometry={g.box} material={m.plain} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/><Instanced items={parts.tinted} geometry={g.box} material={officeGlass} shadow={false} pick={pick.of(parts.tintedKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={windows} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
 }

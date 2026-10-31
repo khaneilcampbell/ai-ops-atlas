@@ -12,7 +12,7 @@ for(const [id,name]of identities)it(`${name} keeps a stable route, searchable na
  expect(financialInteriorBrand(financialInteriorKey(id))?.id).toBe(id);expect(BUILDING_INTERIORS[financialInteriorKey(id)].rooms).toHaveLength(4);
  for(const height of [9,13,18]){
   const shape=financialArchitecture(id,height,palette),bounds=financialDimensions(id);
-  for(const [kind,parts]of Object.entries({solid:shape.solid,glass:shape.glass,clearGlass:shape.clearGlass,glow:shape.glow,bevelled:shape.bevelled,leaves:shape.leaves}))for(const p of parts){
+  for(const [kind,parts]of Object.entries({solid:shape.solid,glass:shape.glass,clearGlass:shape.clearGlass,tintedGlass:shape.tintedGlass,glow:shape.glow,bevelled:shape.bevelled,leaves:shape.leaves}))for(const p of parts){
    expect([...p.p,...p.s].every(Number.isFinite)).toBe(true);expect(p.s.every(n=>n>0)).toBe(true);
    const factor=kind==='leaves'?1:.5,rx=Math.abs(Math.cos(p.r??0))*p.s[0]*factor+Math.abs(Math.sin(p.r??0))*p.s[2]*factor,rz=Math.abs(Math.sin(p.r??0))*p.s[0]*factor+Math.abs(Math.cos(p.r??0))*p.s[2]*factor;
    expect(Math.abs(p.p[0])+rx).toBeLessThanOrEqual(bounds.w/2+.001);expect(Math.abs(p.p[2])+rz).toBeLessThanOrEqual(bounds.d/2+.001);
@@ -22,9 +22,9 @@ for(const [id,name]of identities)it(`${name} keeps a stable route, searchable na
 });
 it('Experian has floor-to-ceiling clear glass on every office floor with a visible, lit interior',()=>{
  const a=financialArchitecture('residence',13,palette),{width,depth}=financialDimensions('residence');
- expect(a.balconies).toHaveLength(0);expect(a.glass).toHaveLength(0);expect(a.clearGlass.length).toBeGreaterThan(10);
- expect(a.glow).toHaveLength(a.clearGlass.length);
- for(const pane of a.clearGlass){
+ expect(a.balconies).toHaveLength(0);expect(a.glass).toHaveLength(0);expect(a.clearGlass).toHaveLength(0);expect(a.tintedGlass.length).toBeGreaterThan(10);
+ expect(a.glow).toHaveLength(a.tintedGlass.length);
+ for(const pane of a.tintedGlass){
   expect(pane.s[0]).toBeCloseTo(width);expect(pane.s[2]).toBeCloseTo(depth);
   const slab=a.solid.find(p=>p.c===financialBrand('residence')!.trim&&Math.abs(p.p[1]+p.s[1]-pane.p[1])<1e-9&&p.s[0]===width);
   expect(slab).toBeDefined();
