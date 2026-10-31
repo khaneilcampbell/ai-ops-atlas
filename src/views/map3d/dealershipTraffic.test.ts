@@ -30,3 +30,8 @@ it('keeps the shutter fully open while a visible service car is at the threshold
   const [gx,gz]=d.drive[d.drive.length-1],p=vehicleAt(v,t);if(Math.hypot(p.x-gx,p.z-gz)<.55)expect(dealershipGarageOpen(plans,t)).toBe(1);
  }
 });
+
+it('fits every service visit inside its interval even on a long drive',()=>{
+ const d=scene.dealership!,far=[...d.service.map(([x,z])=>[x-40,z] as [number,number]),...d.service];
+ for(const v of planDealershipTraffic({dealership:{...d,service:far}}))expect(v.serviceWindow!.duration).toBeLessThanOrEqual(v.period-8+1e-6);
+});

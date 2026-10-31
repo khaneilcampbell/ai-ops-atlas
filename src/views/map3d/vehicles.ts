@@ -124,13 +124,17 @@ export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z:
   return at(v.legs[v.legs.length - 1], 1);
 }
 
+/** Seconds a service car always has left in its interval, so a visit never overruns the next. */
+const DEALER_VISIT_SLACK=8;
 /** Service visits are decorative and share the exact driveway/bridge centerline. */
 export function planDealershipTraffic(scene:Pick<Scene3D,'dealership'>):VehiclePlan[]{
  const d=scene.dealership;if(!d)return [];
  const source=[...d.service,...d.drive.slice(1),[d.x+d.showroom.cx+d.showroom.w/2+.06,d.z+d.showroom.cz] as Pt].filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7);
  return [{id:'bmw-service-out',interval:60,path:[...source].reverse(),kind:'bmw' as const,color:'#3577c4'}, {id:'bmw-service-in',interval:90,path:source,kind:'gwagon' as const,color:'#202a30'}].map(v=>{
-  const path=lanePath(v.path,.12);
-  const legs:Leg[]=path.slice(1).map((b,i)=>({a:path[i],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[i][0],b[1]-path[i][1])/.9,hold:false}));
+  const path=lanePath(v.path,.12),length=path.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-path[i][0],b[1]-path[i][1]),0);
+  // Cruise at .9, but speed up on a longer drive so every visit ends well inside its interval.
+  const speed=Math.max(.9,length/(v.interval-DEALER_VISIT_SLACK));
+  const legs:Leg[]=path.slice(1).map((b,i)=>({a:path[i],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[i][0],b[1]-path[i][1])/speed,hold:false}));
   const duration=legs.reduce((n,l)=>n+l.dur,0),end=v.path[v.path.length-1];
   legs.push({a:end,b:end,ya:.03,yb:.03,dur:Math.max(.1,v.interval-duration),hold:true});
   return {id:v.id,kind:v.kind,color:v.color,legs,period:v.interval,offset:0,serviceWindow:{start:v.interval,duration}};
