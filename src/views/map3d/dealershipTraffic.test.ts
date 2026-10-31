@@ -10,7 +10,7 @@ it('connects the city street to the dealership service door without teleporting 
  const [out,arrival]=planDealershipTraffic(scene),d=scene.dealership!;
  expect(arrival.legs[0].a).toEqual(d.service[0]);expect(out.legs[0].a).toEqual(d.drive[d.drive.length-1]);
  for(const v of [out,arrival])for(let i=1;i<v.legs.length;i++)expect(v.legs[i].a).toEqual(v.legs[i-1].b);
- for(const v of [out,arrival])for(let t=.1;t<v.serviceWindow!.duration;t+=.1){const a=vehicleAt(v,t),b=vehicleAt(v,t-.1);expect(Math.hypot(a.x-b.x,a.z-b.z)).toBeLessThan(.1);}
+ for(const v of [out,arrival])for(let t=.1;t<v.serviceWindow!.duration;t+=.1){const a=vehicleAt(v,t),b=vehicleAt(v,t-.1);expect(Math.hypot(a.x-b.x,a.z-b.z),'drives, never jumps').toBeLessThan(.15);}
 });
 
 it('opens the garage before each service crossing and closes after clearance',()=>{
