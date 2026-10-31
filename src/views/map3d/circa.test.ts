@@ -68,6 +68,10 @@ describe('Circa twin towers',()=>{
   expect(front).toBeGreaterThan(Math.max(...band.filter(([x])=>Math.abs(x)<1.2).map(([,z])=>z)));
   // Centred on the front walk (the approach starts at the building's x) and inside the palm gap.
   const doors=entry.entryDrums.map(p=>p.p[0]);expect(Math.abs((Math.min(...doors)+Math.max(...doors))/2)).toBeLessThan(.1);
+  // As tall as the other Financial District entrances (their shared door canopy sits at .85).
+  expect(Math.max(...all.map(p=>p.p[1]+p.s[1]))).toBeGreaterThanOrEqual(.85);
+  // The band stays on the podium: above the entrance and below the deck parapet.
+  expect(S.y1).toBeLessThanOrEqual(P.h);
   expect(CIRCA.entrance.w).toBeGreaterThanOrEqual(2.2);expect(CIRCA.entrance.w).toBeLessThanOrEqual(2.8);
   for(const p of all)expect(p.p[2]).toBeGreaterThan(P.d/2-.05);
   // The whole complex keeps the entrance and no old portal box.

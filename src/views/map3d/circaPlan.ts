@@ -24,7 +24,8 @@ export const CIRCA={
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
  maxPieces:1200,
  /** LED band wrapping all four podium faces: a rounded loop with a gentle wave, the texture repeating a whole number of times. */
- screen:{y0:.46,y1:1.5,inset:.12,corner:.35,waves:7,amplitude:.2,repeats:4},
+ /** y0 sits above the entrance, which matches the Financial District's shared door canopy height (.85). */
+ screen:{y0:.94,y1:1.6,inset:.12,corner:.35,waves:7,amplitude:.2,repeats:6},
 } as const;
 
 export interface CircaParts{
@@ -62,19 +63,24 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
  const P=CIRCA.podium,T=CIRCA.tower,E=CIRCA.entrance,hw=P.w/2,hd=P.d/2;
  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>t.push({p:[x,y,z],s:[w,h,d],c,...(r?{r}:{})});
 
- // Podium: dark garage core behind the LED band, retail glass at street level.
+ // Podium: dark garage core behind the LED band.
  box(out.solid,0,0,0,P.w-.12,P.h,P.d-.12,palette.core);
- box(out.storefront,0,.04,hd-.04,P.w-.3,P.retail-.08,.04,'#ffffff');
- box(out.storefront,hw-.04,.04,0,.04,P.retail-.08,P.d-.3,'#ffffff');
- for(let x=-hw+.4;x<hw-.2;x+=.62)if(Math.abs(x)>E.w/2+.05)box(out.solid,x,.04,hd-.01,.03,P.retail-.08,.03,palette.white);
- for(let z=-hd+.4;z<hd-.2;z+=.62)box(out.solid,hw-.01,.04,z,.03,P.retail-.08,.03,palette.white);
+ // Double-height retail glass on the street and east faces fills the space under the LED band.
+ const shopH=CIRCA.screen.y0-.12;
+ box(out.storefront,0,.04,hd-.04,P.w-.3,shopH,.04,'#ffffff');
+ box(out.storefront,hw-.04,.04,0,.04,shopH,P.d-.3,'#ffffff');
+ for(let x=-hw+.4;x<hw-.2;x+=.62)if(Math.abs(x)>E.w/2+.05)box(out.solid,x,.04,hd-.01,.03,shopH,.03,palette.white);
+ for(let z=-hd+.4;z<hd-.2;z+=.62)box(out.solid,hw-.01,.04,z,.03,shopH,.03,palette.white);
+ // Parking louvers on the north and west faces below the band.
+ for(let x=-hw+.12;x<=hw-.1;x+=.2)box(out.solid,x,.06,-hd-.03,.035,CIRCA.screen.y0-.12,.1,palette.white);
+ for(let z=-hd+.12;z<=hd-.1;z+=.2)box(out.solid,-hw-.03,.06,z,.1,CIRCA.screen.y0-.12,.035,palette.white);
  // Retail canopy along the street (either side of the main entrance) and the east side.
  const canopyW=(P.w+.1)/2-E.w/2-.05;
  for(const side of [-1,1])box(out.solid,side*(E.w/2+.05+canopyW/2),P.retail-.04,hd+.12,canopyW,.05,.3,palette.white);
  box(out.solid,hw+.12,P.retail-.04,0,.3,.05,P.d+.1,palette.white);
  // Main entrance: a glass pavilion stepping out under the LED band, with a lit lobby inside.
  circaEntrance(out,palette);
- // The parking levels sit behind the LED band that wraps the whole podium, so no louvers or floor bands are needed.
+ // The parking levels sit behind the LED band that wraps the whole podium, so it needs no louvers or floor bands above the street level.
  // Parapet and amenity deck surface.
  for(const side of [-1,1]){box(out.solid,0,P.h-.1,side*(hd-.02),P.w,.22,.08,palette.white);box(out.solid,side*(hw-.02),P.h-.1,0,.08,.22,P.d,palette.white);}
  box(out.solid,0,P.h-.12,0,P.w-.16,.14,P.d-.16,palette.stone);
@@ -171,7 +177,10 @@ export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDru
  box(out.entryGlass,0,top-.03,front+E.canopy/2,E.w+.4,.015,E.canopy,'#ffffff');
  box(out.solid,0,top-.035,front+E.canopy,E.w+.4,.035,.03,palette.white);
  // Two revolving doors in the front glass.
- for(const x of [-.38,.38]){out.entryDrums.push({p:[x,.03,front],s:[.32,glassH-.02,.32],c:'#ffffff'});out.rounds.push({p:[x,.03+glassH-.02,front],s:[.34,.02,.34],c:'#d8cba8'});box(out.solid,x,.03,front,.012,glassH-.03,.3,'#d8cba8');}
+ const doorH=Math.min(.5,glassH-.04);
+ for(const x of [-.38,.38]){out.entryDrums.push({p:[x,.03,front],s:[.32,doorH,.32],c:'#ffffff'});out.rounds.push({p:[x,.03+doorH,front],s:[.34,.025,.34],c:'#d8cba8'});box(out.solid,x,.03,front,.012,doorH-.01,.3,'#d8cba8');}
+ // Transom rail above the doors.
+ box(out.solid,0,.03+doorH+.02,front,E.w,.02,.03,'#d8cba8');
  // Lobby: feature wall and ceiling light that glow at night, walnut reception desk, two lounge chairs.
  box(out.lobbyGlow,0,.06,hd+.015,E.w*.62,glassH-.08,.02,'#ffffff');
  box(out.lobbyGlow,0,.03+glassH-.012,mid,E.w-.3,.01,E.depth-.2,'#ffffff');
