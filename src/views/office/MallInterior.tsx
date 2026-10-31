@@ -11,6 +11,8 @@ import {mallFloor} from '../map3d/mallPlan';
 import {ribbon} from '../map3d/mallShapes';
 import type {Pt} from '../map3d/roads';
 import {Box,Person} from './InteriorPrimitives';
+import CityOutside from './CityOutside';
+import {useReducedMotion} from '../../lib/motion';
 import {leaveBuilding} from './store';
 import {MALL_IN,MALL_LEVELS,MALL_SHAPE,mallUnits,type MallUnit,type UnitKind} from './mallInteriorPlan';
 import '../../styles/skyline.css';
@@ -118,7 +120,7 @@ function MallCamera({mode}:{mode:number}){
 export default function MallInterior({light}:{light:LightMode}){
  const [mode,setMode]=useState(ALL);
  const [picked,setPicked]=useState<MallUnit|null>(null);
- const power=usePowerProfile();const isNight=light==='night';
+ const power=usePowerProfile();const reduced=useReducedMotion();const isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const levels=mode===ALL?[0,1,2,3]:mode===PARKING?[]:[mode];
@@ -126,11 +128,13 @@ export default function MallInterior({light}:{light:LightMode}){
  const title=mode===ALL?'All floors · Open cutaway':mode===PARKING?'Basement · Car park':info!.title;
  return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label="Atlas Marketplace interior">
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
-   <FramePacer profile={power} running={false}/>
+   <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.55:1.2]}/>
    <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-20} shadow-camera-right={20} shadow-camera-top={20} shadow-camera-bottom={-20}/>
    <MallCamera mode={mode}/>
+   {/* The real city round the lot, at the interior's scale, reusing the map's own scene. */}
+   <CityOutside building="Atlas Marketplace" span={MALL_IN.rx*2} allFloors={mode===ALL} elevation={mode>0&&mode!==ALL?mode*FH:0}/>
    {(mode===ALL||mode===PARKING)&&<Parking y={mode===ALL?-FH:0}/>}
    {levels.map(l=><group key={l} position={[0,mode===ALL?l*FH:0,0]}><Floor level={l} y={0} labels={mode!==ALL} onPick={setPicked} cutaway/></group>)}
    {mode!==PARKING&&<group><Atrium top={(mode===ALL?MALL_IN.levels:1)*FH+.6} night={isNight} escalators={mode===ALL?[0,1,2]:mode<MALL_IN.levels-1?[0]:[]}/><Fins levels={levels} stacked={mode===ALL}/></group>}
