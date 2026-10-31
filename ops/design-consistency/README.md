@@ -37,7 +37,7 @@ The 3D map and office scenes (`src/views/map3d`, `src/views/office`, `src/views/
 
 Nothing is required for the check: it runs and reports without any secret.
 
-1. **Let the workflow open pull requests.** Tick "Allow GitHub Actions to create and approve pull requests" at https://github.com/khaneilcampbell/ai-ops-atlas/settings/actions (Workflow permissions). The agent only creates; it never approves.
+1. **Let the workflow open pull requests.** Tick "Allow GitHub Actions to create and approve pull requests" at https://github.com/khaneilcampbell/ai-ops-atlas/settings/actions (Workflow permissions). The agent only creates; it never approves. Until it is ticked, a run that prepared a fix ends with a warning (not a failure), deletes its branch and waits a day.
 2. **CI on fix pull requests (recommended).** Pull requests opened with the built-in token do not start other workflows. Create a fine-grained token for `khaneilcampbell/ai-ops-atlas` only, with Contents and Pull requests read and write, at https://github.com/settings/personal-access-tokens/new, and save it as `DESIGN_FIX_TOKEN` at https://github.com/khaneilcampbell/ai-ops-atlas/settings/secrets/actions/new. Without it, start CI on a fix pull request by pushing to it or with "Update branch".
 3. **Judgment fixes.** Uses the existing `ANTHROPIC_API_KEY` (shared with Merge Flow and Opportunity Scout). Without it, only code-only swaps are made.
 4. **Atlas feed (optional).** `ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN`, as for the other GitHub building agents. See `docs/live-updates.md`.

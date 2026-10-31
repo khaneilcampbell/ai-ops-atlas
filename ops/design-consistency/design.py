@@ -25,9 +25,10 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -35,6 +36,8 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
 API = "https://api.github.com"
 BRANCH_PREFIX = "design-consistency/"
+SETTINGS_URL = "https://github.com/khaneilcampbell/ai-ops-atlas/settings/actions"
+PR_BLOCKED_RETRY = timedelta(days=1)
 RULES = ["color", "spacing", "type", "font", "radius", "inline", "label"]
 RULE_LABELS = {"color": "Hard-coded color", "spacing": "Off-scale spacing", "type": "Off-scale type size",
                "font": "Font stack outside tokens", "radius": "Radius that equals a token", "inline": "Inline style color",
@@ -409,6 +412,8 @@ def decide(found, policy, state, now, open_pr, has_key, dry_run=False):
         why_not = "nothing to fix"
     elif open_pr:
         why_not = f"fix PR #{open_pr} is still open"
+    elif state.get("pr_blocked") and now - datetime.fromisoformat(state["pr_blocked"]) < PR_BLOCKED_RETRY:
+        why_not = "GitHub would not let Actions open a pull request; trying again tomorrow"
     elif batch["mode"] == "model" and not has_key:
         why_not = "no ANTHROPIC_API_KEY for the judgment batch"
     elif dry_run:
@@ -768,8 +773,16 @@ def cmd_pr(args, now=None):
     n = len(result["applied"]) + len(result["kept"])
     title = (f"Design: swap {n} literals for the tokens they equal" if result["mode"] == "code"
              else f'Design: bring {n} {RULE_LABELS[(result["applied"] + result["kept"])[0]["rule"]].lower()} findings onto the tokens')
-    pr = gh("POST", f"/repos/{repo}/pulls", {"title": title, "head": args.branch, "base": args.base,
-                                             "body": pr_body(result, shots, run_url), "maintainer_can_modify": True})
+    try:
+        pr = gh("POST", f"/repos/{repo}/pulls", {"title": title, "head": args.branch, "base": args.base,
+                                                 "body": pr_body(result, shots, run_url), "maintainer_can_modify": True})
+    except urllib.error.HTTPError as e:
+        if e.code != 403:
+            raise
+        return pr_blocked(args, repo, now)
+    state = load_state(args.state)
+    if state.pop("pr_blocked", None):
+        Path(args.state).write_text(json.dumps(state))
     result["pr"] = pr["number"]
     print(f'Opened {pr["html_url"]}')
     write_summary(f'\nOpened fix pull request #{pr["number"]}: {pr["html_url"]}\n')
@@ -777,6 +790,24 @@ def cmd_pr(args, now=None):
     post_feed(f'{work["counts"]["total"]} design findings, {work["counts"]["new"]} new. Fix PR #{pr["number"]}: '
               f'{len(result["applied"])} changes, {len(result["kept"])} kept. Waiting for KC.', "ok", now)
     return pr
+
+
+def pr_blocked(args, repo, now):
+    """403 on opening the PR: the repository does not allow Actions to create pull requests. That is a
+    setting, not a broken run, so warn instead of failing (a failure only emails KC), remove the branch
+    nobody can open, and wait a day before preparing another fix."""
+    try:
+        gh("DELETE", f"/repos/{repo}/git/refs/heads/{args.branch}")
+    except OSError as e:
+        print(f"Could not delete {args.branch} ({type(e).__name__})", file=sys.stderr)
+    state = load_state(args.state)
+    state["pr_blocked"] = now.isoformat()
+    Path(args.state).write_text(json.dumps(state))
+    note = ("GitHub would not let this workflow open the fix pull request (403). Turn on "
+            f'"Allow GitHub Actions to create and approve pull requests" at {SETTINGS_URL}, or add DESIGN_FIX_TOKEN.')
+    print(f"::warning::{note}")
+    write_summary(f"\n{note} Trying again tomorrow.\n")
+    return None
 
 
 def main(argv=None):
