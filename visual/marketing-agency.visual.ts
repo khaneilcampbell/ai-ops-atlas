@@ -52,20 +52,18 @@ for(const [light,size] of [['day',{width:1440,height:900}],['night',{width:1440,
  await expect(page.locator('.skyline-interior')).toHaveCount(0);
  expect(errors).toEqual([]);
 });
-test('Benjaire Marketing Agency walk-through test reaches every floor and walks out',async({page})=>{
- test.setTimeout(1_200_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+test('Benjaire Marketing Agency people move between frames',async({page})=>{
+ test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.emulateMedia({reducedMotion:'no-preference'});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);await floorMarkers(page,4);
- await page.getByRole('button',{name:'Walk-through test'}).click();await settle(page,3);
- const note=page.locator('.skyline-interior-note');const seen=new Set<string>();
- // The walker follows the clock, so jump ahead and draw a couple of frames at each stop.
- for(let i=0;i<40&&!(await note.textContent())?.includes('complete');i++){
-  await page.clock.fastForward(2500);await settle(page,2);
-  const text=await note.textContent()??'';const m=text.match(/Walk-through test · (Lobby|Floor \d)/);if(m)seen.add(m[1]);
-  if([2,7,12].includes(i))await page.screenshot({path:`${out}/walk-${i}.png`});
+ await expect(page.getByRole('button',{name:/Walk-through/})).toHaveCount(0);
+ const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
+ for(const [label,name] of [['Floor 3','hall'],['Lobby','lobby']] as const){
+  await nav.getByRole('button',{name:label,exact:true}).click();await floorMarkers(page,1);await settle(page,3);
+  await page.screenshot({path:`${out}/people-${name}-a.png`});await page.clock.fastForward(3000);await settle(page,1);
+  await page.screenshot({path:`${out}/people-${name}-b.png`});
  }
- await expect(note).toContainText('Walk-through test complete');
- expect([...seen].sort()).toEqual(['Floor 1','Floor 2','Floor 3','Lobby']);
  expect(errors).toEqual([]);
 });

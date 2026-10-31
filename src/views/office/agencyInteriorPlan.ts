@@ -85,16 +85,16 @@ export function stairSteps(level:number){
  return Array.from({length:steps},(_,i)=>{const t=(i+.5)/steps,ang=start+dir*sweep*t;return {x:a.x+Math.cos(ang)*radius,z:a.z+Math.sin(ang)*radius,y:level*INTERIOR.storey+rise*(i+1),yaw:-ang};});
 }
 
-type P3=[number,number,number];
+export type P3=[number,number,number];
 /** Doorway centre through the slot's glass walls (both walls open at z 0). */
 export const SLOT_DOOR_Z=0;
-const flight=(level:number):P3[]=>stairSteps(level).map(st=>[st.x,st.y,st.z]);
-const landing=(level:number):P3=>{const l=stairLanding(level);return [l.x,l.y,l.z];};
+export const flight=(level:number):P3[]=>stairSteps(level).map(st=>[st.x,st.y,st.z]);
+export const landing=(level:number):P3=>{const l=stairLanding(level);return [l.x,l.y,l.z];};
 /** Point on the floor at `level`, just outside the atrium edge at an angle. */
-const rim=(level:number,ang:number,out=.9):P3=>[INTERIOR.atrium.x+Math.cos(ang)*(INTERIOR.atrium.r+out),level*INTERIOR.storey,INTERIOR.atrium.z+Math.sin(ang)*(INTERIOR.atrium.r+out)];
+export const rim=(level:number,ang:number,out=.9):P3=>[INTERIOR.atrium.x+Math.cos(ang)*(INTERIOR.atrium.r+out),level*INTERIOR.storey,INTERIOR.atrium.z+Math.sin(ang)*(INTERIOR.atrium.r+out)];
 
 /** Rim points walking round the atrium on a floor from one angle to another, the short way. */
-function around(level:number,from:number,to:number):P3[]{
+export function around(level:number,from:number,to:number):P3[]{
  const d=Math.atan2(Math.sin(to-from),Math.cos(to-from)),n=Math.max(1,Math.ceil(Math.abs(d)/.45));
  return Array.from({length:n+1},(_,i)=>rim(level,from+d*i/n));
 }

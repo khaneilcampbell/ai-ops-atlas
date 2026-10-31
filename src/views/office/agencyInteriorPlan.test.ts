@@ -72,9 +72,9 @@ describe('Benjaire Marketing Agency interior plan',()=>{
   const src=readFileSync(new URL('./AgencyInterior.tsx',import.meta.url),'utf8');
   expect(src).toMatch(/Planned, not running/);expect(src).toMatch(/No ad, email or social accounts connected/);
   expect(src.match(/<pointLight/g)?.length??0).toBeLessThanOrEqual(1);
-  // Per-frame work only in the walk-through tester, which mounts only while it runs.
-  expect(src.match(/useFrame\(/g)?.length).toBe(1);expect(src).toMatch(/walk==='running'&&<WalkTester/);
-  expect(src).toMatch(/Not an AI agent, no model calls/);
+  // No per-frame work in the interior itself; people move on frames the pacer already draws.
+  expect(src).not.toMatch(/useFrame/);expect(src).not.toMatch(/WalkTester|Walk-through test/);
+  expect(src).toMatch(/scripted illustrations, not running agents/);
   const files=readdirSync(new URL('.',import.meta.url)).map(f=>f.toLowerCase());
   expect(new Set(files).size).toBe(files.length);
  });
