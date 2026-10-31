@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
-import {Canvas,useThree} from '@react-three/fiber';
+import {Canvas,useFrame,useThree} from '@react-three/fiber';
 import {Html,OrbitControls} from '@react-three/drei';
 import type {OrbitControls as OrbitControlsImpl} from 'three-stdlib';
 import * as THREE from 'three';
@@ -14,7 +14,7 @@ import CityOutside from './CityOutside';
 import FloorLabel from './FloorLabel';
 import {Person} from './InteriorPrimitives';
 import {leaveBuilding} from './store';
-import {AGENCY_FLOORS,AGENCY_OWNER,AGENCY_ROOMS,INTERIOR,SLOT_HALF,atriumOpen,entranceX,slotX,stairLanding,stairSteps,type AgencyRoom} from './agencyInteriorPlan';
+import {AGENCY_FLOORS,AGENCY_OWNER,AGENCY_ROOMS,INTERIOR,SLOT_DOOR_Z,SLOT_HALF,atriumOpen,entranceX,flightEnd,slotX,stairLanding,stairSteps,walkRoute,type AgencyRoom} from './agencyInteriorPlan';
 import '../../styles/skyline.css';
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
@@ -52,13 +52,45 @@ function furnish(room:AgencyRoom):{items:Item[];people:[number,number,string][]}
   case 'gallery':{const art=['#b8552e','#2f4a3a','#d9a441','#3f5f86','#8c3b52','#e7d9c3'];for(let k=0;k<5;k++){const px=x+1+(w-2)*k/4;box(px,0,z+.25,1.6,2.6,.12,'#f6f2ea');box(px,.9,z+.33,1.2,1.2,.04,art[k%art.length]);}grid(3,1,2,(px,pz,i)=>{box(px,0,pz+.6,.8,1,.8,'#f6f2ea');box(px,1,pz+.6,.45,.55,.45,art[(i+2)%art.length]);});people.push([cx,cz+1.2,'#7a4b3a'],[cx+3,cz+.4,'#4f6b5d']);break;}
   case 'archive':for(let k=0;k<4;k++)box(x+1+k*((w-2)/3),0,z+d*.35,.5,2.2,d*.45,OAK);box(cx,0,z+d-1.4,3,.75,1.1,LINEN);people.push([cx,z+d-.6,'#5d7a8c']);break;
   case 'lab':box(cx,.9,z+.25,w-2,1.8,.08,'#1f2a36');box(cx,1.1,z+.3,w-2.6,1.3,.02,'#3f8a87');grid(2,2,1.8,(px,pz,i)=>{box(px,0,pz,2,.74,.9,LINEN);box(px,.74,pz-.25,.7,.42,.05,INK);if(i<2)people.push([px,pz+.7,'#a1674a']);});break;
-  case 'hall':{const stageX=x+w-2.2;box(stageX,0,cz,3.4,.5,d-1.4,'#5a3426');box(x+w-.35,.5,cz,.12,3.2,d-2.4,'#1f2a36');box(x+w-.42,1,cz,.04,2.4,d-3.4,'#d9a441');
-   for(let r=0;r<10;r++)for(let k=0;k<12;k++){const px=x+1.2+r*1.25,pz=z+1+k*((d-2)/11);if(px>stageX-2.4)continue;box(px,0,pz,.55,.5,.55,r%2?'#8c3b2e':'#a2452f');box(px-.22,.5,pz,.1,.45,.55,'#7a3326');}
-   people.push([stageX,cz,'#2f4a3a']);break;}
+  case 'hall':{
+   // Stage and screen on the north wall; seats face it, split by a centre aisle and a cross aisle
+   // in line with the slot doorway, so the atrium stair and the door both lead straight in.
+   box(cx,0,z+1.7,w-1.2,.5,2.8,'#5a3426');box(cx,.5,z+.3,w-2,3.1,.12,'#1f2a36');box(cx,1,z+.37,w-3,2.3,.04,'#d9a441');
+   for(let pz=z+4.4;pz<z+d-.6;pz+=1.1){if(Math.abs(pz-SLOT_DOOR_Z)<.9)continue;
+    for(let px=x+.8;px<x+w-.6;px+=.66){if(Math.abs(px-cx)<.55)continue;box(px,0,pz,.52,.48,.52,Math.round(pz)%2?'#8c3b2e':'#a2452f');box(px,.48,pz+.22,.52,.45,.1,'#7a3326');}}
+   people.push([cx,z+1.7,'#2f4a3a']);break;}
   case 'green-room':box(cx,0,z+1,w-1.6,.95,.7,OAK);grid(2,3,1.6,(px,pz)=>{if(pz<z+2.5)return;box(px,0,pz,1.8,.42,.8,'#b9a88d');});break;
   case 'services':for(let k=0;k<6;k++)box(x+.6+k*.75,0,z+.3,.7,2,.5,'#9aa0a3');break;
  }
  return {items,people};
+}
+
+/** Floor index for a height on the walk route. */
+/** Walking pace in interior units per second (about 1.4 m/s at this scale). */
+export const WALK_SPEED=5.5;
+const levelAt=(y:number)=>Math.min(INTERIOR.levels-1,Math.floor(y/H+.02));
+/**
+ * Walk-through test: a simulated visitor (not an AI agent, no model calls) follows walkRoute()
+ * from the plaza through every floor and back out. Mounted only while the test runs, so the
+ * interior stays on demand rendering the rest of the time.
+ */
+function WalkTester({onFloor,onDone}:{onFloor:(level:number)=>void;onDone:()=>void}){
+ const ref=useRef<THREE.Group>(null);const route=useMemo(()=>walkRoute(),[]);
+ const marks=useMemo(()=>{const m=[0];for(let i=1;i<route.length;i++){const [a,b]=[route[i-1],route[i]];m.push(m[i-1]+Math.hypot(b[0]-a[0],(b[1]-a[1])*1.6,b[2]-a[2]));}return m;},[route]);
+ // Position follows the clock, not the frame count, so slow frames never slow the walk down.
+ const state=useRef({start:performance.now(),level:0,done:false});
+ useFrame(three=>{
+  const st=state.current;if(st.done)return;const total=marks[marks.length-1],d=(performance.now()-st.start)/1000*WALK_SPEED;
+  if(d>=total){st.done=true;onDone();return;}
+  let i=1;while(marks[i]<d)i++;const t=(d-marks[i-1])/((marks[i]-marks[i-1])||1),a=route[i-1],b=route[i];
+  const y=a[1]+(b[1]-a[1])*t;ref.current?.position.set(a[0]+(b[0]-a[0])*t,y,a[2]+(b[2]-a[2])*t);
+  const lv=levelAt(y);if(lv!==st.level){st.level=lv;onFloor(lv);}three.invalidate();
+ });
+ return <group ref={ref} position={route[0]}>
+  <mesh position={[0,.55,0]} castShadow><cylinderGeometry args={[.22,.26,1.1,12]}/><meshStandardMaterial color="#c5a35c" emissive="#c5a35c" emissiveIntensity={.35}/></mesh>
+  <mesh position={[0,1.3,0]} castShadow><sphereGeometry args={[.2,12,10]}/><meshStandardMaterial color="#e8cfa0"/></mesh>
+  <Html position={[0,2,0]} center zIndexRange={[9,0]}><span className="skyline-room-label">Test walker</span></Html>
+ </group>;
 }
 
 function Camera({all}:{all:boolean}){
@@ -102,7 +134,8 @@ function Floor({level,single,night,onPick}:{level:number;single:boolean;night:bo
   const l=INTERIOR.lift;items.push({p:[l.x,(single?H-.5:1.1)/2,l.z],s:[l.w,single?H-.5:1.1,l.d],c:'#cdb7a3'},{p:[l.x,.02,l.z+l.d/2+.4],s:[l.w+.6,.04,.6],c:COPPER});
   if(atriumOpen(level)){
    // Balustrade round the atrium edge.
-   for(let k=0;k<40;k++){const t=k/40*Math.PI*2,x=a.x+Math.cos(t)*(a.r+.05),z=a.z+Math.sin(t)*(a.r+.05);items.push({p:[x,.5,z],s:[.68,1,.05],c:'#d7c2ad',r:-t-Math.PI/2},{p:[x,1.02,z],s:[.68,.06,.1],c:COPPER,r:-t-Math.PI/2});}
+   const gap=flightEnd(level-1),near=(t:number)=>Math.abs(Math.atan2(Math.sin(t-gap),Math.cos(t-gap)))<.32;
+   for(let k=0;k<40;k++){const t=k/40*Math.PI*2;if(near(t))continue;const x=a.x+Math.cos(t)*(a.r+.05),z=a.z+Math.sin(t)*(a.r+.05);items.push({p:[x,.5,z],s:[.68,1,.05],c:'#d7c2ad',r:-t-Math.PI/2},{p:[x,1.02,z],s:[.68,.06,.1],c:COPPER,r:-t-Math.PI/2});}
   }
   if(level===0){
    // Round reception desk and a ring of seats in the atrium; the floor inlay marks the circle.
@@ -111,19 +144,17 @@ function Floor({level,single,night,onPick}:{level:number;single:boolean;night:bo
    // Entrance under the copper sweep: mat and a pair of glass leaves.
    const ex=entranceX();items.push({p:[ex,.02,D-.9],s:[3,.04,1.4],c:'#5a3426'},{p:[ex-.8,1.2,D-.08],s:[1.5,2.4,.05],c:'#b9d2d4'},{p:[ex+.8,1.2,D-.08],s:[1.5,2.4,.05],c:'#b9d2d4'});
   }
-  if(level===INTERIOR.levels-1){
-   // The atrium's glass roof in the hall floor.
-   items.push({p:[a.x,.035,a.z],s:[a.r*1.6,.03,a.r*1.6],c:'#b9d2d4'});
-  }
   return {items,people};
  },[rooms,single,level]);
+ // On a single-floor view the flight arriving from below shows through the void too.
+ const arriving=useMemo(()=>single&&level>0&&atriumOpen(level)?stairSteps(level-1).map(st=>({p:[st.x,st.y-level*H-.09,st.z] as [number,number,number],s:[INTERIOR.stair.width,.18,.55] as [number,number,number],c:'#e9dccb',r:st.yaw})):[],[single,level]);
  const steps=useMemo(()=>level<INTERIOR.atrium.openTo?[...stairSteps(level).map(st=>({p:[st.x,st.y-level*H-.09,st.z],s:[INTERIOR.stair.width,.18,.55],c:'#e9dccb',r:st.yaw})),{...(()=>{const ln=stairLanding(level);return {p:[ln.x,ln.y-level*H-.12,ln.z] as [number,number,number],s:[ln.length,.24,ln.width] as [number,number,number],c:'#e9dccb',r:ln.yaw};})()}] as Item[]:[],[level]);
  return <group>
   <mesh geometry={slab} receiveShadow castShadow><meshStandardMaterial color={level===0?'#e4dccd':'#ece5d8'} roughness={.8}/></mesh>
   {/* Single-floor view: the lobby floor and its copper ring seen down through the atrium void. */}
   {single&&atriumOpen(level)&&<mesh position={[INTERIOR.atrium.x,-INTERIOR.slab-.6,INTERIOR.atrium.z]} rotation={[-Math.PI/2,0,0]} receiveShadow><circleGeometry args={[INTERIOR.atrium.r+.2,48]}/><meshStandardMaterial color="#d9c3a5" roughness={.8}/></mesh>}
   {atriumOpen(level)&&<mesh position={[INTERIOR.atrium.x,-INTERIOR.slab/2,INTERIOR.atrium.z]}><torusGeometry args={[INTERIOR.atrium.r,.09,6,64]}/><meshStandardMaterial color={COPPER} roughness={.35} metalness={.5}/></mesh>}
-  <Boxes items={items}/><Boxes items={steps}/>
+  <Boxes items={items}/><Boxes items={steps}/><Boxes items={arriving} shadow={false}/>
   {people.map(([x,z,c],i)=><Person key={i} x={x} z={z} color={c}/>)}
   <FloorLabel level={level} width={W*2} depth={D*2}/>
   {single&&rooms.map(r=><Html key={r.id} position={[r.x+r.w/2,2.6,r.z+r.d/2]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>onPick(`${r.name} · ${r.role} · Planned, not running`)}>{r.name}<span>{r.role}</span></button></Html>)}
@@ -140,6 +171,8 @@ function Floor({level,single,night,onPick}:{level:number;single:boolean;night:bo
  */
 export default function AgencyInterior({light}:{light:LightMode}){
  const [floor,setFloor]=useState(-1);const [picked,setPicked]=useState<string|null>(null);
+ const [walk,setWalk]=useState<'idle'|'running'|'done'>('idle'),[walkFloor,setWalkFloor]=useState(0);
+ const startWalk=()=>{setFloor(-1);setPicked(null);setWalkFloor(0);setWalk('running');};
  const power=usePowerProfile(),reduced=useReducedMotion(),isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
@@ -155,10 +188,11 @@ export default function AgencyInterior({light}:{light:LightMode}){
    <Camera all={all}/>
    <CityOutside allFloors={all} building={AGENCY_NAME} elevation={floor>0?floor*H:0} anchorAt={s=>s.agency&&{x:s.agency.cx,z:s.agency.cz}}
     extras={({scene,g,m})=><MarketingAgency plan={scene.agency} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
+   {walk==='running'&&<WalkTester onFloor={setWalkFloor} onDone={()=>setWalk('done')}/>}
    {levels.map(level=><group key={level} position={[0,all?level*H:0,0]}><Floor level={level} single={!all} night={isNight} onPick={setPicked}/></group>)}
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${AGENCY_NAME} and return to city`}>← Exit building</button><div><small>{AGENCY_NAME.toUpperCase()} · BRAND, CONTENT & CAMPAIGNS</small><h2>{all?'All floors · Open cutaway':floor===0?AGENCY_FLOORS[0]:`Floor ${floor} · ${AGENCY_FLOORS[floor]}`}</h2></div></header>
-  <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
-  <aside className="skyline-interior-note">{picked??(all?'Lobby + 3 floors round a central atrium · Drag to orbit · Scroll to zoom':`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · No ad, email or social accounts connected`}</span></aside>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);if(walk==='running')setWalk('idle');}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}<button onClick={startWalk} aria-pressed={walk==='running'}>{walk==='running'?'Walking…':'Walk-through test'}</button></nav>
+  <aside className="skyline-interior-note" aria-live="polite">{walk==='running'?`Walk-through test · ${walkFloor===0?'Lobby':`Floor ${walkFloor}`} · from the plaza, up the atrium stair to every floor and back out`:walk==='done'?'Walk-through test complete · Lobby, Floors 1 to 3 by the atrium stair, the hall through the slot door, then out the front door':picked??(all?'Lobby + 3 floors round a central atrium · Drag to orbit · Scroll to zoom':`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{walk!=='idle'?'Simulated test walker following a fixed route. Not an AI agent, no model calls.':`Owning agent: ${AGENCY_OWNER} · Planned, not running · No ad, email or social accounts connected`}</span></aside>
  </section>;
 }
