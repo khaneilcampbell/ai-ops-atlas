@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {distanceToRoad} from './highway';
+import {distanceToRoad,roadIntersections} from './highway';
 import {FREIGHT_STREET_TURN,roundJoins,snapToStreets} from './freight';
 
 describe('roads around Financial Park',()=>{
@@ -16,11 +16,14 @@ describe('roads around Financial Park',()=>{
    if(along.length){const [a,b]=collector.collector;expect(Math.abs(a[0]-b[0]),'and leaves it at a right angle').toBeLessThan(1e-6);}
   }
   // Freight never runs beside the street as a second, overlapping road: off the street, it is
-  // either clear of it or on the short turn at a join.
-  const joins=fr.localJunctions.filter(p=>distanceToRoad(p,street)<1e-6);
-  for(let i=1;i<fr.route.length;i++){const a=fr.route[i-1],b=fr.route[i],m:[number,number]=[(a[0]+b[0])/2,(a[1]+b[1])/2],d=distanceToRoad(m,street);
-   const turning=joins.some(j=>Math.hypot(j[0]-m[0],j[1]-m[1])<FREIGHT_STREET_TURN*1.6);
-   expect(d<1e-6||d>.95||turning,`freight segment ${i} hugs the street at ${d.toFixed(2)}`).toBe(true);}
+  // either clear of it, on the short turn at a join, or crossing it at a junction.
+  const joins=fr.localJunctions.filter(p=>distanceToRoad(p,street)<1e-6),crossings=roadIntersections(fr.route,street);
+  for(let i=1;i<fr.route.length;i++){const a=fr.route[i-1],b=fr.route[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.1));
+   for(let k=0;k<=n;k++){const m:[number,number]=[a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n],d=distanceToRoad(m,street);
+    const turning=joins.some(j=>Math.hypot(j[0]-m[0],j[1]-m[1])<FREIGHT_STREET_TURN*1.6),crossing=crossings.some(c=>Math.hypot(c[0]-m[0],c[1]-m[1])<1);
+    if(!(d<1e-6||d>.95||turning||crossing))expect.fail(`freight segment ${i} hugs the street at ${d.toFixed(2)}`);}}
+  // Where it crosses the street, the crossing is a junction, so curbs and lines open for it.
+  for(const c of crossings)expect(fr.localJunctions.some(j=>Math.hypot(j[0]-c[0],j[1]-c[1])<1e-6),'crossing is a junction').toBe(true);
  });
  it('snaps hugging points onto a street and keeps one entry and exit',()=>{
   const street:[number,number][]=[[0,0],[10,0]];
