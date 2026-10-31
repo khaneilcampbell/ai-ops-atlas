@@ -1,3 +1,4 @@
+import { skylineBuildingHeight } from "./skylineSizes";
 /** Brand-inspired architecture; these accents identify companies, not runtime status. */
 export interface ToolBrand { primary: string; secondary: string; wall: string; roof: string; rounded?: boolean; stepped?: boolean }
 const BRANDS: Record<string, ToolBrand> = {
@@ -22,4 +23,5 @@ export function toolBrand(name: string): ToolBrand {
   return BRANDS[name] ?? { primary: "#839b91", secondary: "#51685f", wall: "#dfe5de", roof: "#3b5147" };
 }
 
-export function toolOfficeHeight(name: string): number { if(name === "Anthropic") return 2.9; if(name === "Wells Fargo") return 1.6; return ["Starbucks", "Smashburger", "Chipotle", "Wells Fargo"].includes(name) ? TOOL_OFFICE_HEIGHT / 2 : TOOL_OFFICE_HEIGHT; }
+/** Skyline tenants stand as tall as the Atlas Marketplace space of their type; other offices keep the standard height. */
+export function toolOfficeHeight(name: string): number { return skylineBuildingHeight(name) ?? TOOL_OFFICE_HEIGHT; }

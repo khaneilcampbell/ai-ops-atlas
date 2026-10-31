@@ -636,7 +636,8 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
       }
       // Six office floors with a regular curtain-wall grid and branded cornices.
-      const floorCount=OFFICE_H < 2 ? 3 : 6;
+      // Floors repeat every 0.36 up the facade, so taller offices get more of them.
+      const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.floor((OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/0.36));
       const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
       for (let floor = 0; floor < floorCount; floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
