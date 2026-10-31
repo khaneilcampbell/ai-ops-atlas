@@ -45,6 +45,8 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  if(s.land.some(r=>x<r.x+r.w&&x+w>r.x&&z<r.z+r.d&&z+d>r.z))return;
  const site={x:x-CIRCA.siteWidth,z,w:CIRCA.siteWidth,d},westFree=!s.land.some(r=>site.x<r.x+r.w&&site.x+site.w>r.x&&site.z<r.z+r.d&&site.z+site.d>r.z);
  const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.filter(b=>b.id!=='circa'||westFree).map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
+ // Circa stays the district's tallest however tall the headquarters (and so the others) grow.
+ const twin=buildings.find(b=>b.id==='circa');if(twin)twin.height=Math.max(twin.height,...buildings.filter(b=>b!==twin).map(b=>b.height+financialDimensions(b.id).top-financialDimensions(twin.id).top+CIRCA.lead));
  const blocks=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  blocks.push({x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.airport){const r=airportFootprint(s.airport);blocks.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d});}
