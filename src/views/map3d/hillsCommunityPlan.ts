@@ -35,6 +35,8 @@ export type Point3=[number,number,number];
 export interface RailPlan {route:Pt[];lengths:number[];length:number;hills:Pt;financial:Pt;hillsWalk:Point3[];financialWalk:Point3[]}
 /** Financial Park stop: the platform sits on the park's north shore, its stairs land on the park's entry path. */
 export function financialParkStop(f:Pick<FinancialPlan,'x'|'z'>):Pt{return [f.x+COMMUNITY.parkStopX,f.z-COMMUNITY.shoreTrackOffset];}
+/** Ground footprint of the park stop's lift, stairs and landing, kept clear of roads planned earlier. */
+export function financialParkStation(f:Pick<FinancialPlan,'x'|'z'>):Rect{const [x,z]=financialParkStop(f);return {x:x-3.9,z:z+.6,w:5.6,d:5.7};}
 export function planCommunityRail(c:CommunityPlan|undefined,f:FinancialPlan|undefined,eastLand?:Rect):RailPlan|undefined{
  if(!c||!f)return;
  const a=c.station,b=financialParkStop(f);
