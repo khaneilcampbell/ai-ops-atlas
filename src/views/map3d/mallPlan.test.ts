@@ -47,3 +47,14 @@ describe("Atlas Marketplace mall", () => {
   expect(planMall({parks:[],land:[],towers:[],kiosks:[],retail:[],links:[]})).toBeUndefined();
  });
 });
+
+describe("Atlas Marketplace scale", () => {
+ it("stands twice the height of the Atlas Hills mansion on about its footprint", async () => {
+  const {HILLS}=await import("./hillsPlan");
+  const m=buildScene(layoutMap(catalog,[],"district")).mall!;
+  expect(MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.h*2);
+  expect(m.rx*2).toBeGreaterThan(HILLS.mansion.w*.8);
+  // Bounding volume at least twice the mansion's.
+  expect(m.rx*2*m.rz*2*MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.w*HILLS.mansion.d*HILLS.mansion.h*2);
+ });
+});

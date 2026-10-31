@@ -62,7 +62,7 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   for(const f of mallFins(a,y0))fins.push({p:[f.x,f.y,f.z],s:[.016,f.h,.06],r:-f.a,c:'#f7f7f0'});
   for(let l=0;l<MALL.levels;l++){
    const {outer,inner}=mallFloor(a,l);
-   for(const q of along(inset(outer,inner,.1),MALL.plantStep))plants.push({p:[q.x,y0+(l+1)*MALL.floor+MALL.slab+.04,q.z],s:[.1,.06,.1],c:l%2?'#86b958':'#4f7a52'});
+   for(const q of along(inset(outer,inner,.1),MALL.plantStep))plants.push({p:[q.x,y0+(l+1)*MALL.floor+MALL.slab+.04,q.z],s:[.22,.14,.22],c:l%2?'#86b958':'#4f7a52'});
   }
   const p=a.plaza;
   // The plaza runs on to the collector road's sidewalk, so walkers arrive on paving.

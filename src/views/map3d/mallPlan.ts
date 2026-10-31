@@ -4,9 +4,10 @@ import type {Pt} from './roads';
 export const MALL_KEY='service:atlas-marketplace';
 /**
  * Atlas Marketplace: a low wave-style mall (stacked curving floors wrapped in white fins) on the
- * open lot between the Skyline park and the Hills boulevard. Sizes are in map units.
+ * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
+ * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
  */
-export const MALL={levels:4,floor:.42,slab:.05,gap:.35,openingHalf:.78,segments:40,outerFinStep:.11,innerFinStep:.18,maxW:8.4,maxD:9.4,plantStep:.95,canopyR:1.15} as const;
+export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.11,innerFinStep:.18,maxW:8.4,maxD:9.4,plantStep:.95,canopyR:1.5} as const;
 
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
