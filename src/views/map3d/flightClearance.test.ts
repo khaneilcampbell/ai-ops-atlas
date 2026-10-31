@@ -9,7 +9,7 @@ import {HILLS} from './hillsPlan';
 import {headquartersEnvelope} from './financialPlan';
 import {financialDimensions} from './financialArchitecture';
 import {fleetPose,FLIGHT_SCHEDULE} from './flightSchedule';
-import {flightClearance,airportFlightCircuit,privateJetPose,FLIGHT_CLEARANCE as C} from './flightClearance';
+import {flightClearance,airportFlightCircuit,privateJetPose,decorativeAerialHeights,FLIGHT_CLEARANCE as C} from './flightClearance';
 
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`clears every building after takeoff in ${group} grouping`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),a=s.airport!,safe=flightClearance(s),circuit=airportFlightCircuit(a,s.bounds,safe.altitude);
@@ -38,3 +38,5 @@ it('raises the corridor when future towers grow, with no fixed Financial Distric
 });
 
 it('also respects tall repositories not yet in the catalog',()=>{const s=buildScene(layoutMap(catalog,[],'none'));s.strays.push({key:'new-tower',name:'Future tower',x:0,z:0,size:3,height:50});expect(flightClearance(s).altitude).toBeGreaterThan(54);});
+
+it('keeps airship gondolas and balloon baskets above the skyline and aircraft corridor',()=>{const s=buildScene(layoutMap(catalog,[],'none')),safe=flightClearance(s),h=decorativeAerialHeights(safe.altitude);expect(h.airship-1.1).toBeGreaterThan(safe.altitude+1);expect(h.balloons-1.7-.2).toBeGreaterThan(h.airship+.8);expect(h.balloons-1.9).toBeGreaterThan(safe.roof+2);});

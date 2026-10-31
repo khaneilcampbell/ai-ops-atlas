@@ -25,3 +25,5 @@ export function privateJetPose(b:Scene3D['bounds'],altitude:number,seconds:numbe
  const cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,rx=(b.x1-b.x0)/2+3,rz=(b.z1-b.z0)/2+3,t=seconds*.085;
  return {x:cx+Math.cos(t)*rx,y:altitude+Math.sin(t*2)*.2,z:cz+Math.sin(t)*rz,yaw:Math.atan2(-Math.cos(t)*rz,-Math.sin(t)*rx),roll:Math.sin(t)*.035};
 }
+/** Leave room below the airship gondola and balloon baskets, above the aircraft corridor. */
+export const decorativeAerialHeights=(altitude:number)=>({airship:altitude+3,balloons:altitude+7});

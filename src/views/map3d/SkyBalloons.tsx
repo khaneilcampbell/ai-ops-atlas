@@ -2,10 +2,12 @@ import {useEffect,useMemo,useRef} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
-import type {Scene3D} from './scene';
+import {TERRACE_H,type Scene3D} from './scene';
+import {flightClearance,decorativeAerialHeights} from './flightClearance';
 /** Decorative Atlas airship and two occupied balloons. No relationship to live worker activity. */
 export function SkyBalloons({scene,g,m,moving}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean}){
  const blimp=useRef<THREE.Group>(null),balloons=useRef<THREE.Group>(null),clock=useRef(0);
+ const safeHeights=useMemo(()=>decorativeAerialHeights(flightClearance(scene).altitude),[scene]);
  const logo=useMemo(()=>{
   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=160;
   const ctx=canvas.getContext('2d')!;ctx.fillStyle='#f4ead1';ctx.fillRect(0,0,512,160);
@@ -34,8 +36,8 @@ export function SkyBalloons({scene,g,m,moving}:{scene:Scene3D;g:ReturnType<typeo
  useFrame((_,dt)=>{
   if(moving)clock.current+=Math.min(dt,.1);
   const b=scene.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,t=clock.current*.012-Math.PI/2;
-  if(blimp.current){blimp.current.position.set(cx+Math.cos(t)*(b.x1-b.x0)*.35,12.5,cz+Math.sin(t)*(b.z1-b.z0)*.35);blimp.current.rotation.y=Math.atan2(-Math.cos(t)*(b.z1-b.z0),-Math.sin(t)*(b.x1-b.x0));}
-  if(balloons.current)balloons.current.position.set(cx-(b.x1-b.x0)*.18+Math.sin(t)*1.2,11+Math.sin(t*.7)*.2,cz-(b.z1-b.z0)*.2+Math.cos(t)*1.2);
+  if(blimp.current){blimp.current.position.set(cx+Math.cos(t)*(b.x1-b.x0)*.35,TERRACE_H+safeHeights.airship,cz+Math.sin(t)*(b.z1-b.z0)*.35);blimp.current.rotation.y=Math.atan2(-Math.cos(t)*(b.z1-b.z0),-Math.sin(t)*(b.x1-b.x0));}
+  if(balloons.current)balloons.current.position.set(cx-(b.x1-b.x0)*.18+Math.sin(t)*1.2,TERRACE_H+safeHeights.balloons+Math.sin(t*.7)*.2,cz-(b.z1-b.z0)*.2+Math.cos(t)*1.2);
  });
  return <><group ref={blimp}><Instanced items={airship.hull} geometry={g.ball} material={m.plain}/><Instanced items={airship.trim} geometry={g.box} material={m.plain}/>{[-1,1].map(side=><mesh key={side} position={[0,0,side*.79]} rotation={[0,side<0?Math.PI:0,0]} geometry={logo.geometry} material={logo.material} raycast={()=>null}/>)}</group><group ref={balloons}><Instanced items={parts.shells} geometry={g.ball} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.heads} geometry={g.ball} material={m.plain}/></group></>;
 }
