@@ -1,9 +1,10 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#156)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
+- 2026-10-31 · Added Circa, twin curved glass towers with a pool deck and a big LED screen on the pool and cabana side, west of Navy Federal and Vanguard by the highway. The garden-balcony tower is now called Garden Residences (#156)
 - 2026-10-31 · New Atlas Marketplace mall on the open lot beside the Skyline park: four wave-shaped floors, twice the height of the Atlas Hills mansion on a lot widened for it, with white fins, planted terraces and a fountain plaza, one shop per sellable agent. Enter building opens the inside: four floors round a funnel-tree atrium, with shops, a food court, a demo hall and a car park (#155)
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting

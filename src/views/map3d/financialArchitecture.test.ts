@@ -5,7 +5,7 @@ import {FINANCIAL_BUILDINGS} from './financialPlan';
 import {BUILDING_INTERIORS} from '../../catalog/buildings';
 import {financialBuildingMatches} from '../../lib/financialSearch';
 const palette={ivory:'#f7f7f0',green:'#294237',gold:'#d0ad69'};
-const identities=[['residence','Circa'],['harbor-residence','The Ritz-Carlton'],['records','Wells Fargo'],['financial-planning','Vanguard'],['budget','American Express'],['business-finance','Benjaire Finance']] as const;
+const identities=[['residence','Garden Residences'],['harbor-residence','The Ritz-Carlton'],['records','Wells Fargo'],['financial-planning','Vanguard'],['budget','American Express'],['business-finance','Benjaire Finance']] as const;
 for(const [id,name]of identities)it(`${name} keeps a stable route, searchable name and safe geometry envelope`,()=>{
  const b=FINANCIAL_BUILDINGS.find(b=>b.id===id)!;expect(b.name).toBe(name);expect(financialBuildingMatches(name).map(b=>b.id)).toContain(id);
  expect(financialBuildingMatches(financialInteriorBrand(financialInteriorKey(id))!.legacyName).map(b=>b.id)).toContain(id);
@@ -20,7 +20,7 @@ for(const [id,name]of identities)it(`${name} keeps a stable route, searchable na
   }
  }
 });
-it('Circa keeps a continuous outer walk around recessed garden planters and below the next balcony',()=>{
+it('Garden Residences keeps a continuous outer walk around recessed garden planters and below the next balcony',()=>{
  const a=financialArchitecture('residence',13,palette);expect(a.balconies.length).toBeGreaterThan(15);expect(a.trees.filter(t=>t.floor>=0).length).toBeGreaterThan(2);
  for(const deck of a.balconies){expect((deck.outerW-deck.innerW)/2).toBeGreaterThanOrEqual(BALCONY.walkClearance);expect((deck.outerD-deck.innerD)/2).toBeGreaterThanOrEqual(BALCONY.walkClearance);}
  for(const t of a.trees.filter(t=>t.floor>=0)){
@@ -37,8 +37,8 @@ it('scales the 235-metre architectural reference without breaking HQ-relative he
  expect(financialHeight('records',8,1.12)).toBe(WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT);
  expect(financialHeight('records',20,1.12)).toBeGreaterThan(20);expect(financialSignLevel('financial-planning',12)).toBeLessThan(12*.54);
 });
-it('retains the three other tower names and stable IDs',()=>{
- expect(FINANCIAL_BUILDINGS.filter(b=>!identities.some(([id])=>id===b.id)).map(b=>[b.id,b.name])).toEqual([['banks','Chase'],['investments','Robinhood'],['insurance','Navy Federal Credit Union']]);
+it('retains the other tower names and stable IDs',()=>{
+ expect(FINANCIAL_BUILDINGS.filter(b=>!identities.some(([id])=>id===b.id)).map(b=>[b.id,b.name])).toEqual([['banks','Chase'],['investments','Robinhood'],['insurance','Navy Federal Credit Union'],['circa','Circa']]);
 });
 
 it('joins the top sign band to floor volumes without coplanar overlapping walls',()=>{
@@ -47,8 +47,8 @@ it('joins the top sign band to floor volumes without coplanar overlapping walls'
  }
 });
 
-it('swaps American Express and Wells Fargo while keeping Circa and stable identities',()=>{
- expect(FINANCIAL_BUILDINGS.find(b=>b.id==='residence')).toMatchObject({name:'Circa',x:3.5,z:9,rise:1.24});
+it('swaps American Express and Wells Fargo while keeping Garden Residences and stable identities',()=>{
+ expect(FINANCIAL_BUILDINGS.find(b=>b.id==='residence')).toMatchObject({name:'Garden Residences',x:3.5,z:9,rise:1.24});
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='budget')).toMatchObject({name:'American Express',x:14.5,z:9.5,rise:1.08});
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='records')).toMatchObject({name:'Wells Fargo',x:15.7,z:4.3});
  expect(financialInteriorBrand('Spending & Budget')?.id).toBe('budget');
