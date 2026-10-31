@@ -1,5 +1,6 @@
 import type {Inst} from './models';
 import {financialBrand} from './financialBrands';
+import {CIRCA} from './circaPlan';
 
 /** A stylized vertical scale, not a geospatial survey. HQ-relative minimums remain in force. */
 export const FINANCIAL_METRES_PER_UNIT=18;
@@ -7,6 +8,7 @@ export const WELLS_FARGO_REFERENCE_METRES=235;
 export const BALCONY={projection:.44,railHeight:.22,gardenEvery:5,walkClearance:.32} as const;
 export function financialDimensions(id:string){
  const architecture=financialBrand(id)?.architecture;
+ if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,w:CIRCA.podium.w+.7,d:CIRCA.podium.d+.4,top:CIRCA.crown};
  const width=architecture==='hotel'||architecture==='bevelled'?3.6:architecture?3.4:3;
  const depth=architecture?2.8:2.6,projection=architecture==='biophilic'?BALCONY.projection:0;
  return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+(architecture?.7:.5),depth+projection*2+.12),top:architecture?1.1:1.2};
@@ -19,7 +21,7 @@ export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];gl
 export function financialArchitecture(id:string,height:number,palette:TowerPalette):ArchitecturePlan{
  const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
  const out={solid,glass,clearGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
- if(!brand?.architecture)return out;
+ if(!brand?.architecture||brand.architecture==='twin')return out;
  const {width:w,depth:d}=financialDimensions(id),{body,trim,accent}=brand;
  const box=(target:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>target.push({p:[x,y,z],s:[w,h,d],c,r});
  const slab=(y:number,ww:number,dd:number,c=trim,h=.045)=>box(solid,0,y,0,ww,h,dd,c);

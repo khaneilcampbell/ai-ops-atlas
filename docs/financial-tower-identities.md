@@ -4,7 +4,7 @@ Four existing IDs retain their placement and gain distinct, static procedural ar
 
 | Stable ID | Display name | Architecture |
 |---|---|---|
-| residence | Circa | Wraparound balconies, recessed sky gardens, planted roof, residential suites |
+| residence | Garden Residences (was Circa) | Wraparound balconies, recessed sky gardens, planted roof, residential suites |
 | harbor-residence | The Ritz-Carlton | Warm stone, champagne crown, hotel arrival canopy and guest suites |
 | records | Wells Fargo | Bevelled glazing, metal rims, red/gold fascia, bank reception |
 | financial-planning | Vanguard | Modern Art Deco setbacks, planted terraces, corporate research and meeting rooms |
@@ -78,3 +78,7 @@ The shared geometry envelope continues to drive entrances, freight avoidance, st
 ### Final merge validation
 
 Integrated the latest main-branch WebGL recovery and adaptive quality changes. Full suite: **485 tests passed**; lint and type checks passed. Browser review: **15 passed, 1 intentionally skipped**, covering desktop/phone layouts, day/night map, office, and building navigation. A final desktop/phone check also passed and confirmed the blimp is above the skyline. Commercial planes, private jets, the blimp and balloon baskets now share roof-clearance planning. Screenshots: [desktop](screenshots/pr-153/desktop-day.png), [phone](screenshots/pr-153/phone-day.png). No visual baselines were replaced.
+
+## Circa twin towers (west waterfront parcel)
+
+The `residence` tower was renamed **Garden Residences** so the name Circa belongs to the new twin-tower landmark (stable ID `circa`), on a waterfront parcel west of Navy Federal Credit Union and Vanguard, beside the highway. It is a stylized, unofficial landmark inspired by the 2018 Downtown Los Angeles complex: two elliptical glass towers with balcony ribs on one side, an eight-storey podium with street retail and louvered parking, a curved emissive LED screen on the west face (abstract placeholder content, scrolls only when motion is allowed) and a rooftop pool deck. Geometry lives in `circaPlan.ts` (pure, tested) and `CircaTowers.tsx` (instanced, no lights). The highway's north-west run keeps at least 1.2 units from the parcel in every grouping (`CIRCA_HIGHWAY_GAP` in `cityPerimeter.ts`).

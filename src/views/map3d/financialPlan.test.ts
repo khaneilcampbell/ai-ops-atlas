@@ -8,13 +8,13 @@ import {FINANCIAL as F,FINANCIAL_BUILDINGS} from './financialPlan';
 import {distanceToRoad} from './highway';
 import {airportFootprint} from './airport';
 import {pathClear} from './roads';
-for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans nine clear connected high-rises in ${grouping} grouping`,()=>{
- const scene=buildScene(layoutMap(catalog,[],grouping)),f=scene.financial!;expect(f).toBeDefined();expect(f.buildings).toHaveLength(9);
+for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans ten clear connected high-rises in ${grouping} grouping`,()=>{
+ const scene=buildScene(layoutMap(catalog,[],grouping)),f=scene.financial!;expect(f).toBeDefined();expect(f.buildings).toHaveLength(10);
  expect(f.buildings.find(b=>b.id==='budget')!.height).toBeCloseTo(f.referenceHeight*1.08);
- for(const r of scene.land.filter(r=>r.x!==f.x||r.z!==f.z))expect(f.x<r.x+r.w&&f.x+f.w>r.x&&f.z<r.z+r.d&&f.z+f.d>r.z).toBe(false);
+ for(const r of scene.land.filter(r=>(r.x!==f.x||r.z!==f.z)&&r!==scene.land.find(l=>l.x===f.circa?.x&&l.z===f.circa?.z)))expect(f.x<r.x+r.w&&f.x+f.w>r.x&&f.z<r.z+r.d&&f.z+f.d>r.z).toBe(false);
  const tallest=Math.max(...scene.towers.map(t=>towerTop(t)-TERRACE_H));
  const boxes=f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
- for(let i=0;i<f.buildings.length;i++){const b=f.buildings[i];expect(b.height).toBeGreaterThan(tallest);expect(b.approach.at(-1)).toEqual([f.x+b.x,f.z+F.northWalkZ]);expect(pathClear(b.approach,boxes.filter((_,j)=>i!==j),.3)).toBe(true);expect(b.x-F.towerWidth/2).toBeGreaterThan(0);expect(b.x+F.towerWidth/2).toBeLessThan(f.w);}
+ for(let i=0;i<f.buildings.length;i++){const b=f.buildings[i];expect(b.height).toBeGreaterThan(tallest);expect(b.approach.at(-1)).toEqual([f.x+b.x,f.z+F.northWalkZ]);expect(pathClear(b.approach,boxes.filter((_,j)=>i!==j),.3)).toBe(true);if(b.id==='circa')continue;expect(b.x-F.towerWidth/2).toBeGreaterThan(0);expect(b.x+F.towerWidth/2).toBeLessThan(f.w);}
  // Original tower offsets stay fixed within the translated district; the expansion stays airport-ward.
  for(const b of f.buildings.slice(0,5)){const original=FINANCIAL_BUILDINGS.find(v=>v.id===b.id)!;expect(f.x+b.x).toBeCloseTo(f.originalX+original.x);}
  expect(f.x).toBeLessThan(f.originalX);
