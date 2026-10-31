@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import {stadiumFloodPositions} from './streetLighting';
 import {useMemo} from "react";
 import {TERRACE_H} from "./scene";
@@ -7,7 +6,6 @@ export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
 /** Static instanced bowl: shared geometry, no assets or animation loop. */
 export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
-  const target=useMemo(()=>{const t=new THREE.Object3D();if(a)t.position.set(a.x+4,TERRACE_H+.12,a.z+3.5);return t;},[a]);
   const parts=useMemo(()=>{
     if(!a)return [];
     const y=TERRACE_H,cx=a.x+4,cz=a.z+3.5;
@@ -32,5 +30,5 @@ export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:Stad
     return out;
   },[a]);
   if(!a)return null;
-  return <><primitive object={target}/>{night&&stadiumFloodPositions(a).map(([x,z],i)=><spotLight key={i} position={[x,TERRACE_H+2.08,z]} target={target} color="#fff1d0" intensity={22} distance={10} angle={.72} penumbra={.55} decay={2} castShadow={false}/>)}<Instanced items={stadiumFloodPositions(a).map(([x,z])=>({p:[x,TERRACE_H+2.121,z],s:[.46,.025,.19],c:"#fff1d0"}))} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/><Instanced items={[{p:[a.x+4,0,a.z+3.5],s:[12,TERRACE_H,11]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts} geometry={g.box} material={m.plain}/><Instanced items={[{p:[a.x+6.6,TERRACE_H,a.z+3.5],s:[.65,.55,1.2],c:"#294237"}]} geometry={g.box} material={m.plain} pick={{...pick,keys:[STADIUM_KEY]}}/></>;
+  return <><Instanced items={stadiumFloodPositions(a).map(([x,z])=>({p:[x,TERRACE_H+2.121,z],s:[.46,.025,.19],c:"#fff1d0"}))} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/><Instanced items={[{p:[a.x+4,0,a.z+3.5],s:[12,TERRACE_H,11]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts} geometry={g.box} material={m.plain}/><Instanced items={[{p:[a.x+6.6,TERRACE_H,a.z+3.5],s:[.65,.55,1.2],c:"#294237"}]} geometry={g.box} material={m.plain} pick={{...pick,keys:[STADIUM_KEY]}}/></>;
 }

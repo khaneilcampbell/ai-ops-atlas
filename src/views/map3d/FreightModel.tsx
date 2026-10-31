@@ -10,6 +10,7 @@ import {Instanced,type Inst,type useGeometries,type useMaterials} from "./models
 import {TERRACE_H} from "./scene";
 import {vehicleAt} from "./vehicles";
 import type {FreightPlan} from "./freight";
+import {mergeSegments} from "./mergeSegments";
 export function Freight({plan,g,m,moving,visible=true}:{plan?:FreightPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean;visible?:boolean}){
  const ref=useRef<Group>(null),clock=useRef(0);
  const lightPositions=useMemo(()=>plan?highwayLightPositions(plan.highway,[...plan.exits,...plan.localJunctions]):[],[plan]);
@@ -64,20 +65,19 @@ export function Freight({plan,g,m,moving,visible=true}:{plan?:FreightPlan;g:Retu
  };
  for(const path of paths){
   for(const side of [-1,1]){
-   for(const q of roadLines(path,side*HIGHWAY.shoulder,path===plan.highway?plan.exits:openings))if(path!==plan.route||distanceToRoad(q.a,plan.highway)>.2)strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#ede8d6");
-   if(path===plan.highway)for(const q of roadLines(path,side*.045,plan.exits))strip(q.a,q.b,.022,.01,TERRACE_H+.09,"#d5b76b");
+   for(const q of mergeSegments(roadLines(path,side*HIGHWAY.shoulder,path===plan.highway?plan.exits:openings).filter(q=>path!==plan.route||distanceToRoad(q.a,plan.highway)>.2)))strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#ede8d6");
+   if(path===plan.highway)for(const q of mergeSegments(roadLines(path,side*.045,plan.exits)))strip(q.a,q.b,.022,.01,TERRACE_H+.09,"#d5b76b");
    else if(side===1&&!ramps.has(path)){
     const center=roadLines(path,0,openings);
     for(const [i,q] of center.entries())if(i%4<2&&distanceToRoad(q.a,plan.highway)>.2)strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#e5dfc9");
    }
-   if(path===plan.route)for(const q of roadLines(path,side*HIGHWAY.barrier,[...plan.exits,...plan.localJunctions]))if(onLand(q.a[0],q.a[1])&&distanceToRoad(q.a,plan.highway)>1.1)strip(q.a,q.b,.1,.035,TERRACE_H+.08,"#cfcbbd");
+   if(path===plan.route)for(const q of mergeSegments(roadLines(path,side*HIGHWAY.barrier,[...plan.exits,...plan.localJunctions]).filter(q=>onLand(q.a[0],q.a[1])&&distanceToRoad(q.a,plan.highway)>1.1)))strip(q.a,q.b,.1,.035,TERRACE_H+.08,"#cfcbbd");
    if(path===plan.highway||path!==plan.route){
     const rails=roadLines(path,side*HIGHWAY.barrier,openings);
-    for(const [i,q] of rails.entries()){
-     if(path!==plan.highway&&onLand(q.a[0],q.a[1]))continue;
-     strip(q.a,q.b,.045,.075,TERRACE_H+HIGHWAY.railHeight,"#2f4a3a");
-     if(i%3===0)out.push(box(q.a[0],TERRACE_H+.08,q.a[1],.04,HIGHWAY.railHeight-.08,.04,"#2f4a3a"));
-    }
+    const shown=rails.filter(q=>path===plan.highway||!onLand(q.a[0],q.a[1]));
+    // One box per straight run of rail; posts keep their spacing along the original segments.
+    for(const q of mergeSegments(shown))strip(q.a,q.b,.045,.075,TERRACE_H+HIGHWAY.railHeight,"#2f4a3a");
+    for(const [i,q] of rails.entries())if(i%3===0&&(path===plan.highway||!onLand(q.a[0],q.a[1])))out.push(box(q.a[0],TERRACE_H+.08,q.a[1],.04,HIGHWAY.railHeight-.08,.04,"#2f4a3a"));
    }
   }
 
@@ -89,9 +89,11 @@ export function Freight({plan,g,m,moving,visible=true}:{plan?:FreightPlan;g:Retu
  }
  return out;
  },[plan,lightPositions]);
+ // Paint-thin markings cast no visible shadow; leaving them out of the shadow pass halves their cost.
+ const [solid,flat]=useMemo(()=>[parts.filter(p=>p.s[1]>.02),parts.filter(p=>p.s[1]<=.02)],[parts]);
  const lights=useMemo<Inst[]>(()=>lightPositions.map(p=>({p:[p[0],TERRACE_H+.96,p[1]],s:[.07,.045,.07]})),[lightPositions]);
  const truck=useMemo<Inst[]>(()=>MODELS.semi.parts.map(p=>({p:p.at.map(v=>v*SCALE) as [number,number,number],s:p.size.map(v=>v*SCALE) as [number,number,number],c:p.color??'#294237'})),[]);
  useFrame((_,dt)=>{if(!plan||!ref.current)return;if(moving)clock.current+=Math.min(dt,.1);const p=vehicleAt(plan.truck,clock.current);ref.current.position.set(p.x,TERRACE_H+.03+p.y,p.z);ref.current.rotation.y=Math.atan2(-p.dz,p.dx);});
  if(!plan)return null;
- return <><group name="atlas-road-infrastructure"><Instanced items={parts} geometry={g.box} material={m.plain}/><Instanced items={lights} geometry={g.ball} material={m.lamp}/></group><group name="atlas-freight-truck" ref={ref} visible={visible} position={[plan.lot.x,TERRACE_H+.11,plan.lot.z]}><Instanced items={truck} geometry={g.box} material={m.plain}/></group></>;
+ return <><group name="atlas-road-infrastructure"><Instanced items={solid} geometry={g.box} material={m.plain}/><Instanced items={flat} geometry={g.box} material={m.plain} shadow={false}/><Instanced items={lights} geometry={g.ball} material={m.lamp}/></group><group name="atlas-freight-truck" ref={ref} visible={visible} position={[plan.lot.x,TERRACE_H+.11,plan.lot.z]}><Instanced items={truck} geometry={g.box} material={m.plain}/></group></>;
 }
