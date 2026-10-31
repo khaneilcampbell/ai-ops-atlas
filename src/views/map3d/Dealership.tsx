@@ -74,8 +74,10 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   for(let floor=0;floor<r.floors-1;floor++)for(let i=0;i<D.stairCount;i++)p.solid.push(box(cx+.9-i*.16,floor*F+F*i/D.stairCount+.1,B+.45,.18,.09,.5,'#aab7be'));
   // Ground-floor reception and lounge beside the side service door.
   const desk=Rx-.75;p.solid.push(box(desk,.1,cz+.35,1.3,.45,.5,'#e4e2db'),box(desk,.55,cz+.35,1.4,.045,.6,'#294237'),box(desk,.59,cz+.35,.25,.17,.045,'#203744'),box(Rx-1.3,.1,Fz-.45,.35,.24,.4,'#294237'),box(Rx-.55,.1,Fz-.45,.35,.24,.4,'#294237'));
-  // Original showroom lighting (KC, 2026-10-31): one ceiling strip over each gallery wing per storey.
-  for(const yy of [...levels.map(level=>level-.17),H-.16])for(const xx of wings)p.lights.push(box(xx,yy,cz,Math.min(.8,wing*.7),.025,.5,'#ffffff'));
+  // Original showroom lighting (KC, 2026-10-31): one ceiling strip over each gallery wing per storey,
+  // same glow. The strips hang just behind the front glass so every lit storey reads from the street;
+  // set back at mid-depth under the slabs they were hidden from outside and the tower looked dark.
+  for(const yy of [...levels.map(level=>level-.2),H-.2])for(const xx of wings)p.lights.push(box(xx,yy,Fz-.4,Math.min(.8,wing*.7),.05,.3,'#ffffff'));
   const colors=['#2163ad','#e7e9e6','#a5abb0','#202b35'];
   bays(wings[0]).forEach((bx,k)=>car(p,x+bx,y+.1,z+cz+.3,colors[k%4],false));
   levels.forEach((level,i)=>[...bays(wings[0]),...bays(wings[1])].forEach((bx,k)=>car(p,x+bx,y+level,z+cz+.2,colors[(i+k)%4],k>=perWing&&k%2===0)));
