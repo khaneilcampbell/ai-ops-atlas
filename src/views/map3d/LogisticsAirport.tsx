@@ -1,4 +1,4 @@
-import {airportFlightCircuit} from './flightClearance';
+import {airportFlightCircuit,type WorldObstacle} from './flightClearance';
 import * as THREE from "three";
 import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
@@ -66,7 +66,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
 }
 
 /** Shared geometry and materials; departures use the existing scene frame loop. */
-export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,night=false}:{night?:boolean;bounds?:{x0:number;z0:number;x1:number;z1:number};flightAltitude?:number;plan?:AirportPlan;g:Geometry;m:Materials;pick:Pick;moving:boolean}) {
+export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,night=false}:{night?:boolean;bounds?:{x0:number;z0:number;x1:number;z1:number};flightAltitude?:number;obstacles?:WorldObstacle[];plan?:AirportPlan;g:Geometry;m:Materials;pick:Pick;moving:boolean}) {
   const clock=useRef(0);
   const power=usePowerProfile();
   const [visible,setVisible]=useState(()=>document.visibilityState!=="hidden");
@@ -159,7 +159,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,night=fals
     for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
     return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat()]};
   },[a]);
-  const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude):undefined,[a,bounds,flightAltitude]);
+  const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.ball} material={m.lamp}/>

@@ -56,7 +56,9 @@ export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): Airpo
   return { x: edge + 1.2, z: accessZ - 6, accessX: access.x+access.w-.1, accessZ };
 }
 
-export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number }
+/** Something tall near the departure path, in departure coordinates: centre, half width/depth and roof height. */
+export interface FlightObstacle { x:number; z:number; hw:number; hd:number; h:number }
+export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number; obstacles?:FlightObstacle[] }
 /** Takeoff timing in departure seconds: line up, accelerate, rotate, lift off, then climb out. */
 export const TAKEOFF={hold:2,accel:.32,liftoff:9.5,rotate:1.1,climbAccel:.25,climbTop:30,climbRamp:4,rotationPitch:.17,cruisePitch:.04,maxPitch:.3,maxBank:.42,gearUp:1.5,gearTime:2,mainGearZ:.5} as const;
 const clamp01=(u:number)=>Math.max(0,Math.min(1,u));
@@ -71,8 +73,8 @@ export function takeoffDistance(t:number){
 /** Pitch on the runway: nose rises over the rotation window while the main gear stays down. */
 export const rotationPitch=(t:number)=>T.rotationPitch*smooth((t-(T.liftoff-T.rotate))/T.rotate);
 /** Share of the climb to cruise completed: vertical speed ramps up after liftoff, holds steady, then eases off to level flight. */
-export function climbFraction(t:number){
-  const d=T.climbTop-T.liftoff,r=T.climbRamp,u=Math.max(0,Math.min(d,t-T.liftoff)),v=1/(d-r);
+export function climbFraction(t:number,top:number=T.climbTop){
+  const d=top-T.liftoff,r=T.climbRamp,u=Math.max(0,Math.min(d,t-T.liftoff)),v=1/(d-r);
   if(u<r)return v*u*u/(2*r);
   if(u<d-r)return v*(u-r/2);
   return 1-v*(d-u)**2/(2*r);
@@ -97,14 +99,35 @@ function hermite(s:XZ,a:XZ,j:XZ,b:XZ,u:number):XZ{
 }
 const climbOutEnd=():{at:XZ;velocity:XZ}=>({at:{x:0,z:10.4-takeoffDistance(STRAIGHT)},velocity:{x:0,z:-(LIFT_SPEED+T.climbAccel*(STRAIGHT-T.liftoff))}});
 const speedOf=(v:XZ)=>Math.hypot(v.x,v.z);
-interface JoinTurn {angle:number;a:XZ;b:XZ;end:XZ;lengths:number[];length:number}
+interface JoinTurn {angle:number;a:XZ;b:XZ;end:XZ;lengths:number[];length:number;v0:number;v1:number;climbTop:number}
+/** Clearance kept around and above anything under the climb-out (matches the scene's flight clearance test). */
+const OBSTACLE_RADIUS=2.2,OBSTACLE_GAP=.8,CLIMB_TOPS=[30,27,24,21,18,15];
+/** Point on a join turn after `time` seconds: distance follows a smooth speed change from climb-out speed to circuit speed. */
+function turnPosition(turn:Omit<JoinTurn,'climbTop'>,time:number):XZ{
+  const {at}=climbOutEnd(),d=JOIN-STRAIGHT,u=Math.max(0,Math.min(1,time/d));
+  const s=Math.max(0,Math.min(turn.length,(u**3-2*u*u+u)*d*turn.v0+(-2*u**3+3*u*u)*turn.length+(u**3-u*u)*d*turn.v1));
+  let lo=0,hi=SAMPLES;
+  while(hi-lo>1){const mid=(lo+hi)>>1;if(turn.lengths[mid]<=s)lo=mid;else hi=mid;}
+  const span=turn.lengths[hi]-turn.lengths[lo],f=span>1e-9?(s-turn.lengths[lo])/span:0;
+  return hermite(at,turn.a,turn.end,turn.b,(lo+f)/SAMPLES);
+}
+/** True when the climb-out and turn stay above every obstacle they pass over. */
+function climbClears(c:FlightCircuit,turn:Omit<JoinTurn,'climbTop'>,top:number){
+  const obstacles=c.obstacles??[],cruise=c.altitude??14;
+  if(!obstacles.length)return true;
+  for(let time=T.liftoff;time<=JOIN;time+=.2){
+    const p=time<STRAIGHT?{x:0,z:10.4-takeoffDistance(time)}:turnPosition(turn,time-STRAIGHT),y=(cruise-.28)*climbFraction(time,top);
+    for(const o of obstacles)if(Math.abs(p.x-o.x)<o.hw+OBSTACLE_RADIUS&&Math.abs(p.z-o.z)<o.hd+OBSTACLE_RADIUS&&y-.2<o.h+OBSTACLE_GAP)return false;
+  }
+  return true;
+}
 const SAMPLES=120,joinCache=new WeakMap<FlightCircuit,JoinTurn>();
 /** The turn from the runway heading onto the circuit. The join point and curve shape are chosen once per circuit for
  * the gentlest turn, and the aircraft then moves along the curve at a smoothly changing speed (no slow-down or hairpin). */
 export function circuitJoin(c:FlightCircuit):JoinTurn{
   const cached=joinCache.get(c);if(cached)return cached;
   const {at,velocity}=climbOutEnd(),d=JOIN-STRAIGHT,v0=speedOf(velocity),dir0={x:velocity.x/v0,z:velocity.z/v0};
-  let best:JoinTurn|undefined,bestCost=Infinity;
+  const options:{cost:number;turn:Omit<JoinTurn,'climbTop'>}[]=[];
   for(let k=0;k<180;k++){
     const angle=k*Math.PI/90,end=orbitPoint(c,angle),w=orbitVelocity(c,angle),v1=speedOf(w),dir1={x:w.x/v1,z:w.z/v1};
     const cruise=(v0+v1)/2;
@@ -119,31 +142,25 @@ export function circuitJoin(c:FlightCircuit):JoinTurn{
       const length=lengths[SAMPLES],pace=length/d/cruise;
       // Turn rate at cruise speed, total turning, and a penalty when the curve is too long or short for the time allowed.
       const cost=sharpest*cruise+total*.3+Math.max(0,pace-1.3,.75-pace)*20;
-      if(cost<bestCost){bestCost=cost;best={angle,a,b,end,lengths,length};}
+      options.push({cost,turn:{angle,a,b,end,lengths,length,v0,v1}});
     }
   }
-  joinCache.set(c,best!);return best!;
+  options.sort((p,q)=>p.cost-q.cost);
+  // Prefer the gentlest climb; climb more steeply only when every smooth turn would pass too low over a tower.
+  let chosen:JoinTurn={...options[0].turn,climbTop:CLIMB_TOPS[CLIMB_TOPS.length-1]};
+  search:for(const top of CLIMB_TOPS)for(const o of options)if(climbClears(c,o.turn,top)){chosen={...o.turn,climbTop:top};break search;}
+  joinCache.set(c,chosen);return chosen;
 }
 export const circuitJoinAngle=(c:FlightCircuit)=>circuitJoin(c).angle;
-/** Point on the join turn after `time` seconds: distance follows a smooth speed change from climb-out speed to circuit speed. */
-function joinPosition(c:FlightCircuit,time:number):XZ{
-  const turn=circuitJoin(c),{at,velocity}=climbOutEnd(),d=JOIN-STRAIGHT,u=Math.max(0,Math.min(1,time/d));
-  const v0=speedOf(velocity),v1=speedOf(orbitVelocity(c,turn.angle));
-  const s=Math.max(0,Math.min(turn.length,(u**3-2*u*u+u)*d*v0+(-2*u**3+3*u*u)*turn.length+(u**3-u*u)*d*v1));
-  let lo=0,hi=SAMPLES;
-  while(hi-lo>1){const mid=(lo+hi)>>1;if(turn.lengths[mid]<=s)lo=mid;else hi=mid;}
-  const span=turn.lengths[hi]-turn.lengths[lo],f=span>1e-9?(s-turn.lengths[lo])/span:0;
-  return hermite(at,turn.a,turn.end,turn.b,(lo+f)/SAMPLES);
-}
 /** Decorative three-minute cycle: takeoff, a smooth turn onto two city circuits, departure, then reset offscreen. */
 export function departurePose(seconds:number,moving=true,circuit:FlightCircuit=DEFAULT_CIRCUIT) {
-  const t=moving?seconds%180:0,cruise=circuit.altitude??14,join=circuitJoinAngle(circuit);
+  const t=moving?seconds%180:0,cruise=circuit.altitude??14,turnPlan=circuitJoin(circuit),join=turnPlan.angle;
   // One continuous climb from liftoff to cruise: vertical speed builds gently, then levels off at the circuit.
-  const climb=(time:number)=>.28+(cruise-.28)*climbFraction(time);
+  const climb=(time:number)=>.28+(cruise-.28)*climbFraction(time,turnPlan.climbTop);
   const exitAt=orbitPoint(circuit,join),exitVelocity=orbitVelocity(circuit,join),centre={x:exitAt.x-circuit.x,z:exitAt.z-circuit.z},outward=Math.hypot(centre.x,centre.z)||1;
   const position=(time:number)=>{
     if(time<STRAIGHT)return {x:0,z:10.4-takeoffDistance(time),y:climb(time)};
-    if(time<JOIN)return {...joinPosition(circuit,time-STRAIGHT),y:climb(time)};
+    if(time<JOIN)return {...turnPosition(turnPlan,time-STRAIGHT),y:climb(time)};
     if(time<EXIT)return {...orbitPoint(circuit,join+SPIN*(time-JOIN)*ORBIT),y:cruise};
     // Leave along the circuit heading, drifting outward and climbing away.
     const u=time-EXIT;return {x:exitAt.x+exitVelocity.x*u+centre.x/outward*u*u*.06,z:exitAt.z+exitVelocity.z*u+centre.z/outward*u*u*.06,y:cruise+u*.15};
