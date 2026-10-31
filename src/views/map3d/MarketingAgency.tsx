@@ -56,11 +56,31 @@ function glassTextures(){
  return {map:make(false),glow:make(true)};
 }
 
+/**
+ * The Benjaire sign, drawn in the building's own language: a recessed cream panel edged in the
+ * same copper as the sweep, the name in spaced serif capitals, a fine rule with the screen's
+ * diamond at its centre, and the agency line beneath. The night map lights only the copper.
+ */
+function letterSpaced(g:CanvasRenderingContext2D,text:string,cx:number,y:number,track:number){
+ const widths=[...text].map(ch=>g.measureText(ch).width),total=widths.reduce((a,b)=>a+b,0)+track*(text.length-1);
+ let x=cx-total/2;g.textAlign='left';
+ [...text].forEach((ch,i)=>{g.fillText(ch,x,y);x+=widths[i]+track;});
+}
 function wordmark(){
- const c=document.createElement('canvas');c.width=1024;c.height=192;const g=c.getContext('2d')!;
- g.fillStyle='#9a5232';g.textAlign='center';g.textBaseline='middle';g.font='500 120px -apple-system, "Helvetica Neue", Arial, sans-serif';
- g.fillText('B E N J A I R E',512,100,1000);
- const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
+ const make=(night:boolean)=>{
+  const W=1024,H=Math.round(1024*AGENCY.word.h/AGENCY.word.w),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d')!;
+  const copper=night?'#ffb980':(()=>{const k=g.createLinearGradient(0,0,0,H);k.addColorStop(0,'#c27a4e');k.addColorStop(.5,'#9a5232');k.addColorStop(1,'#7a3d24');return k;})();
+  g.fillStyle=night?'#000':'#ebe3d6';g.fillRect(0,0,W,H);
+  if(!night){g.fillStyle='rgba(90,60,40,.10)';g.fillRect(0,0,W,10);g.fillRect(0,0,10,H);}
+  g.strokeStyle=copper;g.lineWidth=9;g.strokeRect(14,14,W-28,H-28);g.lineWidth=2;g.strokeRect(32,32,W-64,H-64);
+  g.fillStyle=copper;g.textBaseline='middle';
+  g.font='400 150px Georgia, "Times New Roman", serif';letterSpaced(g,'BENJAIRE',W/2,H*.43,26);
+  const ry=H*.66,d=11;g.fillRect(W*.2,ry-1.5,W*.6,3);
+  g.beginPath();g.moveTo(W/2,ry-d*1.4);g.lineTo(W/2+d,ry);g.lineTo(W/2,ry+d*1.4);g.lineTo(W/2-d,ry);g.closePath();g.fillStyle=night?'#000':'#ebe3d6';g.fill();g.strokeStyle=copper;g.lineWidth=3;g.stroke();
+  g.fillStyle=copper;g.font='500 40px -apple-system, "Helvetica Neue", Arial, sans-serif';letterSpaced(g,'MARKETING AGENCY',W/2,H*.81,14);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
+ };
+ return {map:make(false),glow:make(true)};
 }
 
 const noRaycast=()=>null;
@@ -84,12 +104,12 @@ export function MarketingAgency({plan:a,g,m,pick,night=false,building=true}:{pla
  const mats=useMemo(()=>{
   const screen=screenTextures(),glass=glassTextures(),word=wordmark();
   return {
-   textures:[screen.map,screen.glow,glass.map,glass.glow,word],
+   textures:[screen.map,screen.glow,glass.map,glass.glow,word.map,word.glow],
    shell:new THREE.MeshStandardMaterial({map:screen.map,emissiveMap:screen.glow,emissive:'#ffc48a',emissiveIntensity:0,roughness:.78,metalness:.02}),
    copper:new THREE.MeshStandardMaterial({color:'#a2552f',roughness:.36,metalness:.55,emissive:'#ff9a5c',emissiveIntensity:0,side:THREE.DoubleSide}),
    glass:new THREE.MeshStandardMaterial({map:glass.map,emissiveMap:glass.glow,emissive:'#ffbe7a',emissiveIntensity:.04,roughness:.16,metalness:.35,side:THREE.DoubleSide}),
    pool:new THREE.MeshStandardMaterial({color:'#7cc0d3',roughness:.08,metalness:.12,emissive:'#2f6b80',emissiveIntensity:0}),
-   word:new THREE.MeshStandardMaterial({map:word,emissiveMap:word,emissive:'#ffb27a',emissiveIntensity:0,transparent:true,alphaTest:.3,roughness:.4,metalness:.4}),
+   word:new THREE.MeshStandardMaterial({map:word.map,emissiveMap:word.glow,emissive:'#ffb27a',emissiveIntensity:0,roughness:.55,metalness:.15}),
   };
  },[]);
  useEffect(()=>{
@@ -109,6 +129,6 @@ export function MarketingAgency({plan:a,g,m,pick,night=false,building=true}:{pla
    <mesh geometry={geo.glass} material={mats.glass} {...click}/>
   </>}
   <mesh geometry={geo.pools} material={mats.pool} receiveShadow raycast={noRaycast}/>
-  {building&&<mesh position={[wx,wy,a.z+AGENCY.depth+.012]} material={mats.word} raycast={noRaycast}><planeGeometry args={[AGENCY.word.w,AGENCY.word.h]}/></mesh>}
+  {building&&<mesh position={[wx,wy,a.z+AGENCY.depth+.008]} material={mats.word} raycast={noRaycast}><planeGeometry args={[AGENCY.word.w,AGENCY.word.h]}/></mesh>}
  </group>;
 }

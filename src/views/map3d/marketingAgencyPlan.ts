@@ -26,8 +26,9 @@ export const AGENCY={
  sweep:{from:.3,pier:.32,apex:.86,h:2.78},
  arch:{centre:.56,half:1.25,h:2.85},
  inset:.28,frame:.13,
- /** The BENJAIRE wordmark on the west block's south face (local centre x, y, size); the screen is left plain behind it. */
- word:{x:1.15,y:2.3,w:2.1,h:.4},
+ /** The Benjaire sign on the west block's south face (local centre x, y, size), centred between the
+  *  west corner and the slot (face 0 to 2.15) and set in a plain panel of the screen. */
+ word:{x:1.075,y:2.36,w:1.75,h:.62},
  /** Lot needs at least this much open water; the building sits this far from the north shore. */
  minLot:{w:12.5,d:8.6},northSetback:.95,
  /** Plaza in front of the building: the reflecting pool and the causeway to the entrance. */

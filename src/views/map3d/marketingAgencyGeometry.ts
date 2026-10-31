@@ -69,6 +69,56 @@ function openingWall(parts:{shell:Builder;copper:Builder;glass:Builder},len:numb
   parts.copper.quad([x,0,z],[x-out[0]*inset,0,z-out[2]*inset],[x-out[0]*inset,.3,z-out[2]*inset],[x,.3,z],[dx/l*-d,0,dz/l*-d]);}
 }
 
+/** A box from its min corner to its max corner, without the bottom face; uv u fixed for the shell. */
+function box(b:Builder,x0:number,y0:number,z0:number,x1:number,y1:number,z1:number,u=SCREEN_PLAIN){
+ const uv:[UV,UV,UV,UV]=[[u,.02],[u,.02],[u,.02],[u,.02]];
+ b.quad([x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1],[0,1,0],uv);
+ b.quad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],[0,0,1],uv);b.quad([x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[0,0,-1],uv);
+ b.quad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0],[-1,0,0],uv);b.quad([x1,y0,z0],[x1,y0,z1],[x1,y1,z1],[x1,y1,z0],[1,0,0],uv);
+}
+
+/** Where the entrance doors sit along the south face (local x), under the copper sweep. */
+export function entranceLocalX(){const [u0,u1]=sweepSpan();return u0+(u1-u0)*.42;}
+
+/**
+ * The walk-in entrance (KC, 2026-10-31): a glass vestibule pushed out through the sweep's glazing,
+ * a thin cream canopy with a curved copper fascia hung from the sweep on two copper rods, a stone
+ * landing with a copper threshold, and glass-capped copper bollards along the causeway that glow
+ * at night. All of it joins the three merged meshes, so it adds no draw calls and no lights.
+ */
+function entrance(parts:{shell:Builder;copper:Builder;glass:Builder}){
+ const D=AGENCY.depth,ex=entranceLocalX(),gz=D-AGENCY.inset,fz=D+.06,hw=.5,dh=.44,{shell,copper,glass}=parts;
+ // Vestibule: glass front and sides, copper frames, a transom over the double doors.
+ glass.quad([ex-hw,0,fz],[ex+hw,0,fz],[ex+hw,dh,fz],[ex-hw,dh,fz],[0,0,1],[[0,0],[hw*2,0],[hw*2,dh],[0,dh]]);
+ for(const sx of [-1,1])glass.quad([ex+sx*hw,0,gz],[ex+sx*hw,0,fz],[ex+sx*hw,dh,fz],[ex+sx*hw,dh,gz],[sx,0,0],[[0,0],[fz-gz,0],[fz-gz,dh],[0,dh]]);
+ box(shell,ex-hw-.02,dh,gz,ex+hw+.02,dh+.03,fz+.02);
+ for(const x of [ex-hw,ex-hw/2,ex,ex+hw/2,ex+hw])box(copper,x-.014,0,fz,x+.014,dh,fz+.025);
+ box(copper,ex-hw,.37,fz,ex+hw,.39,fz+.025);box(copper,ex-hw,0,fz,ex+hw,.02,fz+.025);
+ // Cantilevered canopy: cream plate, curved front, copper fascia, a glowing glass soffit strip.
+ const cy=.52,ct=.03,cw=.85,edge=(x:number)=>D+.22+.3*Math.sqrt(Math.max(0,1-((x-ex)/cw)**2)),n=18;
+ const plain:[UV,UV,UV,UV]=[[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02]];
+ for(let k=0;k<n;k++){
+  const xa=ex-cw+2*cw*k/n,xb=ex-cw+2*cw*(k+1)/n,za=edge(xa),zb=edge(xb);
+  shell.quad([xa,cy+ct,gz],[xb,cy+ct,gz],[xb,cy+ct,zb],[xa,cy+ct,za],[0,1,0],plain);
+  shell.quad([xa,cy,gz],[xb,cy,gz],[xb,cy,zb],[xa,cy,za],[0,-1,0],plain);
+  const nx=-(zb-za),nz=xb-xa;copper.quad([xa,cy-.015,za],[xb,cy-.015,zb],[xb,cy+ct+.01,zb],[xa,cy+ct+.01,za],[nx,0,nz]);
+ }
+ glass.quad([ex-cw*.7,cy-.002,fz+.04],[ex+cw*.7,cy-.002,fz+.04],[ex+cw*.7,cy-.002,fz+.1],[ex-cw*.7,cy-.002,fz+.1],[0,-1,0],[[0,.5],[1,.5],[1,.5],[0,.5]]);
+ for(const sx of [-1,1]){const x=ex+sx*cw*.6;box(copper,x-.01,cy+ct,edge(x)-.08,x+.01,cy+ct+.02,edge(x)-.06);
+  // Hanger rod rising back to the sweep's frame, drawn as a thin slanted box.
+  const z0=edge(x)-.07,z1=D+.02,y0=cy+ct,y1=1.05,t=.012;
+  copper.quad([x-t,y0,z0],[x+t,y0,z0],[x+t,y1,z1],[x-t,y1,z1],[0,z1-z0,-(y1-y0)]);
+  copper.quad([x-t,y0,z0+t],[x+t,y0,z0+t],[x+t,y1,z1+t],[x-t,y1,z1+t],[0,-(z1-z0),y1-y0]);
+ }
+ // Stone landing and the copper threshold line in front of the doors.
+ box(shell,ex-.75,0,fz,ex+.75,.018,D+AGENCY.pool.gap);box(copper,ex-hw,.018,fz+.05,ex+hw,.022,fz+.09);
+ // Bollards along both sides of the causeway, capped with glass that glows at night.
+ const pz0=D+AGENCY.pool.gap,half=AGENCY.pool.causeway/2-.08;
+ for(const z of [pz0+.15,pz0+AGENCY.pool.d/2,pz0+AGENCY.pool.d-.15])for(const sx of [-1,1]){const x=ex+sx*half;box(copper,x-.025,0,z-.025,x+.025,.13,z+.025);
+  box(glass,x-.022,.13,z-.022,x+.022,.17,z+.022,.5);
+  box(copper,x-.03,.17,z-.03,x+.03,.18,z+.03);}
+}
+
 export function agencyGeometry():AgencyGeometry{
  const shell=new Builder(),copper=new Builder(),glass=new Builder(),parts={shell,copper,glass};
  const L=AGENCY.length,D=AGENCY.depth,cw=AGENCY.cutW/2,cN=cutAt(0),cS=cutAt(D),eastStart=cS+cw;
@@ -105,6 +155,7 @@ export function agencyGeometry():AgencyGeometry{
   copper.quad([xb,0,zf],[xb,ya,zf],[cutAt(zg)+cw,ya,zg],[cutAt(zg)+cw,0,zg],[-1,0,0]);
   void s;
  }
+ entrance(parts);
  const out={shell:shell.build(),copper:copper.build(),glass:glass.build(),triangles:0};
  out.triangles=(shell.pos.length+copper.pos.length+glass.pos.length)/9;
  return out;
