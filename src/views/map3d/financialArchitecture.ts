@@ -49,7 +49,27 @@ export function financialArchitecture(id:string,height:number,palette:TowerPalet
  };
  const levels=Math.max(1,Math.floor((height-2.3)/.42)),step=(height-2.3)/levels;
  const terraceLevels=[.54,.78].map(r=>Math.ceil((height*r-1.15)/step)),terraceY=terraceLevels.map(level=>1.15+level*step);
- for(let floor=0;floor<levels;floor++){
+ if(brand.architecture==='curtain'){
+  // Floor-to-ceiling curtain wall: one clear glass volume per floor shows the lit office inside.
+  // Interiors reuse the district's shared clear-glass and interior-glow materials: no new lights.
+  const signBottom=financialSignLevel(id,height)-.9,top=Math.min(height-1.15,signBottom-.04),seat=['#f3f4f6','#d9dde3'];
+  box(solid,0,1.15,0,.9,height-2.3,.7,body);
+  for(let floor=0;floor<levels;floor++){
+   const y=1.15+floor*step;
+   slab(y,w,d,trim,.05);
+   if(y+step>top+1e-9){box(solid,0,y+.05,0,w,step-.05,d,body);continue;}
+   box(clearGlass,0,y+.05,0,w,step-.05,d,brand.glass);
+   // Warm floor panel: pale by day, lit through the glass at night (shared emissive material).
+   box(glow,0,y+.05,0,w-.2,.012,d-.2,'#ffffff');
+   for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*1.05,y+.062,sz*.82,.62,.14,.34,seat[(floor+(sx>0?1:0))%2]);
+   box(solid,(floor%2?1:-1)*1.3,y+.062,0,.26,.28,.26,floor%3===0?accent:'#6d2077');
+  }
+  for(const side of [-1,1]){
+   for(let i=1;i<6;i++)box(solid,-w/2+i*w/6,1.15,side*(d/2+.02),.03,top-1.15,.03,trim);
+   for(let i=1;i<4;i++)box(solid,side*(w/2+.02),1.15,-d/2+i*d/4,.03,top-1.15,.03,trim);
+  }
+  for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*(w/2-.02),1.15,sz*(d/2-.02),.07,height-1.15-1.15,.07,trim);
+ }else for(let floor=0;floor<levels;floor++){
   const y=1.15+floor*step,garden=brand.architecture==='biophilic'&&floor%BALCONY.gardenEvery===4;
   const setback=brand.architecture==='deco'?(floor>=terraceLevels[1]?1.4:floor>=terraceLevels[0]?.7:0):garden?.62:0;
   const ww=w-setback,dd=brand.architecture==='deco'?d:d-setback;
@@ -88,6 +108,8 @@ export function financialArchitecture(id:string,height:number,palette:TowerPalet
   for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*(w/2-.06),1.12,sz*(d/2-.06),.09,height-1.12,.09,trim);
   slab(height+.1,w+.14,d+.14,palette.ivory,.13);slab(height+.26,w*.8,d*.82,accent,.12);slab(height+.4,w*.56,d*.58,palette.ivory,.38);
   for(const sx of [-1,1])tree(sx*(w/2-.26),height+.25,0,-1);
+ }else if(brand.architecture==='curtain'){
+  slab(height+.1,w+.14,d+.14,trim,.1);box(solid,0,height+.2,0,w*.62,.32,d*.6,body);box(solid,0,height+.52,0,w*.62+.04,.05,d*.6+.04,accent);
  }else if(brand.architecture==='biophilic'){
   slab(height+.12,w+.18,d+.18,palette.ivory,.12);slab(height+.27,w*.8,d*.8,palette.green,.08);
   for(const sx of [-1,1])tree(sx*.9,height+.35,0,-1);

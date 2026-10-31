@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest';
-import {financialArchitecture,financialDimensions,financialHeight,financialSignLevel,FINANCIAL_METRES_PER_UNIT,WELLS_FARGO_REFERENCE_METRES,BALCONY} from './financialArchitecture';
+import {financialArchitecture,financialDimensions,financialHeight,financialSignLevel,FINANCIAL_METRES_PER_UNIT,WELLS_FARGO_REFERENCE_METRES} from './financialArchitecture';
 import {financialInteriorBrand,financialInteriorKey,financialBrand} from './financialBrands';
 import {FINANCIAL_BUILDINGS} from './financialPlan';
 import {BUILDING_INTERIORS} from '../../catalog/buildings';
 import {financialBuildingMatches} from '../../lib/financialSearch';
 const palette={ivory:'#f7f7f0',green:'#294237',gold:'#d0ad69'};
-const identities=[['residence','Garden Residences'],['harbor-residence','The Ritz-Carlton'],['records','Wells Fargo'],['financial-planning','Vanguard'],['budget','American Express'],['business-finance','Benjaire Finance']] as const;
+const identities=[['residence','Experian'],['harbor-residence','The Ritz-Carlton'],['records','Wells Fargo'],['financial-planning','Vanguard'],['budget','American Express'],['business-finance','Benjaire Finance']] as const;
 for(const [id,name]of identities)it(`${name} keeps a stable route, searchable name and safe geometry envelope`,()=>{
  const b=FINANCIAL_BUILDINGS.find(b=>b.id===id)!;expect(b.name).toBe(name);expect(financialBuildingMatches(name).map(b=>b.id)).toContain(id);
  expect(financialBuildingMatches(financialInteriorBrand(financialInteriorKey(id))!.legacyName).map(b=>b.id)).toContain(id);
@@ -20,14 +20,20 @@ for(const [id,name]of identities)it(`${name} keeps a stable route, searchable na
   }
  }
 });
-it('Garden Residences keeps a continuous outer walk around recessed garden planters and below the next balcony',()=>{
- const a=financialArchitecture('residence',13,palette);expect(a.balconies.length).toBeGreaterThan(15);expect(a.trees.filter(t=>t.floor>=0).length).toBeGreaterThan(2);
- for(const deck of a.balconies){expect((deck.outerW-deck.innerW)/2).toBeGreaterThanOrEqual(BALCONY.walkClearance);expect((deck.outerD-deck.innerD)/2).toBeGreaterThanOrEqual(BALCONY.walkClearance);}
- for(const t of a.trees.filter(t=>t.floor>=0)){
-  const deck=a.balconies[t.floor],next=a.balconies[t.floor+1],side=t.x!==0,axis=side?Math.abs(t.x):Math.abs(t.z),inner=(side?deck.innerW:deck.innerD)/2,outer=(side?deck.outerW:deck.outerD)/2;expect(axis-.17).toBeGreaterThan(inner+.025);
-  expect(outer-axis-.17).toBeGreaterThanOrEqual(BALCONY.walkClearance);
-  if(next)expect(t.y+.34).toBeLessThan(next.y);
+it('Experian has floor-to-ceiling clear glass on every office floor with a visible, lit interior',()=>{
+ const a=financialArchitecture('residence',13,palette),{width,depth}=financialDimensions('residence');
+ expect(a.balconies).toHaveLength(0);expect(a.glass).toHaveLength(0);expect(a.clearGlass.length).toBeGreaterThan(10);
+ expect(a.glow).toHaveLength(a.clearGlass.length);
+ for(const pane of a.clearGlass){
+  expect(pane.s[0]).toBeCloseTo(width);expect(pane.s[2]).toBeCloseTo(depth);
+  const slab=a.solid.find(p=>p.c===financialBrand('residence')!.trim&&Math.abs(p.p[1]+p.s[1]-pane.p[1])<1e-9&&p.s[0]===width);
+  expect(slab).toBeDefined();
+  // Desks stand on the lit floor panel, inside the glass volume.
+  const floor=a.glow.find(p=>p.p[1]===pane.p[1])!;expect(floor).toBeDefined();
+  const desks=a.solid.filter(p=>Math.abs(p.p[1]-(floor.p[1]+floor.s[1]))<1e-9&&p.s[1]<.3);expect(desks.length).toBeGreaterThanOrEqual(4);
+  for(const desk of desks)expect(desk.p[1]+desk.s[1]).toBeLessThan(pane.p[1]+pane.s[1]-.05);
  }
+ expect(financialBrand('residence')).toMatchObject({name:'Experian',symbol:'experian',body:'#1d4f91',accent:'#af1685',signLines:['experian']});
 });
 it('keeps the Financial District bank distinct from the existing Skyline bank',()=>{
  expect(financialInteriorBrand('Wells Fargo')).toBeUndefined();expect(financialInteriorBrand('financial:records')?.name).toBe('Wells Fargo');
@@ -47,8 +53,8 @@ it('joins the top sign band to floor volumes without coplanar overlapping walls'
  }
 });
 
-it('swaps American Express and Wells Fargo while keeping Garden Residences and stable identities',()=>{
- expect(FINANCIAL_BUILDINGS.find(b=>b.id==='residence')).toMatchObject({name:'Garden Residences',x:3.5,z:9,rise:1.24});
+it('swaps American Express and Wells Fargo while keeping Experian and stable identities',()=>{
+ expect(FINANCIAL_BUILDINGS.find(b=>b.id==='residence')).toMatchObject({name:'Experian',x:3.5,z:9,rise:1.24});
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='budget')).toMatchObject({name:'American Express',x:14.5,z:9.5,rise:1.08});
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='records')).toMatchObject({name:'Wells Fargo',x:15.7,z:4.3});
  expect(financialInteriorBrand('Spending & Budget')?.id).toBe('budget');
