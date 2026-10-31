@@ -31,7 +31,8 @@ describe("Atlas Marketplace mall", () => {
   expect(s.paving.some(p=>p.z<=plazaEdge&&p.z+p.d>=plazaEdge-.3&&p.x<m.plaza.x+m.plaza.w&&p.x+p.w>m.plaza.x)).toBe(true);
  });
  it("leaves no trees or rocks inside the building", () => {
-  for(const t of [...s.trees,...s.rocks,...s.bushes])expect(t.x>m.x&&t.x<m.x+m.w&&t.z>m.z&&t.z<m.z+m.d).toBe(false);
+  // The plaza in front is planted on purpose (Marketplace Gardens); the building footprint never is.
+  for(const t of [...s.trees,...s.rocks,...s.bushes])expect(t.x>m.x&&t.x<m.x+m.w&&t.z>m.z&&t.z<m.plaza.z).toBe(false);
  });
  it("only shows a service as planned or vacant, never as selling", () => {
   expect(MALL_SHOPS.every(shop=>shop.status==="planned"||shop.status==="vacant")).toBe(true);

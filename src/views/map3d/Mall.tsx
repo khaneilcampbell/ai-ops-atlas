@@ -5,6 +5,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {TERRACE_H} from './scene';
 import {MALL,MALL_KEY,along,mallFins,mallFloor,type MallPlan} from './mallPlan';
 import {inset,ribbon} from './mallShapes';
+import type {MallGarden} from './mallGarden';
 
 function signage(){
  const c=document.createElement('canvas');c.width=1024;c.height=160;const ctx=c.getContext('2d')!;
@@ -18,7 +19,7 @@ function signage(){
  * Atlas Marketplace. Static, no lights of its own: a handful of merged meshes plus instanced fins
  * and planters. Night only raises the glass glow, the same way the other buildings light up.
  */
-export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolean;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
+export function Mall({plan:a,garden,g,m,pick,night=false}:{plan?:MallPlan;garden?:MallGarden;night?:boolean;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
  const mats=useMemo(()=>({
   slab:new THREE.MeshStandardMaterial({color:'#f7f7f0',roughness:.7}),
   roof:new THREE.MeshStandardMaterial({color:'#4f7a52',roughness:.95}),
@@ -76,6 +77,8 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   for(const dx of [-.9,.9])solid.push({p:[a.cx+dx,y0,a.z+a.d-.2],s:[.05,.55,.05],c:'#294237'},{p:[a.cx+dx,y0+.55,a.z+a.d-.2],s:[.1,.06,.1],c:'#f6e7c4'});
   return {fins,plants,solid};
  },[a]);
+ // Marketplace Gardens: hedges, beds, gravel and coping in one instanced mesh, no shadows.
+ const beds=useMemo(()=>(garden?.boxes??[]).map((b):Inst=>({p:[b.x,TERRACE_H+b.y,b.z],s:[b.w,b.h,b.d],c:b.c})),[garden]);
 
  if(!a||!geo)return null;
  const keys=(n:number)=>({...pick,keys:Array.from({length:n},()=>MALL_KEY)});
@@ -93,5 +96,11 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   <Instanced items={parts.fins} geometry={g.box} material={m.plain} pick={keys(parts.fins.length)}/>
   <Instanced items={parts.plants} geometry={g.blob} material={m.plain} shadow={false}/>
   <Instanced items={parts.solid} geometry={g.box} material={m.plain}/>
+  {garden&&<>
+   <Instanced items={beds} geometry={g.box} material={m.plain} shadow={false}/>
+   <mesh position={[garden.canal.x+garden.canal.w/2,TERRACE_H+.052,garden.canal.z+garden.canal.d/2]} rotation={[-Math.PI/2,0,0]} material={mats.water}><planeGeometry args={[garden.canal.w,garden.canal.d]}/></mesh>
+   <mesh position={[garden.basin.x,TERRACE_H+.04,garden.basin.z]} material={mats.slab}><cylinderGeometry args={[garden.basin.r,garden.basin.r*1.04,.08,28]}/></mesh>
+   <mesh position={[garden.basin.x,TERRACE_H+.082,garden.basin.z]} material={mats.water}><cylinderGeometry args={[garden.basin.r*.86,garden.basin.r*.86,.005,28]}/></mesh>
+  </>}
  </group>;
 }
