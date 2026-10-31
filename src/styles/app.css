@@ -788,6 +788,15 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .repository-notice{align-items:flex-start;line-height:1.5}.repository-notice>svg{flex-shrink:0;margin-top:3px}.repository-notice strong{display:block;font-size:12px}.repository-notice p{font-size:12px;margin:5px 0 8px}.repository-notice .text-btn{font-size:12px;text-decoration:underline;text-underline-offset:3px}.repository-notice button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .hm-running{background:#d4ac58;box-shadow:0 0 0 2px #d4ac5833}
 @media(max-width:1450px){.platform-label{display:none}.view-description small{display:none}}
+/* Header stays one row. #138 made the tabs, sync status and platform label wider; the brand was the
+   only item allowed to shrink, so its subtitle wrapped onto three lines and the bar overflowed.
+   The brand now keeps its size, the search and live status give way first, and extras drop out by width. */
+.header .brand{flex:none}
+.header .brand .eyebrow{white-space:nowrap}
+.header>div:has(>.search){flex:0 1 340px;min-width:120px}
+.header .search{width:auto}
+@media(max-width:1600px){.header .brand .eyebrow,.view-description small{display:none}}
+@media(max-width:1280px){.sync-evidence small{display:none}}
 @media(max-width:650px){.map-next-step{margin-top:7px;max-width:100%}.map-next-step button{padding:7px 10px;font-size:11px}.map-next-step small{display:none}.sync-evidence small{display:none}}
 
 .map-next-step button svg{width:14px!important;height:14px!important;flex:0 0 14px}.map-next-step button{width:fit-content;height:auto;min-height:36px}
