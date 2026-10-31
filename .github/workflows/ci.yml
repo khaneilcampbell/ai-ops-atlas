@@ -137,6 +137,14 @@ jobs:
           name: unsigned-macos-app
           path: unsigned-app.zip
           retention-days: 3
+      # Plain-text notes for the update feed. The publish job reads this file and runs no repo code.
+      - name: Collect update notes from CHANGELOG.md
+        run: node scripts/release-notes.mjs CHANGELOG.md 5 > release-notes.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-notes
+          path: release-notes.txt
+          retention-days: 3
 
   sign:
     name: Sign validated main build
@@ -204,6 +212,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: signed-macos-app
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-notes
       - name: Read signed app version and reject older updates
         env:
           GH_TOKEN: ${{ github.token }}
@@ -225,15 +236,17 @@ jobs:
           url="https://github.com/$GITHUB_REPOSITORY/releases/download/main-build/AI-Ops-Atlas.app.tar.gz"
           node -e '
             const fs = require("fs");
-            const [version, sigFile, url, sha] = process.argv.slice(1);
+            const [version, sigFile, url, sha, notesFile] = process.argv.slice(1);
+            const changes = fs.existsSync(notesFile) ? fs.readFileSync(notesFile, "utf8").trim() : "";
+            const built = `Built from main at ${sha.slice(0, 7)}.`;
             const feed = {
               version,
-              notes: `Built from main at ${sha.slice(0, 7)}.`,
+              notes: changes ? `${changes}\n\n${built}` : built,
               pub_date: new Date().toISOString(),
               platforms: { "darwin-aarch64": { signature: fs.readFileSync(sigFile, "utf8").trim(), url } },
             };
             fs.writeFileSync("latest.json", JSON.stringify(feed, null, 2));
-          ' "$VERSION" "AI-Ops-Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA"
+          ' "$VERSION" "AI-Ops-Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA" "release-notes.txt"
           gh release view main-build >/dev/null 2>&1 || gh release create main-build --prerelease --target "$GITHUB_SHA" \
             --title "Latest main build" --notes "Rolling build of main that installed copies of AI Ops Atlas update from. Not a versioned release."
           # The archive goes up before the feed that points at it.
