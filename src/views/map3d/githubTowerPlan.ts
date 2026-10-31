@@ -15,11 +15,11 @@ import {headquartersEnvelope} from './financialPlan';
 export const GITHUB_TOWER={
  projectId:'github-profile',
  /**
-  * Roof height as a share of the Financial District's reference height (headquartersEnvelope),
+  * Top of the crown as a share of the Financial District's reference height (headquartersEnvelope),
   * so the tower stands among the Financial towers and rises with them. The shortest Financial
-  * tower is 1.08 of the reference, so 0.98 keeps every one of them taller.
+  * tower is 1.08 of the reference and Atlas HQ's roof is 1.0 of it, so 0.97 keeps both taller.
   */
- share:.98,
+ share:.97,
  /** Two stepped podium tiers: x0,x1,z0,z1 in footprints, h tall, then a rounded concrete slab. */
  podium:[
   {x0:-.55,x1:.55,z0:-.55,z1:.51,h:.26},
@@ -40,8 +40,8 @@ export const GITHUB_TOWER={
 
 export const isGithubTower=(projectId:string)=>projectId===GITHUB_TOWER.projectId;
 
-/** Roof height above the plinth, from the same reference the Financial District rises from. */
-export const githubTowerHeight=(reference:number)=>reference*GITHUB_TOWER.share;
+/** Roof height above the plinth: the crown's top, not the roof, sits at the share of the reference. */
+export const githubTowerHeight=(reference:number)=>reference*GITHUB_TOWER.share-GITHUB_TOWER.core.crown;
 
 /** Give the GitHub tower its height from every tower's plain height (before any custom height). */
 export function sizeGithubTower(towers:Tower[]){

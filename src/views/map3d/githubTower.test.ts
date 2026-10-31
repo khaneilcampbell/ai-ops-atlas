@@ -19,6 +19,8 @@ describe('GitHub tower',()=>{
   expect(tower.customHeight!).toBeGreaterThan(tower.height*1.6);
   const shortest=Math.min(...scene.financial!.buildings.map(b=>b.height));
   expect(githubTowerTop(tower.customHeight!)).toBeLessThan(shortest);
+  // Atlas HQ's roof stands at the reference itself (#159), so the GitHub crown stays under it.
+  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(reference);
   // Its own custom height never feeds back into the reference the Financial District rises from.
   expect(headquartersEnvelope(scene.towers)).toBeCloseTo(reference);
   expect(Math.min(...FINANCIAL_BUILDINGS.map(b=>b.rise))).toBeGreaterThan(GITHUB_TOWER.share);
