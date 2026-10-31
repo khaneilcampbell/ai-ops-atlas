@@ -60,9 +60,9 @@ export function superellipse(cx:number,cz:number,a:number,b:number,n:number,step
 /** The blue tower: a softly rounded slab on the west half of the site. */
 export function towerOutline(k=1):Pt[]{return superellipse(-.39*k,-.03*k,.47*k,.56*k,4.2);}
 /** Roof height over the blue tower: highest on the west side, sloping east. */
-export function towerRoof(x:number,k=1){
+export function towerRoof(x:number,k=1,v=1){
  const t=Math.min(1,Math.max(0,(x/k+.86)/.96));
- return (HQ.roofHigh-(HQ.roofHigh-HQ.roofLow)*t)*k;
+ return (HQ.roofHigh-(HQ.roofHigh-HQ.roofLow)*t)*k*v;
 }
 
 /**
@@ -78,17 +78,17 @@ export function wingOutline(t:number,k=1):Pt[]{
  const s=wingSway(t);return superellipse(s.x*k,s.z*k,.27*k,.5*k,2.6,HQ.ring,s.turn);
 }
 /** Levels of the wing from the ground to its curved top; the top dips toward its east edge. */
-export function wingLevels(k=1):Pt3[][]{
+export function wingLevels(k=1,v=1):Pt3[][]{
  const out:Pt3[][]=[];
  for(let i=0;i<=HQ.wingSteps;i++){
-  const t=i/HQ.wingSteps,y=HQ.wingTop*k*t,pts=wingOutline(t,k),cx=wingSway(t).x*k;
+  const t=i/HQ.wingSteps,y=HQ.wingTop*k*v*t,pts=wingOutline(t,k),cx=wingSway(t).x*k;
   out.push(pts.map(([x,z])=>[x,i===HQ.wingSteps?y+(cx-x)*.35:y,z]));
  }
  return out;
 }
-export function towerLevels(k=1):Pt3[][]{
+export function towerLevels(k=1,v=1):Pt3[][]{
  const pts=towerOutline(k);
- return [pts.map(([x,z])=>[x,0,z]),pts.map(([x,z])=>[x,towerRoof(x,k),z])];
+ return [pts.map(([x,z])=>[x,0,z]),pts.map(([x,z])=>[x,towerRoof(x,k,v),z])];
 }
 
 /** The podium: east of the tower and behind it, its front east corner rounded. */
@@ -116,7 +116,15 @@ export function footprint(k=1):Pt[]{
  const canopy=Array.from({length:12},(_,i)=>{const c=canopyAt(i/11,k);return [c.x,c.front] as Pt;});
  return [...towerOutline(k),...podiumOutline(k),...wingLevels(k).flatMap(l=>l.map(([x,,z])=>[x,z] as Pt)),...canopy];
 }
-export const hqTop=(k=1)=>HQ.roofHigh*k;
+export const hqTop=(k=1,v=1)=>HQ.roofHigh*k*v;
+/**
+ * How much taller than the reference drawing the tower and wing stand (KC, 2026-10-31: size the
+ * HQs with the Financial District). The podium, lobby and canopy keep their height; the tower
+ * gains storeys, it doesn't stretch them.
+ */
+export const hqRise=(height:number|undefined,k:number)=>height?height/hqTop(k):1;
+/** Storeys up to the tower's roof at this rise. */
+export const hqFloors=(v=1)=>Math.floor(HQ.roofLow*v/HQ.floor);
 
 /**
  * Pieces the building draws, for the performance budget: merged meshes and instances. Every part

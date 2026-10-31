@@ -33,9 +33,10 @@ describe('Benjaire HQ ribbon tower',()=>{
  });
  it('stays inside its performance budget: merged meshes, a few instances, no lights',()=>{
   const p=ribbonPieceCount();expect(p.meshes).toBeLessThanOrEqual(12);expect(p.instances).toBeLessThan(12);
-  const g=ribbonGeometry(1);
+  // At the tallest the city scale can make it (half again the reference drawing's height and more).
+  const g=ribbonGeometry(1,RIBBON.height*2);
   for(const v of Object.values(g))if(v&&typeof v==='object'&&'attributes' in v)expect((v as {attributes:{position?:unknown}}).attributes.position).toBeDefined();
-  expect(ribbonTriangles(g)).toBeLessThan(30000);
+  expect(ribbonTriangles(g)).toBeLessThan(50000);
   const source=readFileSync(join(__dirname,'RibbonTower.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);expect(source).not.toMatch(/useFrame/);
   // The lightest quality level drops every other ribbon.

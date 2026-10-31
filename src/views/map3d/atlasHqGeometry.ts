@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Pt} from './roads';
-import {HQ,canopyAt,lobby,podiumHeight,podiumOutline,roofGarden,superellipse,towerLevels,wingLevels,type Pt3} from './atlasHqPlan';
+import {HQ,canopyAt,hqFloors,lobby,podiumHeight,podiumOutline,roofGarden,superellipse,towerLevels,wingLevels,type Pt3} from './atlasHqPlan';
 
 /**
  * Atlas HQ geometry, built once into a few merged meshes. Levels are closed outlines with the
@@ -133,11 +133,11 @@ export function lobbyGlass(k=1){
 }
 
 /** Everything static, grouped by material. Positions are local to the tower centre and floor base. */
-export function hqGeometry(k=1){
- const tower=towerLevels(k),wing=wingLevels(k);
+export function hqGeometry(k=1,v=1){
+ const tower=towerLevels(k,v),wing=wingLevels(k,v);
  const podium=podiumOutline(k),ph=podiumHeight(k),pRing=(y:number):Pt3[]=>podium.map(([x,z])=>[x,y,z]);
  const podiumLevels=[pRing(0),pRing(ph)];
- const floors=Array.from({length:HQ.floors},(_,i)=>(i+1)*HQ.floor*k);
+ const floors=Array.from({length:hqFloors(v)},(_,i)=>(i+1)*HQ.floor*k);
  const podiumFloors=Array.from({length:HQ.podiumLevels},(_,i)=>(i+1)*HQ.podiumFloor*k);
  // Blades: the wing's two narrow tips, where the bright S-curved edges run.
  const blades=[0,HQ.ring/2];
@@ -151,7 +151,7 @@ export function hqGeometry(k=1){
   roofs:mergeGeometries([lid(tower[1],.02*k),lid(wing[wing.length-1]),lid(podiumLevels[1])])!,
   bands:mergeGeometries([
    bands(y=>ringAt(tower,y),floors),
-   bands(y=>ringAt(wing,y),floors.filter(y=>y<HQ.wingTop*k)),
+   bands(y=>ringAt(wing,y),floors.filter(y=>y<HQ.wingTop*k*v)),
    bands(y=>y<=ph?pRing(Infinity):null,podiumFloors),
   ])!,
   fins:mergeGeometries([fins(tower,HQ.finEvery,HQ.finDepth),fins(wing,HQ.finEvery,HQ.finDepth,blades,HQ.bladeDepth)])!,

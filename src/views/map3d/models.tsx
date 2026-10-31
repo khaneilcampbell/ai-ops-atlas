@@ -730,9 +730,9 @@ const SPIRE_H = 1.1;
 
 export function towerTop(t: Tower) {
   // Atlas HQ is drawn by AtlasHq: a sloped glass roof, no lantern or board.
-  if (t.identity.landmark) return FLOOR_BASE + hqTop(t.size / HQ.refSize) + 0.04;
+  if (t.identity.landmark) return FLOOR_BASE + (t.customHeight ?? hqTop(t.size / HQ.refSize)) + 0.04;
   // Benjaire HQ is drawn by RibbonTower: a hollow crown, no hip roof or finial.
-  if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize) + 0.04;
+  if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize, t.customHeight) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }

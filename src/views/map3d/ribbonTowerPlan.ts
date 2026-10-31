@@ -37,7 +37,8 @@ export const RIBBON={
 } as const;
 
 export const isRibbonTower=(projectId:string)=>projectId===RIBBON.projectId;
-export const ribbonTop=(k=1)=>RIBBON.height*k;
+/** Roof height: the reference drawing's, or the height the scene gives it (matched to the Financial District). */
+export const ribbonTop=(k=1,height?:number)=>height??RIBBON.height*k;
 
 const rot=(x:number,z:number,a:number):Pt=>[x*Math.cos(a)-z*Math.sin(a),x*Math.sin(a)+z*Math.cos(a)];
 
@@ -75,8 +76,8 @@ export function ringsAt(t:number,k=1,scale=1,split=false):Pt[][]{
 }
 
 /** Ribbon heights from the ground to the crown. */
-export function ribbonHeights(k=1){
- const n=Math.floor(RIBBON.height/RIBBON.ribbonGap);
+export function ribbonHeights(k=1,height=RIBBON.height*k){
+ const n=Math.floor(height/(RIBBON.ribbonGap*k));
  return Array.from({length:n},(_,i)=>(i+1)*RIBBON.ribbonGap*k);
 }
 

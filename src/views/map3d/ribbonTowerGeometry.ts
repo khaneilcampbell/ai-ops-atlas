@@ -33,8 +33,8 @@ export function slab(pts:Pt[],y:number,depth:number){
 }
 const toward=(pts:Pt[],k:number):Pt[]=>{const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;return pts.map(([x,z])=>[cx+(x-cx)*k,cz+(z-cz)*k]);};
 
-export function ribbonGeometry(k=1){
- const H=RIBBON.height*k,step=RIBBON.ribbonGap*k,{from,to}=RIBBON.portal,gi=RIBBON.glassInset;
+export function ribbonGeometry(k=1,height=RIBBON.height*k){
+ const H=height,step=RIBBON.ribbonGap*k,{from,to}=RIBBON.portal,gi=RIBBON.glassInset;
  const samples=(t0:number,t1:number)=>{const n=Math.max(2,Math.ceil((t1-t0)*H/step));return Array.from({length:n+1},(_,i)=>t0+(t1-t0)*i/n);};
  // Dark glass: the body below and above the opening, and two legs through it.
  const body=(t0:number,t1:number)=>skin(samples(t0,t1).map(t=>at(ringsAt(t,k,gi)[0],t*H)));
@@ -42,7 +42,7 @@ export function ribbonGeometry(k=1){
  const glass=merge([body(0,from),leg(0),leg(1),body(to,1)]);
  // Ribbons: even and odd sets, so the lightest quality can keep only every other one.
  const even:THREE.BufferGeometry[]=[],odd:THREE.BufferGeometry[]=[];
- ribbonHeights(k).forEach((y,i)=>{
+ ribbonHeights(k,H).forEach((y,i)=>{
   const t=y/H;if(t>=1)return;
   const inner=ringsAt(t,k,gi),outer=ringsAt(t,k,1+RIBBON.ribbonDepth/RIBBON.half);
   inner.forEach((r,j)=>(i%2?odd:even).push(annulus(r,outer[j],y-RIBBON.ribbonThick*k/2,RIBBON.ribbonThick*k)));

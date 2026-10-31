@@ -3,7 +3,9 @@ import {join} from 'node:path';
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
-import {buildScene} from './scene';
+import {buildScene,TERRACE_H} from './scene';
+import {headquartersEnvelope} from './financialPlan';
+import {CUSTOM_TOWER_SHARE} from './customTowers';
 import {towerTop} from './models';
 import {HQ,footprint,hqPieceCount,towerOutline,towerRoof,wingSway} from './atlasHqPlan';
 import {hqGeometry,hqTriangles} from './atlasHqGeometry';
@@ -38,15 +40,21 @@ describe('Atlas HQ',()=>{
    expect(hq.identity.landmark).toBe(true);
    const top=towerTop(hq);
    for(const t of scene.towers.filter(t=>t!==hq))expect(top).toBeGreaterThan(towerTop(t));
-   for(const b of scene.financial?.buildings??[])expect(b.height).toBeGreaterThan(top);
+   // Financial towers stand on the terrace; their heights are measured from it.
+   for(const b of scene.financial?.buildings??[])expect(b.height).toBeGreaterThan(top-TERRACE_H);
+   // Sized with the Financial District: within 10% of its shortest tower.
+   const shortest=Math.min(...(scene.financial?.buildings??[]).map(b=>b.height));
+   if(scene.financial)expect(top-TERRACE_H).toBeGreaterThan(shortest*.9);
+   expect(hq.customHeight).toBeCloseTo(headquartersEnvelope(scene.towers)*CUSTOM_TOWER_SHARE.atlas);
   }
  });
  it('stays inside its performance budget: a dozen merged meshes, few instances, no lights',()=>{
-  const pieces=hqPieceCount(),geo=hqGeometry(1);
+  // At the tallest the city scale can make it: twice the reference drawing's height.
+  const pieces=hqPieceCount(),geo=hqGeometry(1,2);
   expect(pieces.meshes).toBeLessThanOrEqual(14);
   expect(pieces.instances).toBeLessThan(120);
   expect(geo.podiumFins.length+geo.trees.length*2).toBeLessThan(120);
-  expect(hqTriangles(geo)).toBeLessThan(16000);
+  expect(hqTriangles(geo)).toBeLessThan(26000);
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);

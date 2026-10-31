@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Tower} from './scene';
 import {focusable,signTexture} from './materials';
-import {HQ,lobby,towerRoof} from './atlasHqPlan';
+import {HQ,hqRise,lobby,towerRoof} from './atlasHqPlan';
 import {hqGeometry} from './atlasHqGeometry';
 import {useQualityLevel} from '../../lib/governor';
 import {glassTexture} from './atlasHqTextures';
@@ -27,7 +27,8 @@ function wordmark(text:string,color:string){
 export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:number;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
  const k=t.size/HQ.refSize;
  const quality=useQualityLevel();
- const geo=useMemo(()=>hqGeometry(k),[k]);
+ const v=hqRise(t.customHeight,k);
+ const geo=useMemo(()=>hqGeometry(k,v),[k,v]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
   const blue=glassTexture('#5f93bd','#c6deee','#40627f',11),gold=glassTexture('#dcb978','#f8ecc8','#c29c62',29),rib=glassTexture('#86a9c2','#d6e5ee','#5d7b8f',47);
@@ -78,7 +79,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  const finsOn=quality<3;
  const L=lobby(k),front=.53*k;
  // Badge and wordmark sit high on the blue tower's front, where the reference carries its name.
- const topY=towerRoof(-.39*k,k)-.42*k;
+ const topY=towerRoof(-.39*k,k,v)-.42*k;
  return <group>
   <group position={[t.x,base,t.z]}>
    <mesh geometry={geo.towerGlass} material={mats.blue} castShadow receiveShadow {...handlers}/>
