@@ -7,6 +7,7 @@ import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
 import {planMall,type MallPlan} from "./mallPlan";
+import {skylineBuildingSize} from "./skylineSizes";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { airportFootprint, planAirport, type AirportPlan } from "./airport";
@@ -425,14 +426,17 @@ export function buildScene(layout: Layout): Scene3D {
     parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
     // Stagger the tall offices behind the low storefronts, with an open central lobby view.
     const tenants = [
-      { name: "Anthropic", dx: -4.3, dz: -2.7, size: 1.4 },
-      { name: "OpenAI", dx: 4.3, dz: -2.7, size: 1.1 },
-      { name: "Zara", dx: 4.4, dz: 0.5, size: 0.85 },
-      { name: "Wells Fargo", dx: -4.4, dz: 0.5, size: 1.2 },
-      { name: "Smashburger", dx: -3.2, dz: 3, size: 0.85 },
-      { name: "Starbucks", dx: -0.8, dz: 3, size: 0.85 },
-      { name: "Chipotle", dx: 2.5, dz: 3, size: 0.85 },
-    ];
+      // Sizes follow the Atlas Marketplace space of the same type (skylineSizes.ts). The outer
+      // buildings sit far enough in to clear the side promenades at ±5.4, and the food row sits back
+      // a little so the road to Atlas Hills still clears it.
+      { name: "Anthropic", dx: -4.1, dz: -2.7 },
+      { name: "OpenAI", dx: 4.1, dz: -2.7 },
+      { name: "Zara", dx: 4.2, dz: 0.5 },
+      { name: "Wells Fargo", dx: -4.2, dz: 0.5 },
+      { name: "Smashburger", dx: -3.2, dz: 2.85 },
+      { name: "Starbucks", dx: -0.8, dz: 2.85 },
+      { name: "Chipotle", dx: 2.5, dz: 2.85 },
+    ].map(t => ({ ...t, size: skylineBuildingSize(t.name)! }));
     for (const tenant of tenants) {
       const x = cx + tenant.dx, z = cz + tenant.dz;
       retail.push({ key: `retail:${p.id}:${tenant.name}`, projectId: p.id, name: tenant.name, users: [], x, z, size: tenant.size, canopy: "#c9a35a" });
