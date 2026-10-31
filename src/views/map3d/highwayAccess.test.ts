@@ -7,7 +7,7 @@ import {distanceToRoad} from './highway';
 import {pathClear} from './roads';
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`connects district ramps to the perimeter without building collisions: ${group}`,()=>{
  const scene=buildScene(layoutMap(catalog,[],group)),f=scene.freight!;
- expect(f.access.map(a=>a.id)).toEqual(['skyline-airport','profile-stadium','bmw-dealership','financial-district']);
+ expect(f.access.map(a=>a.id)).toEqual(['skyline-airport','profile-stadium','financial-district']);
  const boxes=[...scene.towers,...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  for(const a of f.access){expect(a.collector[0]).toEqual(a.junction);
   for(const ramp of a.ramps){expect(ramp[0]).toEqual(a.collector.at(-1));expect(distanceToRoad(ramp.at(-1)!,f.highway)).toBeLessThan(.001);expect(pathClear(ramp,boxes,.7)).toBe(true);}

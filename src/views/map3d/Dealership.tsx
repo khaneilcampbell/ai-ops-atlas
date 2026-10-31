@@ -89,7 +89,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   return p;
  },[a]);
  if(!a)return null;
- return <><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+5,TERRACE_H+D.height-.425,a.z+3.78]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
+ return <><Instanced items={[{p:[a.lot.x+a.lot.w/2,0,a.lot.z+a.lot.d/2],s:[a.lot.w,TERRACE_H,a.lot.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+5,TERRACE_H+D.height-.425,a.z+3.78]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
 }
 
 function Garage({plan,g,m,moving}:{plan:DealershipPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean}){

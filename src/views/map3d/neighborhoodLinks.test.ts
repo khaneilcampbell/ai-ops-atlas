@@ -6,7 +6,8 @@ for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compa
  const s=buildScene(layoutMap(catalog,[],g)),h=s.hills!,f=s.financial!,r=s.communityRail!;
  expect(h.z-Math.max(...s.terraces.map(t=>t.z+t.d))).toBeLessThan(2);expect(f.x).toBeGreaterThan(Math.min(...s.terraces.map(t=>t.x))-10);
  expect(f.buildings).toHaveLength(10);expect(s.community!.buildings).toHaveLength(13);
- expect(r.length).toBeLessThan(previous[g].rail*.65);expect(length(s.freight!.highway)).toBeLessThan(previous[g].highway*.95);
+ // The line now continues behind BMW and the towers to Financial Park (KC, 2026-10-31).
+ expect(r.length).toBeLessThan(previous[g].rail*.82);expect(length(s.freight!.highway)).toBeLessThan(previous[g].highway*.95);
  expect(s.transportConnections.map(c=>c.id)).toEqual(expect.arrayContaining(['hills-city-boulevard','financial-stadium-local','atlas-hills','financial-district']));
  for(const a of s.neighborhoodLand!){for(const b of s.land)if(a!==b)expect(Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>1e-8&&Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)>1e-8,`new terrain overlap: ${JSON.stringify({a,b,dx:Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),dz:Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)})}`).toBe(false);}
  const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));

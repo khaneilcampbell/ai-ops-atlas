@@ -27,8 +27,10 @@ const BUILDING_LAYOUT=[
 export const FINANCIAL_BUILDINGS=BUILDING_LAYOUT.map(b=>{const brand=financialBrand(b.id);return {...b,name:brand?.name??b.name,role:brand?.role??b.role,purpose:brand?.purpose??b.purpose};});
 export interface FinancialPark extends Rect {paths:Pt[][];pool:Rect;trees:Pt[];benches:Pt[];lights:Pt[]}
 export function financialPark():FinancialPark{return {...FINANCIAL.park,
- paths:[[[21.8,FINANCIAL.northWalkZ],[21.8,2.75]],[[15.95,2.75],[24.05,2.75],[24.05,11.15],[15.95,11.15],[15.95,2.75]],[[15.95,8.3],[24.05,8.3]],[[18.6,8.3],[18.6,9.1]],[[24.05,6.8],[23.6,6.8]]],
- pool:{x:17.8,z:4.6,w:2.6,d:1.5},trees:[[17.2,3.95],[23,4.2],[17.2,9.7],[23,9.7]],benches:[[18.6,9.5],[23,6.8]],lights:[[16.8,7.4],[23.2,10.6],[20.8,3.5],[20.8,10.7]]};}
+ // The north edge is the station plaza: the rail stairs land on the entry path (x 21.8) and the
+ // lift walk joins the loop's top edge (z 4.55), so the pond and planting sit in the south half.
+ paths:[[[21.8,FINANCIAL.northWalkZ],[21.8,4.55]],[[15.95,4.55],[24.05,4.55],[24.05,11.15],[15.95,11.15],[15.95,4.55]],[[15.95,8.3],[24.05,8.3]],[[24.05,6.8],[23.6,6.8]]],
+ pool:{x:18.3,z:9,w:2.6,d:1.5},trees:[[19.6,6.55],[23.4,3.3],[16.95,9.72],[23,9.7]],benches:[[19.6,5.4],[23,6.8]],lights:[[16.8,7.4],[23.2,10.6],[19.6,3.6],[21.3,10]]};}
 /** Circa's waterfront parcel, world coordinates, joined to the district's west edge. */
 export interface CircaSite extends Rect {street:Pt[];sidewalk:Pt[]}
 export interface FinancialPlan extends Rect {circa?:CircaSite;perimeterTrees:Pt[];park:FinancialPark;originalX:number;referenceHeight:number;road:Pt[];walk:Pt[];street:Pt[];sidewalk:Pt[];buildings:(Omit<typeof FINANCIAL_BUILDINGS[number],'x'>&{x:number;height:number;approach:Pt[]})[]}
