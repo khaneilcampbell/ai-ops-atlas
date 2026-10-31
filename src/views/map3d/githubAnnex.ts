@@ -1,6 +1,6 @@
 import type {Pt} from './roads';
 import {ROAD_W,towerRing} from './roads';
-import type {Rect,Tower} from './scene';
+import type {Rect,Scene3D,Tower} from './scene';
 import {GITHUB_TOWER,type Box3} from './githubTowerPlan';
 
 /**
@@ -10,8 +10,11 @@ import {GITHUB_TOWER,type Box3} from './githubTowerPlan';
  * floor-to-ceiling glass stands on the new land beside the tower, joined to it by a glass
  * skybridge over the tower's ring road, the way the reference's base wraps beside its towers.
  *
- * Planned last, after every district, road and neighbourhood, so it only takes ground nothing
- * else uses; when no side is free, the tower keeps its own small podium and no land is added.
+ * Planned last, after every district, road and neighbourhood. The new land may overlap plain
+ * landscape (meadow, beach, gardens, ponds), which it simply covers (KC, 2026-10-31: "combine the
+ * landscape of the area and make it overlap if it needs to"), but never another district, a
+ * building or plan footprint, or any road, rail or walk. When no side is free, the tower keeps its
+ * own small podium and no land is added.
  */
 export const GITHUB_ANNEX={
  /** How far the terrace grows outward, and the beach margin around the new terrace. */
@@ -59,11 +62,10 @@ export function annexRect(t:Rect,side:Side,depth:number):Rect{
 
 export interface AnnexSite {
  tower:Tower;terrace:Rect;
- /** Ground nobody else may take: other terraces, parks, plans, paving, brooks. */
+ /** Ground nobody else may take: other districts, buildings, plan footprints, decks, paving. */
  blocked:Rect[];
  /** Roads, walks and rails: no point of any may fall on the new land. */
  lines:Pt[][];
- ponds:{x:number;z:number;r:number}[];
 }
 
 /** Choose a free side and lay out the podium. Sides are tried camera-facing first. */
@@ -74,7 +76,6 @@ export function planGithubAnnex(s:AnnexSite):GithubAnnex|undefined{
   // Neighbouring meadows may meet the new beach edge to edge, but nothing may sit on it.
   if(s.blocked.some(r=>overlaps(land,r,-.05)))continue;
   if(s.lines.some(l=>l.some(p=>inside(land,p,.2))))continue;
-  if(s.ponds.some(p=>overlaps(land,{x:p.x-p.r,z:p.z-p.r,w:2*p.r,d:2*p.r},.1)))continue;
   return {side,terrace,land,...podium(s.tower,s.terrace,terrace,side)};
  }
  return undefined;
@@ -111,7 +112,46 @@ function podium(t:Tower,own:Rect,annex:Rect,side:Side){
  return {tiers,skybridge,shrubs,trees};
 }
 
-/** Ground and lines the annex must keep clear of, from the finished scene. */
-export function annexBlocked(r:Rect,own:Rect,ownLand:Rect|undefined){
- return !(own.x===r.x&&own.z===r.z&&own.w===r.w&&own.d===r.d)&&!(ownLand&&ownLand.x===r.x&&ownLand.z===r.z&&ownLand.w===r.w&&ownLand.d===r.d);
+const isRect=(v:unknown):v is Rect=>!!v&&typeof v==='object'&&['x','z','w','d'].every(k=>typeof (v as Record<string,unknown>)[k]==='number');
+const isLine=(v:unknown):v is Pt[]=>Array.isArray(v)&&v.length>1&&v.every(p=>Array.isArray(p)&&p.length===2&&typeof p[0]==='number');
+
+/** Every road, rail and walk polyline anywhere in the scene, including plans added by other features. */
+function sceneLines(v:unknown,out:Pt[][]=[],depth=0):Pt[][]{
+ if(depth>5||!v||typeof v!=='object')return out;
+ if(isLine(v)){out.push(v);return out;}
+ if(Array.isArray(v)){
+  if(v.length>1&&v.every(p=>p&&typeof p==='object'&&typeof (p as {gx?:unknown}).gx==='number'))out.push((v as {gx:number;gy:number}[]).map(p=>[p.gx,p.gy] as Pt));
+  else for(const x of v)sceneLines(x,out,depth+1);
+  return out;
+ }
+ for(const x of Object.values(v))sceneLines(x,out,depth+1);
+ return out;
+}
+
+/** Plain landscape the annex may cover; everything else in the scene keeps clear. */
+const GROUND_KEYS=new Set(['land','neighborhoodLand','raisedLand','terraces','paving','steps','brooks','ponds','falls','trees','bushes','rocks','bollards','bounds','githubAnnex']);
+
+/** Plan the annex on a finished scene and add its terrace and land, clearing plants under it. */
+export function addGithubAnnex(scene:Scene3D){
+ const tower=scene.towers.find(t=>t.projectId===GITHUB_TOWER.projectId),own=scene.terraces.find(t=>t.id===GITHUB_TOWER.projectId);
+ if(!tower||!own)return;
+ const ownCentre=(r:Rect)=>inside(own,[r.x+r.w/2,r.z+r.d/2]);
+ const blocked:Rect[]=[
+  ...scene.terraces.filter(t=>t.id!==GITHUB_TOWER.projectId),...scene.parks,...scene.bridges,
+  ...scene.paving.filter(r=>!ownCentre(r)),
+  ...[...scene.towers,...scene.kiosks,...scene.retail,...scene.strays].filter(b=>b!==tower).map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),
+  ...scene.houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+  // Neighbourhood ground keeps its own edges (neighborhoodLinks.test: it never overlaps other land).
+  ...(scene.neighborhoodLand??[]),
+ ];
+ // Every other feature's own footprint (stadium, Financial District, mall and so on), wherever it
+ // keeps one at its top level, so features added later are respected too.
+ for(const [key,v] of Object.entries(scene))if(!GROUND_KEYS.has(key)&&isRect(v))blocked.push(v);
+ const lines=sceneLines(Object.fromEntries(Object.entries(scene).filter(([k])=>!GROUND_KEYS.has(k)||k==='paving')));
+ const annex=planGithubAnnex({tower,terrace:own,blocked,lines});
+ if(!annex)return;
+ scene.githubAnnex=annex;
+ scene.terraces.push({id:GITHUB_TOWER.projectId,park:false,...annex.terrace});
+ scene.land.push(annex.land);
+ for(const items of [scene.trees,scene.bushes,scene.rocks,scene.bollards])for(let i=items.length-1;i>=0;i--)if(inside(annex.land,[items[i].x,items[i].z],.2))items.splice(i,1);
 }
