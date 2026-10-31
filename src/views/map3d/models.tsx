@@ -572,7 +572,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
     const y = TERRACE_H + 0.03;
     const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
     for (const k of kiosks) {
-      const OFFICE_H = toolOfficeHeight(k.name);
+      const OFFICE_H = k.height ?? toolOfficeHeight(k.name);
       const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
       if (["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].includes(k.name)) {
         const zara=k.name==="Zara",cafe=k.name==="Starbucks",chipotle=k.name==="Chipotle";
@@ -638,7 +638,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
       }
       // Six office floors with a regular curtain-wall grid and branded cornices.
-      const floorCount=OFFICE_H < 2 ? 3 : 6;
+      const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
       const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
       for (let floor = 0; floor < floorCount; floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
@@ -701,7 +701,7 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
   }, [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + toolOfficeHeight(tool.name) - (tool.name==="Anthropic"?0.32:0.08);
+  const w = tool.size, y = TERRACE_H + (tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Anthropic"?0.32:0.08);
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />

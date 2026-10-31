@@ -5,6 +5,8 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {towerTop} from './models';
+import {TOOL_OFFICE_SHARE} from './customTowers';
+import {headquartersEnvelope} from './financialPlan';
 import {LOBBY_DOOR,LOBBY_SIGN,podiumTop,RIBBON,footprint,isRibbonTower,portalGap,ribbonHeights,ribbonPieceCount,ringsAt,waist} from './ribbonTowerPlan';
 import {ribbonGeometry,ribbonTriangles} from './ribbonTowerGeometry';
 
@@ -49,5 +51,11 @@ describe('Benjaire HQ ribbon tower',()=>{
   expect(podiumTop(0)).toBeGreaterThan(LOBBY_DOOR.height+.2);
   const signH=LOBBY_SIGN.width/LOBBY_SIGN.aspect;
   expect(LOBBY_SIGN.y-signH/2).toBeGreaterThan(LOBBY_DOOR.height);expect(LOBBY_SIGN.y+signH/2).toBeLessThan(podiumTop(0));
+ });
+ it('raises the district tool offices to half the headquarters reference, below Benjaire HQ',()=>{
+  for(const grouping of ['none','district','status','tag'] as GroupBy[]){
+   const scene=buildScene(layoutMap(catalog,[],grouping)),ref=headquartersEnvelope(scene.towers),b=scene.towers.find(t=>isRibbonTower(t.projectId))!;
+   for(const k of scene.kiosks){expect(k.height).toBeCloseTo(Math.max(2.8,ref*TOOL_OFFICE_SHARE));expect(k.height!).toBeLessThan(b.customHeight!);}
+  }
  });
 });

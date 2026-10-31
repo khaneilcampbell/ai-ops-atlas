@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
+- 2026-10-31 · Tool offices beside each headquarters (Stripe, n8n, Cloudflare and the rest) are now mid-rise towers about half the height of the HQs, and grow with them (#159)
 - 2026-10-31 · Benjaire HQ has a double-height lobby with Financial District size doors and a bigger BENJAIRE sign above them (#159)
 - 2026-10-31 · City streets and road bridges are a little wider, to suit the taller buildings (#159)
 - 2026-10-31 · Atlas HQ and Benjaire HQ now stand as tall as the Financial District towers and grow with them when the city is rescaled (#159)

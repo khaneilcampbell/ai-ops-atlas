@@ -77,6 +77,8 @@ export interface Kiosk {
   size: number;
   /** Canopy color. */
   canopy: string;
+  /** Roof height for a district tool office, sized with its headquarters (see customTowers.ts). */
+  height?: number;
 }
 export interface Tower {
   key: string;
@@ -666,7 +668,7 @@ export function buildScene(layout: Layout): Scene3D {
   if(dealership)land.push({x:dealership.x,z:dealership.z,w:dealership.w,d:dealership.d});
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
-  sizeCustomTowers(towers);
+  sizeCustomTowers(towers, kiosks);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   const community=planCommunity(hills);

@@ -163,7 +163,7 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
     }
   }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
-  for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + TOOL_OFFICE_TOP, w: k.size, d: k.size * 0.8, project: k.projectId });
+  for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + (k.height ?? TOOL_OFFICE_TOP - 0.4) + 0.4, w: k.size, d: k.size * 0.8, project: k.projectId });
   for (const s of scene.strays) m.set(s.key, { x: s.x, z: s.z, y0: 0, y1: Math.max(2, Math.round(s.height / 0.3)) * 0.3 + 0.06, w: s.size, d: s.size });
   return m;
 }
@@ -317,7 +317,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: k.key,
         key: k.key,
-        pos: new THREE.Vector3(k.x, TERRACE_H + TOOL_OFFICE_TOP, k.z),
+        pos: new THREE.Vector3(k.x, TERRACE_H + (k.height ?? TOOL_OFFICE_TOP - 0.4) + 0.4, k.z),
         w: measure(k.name, 11.5, SANS, 500) + 22,
         h: 28,
         priority: urgent ? 0.5 : 6.5,
