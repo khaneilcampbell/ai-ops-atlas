@@ -13,6 +13,8 @@ export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.tower
  if(s.dealership){const d=s.dealership;boxes.push({x:d.x+d.w/2,z:d.z+d.d/2,w:d.w,d:d.d});}
  if(s.stadium)boxes.push({x:s.stadium.x+4,z:s.stadium.z+3.5,w:7.8,d:6.8});
  if(s.airport){const a=s.airport;boxes.push(...AIRPORT_BUILDINGS.map(b=>{const p=airportPoint(a,b.x,b.z);return {x:p[0],z:p[1],w:b.w+.3,d:b.d+.3};}));for(const localX of [AIRPORT_LAYOUT.runwayX,AIRPORT_LAYOUT.taxiX]){const p=airportPoint(a,localX,AIRPORT_LAYOUT.runwayZ);boxes.push({x:p[0],z:p[1],w:3.8,d:25});}}
+// No street lamps on the Marketplace lot or its plaza.
+ if(s.mall)boxes.push({x:s.mall.x+s.mall.w/2,z:s.mall.z+s.mall.d/2,w:s.mall.w,d:s.mall.d});
  boxes.push(...s.fountains.map(f=>({x:f.x,z:f.z,w:1.2*(f.k??1),d:1.2*(f.k??1)})));return boxes;
 }
 /** Static route-derived fixtures. No per-lamp lights, animation, timers or network activity. */

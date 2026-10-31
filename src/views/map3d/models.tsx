@@ -370,7 +370,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
-      neighborhood: (scene.neighborhoodLand??[]).map(t=>slab(t,0,top)),
+      neighborhood: [...(scene.neighborhoodLand??[]),...(scene.raisedLand??[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
       steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),

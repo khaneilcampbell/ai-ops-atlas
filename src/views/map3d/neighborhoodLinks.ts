@@ -39,7 +39,7 @@ export const MALL_LOT={east:4,north:3} as const;
 type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'dealership'|'parks'|'land'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
 /** Adjacent neighborhood streets and public green space use the same routes as the meshes. */
 export function planNeighborhoodLinks(s:Input){
- const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],core=cityEnvelope(s.coreLand),h=s.hills,d=s.dealership;
+ const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],raised:Rect[]=[],core=cityEnvelope(s.coreLand),h=s.hills,d=s.dealership;
  const route=(anchors:Pt[],margin:number):Pt[]|undefined=>{
   const out:Pt[]=[];
   for(let i=1;i<anchors.length;i++){const part=routeAround(anchors[i-1],anchors[i],s.obstacles,margin);if(!part)return;out.push(...part.slice(out.length?1:0));}
@@ -63,6 +63,9 @@ export function planNeighborhoodLinks(s:Input){
     const top=mallRoom?(above.length?Math.max(...above):skyline.z-MALL_LOT.north):skyline.z;
     const green={x:x0,z:top,w:x1-x0,d:h.z-top};
     candidates.push(green);
+    // Low city land inside the green (old channel edges) is lifted to the green's height, so the
+    // Skyline park, the Marketplace lot and the city meet level, with no walls or gaps between them.
+    for(const r of s.land){const x0=Math.max(r.x,green.x),x1=Math.min(r.x+r.w,green.x+green.w),z0=Math.max(r.z,green.z),z1=Math.min(r.z+r.d,green.z+green.d);if(x1-x0>.001&&z1-z0>.001)raised.push({x:x0,z:z0,w:x1-x0,d:z1-z0});}
     const promenade:Pt=[skyline.x+skyline.w/2+5.4,skyline.z+skyline.d/2+3.9],gate:Pt=[h.x+HILLS.walkGateX,h.z+.5];
     walks.push([promenade,[walkX,promenade[1]]],[[gate[0],promenade[1]],gate]);
     for(let x=green.x+2.2;x<walkX-1;x+=4)for(let z=green.z+2;z<green.z+green.d-1;z+=4){const p:Pt=[x,z];if([...walks,walk,road].every(path=>distanceToRoad(p,path)>1)&&!s.obstacles.some(b=>Math.abs(x-b.x)<b.w/2+1&&Math.abs(z-b.z)<b.d/2+1))trees.push(p);}
@@ -76,5 +79,5 @@ export function planNeighborhoodLinks(s:Input){
  }
  candidates.push(...shortLandGaps([...s.links,...links].flatMap(l=>[l.road,l.walk]),s.land));
  const land:Rect[]=[];for(const candidate of candidates)land.push(...uncoveredLand(candidate,[...s.land,...land]));
- return {links,land,walks,trees};
+ return {links,land,walks,trees,raised};
 }

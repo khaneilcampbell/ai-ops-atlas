@@ -144,6 +144,8 @@ export interface Scene3D {
   land: Rect[];
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
+  /** Low land lifted to terrace height where it sits inside a neighborhood green. */
+  raisedLand?: Rect[];
   terraces: Terrace[];
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
@@ -709,6 +711,7 @@ export function buildScene(layout: Layout): Scene3D {
     freight,
     land,
     neighborhoodLand:neighborhood.land,
+    raisedLand:neighborhood.raised,
     terraces,
     paving,
     steps,
