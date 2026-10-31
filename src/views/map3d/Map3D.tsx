@@ -17,7 +17,7 @@ import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
 import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { MapControls } from "three/examples/jsm/controls/MapControls.js";
@@ -420,10 +420,28 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Frame rate, pixels and shadow detail follow the Performance setting.
   const power = usePowerProfile();
   const drawing = visible && officePhase !== "inside";
+  // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
+  // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
+  const [glKey, setGlKey] = useState(0);
+  const glCanvas = useRef<HTMLCanvasElement | null>(null);
+  const restarts = useRef(0);
+  const onGlCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    const c = gl.domElement;
+    glCanvas.current = c;
+    let timer = 0;
+    c.addEventListener("webglcontextlost", () => {
+      timer = window.setTimeout(() => {
+        if (glCanvas.current !== c || restarts.current >= 3) return;
+        restarts.current += 1;
+        setGlKey((k) => k + 1);
+      }, 2000);
+    });
+    c.addEventListener("webglcontextrestored", () => window.clearTimeout(timer));
+  }, []);
 
   return (
     <div className="map3d" ref={wrapEl}>
-      <Canvas shadows dpr={phone ? [1, Math.min(1.5, power.maxDpr)] : [1, power.maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, power.maxDpr)] : [1, power.maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FramePacer profile={power} running={drawing} />
         <World
           power={power}
