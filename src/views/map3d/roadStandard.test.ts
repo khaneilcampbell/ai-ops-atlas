@@ -79,3 +79,21 @@ describe('Atlas road standard',()=>{
   });
  });
 });
+
+describe('district streets carry on over their bridges',()=>{
+ it('paves every road bridge with the street asphalt and a visible center line, end to end',async()=>{
+  const {bridgeParts}=await import('./models');
+  const s=buildScene(layoutMap(catalog,[],'district'));
+  expect(s.carBridges.length).toBeGreaterThan(0);
+  for(const br of s.carBridges){
+   const len=Math.hypot(br.b[0]-br.a[0],br.b[1]-br.a[1]),{deck}=bridgeParts(br,s.brooks);
+   const asphalt=deck.filter(d=>d.c==='#424b50'),dashes=deck.filter(d=>d.c==='#e1ce8e');
+   expect(asphalt.reduce((t,d)=>t+d.s[2],0),`${br.key}: asphalt spans the deck`).toBeGreaterThanOrEqual(len);
+   expect(Math.min(...asphalt.map(d=>d.s[0])),`${br.key}: both lanes paved`).toBeGreaterThan(2*T.cityLaneOffset+.2);
+   expect(dashes.length,`${br.key}: center line every street dash`).toBeGreaterThanOrEqual(Math.floor((len-.26)/.3));
+   // Boxes stand on their base: a dash must start above the asphalt's top, or it is buried.
+   const level=asphalt.find(d=>!d.rx)!,mid=dashes.find(d=>!d.rx);
+   if(mid)expect(mid.p[1],`${br.key}: center line sits on the asphalt`).toBeGreaterThan(level.p[1]+level.s[1]);
+  }
+ });
+});
