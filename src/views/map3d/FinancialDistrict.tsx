@@ -107,7 +107,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  for(const r of a.park.plazas)solid.push(box(r.x+r.w/2,.026,r.z+r.d/2,r.w,.05,r.d,'#ece5d3'));
  // Stepped fountain: four basins, each a little lower than the one above it, with stone rims.
  for(const q of a.park.pools){const cx=q.x+q.w/2,cz=q.z+q.d/2;
-  solid.push(box(cx,.025,cz,q.w+.3,.035,q.d+.3,'#d4cebe'),box(cx,.025,cz,q.w,q.rise-.06,q.d,'#bfb7a2'));water.push(box(cx,q.rise-.035,cz,q.w,.02,q.d,'#ffffff'));
+  solid.push(box(cx,.025,cz,q.w+.3,.035,q.d+.3,'#d4cebe'),box(cx,.025,cz,q.w,q.rise-.06,q.d,'#bfb7a2'));water.push(box(cx,Math.max(q.rise-.035,.064),cz,q.w,.02,q.d,'#ffffff'));
   for(const x of [q.x-.08,q.x+q.w+.08])solid.push(box(x,.025,cz,.12,q.rise+.03,q.d+.3,'#cfc8b5'));
   for(const z of [q.z-.08,q.z+q.d+.08])solid.push(box(cx,.025,z,q.w,q.rise+.03,.12,'#cfc8b5'));
   solid.push(box(cx,q.rise,cz,.08,.14,.08,'#cfc8b5'));}
