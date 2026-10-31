@@ -30,11 +30,22 @@ export const RIBBON={
  portal:{from:.44,to:.8,width:.62},
  /** Crown: the hollow oculus is this share of the plan. */
  oculus:.52,
- podium:{levels:3,floor:.2,half:[.96,.86,.74],shift:[[-.04,.06],[-.1,.1],[-.14,.04]] as [number,number][]},
+ podium:{levels:3,
+  /** Storey heights, bottom up. The lobby is double height so its doors match the Financial District's (0.7 wide, 0.55 tall). */
+  floors:[.8,.24,.24] as number[],half:[.96,.86,.74],shift:[[-.04,.06],[-.1,.1],[-.14,.04]] as [number,number][]},
  turn:-Math.PI/4,
  /** The old plinth's half-size; nothing may stand outside it. */
  plinth:1.02,
 } as const;
+
+/**
+ * The BENJAIRE sign on the lobby, sized like the Financial District's signs (KC, 2026-10-31):
+ * there the letters stand about a third of a unit tall, so here they fill the lobby storey, with
+ * the badge and the workers sign either side. `aspect` is the wordmark canvas's width over height.
+ */
+export const LOBBY_SIGN={width:1.2,aspect:1024/192,y:.67,side:.68,badge:.17} as const;
+/** The lobby entrance, Financial District size: double doors under the sign. */
+export const LOBBY_DOOR={x:-.04,width:.7,height:.55} as const;
 
 export const isRibbonTower=(projectId:string)=>projectId===RIBBON.projectId;
 /** Roof height: the reference drawing's, or the height the scene gives it (matched to the Financial District). */
@@ -93,14 +104,16 @@ export function podiumRing(level:number,k=1):Pt[]{
  }
  return pts;
 }
-export const podiumHeight=(k=1)=>RIBBON.podium.levels*RIBBON.podium.floor*k;
+/** Top of podium storey `level` (0 is the lobby). */
+export const podiumTop=(level:number,k=1)=>RIBBON.podium.floors.slice(0,level+1).reduce((a,b)=>a+b,0)*k;
+export const podiumHeight=(k=1)=>podiumTop(RIBBON.podium.levels-1,k);
 
 /** Garden details on the podium: the round skylight, cafe umbrellas and a sweeping stair. */
 export function podiumDetails(k=1){
- const top1=RIBBON.podium.floor*k*2;
+ const top1=podiumTop(1,k);
  return {
   skylight:{x:.5*k,z:.48*k,r:.17*k,y:top1},
-  umbrellas:[[.22,.74],[.42,.8],[.66,.62]].map(([x,z])=>({x:x*k,z:z*k,y:RIBBON.podium.floor*k})),
+  umbrellas:[[.22,.74],[.42,.8],[.66,.62]].map(([x,z])=>({x:x*k,z:z*k,y:podiumTop(0,k)})),
   stair:Array.from({length:4},(_,i)=>({x:(-.62+i*.03)*k,z:(.78-i*.07)*k,y:i*.05*k,w:.28*k})),
  };
 }

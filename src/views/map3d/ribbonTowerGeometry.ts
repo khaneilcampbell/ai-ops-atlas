@@ -3,7 +3,7 @@ import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Pt} from './roads';
 import {lid,skin} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
-import {RIBBON,podiumDetails,podiumRing,ribbonHeights,ringsAt} from './ribbonTowerPlan';
+import {RIBBON,podiumDetails,podiumRing,podiumTop,ribbonHeights,ringsAt} from './ribbonTowerPlan';
 
 /** Benjaire HQ geometry: a few merged meshes, built once. See ribbonTowerPlan for the design. */
 
@@ -53,11 +53,10 @@ export function ribbonGeometry(k=1,height=RIBBON.height*k){
  const garden=lid(at(eye,H-well+.02*k));
  // Podium terraces: white slab edges over recessed glass, planters along each edge.
  const slabs:THREE.BufferGeometry[]=[],pglass:THREE.BufferGeometry[]=[],planters:THREE.BufferGeometry[]=[];
- const F=RIBBON.podium.floor*k;
  for(let l=0;l<RIBBON.podium.levels;l++){
-  const ring=podiumRing(l,k),y=(l+1)*F;
+  const ring=podiumRing(l,k),y=podiumTop(l,k),y0=l?podiumTop(l-1,k):0;
   slabs.push(slab(ring,y,.07*k));
-  pglass.push(skin([at(toward(ring,.94),l*F),at(toward(ring,.94),y-.07*k)]));
+  pglass.push(skin([at(toward(ring,.94),y0),at(toward(ring,.94),y-.07*k)]));
   planters.push(annulus(toward(ring,.9),toward(ring,.975),y,.035*k));
  }
  const d=podiumDetails(k);

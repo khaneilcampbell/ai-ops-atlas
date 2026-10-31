@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Tower} from './scene';
 import {focusable,signTexture} from './materials';
-import {RIBBON,podiumRing,ribbonTop} from './ribbonTowerPlan';
+import {LOBBY_SIGN,RIBBON,podiumRing,podiumTop,ribbonTop} from './ribbonTowerPlan';
 import {ribbonGeometry} from './ribbonTowerGeometry';
 import {glassTexture} from './atlasHqTextures';
 import {useQualityLevel} from '../../lib/governor';
@@ -56,7 +56,7 @@ export function RibbonTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;bas
   for(const s of d.stair)steps.push({p:[t.x+s.x,base+s.y,t.z+s.z],s:[s.w,.05*k,.07*k],r:.5,c:'#ece9e2'});
   for(const u of d.umbrellas){posts.push({p:[t.x+u.x,base+u.y,t.z+u.z],s:[.012*k,.13*k,.012*k],c:'#8a8f93'});tops.push({p:[t.x+u.x,base+u.y+.12*k,t.z+u.z],s:[.15*k,.05*k,.15*k]});}
   // Lush planting along the terrace edges, a few on each level.
-  for(let l=0;l<RIBBON.podium.levels;l++){const ring=podiumRing(l,k),y=base+(l+1)*RIBBON.podium.floor*k;for(let i=l;i<ring.length;i+=7){const [x,z]=ring[i];shrubs.push({p:[t.x+x*.94,y+.045*k,t.z+z*.94],s:[.05*k,.04*k,.05*k],c:i%2?'#5f8f4a':'#77a35a'});}}
+  for(let l=0;l<RIBBON.podium.levels;l++){const ring=podiumRing(l,k),y=base+podiumTop(l,k);for(let i=l;i<ring.length;i+=7){const [x,z]=ring[i];shrubs.push({p:[t.x+x*.94,y+.045*k,t.z+z*.94],s:[.05*k,.04*k,.05*k],c:i%2?'#5f8f4a':'#77a35a'});}}
   return {steps,posts,tops,shrubs};
  },[geo,t.x,t.z,base,k]);
  const handlers=useMemo(()=>({
@@ -76,9 +76,10 @@ export function RibbonTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;bas
    <mesh geometry={geo.podiumGlass} material={mats.pglass} receiveShadow {...handlers}/>
    <mesh geometry={geo.planters} material={m.lawn} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.skylight} material={mats.sky} raycast={noRaycast}/>
-   <mesh geometry={g.plane} material={signs.wordMat} position={[-.12*k,RIBBON.podium.floor*k*.5,front*.94+.01*k]} scale={[.62*k,.116*k,1]} raycast={noRaycast}/>
-   <mesh geometry={g.plane} material={signs.badge} position={[-.52*k,RIBBON.podium.floor*k*.5,front*.92+.01*k]} scale={[.13*k,.13*k,1]} raycast={noRaycast}/>
-   {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[.3*k,RIBBON.podium.floor*k*.5,front*.94+.012*k]} scale={[.12*k,.12*k,1]} raycast={noRaycast}/>}
+   {/* Lobby sign at the Financial District's sign scale: the letters fill the lobby storey. */}
+   <mesh geometry={g.plane} material={signs.wordMat} position={[-.04*k,LOBBY_SIGN.y*k,front*.97+.01*k]} scale={[LOBBY_SIGN.width*k,LOBBY_SIGN.width/LOBBY_SIGN.aspect*k,1]} raycast={noRaycast}/>
+   <mesh geometry={g.plane} material={signs.badge} position={[-LOBBY_SIGN.side*k,LOBBY_SIGN.y*k,front*.9+.01*k]} scale={[LOBBY_SIGN.badge*k,LOBBY_SIGN.badge*k,1]} raycast={noRaycast}/>
+   {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[LOBBY_SIGN.side*k,LOBBY_SIGN.y*k,front*.9+.012*k]} scale={[LOBBY_SIGN.badge*k,LOBBY_SIGN.badge*k,1]} raycast={noRaycast}/>}
   </group>
   <Instanced items={parts.steps} geometry={g.box} material={m.plain}/>
   <Instanced items={parts.posts} geometry={g.cyl} material={m.plain}/>

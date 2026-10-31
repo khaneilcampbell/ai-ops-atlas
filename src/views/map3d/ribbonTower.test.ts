@@ -5,7 +5,7 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {towerTop} from './models';
-import {RIBBON,footprint,isRibbonTower,portalGap,ribbonHeights,ribbonPieceCount,ringsAt,waist} from './ribbonTowerPlan';
+import {LOBBY_DOOR,LOBBY_SIGN,podiumTop,RIBBON,footprint,isRibbonTower,portalGap,ribbonHeights,ribbonPieceCount,ringsAt,waist} from './ribbonTowerPlan';
 import {ribbonGeometry,ribbonTriangles} from './ribbonTowerGeometry';
 
 describe('Benjaire HQ ribbon tower',()=>{
@@ -42,5 +42,12 @@ describe('Benjaire HQ ribbon tower',()=>{
   // The lightest quality level drops every other ribbon.
   expect(source).toMatch(/quality<3&&<mesh geometry=\{geo\.ribbonsOdd\}/);
   expect(readdirSync(__dirname).filter(f=>/^ribbontower/i.test(f)).length).toBeGreaterThanOrEqual(3);
+ });
+ it('has a Financial District size lobby entrance, with the sign above the doors',()=>{
+  // Financial District doors are 0.7 wide and 0.55 tall.
+  expect(LOBBY_DOOR.width).toBeCloseTo(.7);expect(LOBBY_DOOR.height).toBeCloseTo(.55);
+  expect(podiumTop(0)).toBeGreaterThan(LOBBY_DOOR.height+.2);
+  const signH=LOBBY_SIGN.width/LOBBY_SIGN.aspect;
+  expect(LOBBY_SIGN.y-signH/2).toBeGreaterThan(LOBBY_DOOR.height);expect(LOBBY_SIGN.y+signH/2).toBeLessThan(podiumTop(0));
  });
 });
