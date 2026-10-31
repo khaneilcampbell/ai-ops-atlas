@@ -6,7 +6,7 @@ import {pathClear} from './roads';
 import {financialDimensions} from './financialArchitecture';
 import {COMMUNITY_BUILDINGS} from './hillsCommunityPlan';
 import {distanceToRoad} from './highway';
-import {planDistrictLife,visitorAt,visitorDoorOccupied,DISTRICT_LIFE as L,SIMULATED_COMMUTERS,commuterLane} from './districtLifePlan';
+import {planDistrictLife,visitorAt,visitorDoorOccupied,DISTRICT_LIFE as L} from './districtLifePlan';
 
 describe('bounded district visitor simulation',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`keeps visitors clear of buildings, water and driving aisles in ${group}`,()=>{
@@ -46,7 +46,7 @@ describe('bounded district visitor simulation',()=>{
    const a=visitorAt(v,period-v.offset-.001),b=visitorAt(v,period-v.offset+.001);
    expect(Math.hypot(a.x-b.x,a.z-b.z)).toBeLessThan(.002);
   }
-  expect(SIMULATED_COMMUTERS).toBe(6);for(let i=0;i<SIMULATED_COMMUTERS;i++)expect(Math.abs(commuterLane(i))+.04).toBeLessThan(.5);
+
   expect(planDistrictLife({})).toEqual({visitors:[],doors:[]});
  });
 });

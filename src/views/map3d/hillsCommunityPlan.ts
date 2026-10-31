@@ -5,7 +5,7 @@ import type {Rect} from './scene';
 import {roundedRoad} from './highway';
 import {CITY_SPACING} from './citySpacing';
 import {HILLS} from './hillsPlan';
-export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,stationX:28,parkStopX:20.8,shoreTrackOffset:1.35,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:1.8,platformRise:2.06,trackWidth:.7,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:32,speed:3.2} as const;
+export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,stationX:28,parkStopX:20.8,shoreTrackOffset:1.35,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:1.8,platformRise:2.06,trackWidth:.7,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:15,speed:3.2} as const;
 export const COMMUNITY_BUILDINGS=[
  {id:'home-1',name:'Cypress House',kind:'house',x:4,z:24,w:3.2,d:2.6,h:1.8,color:'#eee2cd',purpose:'Planned gated residence with a private garden and garage.'},
  {id:'home-2',name:'Palm House',kind:'house',x:10,z:24,w:3.2,d:2.6,h:2.2,color:'#dce3dc',purpose:'Planned two-story residence with a balcony and private garage.'},
@@ -62,4 +62,3 @@ export function walkPoint(path:Point3[],t:number):Point3{const lengths=[0];for(l
 /** Physical track extends past stop centers, supporting the complete parked train. */
 export function railDeck(p:RailPlan):RailPlan{const extension=COMMUNITY.trainLength/2+.7,a=railPoint(p,0),b=railPoint(p,p.length);return {...p,route:[[a.x-Math.sin(a.yaw)*extension,a.z-Math.cos(a.yaw)*extension],...p.route,[b.x+Math.sin(b.yaw)*extension,b.z+Math.cos(b.yaw)*extension]],lengths:[0,...p.lengths.map(d=>d+extension),p.length+2*extension],length:p.length+2*extension};}
 
-export function commuterStage(state:ReturnType<typeof railState>){const aboard=state.phase==='outbound'||state.phase==='return',hills=state.phase==='hills';return {aboard,hills,progress:hills?(state.progress<.5?1-state.progress*2:state.progress*2-1):(state.progress<.5?state.progress*2:2-state.progress*2)};}

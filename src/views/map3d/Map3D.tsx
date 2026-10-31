@@ -981,7 +981,7 @@ function World({
       <FinancialDistrict plan={scene.financial} g={g} m={m} night={lightMode==="night"} pick={kioskPick}/>
       <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
       <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
-      <CommunityRail plan={scene.communityRail} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
+      <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
       <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
       <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
       <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>

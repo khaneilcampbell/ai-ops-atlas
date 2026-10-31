@@ -3,7 +3,7 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {COMMUNITY as C,COMMUNITY_BUILDINGS,commuterStage,railState,railDeck,railPoint,walkPoint} from './hillsCommunityPlan';
+import {COMMUNITY as C,COMMUNITY_BUILDINGS,railState,railDeck,railPoint,walkPoint} from './hillsCommunityPlan';
 import {distanceToRoad} from './highway';
 import {pathClear} from './roads';
 import {airportFootprint} from './airport';
@@ -40,6 +40,5 @@ describe('Hills community and elevated service',()=>{
  expect(railState(2*(C.dwell+travel),length)).toMatchObject({distance:0,doors:1});
  for(let t=0;t<2*(C.dwell+travel);t+=.1){const a=railState(t,length),b=railState(t+.01,length);expect(Math.abs(b.distance-a.distance)).toBeLessThanOrEqual(C.speed*.011);}
  });
- it('walks out and back at both stations, riding only with closed doors',()=>{const length=160,travel=length/C.speed;for(const seconds of [0,C.dwell/4,C.dwell/2,C.dwell*.9,C.dwell+1,C.dwell+travel+1,2*C.dwell+travel+1]){const state=railState(seconds,length),stage=commuterStage(state);expect(stage.progress).toBeGreaterThanOrEqual(0);expect(stage.progress).toBeLessThanOrEqual(1);if(stage.aboard)expect(state.doors).toBe(0);else expect(state.doors).toBe(1);}expect(commuterStage(railState(C.dwell/2,length))).toMatchObject({aboard:false,hills:true,progress:0});expect(commuterStage(railState(C.dwell+travel+C.dwell/2,length))).toMatchObject({aboard:false,hills:false,progress:1});});
  it('samples station stair approaches including vertical distance',()=>{const path:[[number,number,number],[number,number,number]]=[[0,0,0],[0,3.6,4.2]];expect(walkPoint(path,0)).toEqual(path[0]);expect(walkPoint(path,1)).toEqual(path[1]);expect(walkPoint(path,.5)).toEqual([0,1.8,2.1]);});
 });
