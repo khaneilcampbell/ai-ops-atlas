@@ -19,7 +19,8 @@ export const CIRCA={
  highwayClearance:1.2,
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
  maxPieces:1200,
- screen:{y0:.46,y1:1.5,inset:.12,waves:1.5,amplitude:.22},
+ /** LED band wrapping all four podium faces: a rounded loop with a gentle wave, the texture repeating a whole number of times. */
+ screen:{y0:.46,y1:1.5,inset:.12,corner:.35,waves:7,amplitude:.2,repeats:4},
 } as const;
 
 export interface CircaParts{
@@ -51,7 +52,7 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
  const P=CIRCA.podium,T=CIRCA.tower,hw=P.w/2,hd=P.d/2;
  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>t.push({p:[x,y,z],s:[w,h,d],c,...(r?{r}:{})});
 
- // Podium: dark garage core behind white louvers, retail glass at street level.
+ // Podium: dark garage core behind the LED band, retail glass at street level.
  box(out.solid,0,0,0,P.w-.12,P.h,P.d-.12,palette.core);
  box(out.storefront,0,.04,hd-.04,P.w-.3,P.retail-.08,.04,'#ffffff');
  box(out.storefront,hw-.04,.04,0,.04,P.retail-.08,P.d-.3,'#ffffff');
@@ -62,12 +63,7 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
  box(out.solid,hw+.12,P.retail-.04,0,.3,.05,P.d+.1,palette.white);
  // Entrance portal at the street door.
  box(out.solid,0,P.retail,hd+.2,1.2,.06,.42,palette.trim);
- // Vertical louvers screen the parking levels on the north, east and west faces; the street (south) face carries the LED screen.
- const louverY=P.retail+.06,louverH=P.h-louverY-.1;
- for(let x=-hw+.12;x<=hw-.1;x+=.2)box(out.solid,x,louverY,-hd-.03,.035,louverH,.1,palette.white);
- for(let z=-hd+.12;z<=hd-.1;z+=.2)for(const side of [-1,1])box(out.solid,side*(hw+.03),louverY,z,.1,louverH,.035,palette.white);
- // Floor bands every two parking levels.
- for(const y of [louverY,louverY+louverH/2])for(const side of [-1,1]){box(out.solid,0,y-.03,side*(hd+.02),P.w+.06,.04,.14,palette.white);box(out.solid,side*(hw+.02),y-.03,0,.14,.04,P.d+.06,palette.white);}
+ // The parking levels sit behind the LED band that wraps the whole podium, so no louvers or floor bands are needed.
  // Parapet and amenity deck surface.
  for(const side of [-1,1]){box(out.solid,0,P.h-.1,side*(hd-.02),P.w,.22,.08,palette.white);box(out.solid,side*(hw-.02),P.h-.1,0,.08,.22,P.d,palette.white);}
  box(out.solid,0,P.h-.12,0,P.w-.16,.14,P.d-.16,palette.stone);
@@ -124,12 +120,29 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
 }
 
 /**
- * Wave-shaped LED screen on the street (south) facade, under the round pool and the cabanas.
- * Building-local (x,z) samples run west to east, so the texture reads left to right from the street.
+ * Wave-shaped LED band wrapping the whole podium, building-local (x,z) samples.
+ * The loop runs south face west to east, then east, north and west faces, so text reads left to right from outside.
+ * The last sample repeats the first, closing the band.
  */
-export function circaScreenPath(samples=40):Pt[]{
- const P=CIRCA.podium,S=CIRCA.screen,span=P.w-.5,points:Pt[]=[];
- for(let i=0;i<=samples;i++){const t=i/samples,x=-span/2+t*span;points.push([x,P.d/2+S.inset+S.amplitude*(1+Math.sin(t*Math.PI*2*S.waves))/2]);}
+export function circaScreenPath(samples=240):Pt[]{
+ const P=CIRCA.podium,S=CIRCA.screen,a=P.w/2+S.inset,b=P.d/2+S.inset,r=S.corner;
+ // Base rounded rectangle as (point, outward normal) samples along its length.
+ const base:{p:Pt;n:Pt}[]=[];
+ const line=(x0:number,z0:number,x1:number,z1:number,n:Pt)=>{for(let i=0;i<12;i++){const t=i/12;base.push({p:[x0+(x1-x0)*t,z0+(z1-z0)*t],n});}};
+ const arc=(cx:number,cz:number,from:number)=>{for(let i=0;i<6;i++){const th=from-i/6*Math.PI/2;base.push({p:[cx+r*Math.cos(th),cz+r*Math.sin(th)],n:[Math.cos(th),Math.sin(th)]});}};
+ line(-(a-r),b,a-r,b,[0,1]);arc(a-r,b-r,Math.PI/2);
+ line(a,b-r,a,-(b-r),[1,0]);arc(a-r,-(b-r),0);
+ line(a-r,-b,-(a-r),-b,[0,-1]);arc(-(a-r),-(b-r),-Math.PI/2);
+ line(-a,-(b-r),-a,b-r,[-1,0]);arc(-(a-r),b-r,Math.PI);
+ base.push(base[0]);
+ const len=[0];for(let i=1;i<base.length;i++)len.push(len[i-1]+Math.hypot(base[i].p[0]-base[i-1].p[0],base[i].p[1]-base[i-1].p[1]));
+ const total=len[len.length-1],points:Pt[]=[];
+ for(let k=0;k<=samples;k++){
+  const d=k/samples*total;let i=1;while(i<base.length-1&&len[i]<d)i++;
+  const t=(d-len[i-1])/((len[i]-len[i-1])||1),A=base[i-1],B=base[i],nx=A.n[0]+(B.n[0]-A.n[0])*t,nz=A.n[1]+(B.n[1]-A.n[1])*t,nl=Math.hypot(nx,nz)||1;
+  const off=S.amplitude*(1-Math.cos(k/samples*Math.PI*2*S.waves))/2;
+  points.push([A.p[0]+(B.p[0]-A.p[0])*t+nx/nl*off,A.p[1]+(B.p[1]-A.p[1])*t+nz/nl*off]);
+ }
  return points;
 }
 

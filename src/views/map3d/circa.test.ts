@@ -47,11 +47,13 @@ describe('Circa twin towers',()=>{
    expect(Math.abs(p.p[2])+(kind==='fronds'?.3:rz),kind).toBeLessThanOrEqual(box.d/2+1.05);
    expect(p.p[1]+p.s[1],kind).toBeLessThanOrEqual(height+box.top+1e-6);
   }
-  // The wave screen hangs on the street face, under the round pool and the cabanas.
-  const screen=circaScreenPath();
-  for(const [x,z]of screen){expect(Math.abs(x)).toBeLessThanOrEqual(CIRCA.podium.w/2);expect(z).toBeGreaterThan(CIRCA.podium.d/2);expect(Math.abs(z)).toBeLessThanOrEqual(box.d/2);}
-  expect(screen[0][0]).toBeLessThan(screen.at(-1)![0]);
-  const pool=parts.roundWater.at(-1)!.p;expect(pool[2]).toBeGreaterThan(0);
+  // The LED band wraps all four podium faces and closes on itself.
+  const screen=circaScreenPath(),P=CIRCA.podium;
+  for(const [x,z]of screen){expect(Math.abs(x)).toBeLessThanOrEqual(box.w/2);expect(Math.abs(z)).toBeLessThanOrEqual(box.d/2);expect(Math.abs(x)>P.w/2||Math.abs(z)>P.d/2).toBe(true);}
+  expect(Math.max(...screen.map(p=>p[0]))).toBeGreaterThan(P.w/2);expect(Math.min(...screen.map(p=>p[0]))).toBeLessThan(-P.w/2);
+  expect(Math.max(...screen.map(p=>p[1]))).toBeGreaterThan(P.d/2);expect(Math.min(...screen.map(p=>p[1]))).toBeLessThan(-P.d/2);
+  expect(screen[0][0]).toBeCloseTo(screen.at(-1)![0]);expect(screen[0][1]).toBeCloseTo(screen.at(-1)![1]);
+  expect(Number.isInteger(CIRCA.screen.repeats)).toBe(true);
  });
 
  it('stays within the map piece budget with one screen mesh and no lights',()=>{

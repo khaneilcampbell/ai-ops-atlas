@@ -22,10 +22,11 @@ function screenTexture(){
  return texture;
 }
 
-/** A vertical ribbon along the wave-shaped street facade, on the pool and cabana side. */
+/** A vertical ribbon wrapping the whole podium; u follows arc length so the texture repeats evenly and meets itself at the seam. */
 function screenGeometry(){
  const path=circaScreenPath(),S=CIRCA.screen,positions:number[]=[],uvs:number[]=[],index:number[]=[];
- path.forEach(([x,z],i)=>{const u=i/(path.length-1);positions.push(x,S.y0,z,x,S.y1,z);uvs.push(u,0,u,1);if(i)index.push(2*i-2,2*i,2*i-1,2*i-1,2*i,2*i+1);});
+ const run=[0];for(let i=1;i<path.length;i++)run.push(run[i-1]+Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]));
+ path.forEach(([x,z],i)=>{const u=run[i]/run[run.length-1]*S.repeats;positions.push(x,S.y0,z,x,S.y1,z);uvs.push(u,0,u,1);if(i)index.push(2*i-2,2*i,2*i-1,2*i-1,2*i,2*i+1);});
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.setIndex(index);geometry.computeVertexNormals();
  return geometry;
 }
