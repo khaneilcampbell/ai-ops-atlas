@@ -36,6 +36,8 @@
   .search { width: 100%; min-width: 0; }
   .search input { width: 100%; min-width: 0; }
   .refresh { font-size: 0; gap: 0; }
+  /* The sync text sets its own size, so font-size 0 above no longer hides it. */
+  .refresh .sync-evidence { display: none; }
   .refresh .icon-btn { width: 40px; height: 40px; }
   .live-pill { padding: 5px 9px; font-size: 11px; }
 
