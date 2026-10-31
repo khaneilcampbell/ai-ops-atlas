@@ -12,7 +12,7 @@ export const FLIGHT_CLEARANCE={roofGap:4,minimumCruise:14,aircraftRadius:1.95} a
 /** Conservative roof envelope, including crowns and the new Financial District skyline.
  * Computed once per scene, not by testing every building on every animation frame. */
 export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'|'retail'>){
- const roof=Math.max(8,headquartersEnvelope(scene.towers),DEALERSHIP.height+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...[...scene.kiosks,...scene.retail].map(b=>toolOfficeHeight(b.name)+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
+ const roof=Math.max(8,headquartersEnvelope(scene.towers),DEALERSHIP.height+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...[...scene.kiosks,...scene.retail].map(b=>('height' in b&&b.height?b.height:toolOfficeHeight(b.name))+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
  return {roof,altitude:Math.max(FLIGHT_CLEARANCE.minimumCruise,roof+FLIGHT_CLEARANCE.roofGap)};
 }
 /** Airport-local circuit, accounting for the renderer's west-facing mirror. */

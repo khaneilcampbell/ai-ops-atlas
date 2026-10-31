@@ -3,6 +3,7 @@ import {planCommunity,planCommunityRail,financialStationLand,type CommunityPlan,
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
+import {sizeCustomTowers} from "./customTowers";
 import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
@@ -76,6 +77,8 @@ export interface Kiosk {
   size: number;
   /** Canopy color. */
   canopy: string;
+  /** Roof height for a district tool office, sized with its headquarters (see customTowers.ts). */
+  height?: number;
 }
 export interface Tower {
   key: string;
@@ -92,6 +95,11 @@ export interface Tower {
   size: number;
   floors: number;
   height: number;
+  /**
+   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ), sized
+   * with the Financial District so they stand among its towers, just under the shortest.
+   */
+  customHeight?: number;
 }
 export interface StrayBuilding {
   key: string;
@@ -660,6 +668,7 @@ export function buildScene(layout: Layout): Scene3D {
   if(dealership)land.push({x:dealership.x,z:dealership.z,w:dealership.w,d:dealership.d});
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
+  sizeCustomTowers(towers, kiosks);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   const community=planCommunity(hills);

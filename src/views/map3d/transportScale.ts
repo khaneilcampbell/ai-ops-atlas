@@ -1,2 +1,2 @@
 /** One visual scale for parked and moving road vehicles. World units, not operational data. */
-export const TRANSPORT={vehicleScale:2,walkWidth:.48,landingOverlap:.08,junctionOpening:.55,cityWidth:.64,bridgeWidth:.68,cityLaneOffset:.16,highwayWidth:1.1,highwayTurnWidth:1.4,highwayLaneOffset:.26,highwayShoulder:.47,highwayBarrier:.63,displayBayWidth:.72,displayBayLength:.95,dealerAisle:.9} as const;
+export const TRANSPORT={vehicleScale:2,walkWidth:.48,landingOverlap:.08,junctionOpening:.55,cityWidth:.72,bridgeWidth:.72,cityLaneOffset:.16,highwayWidth:1.1,highwayTurnWidth:1.4,highwayLaneOffset:.26,highwayShoulder:.47,highwayBarrier:.63,displayBayWidth:.72,displayBayLength:.95,dealerAisle:.9} as const;
