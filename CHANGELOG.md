@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#156)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
 - 2026-10-31 · Added Circa, twin curved glass towers with a pool deck and a big LED screen, west of Navy Federal and Vanguard by the highway. The garden-balcony tower is now called Garden Residences (#PR)
