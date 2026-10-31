@@ -20,35 +20,53 @@ type Materials=ReturnType<typeof useMaterials>;
 const WHEELS=[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z] as [number,number,number],s:[.055,.065,.065] as [number,number,number],c:"#202b36"})));
 /** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
 const GEAR_TOP=.2;
+/** Fuselage tube (radius, centre height, start and end along the aircraft) and the underwing engines. */
+const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
+const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
 function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery}) {
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const parts=useMemo(()=>{
     const l=livery;
+    // Long-haul twinjet proportions (777/787 family): a slender tube with a rounded nose and an upswept
+    // tail cone, swept high-aspect wings, two big underwing turbofans, swept tailplane and fin.
+    // Same footprint as before (AIRCRAFT_LAYOUT), so stands, jet bridges and ground crew still fit.
+    const R=FUSELAGE.radius,y0=FUSELAGE.y,tube=FUSELAGE.tubeFrom,tubeTo=FUSELAGE.tubeTo,fin=.42;
+    const finAt=(t:number):[number,number,number]=>[0,y0+R*.6+t*Math.cos(fin),.97+t*Math.sin(fin)];
     return {
+    tubes:[
+      {p:[0,y0,tube],s:[2*R,tubeTo-tube,2*R],rx:Math.PI/2,c:l.fuselage},
+      // Belly colour: a slightly lower, wider tube shows only along the underside.
+      {p:[0,y0-.045,tube+.08],s:[2*R+.006,tubeTo-tube-.16,2*R],rx:Math.PI/2,c:l.belly},
+      ...[-1,1].flatMap(side=>[
+        {p:[side*ENGINE.x,ENGINE.y,ENGINE.z],s:[ENGINE.d,ENGINE.len,ENGINE.d],rx:Math.PI/2,c:l.engine},
+        {p:[side*ENGINE.x,ENGINE.y,ENGINE.z-.01],s:[ENGINE.d*.82,.02,ENGINE.d*.82],rx:Math.PI/2,c:l.intake},
+        {p:[side*ENGINE.x,ENGINE.y,ENGINE.z+ENGINE.len],s:[ENGINE.d*.55,.12,ENGINE.d*.55],rx:Math.PI/2,c:'#3a4148'},
+      ]),
+    ] as Inst[],
     body:[
-      {p:[0,.34,0],s:[.23,.21,1.4],c:l.fuselage},
-      {p:[0,.245,0],s:[.225,.10,1.28],c:l.belly},
-      {p:[0,.43,-1.02],s:[.16,.075,.19],c:l.cockpit},
-      {p:[-.48,.21,-.18],s:[.14,.14,.32],c:l.engine},
-      {p:[.48,.21,-.18],s:[.14,.14,.32],c:l.engine},
-      {p:[-.48,.21,-.46],s:[.105,.105,.035],c:l.intake},
-      {p:[.48,.21,-.46],s:[.105,.105,.035],c:l.intake},
+      {p:[0,y0,tube],s:[R,R,.42],c:l.fuselage},
+      {p:[0,y0+.02,tubeTo],s:[R*.92,R*.8,.5],c:l.fuselage},
+      {p:[0,y0+.1,tube-.2],s:[R*.62,.045,.07],c:l.cockpit},
       ...(parked?WHEELS:[]),
     ] as Inst[],
     gear:WHEELS.map(w=>({...w,p:[w.p[0],w.p[1]-GEAR_TOP,w.p[2]]})) as Inst[],
     wings:[
-      {p:[-.67,.30,.13],s:[1.35,.055,.4],r:-.32,c:l.wing},
-      {p:[.67,.30,.13],s:[1.35,.055,.4],r:.32,c:l.wing},
-      {p:[0,.36,1.02],s:[1.12,.045,.26],c:l.wing},
-      // Fin reaches up to the top band so both livery bands sit on the tail, not above it.
-      {p:[0,.44,1.03],s:[.07,.62,.36],c:l.tail},
-      {p:[0,.5,1.04],s:[.075,.08,.34],c:l.tailLow},
-      {p:[0,.67,1.04],s:[.075,.08,.34],c:l.tailHigh},
-      {p:[-1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
-      {p:[1.29,.34,.34],s:[.055,.20,.24],c:l.winglet},
-      {p:[AIRCRAFT_LAYOUT.doorX,AIRCRAFT_LAYOUT.doorY,AIRCRAFT_LAYOUT.doorZ],s:[.02,AIRCRAFT_LAYOUT.doorHeight,.12],c:l.windows},
-      ...[-1,1].flatMap(side=>Array.from({length:12},(_,i)=>({p:[side*.222,.39,-.82+i*.15],s:[.018,.055,.055],c:l.windows}))),
+      // Swept main wings with a root fairing, raked tips and engine pylons.
+      ...[-1,1].flatMap(side=>[
+        {p:[side*.66,y0-.1,.02],s:[1.08,.045,.34],r:side*-.5,c:l.wing},
+        {p:[side*1.22,y0-.1+.01,.36],s:[.24,.035,.16],r:side*-.85,c:l.winglet},
+        {p:[side*ENGINE.x,ENGINE.y+ENGINE.d*.45,ENGINE.z+.12],s:[.04,.07,.32],c:l.wing},
+        {p:[side*.33,y0-.07,1.12],s:[.62,.03,.22],r:side*-.55,c:l.wing},
+      ]),
+      {p:[0,y0-.14,.0],s:[.36,.06,.62],c:l.belly},
+      // Swept fin: the livery bands sit on it, leaning back with it.
+      {p:finAt(0),s:[.04,.54,.36],rx:fin,c:l.tail},
+      {p:finAt(.14),s:[.045,.09,.34],rx:fin,c:l.tailLow},
+      {p:finAt(.4),s:[.045,.09,.3],rx:fin,c:l.tailHigh},
+      // Forward passenger door on the skin, where the jet bridge meets it.
+      {p:[AIRCRAFT_LAYOUT.doorX+.005,y0-.1,AIRCRAFT_LAYOUT.doorZ],s:[.02,.2,.1],c:l.windows},
+      ...[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.002),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))),
     ] as Inst[],
   };},[livery,parked]);
   useFrame(()=>{
@@ -62,6 +80,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
   });
   return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined}>
     <Instanced items={parts.body} geometry={g.ball} material={m.plain}/>
+    <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
     {!parked&&<group ref={gearRef} position={[0,GEAR_TOP,0]}><Instanced items={parts.gear} geometry={g.ball} material={m.plain} shadow={false}/></group>}
   </group>;
