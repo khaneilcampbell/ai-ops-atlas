@@ -39,7 +39,8 @@ export function GroundCrew({a,g,m,clock}:{a:AirportPlan;g:Geometry;m:Materials;c
   /** A thin hose or cable from one apron point to another (a box along its own z axis). */
   const link=(from:[number,number,number],to:[number,number,number],c:string):Inst=>{
    const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2],flat=Math.hypot(dx,dz);
-   return box(from[0],from[1],from[2],.018,.018,Math.hypot(flat,dy),c,{r:Math.atan2(dx,dz),rx:-Math.atan2(dy,flat)});
+   // Unit boxes are centred in z, so the link sits at its midpoint.
+   return box((from[0]+to[0])/2,(from[1]+to[1])/2,(from[2]+to[2])/2,.018,.018,Math.hypot(flat,dy),c,{r:Math.atan2(dx,dz),rx:-Math.atan2(dy,flat)});
   };
   for(const gz of SERVED_GATES){
    // Fuel truck parked ahead of the right wing, hose up to the wing.
@@ -48,9 +49,9 @@ export function GroundCrew({a,g,m,clock}:{a:AirportPlan;g:Geometry;m:Materials;c
    solid.push(link([fx-.06,.19,fz+.15],[gx+1.05,.29,gz-.12],'#2a2f33'));
    lights.push(box(fx,.19,fz-.24,.04,.025,.04,'#ffb347'));
    // Belt loader from the apron up to the rear hold door.
-   solid.push(box(gx+.45,.02,gz+.55,.4,.06,.12,'#e2c04c'),box(gx+.15,.27,gz+.55,.09,.02,.6,'#2f3437',{r:Math.PI/2,rx:.41}));
+   solid.push(box(gx+.45,.02,gz+.55,.4,.06,.12,'#e2c04c'),box(gx+.43,.15,gz+.55,.09,.02,.6,'#2f3437',{r:Math.PI/2,rx:.38}));
    // Pushback tug and tow bar at the nose, ground power unit on the left.
-   solid.push(box(gx,.02,gz-1.88,.17,.08,.26,'#e2c04c'),box(gx,.1,gz-1.95,.12,.06,.1,'#2b3a44'),box(gx,.05,gz-1.75,.025,.02,.82,'#3b4247'));
+   solid.push(box(gx,.02,gz-1.88,.17,.08,.26,'#e2c04c'),box(gx,.1,gz-1.95,.12,.06,.1,'#2b3a44'),box(gx,.05,gz-1.33,.025,.02,.82,'#3b4247'));
    lights.push(box(gx,.16,gz-1.95,.035,.02,.035,'#ffb347'));
    solid.push(box(gx-.55,.02,gz-1.25,.13,.1,.18,'#e9e4d2'),box(gx-.55,.12,gz-1.25,.135,.02,.185,'#294237'),box(gx-.36,.05,gz-1.12,.3,.012,.012,'#2a2f33',{r:-.5}));
    // Safety cones at the nose, wing tips and tail.
