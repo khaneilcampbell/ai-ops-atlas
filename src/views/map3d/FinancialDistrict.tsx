@@ -103,14 +103,23 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  const solid:Inst[]=[],plants:Inst[]=[],water:Inst[]=[],lights:Inst[]=[];if(!a)return {solid,plants,water,lights};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
  for(const path of a.park.paths)for(let i=1;i<path.length;i++){const u=path[i-1],v=path[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);solid.push({...box((u[0]+v[0])/2,.025,(u[1]+v[1])/2,.5,.045,length+.025,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
- const p=a.park.pool,cx=p.x+p.w/2,cz=p.z+p.d/2;
- solid.push(box(cx,.025,cz,p.w+.3,.035,p.d+.3,'#d4cebe'));water.push(box(cx,.06,cz,p.w,.02,p.d,'#ffffff'));
- for(const x of [p.x-.08,p.x+p.w+.08])solid.push(box(x,.06,cz,.12,.1,p.d+.3,'#cfc8b5'));
- for(const z of [p.z-.08,p.z+p.d+.08])solid.push(box(cx,.06,z,p.w,.1,.12,'#cfc8b5'));
+ // Plazas at the head and foot of the fountain axis, in a lighter stone than the paths.
+ for(const r of a.park.plazas)solid.push(box(r.x+r.w/2,.026,r.z+r.d/2,r.w,.05,r.d,'#ece5d3'));
+ // Stepped fountain: four basins, each a little lower than the one above it, with stone rims.
+ for(const q of a.park.pools){const cx=q.x+q.w/2,cz=q.z+q.d/2;
+  solid.push(box(cx,.025,cz,q.w+.3,q.rise-.01,q.d+.3,'#d4cebe'));water.push(box(cx,q.rise-.02,cz,q.w,.02,q.d,'#ffffff'));
+  for(const x of [q.x-.08,q.x+q.w+.08])solid.push(box(x,.025,cz,.12,q.rise+.03,q.d+.3,'#cfc8b5'));
+  for(const z of [q.z-.08,q.z+q.d+.08])solid.push(box(cx,.025,z,q.w,q.rise+.03,.12,'#cfc8b5'));
+  solid.push(box(cx,q.rise,cz,.08,.14,.08,'#cfc8b5'));}
+ // Sculpture gardens: a bright round lawn ringed by a narrow path.
+ for(const ring of a.park.rings){const n=14;plants.push(box(ring.x,-.05,ring.z,ring.r-.12,.08,ring.r-.12,'#8fbf6a'));
+  for(let i=0;i<n;i++){const t0=i/n*Math.PI*2,t1=(i+1)/n*Math.PI*2,u:[number,number]=[ring.x+Math.cos(t0)*ring.r,ring.z+Math.sin(t0)*ring.r],v:[number,number]=[ring.x+Math.cos(t1)*ring.r,ring.z+Math.sin(t1)*ring.r];
+   solid.push({...box((u[0]+v[0])/2,.025,(u[1]+v[1])/2,.24,.045,Math.hypot(v[0]-u[0],v[1]-u[1])+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}}
+ for(const [x,z]of a.park.sculptures){solid.push(box(x,.04,z,.32,.12,.32,'#d4cebe'),box(x-.04,.16,z,.08,.55,.08,'#c9a35a'));plants.push(box(x+.06,.78,z,.13,.13,.13,'#c9a35a'));}
+ for(const b of a.park.beds)plants.push(box(b.x+b.w/2,-.02,b.z+b.d/2,b.w/2,.12,b.d/2,b.c));
+ for(const [x,z,r]of a.park.shrubs)plants.push(box(x,r*.55,z,r,r*.8,r,'#5f8a58'));
  for(const [x,z]of a.park.trees){solid.push(box(x,.02,z,.09,.7,.09,'#8b7f65'));plants.push(box(x,1.3,z,F.parkTreeRadius,.8,F.parkTreeRadius,'#6e9369'));}
  for(const [x,z]of a.park.benches){solid.push(box(x,.015,z,1.3,.025,.75,'#d4cebe'),box(x,.18,z,1,.08,.35,'#b68c60'),box(x,.26,z+.15,1,.4,.07,'#b68c60'));for(const side of [-1,1])solid.push(box(x+side*.38,.04,z,.07,.14,.28,materials.green));}
- // Low hedges frame the lawn without narrowing path entrances.
- for(let z=4.6;z<7.3;z+=.45)plants.push(box(15.5,.02,z,.18,.24,.3,'#63875e'));
  for(const [x,z]of a.park.lights){solid.push(box(x,.02,z,.05,.28,.05,materials.green));lights.push(box(x,.3,z,.07,.05,.07,'#ffffff'));}
  return {solid,plants,water,lights};
  },[a,materials]);

@@ -21,7 +21,8 @@ describe('bounded district visitor simulation',()=>{
    for(let time=0;time<210;time+=1.25){const q=visitorAt(v,time);
     expect(Number.isFinite(q.x+q.z+q.y)).toBe(true);
     if(v.area==='financial')expect(pathClear([[q.x,q.z],[q.x+.001,q.z]],v.target?financial.filter(b=>b.id!==v.target):financial,.04),v.id).toBe(true);
-    if(v.id.startsWith('park:')){const pool=f.park.pool;expect(Math.abs(q.x-f.x-pool.x)<pool.w/2+.05&&Math.abs(q.z-f.z-pool.z)<pool.d/2+.05).toBe(false);}
+    if(v.id.startsWith('park:')){const pool=f.park.pool;// Pool x/z is its corner, so measure from its centre.
+     expect(Math.abs(q.x-f.x-pool.x-pool.w/2)<pool.w/2+.05&&Math.abs(q.z-f.z-pool.z-pool.d/2)<pool.d/2+.05).toBe(false);}
     if(v.area==='golf'){expect(q.x-c.x).toBeGreaterThan(24);expect(q.x-c.x).toBeLessThan(32);expect(q.z-c.z).toBeGreaterThan(31);expect(q.z-c.z).toBeLessThan(44);}
     if(v.area==='bmw'){
      expect(distanceToRoad([q.x,q.z],d.drive)).toBeGreaterThan(.5);
