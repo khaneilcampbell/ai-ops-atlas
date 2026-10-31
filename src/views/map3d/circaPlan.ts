@@ -13,13 +13,15 @@ export const CIRCA={
  x:-4.6,z:6.2,
  rise:1.04,
  podium:{w:7.4,d:8.6,h:1.65,retail:.4},
- tower:{rx:1.3,rz:.82,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:27,balconySide:.16},
+ tower:{rx:1.25,rz:.95,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:27,balconySide:.1},
  crown:.6,
  /** Minimum distance from the highway centreline to any corner of the parcel. */
  highwayClearance:1.2,
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
  maxPieces:1200,
  screen:{y0:.46,y1:1.5,inset:.12,waves:1.5,amplitude:.22},
+ /** Second, flat screen on the street front, west of the entrance. */
+ frontScreen:{x0:-3.45,x1:-.9,y0:.5,y1:1.48,offset:.13},
 } as const;
 
 export interface CircaParts{
@@ -74,27 +76,36 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
 
  // Elevated amenity deck: round resort pool, lap pool, cabanas, loungers, planting.
  const deck=P.h+.02;
+ // Round resort pool on a paved ring, loungers set radially around it (deck plan reference).
+ out.rounds.push({p:[1.85,deck,2.05],s:[2.9,.03,2.9],c:'#cfc8b8'});
  out.rounds.push({p:[1.85,deck,2.05],s:[2,.05,2],c:palette.stone});
+ for(let i=0;i<9;i++){const a=Math.PI/3+i*(Math.PI*4/3)/8,x=1.85+Math.cos(a)*1.2,z=2.05+Math.sin(a)*1.2;box(out.solid,x,deck+.03,z,.13,.045,.3,palette.white,Math.atan2(Math.cos(a),Math.sin(a)));}
+ // Small round fountain between the towers, and two oval cabana pods in the gardens.
+ out.rounds.push({p:[.45,deck,.3],s:[.6,.08,.6],c:palette.stone});out.roundWater.push({p:[.45,deck+.02,.3],s:[.48,.07,.48],c:'#ffffff'});
+ for(const [x,z]of [[-2.6,.3],[-.4,-.55]] as const){out.rounds.push({p:[x,deck,z],s:[.62,.06,.44],c:'#7a4f35'});for(const side of [-1,1])box(out.solid,x+side*.12,deck+.06,z,.12,.05,.26,palette.white);}
  out.roundWater.push({p:[1.85,deck+.01,2.05],s:[1.7,.05,1.7],c:'#ffffff'});
- box(out.solid,-1.75,deck,-2.05,2.7,.05,.8,palette.stone);
- out.lapWater.push({p:[-1.75,deck+.01,-2.05],s:[2.45,.05,.56],c:'#ffffff'});
+ box(out.solid,-1.75,deck,-2.05,2.9,.05,1.15,palette.stone);
+ out.lapWater.push({p:[-1.75,deck+.01,-2.05],s:[2.65,.05,.6],c:'#ffffff'},{p:[-2.98,deck+.01,-2.05],s:[.24,.05,.98],c:'#ffffff'});
+ // Dark lane lines, then a colonnade with a flat canopy along the far side of the lap pool.
+ for(const z of [-2.2,-1.9])box(out.solid,-1.75,deck+.062,z,2.3,.004,.035,'#24577a');
+ for(let i=0;i<5;i++)out.rounds.push({p:[-3+i*.6,deck,-3.05],s:[.13,.5,.13],c:palette.trim});
+ box(out.solid,-1.8,deck+.5,-3.15,2.75,.05,.55,palette.white);
  for(let i=0;i<4;i++){const z=.45+i*.85;box(out.solid,3.2,deck,z,.48,.36,.5,palette.turquoise);box(out.solid,3.2,deck+.36,z,.6,.05,.62,palette.white);}
- for(let i=0;i<6;i++)box(out.solid,-2.75+i*.4,deck,-1.5,.15,.05,.34,palette.white);
- for(let i=0;i<4;i++)box(out.solid,.55+i*.42,deck,.55,.15,.05,.34,palette.white);
- for(const [x,z,w,d]of [[-3.35,0,.28,3.4],[0,-3.95,3.6,.28],[3.35,-2.4,.28,2.6],[-1.2,3.95,2.3,.28],[-.2,-.2,.9,.9]] as const){box(out.solid,x,deck,z,w,.12,d,palette.wood);box(out.solid,x,deck+.12,z,w-.04,.1,d-.04,palette.green);}
- for(const [x,z]of [[-3.35,-1],[-3.35,1.2],[3.35,-3.3],[3.35,-1.5],[-.2,-.2],[-.6,3.95]] as const){box(out.solid,x,deck+.12,z,.04,.36,.04,palette.wood);out.leaves.push({p:[x,deck+.6,z],s:[.24,.2,.24],c:palette.green});}
+ for(let i=0;i<7;i++){box(out.solid,-2.95+i*.38,deck,-1.42,.15,.05,.34,'#6f7477');box(out.solid,-2.95+i*.38,deck+.05,-1.3,.15,.07,.08,'#6f7477');}
+ for(const [x,z,w,d]of [[-3.35,0,.28,3.4],[0,-3.95,3.6,.28],[3.35,-2.4,.28,2.6],[-1.2,3.95,2.3,.28]] as const){box(out.solid,x,deck,z,w,.12,d,palette.wood);box(out.solid,x,deck+.12,z,w-.04,.1,d-.04,palette.green);}
+ for(const [x,z]of [[-3.35,-1],[-3.35,1.2],[3.35,-3.3],[3.35,-1.5],[-.6,3.95]] as const){box(out.solid,x,deck+.12,z,.04,.36,.04,palette.wood);out.leaves.push({p:[x,deck+.6,z],s:[.24,.2,.24],c:palette.green});}
 
  // Twin elliptical towers: blue glass, white slab edges, ribbed balconies on one side.
  const base=P.h,floor=(height-base)/T.floors;
  for(const [cx,cz]of T.centres){
   const place=(p:Pt):Pt=>{const [x,z]=rotate(p,T.turn);return [cx+x,cz+z];};
   out.towerGlass.push({p:[cx,base,cz],s:[T.rx*2,height-base,T.rz*2],r:T.turn,c:'#ffffff'});
-  for(let f=2;f<T.floors;f+=2)out.slabs.push({p:[cx,base+f*floor-.015,cz],s:[T.rx*2+.06,.035,T.rz*2+.06],r:T.turn,c:palette.white});
-  for(let f=1;f<T.floors;f+=2)out.balconies.push({p:[cx,base+f*floor-.015,cz],s:[(T.rx+T.balconySide)*2,.03,(T.rz+T.balconySide)*2],r:T.turn,c:palette.white});
-  for(let i=0;i<9;i++){
-   const th=-1.3+i*2.6/8,ex=(T.rx+T.balconySide-.02)*Math.sin(th),ez=(T.rz+T.balconySide-.02)*Math.cos(th);
-   const [x,z]=place([ex,ez]),normal=Math.atan2(Math.sin(th)/T.rx,Math.cos(th)/T.rz);
-   box(out.solid,x,base+.05,z,.035,height-base-.15,.06,palette.white,T.turn+normal);
+  // A thin slab edge wraps every floor; on the view side each floor carries a deeper balcony strip.
+  for(let f=1;f<T.floors;f++){out.slabs.push({p:[cx,base+f*floor-.012,cz],s:[T.rx*2+.05,.024,T.rz*2+.05],r:T.turn,c:palette.trim});out.balconies.push({p:[cx,base+f*floor-.014,cz],s:[(T.rx+T.balconySide)*2,.028,(T.rz+T.balconySide)*2],r:T.turn,c:palette.white});}
+  // Slim glass-rail posts at the ends of the balcony strips.
+  for(const th of [-1.45,1.45]){
+   const [x,z]=place([(T.rx+T.balconySide-.03)*Math.sin(th),(T.rz+T.balconySide-.03)*Math.cos(th)]),normal=Math.atan2(Math.sin(th)/T.rx,Math.cos(th)/T.rz);
+   box(out.solid,x,base+.05,z,.03,height-base-.15,.05,palette.white,T.turn+normal);
   }
   // Podium-to-tower plinth, roof parapet and a slim elliptical crown.
   out.slabs.push({p:[cx,base-.02,cz],s:[T.rx*2+.14,.1,T.rz*2+.14],r:T.turn,c:palette.white});
