@@ -71,3 +71,11 @@ the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from
 
 Playwright is a dev dependency only. Nothing under `visual/` is imported by the app, so it
 never reaches the desktop bundle or the Pages build.
+
+## Circa preview shots
+
+`visual/circa.visual.ts` renders Circa close-ups (LED band, entrance, lobby, deck) into `artifacts/circa/` for review. It has no baselines and is skipped unless asked for:
+
+```sh
+CIRCA_SHOTS=1 npx playwright test -c visual visual/circa.visual.ts
+```

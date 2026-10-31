@@ -1,5 +1,7 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /** Circa preview shots: wide context with Navy Federal, Vanguard and the highway, a close-up of the LED screen, and the deck. */
+// Preview shots only (no baselines): runs only when CIRCA_SHOTS=1, like DESIGN_SHOTS and POWER, so the CI baseline run stays under its time limit.
+test.skip(!process.env.CIRCA_SHOTS,'Set CIRCA_SHOTS=1 to take Circa preview screenshots.');
 // World positions in the default (no grouping) layout: Circa's centre is about (-13.5, -12.6).
 const views=[["overview",[-9,6,-12],[-8,18,16]],["dusk",[-12,5,-12],[-4,4,6]],['screen',[-13.5,1.4,-8.3],[-9,4.5,-0.5]],['west',[-13.5,1.6,-13],[-23,7,-11]],['entrance',[-13.5,.6,-7.9],[-11.6,2.2,-2.6]],['door',[-13.5,.75,-8.1],[-13.1,1.25,-5.6]],['deck',[-13.4,2.3,-12.6],[-9,11,-3]],['towers',[-13.4,9,-12.6],[-14,4,4]]] as const;
 for(const light of ['day','night'] as const)test(`Circa twin towers, ${light}`,async({page})=>{
