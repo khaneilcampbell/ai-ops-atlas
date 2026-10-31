@@ -8,7 +8,7 @@ export const WELLS_FARGO_REFERENCE_METRES=235;
 export const BALCONY={projection:.44,railHeight:.22,gardenEvery:5,walkClearance:.32} as const;
 export function financialDimensions(id:string){
  const architecture=financialBrand(id)?.architecture;
- if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,w:CIRCA.podium.w+.7,d:CIRCA.podium.d+.4,top:CIRCA.crown};
+ if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,w:CIRCA.podium.w+.7,d:CIRCA.podium.d+.7,top:CIRCA.crown};
  const width=architecture==='hotel'||architecture==='bevelled'?3.6:architecture?3.4:3;
  const depth=architecture?2.8:2.6,projection=architecture==='biophilic'?BALCONY.projection:0;
  return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+(architecture?.7:.5),depth+projection*2+.12),top:architecture?1.1:1.2};

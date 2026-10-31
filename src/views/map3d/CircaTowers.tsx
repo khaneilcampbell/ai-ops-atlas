@@ -22,7 +22,7 @@ function screenTexture(){
  return texture;
 }
 
-/** A vertical ribbon along the wave-shaped west facade. */
+/** A vertical ribbon along the wave-shaped north facade, on the pool and cabana side. */
 function screenGeometry(){
  const path=circaScreenPath(),S=CIRCA.screen,positions:number[]=[],uvs:number[]=[],index:number[]=[];
  path.forEach(([x,z],i)=>{const u=i/(path.length-1);positions.push(x,S.y0,z,x,S.y1,z);uvs.push(u,0,u,1);if(i)index.push(2*i-2,2*i,2*i-1,2*i-1,2*i,2*i+1);});
