@@ -57,7 +57,7 @@ describe('Circa twin towers',()=>{
  });
 
  it('has a large glass entrance on the street face that stays below and clear of the LED band',()=>{
-  const entry={solid:[],entryGlass:[],entryDrums:[],lobbyGlow:[],rounds:[],leaves:[]} as Parameters<typeof circaEntrance>[0];
+  const entry={solid:[],entryGlass:[],entryDrums:[],lobbyGlow:[],lobbyFinish:[],rounds:[],leaves:[]} as Parameters<typeof circaEntrance>[0];
   circaEntrance(entry,palette);
   const all=Object.values(entry).flat(),P=CIRCA.podium,S=CIRCA.screen,band=circaScreenPath();
   expect(entry.entryGlass.length).toBeGreaterThan(0);expect(entry.entryDrums.length).toBe(2);expect(entry.lobbyGlow.length).toBeGreaterThan(0);
@@ -73,7 +73,8 @@ describe('Circa twin towers',()=>{
   // The band stays on the podium: above the entrance and below the deck parapet.
   expect(S.y1).toBeLessThanOrEqual(P.h);
   expect(CIRCA.entrance.w).toBeGreaterThanOrEqual(2.2);expect(CIRCA.entrance.w).toBeLessThanOrEqual(2.8);
-  for(const p of all)expect(p.p[2]).toBeGreaterThan(P.d/2-.05);
+  // Lobby parts sit in the street-face recess or the pavilion, never deeper into the podium.
+  for(const p of all)expect(p.p[2]).toBeGreaterThan(P.d/2-.06-CIRCA.entrance.recess-1e-9);
   // The whole complex keeps the entrance and no old portal box.
   const parts=circaParts(9,palette);expect(parts.entryGlass).toEqual(entry.entryGlass);
  });

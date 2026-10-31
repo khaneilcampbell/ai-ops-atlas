@@ -18,7 +18,7 @@ export const CIRCA={
  tower:{rx:1.25,rz:.95,turn:.42,centres:[[-1.75,1.95],[1.75,-1.95]] as Pt[],floors:46,balconySide:.1},
  crown:.6,
  /** Glass entrance pavilion centred on the street face; everything stays below the LED band (screen.y0). */
- entrance:{w:2.4,depth:.62,canopy:.3},
+ entrance:{w:2.8,depth:.62,canopy:.3,recess:1.3},
  /** Minimum distance from the highway centreline to any corner of the parcel. */
  highwayClearance:1.2,
  /** Instance budget for the whole complex (towers, podium, deck, palms, street). */
@@ -53,21 +53,27 @@ export interface CircaParts{
  entryDrums:Inst[];
  /** Lobby light panels that glow at night (box). */
  lobbyGlow:Inst[];
+ /** Lobby finishes (marble, stone, linen) that pick up a warm interior glow at night (box). */
+ lobbyFinish:Inst[];
 }
 
 const rotate=([x,z]:Pt,a:number):Pt=>[x*Math.cos(a)+z*Math.sin(a),z*Math.cos(a)-x*Math.sin(a)];
 
 /** All parts in building-local coordinates. `height` is the tower roof above the terrace. */
 export function circaParts(height:number,palette:{white:string;stone:string;trim:string;core:string;green:string;turquoise:string;wood:string}):CircaParts{
- const out:CircaParts={solid:[],storefront:[],towerGlass:[],slabs:[],balconies:[],roundWater:[],lapWater:[],rounds:[],leaves:[],fronds:[],entryGlass:[],entryDrums:[],lobbyGlow:[]};
+ const out:CircaParts={solid:[],storefront:[],towerGlass:[],slabs:[],balconies:[],roundWater:[],lapWater:[],rounds:[],leaves:[],fronds:[],entryGlass:[],entryDrums:[],lobbyGlow:[],lobbyFinish:[]};
  const P=CIRCA.podium,T=CIRCA.tower,E=CIRCA.entrance,hw=P.w/2,hd=P.d/2;
  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>t.push({p:[x,y,z],s:[w,h,d],c,...(r?{r}:{})});
 
  // Podium: dark garage core behind the LED band.
- box(out.solid,0,0,0,P.w-.12,P.h,P.d-.12,palette.core);
+ // Garage core, with a double-height lobby carved out behind the glass entrance on the street face.
+ {const cw=P.w-.12,cd=P.d-.12,ex=E.w/2,lobbyTop=CIRCA.screen.y0-.04,back=cd/2-E.recess,sideW=(cw/2-ex);
+  for(const side of [-1,1])box(out.solid,side*(ex+sideW/2),0,0,sideW,P.h,cd,palette.core);
+  box(out.solid,0,0,(-cd/2+back)/2,E.w,P.h,back+cd/2,palette.core);
+  box(out.solid,0,lobbyTop,back+E.recess/2,E.w,P.h-lobbyTop,E.recess,palette.core);}
  // Double-height retail glass on the street and east faces fills the space under the LED band.
  const shopH=CIRCA.screen.y0-.12;
- box(out.storefront,0,.04,hd-.04,P.w-.3,shopH,.04,'#ffffff');
+ for(const side of [-1,1]){const x0=E.w/2+.02,x1=hw-.15;box(out.storefront,side*(x0+x1)/2,.04,hd-.04,x1-x0,shopH,.04,'#ffffff');}
  box(out.storefront,hw-.04,.04,0,.04,shopH,P.d-.3,'#ffffff');
  for(let x=-hw+.4;x<hw-.2;x+=.62)if(Math.abs(x)>E.w/2+.05)box(out.solid,x,.04,hd-.01,.03,shopH,.03,palette.white);
  for(let z=-hd+.4;z<hd-.2;z+=.62)box(out.solid,hw-.01,.04,z,.03,shopH,.03,palette.white);
@@ -163,31 +169,52 @@ export function circaScreenPath(samples=240):Pt[]{
  return points;
 }
 
-/** Entrance pavilion parts, building-local. Every top stays at least .04 below the LED band's bottom edge. */
-export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}){
- const P=CIRCA.podium,E=CIRCA.entrance,hd=P.d/2,top=CIRCA.screen.y0-.04,front=hd+E.depth,mid=hd+E.depth/2,glassH=top-.1;
+/**
+ * Entrance pavilion and lobby, building-local. Every part stays at least .04 below the LED band's bottom edge.
+ * Near-frameless clear glass steps out from the street face; behind it a double-height lobby runs
+ * CIRCA.entrance.recess deep into the podium: book-matched marble, a walnut wall with a backlit onyx panel,
+ * linear pendant lights, a stone reception desk, a lounge, gold columns and potted olive trees.
+ */
+export function circaEntrance(out:Pick<CircaParts,'solid'|'entryGlass'|'entryDrums'|'lobbyGlow'|'lobbyFinish'|'rounds'|'leaves'>,palette:{white:string;wood:string;green:string;trim:string}){
+ const P=CIRCA.podium,E=CIRCA.entrance,hd=P.d/2,top=CIRCA.screen.y0-.04,front=hd+E.depth,glassH=top-.07,back=hd-.06-E.recess,ex=E.w/2;
+ const depth=front-back,mid=(front+back)/2,inner=ex-.03;
+ const marble='#f3efe8',vein='#d9d1c4',walnut='#5b3a26',gold='#c9b07a',stone='#ebe5da',linen='#e9e0d0',onyx='#ffffff';
  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string)=>t.push({p:[x,y,z],s:[w,h,d],c});
- // Marble floor, glass walls with slim champagne mullions, flat roof and a thin glass canopy with a white edge.
- box(out.solid,0,0,mid,E.w,.03,E.depth+.02,'#ece6da');
- box(out.entryGlass,0,.03,front,E.w,glassH,.02,'#ffffff');
- for(const side of [-1,1])box(out.entryGlass,side*E.w/2,.03,mid,.02,glassH,E.depth,'#ffffff');
- for(let i=0;i<=6;i++)box(out.solid,-E.w/2+i*E.w/6,.03,front,.025,glassH,.025,'#d8cba8');
- for(const side of [-1,1])box(out.solid,side*E.w/2,.03,hd+.02,.025,glassH,.025,'#d8cba8');
- box(out.solid,0,.03+glassH,mid,E.w+.06,.035,E.depth+.04,palette.white);
- box(out.entryGlass,0,top-.03,front+E.canopy/2,E.w+.4,.015,E.canopy,'#ffffff');
- box(out.solid,0,top-.035,front+E.canopy,E.w+.4,.035,.03,palette.white);
- // Two revolving doors in the front glass.
+ // Floor: white marble through pavilion and lobby, a darker border and a round medallion at the centre.
+ box(out.lobbyFinish,0,0,mid,E.w,.03,depth,marble);
+ for(const side of [-1,1])box(out.solid,side*(inner-.04),.03,mid,.03,.002,depth-.1,vein);
+ out.rounds.push({p:[0,.03,mid+.1],s:[.62,.003,.62],c:vein},{p:[0,.031,mid+.1],s:[.5,.003,.5],c:marble});
+ // Near-frameless glass: front and sides, slim gold fins at the corners and between bays, a thin roof and a glass canopy.
+ box(out.entryGlass,0,.03,front,E.w,glassH,.015,'#ffffff');
+ for(const side of [-1,1])box(out.entryGlass,side*ex,.03,hd+E.depth/2,.015,glassH,E.depth,'#ffffff');
+ for(const x of [-ex,-ex/2,ex/2,ex])box(out.solid,x,.03,front,.014,glassH,.03,gold);
+ for(const side of [-1,1])box(out.solid,side*ex,.03,hd+.02,.014,glassH,.03,gold);
+ box(out.solid,0,.03+glassH,hd+E.depth/2,E.w+.04,.025,E.depth+.04,palette.white);
+ box(out.solid,0,.03+glassH+.005,front+.005,E.w+.04,.02,.012,gold);
+ box(out.entryGlass,0,top-.02,front+E.canopy/2,E.w+.4,.012,E.canopy,'#ffffff');
+ box(out.solid,0,top-.026,front+E.canopy,E.w+.4,.022,.02,gold);
+ // Two glass revolving doors with gold crowns, and a slim transom rail.
  const doorH=Math.min(.5,glassH-.04);
- for(const x of [-.38,.38]){out.entryDrums.push({p:[x,.03,front],s:[.32,doorH,.32],c:'#ffffff'});out.rounds.push({p:[x,.03+doorH,front],s:[.34,.025,.34],c:'#d8cba8'});box(out.solid,x,.03,front,.012,doorH-.01,.3,'#d8cba8');}
- // Transom rail above the doors.
- box(out.solid,0,.03+doorH+.02,front,E.w,.02,.03,'#d8cba8');
- // Lobby: feature wall and ceiling light that glow at night, walnut reception desk, two lounge chairs.
- box(out.lobbyGlow,0,.06,hd+.015,E.w*.62,glassH-.08,.02,'#ffffff');
- box(out.lobbyGlow,0,.03+glassH-.012,mid,E.w-.3,.01,E.depth-.2,'#ffffff');
- box(out.solid,0,.03,hd+.17,.7,.1,.13,'#6b4a32');box(out.solid,0,.13,hd+.17,.74,.012,.15,'#e8e2d4');
- for(const side of [-1,1]){box(out.solid,side*.82,.03,mid+.04,.18,.06,.16,'#8e6f4e');box(out.solid,side*.82,.09,mid-.03,.18,.06,.03,'#8e6f4e');}
- // Planter benches either side of the door and a stone landing meeting the walk.
- for(const side of [-1,1]){box(out.solid,side*(E.w/2+.38),0,front-.12,.5,.1,.22,palette.wood);box(out.solid,side*(E.w/2+.38),.1,front-.12,.46,.05,.18,palette.green);out.leaves.push({p:[side*(E.w/2+.38),.2,front-.12],s:[.2,.16,.2],c:palette.green});}
+ for(const x of [-.42,.42]){out.entryDrums.push({p:[x,.03,front],s:[.34,doorH,.34],c:'#ffffff'});out.rounds.push({p:[x,.03+doorH,front],s:[.36,.03,.36],c:gold});box(out.solid,x,.03,front,.01,doorH-.01,.32,gold);}
+ box(out.solid,0,.03+doorH+.03,front,E.w,.012,.02,gold);
+ // Lobby walls: walnut back wall with a backlit onyx panel and gold reveals; marble side walls with walnut fins.
+ box(out.solid,0,.03,back+.02,E.w-.06,glassH,.04,walnut);
+ box(out.lobbyGlow,0,.12,back+.045,1.0,glassH-.26,.012,onyx);
+ for(const side of [-1,1])box(out.solid,side*.52,.12,back+.05,.012,glassH-.26,.015,gold);
+ for(const side of [-1,1]){box(out.lobbyFinish,side*(inner-.01),.03,(back+hd)/2,.02,glassH,hd-back,stone);for(let z=back+.2;z<hd-.05;z+=.22)box(out.solid,side*(inner-.03),.03,z,.02,glassH,.04,walnut);}
+ // Ceiling: white soffit with three linear pendant lights on fine rods.
+ box(out.lobbyFinish,0,top-.02,(back+hd)/2,E.w-.04,.02,hd-back,palette.white);
+ for(const z of [back+.35,back+.75,hd+.15]){box(out.lobbyGlow,0,glassH-.14,z,E.w*.55,.018,.03,onyx);for(const x of [-E.w*.25,E.w*.25])box(out.solid,x,glassH-.122,z,.006,top-(glassH-.122)-.02,.006,gold);}
+ // Reception: stone-topped walnut desk in front of the onyx wall.
+ box(out.solid,0,.03,back+.32,1.0,.13,.16,walnut);box(out.lobbyFinish,0,.16,back+.32,1.06,.015,.2,stone);box(out.lobbyGlow,0,.04,back+.415,.96,.008,.006,onyx);
+ // Lounge: linen sofas facing a dark stone table on a rug, gold columns and potted olive trees.
+ box(out.solid,0,.03,mid+.25,1.1,.004,.6,'#8c7b6a');
+ for(const side of [-1,1]){box(out.lobbyFinish,side*.42,.034,mid+.25,.16,.07,.5,linen);box(out.lobbyFinish,side*.5,.104,mid+.25,.04,.06,.5,linen);}
+ box(out.solid,0,.034,mid+.25,.26,.05,.26,'#2d2a26');
+ for(const side of [-1,1])out.rounds.push({p:[side*(ex-.32),.03,hd+.1],s:[.07,glassH-.03,.07],c:gold});
+ for(const [x,z] of [[-(inner-.18),back+.2],[inner-.18,back+.2],[-(inner-.18),front-.15],[inner-.18,front-.15]] as const){out.rounds.push({p:[x,.03,z],s:[.14,.12,.14],c:'#e0d9cc'});box(out.solid,x,.15,z,.012,.16,.012,'#6f5a43');out.leaves.push({p:[x,.27,z],s:[.13,.16,.13],c:'#8a9a6a'});}
+ // Outside: planter benches either side of the door and a stone landing meeting the walk.
+ for(const side of [-1,1]){box(out.solid,side*(ex+.38),0,front-.12,.5,.1,.22,palette.wood);box(out.solid,side*(ex+.38),.1,front-.12,.46,.05,.18,palette.green);out.leaves.push({p:[side*(ex+.38),.2,front-.12],s:[.2,.16,.2],c:palette.green});}
  box(out.solid,0,0,front+.2,E.w+.6,.025,.4,'#e8e2d4');
 }
 
