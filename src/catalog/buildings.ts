@@ -19,7 +19,7 @@ for(const b of FINANCIAL_BUILDINGS){const brand=financialBrand(b.id);BUILDING_IN
 // Keep pre-brand interior routes usable without changing stable building IDs.
 for(const brand of FINANCIAL_BRANDS){const interior=BUILDING_INTERIORS[financialInteriorKey(brand.id)];BUILDING_INTERIORS[brand.legacyName]=interior;if(brand.id!=="records")BUILDING_INTERIORS[brand.name]=interior;}
 
-for(const b of AIRPORT_BUILDINGS)BUILDING_INTERIORS[financialInteriorKey(b.id)]={accent:"#83bed2",subtitle:b.agent.toUpperCase(),rooms:[...b.rooms]};
+for(const b of AIRPORT_BUILDINGS)BUILDING_INTERIORS[b.name]={accent:"#83bed2",subtitle:b.agent.toUpperCase(),rooms:[...b.rooms]};
 
 export const SKYLINE_BUILDING_PREFIX="skyline:building:";
 export const skylineBuildingId=(name:string)=>`${SKYLINE_BUILDING_PREFIX}${name}`;
