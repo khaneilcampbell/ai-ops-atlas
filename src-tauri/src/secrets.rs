@@ -10,6 +10,12 @@
 //! quits. Before this, every GitHub request read the Keychain again, and each self-update gave
 //! the app a new code signature the Keychain didn't recognise, so macOS asked for the login
 //! password over and over.
+//!
+//! Installing an update hands the unlocked secrets straight to the new copy (see `handoff`), so
+//! the restart needs neither Touch ID nor the Keychain. The new copy then saves the vault again
+//! as its own item, because Keychain items made by apps without an Apple team ID are tied to
+//! the exact build (its cdhash), so every update would otherwise ask for the login password
+//! once more at the next launch.
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -22,6 +28,8 @@ const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
 const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
 const USAGE_SYNC_ACCOUNT: &str = "usage-sync-key";
+/// Manage agents: enable, disable and run the allow-listed agent workflows.
+const AGENTS_ACCOUNT: &str = "github-agents-token";
 /// One slot per repository: `github-merge-token:owner/name`, lowercase.
 const MERGE_PREFIX: &str = "github-merge-token:";
 /// The single item holding all of the above as JSON.
@@ -41,6 +49,9 @@ trait Store {
     fn get(&self, account: &str) -> Result<Option<String>, String>;
     fn set(&self, account: &str, value: &str) -> Result<(), String>;
     fn remove(&self, account: &str) -> Result<(), String>;
+    /// Adds a new item and fails if one is already there, so it can never overwrite (or prompt
+    /// to change) an item another build owns.
+    fn add(&self, account: &str, value: &str) -> Result<(), String>;
 }
 
 struct Keychain;
@@ -69,6 +80,22 @@ impl Store for Keychain {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(e) => Err(format!("Could not remove the credential: {e}")),
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn add(&self, account: &str, value: &str) -> Result<(), String> {
+        use security_framework::os::macos::keychain::{SecKeychain, SecPreferencesDomain};
+        SecKeychain::default_for_domain(SecPreferencesDomain::User)
+            .and_then(|k| k.add_generic_password(SERVICE, account, value.as_bytes()))
+            .map_err(|e| format!("Could not save to the Keychain: {e}"))
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn add(&self, account: &str, value: &str) -> Result<(), String> {
+        if self.get(account)?.is_some() {
+            return Err("Already saved.".into());
+        }
+        self.set(account, value)
     }
 }
 
@@ -145,6 +172,36 @@ fn unlock(
     Ok(secrets)
 }
 
+/// What the running copy holds, for handing to the updated copy. None unless unlocked with
+/// something saved, so a locked Atlas never passes anything on.
+// Only the macOS update restart uses this.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn snapshot() -> Option<BTreeMap<String, String>> {
+    let state = STATE.lock().unwrap_or_else(|e| e.into_inner());
+    match &*state {
+        Lock::Unlocked(s) if !s.is_empty() => Some(s.clone()),
+        _ => None,
+    }
+}
+
+/// Takes the secrets the previous copy handed over, in place of the Touch ID unlock.
+pub(crate) fn adopt(secrets: BTreeMap<String, String>) {
+    *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Lock::Unlocked(secrets);
+}
+
+/// Removes the vault item, so the updated copy can save it again as its own.
+// Only the macOS update restart uses this.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn release_vault() -> Result<(), String> {
+    Keychain.remove(VAULT_ACCOUNT)
+}
+
+/// Saves the vault as a new item owned by this build. Fails if any vault item exists.
+pub(crate) fn add_vault(secrets: &BTreeMap<String, String>) -> Result<(), String> {
+    let json = serde_json::to_string(secrets).map_err(|e| e.to_string())?;
+    Keychain.add(VAULT_ACCOUNT, &json)
+}
+
 fn read(account: &str) -> Option<String> {
     with_secrets(|s| s.get(account).cloned()).ok().flatten()
 }
@@ -173,6 +230,14 @@ pub struct VaultStatus {
     state: &'static str,
     /// Why the last unlock didn't go through, in plain words.
     error: Option<String>,
+}
+
+/// True once this launch's unlock succeeded. Never prompts, so background work can ask first.
+pub fn unlocked() -> bool {
+    matches!(
+        *STATE.lock().unwrap_or_else(|e| e.into_inner()),
+        Lock::Unlocked(_)
+    )
 }
 
 #[tauri::command]
@@ -243,6 +308,42 @@ pub fn set_actions_token(token: &str) -> Result<(), String> {
 
 pub fn clear_actions_token() -> Result<(), String> {
     clear(ACTIONS_ACCOUNT)
+}
+
+/// The Manage agents token. Read only by the actions client at request time.
+pub fn read_agents_token() -> Option<String> {
+    read(AGENTS_ACCOUNT)
+}
+
+pub fn agents_token_present() -> bool {
+    read_agents_token().is_some()
+}
+
+/// Checks a Manage agents token's shape: fine-grained only, and not any other token Atlas
+/// holds, so managing agents never borrows read, re-run or merge rights.
+pub fn check_agents_token(token: &str, others: &[String]) -> Result<(), String> {
+    if !(token.starts_with("github_pat_") && looks_like_token(token)) {
+        return Err("Use a fine-grained token (starting with github_pat_) limited to the ai-ops-atlas repository.".into());
+    }
+    if others.iter().any(|o| o == token) {
+        return Err("That token is already saved for something else in Atlas. Create a separate one for managing agents.".into());
+    }
+    Ok(())
+}
+
+pub fn set_agents_token(token: &str) -> Result<(), String> {
+    let others: Vec<String> = with_secrets(|s| {
+        s.iter()
+            .filter(|(k, _)| k.as_str() != AGENTS_ACCOUNT)
+            .map(|(_, v)| v.clone())
+            .collect()
+    })?;
+    check_agents_token(token, &others)?;
+    write(AGENTS_ACCOUNT, Some(token))
+}
+
+pub fn clear_agents_token() -> Result<(), String> {
+    clear(AGENTS_ACCOUNT)
 }
 
 fn merge_account(repo: &str) -> String {
@@ -458,6 +559,12 @@ mod tests {
         fn remove(&self, account: &str) -> Result<(), String> {
             self.items.borrow_mut().remove(account);
             Ok(())
+        }
+        fn add(&self, account: &str, value: &str) -> Result<(), String> {
+            if self.items.borrow().contains_key(account) {
+                return Err("duplicate".into());
+            }
+            self.set(account, value)
         }
     }
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { isAiAgent } from "../../catalog/roles";
 import { catalog } from "../../catalog";
 import type { Catalog } from "../../catalog/types";
 import { layoutMap } from "../mapLayout";
@@ -23,10 +22,28 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("buildScene", () => {
-  it("gives every project a tower and every automation a house", () => {
+  it("connects pedestrian crossings to both project entrances without walking through buildings", () => {
+    const scene = buildScene(layoutMap(catalog));
+    const journeys = scene.walks.filter(w => w.bridge && w.route?.length);
+    expect(journeys.length).toBeGreaterThan(0);
+    for (const w of journeys) {
+      const route = w.route!;
+      expect(route.length).toBeGreaterThanOrEqual(4);
+      for (let i=1; i<route.length; i++) {
+        const a=route[i-1], b=route[i];
+        expect(a.gx===b.gx || a.gy===b.gy).toBe(true);
+        for (const tower of [...scene.towers, ...scene.kiosks]) {
+          const crosses = Math.min(a.gx,b.gx)<tower.x+tower.size/2-0.01 && Math.max(a.gx,b.gx)>tower.x-tower.size/2+0.01 && Math.min(a.gy,b.gy)<tower.z+tower.size/2-0.01 && Math.max(a.gy,b.gy)>tower.z-tower.size/2+0.01;
+          expect(crosses).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("gives office projects a tower and keeps Skyline in its residential district", () => {
     const s = buildScene(layoutMap(catalog));
-    expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.map((p) => p.id).sort());
-    expect(s.houses.map((h) => h.agent.id).sort()).toEqual(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id).sort());
+    expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => p.id !== "skyline").map((p) => p.id).sort());
+    expect(s.houses).toEqual([]);
     expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.length);
   });
 
@@ -65,5 +82,36 @@ describe("buildScene", () => {
     expect(performance.now() - t).toBeLessThan(1500);
     expect(s.towers).toHaveLength(300);
     expect(s.strays).toHaveLength(60);
+  });
+});
+
+
+describe("expanded Skyline layout", () => {
+  it("keeps every branded building inside its district without overlapping another", () => {
+    const scene=buildScene(layoutMap(catalog));
+    const park=scene.parks.find(p=>p.label==="Skyline")!;
+    expect(park).toBeDefined();
+    const shops=scene.retail.filter(k=>k.projectId===park.id);
+    expect(shops.map(k=>k.name)).toEqual(expect.arrayContaining(["Anthropic","OpenAI","Starbucks","Chipotle","Zara","Wells Fargo","Smashburger"]));
+    for(const shop of shops) {
+      expect(shop.x-shop.size/2).toBeGreaterThan(park.x);
+      expect(shop.x+shop.size/2).toBeLessThan(park.x+park.w);
+      expect(shop.z-shop.size/2).toBeGreaterThan(park.z);
+      expect(shop.z+shop.size/2).toBeLessThan(park.z+park.d);
+      const cx=park.x+park.w/2,cz=park.z+park.d/2;
+      expect(Math.abs(shop.x-cx)>1.7+shop.size/2||Math.abs(shop.z-cz)>0.475+shop.size/2).toBe(true);
+      for(const other of shops) if(other!==shop) {
+        expect(Math.abs(shop.x-other.x)>(shop.size+other.size)/2+0.3 || Math.abs(shop.z-other.z)>(shop.size+other.size)/2+0.3).toBe(true);
+      }
+      expect(scene.walks.some(w=>w.shopEntrance&&Math.abs(w.x1-shop.x)<0.001&&Math.abs(w.z1-shop.z-0.12)<0.001)).toBe(true);
+    }
+  });
+  it("keeps the entire marina entrance clear of trees across city layouts", () => {
+    for(const input of [catalog,bigCatalog(4),bigCatalog(20)]) {
+      const scene=buildScene(layoutMap(input));
+      const shore=scene.terraces.reduce((a,b)=>b.z+b.d>a.z+a.d?b:a);
+      const x=shore.x+shore.w/2,z=shore.z+shore.d;
+      expect(scene.trees.some(t=>Math.abs(t.x-x)<0.9&&t.z>=z-1&&t.z<=z+3)).toBe(false);
+    }
   });
 });

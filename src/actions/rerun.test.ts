@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WorkflowRun } from "../github/types";
-import { latestPerAttempt, rerunAvailability, runId } from "./rerun";
+import { describeRecord, latestPerAttempt, rerunAvailability, runId } from "./rerun";
 import type { ActionsStatus, AuditRecord } from "./types";
 
 const now = Date.parse("2026-10-27T14:00:00Z");
@@ -49,5 +49,17 @@ describe("audit entries", () => {
     const r = (id: string, at: string, stage: AuditRecord["stage"]) => ({ id, at, stage }) as AuditRecord;
     const out = latestPerAttempt([r("a", "2026-10-27T10:00:00Z", "attempted"), r("a", "2026-10-27T10:00:02Z", "failed"), r("b", "2026-10-27T11:00:00Z", "refused")]);
     expect(out.map((x) => `${x.id}:${x.stage}`)).toEqual(["b:refused", "a:failed"]);
+  });
+});
+
+describe("describeRecord, Manage agents", () => {
+  it("names agent changes by workflow and counts them as successes once GitHub confirms", () => {
+    const base = { id: "1", at: "2026-10-30T12:00:00Z", actor: "kc", github_login: null, repo: "khaneilcampbell/ai-ops-atlas", run_id: 0, agent: "github-merge-flow", workflow: "merge-flow.yml", run_number: null, attempt_before: null, head_sha: null, branch: null, reason: null, http_status: 204, request_id: null, message: null };
+    const d = describeRecord({ ...base, action: "agent_disable", stage: "changed" });
+    expect(d.title).toBe("Disable agent: Changed");
+    expect(d.subject).toBe("merge-flow.yml");
+    expect(d.url).toBe("https://github.com/khaneilcampbell/ai-ops-atlas/actions/workflows/merge-flow.yml");
+    expect(d.result).toBe("success");
+    expect(describeRecord({ ...base, action: "agent_run", stage: "refused" }).title).toBe("Run agent: Not allowed");
   });
 });

@@ -4,12 +4,13 @@ schema: atlas/v2
 
 project:
   id: service-desk
-  name: Service Desk Intelligence Dashboard
+  name: Service Desk
   summary: >-
     Streamlit dashboard that turns service desk ticket data into volume, backlog, SLA health, recurring issue and workload insight. Runs on synthetic tickets.
   status: active
-  repository: khaneilcampbell/service-desk-dashboard
+  repository: khaneilcampbell/service-desk-intelligence
   tags: [itsm, dashboard]
+  district: security-infrastructure
 
 agents:
   - id: service-desk-codeql
@@ -27,7 +28,7 @@ agents:
       - 'GITHUB_TOKEN: security-events write (upload results), actions read, contents read'
       - No repository secrets
     registry:
-      title: Service Desk CodeQL Scan
+      title: Application Security Analyst
       category: security
       subcategory: Vulnerability assessment
       classification:

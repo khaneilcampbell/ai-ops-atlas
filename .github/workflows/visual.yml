@@ -1,0 +1,89 @@
+name: Visual checks
+
+# Screenshots of the map, office and Mission Control compared with visual/baselines/ci.
+# Not a required check: it runs only when a pull request touches what it draws, or by hand.
+on:
+  pull_request:
+    paths:
+      - "src/views/**"
+      - "src/styles/**"
+      - "src/components/**"
+      - "visual/**"
+      - ".github/workflows/visual.yml"
+  workflow_dispatch:
+    inputs:
+      update:
+        description: Save this run's screenshots as the CI baselines, on a new branch to open a pull request from
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Visual checks (screenshots)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Decide whether to compare or record
+        id: mode
+        run: |
+          if [ "${{ inputs.update }}" = "true" ]; then echo "record=1" >> "$GITHUB_OUTPUT";
+          elif ! ls visual/baselines/ci/*.png >/dev/null 2>&1; then
+            echo "record=1" >> "$GITHUB_OUTPUT"
+            echo "::notice::No CI baselines yet. Recording screenshots only; run this workflow by hand with 'update' to save them."
+          fi
+      - name: Compare with baselines
+        if: steps.mode.outputs.record != '1'
+        run: npx playwright test -c visual
+      - name: Record baselines
+        if: steps.mode.outputs.record == '1'
+        run: BASELINE=1 npx playwright test -c visual
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: visual-results
+          path: |
+            visual/baselines/ci/
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+  # Only the manual update run pushes, and only a new visual-baselines/* branch.
+  save:
+    name: Save CI baselines to a branch
+    needs: visual
+    if: inputs.update
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: visual-results
+          path: results
+      - run: |
+          branch="visual-baselines/run-${{ github.run_id }}"
+          mkdir -p visual/baselines/ci
+          cp results/visual/baselines/ci/*.png visual/baselines/ci/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add visual/baselines/ci
+          git commit -m "Update CI visual baselines from run ${{ github.run_id }}"
+          git push origin "$branch"
+          echo "::notice::Baselines pushed to $branch. Open a pull request from it to accept them."

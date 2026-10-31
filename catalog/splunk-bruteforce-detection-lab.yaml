@@ -4,18 +4,19 @@ schema: atlas/v2
 
 project:
   id: soc-lab
-  name: AI-Assisted SOC Brute Force Detection Lab
+  name: SOC Lab
   summary: >-
     Simulates SMB brute-force activity in an isolated lab, detects it in
     Splunk and generates SOC case notes through the Splunk REST API.
   status: active
   repository: khaneilcampbell/splunk-bruteforce-detection-lab
   tags: [splunk, detection-engineering, python, soc]
+  district: security-infrastructure
   links:
     - label: Case study
       url: https://khaneilcampbell.com/soc-automation-lab.html
     - label: Project docs
-      url: https://github.com/khaneilcampbell/project-intelligence-hub
+      url: https://github.com/khaneilcampbell/projects-intelligence-hub
 
 agents:
   - id: soc-case-notes
@@ -36,7 +37,7 @@ agents:
       - Splunk REST API with the lab account in SPLUNK_USER and SPLUNK_PASS
       - Writes Markdown notes to notes/
     registry:
-      title: SOC Case Note Generator
+      title: Security Case Documentation Specialist
       category: security
       subcategory: Detection analysis
       classification:
@@ -91,7 +92,7 @@ agents:
     permissions:
       - Splunk search on index main (WinEventLog:Security)
     registry:
-      title: SMB Brute Force Detection Rule
+      title: Threat Detection Analyst
       category: security
       subcategory: Detection analysis
       classification:
@@ -141,7 +142,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: SOC Lab Continuous Integration
+      title: Detection Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

@@ -1,13 +1,15 @@
 // Mirrors src-tauri/src/actions: the approval-required actions (re-run failed jobs, merge a
 // pull request), their switches and the audit log.
 
-export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "failed" | "unknown";
+export type Stage = "refused" | "cancelled" | "attempted" | "started" | "merged" | "changed" | "opened" | "failed" | "unknown";
 
 export interface ActionsConfig {
   rerun_failed_jobs: { enabled: boolean; repos: string[] };
   token_login: string | null;
   /** Missing in builds from before merging existed. */
   merge_pull_requests?: { enabled: boolean; repos: string[]; token_logins: Record<string, string> };
+  /** The account the Manage agents token belongs to. Missing in older builds. */
+  agents_token_login?: string | null;
 }
 
 export interface ActionsStatus {
@@ -16,6 +18,8 @@ export interface ActionsStatus {
   token: boolean;
   /** Repositories (lowercase owner/name) with a merge token saved. The tokens never reach the web view. */
   merge_tokens?: string[];
+  /** Whether a Manage agents token is saved. Saving it turns Manage agents on. Missing in older builds. */
+  agents_token?: boolean;
 }
 
 export interface AuditRecord {
@@ -28,6 +32,8 @@ export interface AuditRecord {
   /** 0 for merges. */
   run_id: number;
   pull_number?: number | null;
+  /** The catalog agent a Manage agents action targets. */
+  agent?: string | null;
   title?: string | null;
   base?: string | null;
   workflow: string | null;
@@ -74,3 +80,6 @@ export interface MergeCheck {
   message: string;
   preview: MergePreview | null;
 }
+
+/** Manage agents: the three things Atlas can do to an allow-listed agent's workflow. */
+export type AgentOp = "enable" | "disable" | "run_now";

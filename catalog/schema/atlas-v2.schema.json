@@ -57,6 +57,16 @@
             "minLength": 1
           }
         },
+        "district": {
+          "enum": [
+            "ai-operations",
+            "business-operations",
+            "ai-engineering",
+            "security-infrastructure",
+            "career-portfolio"
+          ],
+          "description": "Infrastructure district on the map. Left out, Atlas infers one from the project's tags and agents."
+        },
         "links": {
           "type": "array",
           "items": {
@@ -113,6 +123,15 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "repositories": {
+          "type": "array",
+          "description": "Additional repositories linked to this project; repository remains the default.",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"
           }
         }
       }
@@ -191,9 +210,37 @@
                 "type": "boolean"
               },
               "atlas_intel_runs": {
-                "enum": ["repository", "ecosystem"]
+                "enum": [
+                  "repository",
+                  "ecosystem"
+                ]
+              },
+              "agent_feed": {
+                "type": "boolean",
+                "description": "The agent's pipeline reports its runs to Atlas at /api/hooks/agents."
               }
             }
+          },
+          "alerts": {
+            "type": "object",
+            "description": "Alerts for an unattended agent, from its live source (docs/alerts.md).",
+            "properties": {
+              "failures": {
+                "type": "boolean",
+                "description": "A failed run raises an alert. Defaults to true."
+              },
+              "report_within": {
+                "type": "string",
+                "pattern": "^[0-9]+ ?(m|h|d)$",
+                "description": "No report for this long means the agent has gone silent, for example 2h or 8d. Leave out for agents that only run when something happens."
+              },
+              "not_running": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why the agent is off on purpose. No alerts while set; shown as Not running."
+              }
+            },
+            "additionalProperties": false
           },
           "capabilities": {
             "type": "array",
@@ -311,6 +358,25 @@
                     "minLength": 1
                   }
                 }
+              },
+              "tier": {
+                "enum": [
+                  "central",
+                  "coordinator",
+                  "specialized"
+                ],
+                "description": "Agent tier. Left out, Atlas infers it: central for AI Ops Atlas agents that work across repositories, coordinator for agents that orchestrate two or more items in their project, specialized otherwise."
+              },
+              "automation_category": {
+                "enum": [
+                  "ci",
+                  "security",
+                  "monitoring",
+                  "business",
+                  "intelligence",
+                  "maintenance"
+                ],
+                "description": "What the item does. Left out, Atlas infers it from the classification, category and subcategory."
               },
               "version": {
                 "type": "string",
@@ -581,6 +647,44 @@
                 }
               }
             }
+          },
+          "workplace": {
+            "type": "object",
+            "required": [
+              "building",
+              "floor",
+              "room"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "building": {
+                "enum": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Wells Fargo",
+                  "Starbucks",
+                  "Smashburger",
+                  "Chipotle",
+                  "Zara"
+                ]
+              },
+              "floor": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "room": {
+                "type": "string",
+                "pattern": "^[1-4]0[1-4]$"
+              }
+            },
+            "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building."
+          },
+          "office_floor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4,
+            "description": "Floor in the owning project office. Defaults to 4."
           }
         }
       }

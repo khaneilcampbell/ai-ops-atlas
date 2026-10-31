@@ -27,6 +27,7 @@ function set(next: OfficeState) {
 }
 
 export function enterBuilding(projectId: string, instant = false) {
+  if (projectId === "skyline") { projectId = "skyline-residences"; instant = true; }
   clearTimeout(timer);
   if (instant) return set({ projectId, phase: "inside" });
   set({ projectId, phase: "entering" });

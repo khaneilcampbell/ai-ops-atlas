@@ -20,6 +20,13 @@ pub const MAX_PER_HOUR: usize = 10;
 pub const MERGE_COOLDOWN_MINUTES: i64 = 10;
 /// Merges Atlas will send across all repositories in any rolling hour.
 pub const MAX_MERGES_PER_HOUR: usize = 5;
+pub const ACTION_AGENT_ENABLE: &str = "agent_enable";
+pub const ACTION_AGENT_DISABLE: &str = "agent_disable";
+pub const ACTION_AGENT_RUN: &str = "agent_run";
+/// The same agent can't be changed or started again from Atlas within this window.
+pub const AGENT_COOLDOWN_SECONDS: i64 = 60;
+/// Manage agents actions Atlas will send across all agents in any rolling hour.
+pub const MAX_AGENT_ACTIONS_PER_HOUR: usize = 20;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -48,6 +55,9 @@ pub struct ActionsConfig {
     /// The GitHub account the write token belongs to, read once when it is saved.
     pub token_login: Option<String>,
     pub merge_pull_requests: MergeSwitch,
+    /// The GitHub account the Manage agents token belongs to, read once when it is saved.
+    /// Saving that token is what turns Manage agents on; removing it turns it off.
+    pub agents_token_login: Option<String>,
 }
 
 impl ActionsConfig {
@@ -81,6 +91,12 @@ pub enum Stage {
     Started,
     /// A pull request GitHub reports as merged.
     Merged,
+    /// A setting GitHub reports as changed, such as an agent workflow enabled or disabled.
+    Changed,
+    /// A pull request opened by in-app editing, which has been removed. Kept so the audit
+    /// lines it wrote still read back; nothing writes this stage any more.
+    #[allow(dead_code)]
+    Opened,
     Failed,
     Unknown,
 }
@@ -100,6 +116,9 @@ pub struct AuditRecord {
     /// The pull request a merge targets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pull_number: Option<u64>,
+    /// The catalog agent a Manage agents action targets.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent: Option<String>,
     /// The pull request's title, for merges.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -225,6 +244,35 @@ pub fn rate_block(
     None
 }
 
+/// Why Atlas's own limits block a Manage agents action right now, if they do. Counts
+/// requests that were sent (`Attempted`), whatever their outcome.
+pub fn agent_rate_block(log: &[AuditRecord], agent: &str, now: DateTime<Utc>) -> Option<String> {
+    let sent = log.iter().filter(|r| {
+        r.stage == Stage::Attempted
+            && matches!(
+                r.action.as_str(),
+                ACTION_AGENT_ENABLE | ACTION_AGENT_DISABLE | ACTION_AGENT_RUN
+            )
+    });
+    let cooldown = now - Duration::seconds(AGENT_COOLDOWN_SECONDS);
+    if sent
+        .clone()
+        .any(|r| r.agent.as_deref() == Some(agent) && r.at > cooldown)
+    {
+        return Some(
+            "Atlas changed or started this agent less than a minute ago. Refresh, then try again."
+                .into(),
+        );
+    }
+    let hour = now - Duration::hours(1);
+    if sent.filter(|r| r.at > hour).count() >= MAX_AGENT_ACTIONS_PER_HOUR {
+        return Some(format!(
+            "Atlas sends at most {MAX_AGENT_ACTIONS_PER_HOUR} agent changes an hour. Try again later."
+        ));
+    }
+    None
+}
+
 /// Why Atlas's own limits block a merge right now, if they do. Counts merge requests that
 /// were sent (`Attempted`), whatever their outcome.
 pub fn merge_rate_block(
@@ -268,6 +316,7 @@ mod tests {
             repo: repo.into(),
             run_id,
             pull_number: None,
+            agent: None,
             title: None,
             base: None,
             workflow: None,
@@ -387,12 +436,25 @@ mod tests {
     }
 
     #[test]
+    fn lines_from_removed_in_app_editing_still_load() {
+        let old = r#"{"id":"e","at":"2026-10-28T23:40:00Z","action":"propose_edit","actor":"kc","github_login":"kc","repo":"o/r","run_id":0,"pull_number":7,"title":"Edit README","base":"main","path":"README.md","workflow":null,"run_number":null,"attempt_before":null,"head_sha":null,"branch":"atlas-edit/readme","stage":"opened","reason":null,"http_status":201,"request_id":null,"message":null}"#;
+        let r: AuditRecord = serde_json::from_str(old).unwrap();
+        assert_eq!((r.stage, r.pull_number), (Stage::Opened, Some(7)));
+        let c: ActionsConfig = serde_json::from_str(
+            r#"{"rerun_failed_jobs":{"enabled":false,"repos":[]},"edit_files":{"enabled":true,"repos":["o/r"]}}"#,
+        )
+        .unwrap();
+        assert_eq!(c, ActionsConfig::default());
+    }
+
+    #[test]
     fn merge_cooldown_and_hourly_cap() {
         let now = Utc::now();
         let merge = |n: u64, at| AuditRecord {
             action: ACTION_MERGE.into(),
             run_id: 0,
             pull_number: Some(n),
+            agent: None,
             ..record(Stage::Attempted, "o/r", 0, at)
         };
         let mut log = vec![merge(7, now - Duration::minutes(2))];

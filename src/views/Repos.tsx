@@ -1,3 +1,4 @@
+import { RepositoryNotice } from "../components/RepositoryNotice";
 import { useMemo } from "react";
 import { FilterBar, uniqueOptions } from "../components/Filters";
 import { Icon } from "../components/Icon";
@@ -93,15 +94,9 @@ export function ReposView() {
                 {snap?.description ?? r.project?.summary ?? ""}
               </div>
               {r.state?.kind === "error" && (
-                <div className="notice">
-                  <Icon name="alert" size={15} />
-                  <span>
-                    {r.state.message}
-                    {r.state.data ? ` Showing data from ${relative(r.state.data.fetchedAt)}.` : ""}
-                  </span>
-                </div>
+                <RepositoryNotice message={r.state.message} actions={false}/>
               )}
-              {r.state?.kind === "loading" && <div className="muted small">Loading from GitHub…</div>}
+              {!snap && r.state?.kind !== "error" && (refreshing ? <div className="muted small">Checking GitHub…</div> : <RepositoryNotice message="No repository snapshot" actions={false}/>)}
               <div className="commit">
                 <div className="section-title" style={{ marginBottom: 4 }}>
                   Latest commit

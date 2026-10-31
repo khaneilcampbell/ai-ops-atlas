@@ -1,4 +1,7 @@
-import { isAiAgent, servicesOf, type ServiceUse } from "../catalog/roles";
+import { projectRepositories, LANDMARK_REPOSITORIES } from "../catalog/projects";
+import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
+import { districtLabel, districtOf, districtRank } from "../catalog/organization";
+import { servicesOf, type ServiceUse } from "../catalog/roles";
 import type { Agent, Catalog, Project, Status } from "../catalog/types";
 
 // Isometric projection: one grid unit is TW px across and TH px down per axis.
@@ -14,7 +17,7 @@ export function iso(gx: number, gy: number) {
   return { x: (gx - gy) * TW, y: (gx + gy) * TH };
 }
 
-export type GroupBy = "none" | "status" | "tag";
+export type GroupBy = "none" | "district" | "status" | "tag";
 
 export interface Lot {
   agent: Agent;
@@ -39,9 +42,9 @@ export interface District {
   oy: number;
   size: number;
   hq: { gx: number; gy: number; size: number; height: number };
-  /** Automations: each has a house on the district. */
+  /** Reserved outdoor worker lots; all registered workers now live inside. */
   lots: Lot[];
-  /** AI agents: they work at desks inside the headquarters and have no house. */
+  /** All registered agents and automations work inside this project building. */
   crew: Agent[];
   kiosks: Kiosk[];
 }
@@ -108,14 +111,6 @@ export interface Layout {
  * Ring of building slots around the central HQ. Slots far to the left and right on screen fill
  * first, then front before back, so a small district keeps its labels clear of the HQ label.
  */
-function slots(m: number, size: number): { gx: number; gy: number }[] {
-  const step = size / m;
-  const ring: { gx: number; gy: number }[] = [];
-  const inner = (i: number) => i > 0 && i < m - 1;
-  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) if (!(inner(i) && inner(j))) ring.push({ gx: (i + 0.5) * step, gy: (j + 0.5) * step });
-  const spread = (p: { gx: number; gy: number }) => Math.round(Math.abs(p.gx - p.gy) * 100);
-  return ring.sort((a, b) => spread(b) - spread(a) || b.gx + b.gy - (a.gx + a.gy) || a.gx - b.gx);
-}
 
 export function hash(s: string) {
   let h = 2166136261;
@@ -137,7 +132,7 @@ export function districtSize(lotCount: number) {
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
-  return { crew: agents.filter(isAiAgent), houses: agents.filter((a) => !isAiAgent(a)), services: servicesOf(agents) };
+  return { crew: agents, houses: [] as Agent[], services: orderToolsForWorkflow(servicesOf(agents)) };
 }
 
 interface Box {
@@ -190,7 +185,11 @@ function shelf<T extends Box>(items: T[], gap: number): { placed: Placed<T>[]; w
 const STATUS_ORDER: Status[] = ["attention", "active", "idle", "paused", "retired"];
 const STATUS_GROUP: Record<Status, string> = { attention: "Needs attention", active: "Active", idle: "Idle", paused: "Paused", retired: "Retired" };
 
-function groupOf(p: Project, by: GroupBy): { key: string; label: string; rank: number } {
+function groupOf(p: Project, by: GroupBy, agents: Agent[]): { key: string; label: string; rank: number } {
+  if (by === "district") {
+    const d = districtOf(p, agents).value;
+    return { key: `d:${d}`, label: districtLabel(d), rank: districtRank(d) };
+  }
   if (by === "status") return { key: `s:${p.status}`, label: STATUS_GROUP[p.status], rank: STATUS_ORDER.indexOf(p.status) };
   if (by === "tag") {
     const t = p.tags[0];
@@ -200,13 +199,16 @@ function groupOf(p: Project, by: GroupBy): { key: string; label: string; rank: n
 }
 
 export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy: GroupBy = "none"): Layout {
+  const registered = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+  uncataloged = [...new Set(uncataloged)].filter(name => !registered.has(name));
   const agentsByProject = new Map<string, Agent[]>();
   for (const a of catalog.agents) agentsByProject.set(a.projectId, [...(agentsByProject.get(a.projectId) ?? []), a]);
 
   // Bucket projects into neighborhoods, then pack each neighborhood on its own.
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
-  for (const p of catalog.projects) {
-    const g = groupOf(p, groupBy);
+  // Skyline already has its custom residential district; do not add a duplicate office.
+  for (const p of catalog.projects.filter(p => p.id !== "skyline")) {
+    const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
     b.projects.push(p);
     buckets.set(g.key, b);
@@ -214,7 +216,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const ordered = [...buckets.entries()].sort(([ka, a], [kb, b]) => a.rank - b.rank || a.label.localeCompare(b.label) || ka.localeCompare(kb));
 
   type Item = Box & { project?: Project; park?: true };
-  const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b]) => {
+  const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b],blockIndex) => {
     const items: Item[] = b.projects
       .map((project) => {
         const r = residents(agentsByProject.get(project.id) ?? []);
@@ -224,7 +226,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // Largest first packs tighter; ties keep catalog order.
       .sort((a, c) => c.w - a.w);
     // An empty park keeps the "room for the next project" corner of the original map.
-    if (groupBy === "none" && items.length < 40) items.push({ park: true, w: 6, h: 6 });
+    if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };
   });
@@ -236,7 +238,11 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     blocks.push({ key: "uncataloged", label: "Not in the catalog yet", count: uncataloged.length, inner: { placed: [], w, h }, strays: uncataloged, w, h });
   }
 
-  const outer = shelf(blocks, GROUP_GAP);
+  // Districts share one landmass: the usual street gap between them, and walkways across, so
+  // roads, bridges and street-routed connections reach every district. Other groupings stay apart.
+  const joined = groupBy === "district";
+  const outer = shelf(blocks, joined ? GAP : GROUP_GAP);
+  const rects: { id: string; x: number; y: number; w: number; h: number }[] = [];
   const districts: District[] = [];
   const parks: Park[] = [];
   const neighborhoods: Neighborhood[] = [];
@@ -268,7 +274,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
     // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
     for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
-    walks.push(...walkways(blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }))));
+    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
+    if (joined) rects.push(...own);
+    else walks.push(...walkways(own));
     for (const it of blk.inner.placed) {
       const ox = blk.x + it.x;
       const oy = blk.y + it.y;
@@ -284,7 +292,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const m = n ? ringFor(n) : 2;
       const hqSize = n ? size * 0.26 : size * 0.34;
       const lotSize = (size / m) * 0.52;
-      const spots = n ? slots(m, size).slice(0, n) : [];
+      const spots = n ? workflowToolSpots(n, size) : [];
       districts.push({
         project,
         group: blk.key,
@@ -292,7 +300,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,
@@ -311,8 +319,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
   }
 
-  const rects = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
-  const corners = rects.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
+  if (joined) walks.push(...walkways(rects));
+
+  const boxes = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
+  const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
   const xs = corners.map((c) => c.x);
   const ys = corners.map((c) => c.y);
   return {

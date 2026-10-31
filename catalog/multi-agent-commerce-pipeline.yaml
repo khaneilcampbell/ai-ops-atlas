@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: Multi-Agent Commerce Pipeline
+  name: Commerce Pipeline
   summary: >-
     Autonomous pipeline that researches a niche, builds digital products with
     Canva, sells them through Stripe on a static storefront, emails buyers
@@ -12,6 +12,7 @@ project:
   status: active
   repository: khaneilcampbell/multi-agent-commerce-pipeline
   tags: [crewai, claude, stripe, canva, automation]
+  district: business-operations
   links:
     - label: Case study
       url: https://khaneilcampbell.com/commerce-pipeline.html
@@ -26,6 +27,13 @@ agents:
     status: active
     trigger: loop.sh (systemd, hourly cycle)
     source: loop.sh
+    observe:
+      agent_feed: true
+    # Reports at least once a week even in maintain mode (sleeps until Monday 00:00 UTC).
+    alerts:
+      failures: true
+      report_within: 8d
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     history:
       - at: 2026-10-12
@@ -35,7 +43,7 @@ agents:
       - Storefront deploy key with write access to the storefront repository
       - Runs as root in the documented setup
     registry:
-      title: Commerce Pipeline Orchestrator
+      title: Commerce Operations Coordinator
       category: infrastructure
       subcategory: Workflow orchestration
       classification:
@@ -103,12 +111,15 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Serper search (SERPER_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Product Opportunity Analyst
       category: business
       subcategory: Market research
       classification:
@@ -160,12 +171,15 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Serper search (SERPER_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Market Research Analyst
       category: business
       subcategory: Market research
       classification:
@@ -216,11 +230,14 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Brand Strategist
       category: business
       subcategory: Product validation
       classification:
@@ -269,11 +286,14 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Visual Identity Director
       category: business
       subcategory: Product validation
       classification:
@@ -324,11 +344,14 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Brand Copywriter and SEO Strategist
       category: business
       subcategory: Product validation
       classification:
@@ -379,11 +402,14 @@ agents:
     status: idle
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
     registry:
+      title: Product Launch Planner
       category: business
       subcategory: Product validation
       classification:
@@ -433,11 +459,17 @@ agents:
     status: idle
     trigger: Phase 3, every build or design cycle
     source: scripts/canva_image_generator.py
+    observe:
+      agent_feed: true
+    alerts:
+      failures: true
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Canva account through the Canva MCP server (CANVA_MCP_TOKEN)
     registry:
+      title: Product Visualization Designer
       category: business
       subcategory: Workflow automation
       classification:
@@ -484,11 +516,14 @@ agents:
     status: idle
     trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
     source: scripts/stripe_publisher.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Stripe secret key (STRIPE_SECRET_KEY): products, prices and payment links'
       - Writes listings and run_log in SQLite
     registry:
+      title: Product Publishing Coordinator
       category: business
       subcategory: Workflow automation
       classification:
@@ -540,12 +575,18 @@ agents:
     status: idle
     trigger: Phase 6, every maintain cycle
     source: scripts/seo_analyzer.py
+    observe:
+      agent_feed: true
+    alerts:
+      failures: true
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - Serper API (SERPER_API_KEY)
       - Writes listing tags and seo_review rows in SQLite
       - Storefront deploy key, through the loop's storefront deploy
     registry:
+      title: Search Optimization Specialist
       category: business
       subcategory: Workflow automation
       classification:
@@ -594,11 +635,13 @@ agents:
     status: idle
     trigger: Phase 7, daily via n8n
     source: scripts/health_dashboard.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db; writes nothing
     registry:
-      title: Commerce Pipeline Health Reporter
+      title: Pipeline Health Analyst
       category: infrastructure
       subcategory: System health checks
       classification:
@@ -642,12 +685,21 @@ agents:
     status: active
     trigger: Every loop cycle and every 10 minutes while the loop sleeps
     source: scripts/order_delivery.py
+    observe:
+      agent_feed: true
+    # Emails buyers their files. The window assumes the delivery check reports on every pass,
+    # even with no orders; confirm that when the pipeline is rehosted.
+    alerts:
+      failures: true
+      report_within: 1h
+      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
     permissions:
       - 'Stripe secret key: reads checkout sessions'
       - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
       - Writes deliveries rows in SQLite
     registry:
+      title: Digital Fulfillment Coordinator
       category: business
       subcategory: Order fulfillment
       classification:
@@ -697,11 +749,14 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/sales_tracker.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - 'Stripe secret key: reads checkout sessions'
       - Writes sales rows in SQLite
     registry:
+      title: Sales Reporting Specialist
       category: business
       subcategory: Sales reporting
       classification:
@@ -747,11 +802,14 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/email_digest.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db
       - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
     registry:
+      title: Operations Reporting Coordinator
       category: business
       subcategory: Sales reporting
       classification:
@@ -798,11 +856,14 @@ agents:
     status: active
     trigger: Daily, first cycle of the UTC day
     source: scripts/backup_db.py
+    observe:
+      agent_feed: true
     last_run: null
     permissions:
       - Reads outputs/pipeline.db
       - Writes and deletes dated copies in backups/
     registry:
+      title: Database Backup Specialist
       category: infrastructure
       subcategory: Backups
       classification:
@@ -854,7 +915,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Commerce Pipeline Continuous Integration
+      title: Commerce Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

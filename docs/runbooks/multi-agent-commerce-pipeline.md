@@ -2,6 +2,8 @@
 
 Repository: [khaneilcampbell/multi-agent-commerce-pipeline](https://github.com/khaneilcampbell/multi-agent-commerce-pipeline). Everything except CI runs on the Linux VPS from the repository folder (`/root/multi-agent-commerce-pipeline` in the documented setup). Commands come from `run.sh`, `loop.sh`, the README and `docs/threat-model.md`. Atlas has no live data for the VPS agents yet, so check them on the VPS.
 
+To stop or undo something an agent sent or published, start with [stop-and-rollback.md](stop-and-rollback.md).
+
 ## Common checks
 
 - Service: `systemctl status commerce-pipeline`
@@ -44,7 +46,7 @@ Repository: [khaneilcampbell/multi-agent-commerce-pipeline](https://github.com/k
 - **Healthy:** drafts appear in `./run.sh approve --list`; nothing goes live without approval while `STORE_PUBLISH_STATUS=draft`.
 - **Run it:** `./run.sh phase5 "<product>"`. Review with `./run.sh approve --preview "<product>"`, then `./run.sh approve "<product>"`.
 - **When it fails:** it refuses to publish a product with no template link. Retries are safe: it searches Stripe for the queue id and sends an idempotency key.
-- **Stop it:** stop the loop, or lower `WEEKLY_PUBLISH_LIMIT` in `.env`.
+- **Stop it:** `./run.sh pause` (buyer delivery keeps running), or lower `WEEKLY_PUBLISH_LIMIT` in `.env`. To take a live product down, see [stop-and-rollback.md](stop-and-rollback.md).
 
 ## SEO Maintainer
 
@@ -52,8 +54,8 @@ Repository: [khaneilcampbell/multi-agent-commerce-pipeline](https://github.com/k
 
 - **Healthy:** `seo_review` rows record before and after tags for each published listing.
 - **Run it:** `./run.sh phase6 "<product>"` (analyzes, saves tags and rebuilds the storefront). To see suggestions without saving them, run `.venv/bin/python scripts/seo_analyzer.py "<product>" --analyze-only`.
-- **When it fails:** without `SERPER_API_KEY` it skips competitor research. A bad change can be reverted from the storefront's `gh-pages` history.
-- **Stop it:** stop the loop.
+- **When it fails:** without `SERPER_API_KEY` it skips competitor research. To undo a bad change, see [stop-and-rollback.md](stop-and-rollback.md).
+- **Stop it:** `./run.sh pause`.
 
 ## Health Dashboard Report
 
@@ -69,7 +71,7 @@ Repository: [khaneilcampbell/multi-agent-commerce-pipeline](https://github.com/k
 - **Healthy:** every paid checkout has a `deliveries` row; `./run.sh phase7` lists undelivered orders.
 - **Run it:** `./run.sh deliver` (add `--dry-run` to see what would be sent). The loop runs it every cycle and every 10 minutes while sleeping.
 - **When it fails:** check `EMAIL_FROM`, `EMAIL_SMTP_PASS` and `SMTP_HOST` in `.env`. Failed sends retry on the next cycle; a checkout line is never emailed twice.
-- **Stop it:** stopping the loop also stops delivery, so paying buyers wait. Prefer fixing SMTP.
+- **Stop it:** `./run.sh pause` does not stop delivery. To stop buyer emails, set `MAX_EMAILS_PER_DAY=0` in `.env`; held sends retry once it's raised. Stopping the service also stops delivery, so paying buyers wait. Prefer fixing SMTP.
 
 ## Sales Sync, Daily Email Digest and Database Backup
 

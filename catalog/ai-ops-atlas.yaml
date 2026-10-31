@@ -4,16 +4,17 @@ schema: atlas/v2
 
 project:
   id: ai-ops-atlas
-  name: AI Ops Atlas
+  name: Atlas HQ
   summary: This app. A desktop command center for agents, projects and repositories. Read-only, except one approval-required action that is off by default.
   status: active
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
+  district: ai-operations
 
 agents:
   - id: atlas-ci
     name: Atlas CI
-    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Every push to main also builds, signs and publishes the macOS app that installed copies update from.
+    purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; KC approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
@@ -24,10 +25,10 @@ agents:
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'
-      - 'GITHUB_TOKEN: contents write in the macOS job, to publish the main-build release'
-      - 'Secrets: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
+      - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
+      - 'Protected macos-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
-      title: Atlas Continuous Integration
+      title: Build and Release Engineer
       category: engineering
       subcategory: CI/CD
       classification:
@@ -44,12 +45,12 @@ agents:
           - Build the web bundle
           - Rust fmt, clippy and tests
           - npm and cargo dependency audits
-          - Build, sign and publish the macOS app on every push to main
+          - Build validated main changes, request protected signing approval, then publish
         tools: [GitHub Actions, npm, cargo]
         inputs: [Pushes and pull requests]
         outputs:
           - Check results on the pull request
-          - Signed macOS app on the main-build release (from main) or as an artifact (manual dispatch)
+          - Signed macOS app on main-build after approval; unsigned artifact for manual branch builds
       goals:
         objective: Block merges that break the app.
         kpis:
@@ -61,22 +62,22 @@ agents:
         trigger_type: event
         environment: GitHub-hosted runner
       governance:
-        autonomy: 0
+        autonomy: 2
         data_sensitivity: public
-        risk: low
+        risk: medium
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        approval: KC approves the macos-signing environment for each main build
+        credential_owner: KC (protected GitHub macos-signing environment)
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
         known_issues:
-          - 'Autonomy 0 and low risk understate it: every push to main publishes a signed build that installed copies of Atlas offer as an update'
-          - Re-running a main run publishes the build again, so this repository should stay off the re-run list
+          - Signed updates require manual environment approval; older or equal versions are rejected
           - codeql.yml and release.yml also run in this repository but are not in the catalog
         improvements:
           - Add codeql.yml and release.yml to the catalog
           - Agree a run success target for the KPI
-        last_review: 2026-10-28
+        last_review: 2026-10-29
 
   - id: repo-intelligence
     name: Repository Intelligence Agent
@@ -238,7 +239,7 @@ agents:
     last_run: null
     permissions: [Actions write on repositories selected in the token and in Settings]
     registry:
-      title: Failed Workflow Re-run
+      title: CI Recovery Specialist
       category: engineering
       subcategory: CI/CD operations
       classification:
@@ -290,7 +291,7 @@ agents:
     last_run: null
     permissions: [Pull requests and Contents write on one repository per token, for repositories ticked in Settings]
     registry:
-      title: Pull Request Merge
+      title: Pull Request Integration Coordinator
       category: engineering
       subcategory: Code review and release
       classification:
@@ -331,3 +332,267 @@ agents:
         improvements:
           - Count merges and refusals by reason from audit.jsonl
         last_review: 2026-10-28
+
+  - id: atlas-github-steward
+    name: GitHub Steward
+    purpose: "GitHub Steward: Collects bounded read-only observations for AI Ops Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
+    framework: Atlas read-only workflow
+    runtime: Inside the desktop app (Rust side)
+    status: idle
+    trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
+    source: src-tauri/src/steward/check.rs
+    last_run: null
+    permissions:
+      - Existing Atlas GitHub connection, GET only
+      - Saves at most 30 observation summaries in device-local storage
+    registry:
+      title: Repository Maintenance Analyst
+      category: engineering
+      subcategory: Repository operations
+      classification:
+        type: C
+        confidence: verified
+        evidence: src/steward/check.ts implements a bounded deterministic GET-only check; no AI model calls
+      mission:
+        problem: Atlas needs one place to check its own CI and maintenance signals without granting a new agent write access.
+        outcomes: [Evidence-linked observations, Explicit unavailable checks, Bounded local run history]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read repository and commit metadata, Sample default-branch CI, Count dependency and code scanning alerts, Check maintenance file presence]
+        tools: [Atlas read-only GitHub transport]
+        inputs: [Manual or daily check request, Existing GitHub read credentials when available]
+        outputs: [Observation summaries in Intel → GitHub Steward]
+        limitations: [One fixed repository, No model reasoning, No execution while Atlas is closed, Alert access requires appropriate read permissions, No remote writes]
+      goals:
+        objective: Make repository observations reviewable while preserving approval boundaries.
+      execution:
+        trigger_type: scheduled
+        schedule: Optional daily at the selected device time while Atlas is open; off in new installations
+        environment: Atlas Intel view
+        stages: [Check pause state, Read bounded GitHub evidence, Classify observations and unavailable checks, Save local summary]
+      governance:
+        autonomy: 1
+        autonomy_note: Read-only observation; manual or opt-in daily checks. No code execution, remediation or paid model calls.
+        data_sensitivity: internal
+        approval: KC starts a check or enables the daily schedule; repository changes are not supported
+        credential_owner: KC (existing Atlas connection)
+        risk: low
+        audit_log: Latest 30 summaries in local storage; not immutable and not connected to registry telemetry
+      cost:
+        budget: No model spending; GitHub request limits apply
+      docs:
+        technical: docs/github-steward.md
+        runbook: docs/github-steward.md
+        known_issues:
+          - Scope and limits are compiled into the UI collector; the CLI JSON policy is separate
+          - Shared locking and persisted daily claims cover same-origin windows only; other devices and standalone collectors are independent
+          - Run history is device-local and is not yet surfaced as live registry telemetry
+          - Documentation quality, uptime, branch protections, billing and agent permissions are not assessed
+        last_review: 2026-10-28
+
+  - id: atlas-system-improvements
+    name: Atlas System Improvements
+    model: Automatic reports use no model; manual reviews use an explicitly selected Codex model
+    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Codex reviews are available on request from the OpenAI building, Floor 4, Suite 401.
+    workplace: {building: OpenAI, floor: 4, room: "401"}
+    framework: GitHub Actions + Codex (manual)
+    runtime: GitHub-hosted Python reports; local Codex CLI for manual reviews
+    status: idle
+    trigger: After main-branch push CI completes, or manually from GitHub Actions on main
+    source: ops/system-improvements/report.py
+    observe:
+      github_workflow: system-improvements.yml
+    last_run: null
+    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Codex reads supplied source excerpts only]
+    registry:
+      title: AI Production Improvement Analyst
+      version: 1.1.0
+      tier: specialized
+      category: engineering
+      subcategory: Continuous improvement
+      automation_category: maintenance
+      classification:
+        type: B
+        confidence: verified
+        evidence: Automatic reporting uses fixed checks; ops/system-improvements/codex_review.py adds a separately requested, read-only Codex review. Manual review has not been run.
+      mission:
+        problem: Atlas needs reviewable system improvement candidates without recurring model usage or repeated full builds.
+        outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero automatic model calls]
+        beneficiaries: [KC, Atlas maintainers]
+      responsibilities:
+        tasks: [Sample recent main-branch CI evidence, Check the assessed commit's status, Flag floor-dependent renderer remount patterns, Identify large source modules as refactoring candidates, Publish a compact report]
+        tools: [Python standard library, GitHub read-only REST API, GitHub Actions summary and artifact]
+        inputs: [Completed main-branch CI push run or manual request, Exact assessed commit]
+        outputs: [Markdown run summary, JSON and Markdown report artifact retained 14 days]
+        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Codex review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
+      goals:
+        objective: Surface small evidence-backed improvements while minimizing usage.
+      execution:
+        trigger_type: event
+        environment: GitHub Actions for automatic reports; local Codex for requested reviews
+        stages: [Read bounded source evidence, Read two bounded GitHub endpoints, Rank improvement candidates, Publish report]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only. Does not open issues or pull requests, rerun CI, merge, deploy, or change credentials.
+        data_sensitivity: internal
+        approval: A maintainer reviews findings and separately authorizes any implementation.
+        credential_owner: GitHub ephemeral GITHUB_TOKEN, contents and actions read only
+        risk: low
+        audit_log: GitHub Actions run summary and report artifact
+      cost:
+        budget: Automatic reports use zero model tokens; manual Codex review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
+      docs:
+        technical: docs/system-improvements.md
+        runbook: docs/system-improvements.md
+        last_review: 2026-10-30
+
+  - id: atlas-ui-improvement-designer
+    name: AI UI Improvement Designer
+    model: No automatic model calls; manual Codex review only
+    purpose: Reviews Atlas city maps, building interiors, labels, navigation, accessibility, and responsive layouts. Reuses existing CI reports and user-supplied screenshots to suggest at most three small design improvements. Reports only; no automatic edits or model runs.
+    workplace: {building: OpenAI, floor: 4, room: "402"}
+    framework: Codex (manual review)
+    runtime: Manually requested Codex session
+    status: idle
+    trigger: Explicit maintainer request only; no schedule
+    source: ops/system-improvements/ui-design-prompt.md
+    last_run: null
+    permissions: [Read supplied screenshots and source excerpts, Read existing CI evidence]
+    registry:
+      title: AI UI Improvement Designer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: UI design improvement
+      classification:
+        type: B
+        confidence: verified
+        evidence: Manual review prompt and catalog registration only; no autonomous runner or model calls.
+      mission:
+        problem: Atlas needs focused UI improvements without recurring model usage.
+        outcomes: [Three or fewer evidence-backed UI recommendations, Clear verification steps, Preserve Atlas visual identity]
+        beneficiaries: [KC, Atlas users]
+      responsibilities:
+        tasks: [Review label clarity and visual hierarchy, Check building and path clearance, Assess floor navigation and entrances, Review accessibility and day-night contrast, Propose small prioritized improvements]
+        tools: [Manually requested Codex review, Existing CI report, User-supplied screenshots]
+        inputs: [Explicit review request, Current screenshots, Focused source excerpts, Existing CI evidence]
+        outputs: [Compact design report with evidence and a next validation step]
+        limitations: [No scheduled model runs, No automatic code edits or deployments, No visual claims without screenshots, At most three recommendations, Reuses existing reports rather than rerunning CI]
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex session
+        stages: [Review supplied evidence, Identify confirmed UI issues, Rank three or fewer improvements, Return review for approval]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only. Implementation requires a separate user request.
+        data_sensitivity: internal
+        approval: Explicit user request starts each Codex review.
+        risk: low
+      cost:
+        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Codex allowance only when requested.
+      docs:
+        technical: docs/ui-improvement-designer.md
+        runbook: docs/ui-improvement-designer.md
+        last_review: 2026-10-30
+
+  - id: atlas-production-coordinator
+    name: Atlas Production Coordinator
+    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Production Coordinator
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+
+  - id: atlas-reliability-reviewer
+    name: Atlas Reliability Reviewer
+    purpose: Reviews existing test failures, building transitions, navigation, and error reports for reproducible reliability issues. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Reliability Reviewer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+
+  - id: atlas-performance-reviewer
+    name: Atlas Performance Reviewer
+    purpose: Reviews supplied rendering and usage evidence for focused performance improvements without repeated builds or model loops. Manual reports only, using existing evidence and at most three findings.
+    office_floor: 3
+    model: No automatic model calls; manual Codex review only
+    framework: Codex (manual)
+    runtime: Explicitly requested review session
+    status: idle
+    trigger: Explicit user request only; no schedule
+    source: ops/system-improvements/production-team.md
+    last_run: null
+    permissions: [Read supplied evidence, Produce a review report]
+    registry:
+      title: Atlas Performance Reviewer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Atlas system production
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Catalog role and manual review instructions only; no autonomous runner.
+      execution:
+        trigger_type: manual
+        environment: Maintainer-started Codex review
+        stages: [Read existing evidence, Return three or fewer prioritized findings]
+      governance:
+        autonomy: 1
+        autonomy_note: Reports only; implementation requires a separate user request.
+        risk: low
+      cost:
+        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.

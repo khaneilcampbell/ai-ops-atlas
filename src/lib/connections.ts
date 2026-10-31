@@ -1,3 +1,4 @@
+import { projectRepositories } from "../catalog/projects";
 import type { Agent, Catalog, ConnectionType, Project } from "../catalog/types";
 import type { RepoSnapshot, RepoState, WorkflowRun } from "../github/types";
 import { PRIVATE_OR_MISSING } from "../github/transport";
@@ -63,7 +64,7 @@ const uniq = (xs: (string | undefined)[]) => [...new Set(xs.filter((x): x is str
 export function buildConnections(catalog: Catalog, repos: Record<string, RepoState>, now = Date.now()): Connection[] {
   const agents = new Map(catalog.agents.map((a) => [a.id, a]));
   const projects = new Map(catalog.projects.map((p) => [p.id, p]));
-  const byRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
+  const byRepo = new Map(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents).map(name => [name, p] as const)));
   const fileOf = (projectId: string) => `catalog/${projects.get(projectId)?.file ?? `${projectId}.yaml`}`;
   const nameOf = (e: Endpoint) => (e.kind === "agent" ? agents.get(e.id)?.name : projects.get(e.id)?.name) ?? e.id;
   const out: Connection[] = [];
@@ -215,7 +216,7 @@ export function projectOfEndpoint(catalog: Catalog, e: Endpoint): Project | unde
 export function endpointKey(catalog: Catalog, e: Endpoint): string | undefined {
   if (e.kind === "agent") return `agent:${e.id}`;
   const p = catalog.projects.find((x) => x.id === e.id);
-  return p && `repo:${p.repository}`;
+  return p && `project:${p.id}`;
 }
 
 export const CONNECTION_LABEL: Record<Connection["type"], string> = { github: "GitHub", agent: "AI agents", n8n: "n8n", dependency: "Dependencies" };

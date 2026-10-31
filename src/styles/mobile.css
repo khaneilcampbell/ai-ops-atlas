@@ -6,6 +6,8 @@
 .map-stage { touch-action: none; }
 
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  /* Copy buttons next to values get a finger-sized hit area. */
+  .copy-btn.compact { padding: 6px 8px; }
   html, body { overscroll-behavior: none; }
   body { -webkit-text-size-adjust: 100%; }
   /* Safari zooms the page into any focused field under 16px. */
@@ -34,6 +36,8 @@
   .search { width: 100%; min-width: 0; }
   .search input { width: 100%; min-width: 0; }
   .refresh { font-size: 0; gap: 0; }
+  /* The sync text sets its own size, so font-size 0 above no longer hides it. */
+  .refresh .sync-evidence { display: none; }
   .refresh .icon-btn { width: 40px; height: 40px; }
   .live-pill { padding: 5px 9px; font-size: 11px; }
 
@@ -43,8 +47,9 @@
     padding: 4px max(4px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 4px) max(4px, env(safe-area-inset-left));
     border-right: 0; border-top: 1px solid var(--forest-line); z-index: 30;
   }
+  .sidebar { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
   .sidebar .grow { display: none; }
-  .nav-item { width: auto; flex: 1 1 0; min-width: 0; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
+  .nav-item { width: auto; flex: 0 0 76px; min-width: 76px; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
   .nav-item span { font-size: 8.5px; letter-spacing: 0.08em; }
   .nav-item .badge { top: 2px; right: calc(50% - 22px); min-width: 16px; height: 16px; font-size: 9.5px; }
   .nav-item.active { background: none; border-color: transparent; }
@@ -89,6 +94,8 @@
     border-radius: 18px 18px 0 0; border-left: 0; box-shadow: 0 -12px 40px rgba(22, 33, 26, 0.28);
     padding-bottom: env(safe-area-inset-bottom); animation: sheet 0.22s ease; overflow: hidden;
   }
+  /* app.css gives overlay panels z-index 30 with a more specific selector; keep the sheet above its scrim. */
+  .panel:not(.docked) { z-index: 41; }
   .panel::before {
     content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px;
     border-radius: 999px; background: var(--sage-400); opacity: 0.7; z-index: 1; pointer-events: none;
@@ -98,20 +105,52 @@
   .panel h2, .panel.docked h2 { font-size: 21px; }
   .panel-head .icon-btn { width: 40px; height: 40px; }
 
-  /* Map: full-bleed stage, controls in reach of a thumb, no hover-only furniture. */
+  /* Map: the stage fills everything between the header and the tab bar. Nothing around it
+     changes height while the map is in use, so the canvas never resizes under a finger. */
   .map-wrap { flex-direction: column; }
-  .map-intro { top: 14px; left: 14px; right: 14px; max-width: none; }
-  .map-intro h1 { font-size: 22px; }
-  .map-intro .lede { display: none; }
+  .map-stage:has(.map3d)::before { width: 100%; height: 120px; }
+  .map-intro { top: 10px; left: 12px; right: 12px; max-width: none; padding: 0 !important; }
+  .map-intro .eyebrow, .map-intro .map-intro-subheading, .map-intro .map-intro-description { display: none; }
+  .map-intro h1 { margin: 0; font-size: 17px; }
+  .map-intro-metrics { flex-wrap: nowrap; gap: 14px; margin: 4px 0 0; padding: 0; border: 0; }
+  .map-intro-metrics > div { flex-direction: row; align-items: baseline; gap: 5px; }
+  .map-intro-metrics dt { order: 2; font-size: 11px; }
+  .map-intro-metrics dt i { display: none; }
+  .map-intro-metrics dd { font-size: 14px; }
+  /* While the inspector sheet is up, the selected building gets the whole visible map. */
+  .map-wrap.inspecting .map-intro, .map-wrap.inspecting .map-stage::before { display: none; }
   .map-legend { display: none; }
   .map-tip { display: none; }
-  .map-controls { right: 10px; bottom: 10px; padding: 3px; }
-  .map-controls .icon-btn { width: 40px; height: 40px; }
-  .map-group select { height: 40px; max-width: 132px; }
-  .map-bar { padding: 12px 14px 14px; gap: 10px; }
-  .map-bar .row { gap: 10px; flex-wrap: wrap; }
-  .map-bar h3 { font-size: 18px; }
+
+  /* Toolbar: one row across the bottom of the map, every control in view. Pinch zooms, so the
+     zoom buttons go. */
+  .map-controls { left: 8px; right: 8px; bottom: 8px; padding: 3px; gap: 0; justify-content: space-between; align-items: center; }
+  .map-controls .icon-btn { width: 38px; height: 40px; min-width: 0; flex: none; }
+  .map-controls .icon-btn.text { width: 40px; padding: 0; }
+  .map-controls .sep, .map-controls button[aria-label="Zoom in"], .map-controls button[aria-label="Zoom out"] { display: none; }
+  .map-group select { height: 40px; max-width: 100px; padding: 0 2px; font-size: 12.5px; }
+  /* The Connections menu opens above the whole toolbar, full width, instead of off its button. */
+  .map-menu-wrap { position: static; }
+  .map-menu { left: 0; right: 0; bottom: calc(100% + 8px); width: auto; max-height: 60dvh; overflow: auto; }
+
+  /* The project strip below the map: a fixed two-line height whichever project is in focus. */
+  .map-bar { height: 62px; flex: none; padding: 0 10px 0 14px; justify-content: center; gap: 0; overflow: hidden; }
+  .map-bar .row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto; column-gap: 8px; row-gap: 2px; align-items: center; }
+  .map-bar .row > div { grid-column: 1; grid-row: 1; min-width: 0; }
+  .map-bar .row .eyebrow { display: none; }
+  .map-bar h3 { font-size: 16px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .map-bar .row > .health { grid-column: 1; grid-row: 2; font-size: 12px; white-space: nowrap; overflow: hidden; }
+  .map-bar .row > .brand-mark, .map-bar .row > .grow, .map-bar .row > .status { display: none; }
+  .map-bar .row > .ghost-btn { grid-row: 1 / 3; height: 40px; padding: 0 12px; }
+  .map-bar .row > .ghost-btn:last-child { width: 40px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
   .map-bar .steps { display: none; }
+
+  /* The inspector over the map stops at about half the screen, so the building stays in sight
+     above it (the camera frames it there); the sheet scrolls for the rest. */
+  .map-wrap .panel, .map-wrap .panel.docked { max-height: 55dvh; }
+
+  /* Eight tabs share the bar: keep each label on one line. */
+  .nav-item span { white-space: nowrap; letter-spacing: 0.02em; }
 
   .icon-btn { min-width: 36px; min-height: 36px; }
 }

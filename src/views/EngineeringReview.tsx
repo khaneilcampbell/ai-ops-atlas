@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
-import { ExternalLink } from "../components/bits";
+import { CopyButton, ExternalLink } from "../components/bits";
 import { Refs } from "../components/IntelPanel";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
@@ -8,6 +8,18 @@ import { intelApi } from "../intel/api";
 import { AREA_LABEL, EFFORT_LABEL, WHEN_LABEL, allFindings, ecosystemContext, isReviewRun } from "../intel/ecosystem";
 import { AI_STATE_LABEL, RUN_LABEL, isActive, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
+import {
+  autonomyMarkdown,
+  dataGapsMarkdown,
+  quickWinsMarkdown,
+  recommendationMarkdown,
+  recommendationsMarkdown,
+  reviewMarkdown,
+  risksMarkdown,
+  scorecardMarkdown,
+  toolsMarkdown,
+  verifiedMarkdown,
+} from "../intel/reviewMarkdown";
 import type { CostEstimate, Depth, EcoReport, EcoReview, Rating, RepoEntry, Severity } from "../intel/types";
 
 const RATING_CLASS: Record<Rating, string> = { good: "h-good", fair: "h-warn", poor: "h-bad", unknown: "h-unknown" };
@@ -181,18 +193,31 @@ function RepoChips({ repos }: { repos: string[] }) {
   );
 }
 
+/** A section title with a small copy button for that section's Markdown. */
+function SectionHead({ title, copy }: { title: string; copy: () => string }) {
+  return (
+    <div className="section-head">
+      <div className="section-title">{title}</div>
+      <CopyButton compact text={copy} title={`Copy ${title.toLowerCase()}`} />
+    </div>
+  );
+}
+
 function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
   const agentName = new Map(report.context.agents.map((a) => [a.id, a.name]));
   return (
-    <div className="ai-box">
-      <div className="box-label">
-        <Icon name="spark" size={13} /> Claude's review · AI-generated, not verified
+    <div className="ai-box selectable">
+      <div className="box-head">
+        <div className="box-label">
+          <Icon name="spark" size={13} /> Claude's review · AI-generated, not verified
+        </div>
+        <CopyButton text={() => reviewMarkdown(report, review)} label="Copy review" title="Copy the whole review as Markdown" />
       </div>
       {report.note && <div className="notice">{report.note}</div>}
       <p style={{ margin: 0 }}>{review.summary}</p>
 
       <div>
-        <div className="section-title">Scorecard</div>
+        <SectionHead title="Scorecard" copy={() => scorecardMarkdown(review)} />
         <div className="scorecard">
           {review.scorecard.map((s) => (
             <div key={s.area} className="score">
@@ -208,7 +233,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.top_risks.length > 0 && (
         <div>
-          <div className="section-title">Top risks</div>
+          <SectionHead title="Top risks" copy={() => risksMarkdown(review)} />
           <ul className="findings">
             {review.top_risks.map((r, i) => (
               <li key={i}>
@@ -229,7 +254,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.recommendations.length > 0 && (
         <div>
-          <div className="section-title">Recommendations</div>
+          <SectionHead title="Recommendations" copy={() => recommendationsMarkdown(review)} />
           <ol className="recs">
             {review.recommendations.map((r, i) => (
               <li key={i}>
@@ -239,6 +264,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
                   <span className="muted small">
                     {AREA_LABEL[r.category]} · {EFFORT_LABEL[r.effort]}
                   </span>
+                  <CopyButton compact text={() => recommendationMarkdown(r)} title="Copy this recommendation" />
                 </div>
                 <div className="small">{r.rationale}</div>
                 <div className="small">
@@ -255,7 +281,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.tools.length > 0 && (
         <div>
-          <div className="section-title">Suggested tools</div>
+          <SectionHead title="Suggested tools" copy={() => toolsMarkdown(review)} />
           <ul className="obs plain">
             {review.tools.map((t, i) => (
               <li key={i}>
@@ -268,7 +294,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.autonomy_notes.length > 0 && (
         <div>
-          <div className="section-title">Autonomy</div>
+          <SectionHead title="Autonomy" copy={() => autonomyMarkdown(review, (id) => agentName.get(id) ?? id)} />
           <ul className="obs plain">
             {review.autonomy_notes.map((n, i) => (
               <li key={i}>
@@ -285,7 +311,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.quick_wins.length > 0 && (
         <div>
-          <div className="section-title">Quick wins (under an hour)</div>
+          <SectionHead title="Quick wins (under an hour)" copy={() => quickWinsMarkdown(review)} />
           <ul className="obs">
             {review.quick_wins.map((q, i) => (
               <li key={i}>{q}</li>
@@ -296,7 +322,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
 
       {review.data_gaps.length > 0 && (
         <div>
-          <div className="section-title">Couldn't assess</div>
+          <SectionHead title="Couldn't assess" copy={() => dataGapsMarkdown(review)} />
           <ul className="obs">
             {review.data_gaps.map((q, i) => (
               <li key={i}>{q}</li>
@@ -321,9 +347,12 @@ function VerifiedTable({ report }: { report: EcoReport }) {
   const findings = allFindings(report);
   const [open, setOpen] = useState(false);
   return (
-    <section className="verified-box">
-      <div className="box-label">
-        <Icon name="check" size={13} /> Verified from GitHub · {report.repos.length} repositories
+    <section className="verified-box selectable">
+      <div className="box-head">
+        <div className="box-label">
+          <Icon name="check" size={13} /> Verified from GitHub · {report.repos.length} repositories
+        </div>
+        {findings.length > 0 && <CopyButton compact text={() => verifiedMarkdown(report)} title="Copy verified findings" />}
       </div>
       <div className="table-wrap">
         <table className="table compact">

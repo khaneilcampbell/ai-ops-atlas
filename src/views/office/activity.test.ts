@@ -5,15 +5,15 @@ import { buildingStates, isFresh, justCompleted } from "./activity";
 
 const rt = (state: RuntimeState, result?: "success" | "failure"): Runtime => ({ state, reason: "", source: "GitHub Actions", basis: result ? { at: "2026-10-28T06:00:00Z", result, label: "CI", source: "github" } : null });
 const agents = [
-  { id: "ci", repository: "me/atlas" },
-  { id: "intel", repository: "me/atlas" },
-  { id: "site", repository: "me/site" },
+  { id: "ci", repository: "me/atlas", projectId: "atlas" },
+  { id: "intel", repository: "me/atlas", projectId: "atlas" },
+  { id: "site", repository: "me/site", projectId: "site" },
 ];
 
 describe("building illumination", () => {
   it("lights only buildings whose agents are observed running or failing", () => {
     const s = buildingStates(agents, new Map([["ci", rt("working")], ["intel", rt("idle")], ["site", rt("unknown")]]));
-    expect(Object.fromEntries(s)).toEqual({ "agent:ci": "running", "repo:me/atlas": "running" });
+    expect(Object.fromEntries(s)).toEqual({ "agent:ci": "running", "project:atlas": "running" });
     // Registered, awaiting approval, offline or unknown is not work.
     expect(buildingStates(agents, new Map([["ci", rt("awaiting")], ["intel", rt("offline")]])).size).toBe(0);
   });
@@ -21,7 +21,7 @@ describe("building illumination", () => {
   it("gives a headquarters its most pressing state", () => {
     const s = buildingStates(agents, new Map([["ci", rt("failed")], ["intel", rt("working")]]));
     expect(s.get("agent:ci")).toBe("error");
-    expect(s.get("repo:me/atlas")).toBe("running");
+    expect(s.get("project:atlas")).toBe("running");
   });
 
   it("confirms completion only for an observed running-to-success transition", () => {

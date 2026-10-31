@@ -38,21 +38,32 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 10 projects and 40 agents discoverable with no manifest problems", () => {
+  it("keeps all 11 projects and 49 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(10);
-    expect(entries).toHaveLength(40);
+    expect(catalog.projects).toHaveLength(11);
+    expect(entries).toHaveLength(49);
+  });
+
+
+  it("registers the improvement analyst as observable automation with manual Codex and model-free automatic reporting", () => {
+    const agent=catalog.agents.find(a=>a.id==="atlas-system-improvements")!;
+    expect(agent.projectId).toBe("ai-ops-atlas");
+    expect(agent.registry?.classification?.type).toBe("B");
+    expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
+    expect(agent.model).toContain("no model");
+    expect(agent.workplace).toEqual({building:"OpenAI",floor:4,room:"401"});
+    expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 5, C: 15, D: 10, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 9, B: 13, C: 16, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
   it("keeps stable ids and the original name when a display title is set", () => {
     const ci = entries.find((e) => e.profile.id === "atlas-ci")!.profile;
-    expect(ci.title).toBe("Atlas Continuous Integration");
+    expect(ci.title).toBe("Build and Release Engineer");
     expect(ci.originalName).toBe("Atlas CI");
     expect(catalog.agents.find((a) => a.id === "atlas-ci")?.observe?.githubWorkflow).toBe("ci.yml");
   });
@@ -74,7 +85,7 @@ describe("bundled registry", () => {
       expect(action.profile.governance.approval).toBeTruthy();
       expect(action.profile.governance.permissions.length).toBeGreaterThan(0);
     }
-    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-rerun-failed", "atlas-merge-pr"]);
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr"]);
   });
 });
 
@@ -222,6 +233,22 @@ describe("telemetry", () => {
     const up = telemetryFor(ciAgent, snapshot(days.map((d, i) => run(i < 3 ? "success" : "failure", d))), null);
     expect(successTrend(up)).toBe("up");
   });
+
+  it("reads pipeline phases from the run feed for agents that opt in", () => {
+    const seo = { ...ciAgent, id: "seo-maintainer", observe: { agentFeed: true } } as Agent;
+    const feedRun = (id: number, status: "ok" | "failed" | "skipped" | "paused", at: string, agents = ["seo-maintainer"]) => ({ id, project: "commerce-pipeline", agents, phase: "Phase 6: SEO", status, detail: "", at });
+    expect(telemetryFor(seo, undefined, null)).toMatchObject({ source: "agent-feed", loaded: false, executions: [] });
+    const t = telemetryFor(seo, undefined, null, null, [
+      feedRun(3, "paused", "2026-10-28T03:00:00Z"),
+      feedRun(2, "failed", "2026-10-28T02:00:00Z"),
+      feedRun(1, "ok", "2026-10-28T01:00:00Z"),
+      feedRun(4, "ok", "2026-10-28T04:00:00Z", ["health-report"]),
+    ]);
+    expect(t.executions.map((e) => e.result)).toEqual(["other", "failure", "success"]);
+    expect(t.lastVerifiedRun?.at).toBe("2026-10-28T01:00:00Z");
+    expect(t.successRate).toBe(0.5);
+    expect(operationalState({ classification: "C" }, t)).toBe("failing");
+  });
 });
 
 describe("directory", () => {
@@ -237,14 +264,14 @@ describe("directory", () => {
       ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(6);
-    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["site-audit"]);
+    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
     expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci"]);
   });
 
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(40);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(49);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -261,7 +288,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(12);
+    expect(s.observable).toBe(33);
   });
 });
 

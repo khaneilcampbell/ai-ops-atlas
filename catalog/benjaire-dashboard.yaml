@@ -4,13 +4,14 @@ schema: atlas/v2
 
 project:
   id: benjaire-ops
-  name: Benjaire Ops Dashboard
+  name: Benjaire Dashboard
   summary: >-
     Private business dashboard for Benjaire: traffic, sales, inquiries, n8n
     automation health, Cloudflare infrastructure and a manual finance ledger.
   status: active
   repository: khaneilcampbell/benjaire-dashboard
   tags: [benjaire, cloudflare, d1, dashboard]
+  district: business-operations
 
 agents:
   - id: benjaire-ops-ci
@@ -28,7 +29,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Benjaire Dashboard Continuous Integration
+      title: Dashboard Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

@@ -230,7 +230,7 @@ export function projectOf(catalog: Catalog, id: string): Project | undefined {
  * data unavailable (GitHub refused or the repository is private or missing), or not verified
  * yet (still loading, or never synced). `stale` marks data kept from an earlier sync.
  */
-export type Verified = "failing" | "passing" | "no-ci" | "unavailable" | "unverified";
+export type Verified = "failing" | "passing" | "running" | "no-ci" | "unavailable" | "unverified";
 
 export function verifiedState(state: RepoState | undefined): { kind: Verified; label: string; stale: boolean } {
   if (!state || state.kind === "loading") return { kind: "unverified", label: "Not verified yet", stale: false };
@@ -238,7 +238,7 @@ export function verifiedState(state: RepoState | undefined): { kind: Verified; l
   if (!snap) return { kind: "unavailable", label: "GitHub data unavailable", stale: false };
   const stale = state.kind === "error" || state.stale;
   const ci = ciHealth(snap);
-  const kind: Verified = ci.health === "bad" ? "failing" : ci.value === "No workflows" ? "no-ci" : "passing";
+  const kind: Verified = ci.health === "bad" ? "failing" : ci.value === "No workflows" ? "no-ci" : ci.value === "Running" ? "running" : "passing";
   const label = kind === "failing" ? `CI ${ci.value} now` : kind === "no-ci" ? "No CI workflows" : `CI ${ci.value.toLowerCase()}`;
   return { kind, label: stale ? `${label} · last known` : label, stale };
 }

@@ -1,3 +1,4 @@
+import { isHostedWeb, isTauri } from "./lib/env";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
@@ -23,18 +24,24 @@ import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
+import { useAlertNotifications, useAlerts } from "./alerts/state";
+import { AlertPill } from "./views/AgentAlerts";
+import { startStewardScheduler } from "./steward/store";
+import { StewardNotice } from "./steward/Notice";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
-  { view: "map", label: "Map", icon: "map" },
-  { view: "overview", label: "Mission", icon: "overview" },
+  { view: "map", label: "Projects", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
+  { view: "automations", label: "Automations", icon: "network" },
+  { view: "repos", label: "Repositories", icon: "repos" },
+  { view: "overview", label: "Mission", icon: "overview" },
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
-  { view: "repos", label: "Repos", icon: "repos" },
 ];
 
 export default function App() {
+  useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const actionsStatus = useActions().status;
   const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
@@ -43,6 +50,8 @@ export default function App() {
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
+  const alerts = useAlerts().open;
+  useAlertNotifications(alerts);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -50,6 +59,13 @@ export default function App() {
     times.sort();
     return times[times.length - 1];
   }, [repos]);
+
+  const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
+  const loadedRepositories = [...trackedRepositories].filter(name => {
+    const state = repos[name];
+    return state?.kind === "ok" || (state?.kind === "error" && state.data);
+  }).length;
+  const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
 
   return (
     <div className="shell">
@@ -68,13 +84,15 @@ export default function App() {
         <div className="spacer" />
         <ViewSwitch />
         <GlobalSearch />
-        <div className="refresh" title={lastFetched ? `GitHub data fetched ${new Date(lastFetched).toLocaleString()}` : "GitHub data not fetched yet"}>
+        <div className="refresh" title={lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet"}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
             <Icon name="refresh" size={16} className={refreshing ? "spin" : undefined} />
           </button>
-          {refreshing ? "Refreshing…" : lastFetched ? `Synced ${relative(lastFetched)}` : "Not synced"}
+          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{loadedRepositories}/{trackedRepositories.size} repositories loaded</small></span>
         </div>
+        <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
         <LivePill />
+        <AlertPill open={alerts} />
         <VaultLockedPill />
         <UpdateButton />
         {writes ? (
@@ -92,10 +110,10 @@ export default function App() {
 
       <nav className="sidebar" aria-label="Sections">
         {NAV.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
-            <span>{n.label}</span>
-            {n.view === "overview" && attention.length > 0 && <span className="badge">{attention.length}</span>}
+            <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
+            {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
           </button>
         ))}
         <div className="grow" />
@@ -106,12 +124,14 @@ export default function App() {
       </nav>
 
       <main className="main">
+        <StewardNotice />
         {/* Keyed by view, so moving to another view also clears a crash. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
-          {view === "agents" && <AgentsView />}
+          {view === "agents" && <AgentsView key="agents" kind="agents" />}
+          {view === "automations" && <AgentsView key="automations" kind="automations" />}
           {view === "repos" && <ReposView />}
           {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
@@ -121,7 +141,7 @@ export default function App() {
       </main>
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
-      {selection && view !== "map" && !(view === "agents" && selection.kind === "agent" && !phone) && <DetailPanel />}
+      {selection && view !== "map" && !((view === "agents" || view === "automations") && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
   );
 }
@@ -152,7 +172,8 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    return [...agents, ...rs].slice(0, 8);
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
+    return [...projects, ...agents, ...rs].slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.

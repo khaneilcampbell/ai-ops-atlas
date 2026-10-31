@@ -1,3 +1,4 @@
+import { projectRepositories, LANDMARK_REPOSITORIES } from "./catalog/projects";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
@@ -7,11 +8,13 @@ import { liveCatalog, type HiddenRepo } from "./lib/live";
 import { tokenStore } from "./lib/token";
 import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
+import { isTauri } from "./lib/env";
 import { applyGithubEvent } from "./live/apply";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
-export type View = "overview" | "agents" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
-export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | null;
+export type View = "overview" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+const VIEWS: View[] = ["overview", "agents", "automations", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
+export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | { kind: "project"; id: string } | { kind: "service"; id: string } | null;
 
 export interface Settings {
   refreshMinutes: number;
@@ -65,7 +68,7 @@ interface AtlasState {
 
 const Ctx = createContext<AtlasState | null>(null);
 
-const repoNames = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository)))];
+const repoNames = [...new Set([...LANDMARK_REPOSITORIES, ...catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)), ...catalog.agents.map((a) => a.repository)])];
 const known = new Set(repoNames.map((n) => n.toLowerCase()));
 
 function workflowsFor(repo: string): string[] {
@@ -92,7 +95,11 @@ function fromCache(cache: Cache, extra: string[], maxAgeMs: number): Record<stri
 
 export function AtlasProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...load("settings", {}) }));
-  const [uncataloged, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
+  const [discoveredExtras, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
+  const uncataloged = useMemo(() => {
+    const known = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+    return discoveredExtras.filter(name => !known.has(name));
+  }, [discoveredExtras]);
   const [discovery, setDiscoveryState] = useState<AtlasState["discovery"]>(() => load("discovery", null));
   const [usage, setUsage] = useState<AtlasState["usage"]>(() => load("usage", null));
   const [repos, setRepos] = useState<Record<string, RepoState>>(() => fromCache(load<Cache>("repoCache", {}), uncataloged, settings.refreshMinutes * 60_000));
@@ -104,6 +111,19 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const [selection, select] = useState<Selection>(null);
   const [filters, setFiltersState] = useState<Filters>(EMPTY_FILTERS);
   const inflight = useRef(false);
+
+  // Right after an update, reopen on the view the previous copy had on screen.
+  useEffect(() => {
+    if (!isTauri()) return;
+    void import("@tauri-apps/api/core")
+      .then(({ invoke }) => invoke<string | null>("take_resume"))
+      .then((raw) => {
+        const r = raw ? (JSON.parse(raw) as { view?: View; selection?: Selection }) : null;
+        if (r?.view && VIEWS.includes(r.view)) setViewState(r.view);
+        if (r?.selection && (r.selection.kind === "agent" || r.selection.kind === "repo" || r.selection.kind === "project" || r.selection.kind === "service") && typeof r.selection.id === "string") select(r.selection);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const refresh = useCallback(
     async (force = false, live = false) => {

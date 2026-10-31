@@ -46,3 +46,14 @@ export function residentsLabel(ai: number, automations: number) {
   const parts = [ai && `${ai} AI ${ai === 1 ? "agent" : "agents"}`, automations && `${automations} ${automations === 1 ? "automation" : "automations"}`].filter(Boolean);
   return parts.length ? parts.join(" · ") : "Nothing registered yet";
 }
+
+/** Role of each declared infrastructure tool in a project, separate from its live status. */
+export const SERVICE_PURPOSE: Record<string, string> = {
+  canva: "Creates visual assets and product mockups used by the project.",
+  stripe: "Supports the project's payment and checkout workflows.",
+  shopify: "Supports storefront, product catalog, and commerce operations.",
+  cloudflare: "Provides hosting and request handling for the project's connected services.",
+  splunk: "Supports log analysis, security detection, and operational investigation.",
+  serper: "Provides web search inputs for research and discovery workflows.",
+  n8n: "Connects services and coordinates automated workflows.",
+};

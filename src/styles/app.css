@@ -1,34 +1,3 @@
-:root {
-  --forest-900: #16211a;
-  --forest-800: #1d2b22;
-  --forest-700: #253629;
-  --forest-600: #314636;
-  --forest-line: rgba(233, 236, 223, 0.1);
-  --sage-50: #f1f2ea;
-  --sage-100: #e6e9dc;
-  --sage-200: #d3d9ca;
-  --sage-300: #c2cbb9;
-  --sage-400: #a9b4a0;
-  --ink: #1d2620;
-  --ink-2: #47524a;
-  --ink-3: #6c776d;
-  --on-dark: #e9ecdf;
-  --on-dark-2: #a9b3a5;
-  --gold: #c9a35a;
-  --gold-soft: rgba(201, 163, 90, 0.18);
-  --gold-deep: #7d5f25;
-  --good: #4f7a52;
-  --warn: #b0832d;
-  --bad: #a4483a;
-  --unknown: #8a948a;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(22, 33, 26, 0.06), 0 6px 20px rgba(22, 33, 26, 0.07);
-  --serif: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
-}
-
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
@@ -38,14 +7,21 @@ body {
   color: var(--ink);
   background: var(--forest-800);
   -webkit-font-smoothing: antialiased;
-  user-select: none;
-  -webkit-user-select: none;
 }
 input, select, button, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }
 ::selection { background: var(--gold-soft); }
+/* Text anywhere in the app can be highlighted and copied (desktop, browser and iPhone).
+   Only controls and the drag-to-pan map/office surfaces opt out, so a drag there moves the
+   camera instead of painting a selection. */
 .selectable { user-select: text; -webkit-user-select: text; }
+button, [role="tab"], [role="button"], .sidebar, .header, .view-switch, .map-stage, canvas {
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+/* Readable panels inside the map overlay stay selectable. */
+.map-stage .selectable { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
+input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-select: text; }
 
 /* ── Shell ───────────────────────────────────────── */
 .shell { display: grid; grid-template-columns: 76px 1fr; grid-template-rows: 64px 1fr; height: 100%; }
@@ -266,8 +242,17 @@ table.table { width: 100%; border-collapse: collapse; }
 .map-stage { flex: 1; position: relative; overflow: hidden; cursor: grab; }
 .map-stage.dragging { cursor: grabbing; }
 .map-stage svg { width: 100%; height: 100%; display: block; }
-.map-intro { position: absolute; top: 22px; left: 26px; pointer-events: none; max-width: 420px; }
-.map-intro h1 { font-size: 30px; }
+.map-intro { position: absolute; top: 22px; left: 26px; right: 26px; pointer-events: none; max-width: 430px; color: #162638; }
+.map-intro .eyebrow { color: var(--gold-deep); font-size: 9px; font-weight: 600; letter-spacing: 0.17em; line-height: 1.4; }
+.map-intro h1 { margin: 8px 0 0; font-family: var(--sans); font-size: clamp(23px, 2.5vw, 30px); font-weight: 600; letter-spacing: -0.035em; line-height: 1.16; text-wrap: balance; }
+.map-intro .map-intro-subheading { margin: 7px 0 0; color: #46576a; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.map-intro .map-intro-description { max-width: 370px; margin: 7px 0 0; color: #566477; font-size: 12px; line-height: 1.55; }
+.map-intro-metrics { display: flex; flex-wrap: wrap; gap: 12px 22px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid rgba(201, 163, 90, 0.25); }
+.map-intro-metrics > div { display: flex; flex-direction: column; gap: 3px; }
+.map-intro-metrics dt { display: flex; align-items: center; gap: 6px; color: #566477; font-size: 10px; font-weight: 500; line-height: 1.4; }
+.map-intro-metrics dt i { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); flex: none; }
+.map-intro-metrics dd { margin: 0; color: inherit; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.2; }
+.map-stage.night .map-intro-metrics dt { color: #b8c2d4; }
 .map-controls {
   position: absolute; right: 20px; bottom: 18px; display: flex; gap: 2px; background: var(--sage-50); border-radius: 12px; padding: 4px; box-shadow: var(--shadow);
 }
@@ -294,6 +279,9 @@ table.table { width: 100%; border-collapse: collapse; }
 .ghost-btn { border: 1px solid rgba(201, 163, 90, 0.5); background: none; color: var(--gold); border-radius: 10px; padding: 6px 12px; display: inline-flex; gap: 6px; align-items: center; }
 .ghost-btn:hover { background: rgba(201, 163, 90, 0.12); }
 .ghost-btn.dark { color: var(--gold-deep); border-color: var(--gold); }
+
+/* In app.css: this button is visible before the office module loads. */
+.enter-building { margin-top: 12px; }
 
 /* ── Settings ────────────────────────────────────── */
 .setting { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--sage-100); }
@@ -657,6 +645,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
   .m3-plaque, .m3-pill { transition: none; }
 }
 .m3-pill.hood { background: rgba(29, 43, 34, 0.82); color: #e9e6d4; border-color: rgba(201, 163, 90, 0.4); letter-spacing: 0.12em; font-size: 10.5px; cursor: default; }
+.m3-pill.hood.district { background: rgba(29, 43, 34, 0.6); border-color: transparent; color: #e7d6a8; letter-spacing: 0.18em; font-size: 10px; font-weight: 600; box-shadow: none; }
 
 /* Approval-required actions */
 .btn.small { padding: 3px 9px; font-size: 11.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -690,7 +679,8 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 /* Night mode on the 3D map: the intro sits on a dark wash instead of a light one. */
 .map-stage.night:has(.map3d)::before { background: radial-gradient(ellipse at 0 0, rgba(16, 26, 38, 0.9) 0%, rgba(16, 26, 38, 0.55) 45%, rgba(16, 26, 38, 0) 72%); }
 .map-stage.night .map-intro { color: #e9ecf2; }
-.map-stage.night .map-intro .eyebrow, .map-stage.night .map-intro p { color: #b8c2d4; }
+.map-stage.night .map-intro .eyebrow { color: var(--gold); }
+.map-stage.night .map-intro p { color: #b8c2d4; }
 .map-stage:has(.map3d)::before { transition: opacity 0.3s ease, background 1.2s ease; }
 
 /* Connections: toolbar popover, faded labels in focus mode, connection inspector. */
@@ -726,3 +716,92 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .rec-head .grow { flex: 1; min-width: 12ch; }
 .table-wrap { overflow-x: auto; margin: 0 -4px; }
 .table.compact th, .table.compact td { padding: 8px 10px; }
+.map-legend .lens-note b { font-weight: 600; }
+
+/* Copy buttons (Engineering review) */
+.box-head { display: flex; align-items: center; gap: 8px; }
+.box-head .box-label { flex: 1; }
+.copy-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(201, 163, 90, 0.45); background: rgba(255, 255, 255, 0.55); color: var(--gold-deep); font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.copy-btn:hover { background: var(--gold-soft); }
+.copy-btn.compact { border-color: transparent; background: none; padding: 2px 6px; color: var(--ink-3); font-size: 11px; }
+.copy-btn.compact:hover { color: var(--gold-deep); background: var(--gold-soft); }
+.copy-btn.done, .copy-btn.compact.done { color: var(--forest-700); }
+.ai-box .section-head { margin-bottom: 8px; align-items: center; }
+.rec-head .copy-btn { align-self: center; }
+.copy-value { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; }
+.copy-value > .selectable { overflow-wrap: anywhere; }
+.copy-value .copy-btn.compact { flex-shrink: 0; color: inherit; opacity: 0.75; }
+.copy-value .copy-btn.compact:hover, .copy-value .copy-btn.compact:focus-visible { opacity: 1; }
+
+/* Full destination names remain readable in the compact navigation rail. */
+.nav-item .nav-label-long { font-size: 9px; letter-spacing: 0.01em; }
+
+/* Symbol keys stay compact instead of inheriting the full-size map SVG rule. */
+.map-legend .health > svg { width: 14px; height: 14px; flex: none; }
+.map-legend { flex-wrap: wrap; max-width: calc(100% - 40px); }
+@media (max-width: 1300px) { .map-stage .map-legend { bottom: 72px; } }
+
+/* Tool inspectors explain the business process using the same quiet inspector surfaces. */
+.tool-operations { display: grid; gap: 24px; }
+.tool-outcomes { padding-left: 18px; margin: 10px 0 0; font-size: 13px; line-height: 1.65; }
+.tool-workflow-step { border: 1px solid var(--sage-200); border-radius: 10px; margin-top: 12px; overflow: hidden; }
+.tool-workflow-step summary { display: flex; align-items: center; gap: 10px; padding: 13px; cursor: pointer; background: var(--sage-100); }
+.tool-workflow-step summary strong { display: block; font-size: 13px; font-weight: 500; }
+.tool-workflow-step summary small { display: block; margin-top: 4px; color: var(--ink-2); font-size: 11px; }
+.tool-workflow-step summary::after { content: '+'; margin-left: auto; color: var(--gold-deep); }
+.tool-workflow-step[open] summary::after { content: '−'; }
+.tool-step-body { padding: 15px; display: grid; gap: 18px; }
+.tool-step-body p { margin: 0; font-size: 13px; line-height: 1.65; }
+.tool-step-body ul, .tool-step-body ol { padding-left: 18px; font-size: 12px; line-height: 1.65; margin: 8px 0 0; overflow-wrap: anywhere; }
+.tool-trigger { display: flex; gap: 9px; font-size: 12px; color: var(--ink-2); }
+.tool-trigger svg { flex: none; margin-top: 3px; }
+.tool-trigger strong { display: block; font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.tool-io { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tool-handoffs { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px; }
+@media(max-width: 600px) { .tool-io { grid-template-columns: 1fr; } }
+
+/* Quiet map names; supporting labels appear only at close range or on interaction. */
+.m3-plaque.compact {padding:4px 9px;border-radius:7px;background:rgba(29,43,34,.84);border-color:rgba(201,163,90,.18);box-shadow:0 2px 6px #101a141a;}
+.m3-plaque.compact::after {border-width:4px;border-bottom:0;}
+.m3-plaque.compact .t {font-size:11px;line-height:16px;gap:7px;font-weight:500;}
+.m3-plaque.compact.secondary {background:rgba(246,245,236,.92);color:#334b3c;border-color:rgba(51,75,60,.16);}
+.m3-plaque.compact.secondary .t {font-size:11px;font-weight:500;line-height:16px;}
+.m3-plaque.compact.secondary::after {border-top-color:rgba(246,245,236,.92);}
+.m3-plaque.compact.hover {border-color:#c9a35a;}
+
+/* Agent reports (src/components/AgentReports.tsx) */
+.agent-reports { display: grid; gap: 16px; }
+.report-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.report-head select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--sage-200); background: transparent; color: inherit; }
+.report-table td { vertical-align: top; }
+.report-score { display: inline-block; min-width: 34px; text-align: center; padding: 2px 7px; border-radius: 999px; background: var(--gold-soft); color: var(--gold-deep); font-weight: 600; font-size: 12px; }
+.report-ideas { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.report-spec-head { display: flex; align-items: center; gap: 8px; }
+.report-summary { display: grid; gap: 6px; }
+.report-top { display: flex; gap: 10px; align-items: flex-start; }
+
+/* Explain existing destinations and evidence without adding a competing panel. */
+.view-description{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.15}.view-description b{font-size:12px;font-weight:600}.view-description small{font-size:10px;color:var(--on-dark-2)}
+.sync-evidence{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.sync-evidence b{font-size:12px;font-weight:500}.sync-evidence small{font-size:10px;color:var(--on-dark-2)}
+.platform-label{color:var(--on-dark-2);border:1px solid var(--forest-line);border-radius:6px;padding:4px 7px;font-size:10px;white-space:nowrap}
+.map-next-step{margin-top:12px;max-width:350px}.map-next-step button{pointer-events:auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;border:1px solid #a58c52;background:#f5f1e5f2;color:#203c30;border-radius:9px;padding:9px 12px;cursor:pointer;font:500 12px var(--sans);box-shadow:0 2px 8px #14271d12}.map-next-step button b{font-weight:600}.map-next-step button:focus-visible{outline:3px solid #a87f27;outline-offset:3px}.map-next-step small{display:block;margin-top:6px;font-size:10px;line-height:1.5;color:inherit;max-width:310px}.map-stage.night .map-next-step button{background:#203c30f2;color:#f1ead8;border-color:#c9a35a}
+.repository-notice{align-items:flex-start;line-height:1.5}.repository-notice>svg{flex-shrink:0;margin-top:3px}.repository-notice strong{display:block;font-size:12px}.repository-notice p{font-size:12px;margin:5px 0 8px}.repository-notice .text-btn{font-size:12px;text-decoration:underline;text-underline-offset:3px}.repository-notice button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.hm-running{background:#d4ac58;box-shadow:0 0 0 2px #d4ac5833}
+@media(max-width:1450px){.platform-label{display:none}.view-description small{display:none}}
+/* Header stays one row. #138 made the tabs, sync status and platform label wider; the brand was the
+   only item allowed to shrink, so its subtitle wrapped onto three lines and the bar overflowed.
+   The brand now keeps its size, the search and live status give way first, and extras drop out by width. */
+.header .brand{flex:none}
+.header .brand .eyebrow{white-space:nowrap}
+.header>div:has(>.search){flex:0 1 340px;min-width:120px}
+.header .search{width:auto}
+@media(max-width:1600px){.header .brand .eyebrow,.view-description small{display:none}}
+@media(max-width:1280px){.sync-evidence small{display:none}}
+@media(max-width:650px){.map-next-step{margin-top:7px;max-width:100%}.map-next-step button{padding:7px 10px;font-size:11px}.map-next-step small{display:none}.sync-evidence small{display:none}}
+
+.map-next-step button svg{width:14px!important;height:14px!important;flex:0 0 14px}.map-next-step button{width:fit-content;height:auto;min-height:36px}
+
+.repository-notice>svg{width:16px!important;height:16px!important;flex:0 0 16px}.repository-notice-actions{display:flex;gap:12px;flex-wrap:wrap}.repository-notice-actions button{min-height:32px}.repository-notice-actions button:disabled{opacity:.6;cursor:wait}
+
+/* Projection owns visibility; React must not reset placed city labels. */
+.m3-labels > div{visibility:hidden}

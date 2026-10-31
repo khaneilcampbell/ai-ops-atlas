@@ -4,13 +4,14 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Benjaire.com
+  name: Benjaire HQ
   summary: >-
     Website for Benjaire, an Astro site on Cloudflare Workers with a contact
     Worker that forwards inquiries to the Benjaire Flow intake in n8n.
   status: active
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
+  district: business-operations
   links:
     - label: Live site
       url: https://benjaire.com
@@ -26,6 +27,12 @@ agents:
     status: active
     trigger: POST /api/contact
     source: site/worker/index.ts
+    observe:
+      agent_feed: true
+    # Customer-facing and unattended: a failed request alerts KC. It only runs when someone
+    # posts the form, so a quiet stretch is normal and there is no silence window.
+    alerts:
+      failures: true
     last_run: null
     permissions:
       - 'Cloudflare Email Routing: send to verified destination addresses only'
@@ -33,7 +40,7 @@ agents:
       - Turnstile secret key (TURNSTILE_SECRET_KEY)
       - Benjaire Flow intake key, sent as x-flow-key (FLOW_INTAKE_KEY)
     registry:
-      title: Benjaire Contact and Checkout Gateway
+      title: Inquiry Routing Coordinator
       category: business
       subcategory: Customer inquiry processing
       classification:
@@ -66,7 +73,7 @@ agents:
           - The manifest purpose did not mention Stripe checkout
           - The forward to Benjaire Flow is tried once with a 10 second timeout and only logged on failure
           - Pull request previews email the same inbox as production
-          - No KPI is defined yet, and Atlas has no live data for it
+          - No KPI is defined yet; Atlas sees each request's result through the run feed once ATLAS_FEED_URL and ATLAS_FEED_TOKEN are set
         improvements:
           - Retry the Flow forward on 429 and 5xx with an inquiry id so n8n can drop duplicates
         last_review: 2026-10-28
@@ -80,12 +87,19 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the contact Worker
+    observe:
+      agent_feed: true
+    # Customer-facing and unattended: a failed intake alerts KC. Runs per inquiry, so no
+    # silence window.
+    alerts:
+      failures: true
     last_run: null
     permissions:
       - 'Resend API: sending on benjaire.com only'
       - Anthropic, through the n8n credential on Classify with Claude
       - 'n8n data tables: reads flow_settings, writes flow_inquiries and flow_events'
     registry:
+      title: Client Intake Specialist
       category: business
       subcategory: Workflow automation
       classification:
@@ -151,7 +165,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Benjaire Site Continuous Integration
+      title: Website Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:

@@ -1,16 +1,269 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
 # AI Ops Atlas manifest. Format: catalog/README.md
-schema: atlas/v1
+schema: atlas/v2
 
 project:
   id: github-profile
   name: GitHub Profile
-  summary: The profile README shown on github.com/khaneilcampbell.
+  summary: The profile README shown on github.com/khaneilcampbell, and the GitHub building's own agents, which keep pull requests across the ecosystem moving to production, scout money opportunities in what Atlas already runs, and keep Atlas on its design tokens.
   status: active
   repository: khaneilcampbell/khaneilcampbell
   tags: [profile]
+  district: career-portfolio
   links:
     - label: GitHub profile
       url: https://github.com/khaneilcampbell
 
-agents: []
+agents:
+  - id: github-merge-flow
+    name: Merge Flow
+    purpose: Sorts every open pull request across KC's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; KC still says "merge".
+    framework: GitHub Actions + Claude
+    model: Claude Opus 5.5 (Anthropic API), only when the triage changed
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every 4 hours, when a pull request's Atlas CI finishes, or manual
+    source: ops/merge-flow/merge_flow.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: merge-flow.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read open and recently merged pull requests of 11 repositories in one GraphQL request
+      - Sort each pull request into one lane from GitHub's own merge state, review decision and checks
+      - Name failing checks, stale branches and branches behind their base
+      - Measure median time to merge over the last 30 days
+      - Write a five-line brief of next moves, only when the triage changed and something needs action
+    permissions:
+      - 'GITHUB_TOKEN: contents and pull requests read on ai-ops-atlas'
+      - 'MERGE_FLOW_TOKEN (optional): fine-grained, read-only Pull requests, Contents and Commit statuses on the listed repositories'
+      - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 briefs a day and $1 a month'
+      - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
+    registry:
+      title: Merge Flow Coordinator
+      category: engineering
+      subcategory: Code review and release
+      classification:
+        type: B
+        confidence: verified
+        evidence: ops/merge-flow/merge_flow.py sorts pull requests deterministically and makes one Claude call for the brief only when the triage fingerprint changed and an actionable pull request exists
+      mission:
+        problem: Finished pull requests wait for days because nobody sees that they are ready, behind their base, or blocked on one failing check.
+        outcomes: [Ready pull requests are named the moment they are ready, Each blocked pull request has one concrete next move, Time to merge is measured instead of guessed]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read open pull requests and their merge state in one request, Sort them into lanes, Skip everything else when nothing changed, Ask Claude for a short brief when something needs action, Report counts publicly and details only in Atlas]
+        tools: [GitHub GraphQL API (read), Anthropic Messages API, GitHub Actions cache for the last fingerprint]
+        inputs: [Allowlist and caps in ops/merge-flow/policy.json, Open and recently merged pull requests]
+        outputs: [Job summary on the Actions run, Optional report in Atlas's live feed]
+        dependencies: [atlas-merge-pr, atlas-rerun-failed]
+        limitations: [Never merges approves pushes comments or re-runs, First 20 open pull requests per repository, Private repositories need MERGE_FLOW_TOKEN, Check names are capped at 25 per pull request]
+      goals:
+        objective: Shorten the time from a pull request being ready to it being merged, without bypassing any check or approval.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A missed triage hides ready work
+            measure: run_success_rate
+          - name: Median time to merge
+            kind: throughput
+            target: Under 24 hours, from the run summary
+            basis: Most of KC's pull requests are small and reviewed the same day
+      execution:
+        trigger_type: event
+        schedule: Every 4 hours at :23, plus each completed pull-request CI run in ai-ops-atlas
+        environment: GitHub-hosted runner
+        stages: [Restore last fingerprint, One GraphQL read, Sort into lanes, Stop when unchanged, Brief within caps, Report, Save fingerprint]
+      governance:
+        autonomy: 1
+        autonomy_note: Runs on its own and decides what is worth saying, but only recommends. Merges stay with KC and the Merge Pull Request action; re-runs stay with Re-run Failed Jobs.
+        data_sensitivity: internal
+        approval: None needed to run; every change to a repository stays with KC
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries; optional live feed reports
+      cost:
+        budget: At most 4 Claude briefs a day and $1 a month, enforced in the script before each call
+        notes: Unchanged runs make one GraphQL request (about 50 KB and 5 points of the 5,000 hourly budget at 45 open pull requests) and no Claude call. Actions minutes are free on this public repository.
+      docs:
+        technical: ops/merge-flow/README.md
+        runbook: ops/merge-flow/README.md#runbook
+        known_issues:
+          - Without MERGE_FLOW_TOKEN only public repositories are readable
+        improvements:
+          - Bring behind branches up to date automatically, once KC approves that level 3 step
+        last_review: 2026-10-30
+  - id: github-opportunity-scout
+    name: Opportunity Scout
+    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories KC already has, plus a build-ready spec for the best one. Recommend-only; KC decides what gets built.
+    framework: GitHub Actions + Claude
+    model: Claude Opus 5.5 (Anthropic API), only when the registry changed
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: When the catalog changes on main, twice a week, or manual
+    source: ops/opportunity-scout/scout.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: opportunity-scout.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read every project and agent in the registry from the checkout, with no API reads
+      - Skip the model entirely when the registry and prompt are unchanged
+      - Propose at most 3 ideas with money mechanism, customer, reused agents, time to first dollar, running cost and risks
+      - Rank ideas by a fixed formula from 1 to 5 scores for revenue, effort, cost and risk
+      - Write a ready-to-build agent spec for the top idea, with a spend cap, a building and a human approval point
+      - Check every idea against the registry and flag unknown or inactive agents
+    permissions:
+      - 'GITHUB_TOKEN: contents read on ai-ops-atlas'
+      - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
+      - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
+    registry:
+      title: Opportunity Scout
+      category: business
+      subcategory: Opportunity research
+      classification:
+        type: B
+        confidence: verified
+        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or KC asks for a fresh look
+      mission:
+        problem: Atlas holds dozens of working agents, but nobody regularly asks which of them could earn money and what small agent would turn that into revenue.
+        outcomes: [Each registry change yields at most 3 ranked money ideas, The best idea arrives as a spec that can be built without another planning round, Every idea and spec keeps a human approval point]
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read the registry from catalog files, Stop when nothing changed, Ask Claude for scored ideas and one spec, Rank and check them against the registry, Report in the job summary and Atlas's feed]
+        tools: [Anthropic Messages API with structured output, GitHub Actions cache for the last fingerprint and spend]
+        inputs: [catalog/*.yaml, Caps and model in ops/opportunity-scout/policy.json, Titles of the previous run's ideas]
+        outputs: [Job summary with ranked ideas and one agent spec, Optional one-line report in Atlas's live feed]
+        dependencies: [github-merge-flow]
+        limitations: [Never spends messages publishes merges or builds anything, Ideas come only from the registry with no market data, Estimates of revenue and time to first dollar are the model's judgment, The job summary is public on this repository]
+      goals:
+        objective: Turn what Atlas already runs into a short, honest list of money ideas and one cheap, safe agent to build next.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed scan hides registry changes
+            measure: run_success_rate
+          - name: Ideas built
+            kind: other
+            target: At least one spec a quarter that KC approves for building
+            basis: Ideas only matter when one turns into an agent
+      execution:
+        trigger_type: event
+        schedule: On catalog changes merged to main, Monday and Thursday at 13:41 UTC, or manual
+        environment: GitHub-hosted runner
+        stages: [Restore last fingerprint, Read registry, Stop when unchanged, Ideas within caps, Rank and check, Report, Save fingerprint]
+      governance:
+        autonomy: 1
+        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with KC.
+        data_sensitivity: internal
+        approval: None needed to run; KC approves any spec before it is built
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history and job summaries; optional live feed reports
+      cost:
+        budget: At most 4 Claude runs a day and $1 a month, enforced in the script before each call
+        notes: Unchanged runs read local files and make no network calls. A changed run sends about 5,000 input tokens (the 16 KB registry digest) and gets about 2,000 back, roughly $0.06. Actions minutes are free on this public repository.
+      docs:
+        technical: ops/opportunity-scout/README.md
+        runbook: ops/opportunity-scout/README.md#runbook
+        known_issues:
+          - Without ANTHROPIC_API_KEY it only reports that the registry changed
+        improvements:
+          - Add a small, terms-respecting market signal once KC picks a niche
+        last_review: 2026-10-30
+  - id: github-design-consistency
+    name: Design Consistency
+    purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; KC says "merge".
+    framework: GitHub Actions + Claude
+    model: Claude Opus 5.5 (Anthropic API), only for findings that need judgment
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: When styles, components or the catalog change on main, daily, or manual
+    source: ops/design-consistency/design.py
+    repository: khaneilcampbell/ai-ops-atlas
+    observe:
+      github_workflow: design-consistency.yml
+      agent_feed: true
+    last_run: null
+    capabilities:
+      - Read the tokens in src/styles/tokens.css and check every stylesheet against them, with no API reads
+      - Flag hard-coded colors, off-scale spacing and type sizes, font stacks, radii and inline style colors
+      - Flag building and agent names that break the naming scheme (short Title Case, brand first, no domains or dashes)
+      - Call only drift above the recorded baseline new, so the backlog shrinks one pull request at a time
+      - Swap literals that equal a token by code, with no model call
+      - Ask Claude once, with a closed schema, for near-miss colors, off-scale sizes and names, and check every edit again
+      - Open one pull request at a time with before and after screenshots and a pixel-change count
+    permissions:
+      - 'GITHUB_TOKEN: contents read and pull requests read for the check; contents and pull requests write in the fix job, for design-consistency/* branches and the screenshots branch only'
+      - 'DESIGN_FIX_TOKEN (optional): fine-grained token for ai-ops-atlas so fix pull requests run CI'
+      - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
+      - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
+    registry:
+      title: Design Consistency
+      category: engineering
+      subcategory: Design consistency
+      automation_category: maintenance
+      classification:
+        type: B
+        confidence: verified
+        evidence: ops/design-consistency/design.py checks styles against tokens deterministically, makes exact swaps in code, and makes one Claude call with a closed JSON schema only for a judgment batch, within daily and monthly caps
+      mission:
+        problem: Atlas's look drifts as features land, with colors from the old palette and one-off sizes, and nobody checks every stylesheet against the theme.
+        outcomes: [Every stylesheet uses the Atlas tokens or says why not, New drift is flagged on the pull request that adds it, Each fix arrives as one reviewable pull request with screenshots]
+        beneficiaries: [KC, Atlas users]
+      responsibilities:
+        tasks: [Check stylesheets and names against the tokens, Mark drift above the baseline as new, Swap exact token matches in code, Ask Claude for judgment calls within caps, Open one fix pull request with before and after screenshots, Report in the job summary and Atlas's feed]
+        tools: [Anthropic Messages API with structured output, Playwright screenshots, GitHub pull requests API, GitHub Actions cache for spend and caps]
+        inputs: [src/styles/tokens.css, src/styles/*.css, Inline styles in src/components and src/views, catalog/*.yaml names, ops/design-consistency/baseline.json]
+        outputs: [Job summary with backlog and new drift, At most one open fix pull request with screenshots, Optional one-line report in Atlas's live feed]
+        dependencies: [github-merge-flow]
+        limitations: [Never merges or approves, The 3D map and office scenes are art and are not checked, Screenshots cover Mission Control Agents and Repositories, Without DESIGN_FIX_TOKEN its pull requests need CI started by hand]
+      goals:
+        objective: Keep Atlas on one design system without KC having to police it.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed check hides new drift
+            measure: run_success_rate
+          - name: Backlog
+            kind: other
+            target: Backlog in baseline.json goes down every month
+            basis: Each merged fix pull request removes its findings from the baseline
+      execution:
+        trigger_type: event
+        schedule: On style, component or catalog changes merged to main, daily at 14:17 UTC, or manual
+        environment: GitHub-hosted runner
+        stages: [Check against tokens, Stop when nothing to fix or a fix PR is open, Code swaps or one Claude call within caps, Verify each edit, Screenshots before and after, Open pull request, Report]
+      governance:
+        autonomy: 1
+        autonomy_note: Runs on its own and proposes fixes as pull requests, one at a time. Merging stays with KC.
+        data_sensitivity: internal
+        approval: KC reviews and merges every fix pull request
+        credential_owner: KC (repository secrets in ai-ops-atlas)
+        risk: low
+        audit_log: GitHub Actions run history, job summaries and the fix pull requests
+      cost:
+        budget: At most 4 fix runs a day and $1 a month for Claude, enforced in the script before each call; code-only fixes cost nothing
+        notes: The check reads local files and makes one API read (open pull requests). A judgment call sends about 3,000 input tokens (20 findings with their lines and the token lists) and gets about 1,500 back, roughly $0.04. Actions minutes are free on this public repository.
+      docs:
+        technical: ops/design-consistency/README.md
+        runbook: ops/design-consistency/README.md#runbook
+        known_issues:
+          - Without DESIGN_FIX_TOKEN, pull requests opened by github-actions do not start CI on their own
+        improvements:
+          - Store each run's findings in Atlas's report store once agent reports are available
+        last_review: 2026-10-30

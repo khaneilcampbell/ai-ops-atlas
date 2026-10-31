@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { isAiAgent } from "../catalog/roles";
 import { GAP, layoutMap, placeLabels, type Layout } from "./mapLayout";
 
 function rects(layout: Layout) {
@@ -49,13 +48,13 @@ function bigCatalog(n: number): Catalog {
 }
 
 describe("layoutMap", () => {
-  it("gives every automation a house and seats every AI agent inside its headquarters", () => {
+  it("seats every registered agent and automation inside its project building", () => {
     const layout = layoutMap(catalog);
     const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
     const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
     expect([...housed, ...inside].sort()).toEqual(catalog.agents.map((a) => a.id).sort());
-    expect(inside.every((id) => isAiAgent(catalog.agents.find((a) => a.id === id)!))).toBe(true);
-    expect(housed.some((id) => isAiAgent(catalog.agents.find((a) => a.id === id)!))).toBe(false);
+    expect(housed).toEqual([]);
+    expect(inside).toHaveLength(catalog.agents.length);
   });
 
   it("puts a kiosk only for services a manifest names", () => {
@@ -133,4 +132,51 @@ describe("walkways", () => {
     for (const d of layout.districts) expect(linked.has(d.project.id)).toBe(true);
     for (const w of layout.walks) expect(w.b.gx - w.a.gx + w.b.gy - w.a.gy).toBeGreaterThan(0);
   });
+});
+
+describe("district grouping", () => {
+  const layout = layoutMap(catalog, [], "district");
+
+  it("places the five districts in their fixed order without overlaps", () => {
+    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Security & Infrastructure", "Career & Portfolio"]);
+    expect(overlaps(layout, GAP - 0.01)).toEqual([]);
+  });
+
+  it("joins every district with walkways, so roads and bridges reach all of them", () => {
+    const ids = layout.districts.map((d) => d.project.id);
+    const seen = new Set([ids[0]]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const w of layout.walks)
+        if (seen.has(w.from) !== seen.has(w.to)) {
+          seen.add(w.from);
+          seen.add(w.to);
+          grew = true;
+        }
+    }
+    expect(ids.filter((id) => !seen.has(id))).toEqual([]);
+  });
+});
+
+it("does not draw a second building for a registered repository left in discovery cache", () => {
+  const name="khaneilcampbell/service-desk-intelligence";
+  const layout=layoutMap(catalog,[name]);
+  expect(layout.parks.flatMap(p=>p.strays).some(s=>s.name===name)).toBe(false);
+  expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(1);
+});
+
+it("keeps one accessible Skyline district in every map grouping",()=>{
+  for(const group of ["none","district","status","tag"] as const){
+    const layout=layoutMap(catalog,[],group);
+    expect(layout.parks.filter(p=>!p.strays.length)).toHaveLength(1);
+    expect(overlaps(layout)).toEqual([]);
+  }
+});
+
+it("registers Skyline without duplicating its existing residential district", () => {
+  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/skyline");
+  const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
+  expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
+  expect(layout.parks.filter(p => !p.strays.length)).toHaveLength(1);
+  expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
 });

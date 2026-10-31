@@ -7,14 +7,25 @@ on:
     tags: ["v*.*.*"]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   macos:
     name: Build and publish the macOS app
     runs-on: macos-latest
+    # Release builds start without a Rust cache, so they run longer than CI.
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Require the tagged commit on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: Check the tag matches the app version
         run: |
           want="${GITHUB_REF_NAME#v}"
@@ -26,12 +37,13 @@ jobs:
               exit 1
             fi
           done
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          toolchain: stable
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - run: npm ci
       - run: npm test
@@ -41,6 +53,26 @@ jobs:
         run: |
           ditto -c -k --keepParent "src-tauri/target/universal-apple-darwin/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
           shasum -a 256 AI-Ops-Atlas-macOS.zip > AI-Ops-Atlas-macOS.zip.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: versioned-macos-app
+          path: |
+            AI-Ops-Atlas-macOS.zip
+            AI-Ops-Atlas-macOS.zip.sha256
+
+  publish:
+    name: Publish versioned app
+    needs: macos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: versioned-macos-app
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

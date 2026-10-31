@@ -1,6 +1,6 @@
 # Catalog manifests
 
-Each YAML file in this folder registers one project, its repository and the agents that belong to it. The app bundles every `*.yaml` file here at build time, and `npm test` validates them.
+Each YAML file in this folder registers one project, its linked repositories and the agents that belong to it. Each large map building represents a project, identified by its stable project ID. Repositories are resources in its detail panel. The app bundles every `*.yaml` file here at build time, and `npm test` validates them.
 
 ```yaml
 schema: atlas/v2                   # atlas/v1 still works; v2 adds the registry block
@@ -10,7 +10,8 @@ project:
   name: Multi-Agent Commerce Pipeline
   summary: One or two sentences on what the project does.
   status: active                   # active | idle | paused | attention | retired
-  repository: owner/repo           # GitHub repository, read-only
+  repository: owner/repo           # default repository for existing integrations
+  repositories: [owner/api, owner/web] # optional additional linked repositories
   tags: [crewai, shopify]          # optional
   links:                           # optional, https only
     - label: Case study
@@ -36,6 +37,11 @@ agents:
       github_workflow: ci.yml      # latest run of this workflow updates last run and health
       atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
       atlas_intel_runs: ecosystem  # optional with atlas_intel: which runs count (repository, the default, or ecosystem)
+      agent_feed: true             # or: phase results its pipeline reports to /api/hooks/agents (docs/live-updates.md)
+    alerts:                        # optional: watch an unattended agent (docs/alerts.md)
+      failures: true               # a failed run raises an alert (default true)
+      report_within: 2h            # optional: silent after this long without a report (m, h or d)
+      not_running: Host removed    # optional: off on purpose, so no alerts; shown as Not running
     links: []                      # optional
     history:                       # optional notable events, newest first
       - at: 2026-10-12
@@ -172,3 +178,22 @@ Atlas follows GitHub on every refresh, on the desktop app and the iPhone web bui
 - **Archived repository.** Hidden the same way, and back as soon as it is unarchived.
 - **Renamed repository.** GitHub redirects the old name, so the project keeps working, and the new name isn't listed a second time as uncataloged. The Repositories page suggests updating the manifest.
 - **New repository.** Owner discovery lists it as uncataloged until it gets a manifest.
+
+## Districts, tiers and automation categories
+
+The map groups projects into five infrastructure districts, and the inspector shows each item's tier and function. All three can be declared; anything left out is worked out by fixed rules in `src/catalog/organization.ts` (no model), and the app says which it is. Details: [docs/organization.md](../docs/organization.md).
+
+```yaml
+project:
+  district: ai-operations          # ai-operations | business-operations | ai-engineering | security-infrastructure | career-portfolio
+
+agents:
+  - id: commerce-loop
+    registry:
+      tier: coordinator            # central | coordinator | specialized
+      automation_category: business  # ci | security | monitoring | business | intelligence | maintenance
+```
+
+## Physical workplaces
+
+An agent can keep its existing project/repository ownership while working in a district business building. Declare, for example, `workplace: {building: OpenAI, floor: 4, room: "401"}`. Floors 1–4 and rooms 101–404 are supported; room and floor must match, and each room can have only one worker. Assigned workers are seated at that workplace rather than duplicated in the project office.

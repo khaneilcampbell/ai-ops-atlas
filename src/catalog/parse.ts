@@ -1,7 +1,9 @@
+import {WORKPLACE_BUILDINGS} from "./workplaces";
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
-import { REPO_RE, Reader } from "./reader";
-import { CONNECTION_TYPES, SCHEMAS, type Agent, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
+import { REPO_RE, Reader, type Raw } from "./reader";
+import { DISTRICTS } from "./taxonomy";
+import { CONNECTION_TYPES, SCHEMAS, type Agent, type AlertRules, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
 export function parseManifest(file: string, text: string, issues: ManifestIssue[]): Catalog {
@@ -25,6 +27,14 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
   if (repository && !REPO_RE.test(repository)) r.fail("project.repository", 'must look like "owner/name"');
   if (!projectId || !repository) return { projects: [], agents: [] };
 
+  const repositories = r.list(p, "repositories", "project").flatMap((value, i) => {
+    if (typeof value !== "string" || !REPO_RE.test(value.trim())) {
+      r.fail(`project.repositories[${i}]`, 'must look like "owner/name"');
+      return [];
+    }
+    return [value.trim()];
+  });
+
   const agents: Agent[] = r.list(root, "agents", "file").flatMap((a, i) => {
     const path = `agents[${i}]`;
     const ao = r.obj(a, path);
@@ -34,7 +44,24 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     const purpose = r.str(ao, "purpose", path);
     const framework = r.str(ao, "framework", path);
     if (!id || !name || !purpose || !framework) return [];
+    let workplace:Agent["workplace"];
+    if(ao.workplace!==undefined){
+      const w=r.obj(ao.workplace,`${path}.workplace`);
+      if(w){
+        const building=r.oneOf(w,"building",`${path}.workplace`,WORKPLACE_BUILDINGS);
+        if(w.building===undefined)r.fail(`${path}.workplace.building`,"is required");
+        const floor=w.floor,room=r.str(w,"room",`${path}.workplace`);
+        if(typeof floor!=="number"||!Number.isInteger(floor)||floor<1||floor>4)r.fail(`${path}.workplace.floor`,"must be an integer from 1 to 4");
+        if(room&&!/^[1-4]0[1-4]$/.test(room))r.fail(`${path}.workplace.room`,"must identify a room from 101 to 404");
+        else if(room&&Number(room[0])!==floor)r.fail(`${path}.workplace.room`,"must match the workplace floor");
+        if(building&&typeof floor==="number"&&Number.isInteger(floor)&&floor>=1&&floor<=4&&room&&/^[1-4]0[1-4]$/.test(room)&&Number(room[0])===floor)workplace={building,floor,room};
+      }
+    }
+    const officeFloor = ao.office_floor;
+    if (officeFloor !== undefined && (typeof officeFloor !== "number" || !Number.isInteger(officeFloor) || officeFloor < 1 || officeFloor > 4)) r.fail(`${path}.office_floor`, "must be an integer from 1 to 4");
+    if (officeFloor !== undefined && workplace) r.fail(`${path}.office_floor`, "cannot be combined with an external workplace");
     const observe = ao.observe ? r.obj(ao.observe, `${path}.observe`) : null;
+    const alerts = ao.alerts ? r.obj(ao.alerts, `${path}.alerts`) : null;
     const agentRepo = r.str(ao, "repository", path, false) ?? repository;
     let registry = undefined;
     if (ao.registry !== undefined && ao.registry !== null) {
@@ -53,6 +80,8 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         framework,
         model: r.str(ao, "model", path, false),
         runtime: r.str(ao, "runtime", path, false),
+        workplace,
+        officeFloor: typeof officeFloor === "number" && Number.isInteger(officeFloor) && officeFloor >= 1 && officeFloor <= 4 ? officeFloor : undefined,
         status: r.status(ao, path),
         trigger: r.str(ao, "trigger", path, false),
         source: r.str(ao, "source", path, false),
@@ -66,8 +95,10 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
               githubWorkflow: r.str(observe, "github_workflow", `${path}.observe`, false),
               atlasIntel: r.bool(observe, "atlas_intel", `${path}.observe`),
               atlasIntelRuns: r.oneOf(observe, "atlas_intel_runs", `${path}.observe`, ["repository", "ecosystem"] as const),
+              agentFeed: r.bool(observe, "agent_feed", `${path}.observe`),
             }
           : undefined,
+        alerts: alerts ? alertRules(r, alerts, `${path}.alerts`) : undefined,
         projectId,
         repository: agentRepo,
       },
@@ -80,7 +111,9 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     summary: r.str(p, "summary", "project") ?? "",
     status: r.status(p, "project"),
     repository,
+    repositories: [...new Set(repositories)],
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
+    district: r.oneOf(p, "district", "project", DISTRICTS),
     links: r.links(p, "project"),
     agentIds: agents.map((a) => a.id),
     connections: r.list(p, "connections", "project").flatMap((c, i): DeclaredConnection[] => {
@@ -100,6 +133,24 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
 }
 
 /** Merges manifests and reports duplicate ids across files. */
+const DURATION = /^(\d+)\s*(m|h|d)$/;
+const UNIT_MS = { m: 60_000, h: 3_600_000, d: 86_400_000 } as const;
+
+/** "90m", "2h" or "8d" in milliseconds; null when it isn't one. */
+export function parseDuration(v: string): number | null {
+  const m = DURATION.exec(v.trim());
+  if (!m || Number(m[1]) <= 0) return null;
+  return Number(m[1]) * UNIT_MS[m[2] as keyof typeof UNIT_MS];
+}
+
+function alertRules(r: Reader, o: Raw, path: string): AlertRules {
+  const within = r.str(o, "report_within", path, false);
+  const reportWithinMs = within === undefined ? null : parseDuration(within);
+  if (within !== undefined && reportWithinMs === null) r.fail(`${path}.report_within`, 'must be a duration like "90m", "2h" or "8d"');
+  for (const k of Object.keys(o)) if (!["failures", "report_within", "not_running"].includes(k)) r.fail(`${path}.${k}`, "is not an alerts field");
+  return { failures: r.bool(o, "failures", path) ?? true, reportWithinMs, notRunning: r.str(o, "not_running", path, false) ?? null };
+}
+
 export function buildCatalog(files: Record<string, string>): { catalog: Catalog; issues: ManifestIssue[] } {
   const issues: ManifestIssue[] = [];
   const catalog: Catalog = { projects: [], agents: [] };
@@ -123,6 +174,13 @@ export function buildCatalog(files: Record<string, string>): { catalog: Catalog;
       seenAgents.add(a.id);
       catalog.agents.push(a);
     }
+  }
+  const workplaces=new Set<string>();
+  for(const a of catalog.agents){
+    if(!a.workplace)continue;
+    const key=`${a.workplace.building}/${a.workplace.room}`;
+    if(workplaces.has(key))issues.push({file:catalog.projects.find(p=>p.id===a.projectId)?.file??a.projectId,message:`workplace ${key} is assigned to more than one worker`});
+    workplaces.add(key);
   }
   // A declared connection must point at something in the catalog; it is never guessed.
   for (const p of catalog.projects)

@@ -1,7 +1,9 @@
+import { mergeProduction, validReport, type ProductionEvent } from "../production/model";
 import { useEffect, useSyncExternalStore } from "react";
 import { isHostedWeb, isTauri } from "../lib/env";
 import type { Run } from "../intel/types";
-import { describe, upsertIntelRun, type LiveEvent } from "./apply";
+import { load, save } from "../lib/storage";
+import { describe, mergeAgentRuns, toAgentRun, upsertIntelRun, type AgentRun, type LiveEvent } from "./apply";
 
 // The live feed. GitHub webhooks and the Mac app's own agent runs are collected by the site
 // (server/live.ts); this polls for anything newer than the last event seen, only while the
@@ -17,6 +19,11 @@ export interface LiveStatus {
   last: { at: string; text: string } | null;
   /** Repository Intelligence runs the Mac app reported, for the website. Null until the feed answers. */
   intelRuns: Run[] | null;
+  production: ProductionEvent[];
+  /** Phase results from pipelines outside Atlas, newest first. Kept on this device as well, because
+   *  the site only holds a few days and a fresh client only gets the last six hours. Null until
+   *  the feed answers and nothing was kept. */
+  agentRuns: AgentRun[] | null;
 }
 
 interface FeedPage {
@@ -30,7 +37,9 @@ interface FeedPage {
 export const POLL_MS = 5_000;
 const MAX_BACKOFF_MS = 60_000;
 
-let status: LiveStatus = { state: "off", message: null, checkedAt: null, last: null, intelRuns: null };
+const AGENT_RUNS_KEY = "liveAgentRuns";
+const kept = load<AgentRun[] | null>(AGENT_RUNS_KEY, null);
+let status: LiveStatus = { state: "off", message: null, checkedAt: null, last: null, intelRuns: null, production: [], agentRuns: Array.isArray(kept) ? kept : null };
 const watchers = new Set<() => void>();
 const listeners = new Set<(events: LiveEvent[], gap: boolean) => void>();
 
@@ -88,18 +97,24 @@ async function poll(): Promise<number> {
       return MAX_BACKOFF_MS;
     }
     cursor = page.cursor ?? cursor;
-    let { last, intelRuns } = status;
+    let { last, intelRuns, production } = status;
     intelRuns ??= [];
+    const fresh: AgentRun[] = [];
     for (const e of page.events) {
+      if (e.kind === "production" && validReport(e.body)) production = mergeProduction(production, { id: e.id, at: e.at, body: e.body });
       if (e.kind === "intel_run" && e.body?.id) intelRuns = upsertIntelRun(intelRuns, e.body as Run);
+      const run = toAgentRun(e);
+      if (run) fresh.push(run);
       const text = describe(e);
       if (text) last = { at: e.at, text };
     }
-    set({ state: "live", message: null, checkedAt: new Date().toISOString(), last, intelRuns });
+    const agentRuns = mergeAgentRuns(status.agentRuns ?? [], fresh);
+    if (agentRuns !== status.agentRuns) save(AGENT_RUNS_KEY, agentRuns);
+    set({ state: "live", message: null, checkedAt: new Date().toISOString(), last, intelRuns, agentRuns, production });
     if (page.events.length || page.gap) listeners.forEach((l) => l(page.events, !!page.gap));
     return POLL_MS;
   } catch (e) {
-    set({ state: "error", message: e instanceof Error ? e.message : String(e) });
+    set({ state: "error", message: e instanceof Error ? e.message : String(e), checkedAt: new Date().toISOString() });
     return 0;
   }
 }

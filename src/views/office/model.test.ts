@@ -1,3 +1,4 @@
+import {projectOfficeAgents} from "../../catalog/workplaces";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,16 +27,56 @@ const run = (at: string, result: ExecutionRecord["result"]): ExecutionRecord => 
 const agent = { id: "atlas-ci", status: "active" as const };
 
 describe("office plan", () => {
-  it("gives the AI Ops Atlas headquarters one desk per registered agent, in manifest order", () => {
-    const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
-    const agents = catalog.agents.filter((a) => a.projectId === project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr"]);
+  it.each(catalog.projects)("keeps each worker assigned to the $name office at its own desk", (project) => {
+    const agents = projectOfficeAgents(catalog.agents,project.id);
     const plan = planOffice(project, agents);
-    expect(plan.buildingId).toBe("repo:khaneilcampbell/ai-ops-atlas");
-    expect(plan.workstations.map((w) => w.id)).toEqual(["ai-ops-atlas/atlas-ci", "ai-ops-atlas/repo-intelligence", "ai-ops-atlas/atlas-engineering-review", "ai-ops-atlas/atlas-rerun-failed", "ai-ops-atlas/atlas-merge-pr"]);
-    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(5);
+    expect(plan.workstations.map((w) => w.agentId).sort()).toEqual(agents.map((a) => a.id).sort());
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(agents.length);
+    for (const w of plan.workstations) {
+      expect(Number.isFinite(w.x) && Number.isFinite(w.z)).toBe(true);
+      expect(Math.abs(w.x) + 0.75).toBeLessThan(plan.w / 2);
+      expect(Math.abs(w.z) + 1).toBeLessThan(plan.d / 2);
+    }
+  });
+
+  it("gives the AI Ops Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
+    const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
+    const agents = projectOfficeAgents(catalog.agents,project.id);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer"]);
+    const plan = planOffice(project, agents);
+    expect(plan.buildingId).toBe("project:ai-ops-atlas");
+    expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());
+    expect(plan.workstations.map(w=>w.tier)).toEqual([...plan.workstations.map(w=>w.tier)].sort((a,b)=>["central","coordinator","specialized"].indexOf(a)-["central","coordinator","specialized"].indexOf(b)));
+    expect(new Set(plan.workstations.map((w) => `${w.x},${w.z}`)).size).toBe(agents.length);
     // Stable: the same input always gives the same desks.
     expect(planOffice(project, agents)).toEqual(plan);
+  });
+
+  it("keeps coordinators separate and orders specialists by their dependencies",()=>{
+    const agents=[{id:"publish",registry:{responsibilities:{dependencies:["design"]}}},{id:"lead",registry:{tier:"coordinator" as const}},{id:"design",registry:{responsibilities:{dependencies:["research"]}}},{id:"research"}];
+    const plan=planOffice({id:"demo",repository:"me/demo"},agents);
+    expect(plan.workstations.map(w=>w.agentId)).toEqual(["lead","research","design","publish"]);
+    expect(plan.workstations[0].z).toBeLessThan(plan.workstations[1].z);
+    expect(planOffice({id:"demo",repository:"me/demo"},[...agents].reverse())).toEqual(plan);
+  });
+
+  it("applies role and workflow seating to every project building",()=>{
+    for(const project of catalog.projects) {
+      const workers=catalog.agents.filter(a=>a.projectId===project.id);
+      const plan=planOffice(project,workers);
+      expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(workers.map(a=>a.id).sort());
+      expect(new Set(plan.workstations.map(w=>`${w.x}:${w.z}`)).size).toBe(workers.length);
+      expect(planOffice(project,[...workers].reverse())).toEqual(plan);
+      for(const ws of plan.workstations) {
+        const worker=workers.find(a=>a.id===ws.agentId)!;
+        for(const dependency of worker.registry?.responsibilities?.dependencies??[]) {
+          const before=plan.workstations.find(w=>w.agentId===dependency);
+          // Only acyclic dependencies can require an earlier desk; coordinator rows stay separate.
+          const mutual=workers.find(a=>a.id===dependency)?.registry?.responsibilities?.dependencies?.includes(worker.id);
+          if(before && before.tier===ws.tier && !mutual) expect(before.slot).toBeLessThan(ws.slot);
+        }
+      }
+    }
   });
 
   it("has no desks for a project without agents", () => {

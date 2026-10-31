@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./schema/atlas-v2.schema.json
+schema: atlas/v2
+project:
+  id: skyline
+  name: Skyline
+  summary: Skyline residences and business district, with a lobby, apartment floors, and spaces for future agents. City visuals are maintained in ai-ops-atlas; no live business integrations or workers are assigned yet.
+  status: idle
+  repository: khaneilcampbell/skyline
+  district: business-operations
+  tags: [business, residences]
+  links:
+    - label: Atlas city implementation
+      url: https://github.com/khaneilcampbell/ai-ops-atlas
+agents: []

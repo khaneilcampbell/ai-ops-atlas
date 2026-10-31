@@ -1,3 +1,4 @@
+import { projectRepositories } from "../catalog/projects";
 import type { Catalog } from "../catalog";
 import type { RepoState } from "../github/types";
 
@@ -29,19 +30,19 @@ const snapshotOf = (s: RepoState | undefined) => (s?.kind === "ok" ? s.data : s?
 export function liveCatalog(catalog: Catalog, repos: Record<string, RepoState>, deleted: Record<string, string>): LiveCatalog {
   const renamed: Record<string, string> = {};
   const reasons = new Map<string, HiddenReason>();
-  for (const name of new Set(catalog.projects.map((p) => p.repository))) {
+  for (const name of new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)))) {
     const snap = snapshotOf(repos[name]);
     if (deleted[name]) reasons.set(name, "deleted");
     else if (snap?.archived) reasons.set(name, "archived");
     if (snap && snap.fullName && snap.fullName.toLowerCase() !== name.toLowerCase()) renamed[name] = snap.fullName;
   }
   if (!reasons.size) return { catalog, hidden: [], renamed };
-  const projects = catalog.projects.filter((p) => !reasons.has(p.repository));
+  const projects = catalog.projects.filter((p) => !projectRepositories(p, catalog.agents).every(name => reasons.has(name)));
   const keep = new Set(projects.map((p) => p.id));
   const hidden = [...reasons].map(([repository, reason]) => ({
     repository,
     reason,
-    projects: catalog.projects.filter((p) => p.repository === repository).map((p) => p.name),
+    projects: catalog.projects.filter((p) => projectRepositories(p, catalog.agents).includes(repository)).map((p) => p.name),
   }));
   const agents = catalog.agents.filter((a) => keep.has(a.projectId) && !reasons.has(a.repository));
   const agentIds = new Set(agents.map((a) => a.id));
