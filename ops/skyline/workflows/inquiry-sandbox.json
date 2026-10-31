@@ -1,0 +1,600 @@
+{
+  "name": "Skyline · Inquiry Assistant · Sandbox",
+  "nodes": [
+    {
+      "id": "skyline-manual-start",
+      "name": "Start Sandbox",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [
+        -240,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{body:{\"name\":\"Skyline Test Visitor\",\"email\":\"visitor@example.invalid\",\"company\":\"Synthetic Demo Company\",\"phone\":\"\",\"message\":\"Please help organize inquiries from our website.\",\"source\":\"sandbox\",\"website\":\"\"},headers:{'x-flow-key':'synthetic-fixture-only'}}}];"
+      },
+      "id": "03a9a7a3-3961-413d-9b2a-7585eed8bc00",
+      "name": "Inquiry Received",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{intake_key:'synthetic-fixture-only',firm_name:'Benjaire Sandbox',owner_email:'owner@example.invalid',from_address:'sandbox@example.invalid',reply_to_email:'owner@example.invalid'}}];"
+      },
+      "id": "60dd74af-be6d-4aef-9835-57e373a07f91",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        304
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Inquiry Received').item.json.headers['x-flow-key'] ?? '' }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "={{ $json.intake_key }}",
+              "id": "58f7d71d-b54f-4fc5-919a-3a42e2aa6069"
+            },
+            {
+              "leftValue": "={{ $json.intake_key }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": "",
+              "id": "fa5cbc9d-6cf2-410e-97c7-5ac724e10828"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0df66af1-829d-4b91-a0fb-dadce0d8aff9",
+      "name": "Intake Key Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n-name",
+              "name": "name",
+              "value": "={{ String($('Inquiry Received').item.json.body?.name ?? '').replace(/[\\r\\n\\t]+/g, ' ').trim().slice(0, 120) }}",
+              "type": "string"
+            },
+            {
+              "id": "n-email",
+              "name": "email",
+              "value": "={{ String($('Inquiry Received').item.json.body?.email ?? '').trim().toLowerCase().slice(0, 200) }}",
+              "type": "string"
+            },
+            {
+              "id": "n-company",
+              "name": "company",
+              "value": "={{ String($('Inquiry Received').item.json.body?.company ?? '').replace(/[\\r\\n\\t]+/g, ' ').trim().slice(0, 160) }}",
+              "type": "string"
+            },
+            {
+              "id": "n-phone",
+              "name": "phone",
+              "value": "={{ String($('Inquiry Received').item.json.body?.phone ?? '').replace(/[^0-9+()\\- .]/g, '').trim().slice(0, 40) }}",
+              "type": "string"
+            },
+            {
+              "id": "n-message",
+              "name": "message",
+              "value": "={{ String($('Inquiry Received').item.json.body?.message ?? '').trim().slice(0, 5000) }}",
+              "type": "string"
+            },
+            {
+              "id": "n-source",
+              "name": "source",
+              "value": "={{ String($('Inquiry Received').item.json.body?.source ?? 'website').replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'website' }}",
+              "type": "string"
+            },
+            {
+              "id": "n-honeypot",
+              "name": "website",
+              "value": "={{ String($('Inquiry Received').item.json.body?.website ?? '').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d48e9d8-4ba5-415f-9d24-31807e451124",
+      "name": "Normalize Inquiry",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              },
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$"
+            },
+            {
+              "leftValue": "={{ $json.message.length }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "rightValue": 10
+            },
+            {
+              "leftValue": "={{ $json.website }}",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2c0d252d-1331-4a20-89f8-957d2221db7a",
+      "name": "Inquiry Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Synthetic classification only. No AI API is called.\nreturn [{json:{text:JSON.stringify({topic:'General inquiry',urgency:'normal',confidence:1,is_spam:false}),sandbox_mock:true}}];"
+      },
+      "id": "0ba8a91f-f0d6-4d15-b0ac-47c14a5b0463",
+      "name": "Classify with Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        112
+      ],
+      "notes": "Mock output for plumbing tests; not evidence of AI classification quality."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inq = $('Normalize Inquiry').first().json;\nconst settings = $('Load Client Settings').first().json;\nconst raw = $input.first().json;\nlet ai = null;\ntry { ai = JSON.parse(raw.text); } catch {}\nconst trusted = ai && typeof ai.confidence === 'number' && Number.isFinite(ai.confidence) && ai.confidence >= 0.7 && ai.confidence <= 1;\nconst urgency = trusted && ['urgent','normal','low'].includes(ai.urgency) ? ai.urgency : 'normal';\nconst spam = !!(trusted && ai.is_spam === true);\nconst clean = (v, max) => String(v ?? '').replace(/[\\r\\n\\t]+/g,' ').trim().slice(0,max);\nconst esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\nconst now = $now.toISO();\nconst ref = 'SANDBOX-' + $execution.id;\nconst rec = {\n inquiry_ref:ref,received_at:now,name:inq.name,email:inq.email,company:inq.company,phone:inq.phone,\n message:inq.message,source:'sandbox',topic:trusted?clean(ai.topic || 'General inquiry',80):'General inquiry',\n urgency,is_spam:spam,status:spam?'spam':trusted?'new':'manual_review',\n ai_status:trusted?'sandbox_mock':'ai_unavailable',\n owner_email:settings.owner_email,\n ack_subject:'We received your inquiry',\n ack_html:'<p>Thank you for contacting '+esc(settings.firm_name)+'. Your message has been received.</p><p>Reference: '+esc(ref)+'</p>',\n alert_subject:'[SANDBOX] Inquiry '+ref,\n alert_html:'<p>From: '+esc(inq.name)+' &lt;'+esc(inq.email)+'&gt;</p><blockquote>'+esc(inq.message)+'</blockquote>',\n sandbox_only:true\n};\nreturn [{json:rec}];"
+      },
+      "id": "bf4e8362-4d18-4241-9016-2254c3eea91e",
+      "name": "Build Inquiry Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{ok:false,sandbox_only:true,error:\"Invalid inquiry\"}}];"
+      },
+      "id": "ccf2b6fb-34fb-4362-8af6-0fd53dd241c2",
+      "name": "Reject Invalid Inquiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{ok:false,sandbox_only:true,error:\"Unauthorized\"}}];"
+      },
+      "id": "1aaacec1-1fde-4bf5-bac7-bfc731384fe0",
+      "name": "Reject Unknown Sender",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "skyline_sandbox_inquiries"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $json.inquiry_ref }}",
+            "received_at": "={{ $json.received_at }}",
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}",
+            "company": "={{ $json.company }}",
+            "phone": "={{ $json.phone }}",
+            "message": "={{ $json.message }}",
+            "source": "={{ $json.source }}",
+            "topic": "={{ $json.topic }}",
+            "urgency": "={{ $json.urgency }}",
+            "is_spam": "={{ $json.is_spam }}",
+            "status": "={{ $json.status }}",
+            "ai_status": "={{ $json.ai_status }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "e9d82172-81cd-4942-8ef5-4a8894e81e12",
+      "name": "Save Inquiry",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r=$('Build Inquiry Record').first().json;\nreturn [{json:{ok:true,sandbox_only:true,ref:r.inquiry_ref,delivery_status:'not_sent'}}];"
+      },
+      "id": "8436e34d-9989-4c7e-978b-362a678eb88e",
+      "name": "Confirm Receipt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "skyline_sandbox_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $('Build Inquiry Record').item.json.inquiry_ref }}",
+            "event": "received",
+            "detail": "={{ $(\"Build Inquiry Record\").item.json.ai_status }} · {{ $(\"Build Inquiry Record\").item.json.topic }} · {{ $(\"Build Inquiry Record\").item.json.urgency }}{{ $(\"Build Inquiry Record\").item.json.is_spam ? \" · spam\" : \"\" }}",
+            "at": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "4691a41d-f8c1-4c09-9d01-6b37fa119229",
+      "name": "Log Received Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Build Inquiry Record').first().json.is_spam }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "10202aa8-928e-41ce-8b81-dc716d250419",
+      "name": "Real Inquiry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "skyline_sandbox_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $('Build Inquiry Record').item.json.inquiry_ref }}",
+            "event": "sandbox_preview",
+            "detail": "Owner and acknowledgement previews captured; no email sent.",
+            "at": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "c082f8d1-9d71-4416-bc8c-c5548a27b36b",
+      "name": "Log Notified Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2208,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Skyline sandbox — manual execution only\nSynthetic inquiry → validate → mock classification → SAVE → email previews.\nCreate skyline_sandbox_inquiries and skyline_sandbox_events first (see README).\nNo webhooks, credentials, AI calls or outgoing email. Each execution is a fresh synthetic inquiry.\nDuplicate submission handling, live classifier and email retries remain production blockers.",
+        "height": 260,
+        "width": 520,
+        "color": 7
+      },
+      "id": "fd77ed58-4f2c-4a3b-9b1f-627dc0ee1d5e",
+      "name": "Sticky Note 498107e8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('Build Inquiry Record').first().json;\nreturn [{json:{sandbox_only:true,delivery_status:'not_sent',kind:'owner_alert',intended_to:r.owner_email,subject:r.alert_subject,html:r.alert_html}}];"
+      },
+      "id": "8bdd9108-3be8-414e-873a-101baa7274d0",
+      "name": "Alert Owner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        272
+      ],
+      "notes": "Sends the owner alert through Resend from the firm's own address."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r = $('Build Inquiry Record').first().json;\nreturn [{json:{sandbox_only:true,delivery_status:'not_sent',kind:'acknowledgement',intended_to:r.email,subject:r.ack_subject,html:r.ack_html}}];"
+      },
+      "id": "b9a959ff-a3cc-43b8-a28f-24f21fbd2e06",
+      "name": "Send Acknowledgement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        272
+      ],
+      "notes": "Acknowledges the prospect from contact@; replies route through Cloudflare to the owner inbox."
+    }
+  ],
+  "connections": {
+    "Inquiry Received": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Intake Key Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intake Key Valid?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Unknown Sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Inquiry Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inquiry Valid?": {
+      "main": [
+        [
+          {
+            "node": "Classify with Claude",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Invalid Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify with Claude": {
+      "main": [
+        [
+          {
+            "node": "Build Inquiry Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Inquiry Record": {
+      "main": [
+        [
+          {
+            "node": "Save Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Confirm Receipt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Received Event",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Real Inquiry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Real Inquiry?": {
+      "main": [
+        [
+          {
+            "node": "Alert Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Owner": {
+      "main": [
+        [
+          {
+            "node": "Send Acknowledgement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Acknowledgement": {
+      "main": [
+        [
+          {
+            "node": "Log Notified Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Sandbox": {
+      "main": [
+        [
+          {
+            "node": "Inquiry Received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York"
+  },
+  "description": "Manual-only sandbox derived from Benjaire Flow. Synthetic data, dedicated sandbox tables, mocked classification and email previews. No external messages.",
+  "active": false
+}
