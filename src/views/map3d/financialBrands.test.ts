@@ -12,4 +12,8 @@ for(const [id,name,x,z,rise]of stable)it(`brands ${id} without changing its plac
 it('keeps upper signs clear of windows, doors and structural corners',()=>{
  for(const height of [8,10,14]){const p=financialSignPlacement(height,FINANCIAL.towerDepth,FINANCIAL.towerWidth);expect(p.bottom).toBeGreaterThan(1.1);expect(p.top).toBeLessThan(height);expect(height-FINANCIAL_SIGN.windowSetback+.25).toBeLessThan(p.bottom);expect(p.frontZ).toBeGreaterThan(FINANCIAL.towerDepth/2+.0675);expect(p.frontX).toBeGreaterThan(FINANCIAL.towerWidth/2+.0675);expect(FINANCIAL_SIGN.width).toBeLessThan(FINANCIAL.towerWidth-.1);}
 });
-it('retains the other six building identities',()=>expect(FINANCIAL_BUILDINGS.filter(b=>!FINANCIAL_BRANDS.some(v=>v.id===b.id)).map(b=>b.name)).toEqual(['Residence','Spending & Budget','Bills & Records','Business Finance','Financial Planning','Harbor Residence']));
+it('brands the existing Business Finance tower as Benjaire Finance without changing its stable slot',()=>{
+ const b=FINANCIAL_BUILDINGS.find(b=>b.id==='business-finance')!;expect(b).toMatchObject({name:'Benjaire Finance',x:-13,z:4.2,rise:1.35});
+ const brand=FINANCIAL_BRANDS.find(b=>b.id==='business-finance')!;expect(brand).toMatchObject({body:'#f3f3f1',accent:'#1f2124',ownedBrand:true,website:'https://benjaire.com'});
+ expect(BUILDING_INTERIORS['Business Finance']).toBe(BUILDING_INTERIORS['Benjaire Finance']);
+});

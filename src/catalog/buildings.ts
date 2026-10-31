@@ -1,4 +1,4 @@
-import {financialBrand,FINANCIAL_BRANDS} from "../views/map3d/financialBrands";
+import {financialBrand,FINANCIAL_BRANDS,financialInteriorKey} from "../views/map3d/financialBrands";
 import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AIRPORT_BUILDINGS} from "../views/map3d/airportBuildings";
 /** Shared building identity for the inspector and its prepared interior spaces. */
@@ -15,11 +15,11 @@ export const BUILDING_INTERIORS:Record<string,{accent:string;subtitle:string;roo
   "Wells Fargo":{accent:"#a71d30",subtitle:"BANKING & FINANCIAL OPERATIONS",rooms:["Client advisory","Accounts & payments","Risk review","Financial operations"]},
 };
 
-for(const b of FINANCIAL_BUILDINGS){const brand=financialBrand(b.id);BUILDING_INTERIORS[b.name]={accent:brand?.accent??"#84b8bf",subtitle:brand?.subtitle??"FINANCIAL DISTRICT · PLANNED",rooms:brand?[...brand.rooms]:["Reception & records","Private review","Planning lounge",`${b.role} study`]};}
+for(const b of FINANCIAL_BUILDINGS){const brand=financialBrand(b.id);BUILDING_INTERIORS[financialInteriorKey(b.id)]={accent:brand?.accent??"#84b8bf",subtitle:brand?.subtitle??"FINANCIAL DISTRICT · PLANNED",rooms:brand?[...brand.rooms]:["Reception & records","Private review","Planning lounge",`${b.role} study`]};if(b.name!=="Wells Fargo")BUILDING_INTERIORS[b.name]=BUILDING_INTERIORS[financialInteriorKey(b.id)];}
 // Keep pre-brand interior routes usable without changing stable building IDs.
-for(const brand of FINANCIAL_BRANDS)BUILDING_INTERIORS[brand.legacyName]=BUILDING_INTERIORS[brand.name];
+for(const brand of FINANCIAL_BRANDS){const interior=BUILDING_INTERIORS[financialInteriorKey(brand.id)];BUILDING_INTERIORS[brand.legacyName]=interior;if(brand.id!=="records")BUILDING_INTERIORS[brand.name]=interior;}
 
-for(const b of AIRPORT_BUILDINGS)BUILDING_INTERIORS[b.name]={accent:"#83bed2",subtitle:b.agent.toUpperCase(),rooms:[...b.rooms]};
+for(const b of AIRPORT_BUILDINGS)BUILDING_INTERIORS[financialInteriorKey(b.id)]={accent:"#83bed2",subtitle:b.agent.toUpperCase(),rooms:[...b.rooms]};
 
 export const SKYLINE_BUILDING_PREFIX="skyline:building:";
 export const skylineBuildingId=(name:string)=>`${SKYLINE_BUILDING_PREFIX}${name}`;

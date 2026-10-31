@@ -1,3 +1,4 @@
+import {financialDimensions} from './financialArchitecture';
 import type {Scene3D} from './scene';
 import {towerRing,type Pt,type Box} from './roads';
 import {distanceToRoad} from './highway';
@@ -7,7 +8,7 @@ import {HILLS} from './hillsPlan';
 export const STREET_LIGHT={spacing:3.6,highwaySpacing:6,minSeparation:1.2,junctionClearance:.8,height:.95,highwayHeight:1.35,poleRadius:.025,maxFixtures:420} as const;
 export interface StreetLamp {x:number;z:number;roadX:number;roadZ:number;yaw:number;height:number;highway:boolean}
 export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size+.25,d:b.size+.25}));
- if(s.financial){const f=s.financial;boxes.push(...f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:3.4,d:3})),{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,w:f.park.w,d:f.park.d});}
+ if(s.financial){const f=s.financial;boxes.push(...f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})),{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,w:f.park.w,d:f.park.d});}
  if(s.hills){const h=s.hills;for(const b of [HILLS.mansion,HILLS.garage,HILLS.pool,HILLS.court])boxes.push({x:h.x+b.x,z:h.z+b.z,w:b.w+.2,d:b.d+.2});}
  if(s.community)boxes.push(...s.community.buildings.map(b=>({x:s.community!.x+b.x,z:s.community!.z+b.z,w:b.w+.2,d:b.d+.2})));
  if(s.dealership){const d=s.dealership;boxes.push({x:d.x+d.w/2,z:d.z+d.d/2,w:d.w,d:d.d});}

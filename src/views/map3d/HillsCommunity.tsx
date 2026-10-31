@@ -1,3 +1,4 @@
+import {SIMULATED_COMMUTERS,commuterLane} from './districtLifePlan';
 import {useMemo,useRef,useEffect} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
@@ -95,9 +96,9 @@ export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPl
  for(const path of [p.financialWalk,p.hillsWalk])for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0)strip([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',paths);
  for(const path of [p.financialWalk,p.hillsWalk]){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,night,palette,deck]);
- const commutes=useMemo(()=>p?[0,1,2].map(i=>p.hillsWalk.map((point,j)=>j<2?[point[0]-12+i*6,point[1],point[2]] as Point3:point)):[],[p]);
+ const commutes=useMemo(()=>p?Array.from({length:SIMULATED_COMMUTERS},(_,i)=>p.hillsWalk.map((point,j)=>j<2?[point[0]-12+(i%3)*6,point[1],point[2]] as Point3:point)):[],[p]);
  useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);const state=railState(elapsed.current,p.length),commuter=commuterStage(state);riders.current.forEach(r=>{if(r)r.visible=commuter.aboard;});carriages.current.forEach((car,i)=>{if(!car)return;const q=railPoint(deck,(deck.length-p.length)/2+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(i%2?1:-1);});
-  people.current.forEach((person,i)=>{if(!person)return;person.visible=!commuter.aboard;if(!person.visible)return;const path=commuter.hills?commutes[i]:p.financialWalk,point=walkPoint(path,commuter.progress);person.position.set(point[0]+(i-1)*.13,TERRACE_H+(point[1]>0?Math.ceil(point[1]/(C.platformRise/15))*(C.platformRise/15)+.02:.105),point[2]);});
+  people.current.forEach((person,i)=>{if(!person)return;person.visible=!commuter.aboard;if(!person.visible)return;const path=commuter.hills?commutes[i]:p.financialWalk,point=walkPoint(path,commuter.progress);person.position.set(point[0]+commuterLane(i),TERRACE_H+(point[1]>0?Math.ceil(point[1]/(C.platformRise/15))*(C.platformRise/15)+.02:.105),point[2]);});
  });
  if(!p||!deck)return null;
  return <><Instanced items={[{p:[p.financialLand.x+p.financialLand.w/2,0,p.financialLand.z+p.financialLand.d/2],s:[p.financialLand.w,TERRACE_H,p.financialLand.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
@@ -105,9 +106,9 @@ export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPl
   <Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,0],s:[.52,.16,1.02],c:'#f0f0e5'},{p:[0,.65,0],s:[.48,.07,.96],c:palette.green},{p:[0,.04,0],s:[.55,.06,1],c:palette.gold},{p:[0,-.055,0],s:[.42,.06,.65],c:'#394b49'}]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.266,.22,0],s:[.015,.33,.85],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
   {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.275,.16,.24]} rotation={[0,side*Math.PI/2,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
-  <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,.16,0],s:[.06,.09,.06],c:palette.green}]}/><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.25,0],s:[.065,.065,.065],c:'#c6ad8f'}]}/></group>
+  <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.ball} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
   {i!==1&&<Instanced geometry={g.ball} material={m.plain} items={[{p:[0,0,i===0?-.49:.49],s:[.5,.6,.25],c:'#f0f0e5'}]}/>}
  </group>;})}
- {[0,1,2].map(i=><group key={i} ref={node=>{people.current[i]=node;}} position={[p.hillsWalk[p.hillsWalk.length-1][0]+(i-1)*.13,TERRACE_H+C.platformRise+.02,p.hillsWalk[p.hillsWalk.length-1][2]]}><mesh geometry={g.box} material={m.plain} scale={[.09,.22,.08]}><meshStandardMaterial color={['#304d67','#8c7760','#64856c'][i]}/></mesh><mesh geometry={g.ball} position={[0,.22,0]} scale={[.1,.1,.1]} material={m.plain}/></group>)}
+ {Array.from({length:SIMULATED_COMMUTERS},(_,i)=><group name="rail-commuter" key={i} ref={node=>{people.current[i]=node;}} position={[p.hillsWalk[p.hillsWalk.length-1][0]+commuterLane(i),TERRACE_H+C.platformRise+.02,p.hillsWalk[p.hillsWalk.length-1][2]]}><mesh geometry={g.box} material={m.plain} scale={[.07,.16,.06]}><meshStandardMaterial color={['#304d67','#8c7760','#64856c'][i%3]}/></mesh><mesh geometry={g.ball} position={[0,.21,0]} scale={[.035,.035,.035]} material={m.plain}/></group>)}
  </>;
 }

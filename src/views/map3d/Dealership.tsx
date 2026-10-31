@@ -1,3 +1,4 @@
+import {CLEAR_ARCHITECTURAL_GLASS} from './architecturalGlass';
 import {MODELS,SCALE} from "./vehicleModels";
 import {TRANSPORT} from "./transportScale";
 import {useEffect,useMemo,useRef} from 'react';
@@ -30,7 +31,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
  const glow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#fff1cd',emissive:'#ffdca1',emissiveIntensity:.1}),[]);
  useEffect(()=>{glow.emissiveIntensity=night?1.7:.08;},[glow,night]);
  useEffect(()=>()=>glow.dispose(),[glow]);
- const glass=useMemo(()=>new THREE.MeshPhysicalMaterial({color:'#b4d3df',transparent:true,opacity:.09,roughness:.12,metalness:.1,depthWrite:false}),[]);
+ const glass=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
  useEffect(()=>()=>{sign.texture.dispose();sign.material.dispose();sign.geometry.dispose();glass.dispose();},[sign,glass]);
  const parts=useMemo(()=>{
   const p:Parts={solid:[],round:[],lights:[],glass:[]};if(!a)return p;
@@ -47,9 +48,8 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   for(const yy of [.1,...levels,H-.4])p.solid.push(box(5,yy,3.72,7.6,.035,.055,'#34464f'));
   // Individual front panes stop at the double entrance; side panes retain service access.
   for(const [cx,w] of [[2.85,3.2],[7.15,3.2]])p.glass.push(box(cx,.14,3.72,w,H-.55,.014,'#ffffff'));
-  p.glass.push(box(5,1.3,3.72,.96,H-1.7,.014,'#ffffff'),box(5,.14,3.74,.84,1.12,.018,'#ffffff'));
-  for(const xx of [4.56,5,5.44])p.solid.push(box(xx,.1,3.76,.025,1.2,.03,'#26363e'));
-  for(const xx of [4.9,5.1])p.solid.push(box(xx,.55,3.79,.018,.2,.025,'#b6a172'));
+  p.glass.push(box(5,1.3,3.72,.96,H-1.7,.014,'#ffffff'));
+  for(const xx of [4.56,5.44])p.solid.push(box(xx,.1,3.76,.025,1.2,.03,'#26363e'));
   p.solid.push(box(5,1.32,3.98,1.2,.055,.6,'#b6c1c7'));
   p.glass.push(box(1.2,.14,2.1,.014,H-.55,3.1,'#ffffff'));
   for(const zz of [1.02,3.17])p.glass.push(box(8.8,.14,zz,.014,H-.55,1,'#ffffff'));
