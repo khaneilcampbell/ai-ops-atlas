@@ -60,7 +60,7 @@ export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): Airpo
 export interface FlightObstacle { x:number; z:number; hw:number; hd:number; h:number }
 export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number; obstacles?:FlightObstacle[] }
 /** Takeoff timing in departure seconds: line up, accelerate, rotate, lift off, then climb out. */
-export const TAKEOFF={hold:2,accel:.32,liftoff:9.5,rotate:1.1,climbAccel:.25,climbTop:30,climbRamp:4,rotationPitch:.17,cruisePitch:.04,maxPitch:.3,maxBank:.42,gearUp:1.5,gearTime:2,mainGearZ:.5} as const;
+export const TAKEOFF={hold:2,accel:.32,liftoff:9.5,rotate:1.1,climbAccel:.25,climbTop:30,climbRamp:4,rotationPitch:.17,cruisePitch:.04,maxPitch:.45,maxBank:.42,gearUp:1.5,gearTime:2,mainGearZ:.5} as const;
 const clamp01=(u:number)=>Math.max(0,Math.min(1,u));
 const smooth=(u:number)=>{const v=clamp01(u);return v*v*(3-2*v);};
 const T=TAKEOFF,LIFT_SPEED=T.accel*(T.liftoff-T.hold),LIFT_DISTANCE=.5*T.accel*(T.liftoff-T.hold)**2;
@@ -148,7 +148,8 @@ export function circuitJoin(c:FlightCircuit):JoinTurn{
   options.sort((p,q)=>p.cost-q.cost);
   // Prefer the gentlest climb; climb more steeply only when every smooth turn would pass too low over a tower.
   let chosen:JoinTurn={...options[0].turn,climbTop:CLIMB_TOPS[CLIMB_TOPS.length-1]};
-  search:for(const top of CLIMB_TOPS)for(const o of options)if(climbClears(c,o.turn,top)){chosen={...o.turn,climbTop:top};break search;}
+  // A slightly steeper climb is better than a much tighter turn, so first look only at turns close to the gentlest.
+  search:for(const limit of [options[0].cost*1.4,Infinity])for(const top of CLIMB_TOPS)for(const o of options){if(o.cost>limit)break;if(climbClears(c,o.turn,top)){chosen={...o.turn,climbTop:top};break search;}}
   joinCache.set(c,chosen);return chosen;
 }
 export const circuitJoinAngle=(c:FlightCircuit)=>circuitJoin(c).angle;
