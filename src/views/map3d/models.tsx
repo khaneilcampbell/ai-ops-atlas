@@ -199,7 +199,7 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 const RAIL = "#2f4a3a";
 /** District street paint, shared by the roads and the bridge decks so a street reads as one road. */
 const STREET_ASPHALT = "#424b50";
-const STREET_LINE = "#e1ce8e";
+export const STREET_LINE = "#e1ce8e";
 const STREET_DASH = 0.3;
 const RISE_OF = (len: number) => deckRise(len, len / 2);
 const DECK_T = 0.07;

@@ -7,9 +7,10 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
 import {FINANCIAL as F,financialKey,FINANCIAL_PARK_KEY,type FinancialPlan} from './financialPlan';
 import {TRANSPORT} from './transportScale';
+import {intersectionParts,type financialJunctions} from './junctions';
 import {TERRACE_H} from './scene';
 /** Static instanced skyline; shared windows switch with Atlas day/night preferences. */
-export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:PickHandlerSet;night:boolean}){
+export function FinancialDistrict({plan:a,junctions,g,m,pick,night}:{plan?:FinancialPlan;junctions?:ReturnType<typeof financialJunctions>;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:PickHandlerSet;night:boolean}){
  const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement);return {ivory:css.getPropertyValue('--sage-50').trim()||'#f7f7f0',green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a',water:new THREE.MeshStandardMaterial({color:'#6daeb6',roughness:.35,emissive:'#225d67',emissiveIntensity:0}),window:new THREE.MeshStandardMaterial({color:'#72a7b3',roughness:.36,emissive:'#ffe0a6',emissiveIntensity:0})}},[]);
  useEffect(()=>{materials.window.color.set(night?'#e8d8a9':'#72a7b3');materials.window.emissiveIntensity=night?.65:0;materials.water.emissiveIntensity=night?.2:0},[night,materials]);
  useEffect(()=>()=>{materials.window.dispose();materials.water.dispose()},[materials]);
@@ -19,12 +20,15 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  const pane=(key:string,p:Inst)=>{glass.push(p);keys.push(key)};
 
  // Both blocks share the same local street and waterfront boulevard.
- const center=a.w/2,span=a.w-.4;
- solid.push(box(center,.025,F.streetZ,span,.035,TRANSPORT.cityWidth,'#424b50'),box(center,.065,F.promenadeZ,span,.045,.65,'#e4ddcd'),box(center,.04,F.northWalkZ,span,.045,.6,'#e4ddcd'));
- for(let x=1;x<a.w-1;x+=.7)if(!F.crossings.some(c=>Math.abs(c-x)<.45))solid.push(box(x,.067,F.streetZ,.32,.006,.025,'#e5dfc9'));
- const curbSpans:[number,number][]=[];let previous=.2;
- for(const crossing of F.crossings){curbSpans.push([previous,crossing-.35]);previous=crossing+.35;}curbSpans.push([previous,a.w-.2]);
- for(const z of [F.streetZ-TRANSPORT.cityWidth/2-.04,F.streetZ+TRANSPORT.cityWidth/2+.04])for(const [lo,hi]of curbSpans)solid.push(box((lo+hi)/2,.055,z,hi-lo,.055,.07,'#cfcbbd'));
+ // Side roads meet it at junctions: one clean opening each, with no curb, walk or dash across it.
+ const center=a.w/2,span=a.w-.4,toLocal=([lo,hi]:[number,number]):[number,number]=>[lo-a.x,hi-a.x],local=(junctions?.spans??[]).map(j=>({...j,lo:j.lo-a.x,hi:j.hi-a.x}));
+ const cut=intersectionParts(F.streetZ,.2,a.w-.2,F.crossings,local,{north:F.northWalkZ,south:F.promenadeZ},{north:.6,south:.65},{north:(junctions?.walks.north??[]).map(toLocal),south:(junctions?.walks.south??[]).map(toLocal)});
+ solid.push(box(center,.025,F.streetZ,span,.035,TRANSPORT.cityWidth,'#424b50'));
+ for(const [lo,hi] of cut.walks.south)solid.push(box((lo+hi)/2,.065,F.promenadeZ,hi-lo,.045,.65,'#e4ddcd'));
+ for(const [lo,hi] of cut.walks.north)solid.push(box((lo+hi)/2,.04,F.northWalkZ,hi-lo,.045,.6,'#e4ddcd'));
+ for(const d of cut.dashes)solid.push(box(d,.067,F.streetZ,.32,.006,.025,'#e5dfc9'));
+ for(const [z,spans] of [[F.streetZ-TRANSPORT.cityWidth/2-.04,cut.curbs.north],[F.streetZ+TRANSPORT.cityWidth/2+.04,cut.curbs.south]] as const)for(const [lo,hi]of spans)solid.push(box((lo+hi)/2,.055,z,hi-lo,.055,.07,'#cfcbbd'));
+ for(const p of cut.patches)solid.push(box(p.x,p.y,p.z,p.w,p.h,p.d,p.c));
  for(const x of F.crossings){solid.push(box(x,.04,12.15,.6,.045,.4,'#e4ddcd'),box(x,.055,13.6,.6,.045,1.1,'#e4ddcd'));for(let z=12.42;z<=12.98;z+=.12)solid.push(box(x,.069,z,.55,.008,.055,'#f7f7f0'));}
  for(const b of a.buildings){
   const dimensions=financialDimensions(b.id);
@@ -83,7 +87,7 @@ export function FinancialDistrict({plan:a,g,m,pick,night}:{plan?:FinancialPlan;g
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
  for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.14,14.5,.06,.12,.06,'#ffffff'));
  return {solid,glass,clearGlass,glow,clearKeys,bevelled,plants,lights,keys};
- },[a,materials]);
+ },[a,junctions,materials]);
  const windows=useMemo(()=>parts.glass.map(p=>({...p,c:night?'#ffffff':p.c})),[parts,night]);
  const bevelGeometry=useMemo(()=>{
   const cx=.34/3.6,cz=.34/2.8,shape=new THREE.Shape();

@@ -76,9 +76,14 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
    }
    runs.push({a,b,width,beam});
   }
-  for(const {a,b,width,beam} of runs){
+  // At a bend each run reaches past the corner by half its width times the tangent of half the turn,
+  // so the outside of every bend is closed instead of showing a notch of grass.
+  const heading=(q:Run)=>Math.atan2(q.b[1]-q.a[1],q.b[0]-q.a[0]),joined=(p:Run,q:Run)=>Math.hypot(p.b[0]-q.a[0],p.b[1]-q.a[1])<1e-3;
+  const turn=(p:Run|undefined,q:Run|undefined)=>{if(!p||!q||!joined(p,q))return 0;const d=heading(q)-heading(p);return Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));};
+  for(const [i,{a,b,width,beam}] of runs.entries()){
+   const reach=Math.min(.3,width/2*Math.tan(Math.max(turn(runs[i-1],runs[i]),turn(runs[i],runs[i+1]))/2));
    const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2,length=Math.hypot(b[0]-a[0],b[1]-a[1]),r=Math.atan2(b[0]-a[0],b[1]-a[1]);
-   out.push({p:[x,TERRACE_H+.025,z],s:[width,.06,length+.035],r,c:path===plan.highway?"#343d3e":"#424b50"});
+   out.push({p:[x,TERRACE_H+.025,z],s:[width,.06,length+.035+2*reach],r,c:path===plan.highway?"#343d3e":"#424b50"});
    if(beam)out.push({p:[x,TERRACE_H-.09,z],s:[width+.08,.12,length+.035],r,c:"#bcb9aa"});
   }
  }
