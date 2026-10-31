@@ -2,7 +2,8 @@ import {ACCESS,planHighwayAccess,type HighwayAccess} from "./highwayAccess";
 import {routeAround} from "./routing";
 import {airportCargoPoint,airportFootprint} from "./airport";
 import {pathClear,type CarBridge,type Box} from "./roads";
-import {HIGHWAY,roundedRoad,lanePath,roadWidthAt,roadIntersections,distanceToRoad,closedRoadArc} from "./highway";
+import {TRANSPORT} from "./transportScale";
+import {HIGHWAY,highwayShare,streetBlend,roundedRoad,lanePath,roadWidthAt,roadIntersections,distanceToRoad,closedRoadArc} from "./highway";
 import {cityPerimeter,type CompactParcels} from './cityPerimeter';
 import type {Scene3D} from "./scene";
 import type {VehiclePlan,Leg,Pt} from "./vehicles";
@@ -16,12 +17,19 @@ export function freightSpeed(point:Pt,highway:Pt[]):number{
 export const FREIGHT_STREET_SNAP=1;
 /** Turning radius where the truck joins or leaves a shared street, so a whole semi stays on the road. */
 export const FREIGHT_STREET_TURN=1.5;
+/** Wider reach for highway collectors: a parallel road this close (centre to centre) is merged into it. */
+export const FREIGHT_COLLECTOR_SNAP=2.4;
 /** Snap points that hug a street onto it, keep one entry and one exit per shared run, and report those joins. */
-export function snapToStreets(route:Pt[],streets:Pt[][],snap:number):{route:Pt[];joins:Pt[]}{
+export function snapToStreets(route:Pt[],streets:Pt[][],snap:number,keepShape=false):{route:Pt[];joins:Pt[]}{
  if(!streets.length)return {route,joins:[]};
- const project=(p:Pt):Pt|undefined=>{let best:Pt|undefined,dist=snap;for(const st of streets)for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1))),q:Pt=[a[0]+dx*t,a[1]+dz*t],d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d<dist){dist=d;best=q;}}return best;};
- const out:Pt[]=[],joins:Pt[]=[];let run:Pt[]=[];
- const flush=()=>{if(!run.length)return;out.push(run[0]);if(run.length>1)out.push(run[run.length-1]);joins.push(run[0],run[run.length-1]);run=[];};
+ type Hit={q:Pt;street:number;at:number;p:Pt};
+ const project=(p:Pt):Hit|undefined=>{let best:Hit|undefined,dist=snap;streets.forEach((st,s)=>{let along=0;for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1))),q:Pt=[a[0]+dx*t,a[1]+dz*t],d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d<dist){dist=d;best={q,street:s,at:along+len*t,p};}along+=len;}});return best;};
+ // keepShape: a shared run follows the street's own bends between the entry and exit points.
+ const between=(a:Hit,b:Hit):Pt[]=>{const st=streets[a.street],out:Pt[]=[];let along=0;const inner:{p:Pt;at:number}[]=[];for(let i=0;i<st.length;i++){if(i)along+=Math.hypot(st[i][0]-st[i-1][0],st[i][1]-st[i-1][1]);if(along>Math.min(a.at,b.at)+1e-6&&along<Math.max(a.at,b.at)-1e-6)inner.push({p:st[i],at:along});}if(a.at>b.at)inner.reverse();out.push(a.q,...inner.map(v=>v.p),b.q);return out;};
+ const out:Pt[]=[],joins:Pt[]=[];let run:Hit[]=[];
+ // keepShape also keeps the truck's own first and last points, so it steps straight across to the
+ // collector and back where its original road was clear, never cutting a diagonal through a building.
+ const flush=()=>{if(!run.length)return;const first=run[0],last=run[run.length-1];if(keepShape&&first.street===last.street)out.push(first.p,...between(first,last),last.p);else{out.push(first.q);if(run.length>1)out.push(last.q);}joins.push(first.q,last.q);run=[];};
  for(const p of route){const q=project(p);if(q)run.push(q);else{flush();out.push(p);}}
  flush();
  return {route:out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>1e-6),joins:joins.filter((p,i,a)=>a.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<1e-6)===i)};
@@ -36,6 +44,29 @@ export function roundJoins(route:Pt[],joins:Pt[],radius:number):Pt[]{
   }else out.push(p);
  }
  return out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>1e-6);
+}
+/**
+ * A short hop off one street onto another that crosses it becomes a plain corner at the crossing,
+ * so the truck turns at the intersection instead of cutting a curve across the pavement.
+ */
+export function cornerAtCrossings(route:Pt[],streets:Pt[][],reach=4):{route:Pt[];corners:Pt[]}{
+ const on=(p:Pt)=>streets.findIndex(st=>distanceToRoad(p,st)<1e-6),out:Pt[]=[],corners:Pt[]=[];
+ for(let i=0;i<route.length;i++){
+  out.push(route[i]);const s=on(route[i]);
+  if(s<0||i+1>=route.length||distanceToRoad(route[i+1],streets[s])<1e-6)continue;
+  let j=i+1,length=0;while(j<route.length&&on(route[j])<0){length+=Math.hypot(route[j][0]-route[j-1][0],route[j][1]-route[j-1][1]);j++;}
+  if(j>=route.length)continue;length+=Math.hypot(route[j][0]-route[j-1][0],route[j][1]-route[j-1][1]);
+  const t=on(route[j]);if(t===s||t<0||length>reach)continue;
+  const x=roadIntersections(streets[s],streets[t]).sort((p,q)=>Math.hypot(p[0]-route[i][0],p[1]-route[i][1])-Math.hypot(q[0]-route[i][0],q[1]-route[i][1]))[0];
+  if(!x||Math.hypot(x[0]-route[i][0],x[1]-route[i][1])>reach||Math.hypot(x[0]-route[j][0],x[1]-route[j][1])>reach)continue;
+  out.push(x);corners.push(x);i=j-1;
+ }
+ return {route:out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>1e-6),corners};
+}
+/** Where a route crosses a street, ignoring stretches where it runs along that street. */
+function crossings(route:Pt[],street:Pt[]):Pt[]{
+ const off=route.slice(1).map((b,i):Pt[]=>[route[i],b]).filter(([a,b])=>distanceToRoad([(a[0]+b[0])/2,(a[1]+b[1])/2],street)>1e-6);
+ return off.flatMap(seg=>roadIntersections(seg,street)).filter((p,i,all)=>all.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<.01)===i);
 }
 export interface FreightPlan {lot:{x:number;z:number};route:Pt[];
  /** District streets the truck shares; route segments on them are not drawn a second time. */
@@ -67,9 +98,25 @@ export function planFreight(scene:Pick<Scene3D,"airport"|"towers"|"kiosks"|"reta
  const routed=[HIGHWAY.cornerRadius,1.5].map(r=>[...roundedRoad([...outbound,[mergeX+3,top],exit],r),...sharedHighway.slice(1,-1),...roundedRoad([sharedHighway[sharedHighway.length-2],entry,apron,target],r).slice(1)]).find(safe);if(!routed)return;
  // A truck that runs beside a district street drives on that street instead of on a second,
  // overlapping road: points that hug it snap onto it, and the run between joins is one straight.
- const streets=scene.streets??[],snapped=snapToStreets(routed,streets,FREIGHT_STREET_SNAP),shared={...snapped,route:roundJoins(snapped.route,snapped.joins,FREIGHT_STREET_TURN)};
- const route=shared.route.length>1&&safe(shared.route.filter(p=>streets.every(st=>distanceToRoad(p,st)>1e-6)))?shared.route:routed;
- const streetJoins=route===shared.route?shared.joins:[];
+ const airportLand=airportFootprint(a),stadium=scene.stadium;
+ const access=planHighwayAccess(highway,scene.connections??[],[...obstacles,{x:airportLand.x+airportLand.w/2,z:airportLand.z+airportLand.d/2,w:airportLand.w,d:airportLand.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])],scene.streets??[],scene.land??[]);
+ // Highway collectors are streets too: a truck that would run beside one (two roads side by side
+ // between towers) drives on the collector instead, so each gap between buildings has one road.
+ const collectors=access.map(x=>x.collector),districtStreets=scene.streets??[];
+ const share=(withCollectors:boolean)=>{
+  const onCollector=withCollectors?snapToStreets(routed,collectors,FREIGHT_COLLECTOR_SNAP,true):{route:routed,joins:[] as Pt[]};
+  const onStreets=snapToStreets(onCollector.route,districtStreets,FREIGHT_STREET_SNAP),joins=[...onCollector.joins,...onStreets.joins];
+  const all=withCollectors?[...districtStreets,...collectors]:districtStreets,turned=cornerAtCrossings(onStreets.route,all);
+  return {joins:[...joins,...turned.corners],streets:all,route:roundJoins(turned.route,joins.filter(j=>!turned.corners.some(c=>Math.hypot(c[0]-j[0],c[1]-j[1])<1e-6)),FREIGHT_STREET_TURN)};
+ };
+ // Prefer sharing collectors and streets; fall back to streets only, then to the routed road.
+ // Only the stretches off shared streets need checking; each keeps its own bend widths.
+ // Clearance uses the width actually drawn: street size in town, highway size near the highway.
+ const dense=(path:Pt[])=>path.flatMap((p,i):Pt[]=>{if(!i)return [p];const a=path[i-1],n=Math.max(1,Math.ceil(Math.hypot(p[0]-a[0],p[1]-a[1])/.3));return Array.from({length:n},(_,j):Pt=>[a[0]+(p[0]-a[0])*(j+1)/n,a[1]+(p[1]-a[1])*(j+1)/n]);});
+ const safeOff=(raw:Pt[],shared:Pt[][])=>{const path=dense(raw),k=highwayShare(path,land,highway);return path.slice(1).every((b,i)=>{const a=path[i],m:Pt=[(a[0]+b[0])/2,(a[1]+b[1])/2];if(shared.some(st=>distanceToRoad(m,st)<1e-6))return true;const w=streetBlend(TRANSPORT.cityWidth,roadWidthAt(path,i+1),Math.max(k[i],k[i+1])),n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.1);return Array.from({length:n+1},(_,j)=>clear(a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n,w/2+.03)).every(Boolean);});};
+ const shared=[share(true),share(false)].find(c=>c.route.length>1&&safeOff(c.route,c.streets));
+ const route=shared?.route??routed,streets=shared?.streets??districtStreets;
+ const streetJoins=shared?.joins??[];
  // A short branch joins an existing district street; freight itself uses the wider service road.
  const candidates=(scene.carBridges??[]).flatMap(b=>b.roads).flatMap(path=>path.slice(1).flatMap((b,i)=>{
   const a=path[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((lot![0]-a[0])*dx+(lot![1]-a[1])*dz)/(dx*dx+dz*dz||1)));
@@ -79,10 +126,10 @@ export function planFreight(scene:Pick<Scene3D,"airport"|"towers"|"kiosks"|"reta
  const cityAccess=ordered.find(p=>pathClear(p,obstacles,.26))??ordered.slice(0,4).map(p=>findPath(lot!,p[p.length-1],.26)).find((p):p is Pt[]=>!!p)??[];
  function distance(p:Pt[]){return p.slice(1).reduce((sum,b,i)=>sum+Math.hypot(b[0]-p[i][0],b[1]-p[i][1]),0);}
 
- const airportLand=airportFootprint(a),stadium=scene.stadium;
- const access=planHighwayAccess(highway,scene.connections??[],[...obstacles,{x:airportLand.x+airportLand.w/2,z:airportLand.z+airportLand.d/2,w:airportLand.w,d:airportLand.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]);
  const freightMouths=route.filter((p,i)=>distanceToRoad(p,highway)<.001&&((i>0&&distanceToRoad(route[i-1],highway)>.001)||(i+1<route.length&&distanceToRoad(route[i+1],highway)>.001)));
- const legs:Leg[]=[];const hold=(p:Pt)=>legs.push({a:p,b:p,ya:.03,yb:.03,dur:8,hold:true});hold(lanePath(route)[0]);
- const drive=(path:Pt[])=>{for(let i=1;i<path.length;i++)legs.push({a:path[i-1],b:path[i],ya:.03,yb:.03,dur:Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1])/freightSpeed([(path[i][0]+path[i-1][0])/2,(path[i][1]+path[i-1][1])/2],highway),hold:false});};drive(lanePath(route));hold(route[route.length-1]);drive(lanePath([...route].reverse()));
- return {lot:{x:lot[0],z:lot[1]},route,streets,highway,cityAccess,land,access,localJunctions:[...streetJoins,...(route===shared.route?streets.flatMap(st=>roadIntersections(route,st)):[]),...access.map(a=>a.junction),...access.flatMap(a=>roadIntersections(a.collector,route)),...[...(scene.carBridges??[]).flatMap(b=>b.roads.flatMap(p=>roadIntersections(route,p))),...(scene.connections??[]).flatMap(l=>roadIntersections(route,l.road))]],exits:[...access.flatMap(a=>a.mouths),...freightMouths,...(scene.connections??[]).flatMap(l=>roadIntersections(highway,l.road))],truck:{id:"canva-airport-freight",kind:"semi",color:"#294237",legs,period:legs.reduce((n,l)=>n+l.dur,0),offset:0}};
+ // The truck keeps to its city lane in town and its highway lane on the deck (road standard).
+ const lane=(path:Pt[])=>lanePath(path,highwayShare(path,land,highway).map(k=>streetBlend(TRANSPORT.cityLaneOffset,HIGHWAY.laneOffset,k)));
+ const legs:Leg[]=[];const hold=(p:Pt)=>legs.push({a:p,b:p,ya:.03,yb:.03,dur:8,hold:true});hold(lane(route)[0]);
+ const drive=(path:Pt[])=>{for(let i=1;i<path.length;i++)legs.push({a:path[i-1],b:path[i],ya:.03,yb:.03,dur:Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1])/freightSpeed([(path[i][0]+path[i-1][0])/2,(path[i][1]+path[i-1][1])/2],highway),hold:false});};drive(lane(route));hold(route[route.length-1]);drive(lane([...route].reverse()));
+ return {lot:{x:lot[0],z:lot[1]},route,streets,highway,cityAccess,land,access,localJunctions:[...streetJoins,...(shared?streets.flatMap(st=>crossings(route,st)):[]),...access.map(a=>a.junction),...access.filter(a=>!streets.includes(a.collector)).flatMap(a=>roadIntersections(a.collector,route)),...[...(scene.carBridges??[]).flatMap(b=>b.roads.flatMap(p=>roadIntersections(route,p))),...(scene.connections??[]).flatMap(l=>roadIntersections(route,l.road))]],exits:[...access.flatMap(a=>a.mouths),...freightMouths,...(scene.connections??[]).flatMap(l=>roadIntersections(highway,l.road))],truck:{id:"canva-airport-freight",kind:"semi",color:"#294237",legs,period:legs.reduce((n,l)=>n+l.dur,0),offset:0}};
 }

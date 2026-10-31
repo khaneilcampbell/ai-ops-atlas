@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
 import {HIGHWAY} from './highway';
+import {TRANSPORT} from './transportScale';
 import {collectorProfile} from './highwayAccess';
 import {highwayLightPositions,profileWidthAt,interchangeArrows} from './highwayDetails';
 import {buildScene} from './scene';
@@ -16,7 +17,7 @@ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps 
 });
 it('sizes collector structures to the rendered taper rather than full highway width',()=>{
  const profile=collectorProfile([[0,0],[0,12]]);
- expect(profileWidthAt(profile,[0,0])).toBeCloseTo(.64);
- expect(profileWidthAt(profile,[0,1.5])).toBeCloseTo((.64+HIGHWAY.width)/2);
+ expect(profileWidthAt(profile,[0,0])).toBeCloseTo(TRANSPORT.cityWidth);
+ expect(profileWidthAt(profile,[0,1.5])).toBeCloseTo((TRANSPORT.cityWidth+HIGHWAY.width)/2);
  expect(profileWidthAt(profile,[0,12])).toBeCloseTo(HIGHWAY.width);
 });
