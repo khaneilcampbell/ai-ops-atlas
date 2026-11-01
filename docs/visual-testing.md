@@ -101,3 +101,11 @@ above 90% of its budget leaves a warning on the pull request but still passes.
 ```sh
 CIRCA_SHOTS=1 npx playwright test -c visual visual/circa.visual.ts
 ```
+
+## Trackpad look-around inside buildings
+
+`visual/interior-trackpad.visual.ts` sends real trackpad wheel events inside five interiors (a half turn, a pinch, an Option-move), checks the camera, and writes PNGs to `visual/out/interior-trackpad/`. It takes about 9 minutes, so it is skipped unless asked for:
+
+```sh
+INTERIOR_TRACKPAD=1 npx playwright test -c visual visual/interior-trackpad.visual.ts
+```
