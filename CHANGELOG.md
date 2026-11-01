@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-10-31 · The Atlas Hills mansion is now a modern hillside house: stacked white terraces, dark wood, tall glass that glows at night, a rooftop helipad, clear glass into warm clay-toned rooms (round cream sofas, clay lamps, lattice walls), a glass-edged pool, palms and pink flowers. The Hills community homes, shops and clubs now share the same look (#161)
 - 2026-10-31 · Move around the 3D map with your Mac trackpad: scroll to slide, pinch to zoom, twist to turn, Option+scroll to tilt (#173)
 - 2026-10-31 · The GitHub building is now a stacked-slab tower with terrace stairs, trees and a roof garden, sized with the Financial District, beside a three-storey glass podium on new land east of it (#171)
 - 2026-10-31 · Every building label on the map now looks the same: one size, one height above the roof, one color, and a status dot on each
