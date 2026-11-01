@@ -21,7 +21,9 @@ Balanced retains Retina detail and full-rate interaction, with paced background 
 
 ## Validation
 
-- Full suite: **656 passed, 2 skipped**. Type checks, lint, build and diff whitespace checks passed. Existing chunk-size/Tauri import warnings remain; no Rust changes.
+- Full suite after integrating main `6e633d8`: **688 passed, 2 skipped**. Type checks, lint, build and diff whitespace checks passed. Existing chunk-size/Tauri import warnings remain; no Rust changes.
 - Focused browser checks: **2 passed** — static idle, camera wake, document visibility, DPR change, day/night switching, office entry, desktop and phone screenshots.
 - Before/after comparison: **0 differing pixels**, both desktop (3024×1800) and phone (780×1688), at the existing screenshot threshold 0.2. [Desktop before](screenshots/render-efficiency/before-desktop.png) · [after](screenshots/render-efficiency/after-desktop.png) · [Phone before](screenshots/render-efficiency/before-phone.png) · [after](screenshots/render-efficiency/after-phone.png).
 - The baseline intentionally fails the added idle assertion; the updated branch passes. No visual baselines were replaced. Full screenshot-suite/installed macOS energy measurements were not run in this focused pass.
+
+The before/after comparison isolates these performance changes against main `45c0b5a`. Subsequent main updates (Marketplace, Hills mansion and commuters through `6e633d8`) are preserved and the combined branch is revalidated.
