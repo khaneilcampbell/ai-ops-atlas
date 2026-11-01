@@ -12,6 +12,8 @@ export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.tower
  if(s.hills){const h=s.hills;for(const b of [HILLS.mansion,HILLS.garage,HILLS.pool,HILLS.court])boxes.push({x:h.x+b.x,z:h.z+b.z,w:b.w+.2,d:b.d+.2});}
  if(s.community)boxes.push(...s.community.buildings.map(b=>({x:s.community!.x+b.x,z:s.community!.z+b.z,w:b.w+.2,d:b.d+.2})));
  if(s.dealership){const d=s.dealership;boxes.push({x:d.x+d.w/2,z:d.z+d.d/2,w:d.w,d:d.d});}
+ // Benjaire Marketing Agency: no lamps in the building or its reflecting pools.
+ if(s.agency){const a=s.agency;boxes.push({x:a.cx,z:a.cz,w:a.w+.4,d:a.d+.4},...a.pools.map(p=>({x:p.x+p.w/2,z:p.z+p.d/2,w:p.w+.3,d:p.d+.3})));}
  if(s.stadium)boxes.push({x:s.stadium.x+4,z:s.stadium.z+3.5,w:7.8,d:6.8});
  if(s.airport){const a=s.airport;boxes.push(...AIRPORT_BUILDINGS.map(b=>{const p=airportPoint(a,b.x,b.z);return {x:p[0],z:p[1],w:b.w+.3,d:b.d+.3};}));for(const localX of [AIRPORT_LAYOUT.runwayX,AIRPORT_LAYOUT.taxiX]){const p=airportPoint(a,localX,AIRPORT_LAYOUT.runwayZ);boxes.push({x:p[0],z:p[1],w:3.8,d:25});}}
  boxes.push(...s.fountains.map(f=>({x:f.x,z:f.z,w:1.2*(f.k??1),d:1.2*(f.k??1)})));return boxes;

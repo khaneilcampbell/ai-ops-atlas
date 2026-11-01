@@ -1,5 +1,6 @@
 import type {Inst} from './models';
 import {financialBrand} from './financialBrands';
+import {CIRCA} from './circaPlan';
 
 /** A stylized vertical scale, not a geospatial survey. HQ-relative minimums remain in force. */
 export const FINANCIAL_METRES_PER_UNIT=18;
@@ -7,19 +8,24 @@ export const WELLS_FARGO_REFERENCE_METRES=235;
 export const BALCONY={projection:.44,railHeight:.22,gardenEvery:5,walkClearance:.32} as const;
 export function financialDimensions(id:string){
  const architecture=financialBrand(id)?.architecture;
+ if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,w:CIRCA.podium.w+.7,d:CIRCA.podium.d+.7,top:CIRCA.crown};
  const width=architecture==='hotel'||architecture==='bevelled'?3.6:architecture?3.4:3;
  const depth=architecture?2.8:2.6,projection=architecture==='biophilic'?BALCONY.projection:0;
  return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+(architecture?.7:.5),depth+projection*2+.12),top:architecture?1.1:1.2};
 }
-export function financialHeight(id:string,reference:number,rise:number){return Math.max(reference*rise,id==='records'?WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT:0);}
+/** Circa is the district's tallest: its main roof clears the Wells Fargo-scaled tower's roof by CIRCA.lead. */
+export function financialHeight(id:string,reference:number,rise:number){
+ const wellsFargo=WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT;
+ return Math.max(reference*rise,id==='records'?wellsFargo:id==='circa'?wellsFargo+CIRCA.lead:0);
+}
 export const financialSignLevel=(id:string,height:number)=>financialBrand(id)?.architecture==='deco'?height*.5:height;
 export interface TowerPalette{ivory:string;green:string;gold:string}
-export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}
+export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];tintedGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}
 /** Local coordinates, bases at y=0. Rendering, bounds and clearance tests share dimensions. */
 export function financialArchitecture(id:string,height:number,palette:TowerPalette):ArchitecturePlan{
- const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
- const out={solid,glass,clearGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
- if(!brand?.architecture)return out;
+ const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],tintedGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
+ const out={solid,glass,clearGlass,tintedGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
+ if(!brand?.architecture||brand.architecture==='twin')return out;
  const {width:w,depth:d}=financialDimensions(id),{body,trim,accent}=brand;
  const box=(target:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>target.push({p:[x,y,z],s:[w,h,d],c,r});
  const slab=(y:number,ww:number,dd:number,c=trim,h=.045)=>box(solid,0,y,0,ww,h,dd,c);
@@ -43,7 +49,27 @@ export function financialArchitecture(id:string,height:number,palette:TowerPalet
  };
  const levels=Math.max(1,Math.floor((height-2.3)/.42)),step=(height-2.3)/levels;
  const terraceLevels=[.54,.78].map(r=>Math.ceil((height*r-1.15)/step)),terraceY=terraceLevels.map(level=>1.15+level*step);
- for(let floor=0;floor<levels;floor++){
+ if(brand.architecture==='curtain'){
+  // Floor-to-ceiling curtain wall: one clear glass volume per floor shows the lit office inside.
+  // Interiors reuse the district's shared clear-glass and interior-glow materials: no new lights.
+  const signBottom=financialSignLevel(id,height)-.9,top=Math.min(height-1.15,signBottom-.04),seat=['#f3f4f6','#d9dde3'];
+  box(solid,0,1.15,0,.9,height-2.3,.7,body);
+  for(let floor=0;floor<levels;floor++){
+   const y=1.15+floor*step;
+   slab(y,w,d,trim,.05);
+   if(y+step>top+1e-9){box(solid,0,y+.05,0,w,step-.05,d,body);continue;}
+   box(tintedGlass,0,y+.05,0,w,step-.05,d,'#ffffff');
+   // Warm floor panel: pale by day, lit through the glass at night (shared emissive material).
+   box(glow,0,y+.05,0,w-.2,.012,d-.2,'#ffffff');
+   for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*1.05,y+.062,sz*.82,.62,.14,.34,seat[(floor+(sx>0?1:0))%2]);
+   box(solid,(floor%2?1:-1)*1.3,y+.062,0,.26,.28,.26,floor%3===0?accent:'#6d2077');
+  }
+  for(const side of [-1,1]){
+   for(let i=1;i<6;i++)box(solid,-w/2+i*w/6,1.15,side*(d/2+.02),.03,top-1.15,.03,trim);
+   for(let i=1;i<4;i++)box(solid,side*(w/2+.02),1.15,-d/2+i*d/4,.03,top-1.15,.03,trim);
+  }
+  for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*(w/2-.02),1.15,sz*(d/2-.02),.07,height-1.15-1.15,.07,trim);
+ }else for(let floor=0;floor<levels;floor++){
   const y=1.15+floor*step,garden=brand.architecture==='biophilic'&&floor%BALCONY.gardenEvery===4;
   const setback=brand.architecture==='deco'?(floor>=terraceLevels[1]?1.4:floor>=terraceLevels[0]?.7:0):garden?.62:0;
   const ww=w-setback,dd=brand.architecture==='deco'?d:d-setback;
@@ -82,6 +108,8 @@ export function financialArchitecture(id:string,height:number,palette:TowerPalet
   for(const sx of [-1,1])for(const sz of [-1,1])box(solid,sx*(w/2-.06),1.12,sz*(d/2-.06),.09,height-1.12,.09,trim);
   slab(height+.1,w+.14,d+.14,palette.ivory,.13);slab(height+.26,w*.8,d*.82,accent,.12);slab(height+.4,w*.56,d*.58,palette.ivory,.38);
   for(const sx of [-1,1])tree(sx*(w/2-.26),height+.25,0,-1);
+ }else if(brand.architecture==='curtain'){
+  slab(height+.1,w+.14,d+.14,trim,.1);box(solid,0,height+.2,0,w*.62,.32,d*.6,body);box(solid,0,height+.52,0,w*.62+.04,.05,d*.6+.04,accent);
  }else if(brand.architecture==='biophilic'){
   slab(height+.12,w+.18,d+.18,palette.ivory,.12);slab(height+.27,w*.8,d*.8,palette.green,.08);
   for(const sx of [-1,1])tree(sx*.9,height+.35,0,-1);
