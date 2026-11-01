@@ -31,6 +31,8 @@ export const AGENCY={
  word:{x:1.075,y:2.36,w:1.75,h:.62},
  /** Lot needs at least this much open water; the building sits this far from the north shore. */
  minLot:{w:12.5,d:8.6},northSetback:.95,
+ /** Lot on open water beside the city when there is no bay (other groupings): room for the plaza and pool. */
+ shoreLot:{w:14.5,d:9.75},
  /** Plaza in front of the building: the reflecting pool and the causeway to the entrance. */
  pool:{d:2.5,gap:.55,causeway:1.1},
 } as const;
@@ -84,6 +86,35 @@ export function findBayLot(city:Rect[],land:Rect[],roads:Pt[][],min:{w:number;d:
  return {x:x0+best.c0*step,z:z0,w:(best.c1-best.c0)*step,d:best.h*step};
 }
 
+/**
+ * Fallback for groupings with no bay inside the city (only the district grouping leaves one): the
+ * open-water lot of the given size nearest the city's own land, clear of every parcel and road,
+ * so the agency appears in every map grouping. Returns undefined when nothing within reach is free.
+ */
+export function findShoreLot(city:Rect[],land:Rect[],roads:Pt[][],size:{w:number;d:number}):Rect|undefined{
+ const big=city.filter(r=>r.w*r.d>=4);if(!big.length)return;
+ const reach=size.w+size.d,step=.25,pad=.6;
+ const x0=Math.min(...big.map(r=>r.x))-reach,z0=Math.min(...big.map(r=>r.z))-reach;
+ const cols=Math.ceil((Math.max(...big.map(r=>r.x+r.w))+reach-x0)/step),rows=Math.ceil((Math.max(...big.map(r=>r.z+r.d))+reach-z0)/step);
+ const busy=new Uint8Array(cols*rows),cell=(x:number)=>Math.floor((x-x0)/step),rowOf=(z:number)=>Math.floor((z-z0)/step);
+ const mark=(c0:number,c1:number,r0:number,r1:number)=>{for(let r=Math.max(0,r0);r<=Math.min(rows-1,r1);r++)if(c1>=0&&c0<cols)busy.fill(1,r*cols+Math.max(0,c0),r*cols+Math.min(cols-1,c1)+1);};
+ for(const r of land)mark(cell(r.x+.001),Math.ceil((r.x+r.w-.001-x0)/step)-1,rowOf(r.z+.001),Math.ceil((r.z+r.d-.001-z0)/step)-1);
+ for(const p of roads)for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step));
+  for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;mark(cell(x-pad),cell(x+pad),rowOf(z-pad),rowOf(z+pad));}}
+ // Summed-area table, so each candidate lot is checked in constant time.
+ const W=cols+1,sum=new Int32Array(W*(rows+1));
+ for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)sum[(r+1)*W+c+1]=busy[r*cols+c]+sum[r*W+c+1]+sum[(r+1)*W+c]-sum[r*W+c];
+ const lw=Math.ceil(size.w/step),ld=Math.ceil(size.d/step);
+ const gap=(a:Rect,b:Rect)=>Math.hypot(Math.max(0,b.x-a.x-a.w,a.x-b.x-b.w),Math.max(0,b.z-a.z-a.d,a.z-b.z-b.d));
+ let best:{r:Rect;g:number}|undefined;
+ for(let r=0;r+ld<=rows;r+=2)for(let c=0;c+lw<=cols;c+=2){
+  if(sum[(r+ld)*W+c+lw]-sum[r*W+c+lw]-sum[(r+ld)*W+c]+sum[r*W+c])continue;
+  const lot={x:x0+c*step,z:z0+r*step,w:lw*step,d:ld*step},g=Math.min(...big.map(b=>gap(lot,b)));
+  if(!best||g<best.g-1e-9)best={r:lot,g};
+ }
+ return best&&best.g<=4?best.r:undefined;
+}
+
 /** Whether a road passes within pad of a rectangle (sampled every 0.1 along the road). */
 export function roadCrosses(road:Pt[],r:Rect,pad:number){
  for(let i=1;i<road.length;i++){const a=road[i-1],b=road[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.1));
@@ -113,7 +144,7 @@ export interface AgencyInput {
 }
 
 export function planAgency(s:AgencyInput):AgencyPlan|undefined{
- const lot=findBayLot(s.city,s.land,s.roads,AGENCY.minLot);if(!lot)return;
+ const lot=findBayLot(s.city,s.land,s.roads,AGENCY.minLot)??findShoreLot(s.city,s.land,s.roads,AGENCY.shoreLot);if(!lot)return;
  const {length:w,depth:d}=AGENCY,top=s.top;
  const cx=lot.x+lot.w/2,z=lot.z+AGENCY.northSetback,x=cx-w/2;
  const plazaZ=z+d,pool=AGENCY.pool,poolZ=plazaZ+pool.gap;

@@ -130,7 +130,7 @@ const selOf = (key: string): Sel => {
 };
 
 /** Where each clickable thing sits and how big it is, for highlights, labels and camera moves. */
-function anchorsOf(scene: Scene3D, layout: Layout) {
+export function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
   for(const shop of scene.retail){
