@@ -44,6 +44,7 @@ import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { FramePacer } from "./pacer";
+import { MapGuard } from "./MapGuard";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -449,6 +450,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 
   return (
     <div className="map3d" ref={wrapEl}>
+      <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
       <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FramePacer profile={power} running={drawing} />
         <World
@@ -489,6 +491,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           cover={props.cover ?? 0}
         />
       </Canvas>
+      </MapGuard>
       <div
         className="m3-labels"
         // Labels sit over the canvas; pass the wheel through so zooming works anywhere.
@@ -978,7 +981,7 @@ function World({
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <VenueBridge scene={scene} g={g} m={m}/>
       <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>
-      <FinancialDistrict plan={scene.financial} g={g} m={m} night={lightMode==="night"} pick={kioskPick}/>
+      <FinancialDistrict plan={scene.financial} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>
       <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
       <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
       <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>

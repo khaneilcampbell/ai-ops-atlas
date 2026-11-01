@@ -5,7 +5,7 @@ const previous={none:{rail:169.227,highway:438.735},district:{rail:178.408,highw
 for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compact connected city without changing district contents: ${g}`,()=>{
  const s=buildScene(layoutMap(catalog,[],g)),h=s.hills!,f=s.financial!,r=s.communityRail!;
  expect(h.z-Math.max(...s.terraces.map(t=>t.z+t.d))).toBeLessThan(2);expect(f.x).toBeGreaterThan(Math.min(...s.terraces.map(t=>t.x))-10);
- expect(f.buildings).toHaveLength(9);expect(s.community!.buildings).toHaveLength(13);
+ expect(f.buildings).toHaveLength(10);expect(s.community!.buildings).toHaveLength(13);
  // The line now continues behind BMW and the towers to Financial Park (KC, 2026-10-31).
  expect(r.length).toBeLessThan(previous[g].rail*.82);expect(length(s.freight!.highway)).toBeLessThan(previous[g].highway*.95);
  expect(s.transportConnections.map(c=>c.id)).toEqual(expect.arrayContaining(['hills-city-boulevard','financial-stadium-local','atlas-hills','financial-district']));
