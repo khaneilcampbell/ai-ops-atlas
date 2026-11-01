@@ -981,7 +981,7 @@ function World({
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <VenueBridge scene={scene} g={g} m={m}/>
       <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>
-      <FinancialDistrict plan={scene.financial} g={g} m={m} night={lightMode==="night"} pick={kioskPick}/>
+      <FinancialDistrict plan={scene.financial} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>
       <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
       <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
       <CommunityRail plan={scene.communityRail} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>

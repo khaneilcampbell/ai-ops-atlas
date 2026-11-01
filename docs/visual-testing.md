@@ -86,3 +86,11 @@ CPU time per frame is only comparable on the same machine.
 `BUDGET` in the spec. Run it on any pull request that adds to the map, and put the before
 and after `PERF` lines in the pull request. `PERF_ONLY="desktop day"` runs one case
 (about 6 minutes here).
+
+## Circa preview shots
+
+`visual/circa.visual.ts` renders Circa close-ups (LED band, entrance, lobby, deck) into `artifacts/circa/` for review. It has no baselines and is skipped unless asked for:
+
+```sh
+CIRCA_SHOTS=1 npx playwright test -c visual visual/circa.visual.ts
+```

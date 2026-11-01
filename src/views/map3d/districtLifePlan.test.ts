@@ -11,7 +11,7 @@ import {planDistrictLife,visitorAt,visitorDoorOccupied,DISTRICT_LIFE as L,SIMULA
 describe('bounded district visitor simulation',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`keeps visitors clear of buildings, water and driving aisles in ${group}`,()=>{
   const s=buildScene(layoutMap(catalog,[],group)),p=planDistrictLife(s),f=s.financial!,c=s.community!,d=s.dealership!;
-  expect(p.visitors).toHaveLength(31);expect(p.visitors.length).toBeLessThanOrEqual(L.maxVisitors);expect(p.doors).toHaveLength(10);
+  expect(p.visitors).toHaveLength(32);expect(p.visitors.length).toBeLessThanOrEqual(L.maxVisitors);expect(p.doors).toHaveLength(11);
   expect(new Set(p.visitors.map(v=>v.area))).toEqual(new Set(['financial','hills','golf','bmw']));
   const financial=f.buildings.map(b=>({id:b.id,x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).width,d:financialDimensions(b.id).depth}));
   const homes=COMMUNITY_BUILDINGS.filter(b=>!['golf','station'].includes(b.kind)).map(b=>({...b,x:c.x+b.x,z:c.z+b.z}));
