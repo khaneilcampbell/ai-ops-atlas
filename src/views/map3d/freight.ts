@@ -22,17 +22,41 @@ export const FREIGHT_COLLECTOR_SNAP=2.4;
 /** Snap points that hug a street onto it, keep one entry and one exit per shared run, and report those joins. */
 export function snapToStreets(route:Pt[],streets:Pt[][],snap:number,keepShape=false):{route:Pt[];joins:Pt[]}{
  if(!streets.length)return {route,joins:[]};
- type Hit={q:Pt;street:number;at:number;p:Pt};
- const project=(p:Pt):Hit|undefined=>{let best:Hit|undefined,dist=snap;streets.forEach((st,s)=>{let along=0;for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1))),q:Pt=[a[0]+dx*t,a[1]+dz*t],d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d<dist){dist=d;best={q,street:s,at:along+len*t,p};}along+=len;}});return best;};
+ // square: the step from the point onto the street meets it at a right angle.
+ type Hit={q:Pt;street:number;at:number;p:Pt;square:boolean;dir:Pt};
+ const project=(p:Pt):Hit|undefined=>{let best:Hit|undefined,dist=snap;streets.forEach((st,s)=>{let along=0;for(let i=1;i<st.length;i++){const a=st[i-1],b=st[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1))),q:Pt=[a[0]+dx*t,a[1]+dz*t],d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d<dist){dist=d;best={q,street:s,at:along+len*t,p,square:d<1e-6||Math.abs((p[0]-q[0])*dx+(p[1]-q[1])*dz)/(d*len||1)<.05,dir:[dx/(len||1),dz/(len||1)]};}along+=len;}});return best;};
  // keepShape: a shared run follows the street's own bends between the entry and exit points.
  const between=(a:Hit,b:Hit):Pt[]=>{const st=streets[a.street],out:Pt[]=[];let along=0;const inner:{p:Pt;at:number}[]=[];for(let i=0;i<st.length;i++){if(i)along+=Math.hypot(st[i][0]-st[i-1][0],st[i][1]-st[i-1][1]);if(along>Math.min(a.at,b.at)+1e-6&&along<Math.max(a.at,b.at)-1e-6)inner.push({p:st[i],at:along});}if(a.at>b.at)inner.reverse();out.push(a.q,...inner.map(v=>v.p),b.q);return out;};
  const out:Pt[]=[],joins:Pt[]=[];let run:Hit[]=[];
  // keepShape also keeps the truck's own first and last points, so it steps straight across to the
  // collector and back where its original road was clear, never cutting a diagonal through a building.
- const flush=()=>{if(!run.length)return;const first=run[0],last=run[run.length-1];if(keepShape&&first.street===last.street)out.push(first.p,...between(first,last),last.p);else{out.push(first.q);if(run.length>1)out.push(last.q);}joins.push(first.q,last.q);run=[];};
+ // A run that leaves the street past one of its bends would step off on a slant the trailer swings
+ // wide on; it carries straight on along the street's last heading and turns square onto the truck's
+ // own road instead (see squareExit).
+ const exits:{q:Pt;dir:Pt}[]=[];
+ const flush=()=>{if(!run.length)return;const tail:Pt[]=[];if(keepShape)while(run.length>1&&!run[run.length-1].square)tail.unshift(run.pop()!.p);
+  const first=run[0],last=run[run.length-1];if(keepShape&&first.street===last.street){out.push(first.p,...between(first,last));if(tail.length)exits.push({q:last.q,dir:last.dir});else out.push(last.p);}else{out.push(first.q);if(run.length>1)out.push(last.q);}joins.push(first.q,last.q);out.push(...tail);run=[];};
  for(const p of route){const q=project(p);if(q)run.push(q);else{flush();out.push(p);}}
  flush();
+ for(const e of exits)squareExit(out,e.q,e.dir);
  return {route:out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>1e-6),joins:joins.filter((p,i,a)=>a.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<1e-6)===i)};
+}
+/**
+ * From an exit point q heading dir, find the first later stretch of the route that crosses that
+ * heading at a right angle (within reach), and replace the points between with one rounded corner.
+ */
+function squareExit(route:Pt[],q:Pt,dir:Pt,reach=4){
+ const qi=route.findIndex(p=>Math.hypot(p[0]-q[0],p[1]-q[1])<1e-6);if(qi<0)return;
+ for(let i=qi+1;i+1<route.length;i++){
+  const u=route[i],v=route[i+1],sx=v[0]-u[0],sz=v[1]-u[1],len=Math.hypot(sx,sz);
+  if(Math.hypot(u[0]-q[0],u[1]-q[1])>reach*2)return;
+  if(len<.3||Math.abs(sx*dir[0]+sz*dir[1])/len>.05)continue;
+  // q + s*dir meets the line through u and v.
+  const den=dir[0]*sz-dir[1]*sx;if(Math.abs(den)<1e-9)continue;
+  const s=((u[0]-q[0])*sz-(u[1]-q[1])*sx)/den;if(s<=0||s>reach)continue;
+  const x:Pt=[q[0]+dir[0]*s,q[1]+dir[1]*s],r=Math.min(FREIGHT_STREET_TURN,s*.45,Math.hypot(v[0]-x[0],v[1]-x[1])*.45);
+  route.splice(qi+1,i-qi,...roundedRoad([q,x,v],r).slice(1,-1));return;
+ }
 }
 /**
  * Remove a point where the route doubles straight back on itself. When a crossing corner and a street

@@ -145,6 +145,11 @@ export interface AgencyInput {
  top:number;
 }
 
+/**
+ * How far past the agency's land the south path may look for the next district's paving. Wide
+ * enough to reach Benjaire Dashboard when a widened district (Commerce, #176) pushes it a street further south.
+ */
+const AGENCY_REACH=5.5;
 export function planAgency(s:AgencyInput):AgencyPlan|undefined{
  const lot=findBayLot(s.city,s.land,s.roads,AGENCY.minLot)??findShoreLot(s.city,s.land,s.roads,AGENCY.shoreLot);if(!lot)return;
  const {length:w,depth:d}=AGENCY,top=s.top;
@@ -177,7 +182,7 @@ export function planAgency(s:AgencyInput):AgencyPlan|undefined{
  const westTo=raised.filter(p=>p.x+p.w<lot.x+.01&&p.x+p.w>lot.x-4&&p.z+p.d>plazaZ+.2&&p.z<lot.z+lot.d-.3).sort((a,b)=>b.x+b.w-a.x-a.w)[0];
  if(westTo){const zl=Math.max(westTo.z,Math.min(westTo.z+westTo.d,promenadeZ))+(westTo.d<.6?0:0),z1=Math.min(Math.max(zl,westTo.z+westTo.d/2),westTo.z+westTo.d);walks.push([[westTo.x+westTo.w-.05,z1],[walkX,z1],[walkX,promenadeZ]]);}
  const bottom=Math.max(...land.map(r=>r.z+r.d));
- const southTo=raised.filter(p=>p.z>lot.z+lot.d-.01&&p.z<bottom+3&&p.x+p.w>x+.3&&p.x<x+w-.3&&p.w>.6).sort((a,b)=>a.z-b.z)[0];
+ const southTo=raised.filter(p=>p.z>lot.z+lot.d-.01&&p.z<bottom+AGENCY_REACH&&p.x+p.w>x+.3&&p.x<x+w-.3&&p.w>.6).sort((a,b)=>a.z-b.z)[0];
  if(southTo){const xl=Math.max(x+.3,Math.min(x+w-.3,southTo.x+southTo.w/2));walks.push([[xl,promenadeZ],[xl,southTo.z+.05]]);}
  walks.push([entry,[entryX,promenadeZ]],[[walkX,promenadeZ],[x+w+.4,promenadeZ]]);
  const ground=[...land,...s.terraces];
