@@ -37,19 +37,19 @@ export function districtOf(project: Project, agents: Agent[]): Decided<DistrictI
   const cat = mainCategory(own);
   const t = project.tags;
   const inferred = (value: DistrictId, reason: string): Decided<DistrictId> => ({ value, provenance: "inferred", reason });
-  if (project.id === ATLAS) return inferred("ai-operations", "AI Ops Atlas is the command center");
+  if (project.id === ATLAS) return inferred("ai-operations", "Atlas is the command center");
   if (has(t, /^(career|portfolio|profile|resume)/i) || cat === "career") return inferred("career-portfolio", "career or portfolio tags or items");
   if (has(t, /^(security|soc|splunk|siem|itsm|detection)/i) || cat === "security" || cat === "infrastructure") return inferred("security-infrastructure", "security or infrastructure tags or items");
   if (has(t, /^(commerce|shopify|stripe|business|benjaire)/i) || cat === "business") return inferred("business-operations", "business tags or items");
   return inferred("ai-engineering", "no business, security or career signals");
 }
 
-/** Central: AI Ops Atlas items other than its own CI. Coordinator: lists two or more items of its project as dependencies. */
+/** Central: Atlas items other than its own CI. Coordinator: lists two or more items of its project as dependencies. */
 export function tierOf(agent: Agent, catalog: Catalog): Decided<AgentTier> {
   const declared = agent.registry?.tier;
   if (declared) return { value: declared, provenance: "declared", reason: "registry.tier in the manifest" };
   const type = agent.registry?.classification?.type;
-  if (agent.projectId === ATLAS && type !== "D") return { value: "central", provenance: "inferred", reason: "runs inside AI Ops Atlas and works on other repositories" };
+  if (agent.projectId === ATLAS && type !== "D") return { value: "central", provenance: "inferred", reason: "runs inside Atlas and works on other repositories" };
   const sameProject = new Set(catalog.agents.filter((a) => a.projectId === agent.projectId && a.id !== agent.id).map((a) => a.id));
   const runs = (agent.registry?.responsibilities?.dependencies ?? []).filter((d) => sameProject.has(d));
   if (runs.length >= 2) return { value: "coordinator", provenance: "inferred", reason: `lists ${runs.length} items of its project under dependencies` };

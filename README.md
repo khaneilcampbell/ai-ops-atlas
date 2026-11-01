@@ -6,7 +6,9 @@ the project it belongs to. Status dots, alerts and live activity show what is ru
 needs attention.
 
 It runs as a Mac app (Tauri) and, from the same React code, as a private web page on Cloudflare
-Pages that also works on iPhone. The installed Mac app is still named **AI Ops Atlas** on disk.
+Pages that also works on iPhone. A copy installed before the rename keeps its file name (`AI Ops Atlas.app`) when it updates
+itself, but shows Atlas in the menu bar, Dock and window; new builds are `Atlas.app`. The bundle
+identifier, signing certificate, Keychain entries and update feed are unchanged.
 
 Atlas mostly reads. Everything that can change something is in the Mac app only, off by default,
 limited to an allow-list, approved in a macOS dialog with Touch ID, and written to an audit log.

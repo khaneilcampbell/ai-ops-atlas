@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, effectiveLastRun, verifiedState } from "./derive";
+import { attentionItems, ciHealth, ciSummary, effectiveLastRun, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -103,4 +103,15 @@ it("keeps running checks distinct from passed checks, including cached evidence"
   expect(verifiedState({kind:"ok",data,stale:false})).toEqual({kind:"running",label:"CI running",stale:false});
   expect(verifiedState({kind:"error",message:"Network unavailable",data})).toEqual({kind:"running",label:"CI running · last known",stale:true});
   expect(verifiedState({kind:"ok",data:snap({runs:[running,run("Security","failure")]}),stale:false}).kind).toBe("failing");
+});
+
+describe("ciSummary", () => {
+  it("counts passing and failing repositories, leaving out ones with no CI or no data", () => {
+    const repos = {
+      "me/b": { kind: "ok" as const, stale: false, data: snap({ runs: [run("Tests", "failure")] }) },
+      "me/a": { kind: "ok" as const, stale: false, data: snap({ runs: [run("Tests", "success")] }) },
+      "me/c": { kind: "ok" as const, stale: false, data: snap() },
+    };
+    expect(ciSummary(["me/a", "me/b", "me/c", "me/d"], repos)).toEqual({ failing: ["me/b"], passing: 1, checked: 2, total: 4 });
+  });
 });
