@@ -79,6 +79,7 @@ pub fn run() {
             live::live_feed,
             live::live_publish,
             live::live_reports,
+            live::live_inquiries,
             export::save_pdf,
             power::power_on_battery,
         ])
