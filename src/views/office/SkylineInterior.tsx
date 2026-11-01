@@ -16,6 +16,8 @@ import LobbyEntrance from "./LobbyEntrance";
 import CircaLobby from "./CircaLobby";
 import {toolBrand} from "../map3d/toolBrand";
 import CityOutside from "./CityOutside";
+import CutawayWall from "./CutawayWall";
+import { lookHint, useInteriorTrackpad } from "./useInteriorTrackpad";
 import { night as cityNight } from "../map3d/materials";
 import { type LightMode } from "../map3d/living";
 
@@ -81,6 +83,7 @@ function SkylineCamera({allFloors,floor}:{allFloors:boolean;floor:number}) {
     if(target){target.set(0,allFloors?8:0,0);camera.lookAt(target);controls.current?.update();}
     invalidate();
   },[allFloors,camera,invalidate]);
+  useInteriorTrackpad(()=>controls.current,{x:8,z:6});
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
 }
 export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
@@ -101,7 +104,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
       {floor===-1&&<MovingLift reduced={reduced}/>}
-      <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/>
+      <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>
       {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}
       {(floor===-1?Array.from({length:maxFloor+1},(_,i)=>i):[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
       {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
@@ -144,6 +147,6 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
     </Canvas>
     <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${displayName} and return to city`}>← Exit building</button><div><small>{displayName.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":floor===0?"Grand lobby":`Floor ${floor} · ${residential?(homes?"Residences":"Guest suites"):business?"Workspaces":"Agent residences"}`}</h2></div></header>
     <nav className="skyline-floor-picker" aria-label={`Choose ${displayName} floor`}><strong>Floor navigation</strong>{[-1,...Array.from({length:maxFloor},(_,i)=>maxFloor-i),0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
-    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + ${maxFloor} ${residential?"residential":business?"workspace":"apartment"} ${maxFloor===1?"floor":"floors"} · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
+    <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + ${maxFloor} ${residential?"residential":business?"workspace":"apartment"} ${maxFloor===1?"floor":"floors"} · ${lookHint()}`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
   </section>;
 }
