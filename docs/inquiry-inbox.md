@@ -8,6 +8,21 @@ Gmail compose window with the recipient and subject filled in. Click in the mess
 if you like, and press Send. The design lives in `src/inquiries/emailHtml.ts`, ported from the n8n
 Flow intake. If the browser blocks the clipboard, Gmail opens with the plain text instead.
 
+## Sending from Atlas
+
+When the site has `RESEND_API_KEY`, `REPLY_FROM` and `REPLY_BCC` set (Pages → Settings → Variables
+and Secrets), **Draft reply** opens an editor instead: To, Subject, the message, and a preview of
+the designed email exactly as the client will get it. **Send to …** sends it from `REPLY_FROM` and
+puts a copy in the `REPLY_BCC` Gmail inbox. Nothing is ever sent without that press.
+
+- The address comes from the stored inquiry, never from the request, so Atlas can only answer people
+  who wrote in. Optional `REPLY_REPLY_TO` sets where the client's answer goes.
+- A retried tap sends once (each editor has one key, also passed to Resend as an idempotency key).
+- Safety limit: 50 replies in 24 hours. Sent replies are logged in the `inquiry_replies` table.
+- Mac app: `live_inquiry_reply` posts to `/api/hooks/inquiries/reply` with the sync key. The web page
+  posts to `/api/inquiries/reply` behind Access.
+- Not set up, or a send fails: **Use Gmail instead** (or the old Draft reply flow) still works.
+
 Running cost: $0. No model calls. It uses the existing Pages site and its D1 database.
 
 ## How it flows

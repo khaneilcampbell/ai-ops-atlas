@@ -20,10 +20,16 @@ const inquiries = [
 ];
 const progress = { "inq-replied-0002": { stage: "replied", repliedAt: ago(80), followUps: 0 }, "inq-closed-0003": { stage: "closed" } };
 
-async function open(page: Page) {
+const posted: unknown[] = [];
+
+async function open(page: Page, canSend = false) {
   await page.route("**/api/**", async (route) => {
     const u = new URL(route.request().url());
-    if (u.pathname === "/api/inquiries") return route.fulfill({ json: { configured: true, inquiries } });
+    if (u.pathname === "/api/inquiries/reply") {
+      posted.push(route.request().postDataJSON());
+      return route.fulfill({ json: { sent: true, to: "maya@northpeak.example" } });
+    }
+    if (u.pathname === "/api/inquiries") return route.fulfill({ json: { configured: true, reply: { enabled: canSend }, inquiries } });
     if (u.pathname.startsWith("/api/github")) {
       const body = answer(u.pathname.slice("/api/github".length) + u.search);
       return route.fulfill({ status: body == null ? 404 : 200, json: body ?? { message: "Not Found" } });
@@ -71,6 +77,27 @@ test("Draft reply puts the branded email on the clipboard and opens Gmail", asyn
   await card.screenshot({ path: join(OUT, "inquiries-4-copied.png"), animations: "disabled", caret: "hide" });
 });
 
+test("with sending set up, Draft reply opens an editor with the designed preview and Send emails it once", async ({ page }) => {
+  posted.length = 0;
+  const card = await open(page, true);
+  await card.getByRole("button", { name: "Draft reply" }).click();
+  const composer = card.getByRole("group", { name: "Reply to Maya Thompson" });
+  await expect(composer).toBeVisible();
+  await expect(composer.getByLabel("Subject")).toHaveValue("Re: your Digital Solutions inquiry");
+  const frame = composer.frameLocator("iframe");
+  await expect(frame.locator("img[alt=Benjaire]")).toHaveCount(1);
+  await expect(frame.locator("body")).toContainText("Hi Maya,");
+  await composer.getByLabel("Message").fill("Hi Maya,\n\nThanks for writing in. Happy to talk this week.");
+  await expect(frame.locator("body")).toContainText("Happy to talk this week.");
+  await composer.screenshot({ path: join(OUT, "inquiries-5-composer.png"), animations: "disabled", caret: "hide" });
+  await composer.getByRole("button", { name: "Send to maya@northpeak.example" }).click();
+  await expect(card.getByRole("status")).toContainText("Sent to maya@northpeak.example");
+  await expect(composer).toHaveCount(0);
+  await expect(card.locator(".inquiry-chip").first()).toHaveText(/Follow-up 1/);
+  expect(posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({ id: "inq-new-0001", subject: "Re: your Digital Solutions inquiry", body: expect.stringContaining("Happy to talk this week.") });
+});
+
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
@@ -79,5 +106,15 @@ test.describe("phone", () => {
     const box = (await card.boundingBox())!;
     expect(box.x + box.width).toBeLessThanOrEqual(390);
     await card.screenshot({ path: join(OUT, "inquiries-3-phone.png"), animations: "disabled", caret: "hide" });
+  });
+
+  test("the reply editor fits the phone layout", async ({ page }) => {
+    const card = await open(page, true);
+    await card.getByRole("button", { name: "Draft reply" }).click();
+    const composer = card.getByRole("group", { name: "Reply to Maya Thompson" });
+    await expect(composer).toBeVisible();
+    const box = (await composer.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await composer.screenshot({ path: join(OUT, "inquiries-6-composer-phone.png"), animations: "disabled", caret: "hide" });
   });
 });

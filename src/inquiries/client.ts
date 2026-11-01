@@ -11,10 +11,13 @@ export interface InquiriesState {
   state: "off" | "loading" | "ready" | "error";
   message: string | null;
   inquiries: Inquiry[];
+  /** Whether the site can send a reviewed reply as the designed email (mail key + sender set). */
+  canSend: boolean;
 }
 
 interface Page {
   configured: boolean;
+  reply?: { enabled?: boolean };
   inquiries: unknown[];
 }
 
@@ -37,7 +40,7 @@ export function cleanInquiries(page: Page): Inquiry[] {
 }
 
 export function useInquiries(): InquiriesState {
-  const [s, setS] = useState<InquiriesState>({ state: "loading", message: null, inquiries: [] });
+  const [s, setS] = useState<InquiriesState>({ state: "loading", message: null, inquiries: [], canSend: false });
   const [tick, setTick] = useState(0);
 
   useEffect(
@@ -53,11 +56,11 @@ export function useInquiries(): InquiriesState {
     fetchInquiries()
       .then((page) => {
         if (!alive) return;
-        if (!page) setS({ state: "off", message: "The inbox needs website sync (Settings → Website sync).", inquiries: [] });
-        else if (!page.configured) setS({ state: "off", message: "The inquiry inbox isn't set up on the site yet.", inquiries: [] });
-        else setS({ state: "ready", message: null, inquiries: cleanInquiries(page) });
+        if (!page) setS({ state: "off", message: "The inbox needs website sync (Settings → Website sync).", inquiries: [], canSend: false });
+        else if (!page.configured) setS({ state: "off", message: "The inquiry inbox isn't set up on the site yet.", inquiries: [], canSend: false });
+        else setS({ state: "ready", message: null, inquiries: cleanInquiries(page), canSend: page.reply?.enabled === true });
       })
-      .catch((e) => alive && setS((prev) => ({ state: "error", message: e instanceof Error ? e.message : String(e), inquiries: prev.inquiries })));
+      .catch((e) => alive && setS((prev) => ({ state: "error", message: e instanceof Error ? e.message : String(e), inquiries: prev.inquiries, canSend: prev.canSend })));
     return () => {
       alive = false;
     };
@@ -65,3 +68,31 @@ export function useInquiries(): InquiriesState {
 
   return s;
 }
+
+export interface ReplyToSend {
+  id: string;
+  /** One per send attempt, so a double tap or retry reaches the client once. */
+  key: string;
+  subject: string;
+  body: string;
+}
+
+/** Sends a reviewed reply from the site. Resolves with the address it went to; throws a readable message. */
+export async function sendInquiryReply(r: ReplyToSend): Promise<string> {
+  if (isHostedWeb()) {
+    const res = await fetch("/api/inquiries/reply", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(r) });
+    const j = (await res.json().catch(() => null)) as { message?: string; to?: string } | null;
+    if (!res.ok) throw new Error(j?.message ?? `The site answered ${res.status}.`);
+    return j?.to ?? "the client";
+  }
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const j = await invoke<{ to?: string }>("live_inquiry_reply", { ...r }).catch((e: unknown) =>
+      Promise.reject(new Error(typeof e === "string" ? e : e instanceof Error ? e.message : "Couldn't send the reply.")),
+    );
+    return j.to ?? "the client";
+  }
+  throw new Error("Sending needs the Atlas app or the signed-in site.");
+}
+
+export const newReplyKey = () => (globalThis.crypto?.randomUUID?.() ?? `k${Date.now()}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");

@@ -11,6 +11,7 @@ pub const FEED_PATH: &str = "/api/hooks/feed";
 pub const PUBLISH_PATH: &str = "/api/hooks/atlas";
 pub const REPORTS_PATH: &str = "/api/hooks/reports";
 pub const INQUIRIES_PATH: &str = "/api/hooks/inquiries";
+pub const INQUIRY_REPLY_PATH: &str = "/api/hooks/inquiries/reply";
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
 const REPORT_AGENTS: &[&str] = &["github-opportunity-scout"];
 const MAX_EVENTS: usize = 50;
@@ -114,6 +115,37 @@ pub async fn live_inquiries(
             .await
             .map(Some)
             .map_err(|e| format!("The site's inquiries weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Sends one reviewed reply to a website inquiry as the designed Benjaire email (the site looks the
+/// address up from the stored inquiry and copies KC). Only runs when KC presses Send in Atlas.
+#[tauri::command]
+pub async fn live_inquiry_reply(
+    id: String,
+    key: String,
+    subject: String,
+    body: String,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<serde_json::Value, String> {
+    let (Some(url), Some(token)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Err("Website sync isn't set up on this Mac (Settings → Website sync).".into());
+    };
+    let payload = serde_json::json!({ "id": id, "key": key, "subject": subject, "body": body });
+    match sync
+        .http()
+        .post(format!("{url}{INQUIRY_REPLY_PATH}"))
+        .bearer_auth(token)
+        .json(&payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| format!("The site's answer wasn't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
