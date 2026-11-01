@@ -630,6 +630,14 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
           slabs.push({p:[k.x,y+0.92,k.z+d/2+0.12],s:[w*1.12,0.09,0.32],c:"#bf292b"});
           accents.push({p:[k.x,y+0.09,k.z+d/2+0.03],s:[w,0.07,0.04],c:"#bf292b"});
         }
+        // Upper-floor windows on every side, so shops show lit rooms at night like the offices
+        // around them instead of blank walls (KC, 2026-10-31). Zara and Wells Fargo keep their fronts.
+        const front=!zara&&k.name!=="Wells Fargo";
+        for(let yy=1.08;yy<OFFICE_H-0.3;yy+=0.42)for(let col=-1;col<=1;col++){
+          windows.push({p:[k.x+col*w*0.27,y+yy,k.z-d/2-0.012],s:[w*0.17,0.24,0.025],c:"#fff5d9"});
+          for(const side of [-1,1])windows.push({p:[k.x+side*(w/2+0.012),y+yy,k.z+col*d*0.27],s:[0.025,0.24,d*0.17],c:"#fff5d9"});
+          if(front)windows.push({p:[k.x+col*w*0.27,y+yy,k.z+d/2+0.012],s:[w*0.17,0.24,0.025],c:"#fff5d9"});
+        }
         continue;
       }
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });

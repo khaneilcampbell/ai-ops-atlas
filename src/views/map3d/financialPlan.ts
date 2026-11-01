@@ -6,6 +6,7 @@ import {distanceToRoad} from './highway';
 import {airportFootprint} from './airport';
 import {routeAround} from './routing';
 import {CITY_SPACING,cityEnvelope} from './citySpacing';
+import {CIRCA} from './circaPlan';
 export const FINANCIAL_PARK_KEY='service:financial-park';
 export const FINANCIAL_KEY='service:financial-district';
 export const financialKey=(id:string)=>`service:financial:${id}`;
@@ -20,6 +21,8 @@ const BUILDING_LAYOUT=[
  {id:'business-finance',name:'Business Finance',x:-13,z:4.2,rise:1.35,style:'glass',role:'Business Finance Analyst',purpose:'Planned read-only business cash-flow and statement reviews from local imports.'},
  {id:'financial-planning',name:'Financial Planning',x:-20,z:9,rise:1.1,style:'stepped',role:'Financial Planning Analyst',purpose:'Planned budgeting and scenario reviews. No transactions or investment execution.'},
  {id:'harbor-residence',name:'Harbor Residence',x:-12.5,z:9.2,rise:1.22,style:'balcony',role:'Harbor Residence Coordinator',purpose:'Planned residential and household organization spaces. No financial services connected.'},
+ // West waterfront parcel by the highway; already district-local, so no expansion offset.
+ {id:'circa',name:'Circa',x:CIRCA.x-FINANCIAL.expansion,z:CIRCA.z,rise:CIRCA.rise,style:'twin',role:'Residential Amenities Planning Coordinator',purpose:'Planned twin-tower residence.'},
 ] as const;
 export const FINANCIAL_BUILDINGS=BUILDING_LAYOUT.map(b=>{const brand=financialBrand(b.id);return {...b,name:brand?.name??b.name,role:brand?.role??b.role,purpose:brand?.purpose??b.purpose};});
 export interface FinancialPark extends Rect {
@@ -53,7 +56,9 @@ export function financialPark():FinancialPark{
  shrubs:[[16.42,7.85,.2],[17.75,7.85,.2],[22.3,7.85,.2],[23.6,7.85,.2],[18.3,3.2,.25],[20.55,3.3,.22],[16.8,3.6,.22],[23.9,4,.2]],
  plazas:[{x:18.2,z:4.55,w:3.6,d:.5},{x:18.2,z:10.65,w:3.6,d:.5}],
  sculptures:[[17.05,6.3]]};}
-export interface FinancialPlan extends Rect {perimeterTrees:Pt[];park:FinancialPark;originalX:number;referenceHeight:number;road:Pt[];walk:Pt[];street:Pt[];sidewalk:Pt[];buildings:(Omit<typeof FINANCIAL_BUILDINGS[number],'x'>&{x:number;height:number;approach:Pt[]})[]}
+/** Circa's waterfront parcel, world coordinates, joined to the district's west edge. */
+export interface CircaSite extends Rect {street:Pt[];sidewalk:Pt[]}
+export interface FinancialPlan extends Rect {circa?:CircaSite;perimeterTrees:Pt[];park:FinancialPark;originalX:number;referenceHeight:number;road:Pt[];walk:Pt[];street:Pt[];sidewalk:Pt[];buildings:(Omit<typeof FINANCIAL_BUILDINGS[number],'x'>&{x:number;height:number;approach:Pt[]})[]}
 /** Conservative live tower envelope includes every existing crown style, including HQ spires. */
 export function headquartersEnvelope(towers:Scene3D['towers']){
  return Math.max(1,...towers.map(t=>t.height+.27+Math.max(2.1,.42+t.size*.5,t.size*.3+.45,1.4)));
@@ -65,7 +70,10 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const z=Math.min(core.z,stadium.z-2)-d-CITY_SPACING.gap;
  const park=financialPark();
  if(s.land.some(r=>x<r.x+r.w&&x+w>r.x&&z<r.z+r.d&&z+d>r.z))return;
- const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
+ const site={x:x-CIRCA.siteWidth,z,w:CIRCA.siteWidth,d},westFree=!s.land.some(r=>site.x<r.x+r.w&&site.x+site.w>r.x&&site.z<r.z+r.d&&site.z+site.d>r.z);
+ const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.filter(b=>b.id!=='circa'||westFree).map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
+ // Circa stays the district's tallest however tall the headquarters (and so the others) grow.
+ const twin=buildings.find(b=>b.id==='circa');if(twin)twin.height=Math.max(twin.height,...buildings.filter(b=>b!==twin).map(b=>b.height+financialDimensions(b.id).top-financialDimensions(twin.id).top+CIRCA.lead));
  const blocks=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  blocks.push({x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.airport){const r=airportFootprint(s.airport);blocks.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d});}
@@ -88,5 +96,6 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const road=routeAround(access,entry,blocks,.4);
  const paths=s.paving.map(p=>[p.x+p.w/2,p.z+p.d/2] as Pt).sort((a,b)=>Math.hypot(a[0]-walkEntry[0],a[1]-walkEntry[1])-Math.hypot(b[0]-walkEntry[0],b[1]-walkEntry[1]));
  const walk=paths.slice(0,8).map(p=>routeAround(p,walkEntry,blocks,.35)).find((p):p is Pt[]=>!!p);if(!road||!walk)return;
- return {x,z,w,d,perimeterTrees,park,originalX,referenceHeight,buildings,road,walk,street:[[x+w-.6,entry[1]],entry,[x+.6,entry[1]]],sidewalk:[[x+.6,walkEntry[1]],walkEntry,[x+w-.6,walkEntry[1]]]};
+ const circa:CircaSite|undefined=westFree?{...site,street:[[x+.6,z+FINANCIAL.streetZ],[x-CIRCA.siteWidth+.5,z+FINANCIAL.streetZ]],sidewalk:[[x+.6,z+FINANCIAL.promenadeZ],[x-CIRCA.siteWidth+.4,z+FINANCIAL.promenadeZ]]}:undefined;
+ return {x,z,w,d,circa,perimeterTrees,park,originalX,referenceHeight,buildings,road,walk,street:[[x+w-.6,entry[1]],entry,[x+.6,entry[1]]],sidewalk:[[x+.6,walkEntry[1]],walkEntry,[x+w-.6,walkEntry[1]]]};
 }

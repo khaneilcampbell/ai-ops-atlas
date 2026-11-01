@@ -34,6 +34,23 @@ export function snapToStreets(route:Pt[],streets:Pt[][],snap:number,keepShape=fa
  flush();
  return {route:out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>1e-6),joins:joins.filter((p,i,a)=>a.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<1e-6)===i)};
 }
+/**
+ * Remove a point where the route doubles straight back on itself. When a crossing corner and a street
+ * join land in the wrong order (seen once Circa's parcel moves the route), the route would run out
+ * along the street and back, which no truck can drive. Of the two points that make the stub, drop the
+ * one that leaves the gentler turns.
+ */
+export function dropReversals(route:Pt[]):Pt[]{
+ const out=[...route];
+ const turn=(a:Pt,p:Pt,b:Pt)=>{const ux=p[0]-a[0],uz=p[1]-a[1],vx=b[0]-p[0],vz=b[1]-p[1],l=Math.hypot(ux,uz)*Math.hypot(vx,vz);return l>0?(ux*vx+uz*vz)/l:1;};
+ const worst=(r:Pt[],from:number,to:number)=>{let w=1;for(let k=Math.max(1,from);k<=Math.min(r.length-2,to);k++)w=Math.min(w,turn(r[k-1],r[k],r[k+1]));return w;};
+ for(let i=1;i<out.length-1;){
+  if(turn(out[i-1],out[i],out[i+1])>=-.999){i++;continue;}
+  const options=[i,i-1].filter(k=>k>0).map(k=>{const r=out.filter((_,n)=>n!==k);return {k,score:worst(r,k-2,k+1)};}).sort((a,b)=>b.score-a.score);
+  out.splice(options[0].k,1);i=Math.max(1,i-2);
+ }
+ return out;
+}
 /** Round only the corners at street joins; the rest of the route already carries its own curves. */
 export function roundJoins(route:Pt[],joins:Pt[],radius:number):Pt[]{
  const out:Pt[]=[];
@@ -107,7 +124,7 @@ export function planFreight(scene:Pick<Scene3D,"airport"|"towers"|"kiosks"|"reta
   const onCollector=withCollectors?snapToStreets(routed,collectors,FREIGHT_COLLECTOR_SNAP,true):{route:routed,joins:[] as Pt[]};
   const onStreets=snapToStreets(onCollector.route,districtStreets,FREIGHT_STREET_SNAP),joins=[...onCollector.joins,...onStreets.joins];
   const all=withCollectors?[...districtStreets,...collectors]:districtStreets,turned=cornerAtCrossings(onStreets.route,all);
-  return {joins:[...joins,...turned.corners],streets:all,route:roundJoins(turned.route,joins.filter(j=>!turned.corners.some(c=>Math.hypot(c[0]-j[0],c[1]-j[1])<1e-6)),FREIGHT_STREET_TURN)};
+  return {joins:[...joins,...turned.corners],streets:all,route:roundJoins(dropReversals(turned.route),joins.filter(j=>!turned.corners.some(c=>Math.hypot(c[0]-j[0],c[1]-j[1])<1e-6)),FREIGHT_STREET_TURN)};
  };
  // Prefer sharing collectors and streets; fall back to streets only, then to the routed road.
  // Only the stretches off shared streets need checking; each keeps its own bend widths.

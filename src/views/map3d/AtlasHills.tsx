@@ -29,6 +29,9 @@ export default function AtlasHills({plan:a,g,m,pick,night}:{plan?:HillsPlan;g:Re
  // Separate garage and three static cars, all using the city's existing vehicle scale.
  solid.push(rect(H.garage,.05,1.5,materials.ivory),rect({...H.garage,w:5.2,d:3.2},1.55,.1,'#a9a69a'));
  for(const x of [3,4.5,6])solid.push(box(x,.1,5.52,1.1,1.15,.035,'#536464'));
+ // Lit transoms over the doors and side windows, so the garage is not a dark block at night.
+ for(const x of [3,4.5,6])glass.push(box(x,1.3,5.52,1,.14,.03,'#ffffff'));
+ for(const x of [1.99,7.01])for(const z of [3.3,4.7])glass.push(box(x,.75,z,.03,.4,.5,'#ffffff'));
  for(const route of [a.drive,a.promenade])for(let i=1;i<route.length;i++){const u=route[i-1],v=route[i],d=Math.hypot(v[0]-u[0],v[1]-u[1]);solid.push({p:[(u[0]+v[0])/2,TERRACE_H+(route===a.drive?.025:.05),(u[1]+v[1])/2],s:[route===a.drive?.85:.48,.035,d+.02],r:Math.atan2(v[0]-u[0],v[1]-u[1]),c:route===a.drive?'#68716f':'#e3dfd2'});}
  // Quiet pool terrace, coping, four loungers and a pergola.
  solid.push(rect({...H.pool,w:3.4,d:7},.02,.03,'#e3dfd2'));for(const z of [6.925,13.075])solid.push(box(6.2,.06,z,2.7,.08,.15,'#ece7d8'));for(const x of [4.925,7.475])solid.push(box(x,.06,10,.15,.08,6,'#ece7d8'));water.push(rect(H.pool,.08,.025,'#ffffff'));
