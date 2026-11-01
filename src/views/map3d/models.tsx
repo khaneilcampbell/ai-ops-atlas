@@ -199,6 +199,11 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 // ── Road bridges ────────────────────────────────────
 
 const RAIL = "#2f4a3a";
+/** District street paint, shared by the roads and the bridge decks so a street reads as one road. */
+const STREET_ASPHALT = "#424b50";
+export const STREET_LINE = "#e1ce8e";
+const STREET_DASH = 0.3;
+const RISE_OF = (len: number) => deckRise(len, len / 2);
 const DECK_T = 0.07;
 
 /**
@@ -239,6 +244,8 @@ export function bridgeParts(br: CarBridge, brooks: Rect[], width: number = DECK_
     const m = (s0 + s1) / 2;
     const ym = (y0 + y1) / 2;
     deck.push({ p: at(m, 0, ym - DECK_T), s: [width, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
+    // The street carries on over the bridge: the same asphalt as the road that leads onto it.
+    deck.push({ p: at(m, 0, ym), s: [width - 0.07, 0.006, l], r: yaw, rx: tilt, c: STREET_ASPHALT });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym + 0.085), s: [0.024, 0.016, l], r: yaw, rx: tilt, c: RAIL });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym), s: [0.03, 0.03, l], r: yaw, rx: tilt, c: "#cfc4ab" });
   }
@@ -248,8 +255,11 @@ export function bridgeParts(br: CarBridge, brooks: Rect[], width: number = DECK_
     const s = (len * i) / posts;
     for (const v of [-edge, edge]) rails.push({ p: at(s, v, top(s)), s: [0.016, 0.09, 0.016], c: RAIL });
   }
-  // A dashed center line on the level span.
-  for (let s = r + 0.06; s < len - r - 0.06; s += 0.17) deck.push({ p: at(s + 0.04, 0, top(s)), s: [0.018, 0.003, 0.08], r: yaw, c: "#c9a35a" });
+  // The street's dashed center line, end to end, ramps included, at the street's spacing.
+  for (let s = 0.16; s < len - 0.1; s += STREET_DASH) {
+    const ramp = s < r ? 1 : s > len - r ? -1 : 0;
+    deck.push({ p: at(s, 0, top(s) + 0.0065), s: [0.018, 0.004, 0.12], r: yaw, rx: -ramp * Math.atan2(RISE_OF(len), r), c: STREET_LINE });
+  }
   // Pillars, in pairs, down to the meadow or into the brook.
   const n = Math.max(2, Math.round(len / 0.75));
   for (let i = 1; i <= n; i++) {
@@ -279,15 +289,15 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       const dx=b[0]-a[0], dz=b[1]-a[1], length=Math.hypot(dx,dz);
       if(length<0.01) return;
       const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
-      streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:"#424b50"});
+      streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
       if(curb) for(const side of [-1,1]) {
         sidewalks.push({p:[x+(alongX?0:side*(width/2+0.065)),TERRACE_H+0.035,z+(alongX?side*(width/2+0.065):0)],s:alongX?[length,0.035,0.13]:[0.13,0.035,length],c:"#d4cfb9"});
       }
-      for(let d=0.16;d<length-0.1;d+=0.3) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:"#e1ce8e"});
+      for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
     };
     for(const br of scene.carBridges) for(const road of br.roads) {
       for(let i=1;i<road.length;i++) street(road[i-1],road[i],ROAD_W,true);
-      for(const p of road.slice(1,-1)) streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:"#424b50"});
+      for(const p of road.slice(1,-1)) streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});
     }
     for(const t of scene.towers) {
       const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
@@ -372,7 +382,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
-      neighborhood: (scene.neighborhoodLand??[]).map(t=>slab(t,0,top)),
+      neighborhood: [...(scene.neighborhoodLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
       steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),

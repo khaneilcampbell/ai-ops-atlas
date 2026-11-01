@@ -20,9 +20,11 @@ it('removes posts within a junction and leaves remote railings untouched',()=>{
 it('keeps connector landings flush and wide enough for the shared two-lane street',async()=>{
  const {bridgeParts}=await import('./models');const {TERRACE_H}=await import('./scene');const {TRANSPORT}=await import('./transportScale');
  const p=bridgeParts({key:'test',ends:['a','b'],axis:'x',a:[0,0],b:[8,0],roads:[[],[]]},[],TRANSPORT.bridgeWidth,-1.2,false);
- for(const d of p.deck.filter(d=>d.s[2]>1)){
+ for(const d of p.deck.filter(d=>d.s[2]>1&&d.c==='#ddd2b8')){
   expect(d.s[0]).toBe(TRANSPORT.bridgeWidth);expect(d.rx).toBeCloseTo(0);expect(d.p[1]+d.s[1]).toBeCloseTo(.059+TERRACE_H);
  }
+ // The street's asphalt lies on the slab, a hair proud of it, so the road reads as one surface.
+ for(const d of p.deck.filter(d=>d.s[2]>1&&d.c==='#424b50'))expect(d.p[1]+d.s[1]-(.059+TERRACE_H)).toBeLessThan(.004);
 });
 
 it('keeps bridge furniture on the deck in all four travel directions',()=>{

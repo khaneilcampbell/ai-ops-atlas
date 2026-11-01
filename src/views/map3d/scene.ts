@@ -10,13 +10,13 @@ import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
-import { airportFootprint, planAirport, type AirportPlan } from "./airport";
+import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
 import { hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
-import { planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
+import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -150,6 +150,8 @@ export interface Scene3D {
   land: Rect[];
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
+  /** Terrace-height land joining the airport entrance to the district across from it. */
+  airportForecourt?: Rect;
   terraces: Terrace[];
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
@@ -377,7 +379,7 @@ export function buildScene(layout: Layout): Scene3D {
   const decks: Rect[] = carBridges.map((br) => {
     const x0 = Math.min(br.a[0], br.b[0]);
     const z0 = Math.min(br.a[1], br.b[1]);
-    return br.axis === "x" ? { x: x0, z: br.a[1] - 0.3, w: Math.abs(br.b[0] - br.a[0]), d: 0.6 } : { x: br.a[0] - 0.3, z: z0, w: 0.6, d: Math.abs(br.b[1] - br.a[1]) };
+    return br.axis === "x" ? { x: x0, z: br.a[1] - DECK_W / 2, w: Math.abs(br.b[0] - br.a[0]), d: DECK_W } : { x: br.a[0] - DECK_W / 2, z: z0, w: DECK_W, d: Math.abs(br.b[1] - br.a[1]) };
   });
 
   // A continuous pedestrian network links each front entrance to the dedicated footbridge.
@@ -700,6 +702,19 @@ export function buildScene(layout: Layout): Scene3D {
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
   if(freight)zs.push(...freight.highway.map(p=>p[1]));
+  // Join the terminal entrance to the district across the meadow, unless a street, path or stream runs there.
+  const forecourtLand:Rect[]=[];
+  const forecourt=airport?airportForecourt(airport,terraces):undefined;
+  if(forecourt&&airport){
+    const ground=[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(x=>[x.collector,...x.ramps])]:[])];
+    const blocked=ground.some(p=>pathCrossesRect(p,forecourt,.35))||[...brooks,...bridges].some(r=>r.x<forecourt.x+forecourt.w&&r.x+r.w>forecourt.x&&r.z<forecourt.z+forecourt.d&&r.z+r.d>forecourt.z);
+    if(!blocked){
+      forecourtLand.push(forecourt);
+      const ez=airport.z+AIRPORT_LAYOUT.terminalZ;
+      paving.push(strip(forecourt.x,ez,forecourt.x+forecourt.w,ez,1.4,top));
+      for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
+    }
+  }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
@@ -714,6 +729,7 @@ export function buildScene(layout: Layout): Scene3D {
     freight,
     land,
     neighborhoodLand:neighborhood.land,
+    airportForecourt:forecourtLand[0],
     terraces,
     paving,
     steps,
