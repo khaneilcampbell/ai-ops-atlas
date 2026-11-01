@@ -37,7 +37,6 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
   display: grid; place-items: center; flex: none; background: rgba(201, 163, 90, 0.06);
 }
 .brand-title { font-family: var(--serif); font-size: 21px; letter-spacing: 0.005em; line-height: 1.1; white-space: nowrap; }
-.brand-title sup { font-family: var(--sans); font-size: 9px; color: var(--gold); margin-left: 4px; letter-spacing: 0.1em; }
 .eyebrow { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--on-dark-2); }
 .main .eyebrow, .panel .eyebrow, .card .eyebrow { color: var(--ink-3); }
 .header .spacer { flex: 1; }
