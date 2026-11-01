@@ -34,7 +34,7 @@
 .usage .legend-inline { margin-right: 6px; }
 .usage-tip {
   position: absolute; top: 74px; transform: translateX(-50%); pointer-events: none; z-index: 5;
-  background: var(--forest-800); color: var(--on-dark-2); border-radius: 8px; padding: 8px 10px; font-size: 11.5px;
+  background: var(--forest-800); color: var(--on-dark-2); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 11.5px;
   box-shadow: 0 6px 20px rgba(22, 33, 26, 0.25); white-space: nowrap; min-width: 128px;
 }
 .usage-tip .tip-when { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
