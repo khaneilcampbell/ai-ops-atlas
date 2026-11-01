@@ -6,4 +6,4 @@ The repair keeps opaque building parts separate from public-space geometry and a
 
 `visual/building-selection.visual.ts` frames financial towers by their plaques, finds a solid roof with an unobstructed ray, clicks it through the browser pointer, and checks the selected nameplate and inspector agree. Day checks cover eight towers; night checks cover Wells Fargo and American Express. Shared instance selection metadata makes this test inspect the actual rendered instances instead of guessing screen coordinates.
 
-Validation: type checks, lint, build and 24 focused financial layout/architecture tests passed. Browser results and screenshots are recorded separately after execution. Native installed-desktop testing remains a separate check. Not merged or deployed.
+Validation: type checks, lint, build and 24 focused financial layout/architecture tests passed. Both browser checks passed: eight towers in daylight, and Wells Fargo/American Express at night. Reviewed screenshots are in `docs/screenshots/building-selection/`. Native installed-desktop testing remains a separate check. Not merged or deployed.
