@@ -31,5 +31,9 @@ for(const light of ['day','night'] as const)test(`map zoom stays bounded and dra
   await page.getByRole('button',{name:'Zoom out',exact:true}).click();await settle(page,1);
  }
  for(let i=0;i<10;i++)await page.getByRole('button',{name:'Zoom in',exact:true}).click();await settle(page,3);
+ const close=PNG.sync.read(await page.locator('.map3d canvas').screenshot());let black=0;
+ for(let i=0;i<close.data.length;i+=4)if(close.data[i]<2&&close.data[i+1]<2&&close.data[i+2]<2)black++;
+ expect(black/(close.width*close.height),'no black patch at close zoom').toBeLessThan(.05);
+ expect((await state('read')).error).toBe(0);
  await page.screenshot({path:`artifacts/map-zoom/${light}-zoom.png`});expect(errors).toEqual([]);
 });

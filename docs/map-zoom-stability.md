@@ -19,3 +19,11 @@ Extend the existing two-triangle ocean plane past the camera's far range so its 
 28 focused viewport, trackpad and bloom tests passed; lint, type checks and build passed. Both day/night browser checks passed and screenshots were reviewed in `docs/screenshots/map-zoom/`. They exercise 20 zoom-out clicks, DPR changes (1, 2, 1.5), deliberate partial viewport/scissor state, day/night and close zoom. Screenshot baselines are not changed. Browser software WebGL does not establish native macOS GPU correctness: installed-app zoom verification remains necessary before claiming the specific desktop artifact is fully resolved.
 
 No dependencies, business behavior, paid services, merge or deployment changes.
+
+## Night rendering follow-up
+
+Day and night now use the same direct renderer. The night-only EffectComposer/UnrealBloomPass pipeline and its tests were removed; emissive windows, lamps, materials, shadows and the lighting settings remain. The visual tradeoff is removal of the soft screen-space bloom halo. This eliminates the offscreen compositor path implicated by night-only partial frames rather than relying solely on viewport restoration. No new fallback timers, GPU readbacks or recurring work.
+
+27 focused viewport and trackpad tests, lint, type checks and build passed after removal. Native WebKit/Metal reproduction remains unverified; an installed build must be checked before claiming native GPU correctness.
+
+Both focused night browser checks passed (zoom/DPR/frame coverage and day/night/power-mode/building entry). Updated night overview and close screenshots were reviewed.

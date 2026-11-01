@@ -37,7 +37,7 @@ import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
 import { fogRange } from "./fogRange";
-import { Bloom, Sky, Traffic, Vehicles, type LightMode } from "./living";
+import { MapRenderer, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
 import { measure, SANS, wrap } from "../mapText";
@@ -1087,7 +1087,7 @@ function World({
   return (
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
-      <Bloom />
+      <MapRenderer />
       <Traffic scene={scene} g={g} m={m} moving={!reduced} />
       {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />

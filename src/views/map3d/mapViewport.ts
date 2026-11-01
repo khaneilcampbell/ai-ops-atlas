@@ -11,3 +11,9 @@ export function mapZoomLimits(fitDistance:number){
  const fit=Number.isFinite(fitDistance)?Math.max(4,fitDistance):30;
  return {min:4,max:fit*1.05};
 }
+
+/** The same direct render path is used in both lighting modes, including after zoom or resize. */
+export function renderMapFrame(gl:THREE.WebGLRenderer,scene:THREE.Scene,camera:THREE.Camera,size:THREE.Vector2){
+ prepareMapFrame(gl,size);
+ gl.render(scene,camera);
+}

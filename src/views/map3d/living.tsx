@@ -5,8 +5,7 @@ import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doo
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { prepareMapFrame } from "./mapViewport";
-import { createBloomPipeline } from "./bloomPipeline";
+import { renderMapFrame } from "./mapViewport";
 import { wake } from "../../lib/power";
 import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
@@ -293,28 +292,12 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   );
 }
 
-/**
- * A light bloom at night, only on what is brighter than the scene: lit windows, path lights and
- * connections. By day, and while the bloom is off, the map renders directly.
- */
-export function Bloom() {
+/** Day and night share one framebuffer path; emissive surfaces provide night lighting. */
+export function MapRenderer() {
   const { gl, scene, camera } = useThree();
-  const pipeline = useRef<ReturnType<typeof createBloomPipeline> | null>(null);
   const frameSize = useMemo(() => new THREE.Vector2(), []);
-  useEffect(() => () => {
-    pipeline.current?.dispose();
-    pipeline.current = null;
-  }, [gl, scene, camera]);
-  // Priority 1 takes over rendering. Daylight needs no postprocessing allocations or passes.
-  useFrame(() => {
-    prepareMapFrame(gl, frameSize);
-    const k = night.value;
-    if (k < 0.02) return gl.render(scene, camera);
-    const p = pipeline.current ?? (pipeline.current = createBloomPipeline(gl, scene, camera));
-    p.resize();
-    p.bloom.strength = k * 0.32;
-    p.composer.render();
-  }, 1);
+  // Priority 1 owns rendering, with no offscreen compositor or night-only render targets.
+  useFrame(() => renderMapFrame(gl, scene, camera, frameSize), 1);
   return null;
 }
 
