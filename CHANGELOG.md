@@ -1,8 +1,9 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#192)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · Behind the scenes: the commuter screenshot test now counts the new riders and office walkers, so it passes again (#PR)
 - 2026-11-01 · Behind the scenes: the screenshot check now runs in 6 parts at once, so it finishes on map changes instead of timing out at 45 minutes (#184)
 - 2026-11-01 · The README on GitHub now describes Atlas as it is today: the city, the three views, the agents, the Mac, web and iPhone apps, and how to run and test it (#190)
 - 2026-11-01 · New Fix with Claude button in Mission Control, next to failing workflows and items that need a look. It opens a ready-made GitHub issue; press Create and Claude finds the cause, makes one small fix and opens a pull request for you to merge (#189)
