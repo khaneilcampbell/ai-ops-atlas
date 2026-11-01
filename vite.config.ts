@@ -7,6 +7,8 @@ export default defineConfig({
   clearScreen: false,
   server: {
     port: 1420, strictPort: true,
+    // Tauri supplies the reachable device address when running on a physical iOS device.
+    host: process.env.TAURI_DEV_HOST || false,
     // Generated HTML reports must not force a full reload of an open city during validation.
     watch: { ignored: ["**/playwright-report/**", "**/test-results/**", "**/visual/out/**", "**/artifacts/**"] },
   },
