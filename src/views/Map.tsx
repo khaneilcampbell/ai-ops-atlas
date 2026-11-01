@@ -1169,7 +1169,7 @@ export function MapView({active=true}:{active?:boolean}) {
             <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
               title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
             <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Keep district locations; show district names, declared status, tags, or no group headings" />
+              title="Keep district locations and clean district names; no grouping hides district headings" />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>

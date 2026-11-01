@@ -19,7 +19,7 @@ test('grouping preserves city geometry and camera; labels and controls stay cons
   await page.getByRole('combobox',{name:'Group projects',exact:true}).selectOption(mode);await settle(page,2);
   expect(await scene()).toEqual(baseline);
   if(mode==='none')await expect(page.locator('.m3-pill.hood.district')).toHaveCount(0);
-  if(mode==='status')await expect(page.locator('.m3-pill.hood.district').filter({hasText:/Declared/i}).first()).toHaveCount(1);
+  await expect(page.locator('.m3-pill.hood.district').filter({hasText:/Declared|#/i})).toHaveCount(0);
   await page.screenshot({path:`artifacts/district-presentation/${mode}.png`});
  }
  await page.getByRole('combobox',{name:'Map view',exact:true}).selectOption('automations');await settle(page,1);

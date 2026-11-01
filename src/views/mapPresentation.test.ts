@@ -7,10 +7,10 @@ it('changes headings without moving or mutating district geometry',()=>{
  for(const mode of ['none','district','status','tag'] as GroupBy[]){
   const headings=districtHeadings(layout,mode);
   if(mode==='none')expect(headings).toEqual([]);
-  else for(const h of headings){const original=layout.neighborhoods.find(n=>n.key===h.key)!;expect(h).toMatchObject({ox:original.ox,oy:original.oy,w:original.w,h:original.h});expect(h.label).toContain(original.label);}
+  else for(const h of headings){const original=layout.neighborhoods.find(n=>n.key===h.key)!;expect(h).toMatchObject({ox:original.ox,oy:original.oy,w:original.w,h:original.h});expect(h.label).toBe(original.label);}
   expect(JSON.stringify(layout)).toBe(before);
  }
- expect(districtHeadings(layout,'status').some(n=>n.label.includes('active'))).toBe(true);
+ expect(districtHeadings(layout,'status')).toEqual(districtHeadings(layout,'tag'));
 });
 it('shows every primary building at the same zoom level and reveals supporting detail consistently',()=>{
  for(const distance of ['far','mid','near'] as const){
