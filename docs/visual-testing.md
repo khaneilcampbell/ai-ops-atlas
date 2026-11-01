@@ -29,8 +29,8 @@ in `playwright-report/`.
 
 ## Views covered
 
-`map-day`, `map-night`, `map-selected` (AI Ops Atlas selected, inspector open), `office`
-(inside AI Ops Atlas HQ), `mission-control`, and `active-agents` (skipped until the
+`map-day`, `map-night`, `map-selected` (Atlas selected, inspector open), `office`
+(inside Atlas HQ), `mission-control`, and `active-agents` (skipped until the
 Mission Control Active agents tab is on main). The list is in `visual/views.visual.ts`;
 a new view is one more test there.
 

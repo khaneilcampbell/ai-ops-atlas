@@ -1,4 +1,4 @@
-# AI Ops Atlas
+# Atlas
 
 A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
 
@@ -26,14 +26,16 @@ Requirements: Node 20+, Rust stable, and Xcode Command Line Tools on macOS.
 ```bash
 npm install
 npm run tauri dev        # desktop app with hot reload
-npm run tauri build      # builds AI Ops Atlas.app and a .dmg under src-tauri/target/release/bundle
+npm run tauri build      # builds Atlas.app and a .dmg under src-tauri/target/release/bundle
 npm run dev              # browser-only preview at http://localhost:1420 (public GitHub data, no Keychain)
 npm test                 # validates the catalog and the health/attention rules
 ```
 
 ## Install and update
 
-Download `AI-Ops-Atlas-macOS.zip` from the [latest release](https://github.com/khaneilcampbell/ai-ops-atlas/releases/latest), unzip it and move **AI Ops Atlas** into Applications. The app isn't signed by Apple, so open it the first time with right-click → Open. To update, download the newer release and replace the app; your token and settings stay. With the GitHub CLI: `gh release download -R khaneilcampbell/ai-ops-atlas -p '*.zip'`.
+Download `AI-Ops-Atlas-macOS.zip` from the [latest release](https://github.com/khaneilcampbell/ai-ops-atlas/releases/latest), unzip it and move **Atlas** into Applications. The app isn't signed by Apple, so open it the first time with right-click → Open. To update, download the newer release and replace the app; your token and settings stay. With the GitHub CLI: `gh release download -R khaneilcampbell/ai-ops-atlas -p '*.zip'`.
+
+The app was called AI Ops Atlas until November 2026. A copy installed before then keeps its file name (`AI Ops Atlas.app`) when it updates itself, but shows Atlas in the menu bar, Dock and window. Its bundle identifier, signing certificate, Keychain entries and update feed are unchanged, so tokens and updates carry on.
 
 To publish a release: run `npm run version:set -- 0.3.0`, merge that change, then tag `v0.3.0` on `main` and push the tag. The Release workflow builds a universal (Apple silicon and Intel) app and attaches it.
 

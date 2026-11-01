@@ -131,7 +131,7 @@ jobs:
           base=$(node -p 'require("./src-tauri/tauri.conf.json").version.split(".").slice(0, 2).join(".")')
           version="$base.$GITHUB_RUN_NUMBER"
           npx tauri build --bundles app --config "{\"version\":\"$version\",\"bundle\":{\"createUpdaterArtifacts\":false}}"
-          ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/AI Ops Atlas.app" unsigned-app.zip
+          ditto -c -k --keepParent "src-tauri/target/release/bundle/macos/Atlas.app" unsigned-app.zip
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unsigned-macos-app
@@ -181,10 +181,10 @@ jobs:
           test -n "$TAURI_SIGNING_PRIVATE_KEY"
           scripts/macos-resign.sh
           dir=src-tauri/target/release/bundle/macos
-          tar -czf AI-Ops-Atlas.app.tar.gz -C "$dir" "AI Ops Atlas.app"
+          tar -czf AI-Ops-Atlas.app.tar.gz -C "$dir" "Atlas.app"
           npx --no-install tauri signer sign AI-Ops-Atlas.app.tar.gz >/dev/null
           test -s AI-Ops-Atlas.app.tar.gz.sig
-          ditto -c -k --keepParent "$dir/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
+          ditto -c -k --keepParent "$dir/Atlas.app" AI-Ops-Atlas-macOS.zip
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: signed-macos-app
@@ -219,7 +219,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tar -xOf AI-Ops-Atlas.app.tar.gz "AI Ops Atlas.app/Contents/Info.plist" > app.plist
+          tar -xOf AI-Ops-Atlas.app.tar.gz "Atlas.app/Contents/Info.plist" > app.plist
           version=$(python3 -c 'import plistlib; print(plistlib.load(open("app.plist", "rb"))["CFBundleShortVersionString"])')
           echo "VERSION=$version" >> "$GITHUB_ENV"
           # Approvals may arrive out of order. Fail closed on errors other than a missing asset.
@@ -248,7 +248,7 @@ jobs:
             fs.writeFileSync("latest.json", JSON.stringify(feed, null, 2));
           ' "$VERSION" "AI-Ops-Atlas.app.tar.gz.sig" "$url" "$GITHUB_SHA" "release-notes.txt"
           gh release view main-build >/dev/null 2>&1 || gh release create main-build --prerelease --target "$GITHUB_SHA" \
-            --title "Latest main build" --notes "Rolling build of main that installed copies of AI Ops Atlas update from. Not a versioned release."
+            --title "Latest main build" --notes "Rolling build of main that installed copies of Atlas update from. Not a versioned release."
           # The archive goes up before the feed that points at it.
           gh release upload main-build AI-Ops-Atlas.app.tar.gz --clobber
           gh release upload main-build latest.json --clobber

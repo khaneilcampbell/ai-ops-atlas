@@ -77,7 +77,7 @@ export default function App() {
           </div>
           <div>
             <div className="brand-title">
-              AI Ops Atlas<sup>01</sup>
+              Atlas<sup>01</sup>
             </div>
             <div className="eyebrow">Agents · Projects · Repositories</div>
           </div>

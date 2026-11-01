@@ -141,7 +141,7 @@ Levels describe what the agent is permitted to do in its own environment, not ho
 
 The 3D map draws a connection only where a manifest or GitHub data states it. Shared technology never counts. Today it reads:
 
-- **GitHub**: a repository and the agents whose `source` or `observe.github_workflow` it holds, and AI Ops Atlas reading each cataloged repository.
+- **GitHub**: a repository and the agents whose `source` or `observe.github_workflow` it holds, and Atlas reading each cataloged repository.
 - **AI agents** and **n8n**: agent ids listed under `registry.responsibilities.dependencies`. A link is n8n when either agent's framework or runtime is n8n.
 - **Dependencies**: dependencies between agents of different projects, and anything a project declares:
 

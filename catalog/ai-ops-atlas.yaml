@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
-# AI Ops Atlas manifest. Format: catalog/README.md
+# Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
 project:
@@ -335,7 +335,7 @@ agents:
 
   - id: atlas-github-steward
     name: GitHub Steward
-    purpose: "GitHub Steward: Collects bounded read-only observations for AI Ops Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
+    purpose: "GitHub Steward: Collects bounded read-only observations for Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
     framework: Atlas read-only workflow
     runtime: Inside the desktop app (Rust side)
     status: idle
