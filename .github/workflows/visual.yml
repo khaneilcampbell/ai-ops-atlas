@@ -82,14 +82,12 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: visual-results-*
+          merge-multiple: true
           path: results
       - run: |
           branch="visual-baselines/run-${{ github.run_id }}"
           mkdir -p visual/baselines/ci
-          for f in results/*/visual/baselines/ci/*.png; do
-            n=$(basename "$f")
-            cmp -s "$f" "visual/baselines/ci/$n" || cp "$f" "visual/baselines/ci/$n"
-          done
+          cp results/visual/baselines/ci/*.png visual/baselines/ci/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
