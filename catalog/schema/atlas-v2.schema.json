@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "atlas-v2.schema.json",
-  "title": "AI Ops Atlas catalog manifest (atlas/v1 and atlas/v2)",
+  "title": "Atlas catalog manifest (atlas/v1 and atlas/v2)",
   "description": "Editor validation for catalog/*.yaml. The TypeScript parser in src/catalog is the enforcing validator; npm test keeps the two in sync.",
   "type": "object",
   "required": [
@@ -365,7 +365,7 @@
                   "coordinator",
                   "specialized"
                 ],
-                "description": "Agent tier. Left out, Atlas infers it: central for AI Ops Atlas agents that work across repositories, coordinator for agents that orchestrate two or more items in their project, specialized otherwise."
+                "description": "Agent tier. Left out, Atlas infers it: central for Atlas agents that work across repositories, coordinator for agents that orchestrate two or more items in their project, specialized otherwise."
               },
               "automation_category": {
                 "enum": [

@@ -178,7 +178,7 @@ export function buildConnections(catalog: Catalog, repos: Record<string, RepoSta
         type: "github",
         directed: true,
         relation: "is read by",
-        evidence: [`${fileOf(p.id)} registers ${p.repository}`, "AI Ops Atlas reads it from the GitHub API, read-only"],
+        evidence: [`${fileOf(p.id)} registers ${p.repository}`, "Atlas reads it from the GitHub API, read-only"],
         status,
         statusNote: note,
         lastVerified: at,

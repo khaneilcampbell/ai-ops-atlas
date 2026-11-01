@@ -18,6 +18,8 @@ const PERF = !!process.env.PERF;
  * frames and the map went blank. Raise a number only with a measured reason in the pull request.
  */
 export const BUDGET = { drawsPerFrame: 800, trianglesPerFrame: 1_200_000, programs: 80, geometryMB: 8, contextsAlive: 1 } as const;
+// Share of a budget above which the CI job leaves a warning (it still passes).
+const HEADROOM_WARN = 0.9;
 
 type Probe = { draws: number; screenDraws: number; tris: number; frames: number; bufferBytes: number; liveBuffers: number; liveTextures: number; programs: number };
 
@@ -193,7 +195,16 @@ test.describe("perf", () => {
     if (process.env.PERF_BUDGET) {
       const d = out["desktop day"] as ReturnType<typeof measure> extends Promise<infer T> ? T & { contextsAlive: number } : never;
       if (!d) return;
-      const over = (Object.keys(BUDGET) as (keyof typeof BUDGET)[]).filter((k) => (d[k] as number) > BUDGET[k]);
+      const keys = Object.keys(BUDGET) as (keyof typeof BUDGET)[];
+      // Within 10% of a limit: say so on the pull request before the next building tips it over.
+      for (const k of keys) {
+        if (k === "contextsAlive") continue; // an exact count, not a load: one live canvas is the target
+        const share = (d[k] as number) / BUDGET[k];
+        if (share > HEADROOM_WARN && share <= 1) {
+          console.log(`::warning title=Map performance headroom::${k} is ${d[k]}, ${Math.round(share * 100)}% of its budget of ${BUDGET[k]}`);
+        }
+      }
+      const over = keys.filter((k) => (d[k] as number) > BUDGET[k]);
       if (over.length) throw new Error(`Map is over its performance budget: ${over.map((k) => `${k} ${d[k]} > ${BUDGET[k]}`).join(", ")}`);
     }
   });

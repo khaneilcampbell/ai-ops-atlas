@@ -132,7 +132,7 @@ export function displayTexture(title: string, repo: string, line: string, agents
   drawIcon(ctx, "atlas", 30, 30, 34, "#c9a35a");
   ctx.fillStyle = "#c9a35a";
   ctx.font = `600 15px ${FONT}`;
-  ctx.fillText("AI OPS ATLAS", 76, 54);
+  ctx.fillText("ATLAS", 76, 54);
   ctx.fillStyle = "#e9ecdf";
   ctx.font = `600 34px ${FONT}`;
   ctx.fillText(fit(ctx, title, 450), 30, 120);

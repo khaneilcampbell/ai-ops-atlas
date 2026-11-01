@@ -242,3 +242,24 @@ export function verifiedState(state: RepoState | undefined): { kind: Verified; l
   const label = kind === "failing" ? `CI ${ci.value} now` : kind === "no-ci" ? "No CI workflows" : `CI ${ci.value.toLowerCase()}`;
   return { kind, label: stale ? `${label} · last known` : label, stale };
 }
+
+/** Header summary of CI across every tracked repository, from the same checks the map shows. */
+export interface CiSummary {
+  failing: string[];
+  passing: number;
+  checked: number;
+  total: number;
+}
+
+export function ciSummary(repositories: string[], repos: Record<string, RepoState>): CiSummary {
+  const failing: string[] = [];
+  let passing = 0;
+  let checked = 0;
+  for (const name of repositories) {
+    const kind = verifiedState(repos[name]).kind;
+    if (kind === "failing") failing.push(name);
+    if (kind === "passing" || kind === "running") passing++;
+    if (kind === "failing" || kind === "passing" || kind === "running") checked++;
+  }
+  return { failing: failing.sort(), passing, checked, total: repositories.length };
+}

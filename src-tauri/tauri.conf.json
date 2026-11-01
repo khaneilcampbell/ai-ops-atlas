@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AI Ops Atlas",
+  "productName": "Atlas",
   "version": "0.2.0",
   "identifier": "com.khaneilcampbell.ai-ops-atlas",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "AI Ops Atlas",
+        "title": "Atlas",
         "width": 1360,
         "height": 880,
         "minWidth": 1024,

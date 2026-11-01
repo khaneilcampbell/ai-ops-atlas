@@ -115,7 +115,7 @@ function assemble(streams: string[], title: string): Uint8Array {
   }
   objects[catalog - 1] = `<< /Type /Catalog /Pages ${pagesObj} 0 R >>`;
   objects[pagesObj - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(" ")}] /Count ${kids.length} >>`;
-  const info = add(`<< /Title (${esc(winAnsi(title))}) /Producer (AI Ops Atlas) >>`);
+  const info = add(`<< /Title (${esc(winAnsi(title))}) /Producer (Atlas) >>`);
   let out = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
   const offsets: number[] = [];
   objects.forEach((body, i) => {

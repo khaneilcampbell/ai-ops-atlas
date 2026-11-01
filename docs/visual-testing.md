@@ -29,15 +29,15 @@ in `playwright-report/`.
 
 ## Views covered
 
-`map-day`, `map-night`, `map-selected` (AI Ops Atlas selected, inspector open), `office`
-(inside AI Ops Atlas HQ), `mission-control`, and `active-agents` (skipped until the
+`map-day`, `map-night`, `map-selected` (Atlas selected, inspector open), `office`
+(inside Atlas HQ), `mission-control`, and `active-agents` (skipped until the
 Mission Control Active agents tab is on main). The list is in `visual/views.visual.ts`;
 a new view is one more test there.
 
 `visual/header.visual.ts` checks the top bar at 1728, 1512, 1280 and 1024 px and on a phone:
 nothing in it may wrap, spill out of the bar or run past its right edge, and each width has a
 screenshot (`header-wide`, `header-laptop`, `header-narrow`, `header-small`, `header-phone`).
-It adds the pills the Mac app shows (a long live status, "Read-only + re-runs") so the
+It adds the pills the Mac app shows (a long live status and CI status) so the
 crowded case is covered in the web build.
 
 `visual/copy.visual.ts` has no screenshots: it checks that text can be selected in every
@@ -64,8 +64,10 @@ and that the inspector's copy button puts the repository name on the clipboard.
 
 `.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
 touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
-a required check. Every run uploads its screenshots, diffs and report as the
-`visual-results` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
+a required check. The specs run as 6 shards in parallel (`--shard=N/6`, split by spec
+file, 35 minutes each); one runner could no longer finish all of them in 45 minutes.
+Run one shard locally with `npx playwright test -c visual --shard=1/6`. Each shard uploads
+its screenshots, diffs and report as a `visual-results-N` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
 To set or accept CI baselines, run the workflow by hand with **update** ticked: it pushes
 the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from.
 
@@ -86,6 +88,11 @@ CPU time per frame is only comparable on the same machine.
 `BUDGET` in the spec. Run it on any pull request that adds to the map, and put the before
 and after `PERF` lines in the pull request. `PERF_ONLY="desktop day"` runs one case
 (about 6 minutes here).
+
+In CI the budget runs in its own workflow, `.github/workflows/perf.yml`, on every pull request,
+so it can be a required check. A pull request that touches nothing the map is built from
+(only docs, `ops/`, `catalog/`, `src-tauri/`) passes it in seconds without measuring. A measure
+above 90% of its budget leaves a warning on the pull request but still passes.
 
 ## Circa preview shots
 
