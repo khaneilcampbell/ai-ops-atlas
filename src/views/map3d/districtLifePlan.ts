@@ -4,8 +4,6 @@ import {financialBrand} from './financialBrands';
 import {financialDimensions} from './financialArchitecture';
 
 export const DISTRICT_LIFE={maxVisitors:36,speed:.32,insidePause:8,outsidePause:5,doorRadius:.65,bodyRadius:.04} as const;
-export const SIMULATED_COMMUTERS=6;
-export const commuterLane=(i:number)=>(i-(SIMULATED_COMMUTERS-1)/2)*.065;
 export type LifeArea='financial'|'hills'|'golf'|'bmw';
 export interface VisitorRoute {points:Pt[];lengths:number[];length:number}
 export interface DistrictVisitor {id:string;area:LifeArea;route:VisitorRoute;offset:number;lane:number;door?:string;target?:string;golf?:boolean;threshold?:number}
