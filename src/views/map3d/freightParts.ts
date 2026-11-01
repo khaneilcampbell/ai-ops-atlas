@@ -1,7 +1,6 @@
 import {profileWidthAt,interchangeArrows} from "./highwayDetails";
-import {collectorProfile} from "./highwayAccess";
 import {ROAD_W} from "./roads";
-import {HIGHWAY,offsetRoad,distanceToRoad,roadStrips,roadProfile} from "./highway";
+import {HIGHWAY,offsetRoad,distanceToRoad,roadStrips,roadProfile,highwayShare,streetBlend} from "./highway";
 import type {Inst} from "./models";
 import {TERRACE_H} from "./scene";
 import {FREIGHT_STREET_TURN,type FreightPlan} from "./freight";
@@ -24,8 +23,12 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
  const access=plan.access??[];
  const ramps=new Set(access.flatMap(a=>a.ramps));
  const paths=[plan.highway,plan.route,...access.flatMap(a=>[a.collector,...a.ramps])];
- const collectors=new Set(access.map(a=>a.collector));
- const profiles=new Map(paths.map(p=>[p,collectors.has(p)?collectorProfile(p):roadProfile(p)]));
+ // Ground roads (truck route and highway collectors) follow the road standard: city street size
+ // on land, highway size only once they rise toward the highway (TRANSPORT.streetToHighway).
+ const ground=new Set([plan.route,...access.map(a=>a.collector)]);
+ const profiles=new Map(paths.map(p=>[p,roadProfile(p)]));
+ const shares=new Map<[number,number][],number[]>();
+ for(const path of ground){const r=profiles.get(path)!,k=highwayShare(r.points,plan.land,plan.highway);shares.set(path,k);profiles.set(path,{...r,widths:r.widths.map((w,i)=>streetBlend(TRANSPORT.cityWidth,w,k[i]))});}
  // Where the truck route turns onto or off a shared district street, its deck narrows to the
  // street's own width, so the turn reads as a street corner instead of a fan of wide highway boxes.
  const streetJoins=plan.localJunctions.filter(j=>(plan.streets??[]).some(st=>distanceToRoad(j,st)<1e-6));
@@ -34,12 +37,16 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
   const d=Math.min(...streetJoins.map(j=>Math.hypot(j[0]-r.points[i][0],j[1]-r.points[i][1]))),k=Math.max(0,Math.min(1,(d-FREIGHT_STREET_TURN*1.6)/1.5));
   return TRANSPORT.cityWidth+(w-TRANSPORT.cityWidth)*k;})});}
  const roadLines=(path:[number,number][],offset:number,junctions:[number,number][]=[] )=>{
-  if(!collectors.has(path))return roadStrips(path,offset,junctions);
-  const p=profiles.get(path)!,line=offsetRoad(p.points,p.widths.map(w=>Math.abs(offset)<.1?offset:Math.sign(offset)*(Math.abs(offset)+(w-HIGHWAY.width)/2)));
-  return line.slice(1).map((b,i)=>({a:line[i],b})).filter(q=>!junctions.some(j=>distanceToRoad(j,[q.a,q.b])<HIGHWAY.junctionRadius));
+  if(!ground.has(path))return roadStrips(path,offset,junctions).map(q=>({...q,k:1}));
+  const p=profiles.get(path)!,k=shares.get(path)!,line=offsetRoad(p.points,p.widths.map(w=>Math.abs(offset)<.1?offset:Math.sign(offset)*(Math.abs(offset)+(w-HIGHWAY.width)/2)));
+  return line.slice(1).map((b,i)=>({a:line[i],b,k:(k[i]+k[i+1])/2})).filter(q=>!junctions.some(j=>distanceToRoad(j,[q.a,q.b])<HIGHWAY.junctionRadius));
  };
  const openings=[...plan.exits,...plan.localJunctions,...access.flatMap(a=>[a.collector[a.collector.length-1]])];
- const onStreet=(x:number,z:number)=>(plan.streets??[]).some(st=>distanceToRoad([x,z],st)<.05);
+ // Truck route pieces that sit on a shared street or collector are already covered by its asphalt.
+ const onStreet=(x:number,z:number,self?:[number,number][])=>(plan.streets??[]).some(st=>st!==self&&distanceToRoad([x,z],st)<TRANSPORT.cityWidth/2);
+ // A collector crossing a district street leaves the crossing to the street's own asphalt and markings.
+ const districtStreets=(plan.streets??[]).filter(st=>!access.some(a=>a.collector===st));
+ const crossesStreet=(path:[number,number][],x:number,z:number)=>path!==plan.route&&ground.has(path)&&districtStreets.some(st=>distanceToRoad([x,z],st)<TRANSPORT.cityWidth/2);
  const onLand=(x:number,z:number)=>plan.land.some(r=>x>r.x&&x<r.x+r.w&&z>r.z&&z<r.z+r.d);
  for(const path of paths)for(let i=1;i<path.length;i++){
  const a=path[i-1],b=path[i];
@@ -61,7 +68,7 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
   const runs:Run[]=[];
   for(let i=1;i<profile.points.length;i++){
    const a=profile.points[i-1],b=profile.points[i],x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;
-   if(path===plan.route&&(distanceToRoad([x,z],plan.highway)<.1||onStreet(x,z)))continue;
+   if((path===plan.route&&(distanceToRoad([x,z],plan.highway)<.1||onStreet(x,z)))||crossesStreet(path,x,z))continue;
    const width=(profile.widths[i-1]+profile.widths[i])/2,beam=path===plan.highway||!onLand(x,z),last=runs[runs.length-1];
    if(last&&last.beam===beam&&Math.abs(last.width-width)<.002&&Math.hypot(a[0]-last.b[0],a[1]-last.b[1])<1e-3){
     const h1=Math.atan2(last.b[1]-last.a[1],last.b[0]-last.a[0]),h2=Math.atan2(b[1]-a[1],b[0]-a[0]);
@@ -69,9 +76,14 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
    }
    runs.push({a,b,width,beam});
   }
-  for(const {a,b,width,beam} of runs){
+  // At a bend each run reaches past the corner by half its width times the tangent of half the turn,
+  // so the outside of every bend is closed instead of showing a notch of grass.
+  const heading=(q:Run)=>Math.atan2(q.b[1]-q.a[1],q.b[0]-q.a[0]),joined=(p:Run,q:Run)=>Math.hypot(p.b[0]-q.a[0],p.b[1]-q.a[1])<1e-3;
+  const turn=(p:Run|undefined,q:Run|undefined)=>{if(!p||!q||!joined(p,q))return 0;const d=heading(q)-heading(p);return Math.abs(Math.atan2(Math.sin(d),Math.cos(d)));};
+  for(const [i,{a,b,width,beam}] of runs.entries()){
+   const reach=Math.min(.3,width/2*Math.tan(Math.max(turn(runs[i-1],runs[i]),turn(runs[i],runs[i+1]))/2));
    const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2,length=Math.hypot(b[0]-a[0],b[1]-a[1]),r=Math.atan2(b[0]-a[0],b[1]-a[1]);
-   out.push({p:[x,TERRACE_H+.025,z],s:[width,.06,length+.035],r,c:path===plan.highway?"#343d3e":"#424b50"});
+   out.push({p:[x,TERRACE_H+.025,z],s:[width,.06,length+.035+2*reach],r,c:path===plan.highway?"#343d3e":"#424b50"});
    if(beam)out.push({p:[x,TERRACE_H-.09,z],s:[width+.08,.12,length+.035],r,c:"#bcb9aa"});
   }
  }
@@ -81,15 +93,15 @@ export function freightParts(plan:FreightPlan,lightPositions:[number,number][]):
  };
  for(const path of paths){
   // Edge lines, centre dashes and curbs stop where the truck route shares a district street.
-  const offStreet=(q:{a:[number,number];b:[number,number]})=>{if(path!==plan.route)return true;const m:[number,number]=[(q.a[0]+q.b[0])/2,(q.a[1]+q.b[1])/2];return !nearJoin(m,FREIGHT_STREET_TURN*1.6+1.5)&&!(plan.streets??[]).some(st=>distanceToRoad(m,st)<HIGHWAY.barrier+.12);};
+  const offStreet=(q:{a:[number,number];b:[number,number]})=>{if(path!==plan.route)return !crossesStreet(path,(q.a[0]+q.b[0])/2,(q.a[1]+q.b[1])/2);const m:[number,number]=[(q.a[0]+q.b[0])/2,(q.a[1]+q.b[1])/2];return !nearJoin(m,FREIGHT_STREET_TURN*1.6+1.5)&&!(plan.streets??[]).some(st=>distanceToRoad(m,st)<HIGHWAY.barrier+.12);};
   for(const side of [-1,1]){
-   for(const q of mergeSegments(roadLines(path,side*HIGHWAY.shoulder,path===plan.highway?plan.exits:openings).filter(q=>offStreet(q)&&(path!==plan.route||distanceToRoad(q.a,plan.highway)>.2))))strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#ede8d6");
+   for(const q of mergeSegments(roadLines(path,side*HIGHWAY.shoulder,path===plan.highway?plan.exits:openings).filter(q=>q.k>.5&&offStreet(q)&&(path!==plan.route||distanceToRoad(q.a,plan.highway)>.2))))strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#ede8d6");
    if(path===plan.highway)for(const q of mergeSegments(roadLines(path,side*.045,plan.exits)))strip(q.a,q.b,.022,.01,TERRACE_H+.09,"#d5b76b");
    else if(side===1&&!ramps.has(path)){
     const center=roadLines(path,0,openings);
     for(const [i,q] of center.entries())if(i%4<2&&offStreet(q)&&distanceToRoad(q.a,plan.highway)>.2)strip(q.a,q.b,.025,.01,TERRACE_H+.09,"#e5dfc9");
    }
-   if(path===plan.route)for(const q of mergeSegments(roadLines(path,side*HIGHWAY.barrier,[...plan.exits,...plan.localJunctions]).filter(q=>offStreet(q)&&onLand(q.a[0],q.a[1])&&distanceToRoad(q.a,plan.highway)>1.1)))strip(q.a,q.b,.1,.035,TERRACE_H+.08,"#cfcbbd");
+   // No curbs or rails on ground-level roads: in town the truck route is an ordinary street.
    if(path===plan.highway||path!==plan.route){
     const rails=roadLines(path,side*HIGHWAY.barrier,openings);
     const shown=rails.filter(q=>path===plan.highway||!onLand(q.a[0],q.a[1]));
