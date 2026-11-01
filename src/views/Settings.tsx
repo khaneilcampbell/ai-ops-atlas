@@ -5,6 +5,8 @@ import { tokenStore } from "../lib/token";
 import { isHostedWeb, isTauri } from "../lib/env";
 import { useAtlas } from "../state";
 import { POWER_MODES, setPowerMode, useOnBattery, usePowerMode, usePowerProfile } from "../lib/power";
+import { PHONE_QUERY, useMedia } from "../lib/media";
+import { SCROLL_MODES, setNavigationPrefs, TRACKPAD_SPEEDS, useNavigationPrefs } from "../lib/navigation";
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 import { SyncSettings } from "./SyncSettings";
@@ -32,6 +34,7 @@ export function SettingsView() {
       </section>
 
       <PowerSetting />
+      <NavigationSetting />
 
       <IntelSettings />
 
@@ -258,6 +261,52 @@ function OwnersSetting({ owners, onChange }: { owners: string[]; onChange: (o: s
         Save
       </button>
     </div>
+  );
+}
+
+/** How a scroll and trackpad gestures move the 3D map. */
+function NavigationSetting() {
+  const prefs = useNavigationPrefs();
+  // Phones move the map with fingers on the screen; there is no scroll or trackpad to set up.
+  const phone = useMedia(PHONE_QUERY);
+  const current = SCROLL_MODES.find((m) => m.mode === prefs.scroll)!;
+  if (phone) return null;
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head">
+        <h2 className="grow">Map navigation</h2>
+      </div>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Two-finger scroll</div>
+          <div className="muted small">{current.hint}</div>
+        </div>
+        <label className="field">
+          <select value={prefs.scroll} onChange={(e) => setNavigationPrefs({ scroll: e.target.value as typeof prefs.scroll })} aria-label="Two-finger scroll">
+            {SCROLL_MODES.map((m) => (
+              <option key={m.mode} value={m.mode}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Trackpad speed</div>
+          <div className="muted small">How far the map moves for each scroll, pinch and twist.</div>
+        </div>
+        <label className="field">
+          <select value={prefs.speed} onChange={(e) => setNavigationPrefs({ speed: e.target.value as typeof prefs.speed })} aria-label="Trackpad speed">
+            {TRACKPAD_SPEEDS.map((s) => (
+              <option key={s.speed} value={s.speed}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </section>
   );
 }
 

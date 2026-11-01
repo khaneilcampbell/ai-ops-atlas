@@ -1,4 +1,5 @@
 import {flightClearance} from './flightClearance';
+import { groupLabels } from "./groupLabels";
 import {DistrictLife} from './DistrictLife';
 import {financialDimensions} from './financialArchitecture';
 import {StreetLights} from './StreetLights';
@@ -15,13 +16,17 @@ import {DEALERSHIP_KEY} from "./dealershipPlan";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
+import {MarketingAgency} from "./MarketingAgency";
+import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
+import {Mall} from "./Mall";
+import {MALL,MALL_KEY} from "./mallPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
 import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
 import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { shopHeight } from "./cityScale";
+import { CITY_SCALE, shopHeight } from "./cityScale";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -33,7 +38,7 @@ import type { Health, Verified } from "../../lib/derive";
 import { Bloom, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
-import { clip, measure, SANS, wrap } from "../mapText";
+import { measure, SANS, wrap } from "../mapText";
 import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
 import { focus as focusLevel, focusCount, focusRects, FOCUS_MAX, time } from "./materials";
@@ -41,6 +46,8 @@ import { Network, type NetLink } from "./network";
 import { AtlasHq } from "./AtlasHq";
 import { RibbonTower } from "./RibbonTower";
 import { isRibbonTower } from "./ribbonTowerPlan";
+import { GithubTower } from "./GithubTower";
+import { isGithubTower } from "./githubTowerPlan";
 import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
@@ -50,6 +57,9 @@ import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
+import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
+import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
+import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -120,19 +130,6 @@ const PORTRAIT_ASPECT = 0.75;
 
 const STATUS_DOT: Record<Status, string> = { active: "#7fbf7a", idle: "#a9b4a0", paused: "#c4b07c", attention: "#e2b55a", retired: "#7d857a" };
 
-interface LabelSpec {
-  id: string;
-  key: string;
-  pos: THREE.Vector3;
-  w: number;
-  h: number;
-  priority: number;
-  node: React.ReactNode;
-  className: string;
-  onClick?: () => void;
-  title?: string;
-}
-
 const selOf = (key: string): Sel => {
   const i = key.indexOf(":");
   return { kind: key.slice(0, i) as Sel["kind"], id: key.slice(i + 1) };
@@ -152,6 +149,8 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.community)for(const b of COMMUNITY_BUILDINGS)m.set(communityKey(b.id),{x:scene.community.x+b.x,z:scene.community.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.communityRail){const [x,z]=scene.communityRail.financial;m.set("service:financial-station",{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
+  if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
+  if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
   if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+4,z:scene.stadium.z+3.5,y0:TERRACE_H,y1:TERRACE_H+2.3,w:8,d:7});
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
   const skyline=skylineProjectAnchor(scene);
@@ -245,24 +244,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        const name = clip(t.name, 12, 168);
-        out.push({
-          id: `hq:${t.projectId}`,
-          key: t.key,
-          pos: new THREE.Vector3(t.x, towerTop(t) + 0.3, t.z),
-          w: measure(name, 12, SANS, 600) + 40,
-          h: 34,
-          priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents),
-          className: `m3-plaque compact ${state}${net.focusSet && !net.focusSet.has(t.projectId) ? " dim" : ""}`,
-          onClick: () => select(t.key),
-          title: `${t.name} · ${health.label}`,
-          node: (
-            <div className="t">
-              {name}
-              {mark}
-            </div>
-          ),
-        });
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: towerTop(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -272,7 +254,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: `hq:${t.projectId}`,
         key: t.key,
-        pos: new THREE.Vector3(t.x, towerTop(t) + 0.3, t.z),
+        pos: new THREE.Vector3(t.x, towerTop(t) + PLAQUE.roofGap, t.z),
         w,
         h: h + 8,
         priority: 0,
@@ -343,33 +325,38 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
-    // Neighborhood names when the map is grouped, at the back corner of each landmass.
-    for (const n of layout.neighborhoods) {
-      // Tag groups usually hold one project each, so their "CLAUDE · 1" pills read like error badges.
-      if (!n.label || layout.neighborhoods.length < 2 || n.key.startsWith("t:")) continue;
-      // Districts are a fixed set, so their names stand alone; other groupings show how many they hold.
-      const district = n.key.startsWith("d:");
-      const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
-      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
+    // Group names when the map is grouped, at the back corner of each landmass, one style for every
+    // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
+    // groups give way to the project plaques.
+    const byDistrict = layout.neighborhoods.some((n) => n.key.startsWith("d:"));
+    const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
+    for (const g of groupLabels(layout.neighborhoods)) {
+      const n = hoods.get(g.key)!;
+      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 28, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
     }
+    // Every other building and place uses the same nameplate (see plaques.tsx): one size, one
+    // gap above its roof, one look, and a status dot (planned places show the dashed one).
+    const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => out.push(buildingPlaque({ ...p, selKey, hover, onSelect: select }));
     if(scene.financial){
-      const f=scene.financial,planned=<b className="hm hm-unverified" title="Planned · No verified operations" aria-label="Planned · No verified operations"/>;
-      out.push({id:FINANCIAL_KEY,key:FINANCIAL_KEY,pos:new THREE.Vector3(f.x+f.w/2,TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.5,f.z+f.d/2),w:measure("Financial District",12,SANS,600)+40,h:34,priority:selKey===FINANCIAL_KEY?0:2,className:`m3-plaque compact${selKey===FINANCIAL_KEY?" selected":""}`,node:<div className="t">Financial District{planned}</div>,onClick:()=>select(FINANCIAL_KEY),title:"Financial District · Planned waterfront"});
-      for(const b of f.buildings)if(near==="near"||selKey===FINANCIAL_KEY||selKey===financialKey(b.id))out.push({id:financialKey(b.id),key:financialKey(b.id),pos:new THREE.Vector3(f.x+b.x,TERRACE_H+b.height+1.3,f.z+b.z),w:measure(b.name,12,SANS,600)+40,h:34,priority:selKey===financialKey(b.id)?0:7,className:`m3-plaque compact${selKey===financialKey(b.id)?" selected":""}`,node:<div className="t">{b.name}{planned}</div>,onClick:()=>select(financialKey(b.id)),title:`${b.name} · Planned workspace`});
-      if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)out.push({id:FINANCIAL_PARK_KEY,key:FINANCIAL_PARK_KEY,pos:new THREE.Vector3(f.x+f.park.x+f.park.w/2,TERRACE_H+1.6,f.z+f.park.z+f.park.d/2),w:measure("Financial Park",12,SANS,600)+40,h:34,priority:selKey===FINANCIAL_PARK_KEY?0:7,className:`m3-plaque compact${selKey===FINANCIAL_PARK_KEY?" selected":""}`,node:<div className="t">Financial Park{planned}</div>,onClick:()=>select(FINANCIAL_PARK_KEY),title:"Financial Park · Planned public space"});
+      const f=scene.financial,top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
+      plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:f.x+f.w/2,roof:top,z:f.z+f.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
+      for(const b of f.buildings)if(near==="near"||selKey===FINANCIAL_KEY||selKey===financialKey(b.id))plaque({id:financialKey(b.id),select:financialKey(b.id),name:b.name,x:f.x+b.x,roof:TERRACE_H+b.height+1.2,z:f.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
+      if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
-    if(scene.community&&(near==="near"||selKey===HILLS_KEY||selKey?.startsWith("service:hills:")))for(const b of COMMUNITY_BUILDINGS){const key=communityKey(b.id);out.push({id:key,key,pos:new THREE.Vector3(scene.community.x+b.x,TERRACE_H+b.h+.35,scene.community.z+b.z),w:measure(b.name,12,SANS,600)+30,h:28,priority:selKey===key?0:8,className:`m3-plaque compact${selKey===key?" selected":""}`,node:<div className="t">{b.name}</div>,onClick:()=>select(key),title:`${b.name} · Planned community`});}
-    if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial,key="service:financial-station";out.push({id:key,key,pos:new THREE.Vector3(x,TERRACE_H+COMMUNITY.platformRise+1.6,z),w:185,h:28,priority:selKey===key?0:8,className:"m3-plaque compact",node:<div className="t">Financial District Station</div>,onClick:()=>select(key),title:"Financial District Station · Visual simulation"});}
-    if(scene.hills)out.push({id:HILLS_KEY,key:HILLS_KEY,pos:new THREE.Vector3(scene.hills.x+HILLS.mansion.x,TERRACE_H+3.8,scene.hills.z+HILLS.mansion.z),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Hills</div>,onClick:()=>select(HILLS_KEY),title:"Atlas Hills · Planned community"});
-    if(scene.dealership)out.push({id:DEALERSHIP_KEY,key:DEALERSHIP_KEY,pos:new THREE.Vector3(scene.dealership.x+scene.dealership.showroom.cx,TERRACE_H+scene.dealership.showroom.height+.55,scene.dealership.z+scene.dealership.showroom.cz),w:140,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">BMW</div>,onClick:()=>select(DEALERSHIP_KEY),title:"BMW · Planned visual district"});
-    if(scene.stadium)out.push({id:STADIUM_KEY,key:STADIUM_KEY,pos:new THREE.Vector3(scene.stadium.x+4,TERRACE_H+2.3,scene.stadium.z+3.5),w:100,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Stadium</div>,onClick:()=>select(STADIUM_KEY),title:"Stadium · Planned venue"});
-    if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>near==="near"||selKey===airportBuildingKey(b.id)))out.push({id:airportBuildingKey(b.id),key:airportBuildingKey(b.id),pos:new THREE.Vector3(airportPoint(scene.airport,b.x,b.z)[0],TERRACE_H+b.h+.35,scene.airport.z+b.z),w:measure(b.name,11,SANS,500)+24,h:26,priority:selKey===airportBuildingKey(b.id)?0:7,className:"m3-plaque compact secondary",node:<div className="t">{b.name}</div>,onClick:()=>select(airportBuildingKey(b.id)),title:`${b.name} · Planned workspace`});
-    if(scene.airport)out.push({id:AIRPORT_KEY,key:AIRPORT_KEY,pos:new THREE.Vector3(airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],TERRACE_H+3.5,scene.airport.z+AIRPORT_LAYOUT.terminalZ),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Airport</div>,onClick:()=>select(AIRPORT_KEY),title:"Atlas Airport · Planned visual district"});
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+shopHeight(shop)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
+    if(scene.community&&(near==="near"||selKey===HILLS_KEY||selKey?.startsWith("service:hills:")))for(const b of COMMUNITY_BUILDINGS)plaque({id:communityKey(b.id),select:communityKey(b.id),name:b.name,x:scene.community.x+b.x,roof:TERRACE_H+b.h,z:scene.community.z+b.z,priority:8,mark:PLANNED,title:`${b.name} · Planned community`});
+    if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial;plaque({id:"service:financial-station",select:"service:financial-station",name:"Financial District Station",x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:"Financial District Station · Visual simulation"});}
+    if(scene.hills)plaque({id:HILLS_KEY,select:HILLS_KEY,name:"Atlas Hills",x:scene.hills.x+HILLS.mansion.x,roof:TERRACE_H+HILLS.mansion.h+.25,z:scene.hills.z+HILLS.mansion.z,priority:2,mark:PLANNED,title:"Atlas Hills · Planned community"});
+    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
+    if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
+    if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
+    if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:"Stadium",x:scene.stadium.x+4,roof:TERRACE_H+2.3,z:scene.stadium.z+3.5,priority:2,mark:PLANNED,title:"Stadium · Planned venue"});
+    if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>near==="near"||selKey===airportBuildingKey(b.id)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
+    if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
+    const skylineHealth=healthFor("khaneilcampbell/skyline"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name)))plaque({id:shop.key,key:shop.key,select:skylineBuildingKey(shop.name),name:shop.name,x:shop.x,roof:TERRACE_H+shopHeight(shop)+0.4,z:shop.z,priority:7,mark:skylineMark,title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
-      if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
-      const skylineHealth=healthFor("khaneilcampbell/skyline");
-      out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: selKey==="project:skyline"?0:3, className: `m3-plaque compact${selKey==="project:skyline"?" selected":""}`, onClick:()=>select("project:skyline"), title: `skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
+      if(near!=="near"&&byDistrict) out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
+      plaque({id:p.id,key:p.id,select:"project:skyline",name:p.label,x:p.x+p.w/2,roof:TERRACE_H+4.95*CITY_SCALE.skyline,z:p.z+p.d/2,priority:3,mark:skylineMark,title:`skyline · ${skylineHealth.label}`});
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
@@ -494,6 +481,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           onMoved={() => setTip(null)}
           phone={phone}
           cover={props.cover ?? 0}
+          surface={wrapEl}
         />
       </Canvas>
       </MapGuard>
@@ -563,6 +551,7 @@ function World({
   onMoved,
   phone,
   cover,
+  surface,
 }: {
   power: PowerProfile;
   light: LightMode;
@@ -593,6 +582,8 @@ function World({
   onMoved: () => void;
   phone: boolean;
   cover: number;
+  /** The map's whole area, labels included, for trackpad gestures. */
+  surface: React.RefObject<HTMLDivElement>;
 }) {
   const { camera, gl, size, scene: three, invalidate } = useThree();
   // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.
@@ -637,14 +628,15 @@ function World({
 
   const movedRef = useRef(onMoved);
   movedRef.current = onMoved;
+  /** The person moved the camera themselves: stop any glide and stop following the selection. */
+  const start = useCallback(() => {
+    wake();
+    touched.current = true;
+    anim.current = null;
+    framing.current = null;
+    movedRef.current();
+  }, []);
   useEffect(() => {
-    const start = () => {
-      wake();
-      touched.current = true;
-      anim.current = null;
-      framing.current = null;
-      movedRef.current();
-    };
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
     controls.disconnect();
     controls.connect(gl.domElement);
@@ -657,7 +649,94 @@ function World({
       controls.removeEventListener("change", change);
       controls.disconnect();
     };
-  }, [controls, gl]);
+  }, [controls, gl, start]);
+
+  // Mac trackpad gestures (see trackpad.ts): scroll pans, pinch zooms, twist turns, Option with a
+  // scroll turns and tilts. Listening on the whole map area in the capture phase sees the wheel
+  // over the labels too, and keeps MapControls from also zooming. A mouse wheel passes through.
+  const wheels = useMemo(() => new WheelClassifier(likelyMacTrackpad(typeof navigator === "undefined" ? undefined : navigator) ? "trackpad" : "mouse"), []);
+  const boundsRef = useRef(scene.bounds);
+  boundsRef.current = scene.bounds;
+  useEffect(() => {
+    const el = surface.current;
+    if (!el) return;
+    const cam = camera as THREE.PerspectiveCamera;
+    const rig = { target: controls.target, position: camera.position };
+    const moved = () => {
+      clampRig(rig, boundsRef.current);
+      start();
+      // Draw at full rate only while fingers (or the Mac's momentum) are moving.
+      wake(250);
+    };
+    const zoomAt = (factor: number, x: number, y: number) => {
+      const r = gl.domElement.getBoundingClientRect();
+      const anchor = groundAt(camera, controls.target, ((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+      zoomRigAt(rig, anchor, factor, controls.minDistance, controls.maxDistance);
+    };
+    // WebKit pinches arrive as gesture events; a ctrl wheel close to one is the same pinch.
+    let lastGesture = -Infinity;
+    const gesturing = () => performance.now() - lastGesture < 200;
+    const onWheel = (e: WheelEvent) => {
+      // Copies the labels forward to the canvas are mouse wheels for MapControls.
+      if (!e.isTrusted) return;
+      const p = getNavigationPrefs();
+      const intent = wheelIntent(e, wheels, p.scroll, speedFactor(p.speed), gesturing(), el.clientHeight);
+      if (intent.kind === "pass") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (intent.kind === "drop") return;
+      if (intent.kind === "pan") panRig(rig, cam.fov, gl.domElement.clientHeight, intent.dx, intent.dy);
+      else if (intent.kind === "zoom") zoomAt(intent.factor, e.clientX, e.clientY);
+      else orbitRig(rig, intent.azimuth, intent.polar, controls.minPolarAngle, controls.maxPolarAngle);
+      moved();
+    };
+    // Safari and the Mac app. Phones and iPads send these for touch pinches too, which MapControls
+    // already turns into zoom, so only a pointer-only Mac uses them.
+    const pointerOnly = typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) === 0;
+    type Gesture = Event & { scale: number; rotation: number; clientX: number; clientY: number };
+    let scale = 1;
+    let twist = 0;
+    const onGestureStart = (ev: Event) => {
+      ev.preventDefault();
+      lastGesture = performance.now();
+      scale = 1;
+      twist = 0;
+      wheels.sawPinch();
+    };
+    const onGestureChange = (ev: Event) => {
+      const e = ev as Gesture;
+      e.preventDefault();
+      lastGesture = performance.now();
+      const speed = speedFactor(getNavigationPrefs().speed);
+      const ratio = e.scale / scale;
+      scale = e.scale;
+      if (ratio > 0 && Math.abs(ratio - 1) > 1e-4) zoomAt(Math.pow(ratio, speed), e.clientX, e.clientY);
+      const step = twistStep(twist, e.rotation);
+      twist = e.rotation;
+      if (step) orbitRig(rig, twistToAzimuth(step), 0, controls.minPolarAngle, controls.maxPolarAngle);
+      moved();
+    };
+    const onGestureEnd = (ev: Event) => {
+      ev.preventDefault();
+      lastGesture = performance.now();
+    };
+    // A click or drag ends the trailing momentum of the last flick.
+    const onPointerDown = () => wheels.interrupt();
+    el.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    el.addEventListener("pointerdown", onPointerDown, { capture: true });
+    if (pointerOnly) {
+      el.addEventListener("gesturestart", onGestureStart);
+      el.addEventListener("gesturechange", onGestureChange);
+      el.addEventListener("gestureend", onGestureEnd);
+    }
+    return () => {
+      el.removeEventListener("wheel", onWheel, { capture: true });
+      el.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      el.removeEventListener("gesturestart", onGestureStart);
+      el.removeEventListener("gesturechange", onGestureChange);
+      el.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [surface, camera, controls, gl, start, wheels]);
 
   /**
    * The angle the map is first seen from. A tall phone screen looks along the island's side
@@ -706,6 +785,8 @@ function World({
       return;
     }
     anim.current = { t0: performance.now(), ms, from: [controls.target.clone(), camera.position.clone()], to };
+    // A glide wins over the trailing momentum of a flick that came before it.
+    wheels.interrupt();
   };
 
   const fitNow = (instant = false) => {
@@ -994,7 +1075,9 @@ function World({
       <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
       <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
       <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>
+      <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>
       <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>
+      <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>
       <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
@@ -1002,6 +1085,7 @@ function World({
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       {scene.towers.filter((t) => t.identity.landmark).map((t) => <AtlasHq key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />

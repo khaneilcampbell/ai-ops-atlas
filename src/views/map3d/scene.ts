@@ -4,10 +4,15 @@ import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
+import {sizeGithubTower} from "./githubTowerPlan";
+import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
+import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
+import {planMall,type MallPlan} from "./mallPlan";
+import {planMallGarden,type MallGarden} from "./mallGarden";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
@@ -98,8 +103,8 @@ export interface Tower {
   floors: number;
   height: number;
   /**
-   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ), sized
-   * with the Financial District so they stand among its towers, just under the shortest.
+   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ, the GitHub
+   * tower), sized with the Financial District so they stand among its towers, just under the shortest.
    */
   customHeight?: number;
 }
@@ -146,6 +151,12 @@ export interface Scene3D {
   transportConnections:DistrictConnection[];
   stadium?: StadiumPlan;
   dealership?:DealershipPlan;
+  /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
+  agency?:AgencyPlan;
+  /** Atlas Marketplace mall on the open lot beside the Skyline park. */
+  mall?:MallPlan;
+  /** Marketplace Gardens on the green behind the mall, and the beds on its plaza. */
+  mallGarden?:MallGarden;
   freight?: FreightPlan;
   /** Area reserved by an interior cutaway; outdoor crowds must stay outside. */
   pedestrianExclusion?: Rect;
@@ -154,7 +165,11 @@ export interface Scene3D {
   neighborhoodLand?: Rect[];
   /** Terrace-height land joining the airport entrance to the district across from it. */
   airportForecourt?: Rect;
+  /** Low land lifted to terrace height where it sits inside a neighborhood green. */
+  raisedLand?: Rect[];
   terraces: Terrace[];
+  /** Land added beside the GitHub terrace for its glass podium, when a side is free. */
+  githubAnnex?: GithubAnnex;
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
   steps: Slab[];
@@ -197,7 +212,14 @@ function strip(x0: number, z0: number, x1: number, z1: number, w: number, y: num
   return { x, z, w: x0 === x1 ? w : Math.abs(x1 - x0), d: z0 === z1 ? w : Math.abs(z1 - z0), y, h: 0.03 };
 }
 
+/** The whole city, then the GitHub tower's podium on whatever open ground is left (githubAnnex.ts). */
 export function buildScene(layout: Layout): Scene3D {
+  const scene = buildCity(layout);
+  addGithubAnnex(scene);
+  return scene;
+}
+
+function buildCity(layout: Layout): Scene3D {
   const land: Rect[] = layout.meadows.map((m) => ({ x: m.ox, z: m.oy, w: m.w, d: m.h }));
   const terraces: Terrace[] = [];
   const paving: Slab[] = [];
@@ -671,6 +693,7 @@ export function buildScene(layout: Layout): Scene3D {
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
   sizeCustomTowers(towers, kiosks);
+  sizeGithubTower(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
@@ -698,7 +721,23 @@ export function buildScene(layout: Layout): Scene3D {
     const nearRoad=(x:number,z:number)=>distanceToRoad([x,z],freight.cityAccess)<.4 || freight.route.slice(1).some((b,i)=>{const a=freight.route[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.65;}) || (Math.abs(x-freight.lot.x)<1.3&&Math.abs(z-freight.lot.z)<1.2);
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
   }
+  const agency=planAgency({city:cityLand,land,top,paving,terraces,roads:[...carBridges.flatMap(b=>b.roads),...connections.flatMap(c=>[c.road,c.walk]),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])],obstacles:[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}))});
+  if(agency){
+    const inLot=(x:number,z:number,pad:number)=>agency.land.some(r=>inRect(r,x,z,pad));
+    for(let i=rocks.length-1;i>=0;i--)if(inLot(rocks[i].x,rocks[i].z,.5))rocks.splice(i,1);
+    land.push(...agency.land);paving.push(...agency.paving);
+    trees.push(...agency.trees.map(([x,z],i)=>({x,z,y:top,s:.27+(i%3)*.03,kind:(i%4===1?'cone':'round') as TreeKind})));
+    for(const path of agency.walks)walks.push({x0:path[0][0],z0:path[0][1],x1:path[path.length-1][0],z1:path[path.length-1][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
+  }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
+  const mall=planMall({parks,land,towers,kiosks,retail,hills,links:connections,roads:[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])]});
+  if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
+  const mallGarden=mall?planMallGarden(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
+  if(mallGarden){
+    const r=mallGarden.rect;
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
+    trees.push(...mallGarden.trees);bushes.push(...mallGarden.bushes);bollards.push(...mallGarden.bollards);
+  }
   const communityRail=planCommunityRail(community,financial,dealership?.lot);
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
@@ -728,10 +767,14 @@ export function buildScene(layout: Layout): Scene3D {
     transportConnections:connections,
     stadium,
     dealership,
+    agency,
     freight,
     land,
     neighborhoodLand:neighborhood.land,
     airportForecourt:forecourtLand[0],
+    mall,
+    mallGarden,
+    raisedLand:neighborhood.raised,
     terraces,
     paving,
     steps,
