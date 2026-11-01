@@ -405,8 +405,9 @@ function anchors(districts: District[], parks: Park[]) {
   return m;
 }
 
-export function MapView() {
-  const { catalog, repos, uncataloged, select, selection, setView } = useAtlas();
+export function MapView({active=true}:{active?:boolean}) {
+  const { catalog, repos, uncataloged, select, selection: appSelection, setView } = useAtlas();
+  const selection = active ? appSelection : null;
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -437,6 +438,7 @@ export function MapView() {
   const is3d = mode === "3d";
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
+  useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
   const map3d = useRef<Map3DApi>(null);
   const phone = useMedia(PHONE_QUERY);
 
@@ -485,11 +487,11 @@ export function MapView() {
     if (selection) setLinkSel(null);
   }, [selection]);
   useEffect(() => {
-    if (!pickedLink) return;
+    if (!active || !pickedLink) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLinkSel(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pickedLink]);
+  }, [active, pickedLink]);
   const linkTip = (id: string) => {
     const c = connections.find((x) => x.id === id);
     return c ? { title: c.relation, sub: `${CONNECTION_LABEL[c.type]} · ${CONNECTION_STATUS_LABEL[c.status]} · click to inspect` } : null;
@@ -523,10 +525,11 @@ export function MapView() {
     camRef.current = cam;
   }, [cam]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     if (anim.current !== null) cancelAnimationFrame(anim.current);
     anim.current = null;
-  };
+  }, []);
+  useEffect(() => { if (!active) stop(); }, [active, stop]);
 
   const animateTo = useCallback(
     (to: Cam) => {
@@ -545,7 +548,7 @@ export function MapView() {
       };
       anim.current = requestAnimationFrame(step);
     },
-    [reduced],
+    [reduced, stop],
   );
 
   const fitCam = useCallback(
@@ -594,9 +597,9 @@ export function MapView() {
     const ro = new ResizeObserver(onResize);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fitCam]);
+  }, [fitCam, stop]);
 
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => stop(), [stop]);
 
   const kMin = () => Math.min(0.3, fitK.current * 0.8);
 
@@ -613,7 +616,7 @@ export function MapView() {
       const f = k / v.k;
       return { k, x: px - (px - v.x) * f, y: py - (py - v.y) * f };
     });
-  }, []);
+  }, [stop]);
 
   const endPointer = (id: number) => {
     fingers.current.delete(id);
@@ -671,14 +674,14 @@ export function MapView() {
   const selectedProject = selection?.kind === "repo" ? catalog.projects.find(p => projectRepositories(p, catalog.agents).includes(selection.id)) : undefined;
   const selKey = selectedProject ? `project:${selectedProject.id}` : selection ? `${selection.kind}:${selection.id}` : null;
   useEffect(() => {
-    if (!selKey) return;
+    if (!active || !selKey) return;
     const p = where.get(selKey);
     if (!p) return;
     if (p.district) setFocus(p.district);
     // Wait a frame so the docked inspector has taken its width before measuring.
     const id = requestAnimationFrame(() => reveal(p, 0.55));
     return () => cancelAnimationFrame(id);
-  }, [selKey, where, reveal]);
+  }, [active, selKey, where, reveal]);
 
   const showTip = (e: React.MouseEvent, title: string, sub: string) => {
     const r = stage.current!.getBoundingClientRect();
@@ -916,7 +919,7 @@ export function MapView() {
 
   return (
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
-      {office.projectId && (
+      {active && office.projectId && (
         <Suspense fallback={null}>
           {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
@@ -983,8 +986,9 @@ export function MapView() {
           }}
         >
           {is3d ? (
-            <Suspense fallback={null}>
+            <Suspense fallback={<div className="map-loading" role="status">Loading city…</div>}>
             <Map3D
+              active={active}
               ref={map3d}
               layout={layout}
               // On a phone the inspector is a sheet over the lower half of the map (mobile.css).

@@ -3,7 +3,7 @@ import {Canvas,useThree} from '@react-three/fiber';
 import {Html,OrbitControls} from '@react-three/drei';
 import type {OrbitControls as OrbitControlsImpl} from 'three-stdlib';
 import * as THREE from 'three';
-import {usePowerProfile} from '../../lib/power';
+import {usePageVisible,usePowerProfile} from '../../lib/power';
 import {useReducedMotion} from '../../lib/motion';
 import {FramePacer} from '../map3d/pacer';
 import {night as cityNight} from '../map3d/materials';
@@ -148,13 +148,13 @@ function Floor({level,single,night,animate,onPick}:{level:number;single:boolean;
  */
 export default function AgencyInterior({light}:{light:LightMode}){
  const [floor,setFloor]=useState(-1);const [picked,setPicked]=useState<string|null>(null);
- const power=usePowerProfile(),reduced=useReducedMotion(),isNight=light==='night';
+ const power=usePowerProfile(),visible=usePageVisible(),reduced=useReducedMotion(),isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const all=floor===-1,levels=all?Array.from({length:INTERIOR.levels},(_,i)=>i):[floor];
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${AGENCY_NAME} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.3:.75}/>
