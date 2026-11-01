@@ -88,6 +88,8 @@ export interface MapLink {
 }
 
 interface Props {
+  /** Keep the renderer warm while Projects is closed, without drawing hidden frames. */
+  active?: boolean;
   layout: Layout;
   /** Share of the view covered from below by a sheet; selections are framed above it. */
   cover?: number;
@@ -416,10 +418,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
-  const drawing = visible && officePhase !== "inside";
+  const drawing = props.active !== false && visible && officePhase !== "inside";
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
+  const [readyKey, setReadyKey] = useState(-1);
   useEffect(() => resetGovernor(), [power, glKey]);
   const glCanvas = useRef<HTMLCanvasElement | null>(null);
   const restarts = useRef(0);
@@ -441,6 +444,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
       <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+        <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
           power={power}
@@ -481,6 +485,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           surface={wrapEl}
         />
       </Canvas>
+      {readyKey !== glKey && <div className="map-loading" role="status">Preparing city…</div>}
       </MapGuard>
       <div
         className="m3-labels"
@@ -517,6 +522,19 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     </div>
   );
 });
+
+/** A real drawn frame, not module loading, ends the first-visit loading state. */
+function FirstMapFrame({ready}:{ready:()=>void}) {
+  const scheduled=useRef(false);
+  const frame=useRef(0);
+  useFrame(()=>{
+    if(scheduled.current)return;
+    scheduled.current=true;
+    frame.current=requestAnimationFrame(ready);
+  });
+  useEffect(()=>()=>{cancelAnimationFrame(frame.current);scheduled.current=false;},[]);
+  return null;
+}
 
 function World({
   power,

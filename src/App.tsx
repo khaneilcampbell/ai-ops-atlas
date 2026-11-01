@@ -126,7 +126,11 @@ export default function App() {
 
       <main className="main">
         <StewardNotice />
-        {/* Keyed by view, so moving to another view also clears a crash. */}
+        {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
+        <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>
+          <ErrorBoundary><MapView active={view === "map"}/></ErrorBoundary>
+        </div>
+        {/* Other pages still clear their own crashes when switching views. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "grid" && <GridView />}
@@ -134,7 +138,6 @@ export default function App() {
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
           {view === "repos" && <ReposView />}
-          {view === "map" && <MapView />}
           {view === "intel" && <IntelligenceView />}
           {view === "usage" && <UsageView />}
           {view === "settings" && <SettingsView />}

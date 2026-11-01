@@ -27,3 +27,11 @@ Balanced retains Retina detail and full-rate interaction, with paced background 
 - The baseline intentionally fails the added idle assertion; the updated branch passes. No visual baselines were replaced. Full screenshot-suite/installed macOS energy measurements were not run in this focused pass.
 
 The before/after comparison isolates these performance changes against main `45c0b5a`. Subsequent main updates (Marketplace, Hills mansion and commuters through `6e633d8`) are preserved and the combined branch is revalidated.
+
+## Projects re-entry delay
+
+Confirmed in `App.tsx`: the view-keyed boundary and conditional MapView mount destroyed the entire WebGL scene on every departure from Projects. Re-entry repeated scene construction, GPU uploads and shader setup. The lazy map import also had a null loading fallback.
+
+Projects now retains exactly one map instance outside the route-keyed boundary. Its inactive host stays measured but is invisible, inert and excluded from accessibility. Retaining dimensions avoids a resize-observer race that can leave a resumed canvas waiting to draw. An explicit active prop stops the canvas and frame pump while other pages are open; 2D camera animation is cancelled and open interiors close as before. The first visit shows loading/preparation until a real map frame has been submitted. Context-loss retry still creates a fresh canvas when genuinely needed.
+
+Validation on the latest city: browser regression passed three page round trips with the exact same canvas, zero hidden draw calls even after an unrelated wake, successful redraw on return, building entry/exit, and first-load status. Desktop/phone screenshots reviewed: [desktop](screenshots/projects-resume/desktop.png), [phone](screenshots/projects-resume/phone.png). Full unit suite: **696 passed, 2 skipped**; lint, type checks and build passed. No native latency percentage is claimed. One cached scene remains in memory off-page; initial startup still needs its one-time 3D setup. The saved view/camera and graphics quality are retained rather than allocating multiple scenes.

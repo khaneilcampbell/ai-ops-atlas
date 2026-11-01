@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · Atlas uses less graphics work when still or hidden, and night lighting follows the performance setting without retaining unused effects (#179)
+- 2026-11-01 · Projects keeps its city ready between visits, pauses hidden graphics, and releases unused night effects (#179)
 - 2026-11-01 · Commerce Pipeline is now a twisting teardrop glass tower with a gold ribbon and a garden podium with a pool, and the Commerce district is bigger, with tree-lined grounds (#176)
 - 2026-11-01 · More people in the Financial District: 24 more ride the train out to every Atlas Hills business and the mansion, and 24 office workers walk the sidewalk between towers, going in and out of doors. Fewer show when the Mac is busy or on Battery saver (#162)
 - 2026-10-31 · New Atlas Marketplace mall on the open lot beside the Skyline park: four wave-shaped floors, twice the height of the Atlas Hills mansion on a lot widened for it, with white fins, planted terraces, a fountain plaza with flower beds, and the Marketplace Gardens behind it (a reflecting canal, round basin, cypress avenue, hedged flower beds and path lights), one shop per sellable agent. Enter building opens the inside: four floors round a funnel-tree atrium, with shops, a food court, a demo hall and a car park (#155)

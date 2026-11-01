@@ -822,3 +822,9 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .map-view-context{position:absolute;right:20px;bottom:70px;max-width:min(460px,calc(100% - 40px));display:flex;gap:8px;flex-wrap:wrap;padding:6px 10px;border-radius:8px;background:var(--sage-50);color:var(--ink-2);font-size:11px;pointer-events:none;z-index:2;box-shadow:var(--shadow)}
 .map-view-context strong{color:var(--forest-700)}
 @media(max-width:700px){.map-view-context{display:none}.map-controls{max-width:calc(100% - 16px);right:8px;overflow-x:auto}.map-controls .icon-btn{flex-shrink:0}.map-group{flex-shrink:0}}
+
+/* Keep a single map instance across routes without exposing hidden controls. */
+.projects-host { position: absolute; inset: 0; }
+.projects-host.inactive { visibility: hidden; opacity: 0; pointer-events: none; }
+.projects-host.inactive * { pointer-events: none !important; }
+.map-loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--sage-200); color: var(--ink); font-size: 14px; z-index: 1; }
