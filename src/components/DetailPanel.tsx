@@ -1,4 +1,5 @@
 import {COMMUNITY_BUILDINGS} from '../views/map3d/hillsCommunityPlan';
+import {MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
 import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
@@ -136,6 +137,13 @@ function ServiceDetail({id}:{id:string}) {
 
  if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>None linked</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None</dd></dl><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Every room shows the role planned for it; none of them run yet.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
+  if(id === "atlas-marketplace") return <>
+    <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
+    <div className="panel-body selectable"><p>A four-floor wave-style mall where each shop is one agent or service that clients can buy. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
+      <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
+      <dl className="kv"><dt>Owning agent</dt><dd>Marketplace Steward · Planned, not running</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
+    </div>
+  </>;
   if(id === "bmw-dealership") return <>
     <Head eyebrow="Automotive district · Visual infrastructure" title="BMW"><span className="chip">Planned</span></Head>
     <div className="panel-body selectable"><p>A four-story BMW-inspired glass showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>

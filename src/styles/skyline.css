@@ -8,3 +8,5 @@
 .building-floor-label{display:inline-block;min-width:64px;text-align:center;white-space:nowrap;padding:6px 10px;box-shadow:0 2px 7px #162c231a;pointer-events:none}
 
 .skyline-wall-sign.financial-wall-sign{width:300px;padding:10px 14px;border:1px solid #bca16a;border-radius:8px;background:#faf5e9ee;font-size:18px;letter-spacing:1px;white-space:normal}.skyline-wall-sign.financial-wall-sign span{letter-spacing:1px;line-height:1.5}
+/* Atlas Marketplace on phones: the six floor buttons run in one row above the note, so the ring stays visible. */
+@media(max-width:650px){.mall-interior .skyline-floor-picker{top:auto;bottom:150px;left:10px;right:10px;flex-direction:row;overflow-x:auto;max-height:none;border-radius:18px;padding:8px}.mall-interior .skyline-floor-picker strong{display:none}.mall-interior .skyline-floor-picker button{white-space:nowrap;flex:none}}
