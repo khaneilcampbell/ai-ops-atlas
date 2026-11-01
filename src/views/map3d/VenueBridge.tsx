@@ -3,7 +3,7 @@ import {TRANSPORT} from "./transportScale";
 import {useMemo} from 'react';
 import type {Scene3D} from './scene';
 import {TERRACE_H} from './scene';
-import {bridgeParts,Instanced,type Inst,type useGeometries,type useMaterials} from './models';
+import {bridgeParts,Instanced,STREET_LINE,type Inst,type useGeometries,type useMaterials} from './models';
 import {distanceToRoad,roadIntersections} from './highway';
 import {ROAD_W,type Pt,type CarBridge} from './roads';
 /** Original stone bridge parts and green railings, driven by the same paths as pedestrians. */
@@ -18,12 +18,16 @@ export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGe
    if(h.a[1]!==h.b[1]||k.a[0]!==k.b[0])return [];
    const x=k.a[0],z=h.a[1];return x>=Math.min(h.a[0],h.b[0])-.01&&x<=Math.max(h.a[0],h.b[0])+.01&&z>=Math.min(k.a[1],k.b[1])-.01&&z<=Math.max(k.a[1],k.b[1])+.01?[[x,z] as Pt]:[];
   }))];
+  // A district street is already paved and marked: a connection running along it adds nothing, and
+  // one meeting it stops its center line at the street's edge, so no second set of dashes lands on it.
+  const streets=scene.freight?.streets??[],onStreet=(q:Pt,reach=1e-3)=>streets.some(st=>distanceToRoad(q,st)<reach);
   for(const {a,b,onLand} of splitAtLand(segments,scene.land)){
+   if(onStreet(a)&&onStreet(b)&&onStreet([(a[0]+b[0])/2,(a[1]+b[1])/2]))continue;
    const axis=a[0]===b[0]?'z':'x',key=JSON.stringify([a,b]);
    const br={key,ends:['',''],axis,a,b,roads:[[],[]]} as CarBridge;
    const p=bridgeParts(br,[],TRANSPORT.bridgeWidth,-1.2,false);
    const exposedRails=p.rails.filter(v=>!onLand||!scene.land.some(l=>v.p[0]>l.x+.04&&v.p[0]<l.x+l.w-.04&&v.p[2]>l.z+.04&&v.p[2]<l.z+l.d-.04));
-   solid.push(...p.deck,...clipConnectionRails(exposedRails,junctions,TRANSPORT.junctionOpening),...p.piers.filter(v=>!scene.land.some(l=>v.p[0]>=l.x&&v.p[0]<=l.x+l.w&&v.p[2]>=l.z&&v.p[2]<=l.z+l.d)).map(v=>({...v,c:'#bdb59e'})));
+   solid.push(...p.deck.filter(v=>v.c!==STREET_LINE||!onStreet([v.p[0],v.p[2]],TRANSPORT.cityWidth/2+.08)),...clipConnectionRails(exposedRails,junctions,TRANSPORT.junctionOpening),...p.piers.filter(v=>!scene.land.some(l=>v.p[0]>=l.x&&v.p[0]<=l.x+l.w&&v.p[2]>=l.z&&v.p[2]<=l.z+l.d)).map(v=>({...v,c:'#bdb59e'})));
    if(!onLand)lamps.push(...p.lamps.filter(v=>!junctions.some(j=>Math.hypot(v.p[0]-j[0],v.p[2]-j[1])<TRANSPORT.junctionOpening)));
   }
   const walkPaths=connectionSpans(paths.map(l=>l.walk));
