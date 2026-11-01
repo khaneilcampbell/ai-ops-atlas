@@ -31,8 +31,8 @@ export const AGENCY={
  word:{x:1.075,y:2.36,w:1.75,h:.62},
  /** Lot needs at least this much open water; the building sits this far from the north shore. */
  minLot:{w:12.5,d:8.6},northSetback:.95,
- /** Lot on open water beside the city when there is no bay (other groupings): room for the plaza and pool. */
- shoreLot:{w:14.5,d:9.75},
+ /** Lot on open water beside the city when there is no bay (other groupings): the building, its side walks, plaza and pool. */
+ shoreLot:{w:11.5,d:9.75},
  /** Plaza in front of the building: the reflecting pool and the causeway to the entrance. */
  pool:{d:2.5,gap:.55,causeway:1.1},
 } as const;
