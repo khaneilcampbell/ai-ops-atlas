@@ -35,3 +35,9 @@ test('GitHub tower on a phone',async({page})=>{
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  for(const s of await views(page,[['phone',at(0,4,0),at(6,7,10)]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });
+test('GitHub tower selected on a phone',async({page})=>{
+ test.setTimeout(300_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
+ await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
+ await selectBuilding(page,'GitHub Profile');await settle(page,3);
+ await page.screenshot({path:`${out}/selected-phone.png`});
+});

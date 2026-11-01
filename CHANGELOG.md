@@ -1,8 +1,9 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#188)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · Selecting the GitHub building now outlines, glows and frames the tower and its glass podium together (#188)
 - 2026-11-01 · Behind the scenes: the screenshot check now runs in 6 parts at once, so it finishes on map changes instead of timing out at 45 minutes (#184)
 - 2026-11-01 · The README on GitHub now describes Atlas as it is today: the city, the three views, the agents, the Mac, web and iPhone apps, and how to run and test it (#190)
 - 2026-11-01 · New Fix with Claude button in Mission Control, next to failing workflows and items that need a look. It opens a ready-made GitHub issue; press Create and Claude finds the cause, makes one small fix and opens a pull request for you to merge (#189)
@@ -18,7 +19,7 @@ shown in the Mac app's **Update available** button, so write them for KC, not fo
 - 2026-10-31 · Move around the 3D map with your Mac trackpad: scroll to slide, pinch to zoom, twist to turn, Option+scroll to tilt (#173)
 - 2026-10-31 · The GitHub building is now a stacked-slab tower with terrace stairs, trees and a roof garden, sized with the Financial District, beside a three-storey glass podium on new land east of it (#171)
 - 2026-10-31 · Every building label on the map now looks the same: one size, one height above the roof, one color, and a status dot on each
-- 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#PR)
+- 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#188)
 - 2026-10-31 · New Benjaire Marketing Agency on new land in the bay below the Financial District: a cream building with a diamond screen, a diagonal glass cut, a copper-framed glass sweep and reflecting pools, with paths to Benjaire HQ and Benjaire Dashboard, a copper-framed Benjaire sign and a glass entrance with a canopy and lit bollards. Enter building opens four floors round a central atrium: lobby and café, studios, galleries and a presentation hall, with the stair reaching every floor and people moving through it: desk workers, lobby visitors, stair traffic, a hall audience and a presenter on stage (#163)
 - 2026-11-01 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
