@@ -2,7 +2,9 @@ import {airportPoint,airportFootprint,airportPublicPath,type AirportPlan} from '
 import type {StadiumPlan} from './stadiumPlan';
 import {routeAround} from './routing';
 import {pathClear,type Box,type Pt} from './roads';
-export interface DistrictConnection {id:string;road:Pt[];walk:Pt[]}
+export interface DistrictConnection {id:string;road:Pt[];walk:Pt[];
+ /** A district street the highway collector may leave from directly (a clean T, not a run along it). */
+ frontage?:Pt[]}
 /** Public access remains on the city-facing side, completely outside the aircraft apron. */
 export function districtConnections(a?:AirportPlan,s?:StadiumPlan,boxes:Box[]=[]):DistrictConnection[]{
  const links:DistrictConnection[]=[];

@@ -610,6 +610,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 
 /* ── 3D map ──────────────────────────────────────── */
 .map3d { position: absolute; inset: 0; }
+.map3d-failed { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; padding: 24px; }
 .map3d canvas { display: block; }
 .map-stage:has(.map3d) .map-intro { z-index: 3; padding: 6px 10px 10px 0; }
 .map3d .m3-labels { z-index: 2; }

@@ -1,10 +1,16 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#166)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 
-- 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#PR)
+- 2026-11-01 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#166)
+- 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
+- 2026-10-31 · If the 3D map ever fails to draw, the rest of the Projects view stays and a Try again button restarts the map, instead of the whole page crashing
+
+- 2026-10-31 · Garden Residences is now an Experian office tower: Experian sign and colours, and floor-to-ceiling tinted glass windows you can see the desks through, lit up at night (#168)
+- 2026-10-31 · Added Circa, twin curved glass towers, the tallest in the Financial District, with a pool deck and a big LED screen wrapped around the whole podium and a black-framed glass front door the same size as its neighbours' doors, opening into a lobby you can see into, with marble and wavy walnut walls, a slatted ceiling, a reception desk and lounges. The same lobby design is there when you enter the building, west of Navy Federal and Vanguard by the highway. The garden-balcony tower is now called Garden Residences (#156)
+- 2026-10-31 · BMW moved next to the Financial District on the waterfront, and the Hills train now runs behind the towers to a new stop in Financial Park. Two groups of six commuters now walk from different homes at their own pace to catch the train, which waits 15 seconds; some go to Circa, American Express and the Ritz-Carlton, Ritz guests return to the mansion and one returns to Vista House. Financial Park station now has a Dubai-style shell roof and a glass skybridge down to the park, and the train is a bullet train. Financial Park is now a central green with a stepped fountain, sculpture gardens and flower beds. Financial Park has palm trees, and the roads beside it are tidied: the highway ramp leaves the district street at a clean corner and airport trucks drive on the street instead of a second road squeezed beside it BMW is now a slim glass tower sized like the Financial District towers, with car galleries on every floor. At night every building now shows lights: a floodlit stadium with glowing scoreboards, BMW showroom ceilings glowing white on every floor, windows on all sides of the Skyline shops, and lit windows on the Hills garage and airport service building (#158)
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
 - 2026-10-31 · Fixed the blank map: the new roads and highway are lighter to draw, and the map restarts itself if graphics fail
