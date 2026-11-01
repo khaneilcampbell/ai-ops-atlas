@@ -5,6 +5,7 @@ top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newes
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · The "Read-only" pill in the top bar now shows CI health across your repositories (how many are passing, or how many are failing, in red). Click it to open Mission Control (#187)
 - 2026-11-01 · The app is now called Atlas: the top bar (without the "01"), sign-in screen, browser tab, Mac menu bar and window all say Atlas. Your tokens, settings and updates carry on as before (#187)
+- 2026-11-01 · New Fix with Claude button in Mission Control, next to failing workflows and items that need a look. It opens a ready-made GitHub issue; press Create and Claude finds the cause, makes one small fix and opens a pull request for you to merge (#189)
 - 2026-11-01 · Agents that mostly run on pull requests, like Design Consistency, no longer show "No verified run" when their last run on main passed: Atlas now always finds that run (#186)
 - 2026-11-01 · Merge Flow Coordinator stops failing when GitHub is busy: it asks GitHub in small pieces, retries, and skips a run quietly if GitHub still doesn't answer (#185)
 - 2026-11-01 · Every building now shows in every map view: the Benjaire Marketing Agency and the Atlas Marketplace used to disappear when projects were grouped by status or not grouped (and the agency under By tag), and now stand in the city in each one (#177)
