@@ -15,6 +15,8 @@ import {DEALERSHIP_KEY} from "./dealershipPlan";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
+import {MarketingAgency} from "./MarketingAgency";
+import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
 import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
@@ -152,6 +154,7 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.community)for(const b of COMMUNITY_BUILDINGS)m.set(communityKey(b.id),{x:scene.community.x+b.x,z:scene.community.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.communityRail){const [x,z]=scene.communityRail.financial;m.set("service:financial-station",{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
+  if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+4,z:scene.stadium.z+3.5,y0:TERRACE_H,y1:TERRACE_H+2.3,w:8,d:7});
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
   const skyline=skylineProjectAnchor(scene);
@@ -362,6 +365,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial,key="service:financial-station";out.push({id:key,key,pos:new THREE.Vector3(x,TERRACE_H+COMMUNITY.platformRise+1.6,z),w:185,h:28,priority:selKey===key?0:8,className:"m3-plaque compact",node:<div className="t">Financial District Station</div>,onClick:()=>select(key),title:"Financial District Station · Visual simulation"});}
     if(scene.hills)out.push({id:HILLS_KEY,key:HILLS_KEY,pos:new THREE.Vector3(scene.hills.x+HILLS.mansion.x,TERRACE_H+3.8,scene.hills.z+HILLS.mansion.z),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Hills</div>,onClick:()=>select(HILLS_KEY),title:"Atlas Hills · Planned community"});
     if(scene.dealership)out.push({id:DEALERSHIP_KEY,key:DEALERSHIP_KEY,pos:new THREE.Vector3(scene.dealership.x+scene.dealership.showroom.cx,TERRACE_H+scene.dealership.showroom.height+.55,scene.dealership.z+scene.dealership.showroom.cz),w:140,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">BMW</div>,onClick:()=>select(DEALERSHIP_KEY),title:"BMW · Planned visual district"});
+    if(scene.agency)out.push({id:AGENCY_KEY,key:AGENCY_KEY,pos:new THREE.Vector3(scene.agency.cx,TERRACE_H+AGENCY.eastHigh+.6,scene.agency.cz),w:measure(AGENCY_NAME,13,SANS,500)+30,h:28,priority:2,className:`m3-plaque compact${selKey===AGENCY_KEY?" selected":""}`,node:<div className="t">{AGENCY_NAME}</div>,onClick:()=>select(AGENCY_KEY),title:`${AGENCY_NAME} · Planned`});
     if(scene.stadium)out.push({id:STADIUM_KEY,key:STADIUM_KEY,pos:new THREE.Vector3(scene.stadium.x+4,TERRACE_H+2.3,scene.stadium.z+3.5),w:100,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Stadium</div>,onClick:()=>select(STADIUM_KEY),title:"Stadium · Planned venue"});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>near==="near"||selKey===airportBuildingKey(b.id)))out.push({id:airportBuildingKey(b.id),key:airportBuildingKey(b.id),pos:new THREE.Vector3(airportPoint(scene.airport,b.x,b.z)[0],TERRACE_H+b.h+.35,scene.airport.z+b.z),w:measure(b.name,11,SANS,500)+24,h:26,priority:selKey===airportBuildingKey(b.id)?0:7,className:"m3-plaque compact secondary",node:<div className="t">{b.name}</div>,onClick:()=>select(airportBuildingKey(b.id)),title:`${b.name} · Planned workspace`});
     if(scene.airport)out.push({id:AIRPORT_KEY,key:AIRPORT_KEY,pos:new THREE.Vector3(airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],TERRACE_H+3.5,scene.airport.z+AIRPORT_LAYOUT.terminalZ),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Airport</div>,onClick:()=>select(AIRPORT_KEY),title:"Atlas Airport · Planned visual district"});
@@ -994,6 +998,7 @@ function World({
       <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
       <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
       <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>
+      <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>
       <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>
       <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
       <Landscape scene={scene} g={g} m={m} />
