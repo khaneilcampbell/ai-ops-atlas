@@ -5,16 +5,13 @@ Each project is a building, projects sit in districts, and each agent works insi
 the project it belongs to. Status dots, alerts and live activity show what is running, idle or
 needs attention.
 
-<<<<<<< HEAD
 It runs as a Mac app (Tauri) and, from the same React code, as a private web page on Cloudflare
 Pages that also works on iPhone. The installed Mac app is still named **AI Ops Atlas** on disk.
-=======
-Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. The two exceptions, both in the Mac app only, are **Re-run failed jobs** on a failed GitHub Actions run and **Merge pull request** on a pull request GitHub reports ready (every required check green, no changes requested, not a draft). Each is off by default, limited to repositories you tick, approved in a macOS dialog each time (merges also ask for Touch ID), uses its own write-scoped token (one per repository for merges), and is audited. See [docs/actions.md](docs/actions.md). Nothing else in the app can change a repository or start an external agent. **Fix with Claude** in Mission Control only opens a pre-filled GitHub issue in your browser; nothing is sent until you press Create there (see [ops/fix-with-claude](ops/fix-with-claude/README.md)).
->>>>>>> origin/main
 
 Atlas mostly reads. Everything that can change something is in the Mac app only, off by default,
 limited to an allow-list, approved in a macOS dialog with Touch ID, and written to an audit log.
-See [docs/actions.md](docs/actions.md).
+See [docs/actions.md](docs/actions.md). **Fix with Claude** in Mission Control only opens a
+pre-filled GitHub issue in your browser; nothing is sent until you press Create there.
 
 ## The three views
 
@@ -65,7 +62,7 @@ Agents that work on Atlas itself or its repositories:
 | Opportunity Scout | Looks for revenue ideas in the agents KC already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
 | Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
 | System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
-| Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/prompt.md) |
+| Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
 
 The Mac app's write actions are **Re-run failed jobs**, **Merge pull request** (only when GitHub
 reports it ready) and **Manage agents** (enable, disable or run an allow-listed agent). Each has
