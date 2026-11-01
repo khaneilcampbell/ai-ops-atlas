@@ -4,7 +4,7 @@ import type {Pt} from './roads';
 import {compact,fins,lid,skin} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {annulus,slab} from './ribbonTowerGeometry';
-import {COMMERCE,along,floorHeights,planAt,podiumRing,podiumTop,poolRing,ribbonCentre,ribbonWindow,roofShare,roofTrees} from './commerceTowerPlan';
+import {COMMERCE,along,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,ribbonWindow,roofShare,roofTrees} from './commerceTowerPlan';
 
 /** Commerce Pipeline's teardrop tower: a few merged meshes, built once. See commerceTowerPlan for the design. */
 
@@ -74,11 +74,11 @@ function towerFins(levels:Pt3[][],windows:Set<number>[],k:number,top:number[]){
 
 /** The canopy: a thin sweep following the podium's front, with a fascia strip, lifted at its middle. */
 function canopy(k:number){
- const {from,to,depth,y}=COMMERCE.canopy,ring=podiumRing(k),ns=normals(ring),n=ring.length,pos:number[]=[],T=.035*k;
- const i0=Math.round(from*n),i1=Math.round(to*n),rows:{back:Pt3;front:Pt3}[]=[];
+ const {depth,y}=COMMERCE.canopy,ring=podiumRing(k),ns=normals(ring),n=ring.length,pos:number[]=[],T=.035*k;
+ const [i0,i1]=canopySpan(n),rows:{back:Pt3;front:Pt3}[]=[];
  for(let i=i0;i<=i1;i++){
   const f=(i-i0)/(i1-i0),lift=.06*k*Math.sin(Math.PI*f),reach=depth*k*(.55+.45*Math.sin(Math.PI*f));
-  const [x,z]=ring[i%n],[nx,nz]=ns[i%n],h=y*k+lift;
+  const w=((i%n)+n)%n,[x,z]=ring[w],[nx,nz]=ns[w],h=y*k+lift;
   rows.push({back:[x,h,z],front:[x+nx*reach,h+.02*k,z+nz*reach]});
  }
  const dn=(p:Pt3):Pt3=>[p[0],p[1]-T,p[2]];
@@ -103,14 +103,14 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  // Thin silver ledges every other floor, round the curtain wall.
  const bands=floorHeights(k,H).filter((_,i)=>i%2===1).map(y=>{const t=y/H;return annulus(planAt(t,k),planAt(t,k,.02),y-.012*k,.024*k);});
  // Podium: lobby of gold glass, two silver floors, white slab edges, ribs, a garden roof with a glass rail.
- const ring=podiumRing(k),inner=podiumRing(k,.965),top=podiumTop(2,k);
+ const storeys=c.podium.floors.length,ring=podiumRing(k),inner=podiumRing(k,-.03),top=podiumTop(storeys-1,k);
  const lobbyGlass=skin([at(inner,0),at(inner,podiumTop(0,k)-.03*k)]);
- const podiumGlass=merge([1,2].map(l=>skin([at(inner,podiumTop(l-1,k)),at(inner,podiumTop(l,k)-.03*k)])));
- const slabs=merge([0,1,2].map(l=>slab(ring,podiumTop(l,k),.04*k)));
+ const podiumGlass=merge(Array.from({length:storeys-1},(_,i)=>i+1).map(l=>skin([at(inner,podiumTop(l-1,k)),at(inner,podiumTop(l,k)-.03*k)])));
+ const slabs=merge(c.podium.floors.map((_,l)=>slab(ring,podiumTop(l,k),.04*k)));
  const ribs=fins([at(ring,0),at(ring,top)],2,.035*k);
- const rail=skin([at(podiumRing(k,.985),top),at(podiumRing(k,.985),top+c.podium.rail*k)]);
- const lawn=lid(at(podiumRing(k,.95),top+.004*k));
- const pool=poolRing(k),poolRim=annulus(pool,pool.map(([x,z])=>[x+(x-c.pool.x*k)*.12,z+(z-c.pool.z*k)*.12] as Pt),top,.02*k);
+ const railRing=podiumRing(k,-.012),rail=skin([at(railRing,top),at(railRing,top+c.podium.rail*k)]);
+ const lawn=lid(at(podiumRing(k,-.04),top+.004*k));
+ const pool=poolRing(k),[pcx,pcz]=poolCentre(k),poolRim=annulus(pool,pool.map(([x,z])=>[x+(x-pcx)*.12,z+(z-pcz)*.12] as Pt),top,.02*k);
  return compact({
   glass,gold,fins:finGeo,roof:roofLid,bands:merge(bands),
   lobby:lobbyGlass,podiumGlass,slabs:merge([slabs,poolRim]),ribs,rail,lawn,

@@ -5,8 +5,11 @@ import type {Pt} from './roads';
  * teardrop plan, round at one end and drawn to a soft point at the other, that twists as it
  * rises. A silver curtain wall of vertical fins wraps it, and a warm gold glass ribbon winds up
  * one face in an S. The roof is cut on a slope, high at the point, and the fins run on past it
- * as a screen. A low curved podium wraps the round end with a lobby of gold glass under a
- * sweeping canopy, and its roof is a garden with a free-form pool and olive trees.
+ * as a screen. It stands on a four-storey podium that is the full teardrop of the site, as in the
+ * concept's floor plans (podium about 72 x 50 m, tower 48 x 40 m on its round end): the podium
+ * runs out past the tower toward the point, about half as wide again, with a gold glass lobby
+ * under a sweeping canopy, and its roof beyond the tower is a garden with a pool and olive trees
+ * (KC, 2026-11-01: "expand the lower end of the building ... to realistic width").
  * An original stylized Atlas building after a Behance concept board: no reference signage.
  *
  * Plain numbers only, in coordinates local to the tower (x across, z toward the viewer, y up
@@ -15,16 +18,16 @@ import type {Pt} from './roads';
  */
 export const COMMERCE={
  projectId:'commerce-pipeline',
- /** The tower's footprint in the widened Commerce district (see DISTRICT_MIN_SIZE in mapLayout). */
- refSize:2.392,
+ /** The headquarters' footprint in the widened Commerce district (see DISTRICT_MIN_SIZE and DISTRICT_HQ_SHARE in mapLayout). */
+ refSize:2.944,
  /** Plinth half-size: nothing may stand outside it. Same share of the footprint as Benjaire HQ's. */
- plinth:1.36,
+ plinth:1.67,
  /** Points round every plan outline. */
  ring:56,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
- round:.54,tip:.15,length:1.06,
- /** The round end's centre, and the way the point faces (radians, 0 = +x, turning toward +z). */
- centre:[-.24,.16] as Pt,
+ round:.52,tip:.15,length:.92,
+ /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
+  * inside the podium's round end, touching it at the back (see podium.offset). */
  heading:-.62,
  /** How far the plan turns from bottom to top, and how much it eases in and out (an S). */
  twist:.62,
@@ -41,16 +44,19 @@ export const COMMERCE={
  /** The gold ribbon: how many outline points wide, and how far it winds round the plan. */
  ribbon:{width:7,wind:.07},
  podium:{
-  /** Storey heights bottom up: a double-height lobby, then two office floors. */
-  floors:[.4,.2,.2] as number[],
-  centre:[-.02,.36] as Pt,half:[.96,.86] as Pt,
+  /** Storey heights bottom up: a double-height lobby, then three office floors (about a fifth of the tower). */
+  floors:[.44,.26,.26,.26] as number[],
+  /** The podium's teardrop, same heading as the tower's base: half as wide again and longer. */
+  round:1.02,tip:.38,length:1.98,
+  /** The podium's round-end centre, local to the tower. */
+  centre:[-.56,.4] as Pt,
   /** Roof garden parapet, glass. */
   rail:.08,
  },
- /** The pool on the podium roof, toward the front corner. */
- pool:{x:.48,z:.9,rx:.3,rz:.13,turn:-.35},
- /** The entrance canopy: a thin sweep over the lobby along the podium's front. */
- canopy:{from:.63,to:.87,depth:.24,y:.42},
+ /** The pool on the podium roof beyond the tower, along the axis toward the point: share of the podium's length, and radii. */
+ pool:{at:.98,rx:.28,rz:.17},
+ /** The entrance canopy: a thin sweep over the lobby round the podium's front, as a share of its outline. */
+ canopy:{span:.22,depth:.24,y:.46},
 } as const;
 
 export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
@@ -91,13 +97,19 @@ export function teardrop(round:number=COMMERCE.round,tip:number=COMMERCE.tip,len
 /** How far the plan has turned at height t (0 base, 1 top): eased, so the twist reads as an S. */
 export const twistAt=(t:number)=>COMMERCE.twist*(t-Math.sin(2*Math.PI*t)/(2*Math.PI));
 
+/** The tower's round-end centre: inside the podium's round end, touching it at the back, so the tower rises flush on that side. */
+export function towerCentre():Pt{
+ const p=COMMERCE.podium,d=p.round-COMMERCE.round;
+ return [p.centre[0]+d*Math.cos(COMMERCE.heading),p.centre[1]+d*Math.sin(COMMERCE.heading)];
+}
+
 /** The tower's plan at height t, local to the tower, scaled by k; `grow` pushes it outward. */
 export function planAt(t:number,k=1,grow=0):Pt[]{
  const c=COMMERCE,s=1-c.taper*t;
  const base=teardrop(c.round*s+grow,c.tip*s+grow,c.length*s);
  // Turn about the shape's middle, not the round end, so the tower twists in place.
- const mid=c.length*s*.42;
- return base.map(([x,z])=>{const [rx,rz]=rot([x-mid,z],c.heading+twistAt(t));return [(rx+c.centre[0]+mid*Math.cos(c.heading))*k,(rz+c.centre[1]+mid*Math.sin(c.heading))*k] as Pt;});
+ const mid=c.length*s*.42,[ox,oz]=towerCentre();
+ return base.map(([x,z])=>{const [rx,rz]=rot([x-mid,z],c.heading+twistAt(t));return [(rx+ox+mid*Math.cos(c.heading))*k,(rz+oz+mid*Math.sin(c.heading))*k] as Pt;});
 }
 
 /**
@@ -144,29 +156,36 @@ export function floorHeights(k=1,height=COMMERCE.height*k){
 export const podiumTop=(level:number,k=1)=>COMMERCE.podium.floors.slice(0,level+1).reduce((a,b)=>a+b,0)*k;
 export const podiumHeight=(k=1)=>podiumTop(COMMERCE.podium.floors.length-1,k);
 
-/** The podium's outline: a soft rounded square swelling toward the front corner, round the tower's base. */
-export function podiumRing(k=1,inset=1):Pt[]{
- const {centre:[cx,cz],half:[hx,hz]}=COMMERCE.podium,n=COMMERCE.ring,pts:Pt[]=[];
- for(let i=0;i<n;i++){
-  const th=-i/n*Math.PI*2,c=Math.cos(th),s=Math.sin(th),e=2/3.2;
-  const swell=1+.06*Math.cos(th-Math.PI/4);
-  pts.push([(cx+hx*inset*Math.sign(c)*Math.abs(c)**e*swell)*k,(cz+hz*inset*Math.sign(s)*Math.abs(s)**e*swell)*k]);
- }
- return pts;
+/** The podium's outline: the full teardrop, unturned by the twist; `grow` pushes it out (negative pulls it in). */
+export function podiumRing(k=1,grow=0):Pt[]{
+ const p=COMMERCE.podium,a=COMMERCE.heading;
+ return teardrop(p.round+grow,p.tip+grow,p.length).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
 }
 
-/** The pool's outline on the podium roof. */
+/** The pool's outline on the podium roof, lying along the axis beyond the tower. */
 export function poolRing(k=1,n=28):Pt[]{
- const {x,z,rx,rz,turn}=COMMERCE.pool;
- return Array.from({length:n},(_,i)=>{const th=-i/n*Math.PI*2,w=1+.12*Math.sin(3*th);return rot([rx*Math.cos(th)*w,rz*Math.sin(th)*w],turn);}).map(([a,b])=>[(x+a)*k,(z+b)*k] as Pt);
+ const {at,rx,rz}=COMMERCE.pool,p=COMMERCE.podium,a=COMMERCE.heading,d=p.length*at;
+ const cx=p.centre[0]+d*Math.cos(a),cz=p.centre[1]+d*Math.sin(a);
+ return Array.from({length:n},(_,i)=>{const th=-i/n*Math.PI*2,w=1+.1*Math.sin(3*th);return rot([rx*Math.cos(th)*w,rz*Math.sin(th)*w],a);}).map(([x,z])=>[(cx+x)*k,(cz+z)*k] as Pt);
 }
+export const poolCentre=(k=1):Pt=>{const r=poolRing(k);return [r.reduce((s,p)=>s+p[0],0)/r.length,r.reduce((s,p)=>s+p[1],0)/r.length];};
+
+const insidePoly=(p:Pt,poly:Pt[])=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,zi]=poly[i],[xj,zj]=poly[j];if((zi>p[1])!==(zj>p[1])&&p[0]<(xj-xi)*(p[1]-zi)/(zj-zi)+xi)c=!c;}return c;};
 
 /** Olive trees on the podium roof: along its open edge, clear of the tower and the pool. */
 export function roofTrees(k=1){
- const ring=podiumRing(1,.84),tower=planAt(0,1,.1),pool=poolRing(1);
- const inside=(p:Pt,poly:Pt[])=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,zi]=poly[i],[xj,zj]=poly[j];if((zi>p[1])!==(zj>p[1])&&p[0]<(xj-xi)*(p[1]-zi)/(zj-zi)+xi)c=!c;}return c;};
+ const ring=podiumRing(1,-.13),tower=planAt(0,1,.1),pool=poolRing(1);
  const near=(p:Pt,poly:Pt[],d:number)=>poly.some(([x,z])=>Math.hypot(x-p[0],z-p[1])<d);
- return ring.filter((p,i)=>i%5===0&&!inside(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.12)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
+ return ring.filter((p,i)=>i%4===0&&!insidePoly(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.12)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
+}
+
+/** The outline point the lobby faces from: the podium's front (largest z), where the canopy is centred. */
+export function frontIndex(){
+ const ring=podiumRing();let best=0;ring.forEach(([,z],i)=>{if(z>ring[best][1])best=i;});return best;
+}
+/** The canopy's outline span [first, last] (may run past the ring's end; wrap with modulo). */
+export function canopySpan(n:number=COMMERCE.ring):[number,number]{
+ const c=frontIndex(),h=Math.round(COMMERCE.canopy.span*n/2);return [c-h,c+h];
 }
 
 /** Every outline on the ground plan, for clearance checks. */
@@ -175,8 +194,8 @@ export function footprint(k=1):Pt[]{
  return [...tower,...podiumRing(k)];
 }
 
-/** The podium's front at the entrance, local to the tower: where the canopy's middle reaches. */
+/** The podium's front at the entrance, local to the tower: the wall (`wall`) and the canopy's edge (`z`). */
 export function commerceFront(k=1){
- const ring=podiumRing(k),i=Math.round((COMMERCE.canopy.from+COMMERCE.canopy.to)/2*ring.length)%ring.length;
- return {x:ring[i][0],z:ring[i][1]+COMMERCE.canopy.depth*k+.005*k,door:podiumTop(0,k)};
+ const [x,wall]=podiumRing(k)[frontIndex()];
+ return {x,wall,z:wall+COMMERCE.canopy.depth*k+.005*k,door:podiumTop(0,k)};
 }

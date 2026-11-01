@@ -89,8 +89,8 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    <mesh geometry={geo.rail} material={mats.rail} raycast={noRaycast}/>
    {/* The wordmark sits on the canopy's front edge, with the badge and workers sign either side. */}
    <mesh geometry={g.plane} material={signs.wordMat} position={[front.x,signY,front.z]} scale={[.9*k,.9/(1024/192)*k,1]} raycast={noRaycast}/>
-   <mesh geometry={g.plane} material={signs.badge} position={[front.x-.62*k,.24*k,front.z-.2*k]} scale={[.17*k,.17*k,1]} raycast={noRaycast}/>
-   {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[front.x+.62*k,.24*k,front.z-.22*k]} scale={[.17*k,.17*k,1]} raycast={noRaycast}/>}
+   <mesh geometry={g.plane} material={signs.badge} position={[front.x-.5*k,.26*k,front.wall-.1*k]} scale={[.17*k,.17*k,1]} raycast={noRaycast}/>
+   {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[front.x+.5*k,.26*k,front.wall-.1*k]} scale={[.17*k,.17*k,1]} raycast={noRaycast}/>}
   </group>
   <Instanced items={parts.trunks} geometry={g.cyl} material={m.plain}/>
   <Instanced items={parts.crowns} geometry={g.blob} material={m.foliage}/>

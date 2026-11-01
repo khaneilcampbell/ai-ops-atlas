@@ -750,7 +750,7 @@ const SPIRE_H = 1.1;
 /** Commerce's lobby doors: Financial District size, in the gold glass under the canopy's middle. */
 function commerceDoor(t: Tower): Inst {
   const k = t.size / COMMERCE.refSize, f = commerceFront(k);
-  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.z - COMMERCE.canopy.depth * k - 0.01 * k], s: [0.7 * k, 0.33 * k, 0.025] };
+  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.wall - 0.01 * k], s: [0.7 * k, 0.36 * k, 0.025] };
 }
 
 export function towerTop(t: Tower) {

@@ -138,6 +138,13 @@ export function districtSize(lotCount: number, projectId?: string) {
  */
 export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10 };
 
+/**
+ * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
+ * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
+ * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
+ */
+export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.32 };
+
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
   return { crew: agents, houses: [] as Agent[], services: orderToolsForWorkflow(servicesOf(agents)) };
@@ -299,7 +306,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const n = houses.length + services.length;
       const size = it.w;
       const m = n ? ringFor(n) : 2;
-      const hqSize = n ? size * 0.26 : size * 0.34;
+      const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       districts.push({
