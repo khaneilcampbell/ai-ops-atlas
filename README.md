@@ -33,7 +33,7 @@ The map is one landmass of districts joined by road bridges, with one road stand
 street, a highway, a train with stations and commuters, cars, boats, planes and people.
 Landmarks include Atlas HQ, Benjaire HQ, the GitHub tower, the Commerce Pipeline tower, the
 Financial District (Circa, Experian, BMW and others, with Financial Park), the Atlas Marketplace
-mall and gardens, the Benjaire Marketing Agency on the bay, Atlas Hills with the mansion and its
+mall and gardens, the Benjaire Marketing Agency on the bay, Atlas Hills with Atlas Mansion and its
 community, the Skyline shops, a stadium and Atlas Airport with its terminal, ground crew and
 jets taking off.
 
