@@ -52,7 +52,7 @@ import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
-import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { usePageVisible, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
@@ -398,12 +398,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Health accents on each headquarters, from the same verified data as the inspector.
   const health = useMemo(() => new Map(scene.towers.map((t) => [t.key, healthFor(t.repository).health])), [scene, healthFor]);
   // Stop rendering while the window is hidden; nothing on the map needs to move then.
-  const [visible, setVisible] = useState(() => document.visibilityState !== "hidden");
-  useEffect(() => {
-    const on = () => setVisible(document.visibilityState !== "hidden");
-    document.addEventListener("visibilitychange", on);
-    return () => document.removeEventListener("visibilitychange", on);
-  }, []);
+  const visible = usePageVisible();
   // The map is fully covered while a building's office is open, so it stops rendering then.
   const officePhase = useOffice().phase;
   // Phones get a lighter scene: fewer pixels and a smaller shadow map keep frames steady.
@@ -440,7 +435,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
       <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
-        <FramePacer profile={power} running={drawing} />
+        <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
           power={power}
           light={props.light}

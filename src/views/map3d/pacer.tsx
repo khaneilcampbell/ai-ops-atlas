@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { isBusy, onWake, useWindowFocused, wake, type PowerProfile } from "../../lib/power";
+import { isBusy, onWake, pacingPolicy, usePageVisible, useWindowFocused, wake, type PowerProfile } from "../../lib/power";
 import { feed } from "../../lib/governor";
 
 /**
@@ -13,7 +13,8 @@ import { feed } from "../../lib/governor";
  * `running` false: no idle frames at all; the canvas still redraws on changes and while busy.
  */
 export function FramePacer({ profile, running }: { profile: PowerProfile; running: boolean }) {
-  const { invalidate, gl } = useThree();
+  const { invalidate, gl, frameloop } = useThree();
+  const visible = usePageVisible();
   const focused = useWindowFocused();
 
   useEffect(() => {
@@ -59,8 +60,9 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
     };
   }, [gl]);
 
-  const idle = !running || (profile.pauseInBackground && !focused) ? 0 : profile.idleFps;
+  const { active, idle } = pacingPolicy(profile, running, focused, visible, frameloop);
   useEffect(() => {
+    if (!active) return;
     let raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let last = -Infinity;
@@ -96,6 +98,6 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
       cancelAnimationFrame(raf);
       clearTimeout(timer);
     };
-  }, [idle, invalidate]);
+  }, [active, idle, invalidate]);
   return null;
 }
