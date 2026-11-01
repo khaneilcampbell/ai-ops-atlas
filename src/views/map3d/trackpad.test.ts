@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { clampRig, clampToRoom, evidence, groundAt, interiorIntent, likelyMacTrackpad, orbitRig, panRig, quarterOf, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt, type Rig, type WheelSample } from "./trackpad";
+import { clampRig, evidence, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt, type Rig, type WheelSample } from "./trackpad";
 
 const FOV = 40;
 const W = 1200;
@@ -213,63 +213,5 @@ describe("camera moves", () => {
     expect(Math.abs(r.target.x)).toBeLessThanOrEqual(60);
     expect(Math.abs(r.target.z)).toBeLessThanOrEqual(60);
     expect(r.position.clone().sub(r.target).distanceTo(offset)).toBeLessThan(1e-9);
-  });
-});
-
-describe("inside a building", () => {
-  const pad = () => new WheelClassifier("trackpad");
-  it("turns a two-finger scroll into looking around, not moving", () => {
-    const i = interiorIntent(wheel({ deltaX: 20, deltaY: -10 }), pad(), "auto", 1, false);
-    expect(i.kind).toBe("look");
-    if (i.kind !== "look") return;
-    expect(i.azimuth).toBeGreaterThan(0);
-    expect(i.polar).toBeLessThan(0);
-  });
-
-  it("moves across the floor with Option, zooms on a pinch, and drops a pinch WebKit already handles", () => {
-    expect(interiorIntent(wheel({ deltaX: 5, altKey: true }), pad(), "auto", 1, false)).toEqual({ kind: "move", dx: 5, dy: 0 });
-    const z = interiorIntent(wheel({ deltaY: -30, ctrlKey: true }), pad(), "auto", 1, false);
-    expect(z.kind === "zoom" && z.factor > 1).toBe(true);
-    expect(interiorIntent(wheel({ deltaY: -30, ctrlKey: true }), pad(), "auto", 1, true).kind).toBe("drop");
-  });
-
-  it("leaves a mouse wheel and the Zooms setting to the controls", () => {
-    const mouse = new WheelClassifier("mouse");
-    expect(interiorIntent(wheel({ deltaY: 4.000244140625 * 25 }), mouse, "auto", 1, false).kind).toBe("pass");
-    expect(interiorIntent(wheel({ deltaX: 3, deltaY: 8 }), pad(), "zoom", 1, false).kind).toBe("pass");
-    expect(interiorIntent(wheel({ deltaY: 8 }), mouse, "pan", 1, false).kind).toBe("look");
-  });
-
-  it("looks all the way round the room and comes back where it started", () => {
-    const r: Rig = { target: new THREE.Vector3(0, 0.7, 0), position: new THREE.Vector3(8, 6, 8) };
-    const start = r.position.clone();
-    const c = pad();
-    const seen = new Set<string>();
-    // A long sideways swipe, in the event sizes macOS sends.
-    let turned = 0;
-    for (let t = 0; turned < Math.PI * 2 - 1e-9; t += 16) {
-      const i = interiorIntent(wheel({ deltaX: 12, timeStamp: t }), c, "auto", 1, false);
-      if (i.kind !== "look") throw new Error(i.kind);
-      const step = Math.min(i.azimuth, Math.PI * 2 - turned);
-      orbitRig(r, step, 0, 0.42, 1.22);
-      turned += step;
-      const q = quarterOf(r.position);
-      seen.add(`${q.x},${q.z}`);
-    }
-    expect(seen.size).toBe(4);
-    expect(r.position.distanceTo(start)).toBeLessThan(1e-6);
-  });
-
-  it("keeps the point looked at inside the room, camera moving with it", () => {
-    const r: Rig = { target: new THREE.Vector3(30, 0.7, -4), position: new THREE.Vector3(38, 6, 4) };
-    clampToRoom(r, { x: 8, z: 6 });
-    expect(r.target.toArray()).toEqual([8, 0.7, -4]);
-    expect(r.position.toArray()).toEqual([16, 6, 4]);
-  });
-
-  it("names the quarter the camera looks in from", () => {
-    expect(quarterOf({ x: 3, z: 4 })).toEqual({ x: 1, z: 1 });
-    expect(quarterOf({ x: -3, z: 0 })).toEqual({ x: -1, z: 1 });
-    expect(quarterOf({ x: 0, z: -1 })).toEqual({ x: 1, z: -1 });
   });
 });

@@ -3,9 +3,7 @@ import {HILLS} from "../map3d/hillsPlan";
 import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
 import {airportPoint} from "../map3d/airport";
 import {clearInteriorFootprint} from "./exteriorClearance";
-import {useMemo,useState} from "react";
-import {useFrame} from "@react-three/fiber";
-import {quarterOf} from "../map3d/trackpad";
+import {useMemo} from "react";
 import {useAtlas} from "../../state";
 import {useReducedMotion} from "../../lib/motion";
 import {load} from "../../lib/storage";
@@ -36,12 +34,7 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   // The mall interior is drawn to its map footprint, so the city around it lines up with the lot.
   const scale=mallAnchor&&source.mall?span/(source.mall.rx*2):Math.max(4,span/4),cx=anchor?.x??(park?park.x+park.w/2:0),cz=anchor?.z??(park?park.z+park.d/2:0);
   const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(span/2+2)/scale),[source,cx,cz,span,scale]);
-  // In the all-floors view, neighbours in the quarter the camera looks from would hide the
-  // building. The camera can turn all the way round, so follow it, re-rendering only when it
-  // crosses into another quarter.
-  const [q,setQ]=useState<{x:1|-1;z:1|-1}>({x:1,z:1});
-  useFrame(({camera})=>{if(!allFloors)return;const n=quarterOf(camera.position);if(n.x!==q.x||n.z!==q.z)setQ(n);});
-  const visible=(p:{x:number;z:number})=>!allFloors||(p.x-cx)*q.x<0||(p.z-cz)*q.z<0||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;
+  const visible=(p:{x:number;z:number})=>!allFloors||p.x<cx||p.z<cz||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;
   if(!park&&!anchor)return null;
   return <group scale={scale} position={[-cx*scale,-TERRACE_H*scale-0.35-elevation,-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}

@@ -280,7 +280,6 @@ function NavigationSetting() {
         <div className="grow">
           <div className="label">Two-finger scroll</div>
           <div className="muted small">{current.hint}</div>
-          <div className="muted small">Inside a building, two fingers look around the room all the way round, and Option with a scroll moves across the floor.</div>
         </div>
         <label className="field">
           <select value={prefs.scroll} onChange={(e) => setNavigationPrefs({ scroll: e.target.value as typeof prefs.scroll })} aria-label="Two-finger scroll">
