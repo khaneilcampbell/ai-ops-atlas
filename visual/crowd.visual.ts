@@ -1,6 +1,8 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /** People in the Financial District: sidewalk walkers and train riders to Atlas Hills (KC, 2026-10-31). */
-const out=process.env.SHOT_DIR??'artifacts/crowd';
+// Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
+const out=process.env.SHOT_DIR??'';
+test.skip(!out,'Set SHOT_DIR to a folder to take crowd screenshots.');
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){
  return page.evaluate(async(views)=>{
