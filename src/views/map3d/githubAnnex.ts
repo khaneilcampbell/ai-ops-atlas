@@ -155,3 +155,10 @@ export function addGithubAnnex(scene:Scene3D){
  scene.land.push(annex.land);
  for(const items of [scene.trees,scene.bushes,scene.rocks,scene.bollards])for(let i=items.length-1;i>=0;i--)if(inside(annex.land,[items[i].x,items[i].z],.2))items.splice(i,1);
 }
+
+/** The tower square and the podium tiers together, as a centre and size in plan. */
+export function githubFootprint(t:Pick<Tower,'x'|'z'|'size'>,a:GithubAnnex){
+ const x0=Math.min(t.x-t.size/2,...a.tiers.map(b=>b.x0)),x1=Math.max(t.x+t.size/2,...a.tiers.map(b=>b.x1));
+ const z0=Math.min(t.z-t.size/2,...a.tiers.map(b=>b.z0)),z1=Math.max(t.z+t.size/2,...a.tiers.map(b=>b.z1));
+ return {x:(x0+x1)/2,z:(z0+z1)/2,w:x1-x0,d:z1-z0};
+}

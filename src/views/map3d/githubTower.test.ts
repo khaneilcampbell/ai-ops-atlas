@@ -4,6 +4,7 @@ import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {FINANCIAL_BUILDINGS,headquartersEnvelope} from './financialPlan';
 import {GITHUB_TOWER,boxSide,githubTowerHeight,githubTowerTop,planGithubTower} from './githubTowerPlan';
+import {githubFootprint} from './githubAnnex';
 import {githubTowerGeometry} from './githubTowerGeometry';
 import {towerRing} from './roads';
 import {TRANSPORT} from './transportScale';
@@ -111,5 +112,14 @@ describe('GitHub glass podium and its new land',()=>{
   }
   // The skybridge clears traffic on the ring road beneath it.
   expect(annex.skybridge.y0).toBeGreaterThan(.5);
+ });
+ it('selects the tower and its podium as one building: outline, camera and glow cover both',()=>{
+  const f=githubFootprint(t,annex);
+  expect(f.x-f.w/2).toBeLessThanOrEqual(Math.min(t.x-t.size/2,...annex.tiers.map(b=>b.x0))+1e-9);
+  expect(f.x+f.w/2).toBeGreaterThanOrEqual(Math.max(t.x+t.size/2,...annex.tiers.map(b=>b.x1))-1e-9);
+  expect(f.z-f.d/2).toBeLessThanOrEqual(Math.min(t.z-t.size/2,...annex.tiers.map(b=>b.z0))+1e-9);
+  expect(f.z+f.d/2).toBeGreaterThanOrEqual(Math.max(t.z+t.size/2,...annex.tiers.map(b=>b.z1))-1e-9);
+  // Wider than the tower alone, since the podium stands beside it.
+  expect(f.w*f.d).toBeGreaterThan(t.size*t.size*1.5);
  });
 });

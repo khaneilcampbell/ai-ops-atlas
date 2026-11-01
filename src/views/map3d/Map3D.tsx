@@ -50,8 +50,9 @@ import { CommerceTower } from "./CommerceTower";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
+import { githubFootprint, type GithubAnnex } from "./githubAnnex";
 import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
@@ -137,10 +138,19 @@ const selOf = (key: string): Sel => {
   return { kind: key.slice(0, i) as Sel["kind"], id: key.slice(i + 1) };
 };
 
+type Anchor = { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string; extent?: Rect3 };
+type Rect3 = { x: number; z: number; y0: number; y1: number; w: number; d: number };
+
+/** The GitHub tower and its glass podium as one building: the box the outline and camera use. */
+function githubExtent(t: Tower, annex?: GithubAnnex): Rect3 | undefined {
+  const f = annex && githubFootprint(t, annex);
+  return f && { ...f, y0: TERRACE_H, y1: towerTop(t) };
+}
+
 /** Where each clickable thing sits and how big it is, for highlights, labels and camera moves. */
 function anchorsOf(scene: Scene3D, layout: Layout) {
-  const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
-  for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  const m = new Map<string, Anchor>();
+  for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId, extent: isGithubTower(t.projectId) ? githubExtent(t, scene.githubAnnex) : undefined });
   for(const shop of scene.retail){
     const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+shopHeight(shop)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
     m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
@@ -843,8 +853,9 @@ function World({
 
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
-    const a = anchors.get(key);
-    if (!a) return;
+    const a0 = anchors.get(key);
+    if (!a0) return;
+    const a = a0.extent ?? a0;
     touched.current = true;
     const h = a.y1 - a.y0;
     const dist = THREE.MathUtils.clamp(Math.max(h * 3.4, Math.max(a.w, a.d) * 5) + 3, controls.minDistance, fitDist.current * 0.45);
@@ -1054,8 +1065,9 @@ function World({
   }, [net.picked?.id]);
 
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
-  const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
+  const hl = (key: string | null) => { const a = key ? anchors.get(key) : undefined; return a?.extent ?? a; };
+  // A project can hold more than one terrace (the GitHub podium's land is a second one).
+  const terracesOf = (id?: string) => (id ? scene.terraces.filter((t) => t.id === id) : []);
   return (
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
@@ -1095,8 +1107,8 @@ function World({
       {net.picked && <Outline a={hl(net.picked.a)} color="#c9a35a" />}
       {net.picked && <Outline a={hl(net.picked.b)} color="#c9a35a" />}
       {netLinks.length > 0 && <Network links={netLinks} hover={hoverLink} moving={linksMoving && !reduced} onHover={onLinkHover} onPick={onLinkPick} />}
-      <TerraceGlow t={terraceOf(selectedDistrict)} strong />
-      {hoverDistrict !== selectedDistrict && <TerraceGlow t={terraceOf(hoverDistrict)} />}
+      {terracesOf(selectedDistrict).map((t, i) => <TerraceGlow key={i} t={t} strong />)}
+      {hoverDistrict !== selectedDistrict && terracesOf(hoverDistrict).map((t, i) => <TerraceGlow key={i} t={t} />)}
     </>
   );
 }
