@@ -1,4 +1,5 @@
 import {flightClearance} from './flightClearance';
+import { groupLabels } from "./groupLabels";
 import {DistrictLife} from './DistrictLife';
 import {financialDimensions} from './financialArchitecture';
 import {StreetLights} from './StreetLights';
@@ -346,14 +347,14 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
-    // Neighborhood names when the map is grouped, at the back corner of each landmass.
-    for (const n of layout.neighborhoods) {
-      // Tag groups usually hold one project each, so their "CLAUDE · 1" pills read like error badges.
-      if (!n.label || layout.neighborhoods.length < 2 || n.key.startsWith("t:")) continue;
-      // Districts are a fixed set, so their names stand alone; other groupings show how many they hold.
-      const district = n.key.startsWith("d:");
-      const text = district ? n.label.toUpperCase() : `${n.label.toUpperCase()} · ${n.count}`;
-      out.push({ id: `nb:${n.key}`, key: n.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(text, 11.5, SANS, 500) + 34, h: 28, priority: 1.5, className: `m3-pill hood${district ? " district" : ""}`, node: text, title: district ? `${n.label} district · ${n.count} ${n.count === 1 ? "project" : "projects"}` : undefined });
+    // Group names when the map is grouped, at the back corner of each landmass, one style for every
+    // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
+    // groups give way to the project plaques.
+    const byDistrict = layout.neighborhoods.some((n) => n.key.startsWith("d:"));
+    const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
+    for (const g of groupLabels(layout.neighborhoods)) {
+      const n = hoods.get(g.key)!;
+      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 28, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
     }
     if(scene.financial){
       const f=scene.financial,planned=<b className="hm hm-unverified" title="Planned · No verified operations" aria-label="Planned · No verified operations"/>;
@@ -371,7 +372,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.airport)out.push({id:AIRPORT_KEY,key:AIRPORT_KEY,pos:new THREE.Vector3(airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],TERRACE_H+3.5,scene.airport.z+AIRPORT_LAYOUT.terminalZ),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Airport</div>,onClick:()=>select(AIRPORT_KEY),title:"Atlas Airport · Planned visual district"});
     for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+shopHeight(shop)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
-      if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
+      if(near!=="near"&&byDistrict) out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
       out.push({ id: p.id, key: p.id, pos: new THREE.Vector3(p.x + p.w / 2, TERRACE_H + 5.3, p.z + p.d / 2), w: measure(p.label, 12, SANS, 600) + 40, h: 34, priority: selKey==="project:skyline"?0:3, className: `m3-plaque compact${selKey==="project:skyline"?" selected":""}`, onClick:()=>select("project:skyline"), title: `skyline · ${skylineHealth.label}`, node: <div className="t">{p.label}<b className={`hm hm-${skylineHealth.kind}${skylineHealth.stale ? " stale" : ""}`} title={skylineHealth.label} aria-label={skylineHealth.label}/></div> });
     }
