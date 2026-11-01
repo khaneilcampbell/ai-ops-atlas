@@ -16,6 +16,6 @@ Extend the existing two-triangle ocean plane past the camera's far range so its 
 
 ## Validation
 
-28 focused viewport, trackpad and bloom tests passed; lint, type checks and build passed. Browser checks exercise 20 zoom-out clicks, DPR changes (1, 2, 1.5), deliberate partial viewport/scissor state, day/night and close zoom. Screenshot baselines are not changed. Browser software WebGL does not establish native macOS GPU correctness: installed-app zoom verification remains necessary before claiming the specific desktop artifact is fully resolved.
+28 focused viewport, trackpad and bloom tests passed; lint, type checks and build passed. Both day/night browser checks passed and screenshots were reviewed in `docs/screenshots/map-zoom/`. They exercise 20 zoom-out clicks, DPR changes (1, 2, 1.5), deliberate partial viewport/scissor state, day/night and close zoom. Screenshot baselines are not changed. Browser software WebGL does not establish native macOS GPU correctness: installed-app zoom verification remains necessary before claiming the specific desktop artifact is fully resolved.
 
 No dependencies, business behavior, paid services, merge or deployment changes.
