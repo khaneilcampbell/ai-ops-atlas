@@ -4,6 +4,10 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · New Client inquiries list in Mission Control: every benjaire.com inquiry with a drafted reply that opens in your mail app, plus follow-up reminders on day 3 and day 7. Nothing is sent without you (#183)
+- 2026-11-01 · The README on GitHub now describes Atlas as it is today: the city, the three views, the agents, the Mac, web and iPhone apps, and how to run and test it (#190)
+- 2026-11-01 · New Fix with Claude button in Mission Control, next to failing workflows and items that need a look. It opens a ready-made GitHub issue; press Create and Claude finds the cause, makes one small fix and opens a pull request for you to merge (#189)
+- 2026-11-01 · Agents that mostly run on pull requests, like Design Consistency, no longer show "No verified run" when their last run on main passed: Atlas now always finds that run (#186)
+- 2026-11-01 · Merge Flow Coordinator stops failing when GitHub is busy: it asks GitHub in small pieces, retries, and skips a run quietly if GitHub still doesn't answer (#185)
 - 2026-11-01 · Every building now shows in every map view: the Benjaire Marketing Agency and the Atlas Marketplace used to disappear when projects were grouped by status or not grouped (and the agency under By tag), and now stand in the city in each one (#177)
 - 2026-11-01 · The Commerce district's tool buildings (Canva, Serper, Stripe) are now smaller teardrop glass towers in the Commerce Pipeline style, each pointing at the main tower (#182)
 - 2026-11-01 · Behind the scenes: the map speed check now runs on every pull request and warns when the map is within 10% of its limit, so a too-heavy building can be stopped before it reaches your Mac (#180)

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
 import { RerunButton } from "../components/RerunButton";
+import { FixWithClaude } from "../components/FixWithClaude";
 import { ApprovalQueue } from "../components/ApprovalQueue";
 import { useActions } from "../actions/state";
 import { useProposals } from "../approvals/state";
@@ -208,6 +209,15 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                       {relative(f.run.createdAt)}
                     </span>
                     <RerunButton repo={f.repo} run={f.run} />
+                    <FixWithClaude
+                      request={{
+                        kind: "Failing workflow",
+                        title: `${f.run.name} is failing`,
+                        detail: `Latest ${f.run.event} run on ${f.run.branch} ended ${f.run.conclusion ?? f.run.status} (${f.run.createdAt}).`,
+                        repo: f.repo,
+                        links: [{ label: "Failed run", url: f.run.url }],
+                      }}
+                    />
                   </div>
                 </li>
               ))}

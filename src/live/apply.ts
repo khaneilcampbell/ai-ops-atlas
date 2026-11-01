@@ -41,6 +41,16 @@ export function upsertRun(list: WorkflowRun[], run: WorkflowRun, limit: number):
   return [run, ...list].sort((x, y) => y.createdAt.localeCompare(x.createdAt)).slice(0, limit);
 }
 
+/**
+ * A pull request run must not push the workflow's newest default-branch run out of the list:
+ * that run decides the agent's status, as in fetchRepo's withMainline.
+ */
+function keepMainline(list: WorkflowRun[], prev: WorkflowRun[], branch: string | undefined): WorkflowRun[] {
+  if (!branch || list.some((r) => r.branch === branch)) return list;
+  const main = prev.find((r) => r.branch === branch);
+  return main ? [...list, main] : list;
+}
+
 const fileOf = (path: unknown) => String(path ?? "").split("/").pop() ?? "";
 
 /**
@@ -59,8 +69,9 @@ export function applyGithubEvent(snap: RepoSnapshot, e: LiveEvent): RepoSnapshot
     }
     const file = fileOf(raw.path);
     if (file && file in snap.workflowRuns) {
-      const list = upsertRun(snap.workflowRuns[file], run, 5);
-      if (list) next = { ...next, workflowRuns: { ...next.workflowRuns, [file]: list } };
+      const prev = snap.workflowRuns[file];
+      const list = upsertRun(prev, run, 5);
+      if (list) next = { ...next, workflowRuns: { ...next.workflowRuns, [file]: keepMainline(list, prev, snap.defaultBranch) } };
     }
     return next;
   }
