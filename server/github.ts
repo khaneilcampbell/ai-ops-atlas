@@ -8,7 +8,7 @@ export interface GithubEnv {
 }
 
 const NAME = "[A-Za-z0-9_.-]+";
-const REPO_PATH = new RegExp(`^/repos/(${NAME})/(${NAME})(?:/(?:languages|commits|pulls|actions/runs|actions/workflows|actions/workflows/${NAME}/runs))?$`);
+const REPO_PATH = new RegExp(`^/repos/(${NAME})/(${NAME})(?:/(?:languages|commits|pulls|actions/runs|actions/runs/[1-9][0-9]*/(?:jobs|artifacts)|actions/workflows|actions/workflows/${NAME}/runs))?$`);
 const USER_REPOS = new RegExp(`^/users/(${NAME})/repos$`);
 
 export function owners(env: GithubEnv): string[] {

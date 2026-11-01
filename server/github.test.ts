@@ -69,3 +69,10 @@ describe("proxyGithub", () => {
     expect(unreachable.headers.get("x-atlas-authed")).toBeNull();
   });
 });
+
+it('allows bounded run metadata endpoints without allowing logs, archives or writes', () => {
+ const env={ALLOWED_OWNERS:'khaneilcampbell'};
+ for(const kind of ['jobs','artifacts'])expect(refusal(`/repos/khaneilcampbell/ai-ops-atlas/actions/runs/42/${kind}`,env)).toBeNull();
+ for(const path of ['actions/runs/0/jobs','actions/runs/x/artifacts','actions/runs/42/logs','actions/runs/42/rerun','actions/artifacts/7/zip'])expect(refusal(`/repos/khaneilcampbell/ai-ops-atlas/${path}`,env)).toBe('Path not allowed.');
+ expect(refusal('/repos/other/private/actions/runs/42/artifacts',env)).toBe('Owner not allowed.');
+});

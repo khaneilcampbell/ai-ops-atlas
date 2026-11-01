@@ -1,3 +1,4 @@
+import { WorkflowOutput } from "./WorkflowOutput";
 import type { Agent } from "../catalog/types";
 import { useIntel } from "../intel/state";
 import { repoData } from "../lib/derive";
@@ -21,6 +22,7 @@ export function AgentOutput({ agent }: { agent: Agent }) {
   const checkedAt = telemetry.source === "github" ? snap?.runsCheckedAt ?? snap?.fetchedAt : intel.telemetry?.observedAt;
   const stale = state?.kind === "error" || (state?.kind === "ok" && state.stale);
   return <>
+    {telemetry.source === "github" && <WorkflowOutput key={agent.id} repo={agent.repository} runs={telemetry.executions} documentation={agent.id === "hub-ci"}/> }
     <section aria-label="Latest recorded work">
       <div className="section-title">Latest recorded work</div>
       <p>{latest ? RESULT[latest.result] : "No execution recorded"}</p>
@@ -33,7 +35,7 @@ export function AgentOutput({ agent }: { agent: Agent }) {
     </section>
     <section aria-label="Recorded output">
       <div className="section-title">Output & results</div>
-      <p className="muted small">Atlas currently stores execution summaries, not streamed logs or full generated files. Use the source run to inspect available logs, summaries and artifacts. City animations do not indicate live work.</p>
+      <p className="muted small">Recorded executions appear below. Generated files and job results are listed above when a GitHub workflow is connected; full file contents and raw logs remain at their source. City animations do not indicate live work.</p>
       {agent.observe?.atlasIntel && <button className="text-btn" onClick={() => setView("intel")}>View saved intelligence reports →</button>}
       {telemetry.executions.length > 0 ? <ul className="timeline">{telemetry.executions.slice(0, 10).map((item, index) => <li key={`${item.at}:${index}`}>
         <strong className="small">{RESULT[item.result]}{item.offMainline ? " · Other branch" : ""}</strong>
