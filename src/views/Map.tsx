@@ -9,6 +9,7 @@ import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
+import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
@@ -42,7 +43,9 @@ import { leaveBuilding, useOffice } from "./office/store";
 // three.js only loads when the 3D map is shown.
 const Map3D = lazy(() => import("./map3d/Map3D"));
 // The virtual office loads only when a building is entered.
+import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
+const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 const MallInterior = lazy(() => import("./office/MallInterior"));
 
@@ -915,7 +918,7 @@ export function MapView() {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
@@ -1157,28 +1160,10 @@ export function MapView() {
 
           <div className="map-view-context" role="status">{is3d?<><strong>{LENS_INFO[lens].label}</strong><span>{lens==="infrastructure"?(linkPrefs.on?"Showing enabled connection types":"Select a project to inspect its workers and connections"):mapLinks.length?`${mapLinks.length} declared links · Select a project to see its workers`:LENS_INFO[lens].empty}</span></>:<><strong>Flat map</strong><span>Project overview · Switch to 3D for connection views and interiors</span></>}</div>
           <div className="map-controls">
-            {(
-              <label className="map-group" title={is3d?LENS_INFO[lens].hint:"Connection views are available in 3D. Your selection is saved."}>
-                <span className="sr-only">Map view</span>
-                <select aria-label="Map view" disabled={!is3d} value={lens} onChange={(e) => setLens(e.target.value as MapLens)}>
-                  {MAP_LENSES.map((l) => (
-                    <option key={l} value={l}>
-                      {LENS_INFO[l].label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label className="map-group" title="Group projects into districts or neighborhoods">
-              <span className="sr-only">Group projects</span>
-              <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
-                {(Object.keys(GROUP_LABEL) as GroupBy[]).map((g) => (
-                  <option key={g} value={g}>
-                    {GROUP_LABEL[g]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
+              title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
+            <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
+              title="Group projects into districts or neighborhoods" />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>

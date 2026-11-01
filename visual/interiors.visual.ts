@@ -62,7 +62,7 @@ test("branded business interior opens with its own workspace navigation",async({
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
   for(let i=0;i<6;i++){await page.getByRole("button",{name:"Zoom in",exact:true}).click();await settle(page,1);}
-  await page.locator(".m3-plaque.secondary",{hasText:"Anthropic"}).dispatchEvent("click");await settle(page,4);
+  await page.locator('.m3-plaque[title^="Anthropic ·"]').dispatchEvent("click");await settle(page,4);
   await expect(page.getByRole("region",{name:"Anthropic interior"})).toHaveCount(0);
   await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Anthropic",exact:true})).toBeVisible();
   await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();

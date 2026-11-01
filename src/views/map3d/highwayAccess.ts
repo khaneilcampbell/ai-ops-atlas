@@ -1,11 +1,11 @@
 import {TRANSPORT} from "./transportScale";
 import {pathClear,type Box,type Pt} from './roads';
-import {routeAround} from './routing';
+import {routeAround,straightenJogs} from './routing';
 import {roundedRoad,distanceToRoad,roadProfile} from './highway';
 export const ACCESS={setback:6,cornerRadius:4,mergeLength:4,collectorSetback:3.5,radius:2.5} as const;
 export interface HighwayAccess {id:string;collector:Pt[];ramps:Pt[][];mouths:Pt[];junction:Pt}
 /** Pure planning: paired tangential ramps connect a local collector to a straight perimeter section. */
-export function planHighwayAccess(highway:Pt[],links:{id?:string;road:Pt[];frontage?:Pt[]}[],boxes:Box[]):HighwayAccess[]{
+export function planHighwayAccess(highway:Pt[],links:{id?:string;road:Pt[];frontage?:Pt[]}[],boxes:Box[],streets:Pt[][]=[],land:{x:number;z:number;w:number;d:number}[]=[]):HighwayAccess[]{
  const left=Math.min(...highway.map(p=>p[0])),right=Math.max(...highway.map(p=>p[0])),top=Math.min(...highway.map(p=>p[1])),bottom=Math.max(...highway.map(p=>p[1]));
  const out:HighwayAccess[]=[];
  const bezier=(a:Pt,b:Pt,c:Pt,d:Pt)=>Array.from({length:25},(_,i):Pt=>{const t=i/24,u=1-t;return [u*u*u*a[0]+3*u*u*t*b[0]+3*u*t*t*c[0]+t*t*t*d[0],u*u*u*a[1]+3*u*u*t*b[1]+3*u*t*t*c[1]+t*t*t*d[1]];});
@@ -25,7 +25,7 @@ export function planHighwayAccess(highway:Pt[],links:{id?:string;road:Pt[];front
    }));if(along===undefined)return;
    const node:Pt=vertical?[edge-sign*ACCESS.collectorSetback,along]:[along,edge-sign*ACCESS.collectorSetback];
    const raw=routeAround(junction,node,boxes,.95);if(!raw)return;
-   const clean=raw.filter((p,i)=>!i||Math.hypot(p[0]-raw[i-1][0],p[1]-raw[i-1][1])>.001);
+   const clean=straightenJogs(raw.filter((p,i)=>!i||Math.hypot(p[0]-raw[i-1][0],p[1]-raw[i-1][1])>.001),boxes,.73,1,streets,p=>land.some(r=>p[0]>r.x+.6&&p[0]<r.x+r.w-.6&&p[1]>r.z+.6&&p[1]<r.z+r.d-.6));
    const collector=[ACCESS.radius,1.2,.45].map(r=>roundedRoad(clean,r)).find(p=>pathClear(p,boxes,.73));if(!collector)return;
    const mouths:Pt[]=[],ramps=[-1,1].map(direction=>{
     const mouth:Pt=vertical?[edge,along+direction*ACCESS.mergeLength]:[along+direction*ACCESS.mergeLength,edge];mouths.push(mouth);
