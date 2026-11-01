@@ -71,3 +71,18 @@ the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from
 
 Playwright is a dev dependency only. Nothing under `visual/` is imported by the app, so it
 never reaches the desktop bundle or the Pages build.
+
+## Map performance budget
+
+`npm run measure:perf` (spec: `visual/perf.visual.ts`) measures what one 3D map frame costs:
+draw calls, triangles, offscreen passes (shadows, night glow), shader programs, textures,
+geometry on the GPU, CPU time per frame and JS heap, for desktop day, night, Battery saver
+and iPhone width. It also leaves the map and comes back three times and checks that no
+WebGL context or GPU resource is left behind. Each result prints as a `PERF {json}` line.
+Counts don't depend on how fast the machine's WebGL is, so compare them across branches;
+CPU time per frame is only comparable on the same machine.
+
+`PERF_BUDGET=1 npm run measure:perf` also fails when the desktop day frame goes over
+`BUDGET` in the spec. Run it on any pull request that adds to the map, and put the before
+and after `PERF` lines in the pull request. `PERF_ONLY="desktop day"` runs one case
+(about 6 minutes here).

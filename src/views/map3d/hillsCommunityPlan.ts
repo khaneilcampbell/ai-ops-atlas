@@ -1,3 +1,4 @@
+import {financialDimensions} from './financialArchitecture';
 import type {HillsPlan} from './hillsPlan';
 import type {Pt} from './roads';
 import type {FinancialPlan} from './financialPlan';
@@ -41,10 +42,11 @@ export function planCommunityRail(c:CommunityPlan|undefined,f:FinancialPlan|unde
  const east=Math.max(c.x+HILLS.width+CITY_SPACING.railEdgeClearance,b[0]+CITY_SPACING.railEndApproach);
  const route=roundedRoad([a,[east,a[1]],[east,b[1]],b],4),lengths=[0];
  for(let i=1;i<route.length;i++)lengths.push(lengths[i-1]+Math.hypot(route[i][0]-route[i-1][0],route[i][1]-route[i-1][1]));
+ const shore=f.x+Math.min(f.w-.7,Math.max(...f.buildings.map(b=>b.x+financialDimensions(b.id).w/2))+.55);
  const bank=f.buildings.find(b=>b.id==='banks')!,cross=f.x+34,world=(p:Point3):Point3=>[c.x+p[0],p[1],c.z+p[2]];
  return {route,lengths,length:lengths[lengths.length-1],hills:a,financial:b,financialLand:financialStationLand(f),
  hillsWalk:[[16.65,0,25.45],[16.65,0,26.35],[20,0,26.35],[29,0,26.35],[29,0,24.4],[29,COMMUNITY.platformRise,20.2],[28.33,COMMUNITY.platformRise,19.35],[28.33,COMMUNITY.platformRise,18.78]].map(p=>world(p as Point3)),
- financialWalk:[[b[0]-.33,COMMUNITY.platformRise,b[1]+.28],[b[0]-.33,COMMUNITY.platformRise,b[1]+.85],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[f.x+f.w-2,0,b[1]+5.9],[f.x+f.w-2,0,f.z+14.1],[cross,0,f.z+14.1],[cross,0,f.z+11.95],[f.x+bank.x,0,f.z+11.95],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
+ financialWalk:[[b[0]-.33,COMMUNITY.platformRise,b[1]+.28],[b[0]-.33,COMMUNITY.platformRise,b[1]+.85],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[shore,0,b[1]+5.9],[shore,0,f.z+14.1],[cross,0,f.z+14.1],[cross,0,f.z+11.95],[f.x+bank.x,0,f.z+11.95],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
 }
 /** Distance-based sampling is shared by train movement and route checks. */
 export function railPoint(p:RailPlan,distance:number){const d=Math.max(0,Math.min(p.length,distance));let i=1;while(i<p.lengths.length-1&&p.lengths[i]<d)i++;const a=p.route[i-1],b=p.route[i],t=(d-p.lengths[i-1])/(p.lengths[i]-p.lengths[i-1]||1);return {x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,yaw:Math.atan2(b[0]-a[0],b[1]-a[1])};}
