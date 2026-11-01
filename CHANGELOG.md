@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · Behind the scenes: a plan for giving every AI agent a home, a shift, a budget and an owner, with a daily commute on the map, laid out through the end of November (#PR)
 - 2026-11-01 · The "Read-only" pill in the top bar now shows CI health across your repositories (how many are passing, or how many are failing, in red). Click it to open Mission Control (#187)
 - 2026-11-01 · The app is now called Atlas: the top bar (without the "01"), sign-in screen, browser tab, Mac menu bar and window all say Atlas. Your tokens, settings and updates carry on as before (#187)
 - 2026-11-01 · Behind the scenes: when GitHub blocks the Design Consistency agent from opening its fix pull request, the run now says exactly which setting to turn on and cleans up its branch (#175)
