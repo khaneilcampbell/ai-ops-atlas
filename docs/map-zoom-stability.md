@@ -1,0 +1,21 @@
+# Map zoom stability
+
+## Confirmed issues
+
+- `fitNow` allowed a maximum distance of 1.8 times the fitted city view, making the city unnecessarily small. The same maximum was not recalculated on all viewport-resize paths after manual navigation.
+- The 400-unit ocean plane had a visible edge in the overview. Reviewed browser screenshots showed triangular background gaps beyond it.
+- The map render entry point relied on existing viewport/scissor/target state. A regression deliberately leaves a partial viewport/scissor active, then exercises zoom and DPR changes to verify the map recovers to a complete canvas. This is a defensive repair for partial-frame artifacts; the exact native WebKit/Metal cause of the user's black rectangle has not been independently reproduced.
+
+## Changes
+
+Use one zoom-limit calculation for first fit and resize: four-unit minimum, maximum 1.05 times the fitted city distance. Wheel, pinch and toolbar controls retain their existing common limits. Re-clamp an out-of-range camera after resize without resetting its viewing direction.
+
+Start each map frame on the default render target with a full logical viewport and scissoring disabled. Reuse a Vector2; add no continuous timers or allocations per frame. Keep day/night bloom and adaptive DPR.
+
+Extend the existing two-triangle ocean plane past the camera's far range so its hard edge is hidden. No additional terrain meshes or textures.
+
+## Validation
+
+28 focused viewport, trackpad and bloom tests passed; lint, type checks and build passed. Browser checks exercise 20 zoom-out clicks, DPR changes (1, 2, 1.5), deliberate partial viewport/scissor state, day/night and close zoom. Screenshot baselines are not changed. Browser software WebGL does not establish native macOS GPU correctness: installed-app zoom verification remains necessary before claiming the specific desktop artifact is fully resolved.
+
+No dependencies, business behavior, paid services, merge or deployment changes.

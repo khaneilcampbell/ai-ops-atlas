@@ -1,3 +1,4 @@
+import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
 import { groupLabels } from "./groupLabels";
 import {DistrictLife} from './DistrictLife';
@@ -809,8 +810,9 @@ function World({
 
   const fitNow = (instant = false) => {
     fitDist.current = computeFit();
-    controls.maxDistance = fitDist.current * 1.8;
-    controls.minDistance = 4;
+    const limits = mapZoomLimits(fitDist.current);
+    controls.maxDistance = limits.max;
+    controls.minDistance = limits.min;
     // Expanded cities include every transport corner; retain the original crop for small maps.
     goto(center, fitDist.current * (scene.communityRail ? 1 : hoods > 1 ? 0.9 : homeDir() === DIR_UPRIGHT ? 0.8 : 0.7), instant, 420, homeDir());
   };
@@ -828,10 +830,18 @@ function World({
     // Only the height changed (Safari's toolbar or the keyboard on a phone): the horizontal angle
     // holds, so leave the camera where it is rather than jump to a new fit.
     const heightOnly = phone && prev !== size && Math.abs(prev.width - size.width) < 2;
+    // A selected-building framing path also needs fresh limits after a resize.
+    if (framing.current) fitDist.current = computeFit();
     if (heightOnly) fitDist.current = computeFit();
     else if (framing.current) frame(framing.current);
     else if (!touched.current) fitNow(true);
     else fitDist.current = computeFit();
+    // Viewport changes must update the same wheel/pinch/button limits even after manual movement.
+    const limits = mapZoomLimits(fitDist.current);
+    controls.minDistance = limits.min;
+    controls.maxDistance = limits.max;
+    const distance = camera.position.distanceTo(controls.target);
+    if (distance > limits.max) goto(controls.target, limits.max, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height]);
 
