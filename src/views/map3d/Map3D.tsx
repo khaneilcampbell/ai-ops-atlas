@@ -56,6 +56,8 @@ import { usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
+import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
+import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -475,6 +477,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           onMoved={() => setTip(null)}
           phone={phone}
           cover={props.cover ?? 0}
+          surface={wrapEl}
         />
       </Canvas>
       </MapGuard>
@@ -544,6 +547,7 @@ function World({
   onMoved,
   phone,
   cover,
+  surface,
 }: {
   power: PowerProfile;
   light: LightMode;
@@ -574,6 +578,8 @@ function World({
   onMoved: () => void;
   phone: boolean;
   cover: number;
+  /** The map's whole area, labels included, for trackpad gestures. */
+  surface: React.RefObject<HTMLDivElement>;
 }) {
   const { camera, gl, size, scene: three, invalidate } = useThree();
   // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.
@@ -618,14 +624,15 @@ function World({
 
   const movedRef = useRef(onMoved);
   movedRef.current = onMoved;
+  /** The person moved the camera themselves: stop any glide and stop following the selection. */
+  const start = useCallback(() => {
+    wake();
+    touched.current = true;
+    anim.current = null;
+    framing.current = null;
+    movedRef.current();
+  }, []);
   useEffect(() => {
-    const start = () => {
-      wake();
-      touched.current = true;
-      anim.current = null;
-      framing.current = null;
-      movedRef.current();
-    };
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
     controls.disconnect();
     controls.connect(gl.domElement);
@@ -638,7 +645,94 @@ function World({
       controls.removeEventListener("change", change);
       controls.disconnect();
     };
-  }, [controls, gl]);
+  }, [controls, gl, start]);
+
+  // Mac trackpad gestures (see trackpad.ts): scroll pans, pinch zooms, twist turns, Option with a
+  // scroll turns and tilts. Listening on the whole map area in the capture phase sees the wheel
+  // over the labels too, and keeps MapControls from also zooming. A mouse wheel passes through.
+  const wheels = useMemo(() => new WheelClassifier(likelyMacTrackpad(typeof navigator === "undefined" ? undefined : navigator) ? "trackpad" : "mouse"), []);
+  const boundsRef = useRef(scene.bounds);
+  boundsRef.current = scene.bounds;
+  useEffect(() => {
+    const el = surface.current;
+    if (!el) return;
+    const cam = camera as THREE.PerspectiveCamera;
+    const rig = { target: controls.target, position: camera.position };
+    const moved = () => {
+      clampRig(rig, boundsRef.current);
+      start();
+      // Draw at full rate only while fingers (or the Mac's momentum) are moving.
+      wake(250);
+    };
+    const zoomAt = (factor: number, x: number, y: number) => {
+      const r = gl.domElement.getBoundingClientRect();
+      const anchor = groundAt(camera, controls.target, ((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+      zoomRigAt(rig, anchor, factor, controls.minDistance, controls.maxDistance);
+    };
+    // WebKit pinches arrive as gesture events; a ctrl wheel close to one is the same pinch.
+    let lastGesture = -Infinity;
+    const gesturing = () => performance.now() - lastGesture < 200;
+    const onWheel = (e: WheelEvent) => {
+      // Copies the labels forward to the canvas are mouse wheels for MapControls.
+      if (!e.isTrusted) return;
+      const p = getNavigationPrefs();
+      const intent = wheelIntent(e, wheels, p.scroll, speedFactor(p.speed), gesturing(), el.clientHeight);
+      if (intent.kind === "pass") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (intent.kind === "drop") return;
+      if (intent.kind === "pan") panRig(rig, cam.fov, gl.domElement.clientHeight, intent.dx, intent.dy);
+      else if (intent.kind === "zoom") zoomAt(intent.factor, e.clientX, e.clientY);
+      else orbitRig(rig, intent.azimuth, intent.polar, controls.minPolarAngle, controls.maxPolarAngle);
+      moved();
+    };
+    // Safari and the Mac app. Phones and iPads send these for touch pinches too, which MapControls
+    // already turns into zoom, so only a pointer-only Mac uses them.
+    const pointerOnly = typeof navigator !== "undefined" && (navigator.maxTouchPoints ?? 0) === 0;
+    type Gesture = Event & { scale: number; rotation: number; clientX: number; clientY: number };
+    let scale = 1;
+    let twist = 0;
+    const onGestureStart = (ev: Event) => {
+      ev.preventDefault();
+      lastGesture = performance.now();
+      scale = 1;
+      twist = 0;
+      wheels.sawPinch();
+    };
+    const onGestureChange = (ev: Event) => {
+      const e = ev as Gesture;
+      e.preventDefault();
+      lastGesture = performance.now();
+      const speed = speedFactor(getNavigationPrefs().speed);
+      const ratio = e.scale / scale;
+      scale = e.scale;
+      if (ratio > 0 && Math.abs(ratio - 1) > 1e-4) zoomAt(Math.pow(ratio, speed), e.clientX, e.clientY);
+      const step = twistStep(twist, e.rotation);
+      twist = e.rotation;
+      if (step) orbitRig(rig, twistToAzimuth(step), 0, controls.minPolarAngle, controls.maxPolarAngle);
+      moved();
+    };
+    const onGestureEnd = (ev: Event) => {
+      ev.preventDefault();
+      lastGesture = performance.now();
+    };
+    // A click or drag ends the trailing momentum of the last flick.
+    const onPointerDown = () => wheels.interrupt();
+    el.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    el.addEventListener("pointerdown", onPointerDown, { capture: true });
+    if (pointerOnly) {
+      el.addEventListener("gesturestart", onGestureStart);
+      el.addEventListener("gesturechange", onGestureChange);
+      el.addEventListener("gestureend", onGestureEnd);
+    }
+    return () => {
+      el.removeEventListener("wheel", onWheel, { capture: true });
+      el.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      el.removeEventListener("gesturestart", onGestureStart);
+      el.removeEventListener("gesturechange", onGestureChange);
+      el.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [surface, camera, controls, gl, start, wheels]);
 
   /**
    * The angle the map is first seen from. A tall phone screen looks along the island's side
@@ -687,6 +781,8 @@ function World({
       return;
     }
     anim.current = { t0: performance.now(), ms, from: [controls.target.clone(), camera.position.clone()], to };
+    // A glide wins over the trailing momentum of a flick that came before it.
+    wheels.interrupt();
   };
 
   const fitNow = (instant = false) => {
