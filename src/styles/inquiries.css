@@ -1,0 +1,23 @@
+/* Client inquiries: Mission Control's inbox for website inquiries (Inquiry to Client). */
+.client-inquiries { margin-bottom: 16px; }
+.client-inquiries .inquiries-note { padding: 4px 20px 12px; margin: 0; }
+.client-inquiries .list-row.inquiry { align-items: flex-start; cursor: default; gap: 12px; }
+.client-inquiries .list-row .title { display: block; color: var(--ink); font-weight: 600; }
+.client-inquiries .meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.inquiry-message { margin-top: 4px; font-size: 12.5px; color: var(--ink-2); }
+.inquiry-message summary { cursor: pointer; list-style: none; overflow-wrap: anywhere; }
+.inquiry-message summary::-webkit-details-marker { display: none; }
+.inquiry-message[open] summary { display: none; }
+.inquiry-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.inquiry-chip { flex: none; white-space: nowrap; }
+.inquiry-chip.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+.inquiry-chip.warn { color: var(--gold-deep); background: var(--gold-soft); border-color: rgba(201, 163, 90, 0.5); }
+.inquiry-chip.wait, .inquiry-chip.done { background: transparent; color: var(--ink-3); }
+.inquiry-actions { display: inline-flex; gap: 6px; align-items: center; flex: none; }
+.inquiry-actions .btn.quiet { background: transparent; }
+
+@media (max-width: 720px) {
+  .client-inquiries .list-row.inquiry { flex-wrap: wrap; row-gap: 6px; }
+  .client-inquiries .list-row.inquiry .grow { flex-basis: 100%; }
+  .inquiry-actions { flex-wrap: wrap; }
+}

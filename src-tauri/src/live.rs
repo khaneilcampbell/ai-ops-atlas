@@ -10,6 +10,7 @@ use crate::usage_sync::UsageSync;
 pub const FEED_PATH: &str = "/api/hooks/feed";
 pub const PUBLISH_PATH: &str = "/api/hooks/atlas";
 pub const REPORTS_PATH: &str = "/api/hooks/reports";
+pub const INQUIRIES_PATH: &str = "/api/hooks/inquiries";
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
 const REPORT_AGENTS: &[&str] = &["github-opportunity-scout"];
 const MAX_EVENTS: usize = 50;
@@ -87,6 +88,32 @@ pub async fn live_reports(
             .await
             .map(Some)
             .map_err(|e| format!("The site's reports weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// The newest website inquiries (Inquiry to Client), or `None` when website sync isn't set up.
+#[tauri::command]
+pub async fn live_inquiries(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    // Same sync URL and key as the feed; the key only goes in the header.
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{INQUIRIES_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's inquiries weren't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
