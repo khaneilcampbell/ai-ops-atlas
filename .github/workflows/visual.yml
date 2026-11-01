@@ -26,16 +26,16 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual checks (screenshots ${{ matrix.shard }}/4)
+    name: Visual checks (screenshots ${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
     # The whole set (about 110 tests, software WebGL) no longer fits in 45 minutes on one runner,
-    # so it runs as 4 shards side by side, split by spec file. Each shard takes roughly a quarter.
-    # A shard that still hits 30 minutes is a real slowdown, not noise (the blank map after #148).
-    timeout-minutes: 30
+    # so it runs as 6 shards side by side, split by spec file. Each shard takes roughly a sixth.
+    # A shard that still hits 35 minutes is a real slowdown, not noise (the blank map after #148).
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -54,10 +54,10 @@ jobs:
           fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
-        run: npx playwright test -c visual --shard=${{ matrix.shard }}/4
+        run: npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - name: Record baselines
         if: steps.mode.outputs.record == '1'
-        run: BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/4
+        run: BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

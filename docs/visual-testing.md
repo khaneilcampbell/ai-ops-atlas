@@ -64,9 +64,9 @@ and that the inspector's copy button puts the repository name on the clipboard.
 
 `.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
 touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
-a required check. The specs run as 4 shards in parallel (`--shard=N/4`, split by spec
-file, 30 minutes each); one runner could no longer finish all of them in 45 minutes.
-Run one shard locally with `npx playwright test -c visual --shard=1/4`. Each shard uploads
+a required check. The specs run as 6 shards in parallel (`--shard=N/6`, split by spec
+file, 35 minutes each); one runner could no longer finish all of them in 45 minutes.
+Run one shard locally with `npx playwright test -c visual --shard=1/6`. Each shard uploads
 its screenshots, diffs and report as a `visual-results-N` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
 To set or accept CI baselines, run the workflow by hand with **update** ticked: it pushes
 the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from.
