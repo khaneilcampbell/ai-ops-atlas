@@ -5,7 +5,7 @@ import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAtlas, type View } from "./state";
-import { attentionItems } from "./lib/derive";
+import { attentionItems, ciSummary } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
 import { MissionControl } from "./views/MissionControl";
@@ -21,7 +21,6 @@ import { UsageView } from "./views/Usage";
 import { useAutoPush } from "./usage/sync";
 import { useLiveFeed } from "./live/feed";
 import { LivePill } from "./components/LivePill";
-import { useActions } from "./actions/state";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
@@ -44,10 +43,6 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 export default function App() {
   useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
-  const actionsStatus = useActions().status;
-  const rerunOn = !!actionsStatus?.config.rerun_failed_jobs.enabled && actionsStatus.config.rerun_failed_jobs.repos.length > 0;
-  const mergeOn = !!actionsStatus?.config.merge_pull_requests?.enabled && actionsStatus.config.merge_pull_requests.repos.length > 0;
-  const writes = [rerunOn && "re-runs", mergeOn && "merges"].filter(Boolean).join(" + ");
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
@@ -66,6 +61,7 @@ export default function App() {
     const state = repos[name];
     return state?.kind === "ok" || (state?.kind === "error" && state.data);
   }).length;
+  const ci = ciSummary([...trackedRepositories], repos);
   const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
 
   return (
@@ -77,7 +73,7 @@ export default function App() {
           </div>
           <div>
             <div className="brand-title">
-              AI Ops Atlas<sup>01</sup>
+              Atlas
             </div>
             <div className="eyebrow">Agents · Projects · Repositories</div>
           </div>
@@ -96,17 +92,14 @@ export default function App() {
         <AlertPill open={alerts} />
         <VaultLockedPill />
         <UpdateButton />
-        {writes ? (
-          <span className="pill-mode" title="Read-only, except the actions switched on for the repositories ticked in Settings. Each one needs your approval in a macOS dialog (merges also need Touch ID) and is written to the audit log.">
-            <span className="dot" />
-            Read-only + {writes}
-          </span>
-        ) : (
-          <span className="pill-mode" title="Nothing in the app can start agents or change repositories. Repository intelligence only reads GitHub, and sends repository data to Anthropic for analysis when you run it.">
-            <span className="dot" />
-            Read-only
-          </span>
-        )}
+        <button
+          className={`pill-mode ci-pill ${ci.failing.length ? "bad" : ci.checked ? "good" : ""}`}
+          onClick={() => setView("overview")}
+          title={ci.failing.length ? `CI failing on ${ci.failing.join(", ")}. Open Mission Control.` : ci.checked ? `CI passing on ${ci.passing} of ${ci.checked} repositories with checks. Open Mission Control.` : "CI not checked yet. Open Mission Control."}
+        >
+          <span className="dot" />
+          {ci.failing.length ? `CI ${ci.failing.length} failing` : ci.checked ? `CI ${ci.passing}/${ci.checked} passing` : "CI not checked"}
+        </button>
       </header>
 
       <nav className="sidebar" aria-label="Sections">

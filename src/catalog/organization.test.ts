@@ -58,7 +58,7 @@ describe("districts", () => {
 describe("agent tiers", () => {
   const tiers = (t: string) => [...org.records.values()].filter((r) => r.tier.value === t).map((r) => r.id).sort();
 
-  it("puts AI Ops Atlas agents that work across repositories at the center", () => {
+  it("puts Atlas agents that work across repositories at the center", () => {
     expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-github-steward", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
   });
 

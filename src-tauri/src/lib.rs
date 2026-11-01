@@ -84,5 +84,5 @@ pub fn run() {
             power::power_on_battery,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running AI Ops Atlas");
+        .expect("error while running Atlas");
 }

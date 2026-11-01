@@ -51,7 +51,7 @@ jobs:
       - run: npx tauri build --target universal-apple-darwin --bundles app
       - name: Zip the app bundle
         run: |
-          ditto -c -k --keepParent "src-tauri/target/universal-apple-darwin/release/bundle/macos/AI Ops Atlas.app" AI-Ops-Atlas-macOS.zip
+          ditto -c -k --keepParent "src-tauri/target/universal-apple-darwin/release/bundle/macos/Atlas.app" AI-Ops-Atlas-macOS.zip
           shasum -a 256 AI-Ops-Atlas-macOS.zip > AI-Ops-Atlas-macOS.zip.sha256
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -78,4 +78,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" AI-Ops-Atlas-macOS.zip AI-Ops-Atlas-macOS.zip.sha256 \
-            --title "AI Ops Atlas $GITHUB_REF_NAME" --generate-notes --verify-tag
+            --title "Atlas $GITHUB_REF_NAME" --generate-notes --verify-tag

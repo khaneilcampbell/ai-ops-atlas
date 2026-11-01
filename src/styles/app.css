@@ -37,7 +37,6 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
   display: grid; place-items: center; flex: none; background: rgba(201, 163, 90, 0.06);
 }
 .brand-title { font-family: var(--serif); font-size: 21px; letter-spacing: 0.005em; line-height: 1.1; white-space: nowrap; }
-.brand-title sup { font-family: var(--sans); font-size: 9px; color: var(--gold); margin-left: 4px; letter-spacing: 0.1em; }
 .eyebrow { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--on-dark-2); }
 .main .eyebrow, .panel .eyebrow, .card .eyebrow { color: var(--ink-3); }
 .header .spacer { flex: 1; }
@@ -56,6 +55,11 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
   border: 1px solid rgba(201, 163, 90, 0.5); color: var(--on-dark); font-size: 12.5px; white-space: nowrap;
 }
 .pill-mode .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.ci-pill { background: none; font: inherit; font-size: 12.5px; cursor: pointer; }
+.ci-pill:hover { background: rgba(201, 163, 90, 0.12); }
+.ci-pill.good .dot { background: var(--good); }
+.ci-pill.bad { border-color: var(--bad); }
+.ci-pill.bad .dot { background: var(--bad); }
 .pill-mode.update { background: rgba(201, 163, 90, 0.18); border-color: var(--gold); font: inherit; font-size: 12.5px; cursor: pointer; }
 .pill-mode.update:hover:not(:disabled) { background: rgba(201, 163, 90, 0.3); }
 .pill-mode.update:disabled { cursor: default; opacity: 0.85; }

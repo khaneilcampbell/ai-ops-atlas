@@ -1,4 +1,4 @@
-# Runbooks: AI Ops Atlas
+# Runbooks: Atlas
 
 How to check, run, fix and stop each agent in this repository. Facts here come from the code and workflows; the catalog entry in `catalog/ai-ops-atlas.yaml` links to each section.
 

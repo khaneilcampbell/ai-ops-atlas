@@ -243,3 +243,55 @@ export function groundAt(camera: THREE.Camera, target: THREE.Vector3, ndcX: numb
 export function twistToAzimuth(deg: number): number {
   return (deg * Math.PI) / 180;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Building interiors. Inside a building there's nothing to scroll across, so the gestures swap:
+// two fingers look around the room through a full circle, and Option with a scroll walks the view
+// across the floor. Pinch and twist work as on the map, and a mouse wheel still zooms.
+
+export type InteriorIntent =
+  | { kind: "pass" }
+  | { kind: "drop" }
+  | { kind: "look"; azimuth: number; polar: number }
+  | { kind: "move"; dx: number; dy: number }
+  | { kind: "zoom"; factor: number };
+
+/**
+ * What a wheel event should do inside a building. Same device detection and settings as the
+ * map: "zoom" mode leaves every plain scroll to the controls, "pan" treats every scroll as a
+ * trackpad's. The look direction matches dragging the room: fingers left turn the room left
+ * with them, fingers up (natural scrolling) bring the view down toward eye level.
+ */
+export function interiorIntent(e: WheelSample, c: WheelClassifier, mode: ScrollMode, speed: number, gesturing: boolean, pageH = 800): InteriorIntent {
+  const { kind, stale } = c.classify(e);
+  const { dx, dy } = pixels(e, pageH);
+  if (e.ctrlKey) {
+    if (gesturing) return { kind: "drop" };
+    if (kind === "trackpad") c.sawPinch();
+    const f = Math.exp(-dy * TUNING.pinch * speed);
+    return { kind: "zoom", factor: THREE.MathUtils.clamp(f, 1 / TUNING.maxStep, TUNING.maxStep) };
+  }
+  if (stale) return { kind: "drop" };
+  if (e.altKey) return { kind: "move", dx: dx * TUNING.pan * speed, dy: dy * TUNING.pan * speed };
+  const look = mode === "pan" || (mode === "auto" && kind === "trackpad");
+  if (!look) return { kind: "pass" };
+  return { kind: "look", azimuth: dx * TUNING.orbit * speed, polar: dy * TUNING.tilt * speed };
+}
+
+/** Keep the point looked at inside a room of half-size `reach` around the origin, camera with it. */
+export function clampToRoom(rig: Rig, reach: { x: number; z: number }) {
+  const x = THREE.MathUtils.clamp(rig.target.x, -reach.x, reach.x);
+  const z = THREE.MathUtils.clamp(rig.target.z, -reach.z, reach.z);
+  const fix = new THREE.Vector3(x - rig.target.x, 0, z - rig.target.z);
+  rig.target.add(fix);
+  rig.position.add(fix);
+}
+
+/**
+ * Which quarter around the building the camera is in, as the signs of its x and z (0 counts as
+ * positive). Interiors are drawn around the origin, so this says which walls and neighbours
+ * stand between the camera and the room.
+ */
+export function quarterOf(p: { x: number; z: number }): { x: 1 | -1; z: 1 | -1 } {
+  return { x: p.x < 0 ? -1 : 1, z: p.z < 0 ? -1 : 1 };
+}
