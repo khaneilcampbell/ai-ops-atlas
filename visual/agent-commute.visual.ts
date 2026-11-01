@@ -1,11 +1,11 @@
-import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
+import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {goTo,openAtlas,settle,waitForScene} from './atlas';
 /**
  * AI agents walking between their Circa apartments and their workplaces (KC, 2026-11-01; see
  * docs/agent-workdays.md). Frames the camera on the agents seen walking, then on Circa and a
- * headquarters door. Runs only when SHOT_DIR names a folder; the regular checks skip it.
+ * headquarters door. The map shots run only when SHOT_DIR names a folder (software WebGL is slow);
+ * the Workday tab check always runs.
  */
 const out=process.env.SHOT_DIR??'';
-test.skip(!out,'Set SHOT_DIR to a folder to take agent commute screenshots.');
 async function shoot(page:import('@playwright/test').Page,prefix:string,phone=false){
  return page.evaluate(async({prefix,phone})=>{
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
@@ -27,12 +27,27 @@ async function shoot(page:import('@playwright/test').Page,prefix:string,phone=fa
  },{prefix,phone});
 }
 for(const light of ['day','night'] as const)test(`Agent commutes, ${light}`,async({page})=>{
+ test.skip(!out,'Set SHOT_DIR to a folder to take agent commute screenshots.');
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,6);
  const r=await shoot(page,light);for(const s of r.shots)writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  expect(r.walking).toBeGreaterThan(2);expect(errors).toEqual([]);
 });
 test('Agent commutes, phone',async({page})=>{
+ test.skip(!out,'Set SHOT_DIR to a folder to take agent commute screenshots.');
  test.setTimeout(600_000);await page.setViewportSize({width:390,height:844});mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,6);
  const r=await shoot(page,'day',true);for(const s of r.shots)writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+});
+
+// The Workday tab is in the desktop inspector; the phone's agent sheet (DetailPanel) does not show it yet.
+test('Workday tab, desktop',async({page})=>{
+ await page.setViewportSize({width:1512,height:900});await openAtlas(page);await goTo(page,'Agents');
+ await page.getByRole('textbox',{name:'Search agents',exact:true}).fill('github-opportunity-scout');await settle(page,1);
+ await page.locator('.reg-row[data-id="github-opportunity-scout"]').click();await settle(page,1);
+ await page.getByRole('tab',{name:'Workday',exact:true}).click();await settle(page,1);
+ const panel=page.getByRole('tabpanel');
+ await expect(panel).toContainText('Circa');
+ await expect(panel).toContainText('$1 a month');
+ await expect(panel).toContainText('not a live run');
+ if(out){mkdirSync(out,{recursive:true});await page.screenshot({path:`${out}/workday-tab-desktop.png`});}
 });
