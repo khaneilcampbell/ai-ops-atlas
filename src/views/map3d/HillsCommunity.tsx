@@ -1,4 +1,6 @@
 import {commuterAt,planRailCommuters} from './railCommuters';
+import {crowdLimit,planDistrictWalkers,walkerAt} from './districtWalkers';
+import {useQualityLevel} from '../../lib/governor';
 import type {FinancialPlan} from './financialPlan';
 import {useMemo,useRef,useEffect} from 'react';
 import {useFrame} from '@react-three/fiber';
@@ -105,20 +107,25 @@ export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,
  for(const path of [p.financialWalk,p.hillsWalk])for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0)strip([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',paths);
  for(const path of [p.financialWalk,p.hillsWalk]){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,night,palette,deck]);
- // Two groups of six simulated commuters, drawn as two instanced meshes (bodies and heads).
+ // Simulated people, all drawn as two instanced meshes (bodies and heads): KC's twelve rail
+ // commuters first, then Financial District people riding to Hills places and office workers
+ // walking the sidewalk between towers, interleaved so a smaller crowd keeps both kinds.
  const commuters=useMemo(()=>planRailCommuters(community,financial,p),[community,financial,p]);
- const count=commuters?.commuters.length??0;
+ const walkers=useMemo(()=>planDistrictWalkers(financial),[financial]);
+ const people=useMemo(()=>{if(!commuters)return [];const riders=commuters.commuters,base=riders.slice(0,12),extra=riders.slice(12),out:{rider?:typeof riders[number];walker?:typeof walkers[number]}[]=base.map(rider=>({rider}));
+  for(let i=0;i<Math.max(extra.length,walkers.length);i++){if(extra[i])out.push({rider:extra[i]});if(walkers[i])out.push({walker:walkers[i]});}return out;},[commuters,walkers]);
+ const count=people.length,qualityLevel=useQualityLevel(),limit=crowdLimit(count,{qualityLevel,saver:power.pauseInBackground});
  useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],c=new THREE.Color();for(let i=0;i<count;i++){bodies.current?.setColorAt(i,c.set(colors[i%colors.length]));heads.current?.setColorAt(i,c.set('#c6ad8f'));}for(const mesh of [bodies.current,heads.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count]);
  const pose=useMemo(()=>new THREE.Object3D(),[]);
  const placePeople=(seconds:number)=>{
   const body=bodies.current,head=heads.current;if(!commuters||!body||!head)return {outbound:false,back:false};
-  let outbound=false,back=false;
-  commuters.commuters.forEach((person,i)=>{const at=commuterAt(commuters,person,seconds);
-   if(!at.visible){if(at.where==='aboard'){if(at.direction==='outbound')outbound=true;else back=true;}pose.scale.setScalar(0);pose.position.set(0,-10,0);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);head.setMatrixAt(i,pose.matrix);return;}
+  let outbound=false,back=false;body.count=head.count=limit;
+  for(let i=0;i<limit;i++){const {rider,walker}=people[i],at=rider?commuterAt(commuters,rider,seconds):walkerAt(walker!,seconds);
+   if(!at.visible){if('where' in at&&at.where==='aboard'){if(at.direction==='outbound')outbound=true;else back=true;}pose.scale.setScalar(0);pose.position.set(0,-10,0);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);head.setMatrixAt(i,pose.matrix);continue;}
    const y=TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
    pose.rotation.set(0,at.yaw,0);pose.position.set(at.x,y,at.z);pose.scale.set(.07,.16,.06);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);
    pose.position.set(at.x,y+.21,at.z);pose.scale.setScalar(.035);pose.updateMatrix();head.setMatrixAt(i,pose.matrix);
-  });
+  }
   body.instanceMatrix.needsUpdate=true;head.instanceMatrix.needsUpdate=true;return {outbound,back};
  };
  useEffect(()=>{placePeople(elapsed.current);});
