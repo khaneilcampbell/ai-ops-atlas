@@ -18,6 +18,7 @@
   "openPullRequestsPerRepository": 20,
   "mergedPullRequestsPerRepository": 10,
   "staleAfterDays": 7,
+  "repositoriesPerRequest": 4,
   "requestTimeoutSeconds": 20,
   "heartbeatHours": 24,
   "brief": {
