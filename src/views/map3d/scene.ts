@@ -3,19 +3,21 @@ import {planCommunity,planCommunityRail,financialParkStation,type CommunityPlan,
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
+import {sizeCustomTowers} from "./customTowers";
 import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
-import { airportFootprint, planAirport, type AirportPlan } from "./airport";
+import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
 import { hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
-import { planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
+import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
+import { CITY_SCALE } from "./cityScale";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -28,7 +30,8 @@ export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
 const INNER_PATH_W = 0.32;
 const BROOK_W = 0.55;
-export const FLOOR_H = 0.32;
+/** One headquarters storey: 0.32 grown by CITY_SCALE.hq.storey to sit with the Marketplace. */
+export const FLOOR_H = 0.32 * CITY_SCALE.hq.storey;
 /** A fountain's basin radius at full size. */
 export const FOUNTAIN_R = 0.475;
 
@@ -76,6 +79,8 @@ export interface Kiosk {
   size: number;
   /** Canopy color. */
   canopy: string;
+  /** Roof height for a district tool office, sized with its headquarters (see customTowers.ts). */
+  height?: number;
 }
 export interface Tower {
   key: string;
@@ -92,6 +97,11 @@ export interface Tower {
   size: number;
   floors: number;
   height: number;
+  /**
+   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ), sized
+   * with the Financial District so they stand among its towers, just under the shortest.
+   */
+  customHeight?: number;
 }
 export interface StrayBuilding {
   key: string;
@@ -142,6 +152,8 @@ export interface Scene3D {
   land: Rect[];
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
+  /** Terrace-height land joining the airport entrance to the district across from it. */
+  airportForecourt?: Rect;
   terraces: Terrace[];
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
@@ -214,7 +226,7 @@ export function buildScene(layout: Layout): Scene3D {
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
     const floors = ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
-    const size = d.hq.size * (identity.landmark ? 1.02 : 0.92);
+    const size = d.hq.size * (identity.landmark ? 1.02 : 0.92) * CITY_SCALE.hq.footprint;
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     towers.push({
@@ -369,7 +381,7 @@ export function buildScene(layout: Layout): Scene3D {
   const decks: Rect[] = carBridges.map((br) => {
     const x0 = Math.min(br.a[0], br.b[0]);
     const z0 = Math.min(br.a[1], br.b[1]);
-    return br.axis === "x" ? { x: x0, z: br.a[1] - 0.3, w: Math.abs(br.b[0] - br.a[0]), d: 0.6 } : { x: br.a[0] - 0.3, z: z0, w: 0.6, d: Math.abs(br.b[1] - br.a[1]) };
+    return br.axis === "x" ? { x: x0, z: br.a[1] - DECK_W / 2, w: Math.abs(br.b[0] - br.a[0]), d: DECK_W } : { x: br.a[0] - DECK_W / 2, z: z0, w: DECK_W, d: Math.abs(br.b[1] - br.a[1]) };
   });
 
   // A continuous pedestrian network links each front entrance to the dedicated footbridge.
@@ -433,9 +445,9 @@ export function buildScene(layout: Layout): Scene3D {
     ];
     for (const tenant of tenants) {
       const x = cx + tenant.dx, z = cz + tenant.dz;
-      retail.push({ key: `retail:${p.id}:${tenant.name}`, projectId: p.id, name: tenant.name, users: [], x, z, size: tenant.size, canopy: "#c9a35a" });
+      retail.push({ key: `retail:${p.id}:${tenant.name}`, projectId: p.id, name: tenant.name, users: [], x, z, size: tenant.size * CITY_SCALE.shop, canopy: "#c9a35a" });
       const promenadeZ = tenant.dz < 0 ? cz - 1.2 : cz + 3.9;
-      paving.push(strip(x, z + tenant.size * 0.4, x, promenadeZ, 0.32, top));
+      paving.push(strip(x, z + tenant.size * CITY_SCALE.shop * 0.4, x, promenadeZ, 0.32, top));
     }
     for (const side of [-1, 1]) {
       const x = cx + side * 5.4;
@@ -474,7 +486,7 @@ export function buildScene(layout: Layout): Scene3D {
       const cx=park.x+park.w/2,cz=park.z+park.d/2;
 
       // Keep each bridge approach straight on arrival; turn only at the front promenade.
-      const buildings=[{gx:cx-0.75,gy:cz-0.475,size:1.5},{gx:cx-1.695,gy:cz-0.475,size:0.95},{gx:cx+0.745,gy:cz-0.475,size:0.95},...retail.filter(k=>k.projectId===id).map(k=>({gx:k.x-k.size/2,gy:k.z-k.size/2,size:k.size}))];
+      const S=CITY_SCALE.skyline,buildings=[{gx:cx-0.75*S,gy:cz-0.475*S,size:1.5*S},{gx:cx-1.695*S,gy:cz-0.475*S,size:0.95*S},{gx:cx+0.745*S,gy:cz-0.475*S,size:0.95*S},...retail.filter(k=>k.projectId===id).map(k=>({gx:k.x-k.size/2,gy:k.z-k.size/2,size:k.size}))];
       const path=toolWorkflowRoads(buildings[0],buildings.slice(1),[endpoint,{gx:cx,gy:cz+1.35}])[0]??[];
       for(let j=1;j<path.length;j++) paving.push(strip(path[j-1].gx,path[j-1].gy,path[j].gx,path[j].gy,0.4,top));
       if(path.length>1) walks.push({x0:endpoint.gx,z0:endpoint.gy,x1:cx,z1:cz+1.35,y:top,route:path});
@@ -658,6 +670,7 @@ export function buildScene(layout: Layout): Scene3D {
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
+  sizeCustomTowers(towers, kiosks);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
@@ -691,6 +704,19 @@ export function buildScene(layout: Layout): Scene3D {
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
   if(freight)zs.push(...freight.highway.map(p=>p[1]));
+  // Join the terminal entrance to the district across the meadow, unless a street, path or stream runs there.
+  const forecourtLand:Rect[]=[];
+  const forecourt=airport?airportForecourt(airport,terraces):undefined;
+  if(forecourt&&airport){
+    const ground=[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(x=>[x.collector,...x.ramps])]:[])];
+    const blocked=ground.some(p=>pathCrossesRect(p,forecourt,.35))||[...brooks,...bridges].some(r=>r.x<forecourt.x+forecourt.w&&r.x+r.w>forecourt.x&&r.z<forecourt.z+forecourt.d&&r.z+r.d>forecourt.z);
+    if(!blocked){
+      forecourtLand.push(forecourt);
+      const ez=airport.z+AIRPORT_LAYOUT.terminalZ;
+      paving.push(strip(forecourt.x,ez,forecourt.x+forecourt.w,ez,1.4,top));
+      for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
+    }
+  }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
@@ -705,6 +731,7 @@ export function buildScene(layout: Layout): Scene3D {
     freight,
     land,
     neighborhoodLand:neighborhood.land,
+    airportForecourt:forecourtLand[0],
     terraces,
     paving,
     steps,

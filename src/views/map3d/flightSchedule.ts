@@ -1,4 +1,4 @@
-import {AIRPORT_LAYOUT,departurePose,type FlightCircuit} from './airport';
+import {AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from './airport';
 import {roundedRoad} from './highway';
 /** Three aircraft queue on the taxiway; one is released every 15 simulation seconds. */
 export const FLIGHT_SCHEDULE={interval:15,count:8,park:45,taxi:6,cycle:120,start:45} as const;
@@ -15,17 +15,18 @@ export function fleetPose(seconds:number,slot:number,circuit?:FlightCircuit){
   // Advance one queue position smoothly after the aircraft ahead has been released.
   const advance=Math.min(1,within/4);
   const z=TAKEOFF_QUEUE.frontZ-(3-step-advance)*TAKEOFF_QUEUE.spacing;
-  return {x:TAKEOFF_QUEUE.x,y:0,z,yaw:Math.PI,pitch:0,visible:true};
+  return {x:TAKEOFF_QUEUE.x,y:0,z,yaw:Math.PI,pitch:0,roll:0,gear:1,visible:true};
  }
  if(phase<f.park+f.taxi){
   let left=(phase-f.park)/f.taxi*length;
   for(let i=1;i<route.length;i++){
    const a=route[i-1],b=route[i],d=Math.hypot(b[0]-a[0],b[1]-a[1]);
-   if(left<=d||i===route.length-1){const u=Math.min(1,left/d);return {x:a[0]+(b[0]-a[0])*u,y:0,z:a[1]+(b[1]-a[1])*u,yaw:Math.atan2(-(b[0]-a[0]),-(b[1]-a[1])),pitch:0,visible:true};}left-=d;
+   if(left<=d||i===route.length-1){const u=Math.min(1,left/d);return {x:a[0]+(b[0]-a[0])*u,y:0,z:a[1]+(b[1]-a[1])*u,yaw:Math.atan2(-(b[0]-a[0]),-(b[1]-a[1])),pitch:0,roll:0,gear:1,visible:true};}left-=d;
   }
  }
  const elapsed=(phase-f.park-f.taxi)*1.15;
- const flightTime=elapsed<30?elapsed:elapsed<75?30+(elapsed-30)*4/3:150+elapsed-75;
- const p=departurePose(Math.min(flightTime,179),true,circuit);
+ // Takeoff and the turn onto the circuit run in real time; the circuit itself plays a little faster.
+ const join=DEPARTURE_TIMES.join,flightTime=elapsed<join?elapsed:join+(elapsed-join)*4/3;
+ const p=departurePose(Math.min(flightTime,DEPARTURE_TIMES.exit-.01),true,circuit);
  return {...p,x:15+p.x,z:6.1+p.z,y:p.y-.28,yaw:phase<54?0:p.yaw,visible:phase<114};
 }

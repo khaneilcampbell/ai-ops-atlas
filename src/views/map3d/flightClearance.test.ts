@@ -12,7 +12,7 @@ import {fleetPose,FLIGHT_SCHEDULE} from './flightSchedule';
 import {flightClearance,airportFlightCircuit,privateJetPose,decorativeAerialHeights,FLIGHT_CLEARANCE as C} from './flightClearance';
 
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`clears every building after takeoff in ${group} grouping`,()=>{
- const s=buildScene(layoutMap(catalog,[],group)),a=s.airport!,safe=flightClearance(s),circuit=airportFlightCircuit(a,s.bounds,safe.altitude);
+ const s=buildScene(layoutMap(catalog,[],group)),a=s.airport!,safe=flightClearance(s),circuit=airportFlightCircuit(a,s.bounds,safe.altitude,safe.obstacles);
  const buildings=[
   ...s.towers.map(t=>({id:t.key,x:t.x,z:t.z,w:t.size+.7,d:t.size+.7,h:headquartersEnvelope([t])})),
   ...s.financial!.buildings.map(b=>({id:b.id,x:s.financial!.x+b.x,z:s.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d,h:b.height+financialDimensions(b.id).top})),
