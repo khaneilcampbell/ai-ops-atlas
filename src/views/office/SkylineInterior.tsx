@@ -13,6 +13,7 @@ import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
 import { useReducedMotion } from "../../lib/motion";
 import FloorLabel from "./FloorLabel";
 import LobbyEntrance from "./LobbyEntrance";
+import CircaLobby from "./CircaLobby";
 import {toolBrand} from "../map3d/toolBrand";
 import CityOutside from "./CityOutside";
 import { night as cityNight } from "../map3d/materials";
@@ -83,7 +84,7 @@ function SkylineCamera({allFloors,floor}:{allFloors:boolean;floor:number}) {
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
 }
 export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
-  const identity=financialInteriorBrand(building),displayName=identity?.name??building,residential=identity?.id==="residence"||identity?.id==="harbor-residence";
+  const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   const reduced=useReducedMotion()||building==="Atlas Hills"||!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building);
   const power=usePowerProfile();
@@ -109,18 +110,18 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
         <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?28:5} distance={15} decay={2}/>
         {[-4,4].map(x=><group key={x}><pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={10} decay={2}/><mesh position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}
       </group>
-      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1}/>
+      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d"}:{})}/>
       {level===0 ? <group>
         {business&&!brandedFinancial&&<group>{building==="Wells Fargo"?<group>
           {[-1.5,0,1.5].map(x=><group key={x}><Box p={[x,1.46,-3]} s={[0.65,0.38,0.08]} color="#344a41"/><Box p={[x+0.6,1.65,-3]} s={[0.04,0.8,0.65]} color="#b99957"/></group>)}
           <Box p={[-6.5,1,-4]} s={[1,2,0.7]} color="#a71d30"/><Box p={[-6.5,1.25,-3.62]} s={[0.65,0.5,0.05]} color="#a9c8c3"/>
         </group>:<group><Box p={[-5.8,1.5,-5.6]} s={[3,1.7,0.15]} color="#223d32"/><Html position={[-5.8,1.6,-5.45]} center><span className="skyline-room-label">{business.subtitle}</span></Html></group>}</group>}
-        <Box p={[0,0.6,-3]} s={[5,1.2,1.1]} color={business?.accent??"#234b3c"}/><Box p={[0,1.23,-3]} s={[5.2,0.1,1.25]} color="#c9a35a"/><Box p={[0,1.5,-3.3]} s={[0.7,0.4,0.06]} color="#172a25"/><Person x={0} z={-4.1} color="#344c41"/>
+        {circa?<CircaLobby night={isNight}/>:<group><Box p={[0,0.6,-3]} s={[5,1.2,1.1]} color={business?.accent??"#234b3c"}/><Box p={[0,1.23,-3]} s={[5.2,0.1,1.25]} color="#c9a35a"/><Box p={[0,1.5,-3.3]} s={[0.7,0.4,0.06]} color="#172a25"/><Person x={0} z={-4.1} color="#344c41"/></group>}
         {floor!==-1&&<Html position={[0,2.8,-5.8]} center><div className={`skyline-wall-sign${brandedFinancial?" financial-wall-sign":""}`}>{displayName.toUpperCase()}<span>{business?.subtitle??"PRIVATE RESIDENCES"}</span></div></Html>}
         {identity?.id==="residence"&&[-6,6].map(x=><group key={x}><Box p={[x,.3,-1.5]} s={[.8,.6,.8]} color="#e9dfca"/><mesh position={[x,1.2,-1.5]}><sphereGeometry args={[.5,10,8]}/><meshStandardMaterial color="#4b6b3d"/></mesh></group>)}
-        <Sofa x={-4.5} z={1}/><Sofa x={4.5} z={1}/>{[-4.5,4.5].map(x=><group key={x}><Box p={[x,0.35,2.6]} s={[1.4,0.6,0.8]} color="#b89859"/><Person x={x+0.3} z={0.5} color="#5e796a"/></group>)}
+        {!circa&&<group><Sofa x={-4.5} z={1}/><Sofa x={4.5} z={1}/>{[-4.5,4.5].map(x=><group key={x}><Box p={[x,0.35,2.6]} s={[1.4,0.6,0.8]} color="#b89859"/><Person x={x+0.3} z={0.5} color="#5e796a"/></group>)}</group>}
         <LobbyEntrance z={5.85} width={2.3}/>{floor!==-1&&<Html position={[0,2.8,5.8]} center><span className="skyline-room-label">Main entrance</span></Html>}
-        <Box p={[0,0.02,3]} s={[3,0.03,5]} color="#315c49"/>
+        <Box p={[0,0.02,3]} s={[3,0.03,5]} color={circa?"#9a9893":"#315c49"}/>
       </group> : <group>
         <Box p={[0,0.02,0]} s={[16,0.035,2]} color="#315c49"/>
         {[-1,1].flatMap(side=>[-1,1].map((row,index)=>{
@@ -134,14 +135,14 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
             <Box p={[x,0.025,z]} s={[7.4,0.04,4.6]} color={row===-1?"#eee4d0":"#ded9cc"}/><Box p={[side*0.15,0.65,z]} s={[0.12,1.3,4.7]} color="#c9bea5"/>
             {!business&&<group><Box p={[x+1.8,0.4,z-0.7]} s={[1.7,0.6,2]} color="#657c70"/><Box p={[x+1.8,0.74,z-1.4]} s={[1.5,0.12,0.5]} color="#f8f1e2"/></group>}
             <Sofa x={x-1.4} z={z+0.5}/><Box p={[x-1.7,0.75,z-1.3]} s={[1.7,0.12,0.7]} color="#b89760"/><Box p={[x-1.7,1.08,z-1.48]} s={[0.7,0.42,0.06]} color="#203c32"/>{(!business||agent)&&<Person x={business?x+1.6:x-1.7} z={business?z+0.7:z-0.6} color={["#806c9e","#496e84","#b58b49","#5a8067"][slot%4]}/>}
-            {(floor!==-1||agent?.workplace)&&<Html position={[x,1.85,z]} center><button className="skyline-room-label" onClick={()=>setPicked(`${room} · ${agent?.name??suite??"Available residence"}`)}>{`${residential&&identity?.id==="residence"?"Apartment":business?"Suite":"Apartment"} ${room}`}<span>{agent?.name??suite??"Available residence"}</span></button></Html>}
+            {(floor!==-1||agent?.workplace)&&<Html position={[x,1.85,z]} center><button className="skyline-room-label" onClick={()=>setPicked(`${room} · ${agent?.name??suite??"Available residence"}`)}>{`${residential&&homes?"Apartment":business?"Suite":"Apartment"} ${room}`}<span>{agent?.name??suite??"Available residence"}</span></button></Html>}
           </group>;
         }))}
       </group>}
       </group>)}
-      {[-7,7].map(x=><group key={x}><Box p={[x,0.35,-5]} s={[0.6,0.7,0.6]} color="#b49a67"/><mesh position={[x,1.2,-5]}><sphereGeometry args={[0.55,12,12]}/><meshStandardMaterial color="#426844"/></mesh></group>)}
+      {!circa&&[-7,7].map(x=><group key={x}><Box p={[x,0.35,-5]} s={[0.6,0.7,0.6]} color="#b49a67"/><mesh position={[x,1.2,-5]}><sphereGeometry args={[0.55,12,12]}/><meshStandardMaterial color="#426844"/></mesh></group>)}
     </Canvas>
-    <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${displayName} and return to city`}>← Exit building</button><div><small>{displayName.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":floor===0?"Grand lobby":`Floor ${floor} · ${residential?(identity?.id==="residence"?"Residences":"Guest suites"):business?"Workspaces":"Agent residences"}`}</h2></div></header>
+    <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${displayName} and return to city`}>← Exit building</button><div><small>{displayName.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":floor===0?"Grand lobby":`Floor ${floor} · ${residential?(homes?"Residences":"Guest suites"):business?"Workspaces":"Agent residences"}`}</h2></div></header>
     <nav className="skyline-floor-picker" aria-label={`Choose ${displayName} floor`}><strong>Floor navigation</strong>{[-1,...Array.from({length:maxFloor},(_,i)=>maxFloor-i),0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
     <aside className="skyline-interior-note">{picked??(floor===-1?`Lobby + ${maxFloor} ${residential?"residential":business?"workspace":"apartment"} ${maxFloor===1?"floor":"floors"} · Drag to orbit · Scroll to zoom`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{business?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
   </section>;
