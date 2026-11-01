@@ -6,19 +6,19 @@ Atlas organizes the catalog in three ways. Each value is either **declared** in 
 
 | District | Projects today |
 |---|---|
-| AI Operations | AI Ops Atlas |
+| AI Operations | Atlas |
 | Business Operations | Benjaire.com, Benjaire Ops Dashboard, Multi-Agent Commerce Pipeline |
 | AI Engineering | Project Intelligence Hub |
 | Security & Infrastructure | SOC Brute Force Detection Lab, Service Desk Intelligence Dashboard |
 | Career & Portfolio | khaneilcampbell.com, GitHub Profile, AI Career Application Optimization System |
 
-Each manifest declares `project.district`. Without it, the rules look at the tags and at the most common registry category among the project's items (CI pipelines don't count): career or portfolio, then security or infrastructure, then business, and AI Engineering otherwise. AI Ops Atlas itself is always AI Operations. A test checks that the rules reproduce every declared district, so a new manifest without the field still lands in the right place.
+Each manifest declares `project.district`. Without it, the rules look at the tags and at the most common registry category among the project's items (CI pipelines don't count): career or portfolio, then security or infrastructure, then business, and AI Engineering otherwise. Atlas itself is always AI Operations. A test checks that the rules reproduce every declared district, so a new manifest without the field still lands in the right place.
 
 On the map, **By district** is the default grouping (stored as `mapGroupBy2`). Districts stay on one landmass with walkways, roads and bridges between them, with a quiet name label at each district's back corner. The other groupings are unchanged.
 
 ## Agent tiers
 
-- **Central Operations**: AI Ops Atlas items other than its own CI. They work across every repository (Repository Intelligence, Engineering Review, Re-run, Merge).
+- **Central Operations**: Atlas items other than its own CI. They work across every repository (Repository Intelligence, Engineering Review, Re-run, Merge).
 - **Department Coordinator**: an item that lists two or more items of its own project under `registry.responsibilities.dependencies` (today: the commerce pipeline orchestrator).
 - **Specialized Agent**: everything else.
 

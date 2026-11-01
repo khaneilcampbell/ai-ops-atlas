@@ -29,7 +29,7 @@ export function VaultGate({ children }: { children: ReactNode }) {
         <div className="brand-mark">
           <AtlasMark />
         </div>
-        <h1>AI Ops Atlas</h1>
+        <h1>Atlas</h1>
         {waiting ? (
           <p>Use Touch ID to unlock your saved GitHub and Anthropic keys.</p>
         ) : (

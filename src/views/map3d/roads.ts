@@ -216,7 +216,7 @@ function roadTo(d: DistrictRoads, axis: "x" | "z", sign: 1 | -1, e: number, q: n
 /**
  * Road bridges for the footpaths between districts: one per pair of neighbors, beside the footpath,
  * where both ends can reach their plaza lane on a clear road. Walkways already join every district
- * to its neighbors, and through them to AI Ops Atlas, which reads every repository; the bridges
+ * to its neighbors, and through them to Atlas, which reads every repository; the bridges
  * follow the same network, so the map stays one street grid in every grouping.
  */
 export function planBridges(sites: BridgeSite[], districts: Map<string, DistrictRoads>): CarBridge[] {
