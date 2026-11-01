@@ -96,3 +96,11 @@ Atlas rejects classic `ghp_` tokens and any token already saved for something el
 Any one of these stops a re-run: untick the switch in Settings, remove the Actions token in Settings, or revoke the token on GitHub.
 
 Any one of these stops merging: untick **Merge pull requests**, untick the repository, remove its merge token in Settings, or revoke the token on GitHub.
+
+## Fix with Claude (not a write action)
+
+Mission Control's **Fix with Claude** button is a link, not an action: it opens a pre-filled issue in
+`khaneilcampbell/ai-ops-atlas` labeled `claude-fix`, in the browser. Atlas holds no token for it and
+sends nothing. Pressing **Create** on GitHub is the approval; a Claude Code scheduled task on KC's
+account then follows `ops/fix-with-claude/prompt.md` and opens one pull request for KC to merge. See
+[ops/fix-with-claude/README.md](../ops/fix-with-claude/README.md).
