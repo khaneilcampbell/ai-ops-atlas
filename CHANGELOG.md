@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-10-31 · Every building label on the map now looks the same: one size, one height above the roof, one color, and a status dot on each
 - 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#PR)
 - 2026-10-31 · New Benjaire Marketing Agency on new land in the bay below the Financial District: a cream building with a diamond screen, a diagonal glass cut, a copper-framed glass sweep and reflecting pools, with paths to Benjaire HQ and Benjaire Dashboard, a copper-framed Benjaire sign and a glass entrance with a canopy and lit bollards. Enter building opens four floors round a central atrium: lobby and café, studios, galleries and a presentation hall, with the stair reaching every floor and people moving through it: desk workers, lobby visitors, stair traffic, a hall audience and a presenter on stage (#163)
 - 2026-11-01 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
