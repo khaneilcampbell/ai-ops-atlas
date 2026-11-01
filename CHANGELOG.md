@@ -4,6 +4,9 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · Behind the scenes: the screenshot check now runs in 6 parts at once, so it finishes on map changes instead of timing out at 45 minutes (#184)
+- 2026-11-01 · Merge Flow Coordinator stops failing when GitHub is busy: it asks GitHub in small pieces, retries, and skips a run quietly if GitHub still doesn't answer (#185)
+- 2026-11-01 · Every building now shows in every map view: the Benjaire Marketing Agency and the Atlas Marketplace used to disappear when projects were grouped by status or not grouped (and the agency under By tag), and now stand in the city in each one (#177)
+- 2026-11-01 · The Commerce district's tool buildings (Canva, Serper, Stripe) are now smaller teardrop glass towers in the Commerce Pipeline style, each pointing at the main tower (#182)
 - 2026-11-01 · Behind the scenes: the map speed check now runs on every pull request and warns when the map is within 10% of its limit, so a too-heavy building can be stopped before it reaches your Mac (#180)
 - 2026-11-01 · Commerce Pipeline is now a twisting teardrop glass tower with a gold ribbon and a garden podium with a pool, and the Commerce district is bigger, with tree-lined grounds (#176)
 - 2026-11-01 · More people in the Financial District: 24 more ride the train out to every Atlas Hills business and the mansion, and 24 office workers walk the sidewalk between towers, going in and out of doors. Fewer show when the Mac is busy or on Battery saver (#162)
