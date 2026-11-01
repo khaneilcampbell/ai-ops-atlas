@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
 - 2026-10-31 · If the 3D map ever fails to draw, the rest of the Projects view stays and a Try again button restarts the map, instead of the whole page crashing
 - 2026-10-31 · Airport jets now look like large Boeing-style airliners: long slim body, swept wings, big underwing engines and a swept tail, still in Delta, Emirates, American, Southwest and Qatar colours (#164)

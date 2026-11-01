@@ -20,7 +20,8 @@ import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
 import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
 import {skylineBuildingKey} from "../../catalog/buildings";
 import {skylineProjectAnchor} from "./landmarks";
-import { TOOL_OFFICE_TOP, toolOfficeHeight } from "./toolBrand";
+import { TOOL_OFFICE_TOP } from "./toolBrand";
+import { shopHeight } from "./cityScale";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -142,7 +143,7 @@ function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
   for(const shop of scene.retail){
-    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+toolOfficeHeight(shop.name)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
+    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+shopHeight(shop)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
     m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
   }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
@@ -364,7 +365,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)out.push({id:STADIUM_KEY,key:STADIUM_KEY,pos:new THREE.Vector3(scene.stadium.x+4,TERRACE_H+2.3,scene.stadium.z+3.5),w:100,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Stadium</div>,onClick:()=>select(STADIUM_KEY),title:"Stadium · Planned venue"});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>near==="near"||selKey===airportBuildingKey(b.id)))out.push({id:airportBuildingKey(b.id),key:airportBuildingKey(b.id),pos:new THREE.Vector3(airportPoint(scene.airport,b.x,b.z)[0],TERRACE_H+b.h+.35,scene.airport.z+b.z),w:measure(b.name,11,SANS,500)+24,h:26,priority:selKey===airportBuildingKey(b.id)?0:7,className:"m3-plaque compact secondary",node:<div className="t">{b.name}</div>,onClick:()=>select(airportBuildingKey(b.id)),title:`${b.name} · Planned workspace`});
     if(scene.airport)out.push({id:AIRPORT_KEY,key:AIRPORT_KEY,pos:new THREE.Vector3(airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],TERRACE_H+3.5,scene.airport.z+AIRPORT_LAYOUT.terminalZ),w:125,h:28,priority:2,className:"m3-plaque compact",node:<div className="t">Atlas Airport</div>,onClick:()=>select(AIRPORT_KEY),title:"Atlas Airport · Planned visual district"});
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+toolOfficeHeight(shop.name)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name))) out.push({id:shop.key,key:shop.key,pos:new THREE.Vector3(shop.x,TERRACE_H+shopHeight(shop)+0.4,shop.z),w:measure(shop.name,11,SANS,500)+24,h:26,priority:selKey===skylineBuildingKey(shop.name)?0:hover===shop.key?0.5:7,className:`m3-plaque compact secondary${selKey===skylineBuildingKey(shop.name)?" selected":""}`,node:<div className="t">{shop.name}</div>,onClick:()=>select(skylineBuildingKey(shop.name)),title:`${shop.name} · khaneilcampbell/skyline`});
     for (const p of scene.parks) {
       if(near!=="near") out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
       const skylineHealth=healthFor("khaneilcampbell/skyline");
