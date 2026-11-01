@@ -45,6 +45,8 @@ import { AtlasHq } from "./AtlasHq";
 import { RibbonTower } from "./RibbonTower";
 import { isRibbonTower } from "./ribbonTowerPlan";
 import { CommerceTower } from "./CommerceTower";
+import { CommerceAnnexes } from "./CommerceAnnexes";
+import { ANNEX, isCommerceAnnex } from "./commerceAnnexPlan";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
@@ -1078,7 +1080,8 @@ function World({
       <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
       <Landscape scene={scene} g={g} m={m} />
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
-      <Kiosks kiosks={scene.kiosks} g={g} m={m} pick={kioskPick} />
+      <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
+      <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       {scene.towers.filter((t) => t.identity.landmark).map((t) => <AtlasHq key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}

@@ -1,4 +1,5 @@
 import {financialDimensions} from './financialArchitecture';
+import { ANNEX } from "./commerceAnnexPlan";
 import {planCommunity,planCommunityRail,financialParkStation,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
@@ -300,7 +301,7 @@ function buildCity(layout: Layout): Scene3D {
     for (const k of d.kiosks) {
       const kx = k.gx + k.size / 2;
       const kz = k.gy + k.size / 2;
-      paving.push(strip(kx, kz + Math.min(k.size, 0.9) * 0.4, kx, k.gy + k.size + 0.25, INNER_PATH_W, top));
+      paving.push(strip(kx, kz + (d.project.id === ANNEX.projectId ? k.size * 0.3 : Math.min(k.size, 0.9) * 0.4), kx, k.gy + k.size + 0.25, INNER_PATH_W, top));
       kiosks.push({
         key: `service:${d.project.id}:${k.service.id}`,
         projectId: d.project.id,
@@ -308,7 +309,8 @@ function buildCity(layout: Layout): Scene3D {
         users: k.service.users.map((a) => a.name),
         x: kx,
         z: kz,
-        size: Math.min(k.size, 0.9),
+        // Commerce tool offices are the tower's teardrop siblings and use their whole lot (commerceAnnexPlan).
+        size: d.project.id === ANNEX.projectId ? k.size : Math.min(k.size, 0.9),
         canopy: CANOPIES[Math.floor(hash(k.service.id) * CANOPIES.length)],
       });
     }
