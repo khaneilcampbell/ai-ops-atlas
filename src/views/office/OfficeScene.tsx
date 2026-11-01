@@ -11,6 +11,8 @@ import { ElevatorLanding, MovingLift } from "./BuildingCirculation";
 import LobbyEntrance from "./LobbyEntrance";
 import {cutawayCameraRadius} from "./cameraFit";
 import CityOutside from "./CityOutside";
+import AtlasHqShell from "./AtlasHqShell";
+import { isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
@@ -60,8 +62,9 @@ export default function OfficeScene(props: Props) {
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
-        <OfficeEnvironment plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
-        {(level===0||props.floor===undefined)&&<LobbyEntrance z={props.plan.d/2+0.08} width={1.4} height={2.2}/>}
+        {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
+        {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
@@ -221,7 +224,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean }) {
+function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean; shell?: boolean }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -253,8 +256,10 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: 
       {night && [-1,1].map(side=><group key={side}><pointLight position={[0,2.3,side*d*0.24]} intensity={30} distance={Math.max(w,d)*1.3} decay={1.6} color="#ffe1af"/><mesh position={[0,2.6,side*d*0.24]}><boxGeometry args={[1.2,0.045,0.5]}/><meshStandardMaterial color="#f1e3c4" emissive="#ffe2aa" emissiveIntensity={1.5}/></mesh></group>)}
 
 
-      <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
       <Box p={[0, 0.006, 0.25]} s={[w - 2.6, 0.012, d - 3]} m={MAT.rug} />
+      {/* A building with its own shell (Atlas HQ) draws its own slab, glass and core instead. */}
+      {!shell&&<>
+      <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
 
       {/* Back and left walls stand full height; the front two are cut down to a sill. */}
       {[0.45,2.45].map((y,i)=><group key={y}><Box p={[0,y,-d/2-T/2]} s={[w+T*2,i?0.5:0.9,T]} m={MAT.wall}/><Box p={[-w/2-T/2,y,0]} s={[T,i?0.5:0.9,d]} m={MAT.wall}/></group>)}
@@ -282,6 +287,8 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: 
         </group>
       ))}
 
+      </>}
+
       {/* Wall display: the project and its verified CI line, the same facts as the map. */}
       <group position={[0, 1.6, -d / 2 + 0.03]}>
         <Box p={[0, 0, 0]} s={[2.5, 1.3, 0.06]} m={MAT.dark} />
@@ -292,7 +299,7 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true }: { plan: 
       </group>
 
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
-      <group position={[-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
+      <group position={shell ? [-w / 2 + 1.0, 0, -d / 2 + 1.0] : [-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
         <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
         {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
           <group key={y}>
