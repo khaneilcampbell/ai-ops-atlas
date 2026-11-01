@@ -2,7 +2,7 @@ import {bridgePoint,clipConnectionRails} from "./connectionGeometry";
 import {TRANSPORT} from "./transportScale";
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
-import { toolBrand, toolOfficeHeight, toolSignTexture } from "./toolBrand";
+import { toolBrand, toolOfficeHeight } from "./toolBrand";
 import { CITY_SCALE, scaleParts, shopScale } from "./cityScale";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
@@ -705,7 +705,28 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
 }
 
 function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeometry }) {
-  const texture = useMemo(() => toolSignTexture(tool.name), [tool.name]);
+  const texture = useMemo(() => {
+    const brand = toolBrand(tool.name);
+    const canvas = document.createElement("canvas"); canvas.width = 512; canvas.height = 192;
+    const ctx = canvas.getContext("2d")!;
+    const gradient = ctx.createLinearGradient(0, 0, 512, 192);
+    gradient.addColorStop(0, brand.primary); gradient.addColorStop(1, brand.secondary);
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 512, 192);
+    ctx.fillStyle = tool.name === "Zara" ? "#171717" : "#ffffff";
+    if(tool.name==="Zara") {ctx.fillStyle="#f5f0e6";ctx.fillRect(0,0,512,192);ctx.fillStyle="#171717";}
+    ctx.font = tool.name === "Canva" ? "italic 110px Georgia, serif" : "600 100px system-ui, sans-serif";
+    if(tool.name==="Wells Fargo") {ctx.fillStyle="#f4d78e";ctx.font="bold 74px Georgia,serif";}
+    if(tool.name==="Zara")ctx.font="110px Georgia,serif";
+    if(tool.name==="Starbucks")ctx.font="bold 66px system-ui,sans-serif";
+    if(tool.name==="Chipotle")ctx.font="bold 78px system-ui,sans-serif";
+    if(tool.name==="Smashburger")ctx.font="bold 68px system-ui,sans-serif";
+    if(tool.name==="Anthropic")ctx.font="600 82px Georgia,serif";
+    if(tool.name==="OpenAI")ctx.font="600 96px system-ui,sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(tool.name === "Splunk" ? "splunk>" : tool.name==="Zara"?"ZARA":tool.name==="Starbucks"?"STARBUCKS":tool.name==="Chipotle"?"CHIPOTLE":tool.name, 256, 100, 460);
+    const map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
+    return map;
+  }, [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
   const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Anthropic"?0.32:0.08)) * shopScale(tool);
