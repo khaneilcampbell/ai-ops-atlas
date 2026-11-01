@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · Draft reply and Draft follow-up in Client inquiries now open Gmail and copy the reply in the Benjaire email design (logo header, card, footer); paste it into the message and press Send (#201)
+- 2026-11-01 · Map groupings keep district locations stable, building names share overview rules, and the extra map message is removed (#200)
 - 2026-11-01 · Map zoom stays near the city and night mode uses direct rendering to avoid offscreen black-frame artifacts (#199)
 - 2026-11-01 · New Client inquiries list in Mission Control: every benjaire.com inquiry with a drafted reply that opens in your mail app, plus follow-up reminders on day 3 and day 7. Nothing is sent without you (#183)
 - 2026-11-01 · Projects keeps its city ready between visits, pauses hidden graphics, and releases unused night effects (#179)
