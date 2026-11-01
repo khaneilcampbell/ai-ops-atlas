@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {mergeGeometries,mergeVertices} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Pt} from './roads';
 import {HQ,canopyAt,hqFloors,lobby,podiumHeight,podiumOutline,roofGarden,superellipse,towerLevels,wingLevels,type Pt3} from './atlasHqPlan';
 
@@ -7,6 +7,25 @@ import {HQ,canopyAt,hqFloors,lobby,podiumHeight,podiumOutline,roofGarden,superel
  * Atlas HQ geometry, built once into a few merged meshes. Levels are closed outlines with the
  * same number of points, counter-clockwise seen from above, so the outward side is edge × up.
  */
+
+/**
+ * Shrink a finished mesh for the GPU: drop the UVs where none were laid out (all zero, so no
+ * texture reads them anyway) and share the vertices that triangles repeat. Normals stay as they
+ * were, so it looks the same; it holds about a third of the memory.
+ */
+export function compactGeometry(g:THREE.BufferGeometry){
+ const uv=g.getAttribute('uv');
+ if(uv&&(uv.array as ArrayLike<number>).length&&Array.prototype.every.call(uv.array,(x:number)=>x===0))g.deleteAttribute('uv');
+ const out=mergeVertices(g,1e-4);
+ if(out!==g)g.dispose();
+ return out;
+}
+/** compactGeometry over every geometry in a set of parts, leaving the rest as it is. */
+export function compact<T extends object>(parts:T):T{
+ const out={...parts} as Record<string,unknown>;
+ for(const [k,v] of Object.entries(out))if(v instanceof THREE.BufferGeometry)out[k]=compactGeometry(v);
+ return out as T;
+}
 
 function mesh(pos:number[],uv?:number[]){
  const g=new THREE.BufferGeometry();
@@ -144,7 +163,7 @@ export function hqGeometry(k=1,v=1){
  const garden=roofGarden(k);
  const lawn=lid(superellipse(.4*k,-.24*k,.42*k,.6*k,3.2).map(([x,z])=>[x,garden.y+.012*k,z] as Pt3));
  const pools=mergeGeometries(garden.pools.map(p=>lid(superellipse(p.x,p.z,p.a,p.b,2.2,24,p.turn).map(([x,z])=>[x,garden.y+.02*k,z] as Pt3))))!;
- return {
+ return compact({
   towerGlass:skin(tower),
   wingGlass:skin(wing),
   podiumGlass:skin(podiumLevels),
@@ -164,7 +183,7 @@ export function hqGeometry(k=1,v=1){
   canopy:canopy(k),
   lawn,pools,
   trees:garden.trees.map(([x,z])=>({x,z,y:garden.y})),
- };
+ });
 }
 export type HqGeometry=ReturnType<typeof hqGeometry>;
-export const hqTriangles=(h:HqGeometry)=>Object.values(h).reduce((n,v)=>n+(v instanceof THREE.BufferGeometry?v.getAttribute('position').count/3:0),0);
+export const hqTriangles=(h:HqGeometry)=>Object.values(h).reduce((n,v)=>n+(v instanceof THREE.BufferGeometry?(v.index?v.index.count:v.getAttribute('position').count)/3:0),0);

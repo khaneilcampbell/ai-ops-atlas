@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Pt} from './roads';
-import {lid,skin} from './atlasHqGeometry';
+import {compact,lid,skin} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {RIBBON,podiumDetails,podiumRing,podiumTop,ribbonHeights,ringsAt} from './ribbonTowerPlan';
 
@@ -62,7 +62,7 @@ export function ribbonGeometry(k=1,height=RIBBON.height*k){
  const d=podiumDetails(k);
  const sky=new THREE.CylinderGeometry(d.skylight.r,d.skylight.r,.012*k,28).translate(d.skylight.x,d.skylight.y+.006*k,d.skylight.z);
  const skyRing=new THREE.TorusGeometry(d.skylight.r,.018*k,6,28).rotateX(Math.PI/2).translate(d.skylight.x,d.skylight.y+.02*k,d.skylight.z).toNonIndexed();
- return {glass,ribbonsEven:merge(even),ribbonsOdd:merge(odd),crown,garden,slabs:merge([...slabs,skyRing]),podiumGlass:merge(pglass),planters:merge(planters),skylight:sky,details:d};
+ return compact({glass,ribbonsEven:merge(even),ribbonsOdd:merge(odd),crown,garden,slabs:merge([...slabs,skyRing]),podiumGlass:merge(pglass),planters:merge(planters),skylight:sky,details:d});
 }
 export type RibbonGeometry=ReturnType<typeof ribbonGeometry>;
 export const ribbonTriangles=(g:RibbonGeometry)=>Object.values(g).reduce((n,v)=>n+(v instanceof THREE.BufferGeometry?(v.index?v.index.count:v.getAttribute('position').count)/3:0),0);
