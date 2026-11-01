@@ -2,10 +2,11 @@
 
 Every inquiry sent through the benjaire.com contact form shows up in **Mission Control →
 Client inquiries**. For each one, Atlas drafts a reply, then reminds you to follow up on day 3
-and day 7 after you reply. It never sends anything. **Draft reply** opens a Gmail compose
-window in your browser with the draft filled in, and you edit and press Send there. Gmail adds
-your signature, so put the Benjaire logo in it under Gmail Settings → Signature. A fully branded
-HTML reply would need a Gmail draft made through Google sign-in; that is not built yet.
+and day 7 after you reply. It never sends anything. **Draft reply** copies the reply in the
+Benjaire email design (the same look as the automatic "We received your message" email) and opens a
+Gmail compose window with the recipient and subject filled in. Click in the message, press ⌘V, edit
+if you like, and press Send. The design lives in `src/inquiries/emailHtml.ts`, ported from the n8n
+Flow intake. If the browser blocks the clipboard, Gmail opens with the plain text instead.
 
 Running cost: $0. No model calls. It uses the existing Pages site and its D1 database.
 

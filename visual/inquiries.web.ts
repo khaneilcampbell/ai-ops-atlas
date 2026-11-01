@@ -47,6 +47,30 @@ test("the inbox shows what needs a reply or a follow-up and drafts the reply", a
   await expect(card.locator(".inquiry-chip").first()).toHaveText(/Follow-up 1/);
 });
 
+test("Draft reply puts the branded email on the clipboard and opens Gmail", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => {
+    (window as unknown as { opened: string[] }).opened = [];
+    window.open = ((url: string) => {
+      (window as unknown as { opened: string[] }).opened.push(String(url));
+      return null;
+    }) as typeof window.open;
+  });
+  const card = await open(page);
+  await card.getByRole("button", { name: "Draft reply" }).click();
+  await expect(card.getByRole("status")).toBeVisible();
+  const opened = await page.evaluate(() => (window as unknown as { opened: string[] }).opened);
+  expect(opened).toEqual(["https://mail.google.com/mail/?view=cm&fs=1&to=maya%40northpeak.example&su=Re%3A%20your%20Digital%20Solutions%20inquiry&body="]);
+  await expect(card.getByRole("status")).toContainText("Branded reply copied");
+  const html = await page.evaluate(async () => {
+    const item = (await navigator.clipboard.read())[0];
+    return item.types.includes("text/html") ? await (await item.getType("text/html")).text() : "";
+  });
+  expect(html).toContain("email-header-banner.png");
+  expect(html).toContain("Hi Maya,");
+  await card.screenshot({ path: join(OUT, "inquiries-4-copied.png"), animations: "disabled", caret: "hide" });
+});
+
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
