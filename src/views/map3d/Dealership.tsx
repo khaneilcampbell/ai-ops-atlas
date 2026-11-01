@@ -7,9 +7,9 @@ import {planDealershipTraffic,dealershipGarageOpen} from './vehicles';
 import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import {TERRACE_H} from './scene';
-import {DEALERSHIP as D,dealershipUpperFloors,DEALERSHIP_KEY,type DealershipPlan} from './dealershipPlan';
+import {DEALERSHIP as D,dealershipUpperFloors,DEALERSHIP_KEY,SHOWROOM_FRONT,type DealershipPlan} from './dealershipPlan';
 import {ROAD_W} from './roads';
-type Parts={solid:Inst[];round:Inst[];lights:Inst[];glass:Inst[]};
+type Parts={solid:Inst[];round:Inst[];lights:Inst[];ceilings:Inst[];glass:Inst[]};
 /** Display cars use precisely the moving fleet's geometry, rotated toward the entrance. */
 function car(parts:Parts,x:number,y:number,z:number,color:string,suv:boolean){
  for(const p of MODELS[suv?'gwagon':'bmw'].parts)parts.solid.push({p:[x-p.at[2]*SCALE,y+p.at[1]*SCALE,z+p.at[0]*SCALE],s:[p.size[0]*SCALE,p.size[1]*SCALE,p.size[2]*SCALE],r:-Math.PI/2,c:p.color??color});
@@ -31,48 +31,62 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
  const glow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#fff1cd',emissive:'#ffdca1',emissiveIntensity:.1}),[]);
  useEffect(()=>{glow.emissiveIntensity=night?1.7:.08;},[glow,night]);
  useEffect(()=>()=>glow.dispose(),[glow]);
+ // Night mode (KC, 2026-10-31 "give me BMW dealership lights at night"): every storey's ceiling glows a
+ // clean showroom white through the glass, between the rejected full glow and the dim warm wash.
+ const ceiling=useMemo(()=>new THREE.MeshStandardMaterial({color:'#eef0ee',emissive:'#fff3dc',emissiveIntensity:0,roughness:.7}),[]);
+ useEffect(()=>{ceiling.emissiveIntensity=night?.75:0;},[ceiling,night]);
+ useEffect(()=>()=>ceiling.dispose(),[ceiling]);
  const glass=useMemo(()=>new THREE.MeshPhysicalMaterial(CLEAR_ARCHITECTURAL_GLASS),[]);
  useEffect(()=>()=>{sign.texture.dispose();sign.material.dispose();sign.geometry.dispose();glass.dispose();},[sign,glass]);
  const parts=useMemo(()=>{
-  const p:Parts={solid:[],round:[],lights:[],glass:[]};if(!a)return p;
+  const p:Parts={solid:[],round:[],lights:[],ceilings:[],glass:[]};if(!a)return p;
   const x=a.x,z=a.z,y=TERRACE_H;
   const box=(dx:number,dy:number,dz:number,w:number,h:number,d:number,c:string):Inst=>({p:[x+dx,y+dy,z+dz],s:[w,h,d],c});
-  // Four-story curtain wall: a clear central atrium separates the mezzanine wings.
-  const H=D.height,F=D.mezzanineY,levels=dealershipUpperFloors();
-  p.solid.push(box(5,.04,2.1,7.6,.06,3.2,'#e7e8e4'),box(5,.1,.5,7.6,H-.1,.08,'#e3e7e5'));
-  p.solid.push(box(5,H,2.1,7.85,.1,3.45,'#edf0ef'),box(5,H+.1,2.1,7.6,.035,3.2,'#aab5bb'));
+  // Curtain-wall tower sized from the Financial District (plan.showroom): a clear central atrium
+  // separates the gallery wings on every storey, and the glass front stays on the promenade line.
+  const r=a.showroom,H=r.height,F=D.mezzanineY,levels=dealershipUpperFloors(r.floors),cx=r.cx,cz=r.cz;
+  const W=r.w/2,Lx=cx-W,Rx=cx+W,B=cz-r.d/2,Fz=cz+r.d/2,wing=W-.67,wings=[cx-.65-wing/2,cx+.65+wing/2],perWing=Math.max(1,Math.floor(wing/1.1));
+  const bays=(c:number)=>Array.from({length:perWing},(_,k)=>c+(k-(perWing-1)/2)*wing/perWing);
+  p.solid.push(box(cx,.04,cz,r.w,.06,r.d,'#e7e8e4'),box(cx,.1,B,r.w,H-.1,.08,'#e3e7e5'));
+  p.solid.push(box(cx,H,cz,r.w+.25,.1,r.d+.25,'#edf0ef'),box(cx,H+.1,cz,r.w,.035,r.d,'#aab5bb'));
   // Roof-edge fascia carries the sign above the glazing, with no duplicate roof mesh.
-  p.solid.push(box(5,H-.85,3.73,7.6,.85,.08,'#f8f9f7'),box(5,H-.89,3.78,7.6,.025,.02,'#2876bb'));
-  for(const xx of [1.2,3.1,4.5,5.5,6.9,8.8])p.solid.push(box(xx,.1,3.72,.035,H-.46,.05,'#26363e'));
-  for(const xx of [1.2,8.8])for(const zz of [.5,2.1,3.7])p.solid.push(box(xx,.1,zz,.065,H-.1,.065,'#b4c0c6'));
-  for(const yy of [.1,...levels,H-.4])p.solid.push(box(5,yy,3.72,7.6,.035,.055,'#34464f'));
+  p.solid.push(box(cx,H-.85,Fz+.03,r.w,.85,.08,'#f8f9f7'),box(cx,H-.89,Fz+.08,r.w,.025,.02,'#2876bb'));
+  for(const xx of [Lx,(Lx+cx-.5)/2,cx-.5,cx+.5,(cx+.5+Rx)/2,Rx])p.solid.push(box(xx,.1,Fz+.02,.035,H-.46,.05,'#26363e'));
+  for(const xx of [Lx,Rx])for(const zz of [B,cz,Fz])p.solid.push(box(xx,.1,zz,.065,H-.1,.065,'#b4c0c6'));
+  for(const yy of [.1,...levels,H-.4])p.solid.push(box(cx,yy,Fz+.02,r.w,.035,.055,'#34464f'));
   // Individual front panes stop at the double entrance; side panes retain service access.
-  for(const [cx,w] of [[2.85,3.2],[7.15,3.2]])p.glass.push(box(cx,.14,3.72,w,H-.55,.014,'#ffffff'));
-  p.glass.push(box(5,1.3,3.72,.96,H-1.7,.014,'#ffffff'));
-  for(const xx of [4.56,5.44])p.solid.push(box(xx,.1,3.76,.025,1.2,.03,'#26363e'));
-  p.solid.push(box(5,1.32,3.98,1.2,.055,.6,'#b6c1c7'));
-  p.glass.push(box(1.2,.14,2.1,.014,H-.55,3.1,'#ffffff'));
-  for(const zz of [1.02,3.17])p.glass.push(box(8.8,.14,zz,.014,H-.55,1,'#ffffff'));
-  p.glass.push(box(8.8,1.2,2.1,.014,H-1.61,1.02,'#ffffff'));
-  p.solid.push(box(9.06,.035,2.1,.46,.025,1.02,'#343f45'),box(8.83,1.17,2.1,.09,.09,1.2,'#b6c1c7'),box(8.83,.1,1.54,.09,1.07,.08,'#b6c1c7'),box(8.83,.1,2.66,.09,1.07,.08,'#b6c1c7'));
+  for(const side of [-1,1]){const w=W-.48;p.glass.push(box(cx+side*(.48+w/2),.14,Fz+.02,w,H-.55,.014,'#ffffff'));}
+  p.glass.push(box(cx,1.3,Fz+.02,.96,H-1.7,.014,'#ffffff'));
+  for(const xx of [cx-.44,cx+.44])p.solid.push(box(xx,.1,Fz+.06,.025,1.2,.03,'#26363e'));
+  p.solid.push(box(cx,1.32,Fz+.28,1.2,.055,.6,'#b6c1c7'));
+  p.glass.push(box(Lx,.14,cz,.014,H-.55,r.d-.1,'#ffffff'));
+  const pane=(r.d-1.02)/2-.05;for(const zz of [cz-.51-.025-pane/2,cz+.51+.025+pane/2])p.glass.push(box(Rx,.14,zz,.014,H-.55,pane,'#ffffff'));
+  p.glass.push(box(Rx,1.2,cz,.014,H-1.61,1.02,'#ffffff'));
+  p.solid.push(box(Rx+.26,.035,cz,.46,.025,1.02,'#343f45'),box(Rx+.03,1.17,cz,.09,.09,1.2,'#b6c1c7'),box(Rx+.03,.1,cz-.56,.09,1.07,.08,'#b6c1c7'),box(Rx+.03,.1,cz+.56,.09,1.07,.08,'#b6c1c7'));
 
-  // Repeat the original galleries and rear landing; keep the atrium and circulation clear.
+  // Gallery wings and a rear landing on every storey; the atrium and stairs stay clear.
+  const rail=r.d-.92;
   for(const level of levels){
-  for(const xx of [2.85,7.15]){
-   p.solid.push(box(xx,level-.09,2.1,3.15,.09,3.1,'#c6cfd3'));
-   p.glass.push(box(xx,level,3.56,3.12,.47,.014,'#ffffff'));
-   p.solid.push(box(xx,level+.47,3.56,3.15,.025,.03,'#647883'));
+  for(const xx of wings){
+   p.solid.push(box(xx,level-.09,cz,wing,.09,r.d-.1,'#c6cfd3'));
+   p.glass.push(box(xx,level,Fz-.14,wing-.03,.47,.014,'#ffffff'));
+   p.solid.push(box(xx,level+.47,Fz-.14,wing,.025,.03,'#647883'));
   }
-  p.solid.push(box(5,level-.09,.64,1.15,.09,.22,'#c6cfd3'));
-  for(const xx of [4.42,5.58]){p.glass.push(box(xx,level,2.4,.014,.47,2.28,'#ffffff'));p.solid.push(box(xx,level+.47,2.4,.025,.025,2.28,'#647883'));}
+  p.solid.push(box(cx,level-.09,B+.14,1.15,.09,.22,'#c6cfd3'));
+  for(const xx of [cx-.58,cx+.58]){p.glass.push(box(xx,level,Fz-.14-rail/2,.014,.47,rail,'#ffffff'));p.solid.push(box(xx,level+.47,Fz-.14-rail/2,.025,.025,rail,'#647883'));}
   }
-  // One stair flight per level uses the established back-wall route and rear landings.
-  for(let floor=0;floor<D.floorCount-1;floor++)for(let i=0;i<D.stairCount;i++)p.solid.push(box(5.9-i*.16,floor*F+F*i/D.stairCount+.1,1.15,.18,.09,.55,'#aab7be'));
-  // Ground-floor reception and lounge.
-  p.solid.push(box(7.1,.1,1.6,1.3,.45,.5,'#e4e2db'),box(7.1,.55,1.6,1.4,.045,.6,'#294237'),box(7.1,.59,1.6,.25,.17,.045,'#203744'),box(6.2,.1,2.7,.35,.24,.4,'#294237'),box(7,.1,2.7,.35,.24,.4,'#294237'));
-  for(const yy of [...levels.map(level=>level-.17),H-.16])for(const xx of [2.5,6.8])p.lights.push(box(xx,yy,2.1,.8,.025,.5,'#ffffff'));
-  car(p,x+2.6,y+.1,z+2,'#e5e8e7',false);car(p,x+4,y+.1,z+2.6,'#2163ad',false);
-  for(const level of levels){car(p,x+2.3,y+level,z+2.3,'#2163ad',false);car(p,x+3.7,y+level,z+2.3,'#e7e9e6',false);car(p,x+7.2,y+level,z+2.3,'#a5abb0',true);}
+  // One stair flight per storey along the back wall, up to the rear landings.
+  for(let floor=0;floor<r.floors-1;floor++)for(let i=0;i<D.stairCount;i++)p.solid.push(box(cx+.9-i*.16,floor*F+F*i/D.stairCount+.1,B+.45,.18,.09,.5,'#aab7be'));
+  // Ground-floor reception and lounge beside the side service door.
+  const desk=Rx-.75;p.solid.push(box(desk,.1,cz+.35,1.3,.45,.5,'#e4e2db'),box(desk,.55,cz+.35,1.4,.045,.6,'#294237'),box(desk,.59,cz+.35,.25,.17,.045,'#203744'),box(Rx-1.3,.1,Fz-.45,.35,.24,.4,'#294237'),box(Rx-.55,.1,Fz-.45,.35,.24,.4,'#294237'));
+  // Original showroom lighting (KC, 2026-10-31): one ceiling strip over each gallery wing per storey,
+  // same glow. The strips hang just behind the front glass so every lit storey reads from the street;
+  // set back at mid-depth under the slabs they were hidden from outside and the tower looked dark.
+  for(const yy of [...levels.map(level=>level-.2),H-.2])for(const xx of wings)p.lights.push(box(xx,yy,Fz-.4,Math.min(.8,wing*.7),.05,.3,'#ffffff'));
+  for(const top of [...levels,H])p.ceilings.push(box(cx,top-.13,cz,r.w-.14,.02,r.d-.14,'#ffffff'));
+  const colors=['#2163ad','#e7e9e6','#a5abb0','#202b35'];
+  bays(wings[0]).forEach((bx,k)=>car(p,x+bx,y+.1,z+cz+.3,colors[k%4],false));
+  levels.forEach((level,i)=>[...bays(wings[0]),...bays(wings[1])].forEach((bx,k)=>car(p,x+bx,y+level,z+cz+.2,colors[(i+k)%4],k>=perWing&&k%2===0)));
   // Display bays and the drive aisle leave a central pedestrian approach clear.
   p.solid.push(box(5,.012,5.9,9.4,.035,3.5,'#414b50'));
   for(const v of a.cars){car(p,v.x,y+.06,v.z,v.color,v.kind==='suv');for(const side of [-1,1])p.solid.push({p:[v.x+side*TRANSPORT.displayBayWidth/2,y+.055,v.z],s:[.025,.012,TRANSPORT.displayBayLength],c:'#e4e7de'});p.solid.push({p:[v.x,y+.055,v.z-TRANSPORT.displayBayLength/2],s:[TRANSPORT.displayBayWidth,.012,.025],c:'#e4e7de'});}
@@ -89,7 +103,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
   return p;
  },[a]);
  if(!a)return null;
- return <><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+5,TERRACE_H+D.height-.425,a.z+3.78]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
+ return <><Instanced items={[{p:[a.lot.x+a.lot.w/2,0,a.lot.z+a.lot.d/2],s:[a.lot.w,TERRACE_H,a.lot.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.round} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={glow}/><Instanced items={parts.ceilings} geometry={g.box} material={ceiling} shadow={false}/><Instanced items={parts.glass} geometry={g.box} material={glass} pick={{...pick,keys:parts.glass.map(()=>DEALERSHIP_KEY)}}/>{traffic?<Garage key="moving" plan={a} g={g} m={m} moving={!reduced}/>:<Garage key="parked" plan={a} g={g} m={m} moving={false}/>}<mesh position={[a.x+a.showroom.cx,TERRACE_H+a.showroom.height-.425,a.z+SHOWROOM_FRONT+.08]} geometry={sign.geometry} material={sign.material} raycast={()=>null}/></>;
 }
 
 function Garage({plan,g,m,moving}:{plan:DealershipPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean}){
@@ -97,5 +111,5 @@ function Garage({plan,g,m,moving}:{plan:DealershipPlan;g:ReturnType<typeof useGe
  const visits=useMemo(()=>planDealershipTraffic({dealership:plan}),[plan]);
  const slats=useMemo<Inst[]>(()=>Array.from({length:8},(_,i)=>({p:[0,i*.13,0],s:[.035,.125,1.02],c:i%2?'#9eacb4':'#c5cdd0'})),[]);
  useFrame((_,dt)=>{if(moving)clock.current+=Math.min(dt,.1);if(ref.current){const open=dealershipGarageOpen(visits,clock.current);ref.current.position.y=TERRACE_H+.12+open*1.05;ref.current.scale.y=Math.max(.001,1-open);}});
- return <group ref={ref} position={[plan.x+8.84,TERRACE_H+.12,plan.z+2.1]}><Instanced items={slats} geometry={g.box} material={m.metal}/></group>;
+ return <group ref={ref} position={[plan.x+plan.showroom.cx+plan.showroom.w/2+.04,TERRACE_H+.12,plan.z+plan.showroom.cz]}><Instanced items={slats} geometry={g.box} material={m.metal}/></group>;
 }
