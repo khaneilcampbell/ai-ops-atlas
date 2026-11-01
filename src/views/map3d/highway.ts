@@ -53,7 +53,7 @@ export function offsetRoad(path:Pt[],offset:number|number[],taper=false):Pt[]{
  });
  if(closed)out.push(out[0]);return out;
 }
-export function lanePath(path:Pt[],offset:number=HIGHWAY.laneOffset):Pt[]{return offsetRoad(path,offset,true);}
+export function lanePath(path:Pt[],offset:number|number[]=HIGHWAY.laneOffset):Pt[]{return offsetRoad(path,offset,true);}
 export interface RoadStrip {a:Pt;b:Pt}
 /** Split exact offset lines at junction mouths instead of dropping entire long segments. */
 export function roadStrips(path:Pt[],offset:number,junctions:Pt[]=[]):RoadStrip[]{
@@ -105,3 +105,21 @@ export function roadIntersections(a:Pt[],b:Pt[]):Pt[]{
  }
  return out;
 }
+
+/**
+ * How much of the highway standard applies along a road: 0 at street level on land, 1 on the
+ * highway deck or over water, blending over TRANSPORT.streetToHighway along the road. Ground
+ * roads (freight route, collectors) use it so they are drawn and driven as city streets in town.
+ */
+export function highwayShare(points:Pt[],land:{x:number;z:number;w:number;d:number}[],highway:Pt[]):number[]{
+ // Canal crossings between districts stay street bridges; only water out by the highway (the
+ // ramps' side of the city edge) takes highway size.
+ const elevated=points.map(p=>{const d=distanceToRoad(p,highway);return d<HIGHWAY.width||(d<TRANSPORT.highwayReach&&!land.some(r=>p[0]>r.x&&p[0]<r.x+r.w&&p[1]>r.z&&p[1]<r.z+r.d));});
+ const along=[0];for(let i=1;i<points.length;i++)along.push(along[i-1]+Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]));
+ const gap=points.map(()=>Infinity);
+ for(let i=0,last=-Infinity;i<points.length;i++){if(elevated[i])last=along[i];gap[i]=along[i]-last;}
+ for(let i=points.length-1,next=Infinity;i>=0;i--){if(elevated[i])next=along[i];gap[i]=Math.min(gap[i],next-along[i]);}
+ return gap.map(g=>Math.max(0,Math.min(1,1-g/TRANSPORT.streetToHighway)));
+}
+/** Blend a highway-sized value toward the city street value where the road runs at street level. */
+export function streetBlend(city:number,highwayValue:number,share:number):number{return city+(highwayValue-city)*share;}
