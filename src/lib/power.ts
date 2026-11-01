@@ -44,6 +44,7 @@ let mode: PowerMode = load<PowerMode>("powerMode", "balanced");
 if (!POWER_MODES.some((m) => m.mode === mode)) mode = "balanced";
 let onBattery: boolean | null = null;
 let focused = typeof document === "undefined" || document.hasFocus();
+let visible = typeof document === "undefined" || document.visibilityState !== "hidden";
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 const subscribe = (l: () => void) => {
@@ -78,6 +79,19 @@ export function usePowerProfile(): PowerProfile {
   return profileFor(m, battery);
 }
 
+/** Shared by the map and interiors: hidden windows must not keep a frame pump alive. */
+export function usePageVisible(): boolean {
+  return useSyncExternalStore(subscribe, () => visible);
+}
+
+/** Static scenes still accept camera redraws; hidden/covered canvases do no scheduled work. */
+export function pacingPolicy(profile: PowerProfile, running: boolean, focused: boolean, visible: boolean, frameloop: string) {
+  return {
+    active: visible && frameloop !== "never",
+    idle: !running || (profile.pauseInBackground && !focused) ? 0 : profile.idleFps,
+  };
+}
+
 /** Whether the window is the one in front. */
 export function useWindowFocused(): boolean {
   return useSyncExternalStore(subscribe, () => focused);
@@ -89,6 +103,10 @@ if (typeof window !== "undefined") {
     focused = f;
     emit();
   };
+  document.addEventListener("visibilitychange", () => {
+    const next = document.visibilityState !== "hidden";
+    if (next !== visible) { visible = next; emit(); }
+  });
   window.addEventListener("focus", () => set(true));
   window.addEventListener("blur", () => set(false));
 }

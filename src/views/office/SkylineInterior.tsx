@@ -3,7 +3,7 @@ import {FINANCIAL_BUILDINGS} from "../map3d/financialPlan";
 import {workplaceAgent} from "../../catalog/workplaces";
 import {BUILDING_INTERIORS as BUSINESS} from "../../catalog/buildings";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { usePowerProfile } from "../../lib/power";
+import { usePageVisible, usePowerProfile } from "../../lib/power";
 import { FramePacer } from "../map3d/pacer";
 import { Canvas, useThree } from "@react-three/fiber";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
@@ -90,7 +90,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
   const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   const reduced=useReducedMotion()||building==="Atlas Hills"||!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building);
-  const power=usePowerProfile();
+  const power=usePowerProfile(),visible=usePageVisible();
   const business=building==="Skyline"?undefined:BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
   const brandedFinancial=!!identity;
   const isNight=light==="night";
@@ -101,7 +101,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
   const assigned=catalog.agents.filter(a=>a.workplace?.building===building);
   useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.stopPropagation();leaveBuilding(true);}};window.addEventListener("keydown",close,true);return()=>window.removeEventListener("keydown",close,true);},[]);
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${displayName} interior`}>
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor}/>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?[24,17,30]:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
       {floor===-1&&<MovingLift reduced={reduced}/>}
       <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>

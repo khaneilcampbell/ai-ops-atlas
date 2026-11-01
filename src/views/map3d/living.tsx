@@ -5,10 +5,7 @@ import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doo
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { createBloomPipeline } from "./bloomPipeline";
 import { wake } from "../../lib/power";
 import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
@@ -300,29 +297,20 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
  * connections. By day, and while the bloom is off, the map renders directly.
  */
 export function Bloom() {
-  const { gl, scene, camera, size } = useThree();
-  const composer = useMemo(() => {
-    const c = new EffectComposer(gl);
-    c.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0, 0.35, 0.9);
-    c.addPass(bloom);
-    c.addPass(new OutputPass());
-    return { c, bloom };
+  const { gl, scene, camera } = useThree();
+  const pipeline = useRef<ReturnType<typeof createBloomPipeline> | null>(null);
+  useEffect(() => () => {
+    pipeline.current?.dispose();
+    pipeline.current = null;
   }, [gl, scene, camera]);
-  useEffect(() => {
-    const dpr = gl.getPixelRatio();
-    composer.c.setPixelRatio(dpr);
-    composer.c.setSize(size.width, size.height);
-    // Half resolution is plenty for a soft glow and keeps it cheap.
-    composer.bloom.resolution.set((size.width * dpr) / 2, (size.height * dpr) / 2);
-  }, [composer, gl, size]);
-  useEffect(() => () => composer.c.dispose(), [composer]);
-  // Priority 1 takes over rendering from the default loop.
+  // Priority 1 takes over rendering. Daylight needs no postprocessing allocations or passes.
   useFrame(() => {
     const k = night.value;
     if (k < 0.02) return gl.render(scene, camera);
-    composer.bloom.strength = k * 0.32;
-    composer.c.render();
+    const p = pipeline.current ?? (pipeline.current = createBloomPipeline(gl, scene, camera));
+    p.resize();
+    p.bloom.strength = k * 0.32;
+    p.composer.render();
   }, 1);
   return null;
 }

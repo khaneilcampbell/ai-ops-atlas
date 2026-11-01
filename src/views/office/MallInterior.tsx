@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {Canvas,useThree} from '@react-three/fiber';
 import {Html,OrbitControls} from '@react-three/drei';
 import type {OrbitControls as OrbitControlsImpl} from 'three-stdlib';
-import {usePowerProfile} from '../../lib/power';
+import {usePageVisible,usePowerProfile} from '../../lib/power';
 import {FramePacer} from '../map3d/pacer';
 import {type LightMode} from '../map3d/living';
 import {night as cityNight} from '../map3d/materials';
@@ -196,14 +196,14 @@ function MallCamera({mode}:{mode:number}){
 export default function MallInterior({light}:{light:LightMode}){
  const [mode,setMode]=useState(ALL);
  const [picked,setPicked]=useState<MallUnit|null>(null);
- const power=usePowerProfile();const reduced=useReducedMotion();const isNight=light==='night';
+ const power=usePowerProfile(),visible=usePageVisible();const reduced=useReducedMotion();const isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const levels=mode===ALL?[0,1,2,3]:mode===PARKING?[]:[mode];
  const info=MALL_LEVELS.find(l=>l.level===mode);
  const title=mode===ALL?'All floors · Open cutaway':mode===PARKING?'Basement · Car park':info!.title;
  return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label="Atlas Marketplace interior">
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.55:1.2]}/>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isBusy, profileFor, wake } from "./power";
+import { isBusy, pacingPolicy, profileFor, wake } from "./power";
 
 describe("power profiles", () => {
   it("keeps full quality unless Battery saver is chosen or Automatic is on battery", () => {
@@ -17,5 +17,20 @@ describe("power profiles", () => {
     wake(10);
     expect(isBusy(now + 900)).toBe(true);
     expect(isBusy(now + 1100)).toBe(false);
+  });
+});
+
+describe("frame scheduling policy", () => {
+  it("suspends hidden and covered canvases even in Best mode", () => {
+    const p = profileFor("full", false);
+    expect(pacingPolicy(p, true, true, false, "demand").active).toBe(false);
+    expect(pacingPolicy(p, false, true, true, "never").active).toBe(false);
+  });
+  it("keeps static scenes interactive without idle frames", () => {
+    expect(pacingPolicy(profileFor("balanced", false), false, true, true, "demand")).toEqual({active: true, idle: 0});
+  });
+  it("retains background saver and normal foreground animation rates", () => {
+    expect(pacingPolicy(profileFor("saver", false), true, false, true, "demand").idle).toBe(0);
+    expect(pacingPolicy(profileFor("balanced", false), true, true, true, "demand").idle).toBe(30);
   });
 });
