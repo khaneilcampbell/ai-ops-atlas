@@ -18,6 +18,7 @@ import { isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
+import { OFFICE_COLORS as C } from "./palette";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -208,23 +209,23 @@ const RING = new THREE.RingGeometry(0.9, 0.98, 48);
 
 const std = (color: string, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o });
 const MAT = {
-  floor: patterned("#d8d2c3", "stone", { roughness: 0.75 }),
-  rug: std("#2f4535", { roughness: 1 }),
-  wall: std("#ece5d2"),
-  trim: std("#2f4535", { roughness: 0.6 }),
+  floor: patterned(C.floor, "stone", { roughness: 0.75 }),
+  rug: std(C.rug, { roughness: 1 }),
+  wall: std(C.wall),
+  trim: std(C.trim, { roughness: 0.6 }),
   frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
   grass: patterned("#8fae6a", "grass"),
-  oak: std("#c49a6c", { roughness: 0.55 }),
-  steel: std("#a8aea6", { roughness: 0.35, metalness: 0.6 }),
-  dark: std("#232a26", { roughness: 0.45, metalness: 0.3 }),
+  oak: std(C.oak, { roughness: 0.55 }),
+  steel: std(C.steel, { roughness: 0.35, metalness: 0.6 }),
+  dark: std(C.dark, { roughness: 0.45, metalness: 0.3 }),
   key: std("#e9e6dc", { roughness: 0.6 }),
-  chair: std("#36403a", { roughness: 0.7 }),
-  skin: [std("#f0c9a4"), std("#d9a27a"), std("#a8714d"), std("#7a4f33")],
-  hair: [std("#2b2420"), std("#5a3a22"), std("#b88a4a"), std("#d9d2c4")],
+  chair: std(C.chair, { roughness: 0.7 }),
+  skin: C.skin.map((c) => std(c)),
+  hair: C.hair.map((c) => std(c)),
   pot: std("#b8836a", { roughness: 0.9 }),
   leaf: std("#4f7f4a", { roughness: 0.9, flatShading: true }),
   leaf2: std("#6a9a52", { roughness: 0.9, flatShading: true }),
-  inactive: std("#8e938b"),
+  inactive: std(C.inactive),
   pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.02, transparent:true,opacity:0.14,depthWrite:false, roughness: 0.1, metalness: 0.1 }),
   led: new THREE.MeshBasicMaterial({ color: "#7fdc8e" }),
   ledOff: new THREE.MeshBasicMaterial({ color: "#3d4a41" }),

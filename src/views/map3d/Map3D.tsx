@@ -56,12 +56,15 @@ import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
 import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
-import { usePageVisible, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
+import { insideLimits, type InsideLimits } from "./inside";
+import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
@@ -124,6 +127,8 @@ interface Props {
   linksMoving: boolean;
   /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
   traffic: boolean;
+  /** The toolbar's Inside toggle: nearby headquarters show their offices as cutaways (InsideView). */
+  inside?: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -187,6 +192,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
+  // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
+  const [opened, setOpened] = useState<string[]>([]);
+  const openSet = useMemo(() => new Set(props.inside ? opened : []), [opened, props.inside]);
+  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? INSIDE_ROOF : towerTop(t)), [openSet]);
   const api = useRef<Map3DApi | null>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
   const labelEls = useRef(new Map<string, HTMLDivElement>());
@@ -254,7 +263,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: towerTop(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -264,7 +273,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: `hq:${t.projectId}`,
         key: t.key,
-        pos: new THREE.Vector3(t.x, towerTop(t) + PLAQUE.roofGap, t.z),
+        pos: new THREE.Vector3(t.x, roofOf(t) + PLAQUE.roofGap, t.z),
         w,
         h: h + 8,
         priority: 0,
@@ -370,7 +379,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet]);
+  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -421,6 +430,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const activity = useBuildingActivity();
   // Frame rate, pixels and shadow detail follow the Performance setting.
   const power = usePowerProfile();
+  // Inside view: how many buildings open follows the device and the Performance setting.
+  const powerMode = usePowerMode();
+  const battery = useOnBattery();
+  const insideCaps = useMemo(() => insideLimits(phone, powerMode, battery), [phone, powerMode, battery]);
+  const insideOffices = useInsideOffices(!!props.inside);
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
@@ -460,6 +474,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
           traffic={props.traffic}
+          inside={!!props.inside}
+          insideOffices={insideOffices}
+          insideCaps={insideCaps}
+          onInsideOpen={setOpened}
+          insideOpen={openSet}
           onLinkHover={(id, e) => {
             setHoverLink(id);
             const t = id ? props.linkTip(id) : null;
@@ -550,6 +569,11 @@ function World({
   hoverLink,
   linksMoving,
   traffic,
+  inside,
+  insideOffices,
+  insideCaps,
+  onInsideOpen,
+  insideOpen,
   onLinkHover,
   onLinkPick,
   hoods,
@@ -581,6 +605,11 @@ function World({
   hoverLink: string | null;
   linksMoving: boolean;
   traffic: boolean;
+  inside: boolean;
+  insideOffices: Map<string, InsideOffice>;
+  insideCaps: InsideLimits;
+  onInsideOpen: (keys: string[]) => void;
+  insideOpen: Set<string>;
   onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
   onLinkPick: (id: string) => void;
   hoods: number;
@@ -1084,7 +1113,11 @@ function World({
   }, [net.picked?.id]);
 
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
+  // An open building's outline hugs its office, not the shell that was cut away.
+  const hl = (key: string | null) => {
+    const a = key ? anchors.get(key) : undefined;
+    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a;
+  };
   const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
   return (
     <>
@@ -1120,6 +1153,7 @@ function World({
       {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <CommerceTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />

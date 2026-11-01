@@ -5,16 +5,17 @@ import { quarterOf } from "../map3d/trackpad";
 
 /**
  * A full-height wall of the cutaway, shown only while the camera is on the room's side of it.
- * The room is drawn around the origin, so the back wall (z < 0) steps aside once the camera
- * moves behind the middle, and the left wall (x < 0) once it moves left of it. Checked each
- * drawn frame, which on an on-demand canvas is only while the view moves.
+ * The room is drawn around `center` (the origin inside a building, the building's spot on the
+ * map), so the back wall (z < 0) steps aside once the camera moves behind the middle, and the left
+ * wall (x < 0) once it moves left of it. Checked each drawn frame, which on an on-demand canvas is
+ * only while the view moves.
  */
-export default function CutawayWall({ side, always = false, children }: { side: "back" | "left"; always?: boolean; children: React.ReactNode }) {
+export default function CutawayWall({ side, always = false, center, children }: { side: "back" | "left"; always?: boolean; center?: { x: number; z: number }; children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
   useFrame(({ camera }) => {
     const g = ref.current;
     if (!g) return;
-    const q = quarterOf(camera.position);
+    const q = quarterOf(center ? { x: camera.position.x - center.x, z: camera.position.z - center.z } : camera.position);
     g.visible = always || (side === "back" ? q.z > 0 : q.x > 0);
   });
   return <group ref={ref}>{children}</group>;
