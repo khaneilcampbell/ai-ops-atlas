@@ -1,3 +1,4 @@
+import {interiorDisplayName,MANSION_INTERIOR_BUILDING} from "../map3d/hillsPlan";
 import {financialInteriorBrand} from '../map3d/financialBrands';
 import {FINANCIAL_BUILDINGS} from "../map3d/financialPlan";
 import {workplaceAgent} from "../../catalog/workplaces";
@@ -84,9 +85,9 @@ function SkylineCamera({allFloors,floor}:{allFloors:boolean;floor:number}) {
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
 }
 export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
-  const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
+  const identity=financialInteriorBrand(building),displayName=identity?.name??interiorDisplayName(building),circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
-  const reduced=useReducedMotion()||building==="Atlas Hills"||!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building);
+  const reduced=useReducedMotion()||building===MANSION_INTERIOR_BUILDING||!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building);
   const power=usePowerProfile();
   const business=building==="Skyline"?undefined:BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
   const brandedFinancial=!!identity;

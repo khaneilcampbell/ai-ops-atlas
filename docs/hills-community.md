@@ -1,8 +1,10 @@
 # Atlas Hills community preview
 
+Names: the district is **Atlas Hills** and the house on its estate is **Atlas Mansion** (KC, 2026-11-01). The names live in `hillsPlan.ts` (`HILLS_DISTRICT_NAME`, `MANSION_NAME`). Ids did not change: the selection key stays `service:atlas-hills` and the interior key stays `skyline-business:Atlas Hills`, shown as Atlas Mansion through `interiorDisplayName`. Atlas Hills Station keeps the district name.
+
 Planned visual community; no agents, memberships, financial accounts, external services, bookings or payments are activated.
 
-The existing mansion, garage, pool and tennis court retain their original placement. The parcel extends outward to hold four residences, village shops, a café, a community clubhouse, a gym, social club, wellness spa, golf clubhouse and schematic three-hole short course.
+Atlas Mansion (the estate's house), its garage, pool and tennis court retain their original placement. The parcel extends outward to hold four residences, village shops, a café, a community clubhouse, a gym, social club, wellness spa, golf clubhouse and schematic three-hole short course.
 
 ## Passenger connection
 
@@ -20,7 +22,7 @@ Traffic must be enabled and reduced motion disabled to see movement. Battery sav
 - `hillsCommunityPlan.ts`: stable amenity IDs, shared street/walking routes, station geometry, rail sampling, deterministic train and commuter phases.
 - `HillsCommunity.tsx`: instanced neighborhood and track geometry, shared materials, one train and three residents.
 - `scene.ts`: reserved station parcel, freight clearance and shared planning integration.
-- Existing selection/nameplate systems provide detail panels and collision-aware labels. One Atlas Hills label appears at overview distance; supporting names appear on selection or closer zoom.
+- Existing selection/nameplate systems provide detail panels and collision-aware labels. One Atlas Mansion label appears at overview distance (its hover title names Atlas Hills); supporting names appear on selection or closer zoom. Search finds both Atlas Hills and Atlas Mansion and opens the Atlas Hills panel.
 
 ## Validation
 
@@ -28,4 +30,4 @@ Traffic must be enabled and reduced motion disabled to see movement. Battery sav
 
 ## Limits
 
-Only the preserved mansion has an enterable interior. New amenities are exterior previews. Lifts are schematic and not animated. There are two train stops; onward travel uses existing pedestrian connections. The golf course is a compact schematic short course, not a regulation course. No additional integrations or agents were created. No merge or deployment is included.
+Only Atlas Mansion has an enterable interior. New amenities are exterior previews. Lifts are schematic and not animated. There are two train stops; onward travel uses existing pedestrian connections. The golf course is a compact schematic short course, not a regulation course. No additional integrations or agents were created. No merge or deployment is included.

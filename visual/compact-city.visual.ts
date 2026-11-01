@@ -10,8 +10,8 @@ for(const light of ['day','night'] as const)test(`Compact connected city: ${ligh
  await page.getByRole('button',{name:'Back to Atlas Hills',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/hills-connections-${light}.png`});
  await page.getByRole('button',{name:'Atlas Hills Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/hills-station-${light}.png`});
  await page.getByRole('button',{name:'Back to Atlas Hills',exact:true}).click();await settle(page,2);await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,3);
- const nav=page.getByRole('navigation',{name:'Choose Atlas Hills floor',exact:true});await expect(nav).toBeVisible();await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await settle(page,2);await expect(page.getByRole('heading',{name:'Floor 1 · Workspaces',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Exit Atlas Hills and return to city',exact:true}).click();await settle(page,2);expect(errors).toEqual([]);
+ const nav=page.getByRole('navigation',{name:'Choose Atlas Mansion floor',exact:true});await expect(nav).toBeVisible();await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await settle(page,2);await expect(page.getByRole('heading',{name:'Floor 1 · Workspaces',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Exit Atlas Mansion and return to city',exact:true}).click();await settle(page,2);expect(errors).toEqual([]);
 });
 for(const light of ['day','night'] as const)test(`Final perimeter and local connections: ${light}`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});

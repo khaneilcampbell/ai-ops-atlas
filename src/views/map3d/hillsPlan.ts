@@ -3,6 +3,21 @@ import type {Pt} from './roads';
 import {routeAround} from './routing';
 import {CITY_SPACING,cityEnvelope,overlapsParcel} from './citySpacing';
 export const HILLS_KEY='service:atlas-hills';
+/** The district is Atlas Hills; the house on its estate is Atlas Mansion (KC, 2026-11-01). Display names only. */
+export const HILLS_DISTRICT_NAME='Atlas Hills';
+export const MANSION_NAME='Atlas Mansion';
+/**
+ * The mansion's interior key predates the rename and stays as it was, so saved views and the
+ * interior catalog entry keep working. Show MANSION_NAME wherever this key would be printed.
+ */
+export const MANSION_INTERIOR_BUILDING='Atlas Hills';
+export const MANSION_INTERIOR_ID=`skyline-business:${MANSION_INTERIOR_BUILDING}`;
+/** The name a person sees for an interior building key. */
+export const interiorDisplayName=(building:string)=>building===MANSION_INTERIOR_BUILDING?MANSION_NAME:building;
+/** The nameplate over the house: it names the mansion, and its hover title names the district too. */
+export function mansionPlaque(hills:Pick<Rect,'x'|'z'>){
+ return {id:HILLS_KEY,select:HILLS_KEY,name:MANSION_NAME,title:`${MANSION_NAME} · ${HILLS_DISTRICT_NAME} · Planned community`,x:hills.x+HILLS.mansion.x,z:hills.z+HILLS.mansion.z,roofAboveTerrace:HILLS.mansion.h+.25,priority:2};
+}
 export const HILLS={width:34,depth:46,estateWidth:20,mansion:{x:13,z:10,w:9,d:5,h:3.2},garage:{x:4.5,z:4,w:5,d:3},pool:{x:6.2,z:10,w:2.4,d:6},court:{x:2.4,z:11,w:3.5,d:8,playWidth:2.8,playDepth:6.08},gateX:1,walkGateX:7.95} as const;
 export interface HillsPlan extends Rect {road:Pt[];walk:Pt[];drive:Pt[];promenade:Pt[]}
 /** Keep the neighborhood beside the original city, independent of the airport's outer edge. */

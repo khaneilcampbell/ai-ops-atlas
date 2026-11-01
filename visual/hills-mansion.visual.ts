@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
-/** Atlas Hills mansion redesign (KC, 2026-10-31). Writes day/night camera views around the estate. */
+/** Atlas Mansion (in Atlas Hills) redesign (KC, 2026-10-31). Writes day/night camera views around the estate. */
 const out=process.env.SHOT_DIR??'artifacts/hills-mansion';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){

@@ -50,7 +50,7 @@ describe("Atlas Marketplace mall", () => {
 });
 
 describe("Atlas Marketplace scale", () => {
- it("stands twice the height of the Atlas Hills mansion on about its footprint", async () => {
+ it("stands twice the height of Atlas Mansion on about its footprint", async () => {
   const {HILLS}=await import("./hillsPlan");
   const m=buildScene(layoutMap(catalog,[],"district")).mall!;
   expect(MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.h*2);
