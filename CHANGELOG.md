@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · Behind the scenes: when GitHub blocks the Design Consistency agent from opening its fix pull request, the run now says exactly which setting to turn on and cleans up its branch (#PR)
+- 2026-11-01 · Behind the scenes: when GitHub blocks the Design Consistency agent from opening its fix pull request, the run now says exactly which setting to turn on and cleans up its branch (#175)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
 - 2026-10-31 · If the 3D map ever fails to draw, the rest of the Projects view stays and a Try again button restarts the map, instead of the whole page crashing
 
