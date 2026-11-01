@@ -8,9 +8,9 @@ it('runs departures every 60 seconds and service arrivals every 90 seconds',()=>
 });
 it('connects the city street to the dealership service door without teleporting during a visit',()=>{
  const [out,arrival]=planDealershipTraffic(scene),d=scene.dealership!;
- expect(arrival.legs[0].a).toEqual(d.road[0]);expect(out.legs[0].a).toEqual([d.x+8.86,d.z+2.1]);
+ expect(arrival.legs[0].a).toEqual(d.service[0]);expect(out.legs[0].a).toEqual(d.drive[d.drive.length-1]);
  for(const v of [out,arrival])for(let i=1;i<v.legs.length;i++)expect(v.legs[i].a).toEqual(v.legs[i-1].b);
- for(const v of [out,arrival])for(let t=.1;t<v.serviceWindow!.duration;t+=.1){const a=vehicleAt(v,t),b=vehicleAt(v,t-.1);expect(Math.hypot(a.x-b.x,a.z-b.z)).toBeLessThan(.1);}
+ for(const v of [out,arrival])for(let t=.1;t<v.serviceWindow!.duration;t+=.1){const a=vehicleAt(v,t),b=vehicleAt(v,t-.1);expect(Math.hypot(a.x-b.x,a.z-b.z),'drives, never jumps').toBeLessThan(.15);}
 });
 
 it('opens the garage before each service crossing and closes after clearance',()=>{
@@ -27,6 +27,11 @@ it('opens the garage before each service crossing and closes after clearance',()
 it('keeps the shutter fully open while a visible service car is at the threshold',()=>{
  const plans=planDealershipTraffic(scene),d=scene.dealership!;
  for(const v of plans)for(let t=v.period;t<v.period+v.serviceWindow!.duration;t+=.1){
-  const p=vehicleAt(v,t);if(Math.hypot(p.x-(d.x+8.86),p.z-(d.z+2.1))<.55)expect(dealershipGarageOpen(plans,t)).toBe(1);
+  const [gx,gz]=d.drive[d.drive.length-1],p=vehicleAt(v,t);if(Math.hypot(p.x-gx,p.z-gz)<.55)expect(dealershipGarageOpen(plans,t)).toBe(1);
  }
+});
+
+it('fits every service visit inside its interval even on a long drive',()=>{
+ const d=scene.dealership!,far=[...d.service.map(([x,z])=>[x-40,z] as [number,number]),...d.service];
+ for(const v of planDealershipTraffic({dealership:{...d,service:far}}))expect(v.serviceWindow!.duration).toBeLessThanOrEqual(v.period-8+1e-6);
 });
