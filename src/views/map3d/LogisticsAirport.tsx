@@ -89,6 +89,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,night=fals
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[box(x+1.5,y+4.95,z-3,.5,.5,.5,'#f4f1e6')];
     // Warm glazed cab panels sit outside the tower shaft and below its roof.
     for(const side of [-1,1])glass.push(box(x+1.5+side*.685,y+3.82,z-3,.025,.44,1.08,'#ffffff'),box(x+1.5,y+3.82,z-3+side*.635,1.18,.44,.025,'#ffffff'));
+    // Airside service building: a window band on every side, lit with the terminal glazing at night.
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
     // Glazed terminal with a visible check-in hall and upper passenger lounge.
     for(const yy of [.15,1.35]){
      for(const zz of [1.2,3.6,6,8.4,10.8])for(const xx of [-.4,3.4])cubes.push(box(x+xx,y+yy,z+zz,.07,1.1,.07,'#9eaaa8'));
