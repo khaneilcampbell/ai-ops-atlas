@@ -1,3 +1,4 @@
+import {TRANSPORT} from "./transportScale";
 import {lanePath} from "./highway";
 import { hash } from "../mapLayout";
 import { crossing, ringPath, towerRing, type Pt, type Pt3 } from "./roads";
@@ -131,7 +132,7 @@ export function planDealershipTraffic(scene:Pick<Scene3D,'dealership'>):VehicleP
  const d=scene.dealership;if(!d)return [];
  const source=[...d.service,...d.drive.slice(1),[d.x+d.showroom.cx+d.showroom.w/2+.06,d.z+d.showroom.cz] as Pt].filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7);
  return [{id:'bmw-service-out',interval:60,path:[...source].reverse(),kind:'bmw' as const,color:'#3577c4'}, {id:'bmw-service-in',interval:90,path:source,kind:'gwagon' as const,color:'#202a30'}].map(v=>{
-  const path=lanePath(v.path,.12),length=path.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-path[i][0],b[1]-path[i][1]),0);
+  const path=lanePath(v.path,TRANSPORT.cityLaneOffset),length=path.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-path[i][0],b[1]-path[i][1]),0);
   // Cruise at .9, but speed up on a longer drive so every visit ends well inside its interval.
   const speed=Math.max(.9,length/(v.interval-DEALER_VISIT_SLACK));
   const legs:Leg[]=path.slice(1).map((b,i)=>({a:path[i],b,ya:.03,yb:.03,dur:Math.hypot(b[0]-path[i][0],b[1]-path[i][1])/speed,hold:false}));

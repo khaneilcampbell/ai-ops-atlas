@@ -1,5 +1,5 @@
 import {expect,it} from "vitest";
-import {planFreight} from "./freight";
+import {dropReversals,planFreight} from "./freight";
 import type {Scene3D} from "./scene";
 it("connects a lot left of Canva to the airport with a returning truck",()=>{
  const scene={airport:{x:-12,z:0,w:8,d:12,accessX:0,accessZ:6,west:true},towers:[],retail:[],kiosks:[{name:"Canva",x:2,z:4,size:1}]} as unknown as Scene3D;
@@ -20,4 +20,13 @@ it("wraps all district land and separates outbound and return lanes",()=>{
  expect(Math.min(...p.highway.map(v=>v[1]))).toBeLessThan(-10);expect(Math.max(...p.highway.map(v=>v[1]))).toBeGreaterThan(15);
  const outbound=p.truck.legs.find(l=>!l.hold&&Math.abs(l.a[1]+16)<.5&&Math.abs(l.b[1]+16)<.5&&Math.hypot(l.b[0]-l.a[0],l.b[1]-l.a[1])>.1)!;
  expect(outbound).toBeDefined();expect(Math.abs(outbound.a[1]+16)).toBeGreaterThan(.1);
+});
+it("drops an out-and-back stub where a crossing corner and a street join land in the wrong order",()=>{
+ // Down to the street, a stray corner east of the join, back west to the join, then east and south.
+ const route=dropReversals([[-2.94,-.7],[-2.5,-4.6],[-2.94,-4.6],[-2.03,-4.6],[-2.03,-18]]);
+ expect(route).toHaveLength(4);expect(route[0]).toEqual([-2.94,-.7]);expect(route.slice(-2)).toEqual([[-2.03,-4.6],[-2.03,-18]]);
+ for(let i=1;i<route.length-1;i++){const [a,p,b]=[route[i-1],route[i],route[i+1]];expect((p[0]-a[0])*(b[0]-p[0])+(p[1]-a[1])*(b[1]-p[1])).toBeGreaterThanOrEqual(0);}
+ // A route with no reversal is left alone.
+ const plain:[number,number][]=[[0,0],[0,5],[5,5],[5,0]];
+ expect(dropReversals(plain)).toEqual(plain);
 });

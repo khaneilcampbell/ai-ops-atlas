@@ -15,7 +15,7 @@ import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
 import { hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
-import { planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
+import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -369,7 +369,7 @@ export function buildScene(layout: Layout): Scene3D {
   const decks: Rect[] = carBridges.map((br) => {
     const x0 = Math.min(br.a[0], br.b[0]);
     const z0 = Math.min(br.a[1], br.b[1]);
-    return br.axis === "x" ? { x: x0, z: br.a[1] - 0.3, w: Math.abs(br.b[0] - br.a[0]), d: 0.6 } : { x: br.a[0] - 0.3, z: z0, w: 0.6, d: Math.abs(br.b[1] - br.a[1]) };
+    return br.axis === "x" ? { x: x0, z: br.a[1] - DECK_W / 2, w: Math.abs(br.b[0] - br.a[0]), d: DECK_W } : { x: br.a[0] - DECK_W / 2, z: z0, w: DECK_W, d: Math.abs(br.b[1] - br.a[1]) };
   });
 
   // A continuous pedestrian network links each front entrance to the dedicated footbridge.
