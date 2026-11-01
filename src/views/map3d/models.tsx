@@ -69,6 +69,7 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
       key={items.length}
       ref={ref}
       args={[geometry, material, items.length]}
+      userData={{ selectionKeys: pick?.keys }}
       castShadow={shadow}
       receiveShadow
       // Each box's place lives in the instance matrices; the mesh itself never moves, so skip
