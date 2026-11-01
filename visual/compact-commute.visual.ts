@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /**
- * Drives the real map renderer through one full commuter period (both groups of six) and checks what is
+ * Drives the real map renderer through one full commuter period (both commuter groups of six, plus the visitor groups) and checks what is
  * drawn: commuters only appear on their own walking routes, never jump, ride only while the train is
  * moving with its doors shut, and the bullet train stops at both Atlas Hills and Financial Park.
  */
@@ -14,7 +14,7 @@ test('Complete rendered commuter round trip',async({page})=>{
  // Exercise the real useFrame callbacks using Fiber's installed manual-advance API.
  // Skip GPU draws between checkpoints; no production hooks, timers, or animation changes.
  const result=await page.evaluate(async()=>{
-  const [data,layout,planner,commute]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/railCommuters.ts'].map(url=>import(url)));
+  const [data,layout,planner,commute,walkers]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/railCommuters.ts','/src/views/map3d/districtWalkers.ts'].map(url=>import(url)));
   const grouping=JSON.parse(localStorage.getItem('atlas:mapProjectGrouping')??'"district"'),scene=planner.buildScene(layout.layoutMap(data.catalog,[],grouping));
   const plan=commute.planRailCommuters(scene.community,scene.financial,scene.communityRail),rail=scene.communityRail;if(!plan||!rail)throw new Error('Commuter plan not found');
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Installed Fiber import not found');
@@ -43,11 +43,14 @@ test('Complete rendered commuter round trip',async({page})=>{
    last=now;lastTrain=toHills;if(faults.length>5)break;}
    shoot('arrived',centre(),8);
   }finally{state.gl.render=render;}
-  return {shots,seen,faults,count:mesh.count};
+  return {shots,seen,faults,count:mesh.count,planned:plan.commuters.length+walkers.planDistrictWalkers(scene.financial).length};
  });
  for(const s of result.shots)writeFileSync(`artifacts/compact-city/commute-${s.phase}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  writeFileSync('artifacts/compact-city/commute-trace.json',JSON.stringify({seen:result.seen,faults:result.faults},null,2));
- expect(result.count).toBe(12);
+ // One body per planned person: the rail riders (two commuter groups of six plus the visitor
+ // groups) and the Financial District sidewalk walkers, all in the same instanced mesh (#162).
+ expect(result.count).toBe(result.planned);
+ expect(result.count).toBeGreaterThanOrEqual(12);
  expect(result.faults).toEqual([]);
  expect(result.seen).toMatchObject({outbound:true,back:true,hills:true,financial:true});
  expect(result.seen.walking).toBeGreaterThanOrEqual(6);
