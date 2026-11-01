@@ -35,7 +35,7 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   return {
    textures:[silver.map,silver.glow,gold.map,gold.glow],
    glass:glass(silver,'#dbe7ff'),gold:glass(gold,'#ffc978'),
-   fin:focusable(new THREE.MeshStandardMaterial({color:'#e6ebee',roughness:.35,metalness:.5})),
+   fin:focusable(new THREE.MeshStandardMaterial({color:'#e6ebee',roughness:.35,metalness:.5,side:THREE.DoubleSide})),
    roof:focusable(new THREE.MeshStandardMaterial({color:'#8f989c',roughness:.85})),
    white:focusable(new THREE.MeshStandardMaterial({color:'#f2f3f1',roughness:.45,metalness:.2})),
    rail:focusable(new THREE.MeshStandardMaterial({color:'#cfe3ec',roughness:.1,metalness:.2,transparent:true,opacity:.45,depthWrite:false})),
