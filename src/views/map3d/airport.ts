@@ -56,19 +56,22 @@ export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): Airpo
   return { x: edge + 1.2, z: accessZ - 6, accessX: access.x+access.w-.1, accessZ };
 }
 
-export interface FlightCircuit { x:number; z:number; rx:number; rz:number }
+export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number }
 /** Decorative three-minute cycle: takeoff, two city circuits, departure, then reset offscreen. */
 export function departurePose(seconds:number,moving=true,circuit:FlightCircuit={x:-18,z:-4,rx:22,rz:18}) {
-  const t=moving?seconds%180:0;
+  const t=moving?seconds%180:0,cruise=circuit.altitude??14;
+  const smooth=(u:number)=>{const v=Math.max(0,Math.min(1,u));return v*v*(3-2*v);};
+  // Reach skyline clearance on the runway heading before the first city turn.
+  const climb=(time:number)=>circuit.altitude===undefined?.28+Math.max(0,time-10)**1.3*.16:.28+(cruise-.28)*smooth((time-10)/8);
   const position=(time:number)=>{
-    if(time<18){const roll=Math.max(0,time-3);return {x:0,z:10.4-Math.min(roll,9)**2*.12-Math.max(0,roll-9)*1.4,y:.28+Math.max(0,roll-7)**1.3*.16};}
+    if(time<18){const roll=Math.max(0,time-3);return {x:0,z:10.4-Math.min(roll,9)**2*.12-Math.max(0,roll-9)*1.4,y:climb(time)};}
     const startZ=10.4-9**2*.12-6*1.4;
     if(time<30){
       const u=(time-18)/12,v=1-u;
-      return {x:3*v*u*u*(circuit.x-10)+u**3*circuit.x,z:v**3*startZ+3*v*v*u*(startZ-12)+(3*v*u*u+u**3)*(circuit.z-circuit.rz),y:.28+8**1.3*.16+(14-(.28+8**1.3*.16))*(u*u*(3-2*u))};
+      return {x:3*v*u*u*(circuit.x-10)+u**3*circuit.x,z:v**3*startZ+3*v*v*u*(startZ-12)+(3*v*u*u+u**3)*(circuit.z-circuit.rz),y:climb(18)+(cruise-climb(18))*(u*u*(3-2*u))};
     }
-    if(time<150){const angle=(time-30)*Math.PI/30;return {x:circuit.x+circuit.rx*Math.sin(angle),z:circuit.z-circuit.rz*Math.cos(angle),y:14};}
-    return {x:circuit.x+(time-150)*circuit.rx*Math.PI/30,z:circuit.z-circuit.rz-(time-150)**2*.06,y:14+(time-150)*.15};
+    if(time<150){const angle=(time-30)*Math.PI/30;return {x:circuit.x+circuit.rx*Math.sin(angle),z:circuit.z-circuit.rz*Math.cos(angle),y:cruise};}
+    return {x:circuit.x+(time-150)*circuit.rx*Math.PI/30,z:circuit.z-circuit.rz-(time-150)**2*.06,y:cruise+(time-150)*.15};
   };
   const p=position(t),next=position(t+.01);
   return {...p,yaw:Math.atan2(-(next.x-p.x),-(next.z-p.z)),pitch:t<18?-Math.min(.16,Math.max(0,t-10)*.025):0,visible:t<162};

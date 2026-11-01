@@ -1,3 +1,4 @@
+import {airportFlightCircuit} from './flightClearance';
 import * as THREE from "three";
 import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
@@ -50,7 +51,7 @@ function Aircraft({g,m,circuit,clock,slot,parked}:{parked?:{x:number;z:number};g
 }
 
 /** Shared geometry and materials; departures use the existing scene frame loop. */
-export function Airport({plan:a,g,m,pick,moving,bounds,night=false}:{night?:boolean;bounds?:{x0:number;z0:number;x1:number;z1:number};plan?:AirportPlan;g:Geometry;m:Materials;pick:Pick;moving:boolean}) {
+export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,night=false}:{night?:boolean;bounds?:{x0:number;z0:number;x1:number;z1:number};flightAltitude?:number;plan?:AirportPlan;g:Geometry;m:Materials;pick:Pick;moving:boolean}) {
   const clock=useRef(0);
   const power=usePowerProfile();
   const [visible,setVisible]=useState(()=>document.visibilityState!=="hidden");
@@ -88,6 +89,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,night=false}:{night?:bool
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[box(x+1.5,y+4.95,z-3,.5,.5,.5,'#f4f1e6')];
     // Warm glazed cab panels sit outside the tower shaft and below its roof.
     for(const side of [-1,1])glass.push(box(x+1.5+side*.685,y+3.82,z-3,.025,.44,1.08,'#ffffff'),box(x+1.5,y+3.82,z-3+side*.635,1.18,.44,.025,'#ffffff'));
+    // Airside service building: a window band on every side, lit with the terminal glazing at night.
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
     // Glazed terminal with a visible check-in hall and upper passenger lounge.
     for(const yy of [.15,1.35]){
      for(const zz of [1.2,3.6,6,8.4,10.8])for(const xx of [-.4,3.4])cubes.push(box(x+xx,y+yy,z+zz,.07,1.1,.07,'#9eaaa8'));
@@ -143,6 +146,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,night=false}:{night?:bool
     for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
     return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat()]};
   },[a]);
+  const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude):undefined,[a,bounds,flightAltitude]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.ball} material={m.lamp}/>
@@ -155,7 +159,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,night=false}:{night?:bool
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x-.48} z={a.z+6} y={TERRACE_H+1.6}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
-    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={bounds?{x:(a.west?2*a.x+AIRPORT_LAYOUT.mirrorWidth-(bounds.x0+bounds.x1)/2:(bounds.x0+bounds.x1)/2)-(a.x+15),z:(bounds.z0+bounds.z1)/2-a.z-6.1,rx:(bounds.x1-bounds.x0)/2+2,rz:(bounds.z1-bounds.z0)/2+2}:undefined}/></group>)}
+    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit}/></group>)}
   </group>;
 }
 

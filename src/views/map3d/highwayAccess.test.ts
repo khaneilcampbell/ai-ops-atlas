@@ -1,3 +1,4 @@
+import {financialParkStation} from './hillsCommunityPlan';
 import {it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
@@ -7,8 +8,10 @@ import {distanceToRoad} from './highway';
 import {pathClear} from './roads';
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`connects district ramps to the perimeter without building collisions: ${group}`,()=>{
  const scene=buildScene(layoutMap(catalog,[],group)),f=scene.freight!;
- expect(f.access.map(a=>a.id)).toEqual(['skyline-airport','profile-stadium','bmw-dealership','financial-district']);
+ expect(f.access.map(a=>a.id)).toEqual(['skyline-airport','profile-stadium','financial-district']);
  const boxes=[...scene.towers,...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ // Ramps stay clear of the Financial Park station's lift and stairs.
+ {const r=financialParkStation(scene.financial!);for(const a of f.access)expect(pathClear(a.collector,[{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}],.4),`${a.id} collector`).toBe(true);}
  for(const a of f.access){expect(a.collector[0]).toEqual(a.junction);
   for(const ramp of a.ramps){expect(ramp[0]).toEqual(a.collector.at(-1));expect(distanceToRoad(ramp.at(-1)!,f.highway)).toBeLessThan(.001);expect(pathClear(ramp,boxes,.7)).toBe(true);}
   expect(pathClear(a.collector,boxes,.7)).toBe(true);

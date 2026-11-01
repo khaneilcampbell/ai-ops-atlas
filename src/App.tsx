@@ -1,3 +1,4 @@
+import {financialBuildingMatches,financialBuildingAliases} from './lib/financialSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
@@ -5,7 +6,7 @@ import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAtlas, type View } from "./state";
 import { attentionItems } from "./lib/derive";
-import { agentMatches, repoMatches, repoRows } from "./lib/search";
+import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
@@ -173,7 +174,8 @@ function GlobalSearch() {
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
     const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
-    return [...projects, ...agents, ...rs].slice(0, 8);
+    const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
+    return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.

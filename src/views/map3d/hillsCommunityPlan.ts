@@ -1,11 +1,11 @@
 import type {HillsPlan} from './hillsPlan';
 import type {Pt} from './roads';
-import type {FinancialPlan} from './financialPlan';
+import {FINANCIAL,type FinancialPlan} from './financialPlan';
 import type {Rect} from './scene';
 import {roundedRoad} from './highway';
 import {CITY_SPACING} from './citySpacing';
 import {HILLS} from './hillsPlan';
-export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,financialShoreGap:2.4,stationX:28,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:1.8,platformRise:2.06,trackWidth:.7,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:32,speed:3.2} as const;
+export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,stationX:28,parkStopX:20.8,shoreTrackOffset:1.35,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:1.8,platformRise:2.06,trackWidth:.7,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:15,speed:3.2} as const;
 export const COMMUNITY_BUILDINGS=[
  {id:'home-1',name:'Cypress House',kind:'house',x:4,z:24,w:3.2,d:2.6,h:1.8,color:'#eee2cd',purpose:'Planned gated residence with a private garden and garage.'},
  {id:'home-2',name:'Palm House',kind:'house',x:10,z:24,w:3.2,d:2.6,h:2.2,color:'#dce3dc',purpose:'Planned two-story residence with a balcony and private garage.'},
@@ -32,19 +32,23 @@ export function planCommunity(h?:HillsPlan):CommunityPlan|undefined{
  walks:[[[13,16],[13,20.5],[20,20.5],[20,44.3]],[[2,26.35],[20,26.35]],[[2,35],[20,35]],[[2,44.3],[20,44.3]],[[20,26.35],[29,26.35],[29,24.4]],[[20,29],[23,29],[23,44]],[[20,34.5],[23,34.5]],...COMMUNITY_BUILDINGS.filter(b=>!['golf','station','golf-club'].includes(b.id)).map(b=>b.id==='home-4'?[[b.x+.65,b.z+b.d/2+.15],[b.x+.65,11],[22,11],[22,20.5],[20,20.5]] as Pt[]:[[b.x+.65,b.z+b.d/2+.15],[b.x+.65,b.z<27?26.35:b.z<36?35:44.3]] as Pt[]),[[28.65,30.45],[28.65,30.6],[23,30.6]]].map(path=>path.map(p=>world(p as Pt)))};
 }
 export type Point3=[number,number,number];
-export interface RailPlan {route:Pt[];lengths:number[];length:number;hills:Pt;financial:Pt;financialLand:Rect;hillsWalk:Point3[];financialWalk:Point3[]}
-export function financialStationLand(f:FinancialPlan):Rect{return {x:f.x+f.w+COMMUNITY.financialShoreGap,z:f.z+.5,w:8.1,d:8};}
-export function planCommunityRail(c:CommunityPlan|undefined,f:FinancialPlan|undefined):RailPlan|undefined{
+export interface RailPlan {route:Pt[];lengths:number[];length:number;hills:Pt;financial:Pt;hillsWalk:Point3[];financialWalk:Point3[]}
+/** Financial Park stop: the platform sits on the park's north shore, its stairs land on the park's entry path. */
+export function financialParkStop(f:Pick<FinancialPlan,'x'|'z'>):Pt{return [f.x+COMMUNITY.parkStopX,f.z-COMMUNITY.shoreTrackOffset];}
+/** Ground footprint of the park stop's lift, stairs and landing, kept clear of roads planned earlier. */
+export function financialParkStation(f:Pick<FinancialPlan,'x'|'z'>):Rect{const [x,z]=financialParkStop(f);return {x:x-3.9,z:z+.6,w:5.6,d:5.7};}
+export function planCommunityRail(c:CommunityPlan|undefined,f:FinancialPlan|undefined,eastLand?:Rect):RailPlan|undefined{
  if(!c||!f)return;
- const a=c.station,b:Pt=[f.x+f.w+COMMUNITY.financialShoreGap+3.8,f.z+2];
- // A direct eastern spine crosses the roads and water, without wrapping the highway.
- const east=Math.max(c.x+HILLS.width+CITY_SPACING.railEdgeClearance,b[0]+CITY_SPACING.railEndApproach);
+ const a=c.station,b=financialParkStop(f);
+ // An eastern spine clears the Hills and the BMW lot, then runs west over the water behind
+ // the dealership and the district towers to the park, never across a building.
+ const east=Math.max(c.x+HILLS.width,eastLand?eastLand.x+eastLand.w:f.x+f.w)+CITY_SPACING.railEdgeClearance+.6;
  const route=roundedRoad([a,[east,a[1]],[east,b[1]],b],4),lengths=[0];
  for(let i=1;i<route.length;i++)lengths.push(lengths[i-1]+Math.hypot(route[i][0]-route[i-1][0],route[i][1]-route[i-1][1]));
- const bank=f.buildings.find(b=>b.id==='banks')!,cross=f.x+34,world=(p:Point3):Point3=>[c.x+p[0],p[1],c.z+p[2]];
- return {route,lengths,length:lengths[lengths.length-1],hills:a,financial:b,financialLand:financialStationLand(f),
+ const bank=f.buildings.find(b=>b.id==='banks')!,world=(p:Point3):Point3=>[c.x+p[0],p[1],c.z+p[2]];
+ return {route,lengths,length:lengths[lengths.length-1],hills:a,financial:b,
  hillsWalk:[[16.65,0,25.45],[16.65,0,26.35],[20,0,26.35],[29,0,26.35],[29,0,24.4],[29,COMMUNITY.platformRise,20.2],[28.33,COMMUNITY.platformRise,19.35],[28.33,COMMUNITY.platformRise,18.78]].map(p=>world(p as Point3)),
- financialWalk:[[b[0]-.33,COMMUNITY.platformRise,b[1]+.28],[b[0]-.33,COMMUNITY.platformRise,b[1]+.85],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[f.x+f.w-2,0,b[1]+5.9],[f.x+f.w-2,0,f.z+14.1],[cross,0,f.z+14.1],[cross,0,f.z+11.95],[f.x+bank.x,0,f.z+11.95],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
+ financialWalk:[[b[0]-.33,COMMUNITY.platformRise,b[1]+.28],[b[0]-.33,COMMUNITY.platformRise,b[1]+.85],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[b[0]+1,0,f.z+FINANCIAL.northWalkZ],[f.x+bank.x,0,f.z+FINANCIAL.northWalkZ],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
 }
 /** Distance-based sampling is shared by train movement and route checks. */
 export function railPoint(p:RailPlan,distance:number){const d=Math.max(0,Math.min(p.length,distance));let i=1;while(i<p.lengths.length-1&&p.lengths[i]<d)i++;const a=p.route[i-1],b=p.route[i],t=(d-p.lengths[i-1])/(p.lengths[i]-p.lengths[i-1]||1);return {x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t,yaw:Math.atan2(b[0]-a[0],b[1]-a[1])};}
@@ -58,4 +62,3 @@ export function walkPoint(path:Point3[],t:number):Point3{const lengths=[0];for(l
 /** Physical track extends past stop centers, supporting the complete parked train. */
 export function railDeck(p:RailPlan):RailPlan{const extension=COMMUNITY.trainLength/2+.7,a=railPoint(p,0),b=railPoint(p,p.length);return {...p,route:[[a.x-Math.sin(a.yaw)*extension,a.z-Math.cos(a.yaw)*extension],...p.route,[b.x+Math.sin(b.yaw)*extension,b.z+Math.cos(b.yaw)*extension]],lengths:[0,...p.lengths.map(d=>d+extension),p.length+2*extension],length:p.length+2*extension};}
 
-export function commuterStage(state:ReturnType<typeof railState>){const aboard=state.phase==='outbound'||state.phase==='return',hills=state.phase==='hills';return {aboard,hills,progress:hills?(state.progress<.5?1-state.progress*2:state.progress*2-1):(state.progress<.5?state.progress*2:2-state.progress*2)};}

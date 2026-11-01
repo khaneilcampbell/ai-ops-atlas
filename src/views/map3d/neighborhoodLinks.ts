@@ -36,10 +36,18 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
  * so the mall's lot is about twice the Atlas Hills mansion's footprint and joins the city.
  */
 export const MALL_LOT={east:4,north:3} as const;
-type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'dealership'|'parks'|'land'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
+type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'parks'|'land'|'carBridges'|'paving'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
+/** The original grid's easternmost street end and the nearest open plaza, where the Hills boulevard joins the city. */
+export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:Box[]):{road:Pt;walk:Pt}|undefined{
+ const streets=s.carBridges.flatMap(b=>b.roads).flat();if(!streets.length)return;
+ const road=streets.reduce((a,b)=>b[0]>a[0]?b:a),target:Pt=[road[0]+6,road[1]+1.1];
+ const walk=s.paving.map(p=>[p.x+p.w/2,p.z+p.d/2] as Pt).filter(p=>!obstacles.some(b=>Math.abs(p[0]-b.x)<b.w/2+.3&&Math.abs(p[1]-b.z)<b.d/2+.3))
+  .sort((a,b)=>Math.hypot(a[0]-target[0],a[1]-target[1])-Math.hypot(b[0]-target[0],b[1]-target[1]))[0];
+ return walk&&{road,walk};
+}
 /** Adjacent neighborhood streets and public green space use the same routes as the meshes. */
 export function planNeighborhoodLinks(s:Input){
- const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],raised:Rect[]=[],core=cityEnvelope(s.coreLand),h=s.hills,d=s.dealership;
+ const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],raised:Rect[]=[],core=cityEnvelope(s.coreLand),h=s.hills,d=cityEastAccess(s,s.obstacles);
  const route=(anchors:Pt[],margin:number):Pt[]|undefined=>{
   const out:Pt[]=[];
   for(let i=1;i<anchors.length;i++){const part=routeAround(anchors[i-1],anchors[i],s.obstacles,margin);if(!part)return;out.push(...part.slice(out.length?1:0));}
@@ -47,9 +55,9 @@ export function planNeighborhoodLinks(s:Input){
  };
  if(core&&h&&d){
   const sky=s.parks.find(p=>p.label==='Skyline'),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
-  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road[0],east=Math.max(core.x+core.w+.9,start[0])+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
+  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road,east=Math.max(core.x+core.w+.9,start[0])+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
   const road=route([start,[east,start[1]],[east,target[1]],target],.4);
-  const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[0][1]],d.walk[0]],.3);
+  const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[1]],d.walk],.3);
   if(road&&walk){
    links.push({id:'hills-city-boulevard',road,walk});
    // A narrow land-backed local boulevard, not another elevated highway.
