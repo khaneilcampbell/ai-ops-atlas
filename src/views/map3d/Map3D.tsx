@@ -1,4 +1,3 @@
-import {CityLoading} from "../../components/CityLoading";
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -99,7 +98,6 @@ interface Props {
   layout: Layout;
   /** Share of the view covered from below by a sheet; selections are framed above it. */
   cover?: number;
-  onFlat?: () => void;
   displayNeighborhoods?: {key:string;label:string;count:number}[];
   selKey: string | null;
   selectedDistrict?: string;
@@ -493,7 +491,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           surface={wrapEl}
         />
       </Canvas>
-      {readyKey !== glKey && <CityLoading stage="drawing" onFlat={() => props.onFlat?.()}/>}
       </MapGuard>
       <div
         className="m3-labels"

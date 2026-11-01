@@ -1,4 +1,3 @@
-import {CityLoading} from "../components/CityLoading";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
@@ -989,10 +988,9 @@ export function MapView({active=true}:{active?:boolean}) {
           }}
         >
           {is3d ? (
-            <Suspense fallback={<CityLoading stage="files" onFlat={() => setMode("2d")}/>}>
+            <Suspense fallback={null}>
             <Map3D
               active={active}
-              onFlat={() => setMode("2d")}
               ref={map3d}
               layout={layout}
               displayNeighborhoods={displayNeighborhoods}

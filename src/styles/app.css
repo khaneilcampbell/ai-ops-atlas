@@ -829,14 +829,5 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .projects-host { position: absolute; inset: 0; }
 .projects-host.inactive { visibility: hidden; opacity: 0; pointer-events: none; }
 .projects-host.inactive * { pointer-events: none !important; }
-.map-loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--sage-200); color: var(--ink); font-size: 14px; z-index: 1; }
 
-/* Startup uses the current map lighting instead of flashing a pale canvas in night mode. */
-.map-stage.night .map-loading { background: #071827; color: var(--sage-50); }
-.city-loading-card { display:flex; flex-direction:column; align-items:center; gap:12px; max-width:320px; padding:24px; text-align:center; }
-.city-loading-card p { margin:0; font-size:18px; color:inherit; }
-.city-loading-card > span:last-of-type { font-size:13px; opacity:.8; }
-.city-loading-brand { color:var(--gold); letter-spacing:.2em; font-size:12px; }
-.map-stage:has(.map-loading) .map-intro { visibility:hidden; }
-.city-loading-card .btn { color:var(--forest-900); background:var(--sage-50); border-color:var(--gold); }
-.city-loading-card .btn:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.map-stage.night, .map-stage.night .map3d { background: #071827; }

@@ -36,11 +36,11 @@ test('Projects keeps one renderer across navigation, drawing nothing while close
  console.log('PROJECTS_RESUME: same canvas retained across 3 returns; hidden draw calls = 0');
 });
 
-test('first visit shows loading until the city module and first frame are ready',async({page})=>{
+test('first visit has no loading overlay while the city module prepares',async({page})=>{
  let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
  await page.route('**/src/views/map3d/Map3D.tsx',async route=>{await gate;await route.continue();});
  const opening=openAtlas(page);
- try{await expect(page.getByText('Loading city…',{exact:true})).toBeVisible();}finally{release();}
+ try{await expect(page.locator('.nav-item').first()).toBeVisible();await expect(page.locator('.map-loading')).toHaveCount(0);}finally{release();}
  await opening;await waitForScene(page);await settle(page);
  await expect(page.locator('.map-loading')).toHaveCount(0);
 });

@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · City startup matches day/night mode, draws a lighter first frame, and offers a flat-map option if loading is slow (#202)
+- 2026-11-01 · City opens without loading messages and draws a lighter first frame before restoring normal quality (#202)
 - 2026-11-01 · Map groupings keep district locations stable, building names share overview rules, and the extra map message is removed (#200)
 - 2026-11-01 · Map zoom stays near the city and night mode uses direct rendering to avoid offscreen black-frame artifacts (#199)
 - 2026-11-01 · New Client inquiries list in Mission Control: every benjaire.com inquiry with a drafted reply that opens in your mail app, plus follow-up reminders on day 3 and day 7. Nothing is sent without you (#183)
