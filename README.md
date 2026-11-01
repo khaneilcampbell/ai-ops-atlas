@@ -1,108 +1,138 @@
-# AI Ops Atlas
+# Atlas
 
-A personal desktop command center for AI agents, projects and GitHub repositories. Repositories are neighborhoods, agents are the buildings around them, and badges show what is active, idle or needs attention.
+Atlas is KC's command center for AI agents, projects and GitHub repositories, drawn as a 3D city.
+Each project is a building, projects sit in districts, and each agent works inside the building of
+the project it belongs to. Status dots, alerts and live activity show what is running, idle or
+needs attention.
 
-Atlas is **read-only**. It reads project manifests and GitHub data, and its one built-in agent, the Repository Intelligence Agent, only reads repositories and asks Claude for an assessment. The two exceptions, both in the Mac app only, are **Re-run failed jobs** on a failed GitHub Actions run and **Merge pull request** on a pull request GitHub reports ready (every required check green, no changes requested, not a draft). Each is off by default, limited to repositories you tick, approved in a macOS dialog each time (merges also ask for Touch ID), uses its own write-scoped token (one per repository for merges), and is audited. See [docs/actions.md](docs/actions.md). Nothing else in the app can change a repository or start an external agent.
+It runs as a Mac app (Tauri) and, from the same React code, as a private web page on Cloudflare
+Pages that also works on iPhone. The installed Mac app is still named **AI Ops Atlas** on disk.
 
-## What it does
+Atlas mostly reads. Everything that can change something is in the Mac app only, off by default,
+limited to an allow-list, approved in a macOS dialog with Touch ID, and written to an audit log.
+See [docs/actions.md](docs/actions.md). **Fix with Claude** in Mission Control only opens a
+pre-filled GitHub issue in your browser; nothing is sent until you press Create there.
 
-| Area | What you see |
-|---|---|
-| Overview | Agent and repository totals, items needing attention, recent commits, CI runs and agent history, and a card per project |
-| Agents | The agent registry. **Directory**: every agent classified (AI agent, AI-assisted workflow, automation, CI/CD, integration, planned) with function, project, operational status, last verified run and risk; search, filter, sort and group. A six-tab inspector (Overview, Goals, Workflow, Operations, Governance, Documentation). **Portfolio**: counts by type, configured versus verified, missing documentation and items needing review. **Goals & performance**: KPI targets against observed values. See [docs/agent-registry.md](docs/agent-registry.md) |
-| Repositories | Description, language, latest commit, health indicators (CI, last push, open issues, license, linked agents) and linked agents |
-| Workspace map | An isometric map: each project is a district, its repository is the HQ in the middle and its agents are the houses around it. Pan, zoom, hover and click |
-| Details | A side panel for any agent or repository with its description, links, status and activity history |
-| Search | `⌘K` searches agents and repositories from anywhere |
-| Live updates | Workflow runs, pushes and Repository Intelligence runs appear as they happen on the Mac and the website, from GitHub App webhooks collected by the site. The header's **Live** pill shows the latest. See [docs/live-updates.md](docs/live-updates.md) |
-| Agent alerts | Unattended customer-facing agents raise an alert when they report a failure or go silent: a red header pill, Mission Control's Agent alerts list, optional Mac or browser notifications, and optional email from the site. Agents that are off on purpose show as Not running. See [docs/alerts.md](docs/alerts.md) |
-| Repository intelligence | Pick a repository and the agent reads it from GitHub, asks Claude for a structured assessment and saves a report. Verified facts are kept apart from Claude's unverified recommendations. **Intel** shows the agent's configuration, every run with its trace, and token and cost totals. See [docs/repository-intelligence.md](docs/repository-intelligence.md) |
-| Settings | Refresh interval, cache, map labels, an optional GitHub token, and the Anthropic key, budgets and schedule for the intelligence agent. Keys are stored in the macOS Keychain |
+## The three views
 
-## Run it
+`⌘1`, `⌘2` and `⌘3` switch between them from anywhere, and `⌘K` searches everything.
+
+| View | What you see |
+| --- | --- |
+| **Projects** (map) | The 3D city. Pan, zoom and turn with mouse, trackpad or touch, switch day and night, and click a building for its panel. **View** picks which links are drawn (Infrastructure, Agent network, Automation flow) and **Grouping** arranges buildings By district, By status, By tag or with no grouping |
+| **Mission Control** | Prioritized work: approvals waiting for you, failing workflows, agent alerts, workflow runs per day, API usage and cost, the busiest repositories and recent activity |
+| **Grid** | Every repository side by side with CI, last push, issues and linked agents |
+
+The sidebar also has **Agents** (the registry, Portfolio, Goals and Manage agents),
+**Automations**, **Repositories**, **Activity**, **Intel** (Repository Intelligence and the
+Engineering review), **API Usage** and **Settings**.
+
+## The city
+
+The map is one landmass of districts joined by road bridges, with one road standard for every
+street, a highway, a train with stations and commuters, cars, boats, planes and people.
+Landmarks include Atlas HQ, Benjaire HQ, the GitHub tower, the Commerce Pipeline tower, the
+Financial District (Circa, Experian, BMW and others, with Financial Park), the Atlas Marketplace
+mall and gardens, the Benjaire Marketing Agency on the bay, Atlas Hills with the mansion and its
+community, the Skyline shops, a stadium and Atlas Airport with its terminal, ground crew and
+jets taking off.
+
+**Enter building** in a building's panel opens its inside: a project's office with its agents at
+work, or a dedicated interior for Atlas HQ, the Marketplace, the Marketing Agency, the Circa lobby
+and the Skyline shops. If the 3D map ever fails to draw, the rest of the page stays and a
+**Try again** button restarts it.
+
+**Settings → Performance and battery** lowers the map's cost on battery, and **Settings → Map
+navigation** sets how the trackpad moves the map.
+
+## Agents
+
+Agents are declared in [`catalog/`](catalog/README.md), one YAML file per project; `npm test`
+fails on a broken manifest. Statuses come from real runs where Atlas can see them; otherwise
+the manifest's value is shown as configured, not verified.
+
+Agents that work on Atlas itself or its repositories:
+
+| Agent | What it does | Docs |
+| --- | --- | --- |
+| Repository Intelligence | Reads one repository and asks Claude for an assessment, within per-run and monthly caps | [docs/repository-intelligence.md](docs/repository-intelligence.md) |
+| Senior Engineering Reviewer | Reviews every repository at once and returns a scorecard and ranked fixes. Recommends only | [docs/engineering-review.md](docs/engineering-review.md) |
+| GitHub Steward | Observes repository health from the Mac app | [docs/github-steward.md](docs/github-steward.md) |
+| Merge Flow | Sorts every open pull request into a lane and names the next move. Recommends only | [ops/merge-flow](ops/merge-flow/README.md) |
+| Opportunity Scout | Looks for revenue ideas in the agents KC already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
+| Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
+| System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
+| Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
+
+The Mac app's write actions are **Re-run failed jobs**, **Merge pull request** (only when GitHub
+reports it ready) and **Manage agents** (enable, disable or run an allow-listed agent). Each has
+its own token. See [docs/actions.md](docs/actions.md) and
+[docs/manage-agents.md](docs/manage-agents.md). Alerts for failing or silent agents are in
+[docs/alerts.md](docs/alerts.md), and live updates from GitHub App webhooks in
+[docs/live-updates.md](docs/live-updates.md).
+
+## Mac, web and iPhone
+
+- **Mac.** Every merge to `main` builds, signs and publishes a new version to the `main-build`
+  release. The installed app checks every 10 minutes and shows **Update available** with the
+  newest lines of [CHANGELOG.md](CHANGELOG.md). Secrets (GitHub tokens, the Anthropic key) live
+  in a Touch ID vault in the macOS Keychain and are only read by the Rust side.
+- **Web and iPhone.** `npm run build:web` builds the same app for Cloudflare Pages behind
+  Cloudflare Access. It reads GitHub through a Pages Function that holds the token and only
+  forwards allow-listed GET requests, and it stays read-only. Setup and the phone layout are in
+  [docs/iphone.md](docs/iphone.md).
+
+## Run and test
 
 Requirements: Node 20+, Rust stable, and Xcode Command Line Tools on macOS.
 
 ```bash
 npm install
-npm run tauri dev        # desktop app with hot reload
-npm run tauri build      # builds AI Ops Atlas.app and a .dmg under src-tauri/target/release/bundle
-npm run dev              # browser-only preview at http://localhost:1420 (public GitHub data, no Keychain)
-npm test                 # validates the catalog and the health/attention rules
+npm run dev              # browser preview at http://localhost:1420 (no Keychain, no write actions)
+npm run tauri dev        # Mac app with hot reload
+npm run lint && npm run typecheck && npm test
+cargo test --manifest-path src-tauri/Cargo.toml
+npm run visual           # screenshot checks against baselines
+npm run measure:perf     # map performance measurements
 ```
 
-## Install and update
+**Visual checks** render the map, interiors and Mission Control in headless Chrome with sample
+data and a frozen clock, so every run draws the same frame. See
+[docs/visual-testing.md](docs/visual-testing.md).
 
-Download `AI-Ops-Atlas-macOS.zip` from the [latest release](https://github.com/khaneilcampbell/ai-ops-atlas/releases/latest), unzip it and move **AI Ops Atlas** into Applications. The app isn't signed by Apple, so open it the first time with right-click → Open. To update, download the newer release and replace the app; your token and settings stay. With the GitHub CLI: `gh release download -R khaneilcampbell/ai-ops-atlas -p '*.zip'`.
+**Performance budget.** One desktop map frame may use at most 800 draw calls, 1.2 million
+triangles, 80 shader programs and 8 MB of geometry, and leaving the map must free its WebGL
+context. `.github/workflows/perf.yml` measures this on every pull request that touches the map
+and warns above 90% of the budget. Limits are in `visual/perf.visual.ts`.
 
-To publish a release: run `npm run version:set -- 0.3.0`, merge that change, then tag `v0.3.0` on `main` and push the tag. The Release workflow builds a universal (Apple silicon and Intel) app and attaches it.
+## Making a change
 
-## Contributing
+Every merge is a production release, so the rules are in [CLAUDE.md](CLAUDE.md): one small pull
+request per change with the template filled in, one plain-words line at the top of
+[CHANGELOG.md](CHANGELOG.md), tests for new logic, before and after screenshots at desktop and
+iPhone width for anything on screen, and KC merges. To roll back, revert the pull request; the
+revert ships as a newer build. See also [docs/runbooks/stop-and-rollback.md](docs/runbooks/stop-and-rollback.md)
+and [SECURITY.md](SECURITY.md).
 
-`main` only takes pull requests that pass CI. Before pushing, run `npm run lint`, `npm test`, and in `src-tauri/`, `cargo fmt` and `cargo clippy --all-targets -- -D warnings`. Dependabot opens weekly update PRs, and CodeQL scans every PR. See [SECURITY.md](SECURITY.md) for how secrets are handled.
-
-## Add a project or agent
-
-Add or edit a YAML file in [`catalog/`](catalog/README.md). The format is documented there, and `npm test` fails on a broken manifest. There is one manifest for each of the 11 `khaneilcampbell` repositories, including:
-
-- **Multi-Agent Commerce Pipeline**: the autonomous loop, the six CrewAI brand-crew agents, and the Canva, Shopify, SEO and health-report stages
-- **AI-Assisted SOC Brute Force Detection Lab**: the Splunk detection search and the SOC case-note automation
-- **khaneilcampbell.com**: the Claude site assistant, the site audit script and the security-check workflow
-- **Benjaire.com**: the contact form Worker, the Benjaire Flow intake in n8n and Site CI
-- **AI Career Application Optimization System**: the three Claude prompt stages and the career database validator
-
-Repositories with no manifest still appear. The app lists every repository owned by the accounts in **Settings → Show every repository owned by** (default `khaneilcampbell`), and shows the rest under "Not in the catalog yet" on the list and the map. Private repositories need a token.
-
-Statuses and last-run times in the manifests are a starting point. Correct them by hand until live sources arrive.
-
-## GitHub access and secrets
-
-- All GitHub calls are `GET` requests to `api.github.com/repos/...`, plus the repository lists at `/users/{owner}/repos` and `/user/repos`. The Rust side rejects any other path.
-- The app keeps GitHub usage low:
-  - Repository details come from the one repository list used to find new repositories, instead of one request per repository.
-  - Commits and languages are fetched again only when a repository's last push changes. Workflow runs are checked on each refresh with a token, or every 3 hours without one, and always while a run is still in progress.
-  - One run list per repository covers both CI and the workflows agents observe.
-  - Requests are conditional (ETags). With a token, GitHub doesn't count unchanged 304 answers against the limit; without one, every request counts.
-  - Repositories checked within the refresh interval are left alone, the timer pauses while the window is hidden, and refreshes stop when the hourly limit is spent until it resets.
-  - **Settings → GitHub request budget** shows what the last refresh cost and how much of the hour's limit is left.
-- Without a token the limit is 60 requests an hour. A first load of 11 repositories takes about 20 requests and a quiet refresh about 1.
-- With a token, private repositories work and the limit rises. Use a fine-grained token with read-only **Contents**, **Metadata** and **Actions** access. It is saved in the macOS Keychain under `com.khaneilcampbell.ai-ops-atlas`, attached to requests by the Rust side, and never returned to the web view, shown in the interface or logged.
-- Preferences and cached GitHub metadata are kept in the app's local storage on your Mac.
-
-## Repository intelligence
-
-The agent needs an Anthropic API key. Create one at [console.anthropic.com](https://console.anthropic.com/settings/keys) (ideally in its own workspace with a spend limit), then paste it in **Settings → Repository intelligence**. It is stored in the Keychain and only the Rust side reads it.
-
-- Spending is capped per run (default $0.40) and per month (default $5.00). The worst case is checked before anything is sent.
-- If nothing in a repository changed since the last analysis, the saved one is reused without calling Claude.
-- Scheduled analysis (chosen days and time, preset to Mon, Wed and Fri at 08:00) is off until you turn it on and confirm it, and it only runs while the app is open.
-- Costs shown are estimates from Anthropic's reported token counts. The Anthropic Console has the billed amounts.
-
-The full guide, including what is sent to Anthropic, is in [docs/repository-intelligence.md](docs/repository-intelligence.md).
-
-## Layout
+## Where things live
 
 ```
-catalog/            project and agent manifests (bundled at build time)
-src/catalog/        manifest parsing and validation
-src/github/         read-only GitHub client and snapshot types
-src/lib/            health, attention and activity rules; search; time; storage
-src/views/          Overview, Agents, Repositories, Map, Settings
-src/components/     detail panel, filters, icons, status pills
-src/registry/       agent registry: profiles, migration, telemetry, directory logic
-src/intel/          intelligence agent bridge, types and formatting
-src-tauri/          desktop shell: read-only GitHub proxy and Keychain storage
-src-tauri/src/intel/  Repository Intelligence Agent: collection, prompt, Claude client, validation, budgets, jobs
+catalog/              project and agent manifests
+src/views/            Projects map, Mission Control, Grid, Agents, Intel, Usage, Settings
+src/views/map3d/      the 3D city: buildings, roads, traffic, airport, plans and their tests
+src/views/office/     building interiors
+src/components/       panels, header, update button, shared parts
+src/lib/  src/registry/  src/catalog/   rules, agent registry, manifest parsing
+src/styles/tokens.css the design tokens every stylesheet uses
+src-tauri/            Mac shell: GitHub proxy, vault, write actions, intelligence agents, updater handoff
+functions/  server/   Cloudflare Pages Functions for the web build (GitHub proxy, live feed, reports, usage)
+ops/                  scripts and prompts for the GitHub Actions agents
+visual/               Playwright visual and performance checks
+docs/                 guides and runbooks
 ```
-
-## Roadmap
-
-1. **Done:** read-only catalog, GitHub data, lists, details, search and the map.
-2. **Now:** the Repository Intelligence Agent.
-3. **Next:** a persistent background worker for scheduled analysis, and a CI failure triage agent (see the [agent roadmap](docs/repository-intelligence.md#10-roadmap-for-the-next-autonomous-agent)).
-4. **Then:** live n8n visibility (workflow executions and failures), filling in `last_run` and history automatically.
-5. **Later:** small project-specific adapters for CrewAI and local agents, and a local database if run history outgrows the cache.
 
 ## License
 
-Copyright (c) 2026 Khaneil Campbell. All rights reserved. The code is public for viewing only, and no one may use, copy, modify or distribute it without written permission. See [LICENSE](LICENSE).
+Copyright (c) 2026 Khaneil Campbell. All rights reserved. The code is public for viewing only,
+and no one may use, copy, modify or distribute it without written permission. See
+[LICENSE](LICENSE).
