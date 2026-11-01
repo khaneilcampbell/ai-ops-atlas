@@ -55,6 +55,8 @@ import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
 import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import type { AgentJob } from "../../catalog/agentJobs";
+import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
@@ -92,6 +94,8 @@ export interface MapLink {
 
 interface Props {
   layout: Layout;
+  /** AI agents' jobs: each walks between its Circa apartment and its workplace on a simulated day. */
+  jobs?: AgentJob[];
   /** Share of the view covered from below by a sheet; selections are framed above it. */
   cover?: number;
   selKey: string | null;
@@ -176,8 +180,9 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
+  const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
+  const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
@@ -451,6 +456,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FramePacer profile={power} running={drawing} />
         <World
+          agentCommutes={agentCommutes}
           power={power}
           light={props.light}
           health={health}
@@ -527,6 +533,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
 });
 
 function World({
+  agentCommutes,
   power,
   light: lightMode,
   health,
@@ -558,6 +565,7 @@ function World({
   cover,
   surface,
 }: {
+  agentCommutes?: CommutePlan;
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -1078,7 +1086,7 @@ function World({
       <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>
       <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
       <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
-      <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
+      <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
       <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
       <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
       <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>

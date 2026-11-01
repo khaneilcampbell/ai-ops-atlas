@@ -12,13 +12,16 @@ import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } fr
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
 import { isReportAgent } from "../../reports/model";
 import { useAtlas } from "../../state";
+import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/agentJobs";
+import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
-type Tab = "report" | "output" | "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
+type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "report", label: "Reports" },
   { id: "overview", label: "Overview" },
   { id: "output", label: "Output" },
+  { id: "workday", label: "Workday" },
   { id: "goals", label: "Goals" },
   { id: "workflow", label: "Workflow" },
   { id: "operations", label: "Operations" },
@@ -34,7 +37,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   const { profile: p, telemetry: t } = entry;
   // Agents that store full reports open on them: that's what they're for.
   const reports = isReportAgent(p.id) ? p.id : null;
-  const TABS = reports ? ALL_TABS : ALL_TABS.filter((x) => x.id !== "report");
+  const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === p.id), [catalog, p.id]);
+  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job));
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
   const snap = repoData(repos[p.repository]);
@@ -190,6 +194,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
           </div>
         )}
 
+        {tab === "workday" && job && <WorkdayTab job={job} />}
+
         {tab === "goals" && <GoalsTab kpis={p.goals.kpis} objective={p.goals.objective} review={p.goals.reviewFrequency} t={t} />}
 
         {tab === "workflow" && (
@@ -335,6 +341,52 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         )}
       </div>
     </section>
+  );
+}
+
+const OFF_DUTY = { planned: "Planned: no workday until it ships, so it stays home.", paused: "Paused: stays home until it is resumed.", retired: "Retired: stays home." } as const;
+
+/** Where a value came from: written in the manifest, or worked out by Atlas's rules (catalog/agentJobs.ts). */
+function Basis({ d }: { d: Decided<unknown> }) {
+  return <div className="muted small">{d.provenance === "declared" ? "From the manifest" : "Worked out by Atlas"} · {d.reason}</div>;
+}
+
+/** The agent's job: home, workplace, shift, budget, owner and the output it owes each day. Read-only. */
+function WorkdayTab({ job }: { job: AgentJob }) {
+  return (
+    <div className="reg-cols">
+      <dl className="kv">
+        <dt>Role</dt>
+        <dd>{job.role.value}<Basis d={job.role} /></dd>
+        <dt>Owner</dt>
+        <dd>{job.owner.value}<Basis d={job.owner} /></dd>
+        <dt>Home</dt>
+        <dd>{job.home.label}</dd>
+        <dt>Works at</dt>
+        <dd>{job.work.label}</dd>
+        <dt>Shift</dt>
+        <dd>
+          {clock(job.shift.value.start)} to {clock(job.shift.value.end)}
+          <Basis d={job.shift} />
+          {job.shift.declared && <div className="muted small">Schedule in the manifest: {job.shift.declared}</div>}
+        </dd>
+        <dt>Budget</dt>
+        <dd>{job.budget.value}<Basis d={job.budget} /></dd>
+        <dt>End-of-day output</dt>
+        <dd>{job.output.value}<Basis d={job.output} /></dd>
+      </dl>
+      <div className="reg-stack">
+        <div className="section-title">On the map</div>
+        <p className="small">
+          {job.offDuty
+            ? OFF_DUTY[job.offDuty]
+            : job.work.kind === "workplace"
+            ? `No street reaches ${job.work.building} on the map yet, so it is not drawn walking there. Its job card still holds.`
+            : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}
+        </p>
+        <p className="muted small">This is a simulation of the job as written, not a live run. Runs Atlas has actually seen are on the Operations tab.</p>
+      </div>
+    </div>
   );
 }
 
