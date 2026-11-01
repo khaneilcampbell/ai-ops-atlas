@@ -4,6 +4,8 @@ import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
+import {sizeGithubTower} from "./githubTowerPlan";
+import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {planHills,type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
@@ -99,8 +101,8 @@ export interface Tower {
   floors: number;
   height: number;
   /**
-   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ), sized
-   * with the Financial District so they stand among its towers, just under the shortest.
+   * Roof height above the floor base for the custom-built HQs (Atlas HQ, Benjaire HQ, the GitHub
+   * tower), sized with the Financial District so they stand among its towers, just under the shortest.
    */
   customHeight?: number;
 }
@@ -158,6 +160,8 @@ export interface Scene3D {
   /** Terrace-height land joining the airport entrance to the district across from it. */
   airportForecourt?: Rect;
   terraces: Terrace[];
+  /** Land added beside the GitHub terrace for its glass podium, when a side is free. */
+  githubAnnex?: GithubAnnex;
   /** Paved strips: walkways on the meadow, paths and plazas on terraces. */
   paving: Slab[];
   steps: Slab[];
@@ -200,7 +204,14 @@ function strip(x0: number, z0: number, x1: number, z1: number, w: number, y: num
   return { x, z, w: x0 === x1 ? w : Math.abs(x1 - x0), d: z0 === z1 ? w : Math.abs(z1 - z0), y, h: 0.03 };
 }
 
+/** The whole city, then the GitHub tower's podium on whatever open ground is left (githubAnnex.ts). */
 export function buildScene(layout: Layout): Scene3D {
+  const scene = buildCity(layout);
+  addGithubAnnex(scene);
+  return scene;
+}
+
+function buildCity(layout: Layout): Scene3D {
   const land: Rect[] = layout.meadows.map((m) => ({ x: m.ox, z: m.oy, w: m.w, d: m.h }));
   const terraces: Terrace[] = [];
   const paving: Slab[] = [];
@@ -674,6 +685,7 @@ export function buildScene(layout: Layout): Scene3D {
   const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
   if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
   sizeCustomTowers(towers, kiosks);
+  sizeGithubTower(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
