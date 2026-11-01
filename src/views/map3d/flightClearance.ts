@@ -3,7 +3,7 @@ import {headquartersEnvelope} from './financialPlan';
 import {financialDimensions} from './financialArchitecture';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {AIRPORT_LAYOUT,type AirportPlan,type FlightCircuit,type FlightObstacle} from './airport';
-import {toolOfficeHeight} from './toolBrand';
+import {shopHeight} from './cityScale';
 import {DEALERSHIP} from './dealershipPlan';
 import {COMMUNITY_BUILDINGS} from './hillsCommunityPlan';
 import {HILLS} from './hillsPlan';
@@ -12,13 +12,13 @@ export const FLIGHT_CLEARANCE={roofGap:4,minimumCruise:14,aircraftRadius:1.95} a
 /** Conservative roof envelope, including crowns and the new Financial District skyline.
  * Computed once per scene, not by testing every building on every animation frame. */
 export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'|'retail'>&Partial<Pick<Scene3D,'dealership'>>){
- const roof=Math.max(8,headquartersEnvelope(scene.towers),(scene.dealership?.showroom.height??DEALERSHIP.height)+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...[...scene.kiosks,...scene.retail].map(b=>toolOfficeHeight(b.name)+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
+ const roof=Math.max(8,headquartersEnvelope(scene.towers),(scene.dealership?.showroom.height??DEALERSHIP.height)+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...[...scene.kiosks,...scene.retail].map(b=>('height' in b&&b.height?b.height:shopHeight(b))+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
  // Footprints of the tall buildings, so departures can climb clear of whatever sits off the runway.
  const obstacles:WorldObstacle[]=[
   ...scene.towers.map(t=>({x:t.x,z:t.z,w:t.size+.7,d:t.size+.7,h:headquartersEnvelope([t])})),
   ...(scene.financial?.buildings.map(b=>({x:scene.financial!.x+b.x,z:scene.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d,h:b.height+financialDimensions(b.id).top}))??[]),
   ...scene.strays.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:b.height+1})),
-  ...[...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:toolOfficeHeight(b.name)+1})),
+  ...[...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:('height' in b&&b.height?b.height:shopHeight(b))+1})),
  ];
  return {roof,altitude:Math.max(FLIGHT_CLEARANCE.minimumCruise,roof+FLIGHT_CLEARANCE.roofGap),obstacles};
 }

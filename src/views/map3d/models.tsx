@@ -3,6 +3,7 @@ import {TRANSPORT} from "./transportScale";
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
 import { toolBrand, toolOfficeHeight } from "./toolBrand";
+import { CITY_SCALE, scaleParts, shopScale } from "./cityScale";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
@@ -11,6 +12,9 @@ import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { HQ, hqTop } from "./atlasHqPlan";
+import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
+import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -380,7 +384,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
-      neighborhood: [...(scene.neighborhoodLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
+      neighborhood: [...(scene.neighborhoodLand??[]),...(scene.raisedLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
       steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
       brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
@@ -579,9 +583,10 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
   const items = useMemo(() => {
     const y = TERRACE_H + 0.03;
     const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
-    for (const k of kiosks) {
-      const OFFICE_H = toolOfficeHeight(k.name);
-      const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
+    const one = (k: Kiosk) => {
+      const OFFICE_H = k.height ?? toolOfficeHeight(k.name);
+      // Skyline shops are drawn at their base size, then grown evenly (CITY_SCALE.shop).
+      const brand = toolBrand(k.name), w = k.size / shopScale(k), d = w * 0.8;
       if (["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].includes(k.name)) {
         const zara=k.name==="Zara",cafe=k.name==="Starbucks",chipotle=k.name==="Chipotle";
         walls.push({p:[k.x,y,k.z],s:[w,OFFICE_H,d],c:chipotle?"#845544":brand.wall});
@@ -638,7 +643,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
           for(const side of [-1,1])windows.push({p:[k.x+side*(w/2+0.012),y+yy,k.z+col*d*0.27],s:[0.025,0.24,d*0.17],c:"#fff5d9"});
           if(front)windows.push({p:[k.x+col*w*0.27,y+yy,k.z+d/2+0.012],s:[w*0.17,0.24,0.025],c:"#fff5d9"});
         }
-        continue;
+        return;
       }
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
@@ -654,7 +659,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
       }
       // Six office floors with a regular curtain-wall grid and branded cornices.
-      const floorCount=OFFICE_H < 2 ? 3 : 6;
+      const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
       const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
       for (let floor = 0; floor < floorCount; floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
@@ -676,6 +681,12 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
       if (brand.stepped && k.name!=="Anthropic") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+    };
+    const all = [walls, slabs, accents, windows, domes, pediments, doors];
+    for (const k of kiosks) {
+      const from = all.map(a => a.length);
+      one(k);
+      all.forEach((a, n) => scaleParts(a, from[n], k.x, y, k.z, shopScale(k)));
     }
     return { walls, slabs, accents, windows, domes, pediments, doors };
   }, [kiosks]);
@@ -717,7 +728,7 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
   }, [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + toolOfficeHeight(tool.name) - (tool.name==="Anthropic"?0.32:0.08);
+  const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Anthropic"?0.32:0.08)) * shopScale(tool);
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />
@@ -728,7 +739,8 @@ export interface PickHandlerSet {
   of: (keys: string[]) => Pick;
 }
 
-const FLOOR_BASE = TERRACE_H + 0.15;
+/** Headquarters stand on a plinth; their floors start here. */
+export const FLOOR_BASE = TERRACE_H + 0.15;
 /** Rooftop name boards and billboards stand this high above the roof. */
 const BOARD_LIFT = 0.42;
 
@@ -744,6 +756,12 @@ const LANTERN_H = 1.0;
 const SPIRE_H = 1.1;
 
 export function towerTop(t: Tower) {
+  // Atlas HQ is drawn by AtlasHq: a sloped glass roof, no lantern or board.
+  if (t.identity.landmark) return FLOOR_BASE + (t.customHeight ?? hqTop(t.size / HQ.refSize)) + 0.04;
+  // Benjaire HQ is drawn by RibbonTower: a hollow crown, no hip roof or finial.
+  if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize, t.customHeight) + 0.04;
+  // The GitHub HQ is drawn by GithubTower: a roof garden and the core's crown, no board.
+  if (isGithubTower(t.projectId)) return FLOOR_BASE + githubTowerTop(t.customHeight ?? t.height) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }
@@ -800,7 +818,9 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const top = FLOOR_BASE + t.height;
     const r = (k: string) => hash(`${t.key}:${k}`);
 
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: style === "tech" ? "#5d666e" : "#8d8a80" });
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark || isRibbonTower(t.projectId) ? "#d8d1c1" : isGithubTower(t.projectId) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    // Atlas HQ, Benjaire HQ and the GitHub HQ keep their plinths; the buildings are AtlasHq, RibbonTower and GithubTower.
+    if (t.identity.landmark || isRibbonTower(t.projectId) || isGithubTower(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
@@ -986,7 +1006,16 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
     () =>
       towers.flatMap((t) => {
         const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
-        return c ? [{ p: [t.x, TERRACE_H + 0.15, t.z], s: [t.size * 1.16, 0.022, t.size * 1.16], c } as Inst] : [];
+        if (!c) return [];
+        // Atlas HQ leaves most of its plinth open, so its health is a thin edge ring, not a slab.
+        if (t.identity.landmark || isRibbonTower(t.projectId)) {
+          const w = t.size * 1.16, e = 0.05;
+          return [-1, 1].flatMap((k) => [
+            { p: [t.x, TERRACE_H + 0.15, t.z + (k * (w - e)) / 2], s: [w, 0.022, e], c } as Inst,
+            { p: [t.x + (k * (w - e)) / 2, TERRACE_H + 0.15, t.z], s: [e, 0.022, w - 2 * e], c } as Inst,
+          ]);
+        }
+        return [{ p: [t.x, TERRACE_H + 0.15, t.z], s: [t.size * 1.16, 0.022, t.size * 1.16], c } as Inst];
       }),
     [towers, health],
   );
@@ -1002,7 +1031,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>({p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]}))} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(t=>isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
@@ -1012,7 +1041,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
       <Instanced items={P.dishes} geometry={g.dish} material={m.plain} />
-      {towers.map((t) => (
+      {towers.filter((t) => !t.identity.landmark && !isRibbonTower(t.projectId) && !isGithubTower(t.projectId)).map((t) => (
         <BuildingIdentitySigns key={t.key} t={t} g={g} />
       ))}
     </group>
@@ -1084,6 +1113,7 @@ export function Skyline({parks,g,m,onSelect}:{parks:Scene3D["parks"];g:G;m:M;onS
     const walls:Inst[]=[],trim:Inst[]=[],roofs:Inst[]=[],glass:Inst[]=[],doors:Inst[]=[];
     for(const p of parks) {
       const x=p.x+p.w/2,z=p.z+p.d/2,y=TERRACE_H+0.03;
+      const all=[walls,trim,roofs,glass,doors],from=all.map(a=>a.length);
       for(const [offset,width,height] of [[0,1.5,4.5],[-1.22,0.95,2.6],[1.22,0.95,3.1]]) {
         walls.push({p:[x+offset,y+0.4,z],s:[width,height-0.4,0.95]});
         roofs.push({p:[x+offset,y+height,z],s:[width*1.12,0.4,1.08],c:"#294c40"});
@@ -1105,8 +1135,10 @@ export function Skyline({parks,g,m,onSelect}:{parks:Scene3D["parks"];g:G;m:M;onS
 
       trim.push({p:[x,y+0.62,z+0.54],s:[0.76,0.035,0.24],c:"#d3b36e"});
       trim.push({p:[x,y+4.9,z],s:[0.045,0.35,0.045],c:"#d3b36e"});
+      // The whole residence grows evenly about its lobby (CITY_SCALE.skyline).
+      all.forEach((a,n)=>scaleParts(a,from[n],x,y,z,CITY_SCALE.skyline));
     }
     return {walls,trim,roofs,glass,doors};
   },[parks]);
-  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber} pick={{keys:parts.walls.map(()=>"skyline"),over:()=>{},out:()=>{},click:()=>onSelect?.()}}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/><EntranceDoors doors={parks.map(p=>({p:[p.x+p.w/2,TERRACE_H+0.03,p.z+p.d/2+0.51],s:[0.56,0.52,0.025]}))} g={g} m={m}/></group>;
+  return <group><Instanced items={parts.walls} geometry={g.box} material={m.facades.timber} pick={{keys:parts.walls.map(()=>"skyline"),over:()=>{},out:()=>{},click:()=>onSelect?.()}}/><Instanced items={parts.trim} geometry={g.box} material={m.plain}/><Instanced items={parts.roofs} geometry={g.hip} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={m.glass}/><Instanced items={parts.doors} geometry={g.box} material={m.darkGlass}/><EntranceDoors doors={parks.map(p=>({p:[p.x+p.w/2,TERRACE_H+0.03,p.z+p.d/2+0.51*CITY_SCALE.skyline],s:[0.56*CITY_SCALE.skyline,0.52*CITY_SCALE.skyline,0.025]}))} g={g} m={m}/></group>;
 }
