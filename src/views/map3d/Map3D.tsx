@@ -9,7 +9,7 @@ import {FinancialDistrict} from "./FinancialDistrict";
 import {FINANCIAL,FINANCIAL_KEY,FINANCIAL_PARK_KEY,financialKey} from "./financialPlan";
 import {financialJunctions} from './junctions';
 import AtlasHills from "./AtlasHills";
-import {HILLS,HILLS_KEY} from "./hillsPlan";
+import {HILLS_KEY,mansionPlaque} from "./hillsPlan";
 import {AIRPORT_BUILDINGS,airportBuildingKey} from "./airportBuildings";
 import {Dealership} from "./Dealership";
 import {DEALERSHIP_KEY} from "./dealershipPlan";
@@ -345,7 +345,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     if(scene.community&&(near==="near"||selKey===HILLS_KEY||selKey?.startsWith("service:hills:")))for(const b of COMMUNITY_BUILDINGS)plaque({id:communityKey(b.id),select:communityKey(b.id),name:b.name,x:scene.community.x+b.x,roof:TERRACE_H+b.h,z:scene.community.z+b.z,priority:8,mark:PLANNED,title:`${b.name} · Planned community`});
     if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial;plaque({id:"service:financial-station",select:"service:financial-station",name:"Financial District Station",x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:"Financial District Station · Visual simulation"});}
-    if(scene.hills)plaque({id:HILLS_KEY,select:HILLS_KEY,name:"Atlas Hills",x:scene.hills.x+HILLS.mansion.x,roof:TERRACE_H+HILLS.mansion.h+.25,z:scene.hills.z+HILLS.mansion.z,priority:2,mark:PLANNED,title:"Atlas Hills · Planned community"});
+    if(scene.hills){const {roofAboveTerrace,...p}=mansionPlaque(scene.hills);plaque({...p,roof:TERRACE_H+roofAboveTerrace,mark:PLANNED});}
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});

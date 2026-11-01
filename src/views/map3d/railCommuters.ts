@@ -13,7 +13,7 @@ export const RAIL_COMMUTERS={rest:8,paces:[.31,.36,.41,.46,.5,.55],laneWidth:.07
 export const COMMUTER_TOWERS={circa:'circa',amex:'budget',ritz:'harbor-residence'} as const;
 /**
  * KC, 2026-10-31: two groups of six. Each group rides one train together: two to Circa, two to
- * American Express, two to the Ritz-Carlton. Ritz-Carlton guests return to the Atlas Hills mansion,
+ * American Express, two to the Ritz-Carlton. Ritz-Carlton guests return to Atlas Mansion,
  * and one American Express guest goes home to Vista House.
  */
 export const COMMUTER_GROUPS=[

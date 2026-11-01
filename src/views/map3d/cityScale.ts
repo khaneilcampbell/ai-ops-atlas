@@ -3,7 +3,7 @@ import {toolOfficeHeight} from './toolBrand';
 
 /**
  * One scale table for the city's buildings, set against the Atlas Marketplace mall (about 12 x 11.6
- * map units and 6.4 tall: four 1.6 storeys, twice the Atlas Hills mansion). Before this, a project
+ * map units and 6.4 tall: four 1.6 storeys, twice Atlas Mansion). Before this, a project
  * headquarters was 1.6 wide and 4.5 tall and a Skyline shop 0.85 wide, so next to the mall they read
  * as toys (KC, 2026-10-31).
  *

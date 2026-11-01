@@ -1,4 +1,5 @@
 import {financialBuildingMatches,financialBuildingAliases} from './lib/financialSearch';
+import {hillsSearchResult} from './lib/hillsSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
@@ -175,7 +176,9 @@ function GlobalSearch() {
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
     const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
     const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
-    return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
+    const hills=hillsSearchResult(q);
+    const places=hills?[{kind:"service" as const,id:"atlas-hills",...hills}]:[];
+    return prioritizeExact([...projects, ...places, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.

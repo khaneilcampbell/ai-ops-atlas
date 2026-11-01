@@ -33,7 +33,7 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
 /**
  * Room for the Atlas Marketplace: the boulevard runs this much further east of the city, and the
  * green between it and the Skyline park reaches north to the city's terraces (or this far, if none),
- * so the mall's lot is about twice the Atlas Hills mansion's footprint and joins the city.
+ * so the mall's lot is about twice Atlas Mansion's footprint and joins the city.
  */
 export const MALL_LOT={east:4,north:3} as const;
 type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'parks'|'land'|'carBridges'|'paving'> & {coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};

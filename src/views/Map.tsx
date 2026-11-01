@@ -1,4 +1,5 @@
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
+import { MANSION_INTERIOR_ID } from "./map3d/hillsPlan";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
 import { projectRepositories } from "../catalog/projects";
@@ -918,7 +919,7 @@ export function MapView() {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId===MANSION_INTERIOR_ID?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">

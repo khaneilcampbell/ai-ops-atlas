@@ -1,5 +1,5 @@
 import {financialInteriorBrand} from "../map3d/financialBrands";
-import {HILLS} from "../map3d/hillsPlan";
+import {HILLS,MANSION_INTERIOR_BUILDING} from "../map3d/hillsPlan";
 import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
 import {airportPoint} from "../map3d/airport";
 import {clearInteriorFootprint} from "./exteriorClearance";
@@ -26,7 +26,7 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   const pick=useMemo<PickHandlerSet>(()=>({of:keys=>({keys,over:()=>{},out:()=>{},click:()=>{}})}),[]);
   const airportBuilding=AIRPORT_BUILDINGS.find(b=>b.name===building);
   const airportAnchor=airportBuilding&&source.airport?{x:airportPoint(source.airport,airportBuilding.x,airportBuilding.z)[0],z:source.airport.z+airportBuilding.z}:undefined;
-  const hillsAnchor=building==="Atlas Hills"&&source.hills?{x:source.hills.x+HILLS.mansion.x,z:source.hills.z+HILLS.mansion.z}:undefined;
+  const hillsAnchor=building===MANSION_INTERIOR_BUILDING&&source.hills?{x:source.hills.x+HILLS.mansion.x,z:source.hills.z+HILLS.mansion.z}:undefined;
   const financialBuilding=source.financial?.buildings.find(b=>b.id===financialInteriorBrand(building)?.id);
   const financialAnchor=financialBuilding&&source.financial?{x:source.financial.x+financialBuilding.x,z:source.financial.z+financialBuilding.z}:undefined;
   const mallAnchor=building==="Atlas Marketplace"&&source.mall?{x:source.mall.cx,z:source.mall.cz}:undefined;

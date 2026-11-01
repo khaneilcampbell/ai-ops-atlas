@@ -5,7 +5,7 @@ export const MALL_KEY='service:atlas-marketplace';
 /**
  * Atlas Marketplace: a low wave-style mall (stacked curving floors wrapped in white fins) on the
  * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
- * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
+ * tall as Atlas Mansion's (1.6), so four of them stand twice its height on about its footprint.
  */
 export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.5} as const;
 

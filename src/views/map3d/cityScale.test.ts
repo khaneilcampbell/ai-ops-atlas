@@ -5,7 +5,7 @@ import {buildScene,FLOOR_H} from "./scene";
 import {CITY_SCALE,scaleParts,shopHeight} from "./cityScale";
 import type {Inst} from "./models";
 
-/** The Atlas Marketplace roof: four 1.6 storeys (twice the Atlas Hills mansion). */
+/** The Atlas Marketplace roof: four 1.6 storeys (twice Atlas Mansion). */
 const MARKETPLACE_ROOF=4*1.6;
 
 describe("city scale", () => {
