@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · Zooming in close to a building no longer turns the map dark at night or washed out by day: the distance haze now stays out past the neighbourhood you are looking at (#PR)
+- 2026-11-01 · Zooming in close to a building no longer turns the map dark at night or washed out by day: the distance haze now stays out past the neighbourhood you are looking at (#178)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
 - 2026-10-31 · If the 3D map ever fails to draw, the rest of the Projects view stays and a Try again button restarts the map, instead of the whole page crashing
 - 2026-10-31 · Airport jets now look like large Boeing-style airliners: long slim body, swept wings, big underwing engines and a swept tail, still in Delta, Emirates, American, Southwest and Qatar colours (#164)
