@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,writeFileSync,unlinkSync} from 'node:fs';
 import {openAtlas,goTo,selectBuilding,settle,waitForOffice,waitForScene} from './atlas';
 test.use({viewport:{width:1280,height:800},deviceScaleFactor:1});
 
@@ -43,4 +43,12 @@ test('first visit shows loading until the city module and first frame are ready'
  try{await expect(page.getByText('Loading city…',{exact:true})).toBeVisible();}finally{release();}
  await opening;await waitForScene(page);await settle(page);
  await expect(page.locator('.map-loading')).toHaveCount(0);
+});
+
+
+test('generated test reports do not reload the open preview',async({page})=>{
+ await openAtlas(page,{storage:{mapMode:'2d'}});
+ let reloads=0;page.on('framenavigated',frame=>{if(frame===page.mainFrame())reloads++;});
+ const path='playwright-report/atlas-watch-probe.html';mkdirSync('playwright-report',{recursive:true});
+ try{writeFileSync(path,'<!doctype html><title>Generated report probe</title>');await page.waitForTimeout(1000);expect(reloads).toBe(0);}finally{unlinkSync(path);}
 });
