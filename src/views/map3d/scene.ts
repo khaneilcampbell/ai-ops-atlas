@@ -14,7 +14,7 @@ import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, pl
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
-import { hash, treeSpots, type Layout } from "../mapLayout";
+import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 
@@ -193,6 +193,18 @@ function strip(x0: number, z0: number, x1: number, z1: number, w: number, y: num
   const x = Math.min(x0, x1) - (x0 === x1 ? w / 2 : 0);
   const z = Math.min(z0, z1) - (z0 === z1 ? w / 2 : 0);
   return { x, z, w: x0 === x1 ? w : Math.abs(x1 - x0), d: z0 === z1 ? w : Math.abs(z1 - z0), y, h: 0.03 };
+}
+
+/**
+ * Candidate tree spots for a widened district's grounds: an even grid over the lot, inset from
+ * its edges, outside the tower's plaza. The caller drops any that land on a road or path.
+ */
+export function districtGrove(d: { ox: number; oy: number; size: number; hq: { size: number } }, cx: number, cz: number, step = 0.85): [number, number][] {
+  const out: [number, number][] = [], plaza = (d.hq.size * 1.25 + 1.0) / 2 + 0.35, inset = 0.55;
+  for (let x = d.ox + inset; x <= d.ox + d.size - inset + 1e-6; x += step)
+    for (let z = d.oy + inset; z <= d.oy + d.size - inset + 1e-6; z += step)
+      if (Math.max(Math.abs(x - cx), Math.abs(z - cz)) > plaza) out.push([x, z]);
+  return out;
 }
 
 export function buildScene(layout: Layout): Scene3D {
@@ -419,6 +431,12 @@ export function buildScene(layout: Layout): Scene3D {
     for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(d.size * 2.2))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
+    }
+    // A widened district's extra land becomes planted grounds: rows of trees over the open lawn,
+    // clear of every road, path and plaza, like a tree-lined city block (see DISTRICT_MIN_SIZE).
+    if (DISTRICT_MIN_SIZE[d.project.id]) for (const [x, z] of districtGrove(d, cx, cz)) {
+      if (blocked(x, z) || paving.some((p) => inRect(p, x, z, 0.42)) || trees.some((t) => Math.hypot(t.x - x, t.z - z) < 0.5)) continue;
+      trees.push({ x, y: top, z, s: 0.22 + hash(`${x.toFixed(2)}:${z.toFixed(2)}:g`) * 0.06, kind: hash(`${x.toFixed(2)}:${z.toFixed(2)}`) > 0.9 ? "blossom" : "round" });
     }
   }
 

@@ -1,6 +1,7 @@
 import type {Kiosk,Tower} from './scene';
 import {headquartersEnvelope} from './financialPlan';
 import {isRibbonTower} from './ribbonTowerPlan';
+import {isCommerceTower} from './commerceTowerPlan';
 
 /**
  * The custom-built HQs stand with the Financial District (KC, 2026-10-31: "make the building bigger
@@ -9,7 +10,7 @@ import {isRibbonTower} from './ribbonTowerPlan';
  * scale changes, both move together. The shortest Financial tower is 1.08 of that reference, so
  * a share of at most 1 keeps every Financial tower taller.
  */
-export const CUSTOM_TOWER_SHARE={atlas:1,benjaire:.92} as const;
+export const CUSTOM_TOWER_SHARE={atlas:1,benjaire:.92,commerce:.84} as const;
 /**
  * District tool offices (Stripe, n8n, Cloudflare and the rest) stand at half that reference: a
  * mid-rise beside their headquarters, the way a support building sits by a tower, and they grow
@@ -21,6 +22,7 @@ export const toolOfficeTop=(reference:number)=>Math.max(2.8,reference*TOOL_OFFIC
 export function customTowerShare(t:Pick<Tower,'projectId'|'identity'>){
  if(t.identity.landmark)return CUSTOM_TOWER_SHARE.atlas;
  if(isRibbonTower(t.projectId))return CUSTOM_TOWER_SHARE.benjaire;
+ if(isCommerceTower(t.projectId))return CUSTOM_TOWER_SHARE.commerce;
  return 0;
 }
 
