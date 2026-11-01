@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#190)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · The README on GitHub now describes Atlas as it is today: the city, the three views, the agents, the Mac, web and iPhone apps, and how to run and test it (#PR)
 - 2026-11-01 · The Commerce district's tool buildings (Canva, Serper, Stripe) are now smaller teardrop glass towers in the Commerce Pipeline style, each pointing at the main tower (#182)
