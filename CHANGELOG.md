@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off
 - 2026-10-31 · If the 3D map ever fails to draw, the rest of the Projects view stays and a Try again button restarts the map, instead of the whole page crashing
 - 2026-10-31 · Airport jets now look like large Boeing-style airliners: long slim body, swept wings, big underwing engines and a swept tail, still in Delta, Emirates, American, Southwest and Qatar colours (#164)
@@ -23,7 +24,6 @@ shown in the Mac app's **Update available** button, so write them for KC, not fo
 - 2026-10-31 · Benjaire HQ rebuilt as a ribbon tower: champagne bands over dark glass, an opening through the sky, a hollow crown with a roof garden and a white terraced podium (#159)
 - 2026-10-31 · Inside Atlas HQ now matches the outside: curved glass walls, a gold lobby, gold glass that follows the wing, and a roof garden with a pool off Floor 3 (#159)
 - 2026-10-31 · Atlas HQ rebuilt as a curving glass tower: a blue tower with a sloped roof, a gold wing that sways in an S, a ribbed podium with a roof garden and a glass lobby under a wavy canopy (#159)
-- 2026-10-31 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
 - 2026-10-31 · Refined financial buildings, added community visitors and train commuters, and kept planes clear of the skyline (#153)
 - 2026-10-31 · The map keeps itself smooth: if frames slow down it softens detail a little, then restores it, at every Performance setting
 - 2026-10-31 · Fixed the blank map: the new roads and highway are lighter to draw, and the map restarts itself if graphics fail
