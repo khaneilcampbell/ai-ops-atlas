@@ -18,7 +18,8 @@ describe("city scale", () => {
   const chipotle=s.retail.find(k=>k.name==="Chipotle")!,anthropic=s.retail.find(k=>k.name==="Anthropic")!;
   expect(chipotle.size).toBeCloseTo(.85*CITY_SCALE.shop);
   expect(shopHeight(anthropic)).toBeCloseTo(2.9*CITY_SCALE.shop);
-  for(const k of s.kiosks)expect(k.size).toBeCloseTo(.9);
+  // Commerce's tool offices are teardrop siblings of its tower and take their whole lot (commerceAnnexPlan).
+  for(const k of s.kiosks)if(k.projectId!=="commerce-pipeline")expect(k.size).toBeCloseTo(.9);
  });
  it("keeps the Skyline shops apart", () => {
   for(const a of s.retail)for(const b of s.retail)if(a!==b)

@@ -126,9 +126,24 @@ function ringFor(count: number) {
 }
 
 /** A district is sized for the houses and kiosks around its headquarters, so small projects stay compact. */
-export function districtSize(lotCount: number) {
-  return lotCount === 0 ? 5 : ringFor(lotCount) * 2.5;
+export function districtSize(lotCount: number, projectId?: string) {
+  const fit = lotCount === 0 ? 5 : ringFor(lotCount) * 2.5;
+  return Math.max(fit, (projectId && DISTRICT_MIN_SIZE[projectId]) || 0);
 }
+
+/**
+ * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
+ * and its grounds. The Commerce district holds the teardrop tower and its garden podium
+ * (KC, 2026-11-01: "expand district landscape to fit design"). Sizes stay on the 2.5 grid.
+ */
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10 };
+
+/**
+ * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
+ * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
+ * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
+ */
+export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.32 };
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
@@ -220,11 +235,12 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     const items: Item[] = b.projects
       .map((project) => {
         const r = residents(agentsByProject.get(project.id) ?? []);
-        const s = districtSize(r.houses.length + r.services.length);
-        return { project, w: s, h: s };
+        const s = districtSize(r.houses.length + r.services.length, project.id);
+        return { project, w: s, h: s, fit: districtSize(r.houses.length + r.services.length) };
       })
-      // Largest first packs tighter; ties keep catalog order.
-      .sort((a, c) => c.w - a.w);
+      // Largest first packs tighter; ties keep catalog order. A widened district keeps the place its
+      // houses and kiosks give it, so it grows where it stands and its neighbors step aside.
+      .sort((a, c) => c.fit - a.fit);
     // An empty park keeps the "room for the next project" corner of the original map.
     if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
@@ -290,7 +306,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const n = houses.length + services.length;
       const size = it.w;
       const m = n ? ringFor(n) : 2;
-      const hqSize = n ? size * 0.26 : size * 0.34;
+      const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       districts.push({

@@ -55,11 +55,15 @@ export function planMall(s:Input):MallPlan|undefined{
  }
  if(east-west<6.5||south-north<8)return;
  // A bigger lot (other map groupings) gets the same-size mall, centred, not a bigger one.
- const w=Math.min(east-west,MALL.maxW),d=Math.min(south-north,MALL.maxD);
- const lot={x:(west+east-w)/2,z:south-d,w,d};
- // Every corner must be on land, and no building may stand in the lot.
- const corners:[number,number][]=[[lot.x,lot.z],[lot.x+w,lot.z],[lot.x,lot.z+d],[lot.x+w,lot.z+d],[lot.x+w/2,lot.z+d/2]];
- if(!corners.every(([x,z])=>s.land.some(r=>inside(r,x,z))))return;
+ const w=Math.min(east-west,MALL.maxW),x=(west+east-w)/2;
+ // Every corner must be on land. Where water reaches the lot's north edge (the ungrouped and
+ // by-status layouts), the lot gives up depth from the north, down to the 8 the mall needs.
+ const onLand=(d:number)=>([[x,south-d],[x+w,south-d],[x,south],[x+w,south],[x+w/2,south-d/2]] as [number,number][]).every(([px,pz])=>s.land.some(r=>inside(r,px,pz)));
+ let d=Math.min(south-north,MALL.maxD);
+ while(d>8&&!onLand(d))d=Math.max(8,d-.25);
+ if(!onLand(d))return;
+ const lot={x,z:south-d,w,d};
+ // No building may stand in the lot.
  if([...s.towers,...s.kiosks,...s.retail].some(b=>b.x+b.size/2>lot.x&&b.x-b.size/2<lot.x+w&&b.z+b.size/2>lot.z&&b.z-b.size/2<lot.z+d))return;
  const plazaD=2.3,bd=d-plazaD;
  const rx=w/2-.1,rz=bd/2-.05;
