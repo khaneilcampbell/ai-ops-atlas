@@ -35,6 +35,7 @@ import { MapControls } from "three/examples/jsm/controls/MapControls.js";
 import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
+import { fogRange } from "./fogRange";
 import { Bloom, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { placeLabels, type Layout } from "../mapLayout";
@@ -962,8 +963,10 @@ function World({
     }
     controls.update();
     const dist = camera.position.distanceTo(controls.target);
-    fog.near = dist * 1.25;
-    fog.far = dist * 3.2;
+    // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
+    const haze = fogRange(dist, ext);
+    fog.near = haze.near;
+    fog.far = haze.far;
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
     if (isNear !== nearRef.current) {
       nearRef.current = isNear;
