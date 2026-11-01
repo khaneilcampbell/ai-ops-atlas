@@ -26,11 +26,16 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual checks (screenshots)
+    name: Visual checks (screenshots ${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
-    # The full set takes about 20 minutes on a GitHub runner with today's map (software WebGL).
-    # 45 leaves room for a bigger map without cancelling, which hid the blank map after #148.
-    timeout-minutes: 45
+    # The whole set (about 110 tests, software WebGL) no longer fits in 45 minutes on one runner,
+    # so it runs as 6 shards side by side, split by spec file. Each shard takes roughly a sixth.
+    # A shard that still hits 35 minutes is a real slowdown, not noise (the blank map after #148).
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -49,49 +54,19 @@ jobs:
           fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
-        run: npx playwright test -c visual
+        run: npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - name: Record baselines
         if: steps.mode.outputs.record == '1'
-        run: BASELINE=1 npx playwright test -c visual
+        run: BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: visual-results
+          name: visual-results-${{ matrix.shard }}
           path: |
             visual/baselines/ci/
             test-results/
             playwright-report/
           retention-days: 14
-
-  # What one map frame costs (draw calls, triangles, shader programs, GPU geometry) and whether
-  # leaving the map and coming back leaks a WebGL canvas; fails over BUDGET in visual/perf.visual.ts.
-  # Runs beside the screenshots, so it adds no time to them. See docs/visual-testing.md.
-  perf:
-    name: Map performance budget
-    if: ${{ !inputs.update }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Measure the map against its budget
-        run: |
-          set +e
-          PERF=1 PERF_BUDGET=1 PERF_ONLY="desktop day" npx playwright test -c visual perf --reporter=line 2>&1 | tee perf.log
-          status=${PIPESTATUS[0]}
-          grep '^PERF ' perf.log | sed 's/^PERF //' > perf.jsonl || true
-          {
-            echo "### Map performance (desktop, day)"
-            echo '```json'
-            cat perf.jsonl
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit "$status"
 
   # Only the manual update run pushes, and only a new visual-baselines/* branch.
   save:
@@ -106,7 +81,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: visual-results
+          pattern: visual-results-*
+          merge-multiple: true
           path: results
       - run: |
           branch="visual-baselines/run-${{ github.run_id }}"

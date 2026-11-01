@@ -9,7 +9,7 @@ const KIND: Record<string, string> = {
   repo: "The repository holds this agent's code or workflow",
   dep: "Agent dependency from the agent registry",
   decl: "Connection declared in the project manifest",
-  sync: "Repository data that AI Ops Atlas reads from GitHub",
+  sync: "Repository data that Atlas reads from GitHub",
 };
 
 /** The connection inspector, docked beside the map in place of the building inspector. */

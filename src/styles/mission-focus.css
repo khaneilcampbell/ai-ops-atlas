@@ -16,3 +16,16 @@
   .mission-focus .list-row { flex-wrap: wrap; }
   .mission-next { width: 100%; padding-left: 18px; }
 }
+.fix-claude { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 12.5px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.mission-item { display: flex; align-items: flex-start; gap: 8px; padding-right: 20px; }
+.mission-item > .fix-claude { margin-top: 12px; }
+.mission-item .list-row { flex: 1; min-width: 0; }
+.mc-failing .list-row .fix-claude { margin-left: 4px; }
+@media (max-width: 640px) {
+  .mission-item { flex-wrap: wrap; padding: 0 0 12px 30px; }
+  .mission-item .list-row { flex-basis: 100%; margin-left: -30px; }
+  .mission-item > .fix-claude { margin-top: 0; }
+  .mc-failing .list-row { flex-wrap: wrap; }
+  .mc-failing .list-row .grow { flex: 1 1 60%; }
+  .mc-failing .list-row .fix-claude { margin-left: 18px; }
+}

@@ -4,7 +4,7 @@ import { check, openAtlas, settle } from "./atlas";
 /**
  * The top bar at the widths people use. The plain web build shows fewer pills than the Mac app,
  * so `desktopChrome` adds what the Mac app adds (traffic-light padding, a live pill with a long
- * status, and the "Read-only + re-runs" mode) to check the crowded case too.
+ * status, and a long CI status) to check the crowded case too.
  */
 async function desktopChrome(page: Page, mac = true) {
   await page.evaluate((mac) => {
@@ -17,7 +17,7 @@ async function desktopChrome(page: Page, mac = true) {
     live.innerHTML = '<span class="dot"></span>Live<span class="live-last">Merge flow failed · ai-ops-atlas</span>';
     (platform ?? header.querySelector(".pill-mode"))!.after(live);
     const mode = header.querySelector(".pill-mode");
-    if (mode) mode.lastChild!.textContent = "Read-only + re-runs";
+    if (mode) mode.lastChild!.textContent = "CI 10/11 passing";
   }, mac);
   await settle(page, 1);
 }
