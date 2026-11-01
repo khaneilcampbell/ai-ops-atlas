@@ -1,3 +1,4 @@
+import {CityLoading} from "../../components/CityLoading";
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -98,6 +99,7 @@ interface Props {
   layout: Layout;
   /** Share of the view covered from below by a sheet; selections are framed above it. */
   cover?: number;
+  onFlat?: () => void;
   displayNeighborhoods?: {key:string;label:string;count:number}[];
   selKey: string | null;
   selectedDistrict?: string;
@@ -449,7 +451,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   return (
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
@@ -491,7 +493,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           surface={wrapEl}
         />
       </Canvas>
-      {readyKey !== glKey && <div className="map-loading" role="status">Preparing city…</div>}
+      {readyKey !== glKey && <CityLoading stage="drawing" onFlat={() => props.onFlat?.()}/>}
       </MapGuard>
       <div
         className="m3-labels"
