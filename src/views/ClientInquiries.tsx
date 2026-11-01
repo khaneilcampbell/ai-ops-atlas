@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { CopyValue } from "../components/bits";
 import { useInquiries } from "../inquiries/client";
-import { followUpDraft, mailto, nextStep, replyDraft, type Inquiry, type NextStep } from "../inquiries/model";
+import { followUpDraft, gmailCompose, nextStep, replyDraft, type Inquiry, type NextStep } from "../inquiries/model";
 import { markClosed, markFollowedUp, markReplied, reopen, useInquiryProgress } from "../inquiries/state";
 import { relative } from "../lib/time";
 import "../styles/inquiries.css";
 
 const TICK_MS = 60_000;
 
-/** Opens the draft in KC's own mail app. Nothing is sent from Atlas. */
+/** Opens the draft in Gmail in the browser, so KC's signature and logo are added. Nothing is sent from Atlas. */
 function openDraft(url: string) {
   if ("__TAURI_INTERNALS__" in window) void import("@tauri-apps/plugin-opener").then((m) => m.openUrl(url));
   else window.location.href = url;
@@ -85,7 +85,7 @@ function InquiryRow({ inquiry: i, step }: { inquiry: Inquiry; step: NextStep }) 
         <span className="inquiry-actions">
           {step.kind === "reply" && (
             <>
-              <button className="btn small" onClick={() => openDraft(mailto(i.email, replyDraft(i)))} title="Open a drafted reply in your mail app">
+              <button className="btn small" onClick={() => openDraft(gmailCompose(i.email, replyDraft(i)))} title="Open a drafted reply in Gmail">
                 Draft reply
               </button>
               <button className="text-btn small" onClick={() => markReplied(i.id)} title="You sent the reply; follow-ups are due on day 3 and day 7">
@@ -95,7 +95,7 @@ function InquiryRow({ inquiry: i, step }: { inquiry: Inquiry; step: NextStep }) 
           )}
           {step.kind === "follow_up" && (
             <>
-              <button className={step.due ? "btn small" : "btn small quiet"} onClick={() => openDraft(mailto(i.email, followUpDraft(i, step.number)))} title="Open a drafted follow-up in your mail app">
+              <button className={step.due ? "btn small" : "btn small quiet"} onClick={() => openDraft(gmailCompose(i.email, followUpDraft(i, step.number)))} title="Open a drafted follow-up in Gmail">
                 Draft follow-up
               </button>
               <button className="text-btn small" onClick={() => markFollowedUp(i.id)}>
