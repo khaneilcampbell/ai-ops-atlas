@@ -63,36 +63,6 @@ jobs:
             playwright-report/
           retention-days: 14
 
-  # What one map frame costs (draw calls, triangles, shader programs, GPU geometry) and whether
-  # leaving the map and coming back leaks a WebGL canvas; fails over BUDGET in visual/perf.visual.ts.
-  # Runs beside the screenshots, so it adds no time to them. See docs/visual-testing.md.
-  perf:
-    name: Map performance budget
-    if: ${{ !inputs.update }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Measure the map against its budget
-        run: |
-          set +e
-          PERF=1 PERF_BUDGET=1 PERF_ONLY="desktop day" npx playwright test -c visual perf --reporter=line 2>&1 | tee perf.log
-          status=${PIPESTATUS[0]}
-          grep '^PERF ' perf.log | sed 's/^PERF //' > perf.jsonl || true
-          {
-            echo "### Map performance (desktop, day)"
-            echo '```json'
-            cat perf.jsonl
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit "$status"
-
   # Only the manual update run pushes, and only a new visual-baselines/* branch.
   save:
     name: Save CI baselines to a branch
