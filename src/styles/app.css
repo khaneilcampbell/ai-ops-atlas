@@ -774,10 +774,12 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .m3-plaque.compact {padding:4px 9px;border-radius:7px;background:rgba(29,43,34,.84);border-color:rgba(201,163,90,.18);box-shadow:0 2px 6px #101a141a;}
 .m3-plaque.compact::after {border-width:4px;border-bottom:0;}
 .m3-plaque.compact .t {font-size:11px;line-height:16px;gap:7px;font-weight:500;}
-.m3-plaque.compact.secondary {background:rgba(246,245,236,.92);color:#334b3c;border-color:rgba(51,75,60,.16);}
-.m3-plaque.compact.secondary .t {font-size:11px;font-weight:500;line-height:16px;}
-.m3-plaque.compact.secondary::after {border-top-color:rgba(246,245,236,.92);}
+/* One nameplate for every building (src/views/map3d/plaques.tsx): same colors, and the same
+   hover and selected looks everywhere. Sizes here must match PLAQUE in plaques.tsx. */
+.m3-plaque.compact::after {border-top-color:rgba(29,43,34,.84);}
 .m3-plaque.compact.hover {border-color:#c9a35a;}
+.m3-plaque.compact.selected {background:var(--forest-700);border-color:var(--gold);}
+.m3-plaque.compact.selected::after {border-top-color:var(--forest-700);}
 
 /* Agent reports (src/components/AgentReports.tsx) */
 .agent-reports { display: grid; gap: 16px; }
