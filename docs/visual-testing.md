@@ -87,6 +87,11 @@ CPU time per frame is only comparable on the same machine.
 and after `PERF` lines in the pull request. `PERF_ONLY="desktop day"` runs one case
 (about 6 minutes here).
 
+In CI the budget runs in its own workflow, `.github/workflows/perf.yml`, on every pull request,
+so it can be a required check. A pull request that touches nothing the map is built from
+(only docs, `ops/`, `catalog/`, `src-tauri/`) passes it in seconds without measuring. A measure
+above 90% of its budget leaves a warning on the pull request but still passes.
+
 ## Circa preview shots
 
 `visual/circa.visual.ts` renders Circa close-ups (LED band, entrance, lobby, deck) into `artifacts/circa/` for review. It has no baselines and is skipped unless asked for:
