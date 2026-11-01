@@ -92,6 +92,18 @@ describe("fetchRepo", () => {
     expect(snap.workflowRuns["ci.yml"].at(-1)?.branch).toBe("main");
   });
 
+  it("asks for the newest default-branch run when only pull request runs are listed", async () => {
+    const prs = Array.from({ length: 3 }, (_, i) => run({ head_branch: "feature", event: "pull_request", created_at: `2026-10-27T09:1${i}:00Z` }));
+    responses = {
+      "/repos/o/r/actions/runs": { workflow_runs: prs },
+      "/repos/o/r/actions/workflows/ci.yml/runs": { workflow_runs: [run({ created_at: "2026-10-26T09:00:00Z" })] },
+    };
+    const snap = await fetchRepo("o/r", ["ci.yml"], { meta, runsEveryMs: 0, now });
+    expect(calls).toContain("/repos/o/r/actions/workflows/ci.yml/runs?per_page=1&branch=main");
+    expect(snap.workflowRuns["ci.yml"]).toHaveLength(4);
+    expect(snap.workflowRuns["ci.yml"].at(-1)?.branch).toBe("main");
+  });
+
   it("asks only for a workflow the run list doesn't show", async () => {
     await fetchRepo("o/r", ["codeql.yml"], { meta, runsEveryMs: 0, now });
     expect(calls).toContain("/repos/o/r/actions/workflows/codeql.yml/runs?per_page=5");

@@ -78,10 +78,18 @@ async function fetchRuns(base: string, branch: string, workflows: string[]) {
   }
   const observed = await Promise.all(
     workflows.map(async (w) => {
-      const seen = all.filter(workflowPath(w));
-      if (seen.length) return seen;
-      const res = await optional(githubGet(`${base}/actions/workflows/${encodeURIComponent(w)}/runs?per_page=5`) as Promise<J>, { workflow_runs: [] });
-      return (res.workflow_runs ?? []) as J[];
+      let seen = all.filter(workflowPath(w));
+      if (!seen.length) {
+        const res = await optional(githubGet(`${base}/actions/workflows/${encodeURIComponent(w)}/runs?per_page=5`) as Promise<J>, { workflow_runs: [] });
+        seen = (res.workflow_runs ?? []) as J[];
+      }
+      // A busy repository's pull request runs can push the workflow's last default-branch run out
+      // of both lists. That run decides the agent's status, so ask for it by name.
+      if (seen.length && !seen.some((r) => r.head_branch === branch)) {
+        const res = await optional(githubGet(`${base}/actions/workflows/${encodeURIComponent(w)}/runs?per_page=1&branch=${encodeURIComponent(branch)}`) as Promise<J>, { workflow_runs: [] });
+        seen = [...seen, ...((res.workflow_runs ?? []) as J[])];
+      }
+      return seen;
     }),
   );
   return {
