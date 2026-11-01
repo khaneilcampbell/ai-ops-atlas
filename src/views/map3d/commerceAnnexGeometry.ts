@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {mergeVertices} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {compact,fins,lid,skin} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {slab} from './ribbonTowerGeometry';
@@ -20,13 +21,16 @@ export function annexGeometry(shape:AnnexShape,height:number){
  const finSkip=new Set([...strip]);
  const finIdx=Array.from({length:n},(_,i)=>i).filter(i=>i%a.finEvery===0&&!finSkip.has(i));
  return compact({
-  glass:skin(levels),
-  gold:merge([skin(lobbyLevels),goldStrip]),
-  fins:pickFins(levels,finIdx,a.finDepth*k),
+  glass:smooth(skin(levels)),
+  gold:smooth(merge([skin(lobbyLevels),goldStrip])),
+  fins:smooth(pickFins(levels,finIdx,a.finDepth*k)),
   roof:lid(levels[levels.length-1],.01*k),
   plinth:slab(annexPlan(shape,0,a.plinth),a.plinthH*k,a.plinthH*k),
  });
 }
+
+/** Weld shared corners into an indexed mesh and shade it smooth: far less memory for curved glass. */
+function smooth(g:THREE.BufferGeometry){g.deleteAttribute('normal');const out=mergeVertices(g,1e-4);if(out!==g)g.dispose();out.computeVertexNormals();return out;}
 
 /** An open band (not closed round) of quads between successive rows. */
 function stripSkin(rows:Pt3[][]){
@@ -43,7 +47,8 @@ function stripSkin(rows:Pt3[][]){
 function pickFins(levels:Pt3[][],idx:number[],depth:number){
  // fins() works out normals from the whole ring, so build every fin and keep the chosen ones.
  const all=fins(levels,1,depth),per=6*3*2*(levels.length-1),pos=all.getAttribute('position').array as Float32Array,out:number[]=[];
- for(const i of idx)for(let v=i*per;v<(i+1)*per;v++)out.push(pos[v]);
+ // Each level gives two faces (12 corners); keep the first face only, the fin material is double-sided.
+ for(const i of idx)for(let v=i*per;v<(i+1)*per;v+=36)for(let w=0;w<18;w++)out.push(pos[v+w]);
  all.dispose();
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
  g.setAttribute('uv',new THREE.Float32BufferAttribute(new Array(out.length/3*2).fill(0),2));g.computeVertexNormals();return g;

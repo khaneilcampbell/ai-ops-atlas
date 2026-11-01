@@ -20,7 +20,7 @@ function annexMaterials(){
  return {
   textures:[silver.map,silver.glow,gold.map,gold.glow],
   glass:glass(silver,'#dbe7ff'),gold:glass(gold,'#ffc978'),
-  fin:focusable(new THREE.MeshStandardMaterial({color:'#e6ebee',roughness:.35,metalness:.5})),
+  fin:focusable(new THREE.MeshStandardMaterial({color:'#e6ebee',roughness:.35,metalness:.5,side:THREE.DoubleSide})),
   roof:focusable(new THREE.MeshStandardMaterial({color:'#8f989c',roughness:.85})),
   stone:focusable(new THREE.MeshStandardMaterial({color:'#e4dfd3',roughness:.8})),
  };

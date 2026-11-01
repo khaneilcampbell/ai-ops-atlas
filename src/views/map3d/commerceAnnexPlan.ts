@@ -12,14 +12,14 @@ export const ANNEX={
  projectId:'commerce-pipeline',
  refSize:.9,
  /** Teardrop: round end radius, point radius, centre-to-centre length. */
- round:.25,tip:.08,length:.42,ring:36,
+ round:.25,tip:.08,length:.42,ring:32,
  /** Turn over the full height (radians), alternating direction building to building. */
  twist:.42,
  /** The plan narrows by this share toward the roof. */
  taper:.12,
  /** The roof falls toward the round end by this share of the height. */
  slope:.1,
- levels:10,
+ levels:8,
  /** Gold glass lobby height and the gold strip up the point (outline points either side). */
  lobby:.36,strip:3,
  finEvery:2,finDepth:.03,
