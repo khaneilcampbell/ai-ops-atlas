@@ -89,7 +89,7 @@ export function findBayLot(city:Rect[],land:Rect[],roads:Pt[][],min:{w:number;d:
 /**
  * Fallback for groupings with no bay inside the city (only the district grouping leaves one): the
  * open-water lot of the given size nearest the city's own land, clear of every parcel and road,
- * so the agency appears in every map grouping. Returns undefined when nothing within reach is free.
+ * beside the city or on the shore of other land, so the agency appears in every map grouping. Returns undefined when nothing within reach is free.
  */
 export function findShoreLot(city:Rect[],land:Rect[],roads:Pt[][],size:{w:number;d:number}):Rect|undefined{
  const big=city.filter(r=>r.w*r.d>=4);if(!big.length)return;
@@ -112,7 +112,9 @@ export function findShoreLot(city:Rect[],land:Rect[],roads:Pt[][],size:{w:number
   const lot={x:x0+c*step,z:z0+r*step,w:lw*step,d:ld*step},g=Math.min(...big.map(b=>gap(lot,b)));
   if(!best||g<best.g-1e-9)best={r:lot,g};
  }
- return best&&best.g<=4?best.r:undefined;
+ // Close to the city, or at least on the shore of other land (a green or link strip), never adrift.
+ if(!best)return;const lot=best.r;
+ return best.g<=4||land.some(r=>r.w*r.d>=4&&gap(lot,r)<=.5)?lot:undefined;
 }
 
 /** Whether a road passes within pad of a rectangle (sampled every 0.1 along the road). */
