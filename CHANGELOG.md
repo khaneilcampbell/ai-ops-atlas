@@ -5,6 +5,7 @@ top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newes
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · The "Read-only" pill in the top bar now shows CI health across your repositories (how many are passing, or how many are failing, in red). Click it to open Mission Control (#187)
 - 2026-11-01 · The app is now called Atlas: the top bar (without the "01"), sign-in screen, browser tab, Mac menu bar and window all say Atlas. Your tokens, settings and updates carry on as before (#187)
+- 2026-11-01 · Behind the scenes: when GitHub blocks the Design Consistency agent from opening its fix pull request, the run now says exactly which setting to turn on and cleans up its branch (#175)
 - 2026-11-01 · Zooming in close to a building no longer turns the map dark at night or washed out by day: the distance haze now stays out past the neighbourhood you are looking at (#178)
 - 2026-11-01 · Behind the scenes: the screenshot check now runs in 6 parts at once, so it finishes on map changes instead of timing out at 45 minutes (#184)
 - 2026-11-01 · The README on GitHub now describes Atlas as it is today: the city, the three views, the agents, the Mac, web and iPhone apps, and how to run and test it (#190)
