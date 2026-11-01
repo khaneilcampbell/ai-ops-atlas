@@ -198,6 +198,7 @@ test.describe("perf", () => {
       const keys = Object.keys(BUDGET) as (keyof typeof BUDGET)[];
       // Within 10% of a limit: say so on the pull request before the next building tips it over.
       for (const k of keys) {
+        if (k === "contextsAlive") continue; // an exact count, not a load: one live canvas is the target
         const share = (d[k] as number) / BUDGET[k];
         if (share > HEADROOM_WARN && share <= 1) {
           console.log(`::warning title=Map performance headroom::${k} is ${d[k]}, ${Math.round(share * 100)}% of its budget of ${BUDGET[k]}`);
