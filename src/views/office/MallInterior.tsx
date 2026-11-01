@@ -12,7 +12,6 @@ import {ribbon} from '../map3d/mallShapes';
 import type {Pt} from '../map3d/roads';
 import {Box,Person} from './InteriorPrimitives';
 import CityOutside from './CityOutside';
-import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {useReducedMotion} from '../../lib/motion';
 import {leaveBuilding} from './store';
 import {ESCALATOR,MALL_IN,MALL_LEVELS,MALL_SHAPE,bridgeSide,escalatorFor,mallUnits,type MallUnit,type UnitKind} from './mallInteriorPlan';
@@ -188,7 +187,6 @@ function MallCamera({mode}:{mode:number}){
   const all=mode===ALL;camera.position.set(...((all?[26,24,30]:[16,18,22]).map(v=>v*far)) as [number,number,number]);
   const t=controls.current?.target;if(t){t.set(0,all?5:0,-1);camera.lookAt(t);controls.current?.update();}invalidate();
  },[mode,camera,invalidate,far]);
- useInteriorTrackpad(()=>controls.current,{x:MALL_IN.rx,z:MALL_IN.rz});
  return <OrbitControls ref={controls} makeDefault minDistance={8} maxDistance={70} maxPolarAngle={Math.PI/2.2}/>;
 }
 
@@ -229,6 +227,6 @@ export default function MallInterior({light}:{light:LightMode}){
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label="Exit Atlas Marketplace and return to city">← Exit building</button><div><small>ATLAS MARKETPLACE · CLIENT SERVICES</small><h2>{title}</h2></div></header>
   <nav className="skyline-floor-picker" aria-label="Choose Atlas Marketplace floor"><strong>Floor navigation</strong>
    {[ALL,3,2,1,0,PARKING].map(n=><button key={n} aria-pressed={mode===n} onClick={()=>{setMode(n);setPicked(null);}}>{n===ALL?'All floors':n===PARKING?'Car park':n===0?'Ground':`Floor ${n}`}</button>)}</nav>
-  <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Four floors round a funnel-tree atrium · {lookHint()}<span>Shops are planned services; none are selling yet.</span></>:mode===PARKING?<>Basement car park<span>Ramp from the boulevard side.</span></>:<>{info!.summary}<span>Select a unit to see what it is.</span></>}</aside>
+  <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Four floors round a funnel-tree atrium · Drag to orbit · Scroll to zoom<span>Shops are planned services; none are selling yet.</span></>:mode===PARKING?<>Basement car park<span>Ramp from the boulevard side.</span></>:<>{info!.summary}<span>Select a unit to see what it is.</span></>}</aside>
  </section>;
 }
