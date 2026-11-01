@@ -7,6 +7,9 @@ import { openAtlas, selectBuilding, settle, waitForOffice, waitForScene } from "
 // from Chromium. Reads the interior camera and checks each gesture moved it the right way, and
 // writes before/after PNGs to visual/out/interior-trackpad/ (compares nothing).
 
+// About 9 minutes of software WebGL: runs only when INTERIOR_TRACKPAD=1, like CIRCA_SHOTS, so the
+// CI visual run stays under its time limit.
+test.skip(!process.env.INTERIOR_TRACKPAD, "Set INTERIOR_TRACKPAD=1 to check trackpad look-around inside buildings.");
 test.use({ deviceScaleFactor: 1 });
 const out = join(import.meta.dirname, "out", "interior-trackpad");
 
