@@ -1,13 +1,15 @@
-import {SIMULATED_COMMUTERS,commuterLane} from './districtLifePlan';
+import {commuterAt,planRailCommuters} from './railCommuters';
+import type {FinancialPlan} from './financialPlan';
 import {useMemo,useRef,useEffect} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
 import {TERRACE_H} from './scene';
-import {COMMUNITY as C,communityKey,commuterStage,railDeck,railPoint,railState,walkPoint,type CommunityPlan,type RailPlan,type Point3} from './hillsCommunityPlan';
+import {COMMUNITY as C,communityKey,railDeck,railPoint,railState,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {TRANSPORT} from './transportScale';
 import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
+import {PARK_STATION,parkStationParts} from './parkStationPlan';
 function useCommunityPalette(){return useMemo(()=>{const css=getComputedStyle(document.documentElement);return {green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a'};},[]);}
 type Shared={g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>};
 /** All neighborhood architecture is static and instanced. The original estate stays separate. */
@@ -57,13 +59,18 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  return {solid,glass,plants,lights,keys};},[p,night,palette]);
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
 }
+/** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
+const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
 /** Elevated track, platforms and stair approaches share the same sampled route as the train. */
-export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPlan;roads:[number,number][][];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
- const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),people=useRef<(THREE.Group|null)[]>([]),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0);
+export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,night}:{plan?:RailPlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
+ const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0);
  const enabled=moving&&focused&&power.idleFps>15;
  const deck=useMemo(()=>p?railDeck(p):undefined,[p]);
  const trainGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:night?'#f5dfb1':'#9ec6c8',transparent:true,opacity:.38,depthWrite:false,roughness:.35,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.2:0}),[night]);
  useEffect(()=>()=>trainGlass.dispose(),[trainGlass]);
+ const stationGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.42,depthWrite:false,roughness:.15,metalness:.3,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.25:0}),[night]);
+ useEffect(()=>()=>stationGlass.dispose(),[stationGlass]);
+ const station=useMemo(()=>p?parkStationParts(p.financial,TERRACE_H):undefined,[p]);
  const palette=useCommunityPalette();
  const parts=useMemo(()=>{const solid:Inst[]=[],lights:Inst[]=[],platforms:Inst[]=[],paths:Inst[]=[],stationKeys:string[]=[];if(!p)return {solid,lights,platforms,paths,stationKeys};
  const track=deck!;
@@ -77,38 +84,53 @@ export function CommunityRail({plan:p,roads,g,m,pick,moving,night}:{plan?:RailPl
  for(const [index,s]of [p.hills,p.financial].entries()){
   const [x,z]=s,key=index===0?communityKey('station'):'service:financial-station';
   platforms.push(box(x,C.platformRise-.2,z+.85,C.platformLength,.2,C.platformWidth,'#ded8c7'));stationKeys.push(key);
-  solid.push(box(x,C.platformRise+.005,z+.38,C.platformLength,.015,.07,'#d0ad69'),box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
+  solid.push(box(x,C.platformRise+.005,z+.38,C.platformLength,.015,.07,'#d0ad69'));
+  // The Hills keeps its flat canopy; Financial Park has the Dubai-style shell instead (parkStationPlan).
+  if(index===0)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
   for(const dx of [-3.5,3.5])solid.push(box(x+dx,C.platformRise,z+1.25,.07,1.15,.07,palette.green));
   solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+1.5,.7,.2,.5,'#ded8c7'));
   strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+1.8],.48,.075,.03,'#e3dfd2',paths);
   for(let i=0;i<15;i++)solid.push(box(x+1,C.platformRise*(1-(i+1)/15),z+1.7+i*.28,1,C.platformRise/15,.29,'#d6d0bd'));
   // Separate protected lift and stairs make the raised platform reachable from ground paths.
-  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,'#819f9b'),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
+  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,index===0?'#819f9b':PARK_STATION.colors.lift),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
   for(const dx of [-.58,.58]){solid.push({...box(x+1+dx,C.platformRise/2+.6,z+3.8,.035,.035,Math.hypot(C.platformRise,4.2),palette.green),rx:Math.atan2(C.platformRise,4.2)});}
   for(const dx of [-.58,.58])for(let i=0;i<15;i++)solid.push(box(x+1+dx,C.platformRise*(1-i/15),z+1.7+i*.28,.035,.6,.035,palette.green));
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
   for(const dx of [-2,2])lights.push(box(x+dx,C.platformRise+1.08,z+.85,.8,.025,.12,night?'#ffe6b7':'#e4dfcf'));
  }
- const bridgeX=p.financialLand.x-C.financialShoreGap/2,bridgeZ=p.financial[1]+5.9;
- solid.push(box(bridgeX,0,bridgeZ,C.financialShoreGap+.2,.105,.6,'#d6d0bd'));
- for(const side of [-1,1]){solid.push(box(bridgeX,.45,bridgeZ+side*.28,C.financialShoreGap+.2,.035,.035,palette.green));for(const dx of [-1,0,1])solid.push(box(bridgeX+dx,.105,bridgeZ+side*.28,.035,.35,.035,palette.green));}
- solid.push({p:[bridgeX,-1.2,bridgeZ],s:[.18,TERRACE_H+1.2,.35],c:'#bdb59e'});
  for(const path of [p.financialWalk,p.hillsWalk])for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0)strip([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',paths);
  for(const path of [p.financialWalk,p.hillsWalk]){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,night,palette,deck]);
- const commutes=useMemo(()=>p?Array.from({length:SIMULATED_COMMUTERS},(_,i)=>p.hillsWalk.map((point,j)=>j<2?[point[0]-12+(i%3)*6,point[1],point[2]] as Point3:point)):[],[p]);
- useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);const state=railState(elapsed.current,p.length),commuter=commuterStage(state);riders.current.forEach(r=>{if(r)r.visible=commuter.aboard;});carriages.current.forEach((car,i)=>{if(!car)return;const q=railPoint(deck,(deck.length-p.length)/2+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(i%2?1:-1);});
-  people.current.forEach((person,i)=>{if(!person)return;person.visible=!commuter.aboard;if(!person.visible)return;const path=commuter.hills?commutes[i]:p.financialWalk,point=walkPoint(path,commuter.progress);person.position.set(point[0]+commuterLane(i),TERRACE_H+(point[1]>0?Math.ceil(point[1]/(C.platformRise/15))*(C.platformRise/15)+.02:.105),point[2]);});
- });
+ // Two groups of six simulated commuters, drawn as two instanced meshes (bodies and heads).
+ const commuters=useMemo(()=>planRailCommuters(community,financial,p),[community,financial,p]);
+ const count=commuters?.commuters.length??0;
+ useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],c=new THREE.Color();for(let i=0;i<count;i++){bodies.current?.setColorAt(i,c.set(colors[i%colors.length]));heads.current?.setColorAt(i,c.set('#c6ad8f'));}for(const mesh of [bodies.current,heads.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count]);
+ const pose=useMemo(()=>new THREE.Object3D(),[]);
+ const placePeople=(seconds:number)=>{
+  const body=bodies.current,head=heads.current;if(!commuters||!body||!head)return {outbound:false,back:false};
+  let outbound=false,back=false;
+  commuters.commuters.forEach((person,i)=>{const at=commuterAt(commuters,person,seconds);
+   if(!at.visible){if(at.where==='aboard'){if(at.direction==='outbound')outbound=true;else back=true;}pose.scale.setScalar(0);pose.position.set(0,-10,0);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);head.setMatrixAt(i,pose.matrix);return;}
+   const y=TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
+   pose.rotation.set(0,at.yaw,0);pose.position.set(at.x,y,at.z);pose.scale.set(.07,.16,.06);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);
+   pose.position.set(at.x,y+.21,at.z);pose.scale.setScalar(.035);pose.updateMatrix();head.setMatrixAt(i,pose.matrix);
+  });
+  body.instanceMatrix.needsUpdate=true;head.instanceMatrix.needsUpdate=true;return {outbound,back};
+ };
+ useEffect(()=>{placePeople(elapsed.current);});
+ useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);const state=railState(elapsed.current,p.length),aboard=placePeople(elapsed.current);riders.current.forEach(r=>{if(r)r.visible=(state.phase==='outbound'&&aboard.outbound)||(state.phase==='return'&&aboard.back);});carriages.current.forEach((car,i)=>{if(!car)return;const q=railPoint(deck,(deck.length-p.length)/2+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(i%2?1:-1);});});
  if(!p||!deck)return null;
- return <><Instanced items={[{p:[p.financialLand.x+p.financialLand.w/2,0,p.financialLand.z+p.financialLand.d/2],s:[p.financialLand.w,TERRACE_H,p.financialLand.d]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
+ return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
+ {station&&<><Instanced items={station.metal} geometry={g.box} material={m.metal}/><Instanced items={station.accents} geometry={g.box} material={m.plain}/><Instanced items={station.glass} geometry={g.box} material={stationGlass} shadow={false}/></>}
  {[0,1,2].map(i=>{const start=railPoint(deck,(deck.length-p.length)/2+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
-  <Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,0],s:[.52,.16,1.02],c:'#f0f0e5'},{p:[0,.65,0],s:[.48,.07,.96],c:palette.green},{p:[0,.04,0],s:[.55,.06,1],c:palette.gold},{p:[0,-.055,0],s:[.42,.06,.65],c:'#394b49'}]}/>
-  <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.266,.22,0],s:[.015,.33,.85],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
-  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.275,.16,.24]} rotation={[0,side*Math.PI/2,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
+  {/* Bullet train: low white body, a continuous window band, gold line, and gangways between cars. */}
+  <Instanced geometry={g.box} material={m.plain} items={BULLET_BODY(palette.gold)}/>
+  <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'}]}/>
+  <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.256,.2,0],s:[.015,.24,.9],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
+  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.26,.16,.24]} rotation={[0,side*Math.PI/2,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.ball} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
-  {i!==1&&<Instanced geometry={g.ball} material={m.plain} items={[{p:[0,0,i===0?-.49:.49],s:[.5,.6,.25],c:'#f0f0e5'}]}/>}
+  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
  </group>;})}
- {Array.from({length:SIMULATED_COMMUTERS},(_,i)=><group name="rail-commuter" key={i} ref={node=>{people.current[i]=node;}} position={[p.hillsWalk[p.hillsWalk.length-1][0]+commuterLane(i),TERRACE_H+C.platformRise+.02,p.hillsWalk[p.hillsWalk.length-1][2]]}><mesh geometry={g.box} material={m.plain} scale={[.07,.16,.06]}><meshStandardMaterial color={['#304d67','#8c7760','#64856c'][i%3]}/></mesh><mesh geometry={g.ball} position={[0,.21,0]} scale={[.035,.035,.035]} material={m.plain}/></group>)}
+ {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.ball,m.plain,count]} frustumCulled={false}/></>}
  </>;
 }
