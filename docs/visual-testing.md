@@ -37,7 +37,7 @@ a new view is one more test there.
 `visual/header.visual.ts` checks the top bar at 1728, 1512, 1280 and 1024 px and on a phone:
 nothing in it may wrap, spill out of the bar or run past its right edge, and each width has a
 screenshot (`header-wide`, `header-laptop`, `header-narrow`, `header-small`, `header-phone`).
-It adds the pills the Mac app shows (a long live status, "Read-only + re-runs") so the
+It adds the pills the Mac app shows (a long live status and CI status) so the
 crowded case is covered in the web build.
 
 `visual/copy.visual.ts` has no screenshots: it checks that text can be selected in every

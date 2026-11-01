@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#PR)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · The "Read-only" pill in the top bar now shows CI health across your repositories (how many are passing, or how many are failing, in red). Click it to open Mission Control (#187)
 - 2026-11-01 · The app is now called Atlas: the top bar (without the "01"), sign-in screen, browser tab, Mac menu bar and window all say Atlas. Your tokens, settings and updates carry on as before (#187)
 - 2026-11-01 · Commerce Pipeline is now a twisting teardrop glass tower with a gold ribbon and a garden podium with a pool, and the Commerce district is bigger, with tree-lined grounds (#176)
 - 2026-11-01 · More people in the Financial District: 24 more ride the train out to every Atlas Hills business and the mansion, and 24 office workers walk the sidewalk between towers, going in and out of doors. Fewer show when the Mac is busy or on Battery saver (#162)

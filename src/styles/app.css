@@ -55,6 +55,11 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
   border: 1px solid rgba(201, 163, 90, 0.5); color: var(--on-dark); font-size: 12.5px; white-space: nowrap;
 }
 .pill-mode .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.ci-pill { background: none; font: inherit; font-size: 12.5px; cursor: pointer; }
+.ci-pill:hover { background: rgba(201, 163, 90, 0.12); }
+.ci-pill.good .dot { background: var(--good); }
+.ci-pill.bad { border-color: var(--bad); }
+.ci-pill.bad .dot { background: var(--bad); }
 .pill-mode.update { background: rgba(201, 163, 90, 0.18); border-color: var(--gold); font: inherit; font-size: 12.5px; cursor: pointer; }
 .pill-mode.update:hover:not(:disabled) { background: rgba(201, 163, 90, 0.3); }
 .pill-mode.update:disabled { cursor: default; opacity: 0.85; }
