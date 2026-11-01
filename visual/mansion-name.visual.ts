@@ -1,6 +1,6 @@
 import {mkdirSync} from 'node:fs';
 import {expect,test,type Page} from '@playwright/test';
-import {openAtlas,selectBuilding,settle,waitForOffice,waitForScene} from './atlas';
+import {openAtlas,selectBuilding,settle,waitForScene} from './atlas';
 /**
  * KC, 2026-11-01: the district is Atlas Hills and the house is Atlas Mansion. Checks the map label,
  * the panel, search and the inside. Screenshots go to SHOT_DIR only when it is set.
@@ -12,9 +12,14 @@ for(const [size,viewport] of Object.entries(sizes))test(`Atlas Mansion in Atlas 
  test.setTimeout(240_000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize(viewport);
  await openAtlas(page,{light:'day',storage:{powerMode:'saver'}});await waitForScene(page);
- await page.getByRole('button',{name:'Zoom in',exact:true}).click();await settle(page,2);
- await selectBuilding(page,'Atlas Mansion');await settle(page,2);
- await expect(page.locator('.m3-plaque',{hasText:'Atlas Mansion'}).first()).toBeAttached();
+ if(size==='desktop'){
+  await page.getByRole('button',{name:'Zoom in',exact:true}).click();await settle(page,2);
+  await selectBuilding(page,'Atlas Mansion');await settle(page,2);
+  await expect(page.locator('.m3-plaque',{hasText:'Atlas Mansion'}).first()).toBeAttached();
+ }else{
+  // The phone toolbar has no zoom buttons; search opens the same panel (Enter picks the top result).
+  await page.getByRole('textbox',{name:'Search'}).fill('Atlas Mansion');await page.keyboard.press('Enter');await settle(page,3);
+ }
  await expect(page.getByRole('heading',{name:'Atlas Hills',exact:true})).toBeVisible();
  await expect(page.getByText('Inside Atlas Mansion',{exact:true})).toBeAttached();
  await shot(page,`${size}-panel`);
@@ -22,7 +27,7 @@ for(const [size,viewport] of Object.entries(sizes))test(`Atlas Mansion in Atlas 
   const search=page.getByRole('textbox',{name:'Search'});await search.fill('Atlas Mansion');
   await expect(page.locator('.list-row .title',{hasText:'Atlas Mansion'})).toBeVisible();await shot(page,`${size}-search`);await search.fill('');
  }
- await page.getByRole('button',{name:'Enter building',exact:true}).click();await waitForOffice(page);await settle(page,2);
+ await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,3);
  await expect(page.getByRole('navigation',{name:'Choose Atlas Mansion floor',exact:true})).toBeVisible();
  await shot(page,`${size}-inside`);
  await page.getByRole('button',{name:'Exit Atlas Mansion and return to city',exact:true}).click();await settle(page,2);
