@@ -203,7 +203,7 @@ function AgentsSettings() {
           <div className="muted small">
             {has
               ? `On. Token saved in your macOS Keychain${status?.config.agents_token_login ? ` for ${status.config.agents_token_login}` : ""}. Enable, Disable and Run now work in Agents → Manage agents, only for the agents on Atlas's allow-list. Removing the token turns them off.`
-              : `Off. Save a separate fine-grained token to turn on Enable, Disable and Run now for the agents on Atlas's allow-list: Only select repositories (just ${MANIFEST.repository.split("/")[1]}), with Actions: Read and write and nothing else.`}
+              : `Off. Save a separate fine-grained token to turn on Manage agents for the agents on Atlas's allow-list: Only select repositories (just ${MANIFEST.repository.split("/")[1]}), with Actions, Contents, Pull requests and Workflows set to Read and write. Actions alone is enough for Enable, Disable and Run now; the other three let Atlas open schedule and cap pull requests.`}
           </div>
         </div>
         {has ? (
