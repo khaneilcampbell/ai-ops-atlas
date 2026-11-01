@@ -20,13 +20,15 @@ async function views(page:import('@playwright/test').Page,list:(c:{x:number;z:nu
   return shots;
  },list(at));
 }
+// The district's tool buildings stand on its four corners (about 3.3 out on each axis), so every
+// camera looks in along an axis between them rather than across a corner.
 const VIEWS=({x,z}:{x:number;z:number}):View[]=>[
- ['front',[x,3,z],[x+8.5,7,z+12]],
- ['close',[x,1.4,z+.6],[x+3,2.2,z+5]],
- ['podium',[x+.3,1.2,z+.3],[x+4.5,5.5,z+3.5]],
- ['side',[x,2.6,z],[x+9,4,z+1]],
- ['district',[x,.8,z],[x+9,15,z+11]],
- ['context',[x+1,1,z-1],[x+14,14,z+16]],
+ ['front',[x,3,z],[x+1.6,5.5,z+10.5]],
+ ['close',[x,1.4,z+.6],[x+1.4,2.2,z+5.2]],
+ ['podium',[x+.3,1.2,z+.3],[x+1.8,4.6,z+5.4]],
+ ['side',[x,2.6,z],[x+9.5,4,z+.6]],
+ ['district',[x,.8,z],[x+1.5,17,z+12]],
+ ['context',[x+1,1,z-1],[x+14,16,z+16]],
 ];
 for(const light of ['day','night'] as const)test(`Commerce district, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -42,5 +44,5 @@ test('Commerce Pipeline nameplate still opens its panel',async({page})=>{
 test('Commerce district on a phone',async({page})=>{
  mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- for(const s of await views(page,({x,z})=>[['phone',[x,2.2,z],[x+6.5,6,z+9]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ for(const s of await views(page,({x,z})=>[['phone',[x,2.4,z],[x+1.2,6,z+10]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });
