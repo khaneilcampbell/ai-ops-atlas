@@ -1,3 +1,4 @@
+import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
@@ -419,7 +420,7 @@ export function MapView({active=true}:{active?:boolean}) {
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
-  const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
+  const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
   // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
@@ -439,6 +440,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
   useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
+  const displayNeighborhoods = useMemo(() => districtHeadings(layout, groupBy), [layout, groupBy]);
   const map3d = useRef<Map3DApi>(null);
   const phone = useMedia(PHONE_QUERY);
 
@@ -991,6 +993,7 @@ export function MapView({active=true}:{active?:boolean}) {
               active={active}
               ref={map3d}
               layout={layout}
+              displayNeighborhoods={displayNeighborhoods}
               // On a phone the inspector is a sheet over the lower half of the map (mobile.css).
               cover={phone && (selection || pickedLink) ? 0.4 : 0}
               selKey={selKey}
@@ -1023,7 +1026,7 @@ export function MapView({active=true}:{active?:boolean}) {
           <svg aria-hidden="true">
             <MapDefs />
             <g transform={`translate(${cam.x},${cam.y}) scale(${k})`}>
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
               <Meadows meadows={layout.meadows} walks={layout.walks} visible={rectVisible} texture={detail} />
               {islands.map((it) => {
                 if (!rectVisible(it.ox, it.oy, it.w, it.w)) return null;
@@ -1134,7 +1137,7 @@ export function MapView({active=true}:{active?:boolean}) {
                 );
               })}
               {labels.filter((b) => ptVisible({ x: b.x, y: b.top + b.dy })).map((b) => b.draw(b.dy))}
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
             {layout.districts.flatMap(d => d.kiosks.map(k => <Box key={`tool:${d.project.id}:${k.service.id}`} id={`tool:${d.project.id}:${k.service.id}`} kind="tower" gx={k.gx} gy={k.gy} w={k.size} h={88} wall={toolBrand(k.service.name).wall} roof={toolBrand(k.service.name).primary} windows={detail} onClick={() => { setFocus(d.project.id); select({ kind: "service", id: `${d.project.id}:${k.service.id}` }); }} selected={selection?.kind === "service" && selection.id === `${d.project.id}:${k.service.id}`} onEnter={() => { setHover(`service:${d.project.id}:${k.service.id}`); setTip(null); }} onLeave={leave} />))}
           </svg>
@@ -1162,12 +1165,11 @@ export function MapView({active=true}:{active?:boolean}) {
             </div>
           )}
 
-          <div className="map-view-context" role="status">{is3d?<><strong>{LENS_INFO[lens].label}</strong><span>{lens==="infrastructure"?(linkPrefs.on?"Showing enabled connection types":"Select a project to inspect its workers and connections"):mapLinks.length?`${mapLinks.length} declared links · Select a project to see its workers`:LENS_INFO[lens].empty}</span></>:<><strong>Flat map</strong><span>Project overview · Switch to 3D for connection views and interiors</span></>}</div>
           <div className="map-controls">
             <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
               title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
             <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Group projects into districts or neighborhoods" />
+              title="Keep district locations; show district names, declared status, tags, or no group headings" />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
