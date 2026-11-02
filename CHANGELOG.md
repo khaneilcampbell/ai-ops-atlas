@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-01 · City opens without loading messages and draws a lighter first frame before restoring normal quality (#202)
 - 2026-11-01 · Draft reply can now send the Benjaire-designed email straight from Atlas after you review it, with a copy to your Gmail (#203)
 - 2026-11-01 · Draft reply and Draft follow-up in Client inquiries now open Gmail and copy the reply in the Benjaire email design (logo header, card, footer); paste it into the message and press Send (#201)
 - 2026-11-01 · Map groupings keep district locations stable, building names share overview rules, and the extra map message is removed (#200)

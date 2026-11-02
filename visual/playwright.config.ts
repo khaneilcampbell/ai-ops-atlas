@@ -40,7 +40,7 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: `npx vite --port ${PORT} --strictPort`,
+    command: process.env.STARTUP_BUILD ? `npx vite preview --port ${PORT} --strictPort` : `npx vite --port ${PORT} --strictPort`,
     cwd: "..",
     port: PORT,
     reuseExistingServer: !process.env.ATLAS_VISUAL_PORT,
