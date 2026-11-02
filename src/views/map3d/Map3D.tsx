@@ -449,7 +449,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   return (
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
@@ -491,7 +491,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           surface={wrapEl}
         />
       </Canvas>
-      {readyKey !== glKey && <div className="map-loading" role="status">Preparing city…</div>}
       </MapGuard>
       <div
         className="m3-labels"
@@ -1083,6 +1082,14 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [net.picked?.id]);
 
+  // Let the core city draw before mounting expanded districts and decorative simulations.
+  const [detailsReady, setDetailsReady] = useState(false);
+  const detailFrame = useRef(0);
+  useFrame(() => {
+    if (detailsReady || detailFrame.current) return;
+    detailFrame.current = requestAnimationFrame(() => setDetailsReady(true));
+  });
+  useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
   const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
@@ -1090,28 +1097,28 @@ function World({
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
       <MapRenderer />
-      <Traffic scene={scene} g={g} m={m} moving={!reduced} />
-      {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
+      {detailsReady && <Traffic scene={scene} g={g} m={m} moving={!reduced} />}
+      {detailsReady && traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
-      <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />
+      {detailsReady && <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />}
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <VenueBridge scene={scene} g={g} m={m}/>
-      <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>
-      <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>
-      <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
-      <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
-      <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
-      <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
-      <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
-      <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>
-      <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>
-      <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>
-      <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>
-      <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
-      <Landscape scene={scene} g={g} m={m} />
+      {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
+      {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
+      {detailsReady && <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>}
+      {detailsReady && <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
+      {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
+      {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
+      {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
+      {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
+      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
+      {detailsReady && <Landscape scene={scene} g={g} m={m} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />

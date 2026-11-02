@@ -42,7 +42,9 @@ import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
-const Map3D = lazy(() => import("./map3d/Map3D"));
+// Begin loading the default view while the app initializes, rather than after React mounts it.
+const cityModule = import("./map3d/Map3D");
+const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
 import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
@@ -988,7 +990,7 @@ export function MapView({active=true}:{active?:boolean}) {
           }}
         >
           {is3d ? (
-            <Suspense fallback={<div className="map-loading" role="status">Loading city…</div>}>
+            <Suspense fallback={null}>
             <Map3D
               active={active}
               ref={map3d}
