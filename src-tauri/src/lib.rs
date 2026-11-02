@@ -80,6 +80,7 @@ pub fn run() {
             live::live_publish,
             live::live_reports,
             live::live_inquiries,
+            live::live_inquiry_reply,
             export::save_pdf,
             power::power_on_battery,
         ])

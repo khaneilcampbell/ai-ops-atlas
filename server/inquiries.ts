@@ -6,6 +6,7 @@
 // the category only (no name or email), so an open page refreshes as soon as one lands.
 
 import { INQUIRY_AGENT, KEEP_DAYS, MAX_INQUIRY_BYTES, validInquiry, type Inquiry } from "../src/inquiries/model";
+import { replyState, type ReplyEnv } from "./inquiryReply";
 import { bearerOk, ensureSchema as ensureFeed, type D1, type LiveEnv } from "./live";
 
 export const INQUIRIES_PATH = "/api/hooks/inquiries";
@@ -65,8 +66,8 @@ export async function receiveInquiry(req: Request, env: LiveEnv, now = Date.now(
 }
 
 /** The newest inquiries, newest first. */
-export async function readInquiries(env: LiveEnv): Promise<Response> {
-  if (!env.LIVE) return reply(200, { configured: false, inquiries: [] });
+export async function readInquiries(env: LiveEnv & ReplyEnv): Promise<Response> {
+  if (!env.LIVE) return reply(200, { configured: false, reply: { enabled: false }, inquiries: [] });
   await ensureSchema(env.LIVE);
   const { results } = await env.LIVE.prepare("SELECT body FROM inquiries ORDER BY received_at DESC LIMIT ?").bind(READ_LIMIT).all<{ body: string }>();
   const inquiries: Inquiry[] = [];
@@ -74,11 +75,11 @@ export async function readInquiries(env: LiveEnv): Promise<Response> {
     const body = JSON.parse(r.body);
     if (validInquiry(body)) inquiries.push(body);
   }
-  return reply(200, { configured: true, inquiries });
+  return reply(200, { configured: true, reply: replyState(env), inquiries });
 }
 
 /** GET /api/hooks/inquiries: the same list for the Mac app, with its sync key instead of Access. */
-export async function readInquiriesForApp(req: Request, env: LiveEnv): Promise<Response> {
+export async function readInquiriesForApp(req: Request, env: LiveEnv & ReplyEnv): Promise<Response> {
   if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Live updates aren't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
   if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
   return readInquiries(env);
