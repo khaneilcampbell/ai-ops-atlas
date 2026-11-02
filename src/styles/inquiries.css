@@ -10,7 +10,7 @@
 .inquiry-message[open] summary { display: none; }
 .inquiry-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .inquiry-chip { flex: none; white-space: nowrap; }
-.inquiry-chip.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+.inquiry-chip.bad { color: var(--white); background: var(--bad); border-color: var(--bad); }
 .inquiry-chip.warn { color: var(--gold-deep); background: var(--gold-soft); border-color: rgba(201, 163, 90, 0.5); }
 .inquiry-chip.wait, .inquiry-chip.done { background: transparent; color: var(--ink-3); }
 .inquiry-actions { display: inline-flex; gap: 6px; align-items: center; flex: none; }
@@ -21,7 +21,7 @@
 .reply-field.stack { flex-direction: column; align-items: stretch; gap: 4px; }
 .reply-field > span:first-child { width: 56px; }
 .reply-field.stack > span:first-child { width: auto; }
-.reply-field input, .reply-field textarea { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--line, rgba(0,0,0,.2)); border-radius: 8px; background: transparent; color: inherit; }
+.reply-field input, .reply-field textarea { flex: 1; min-width: 0; font: inherit; padding: 6px 8px; border: 1px solid var(--line, rgba(0,0,0,.2)); border-radius: var(--radius-sm); background: transparent; color: inherit; }
 .reply-field textarea { resize: vertical; }
 .reply-preview { width: 100%; height: 420px; border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 10px; background: #f3f3f1; }
 .reply-error { color: var(--bad); margin: 0; }

@@ -98,7 +98,7 @@
   .panel:not(.docked) { z-index: 41; }
   .panel::before {
     content: ""; position: absolute; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px;
-    border-radius: 999px; background: var(--sage-400); opacity: 0.7; z-index: 1; pointer-events: none;
+    border-radius: var(--radius-pill); background: var(--sage-400); opacity: 0.7; z-index: 1; pointer-events: none;
   }
   .panel-head { padding: 22px 16px 12px; }
   .panel-body { padding: 14px 16px 22px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
