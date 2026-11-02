@@ -57,7 +57,12 @@ jobs:
         run: npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - name: Record baselines
         if: steps.mode.outputs.record == '1'
-        run: BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/6
+        # Start from an empty folder so this shard uploads only the screenshots it recorded.
+        # Otherwise every shard also uploads the old copies of the other shards' baselines, and
+        # when the save job merges the six uploads an old copy can overwrite a new recording.
+        run: |
+          rm -f visual/baselines/ci/*.png
+          BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/6
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
