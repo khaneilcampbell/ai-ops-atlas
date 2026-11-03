@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-03 · Skyline links to the Atlas repository while retaining its district, buildings and planned assistant
+- 2026-11-03 · Skyline links to the Atlas repository while retaining its district, buildings and planned assistant (#207)
 - 2026-11-01 · Behind the scenes: a plan for giving every AI agent a home, a shift, a budget and an owner, with a daily commute on the map, laid out through the end of November (#195)
 - 2026-11-01 · City opens without loading messages and draws a lighter first frame before restoring normal quality (#202)
 - 2026-11-01 · Draft reply can now send the Benjaire-designed email straight from Atlas after you review it, with a copy to your Gmail (#203)
