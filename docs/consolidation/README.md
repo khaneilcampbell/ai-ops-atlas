@@ -11,7 +11,9 @@ Prepared November 3, 2026. This migration adds source code to Atlas; it does not
 | Benjaire Dashboard | `apps/benjaire-dashboard/` | `khaneilcampbell/benjaire-dashboard` | This migration is prepared; do not delete |
 | Intelligence Hub | `docs/intelligence-hub/` | `khaneilcampbell/projects-intelligence-hub` | This migration is prepared; do not delete |
 
-This checklist covers these four source repositories only. **Keep `ai-ops-atlas` and all other business repositories.** Deleting every GitHub repository would destroy unrelated projects. Any broader retirement list needs a separate inventory and explicit approval.
+Service Desk is also consolidated in `apps/service-desk` via merged PR #213; its separate retirement gates are in `docs/service-desk-migration.md`.
+
+This checklist covers these migrated source repositories only. **Keep `ai-ops-atlas` and all other business repositories.** Deleting every GitHub repository would destroy unrelated projects. Any broader retirement list needs a separate inventory and explicit approval.
 
 Both newly imported repositories were public before migration. Their main trees were imported using unsquashed subtree merges, retaining original commits as Atlas ancestors. **Merge this PR with a merge commit, never squash or rebase.** Unmerged source branches remain in the full recovery backups rather than active Atlas code.
 
@@ -42,7 +44,7 @@ Common credential-pattern scans covered 138 Dashboard and 142 Hub history blobs 
 
 ## Delete only after every gate passes, per source repository
 
-1. Merge the corresponding reviewed migration PR with passing required checks and a merge commit. Career #211 is separate from this PR; reconcile shared catalog, CI and retirement-list changes when merging both.
+1. Merge the corresponding reviewed migration PR with passing required checks and a merge commit. Career #211 is separate from this PR; reconcile shared catalog, CI and retirement-list changes when merging both. Service Desk #213 has already been integrated here, preserving its retirement alias, tests and dependency monitoring.
 2. Verify Atlas's deployed/released version: selection, linked Atlas repository, building entry, lobby, floor switching, all-floor view and exit. A local screenshot alone is insufficient.
 3. For Dashboard, confirm Cloudflare Git integration now targets Atlas with build root `apps/benjaire-dashboard`; verify existing Worker name, D1 binding, Access policy, secrets and application health. Export/verify D1 data separately before any service changes. Keep source repo until this is completed with separate production authorization.
 4. Review n8n workflow references, release/download URLs and external integrations. Preserve actual live n8n state and credentials in their existing secure storage. Imported JSON exports are not activated. For Career, preserve ignored personal workspaces separately and update any runner paths only after review. For Hub, redirect document links and optional artifact consumers.
