@@ -27,8 +27,6 @@ import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
-import { PropertyDashboard } from "./PropertyDashboard";
-import { propertyForProject } from "../properties/registry";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -191,7 +189,6 @@ function ProjectDetail({ id }: { id: string }) {
   const project = catalog.projects.find(p => p.id === id);
   if (!project) return <Head eyebrow="Project" title="Not found" />;
   const repositories = projectRepositories(project, catalog.agents);
-  const property = propertyForProject(project.id);
   return <>
     <Head eyebrow="Project building" title={project.name}>
       <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
@@ -199,7 +196,6 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable">
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
-      {property && <PropertyDashboard property={property} />}
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}

@@ -14,14 +14,14 @@ Cloudflare traffic and change events read KC's read-only token once it is saved 
 
 | Place | What KC sees |
 |---|---|
-| Benjaire HQ and Portfolio Site panels (map and lists) | A "Live site" section at the top: open incidents with links to act, then one tile per signal |
-| Header | A red pill ("benjaire.com: production deploy failed", or "2 website incidents") while any incident is open; clicking it opens that building |
+| Mission Control → Website management | One "Live site" dashboard per website: open incidents with links to act, then one tile per signal. The count of open incidents sits in the section's header |
 | System notifications | One notification per new critical incident, when "Notify me on this device" is on (the same switch as agent alerts) |
 
 This follows the command center design (`docs/command-center.md`, draft #210): a website is a
 **resource** of the place that runs it (Benjaire HQ becomes the Sales Office), and its incidents
 are exactly what the Control Room's "Failed or silent" list will gather in phase 4. Until then,
-they live on the building and the header pill.
+they live in Mission Control. (Nov 3: KC moved them there from the building panels and removed the
+header pill, which made the header wider than the screen.)
 
 ## Signals and sources
 
@@ -60,7 +60,7 @@ flowchart LR
   Web & Mac -->|read-only GitHub| GH[check runs / deployments]
   GH --> I{incidentsFor}
   P --> I
-  I --> Panel[Building panel] & Pill[Header pill] & N[Notification]
+  I --> MC[Mission Control: Website management] & N[Notification]
 ```
 
 - `src/properties/registry.ts`: the two websites, their building, repository, deploy source and
