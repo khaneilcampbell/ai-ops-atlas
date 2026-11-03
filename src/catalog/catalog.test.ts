@@ -18,8 +18,8 @@ describe("bundled catalog", () => {
     expect(issues).toEqual([]);
   });
 
-  it("registers every khaneilcampbell repository once", () => {
-    expect(catalog.projects.map((p) => p.repository).sort()).toEqual([
+  it("registers the expected repositories and shares Atlas with Skyline", () => {
+    expect([...new Set(catalog.projects.map((p) => p.repository))].sort()).toEqual([
       "khaneilcampbell/ai-ops-atlas",
       "khaneilcampbell/benjaire-dashboard",
       "khaneilcampbell/benjaire.com",
@@ -29,7 +29,6 @@ describe("bundled catalog", () => {
       "khaneilcampbell/multi-agent-commerce-pipeline",
       "khaneilcampbell/projects-intelligence-hub",
       "khaneilcampbell/service-desk-intelligence",
-      "khaneilcampbell/skyline",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
   });

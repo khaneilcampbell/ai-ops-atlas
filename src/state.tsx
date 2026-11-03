@@ -1,4 +1,4 @@
-import { projectRepositories, LANDMARK_REPOSITORIES } from "./catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "./catalog/projects";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { catalog, manifestIssues, type Catalog, type ManifestIssue } from "./catalog";
 import { discoverRepos } from "./github/discover";
@@ -69,7 +69,7 @@ interface AtlasState {
 const Ctx = createContext<AtlasState | null>(null);
 
 const repoNames = [...new Set([...LANDMARK_REPOSITORIES, ...catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)), ...catalog.agents.map((a) => a.repository)])];
-const known = new Set(repoNames.map((n) => n.toLowerCase()));
+const known = new Set([...repoNames, ...RETIRED_REPOSITORIES].map((n) => n.toLowerCase()));
 
 function workflowsFor(repo: string): string[] {
   return [...new Set(catalog.agents.filter((a) => a.repository === repo && a.observe?.githubWorkflow).map((a) => a.observe!.githubWorkflow!))];
@@ -97,7 +97,7 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => ({ ...DEFAULT_SETTINGS, ...load("settings", {}) }));
   const [discoveredExtras, setUncataloged] = useState<string[]>(() => load<string[]>("uncataloged", []));
   const uncataloged = useMemo(() => {
-    const known = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+    const known = new Set([...LANDMARK_REPOSITORIES,...RETIRED_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
     return discoveredExtras.filter(name => !known.has(name));
   }, [discoveredExtras]);
   const [discovery, setDiscoveryState] = useState<AtlasState["discovery"]>(() => load("discovery", null));

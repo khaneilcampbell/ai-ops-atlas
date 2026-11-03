@@ -13,7 +13,7 @@ export function ReposView() {
   const all = useMemo(() => repoRows(catalog, repos, uncataloged), [catalog, repos, uncataloged]);
   const rows = all.filter(
     (r) =>
-      (!filters.project || r.project?.id === filters.project) &&
+      (!filters.project || r.projects.some(p => p.id === filters.project)) &&
       (!filters.language || repoData(r.state)?.language === filters.language) &&
       (!filters.framework || r.agents.some((a) => a.framework === filters.framework)) &&
       (!filters.status || r.agents.some((a) => a.status === filters.status)) &&
@@ -85,7 +85,7 @@ export function ReposView() {
                 <div className="grow">
                   <div className="rname">{r.name.split("/")[1]}</div>
                   <div className="muted small">
-                    {r.name.split("/")[0]} · {r.project?.name ?? "Not in the catalog yet"}
+                    {r.name.split("/")[0]} · {r.projects.map(p => p.name).join(" · ") || "Not in the catalog yet"}
                   </div>
                 </div>
                 {snap && <span className="chip">{snap.visibility}</span>}
