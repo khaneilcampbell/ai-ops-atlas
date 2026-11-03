@@ -143,6 +143,21 @@ async function measure(page: Page) {
   };
 }
 
+/** Selects Atlas HQ and zooms in on it, as close as KC would look into its office. */
+async function closeOnAtlasHq(page: Page) {
+  await page.locator('.m3-plaque[title^="Atlas HQ"]').first().dispatchEvent("click");
+  await page.clock.runFor(1500);
+  const zoom = page.getByRole("button", { name: "Zoom in", exact: true });
+  // Phones have no zoom buttons; pinch is what they use, so zoom the camera with the wheel there.
+  for (let i = 0; i < 4; i++) {
+    if (await zoom.isVisible()) await zoom.click();
+    else await page.mouse.wheel(0, -200);
+    await page.clock.runFor(400);
+  }
+  await page.waitForTimeout(3000);
+  await page.clock.runFor(1500);
+}
+
 const contexts = (page: Page) =>
   page.evaluate(() => (window as unknown as { __ctx: { gl: WebGLRenderingContext; buffers: number; textures: number; programs: number }[] }).__ctx.map((c) => ({ alive: !c.gl.isContextLost(), buffers: c.buffers, textures: c.textures, programs: c.programs })));
 
@@ -180,12 +195,20 @@ test.describe("perf", () => {
       { name: "desktop night", vp: { width: 1280, height: 800 }, storage: { mapLight: "night" } },
       { name: "desktop saver", vp: { width: 1280, height: 800 }, storage: { mapLight: "day", powerMode: "saver" } },
       { name: "iphone day", vp: { width: 390, height: 844 }, storage: { mapLight: "day" } },
+      // The Inside toggle: every headquarters cut open as a floor plan, then zoomed in on Atlas HQ
+      // with the nearest offices drawn in full (InsideView). Reported, not budgeted: the budget is
+      // for the default map. Only with PERF_INSIDE=1, so the CI job's "desktop day" stays one run.
+      { name: "desktop day inside", vp: { width: 1280, height: 800 }, storage: { mapLight: "day", mapInside: true } },
+      { name: "desktop night inside close", vp: { width: 1280, height: 800 }, storage: { mapLight: "night", mapInside: true }, close: true },
+      { name: "iphone day inside close", vp: { width: 390, height: 844 }, storage: { mapLight: "day", mapInside: true }, close: true },
     ];
     const only = process.env.PERF_ONLY;
     const out: Record<string, unknown> = {};
     for (const r of runs) {
+      if (r.name.includes("inside") !== !!process.env.PERF_INSIDE) continue;
       if (only && !r.name.includes(only)) continue;
       const page = await open(browser, baseURL!, r.vp, r.storage);
+      if ("close" in r && r.close) await closeOnAtlasHq(page);
       const m = await measure(page);
       const l = r.name === "desktop day" && process.env.PERF_LEAK !== "0" ? await leak(page) : {};
       out[r.name] = { ...m, ...l };
