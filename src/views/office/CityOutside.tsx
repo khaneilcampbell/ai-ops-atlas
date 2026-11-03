@@ -3,6 +3,8 @@ import {HILLS} from "../map3d/hillsPlan";
 import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
 import {airportPoint} from "../map3d/airport";
 import {clearInteriorFootprint} from "./exteriorClearance";
+import {cityDrop} from "./interiorGround";
+import {circaSitePieces,financialTerrace} from "../map3d/circaSite";
 import {useMemo,useState} from "react";
 import {useFrame} from "@react-three/fiber";
 import {quarterOf} from "../map3d/trackpad";
@@ -10,9 +12,9 @@ import {useAtlas} from "../../state";
 import {useReducedMotion} from "../../lib/motion";
 import {load} from "../../lib/storage";
 import {layoutMap,type GroupBy} from "../mapLayout";
-import {buildScene,TERRACE_H} from "../map3d/scene";
+import {buildScene} from "../map3d/scene";
 import {Traffic,Vehicles} from "../map3d/living";
-import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
+import {Terrain,Landscape,Towers,Bridges,Kiosks,Instanced,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
 export default function CityOutside({building="",projectId,span=16,elevation=0,allFloors=false,anchorAt,extras}:{building?:string;projectId?:string;span?:number;elevation?:number;allFloors?:boolean;
   /** A map position to centre on, for buildings that are not towers or shops. */
   anchorAt?:(scene:ReturnType<typeof buildScene>)=>{x:number;z:number}|undefined;
@@ -30,6 +32,10 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   const airportAnchor=airportBuilding&&source.airport?{x:airportPoint(source.airport,airportBuilding.x,airportBuilding.z)[0],z:source.airport.z+airportBuilding.z}:undefined;
   const hillsAnchor=building==="Atlas Hills"&&source.hills?{x:source.hills.x+HILLS.mansion.x,z:source.hills.z+HILLS.mansion.z}:undefined;
   const financialBuilding=source.financial?.buildings.find(b=>b.id===financialInteriorBrand(building)?.id);
+  // Circa stands on its own raised lot beside the Financial District. The map draws those terraces with the district,
+  // not the shared terrain, so draw them here too or the lobby floats above the bare ground below.
+  const circa=financialInteriorBrand(building)?.id==="circa";
+  const ground=useMemo(()=>circa&&source.financial?.circa?{...circaSitePieces(source.financial,"#5f8f5d"),plaza:financialTerrace(source.financial)}:undefined,[circa,source]);
   const financialAnchor=financialBuilding&&source.financial?{x:source.financial.x+financialBuilding.x,z:source.financial.z+financialBuilding.z}:undefined;
   const mallAnchor=building==="Atlas Marketplace"&&source.mall?{x:source.mall.cx,z:source.mall.cz}:undefined;
   const anchor=mallAnchor??anchorAt?.(source)??financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building));
@@ -43,8 +49,9 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   useFrame(({camera})=>{if(!allFloors)return;const n=quarterOf(camera.position);if(n.x!==q.x||n.z!==q.z)setQ(n);});
   const visible=(p:{x:number;z:number})=>!allFloors||(p.x-cx)*q.x<0||(p.z-cz)*q.z<0||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;
   if(!park&&!anchor)return null;
-  return <group scale={scale} position={[-cx*scale,-TERRACE_H*scale-0.35-elevation,-cz*scale]}>
+  return <group scale={scale} position={[-cx*scale,-cityDrop(scale,elevation,!!ground),-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}
     <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={[...scene.kiosks,...scene.retail].filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
+    {ground&&<><Instanced items={[ground.plaza,...ground.terrace]} geometry={g.box} material={m.terrace}/><Instanced items={ground.site} geometry={g.box} material={m.plain}/><Instanced items={ground.marks} geometry={g.box} material={m.plain} shadow={false}/></>}
   </group>;
 }

@@ -10,6 +10,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Html, OrbitControls } from "@react-three/drei";
 import {Box,Person,Sofa} from "./InteriorPrimitives";
 import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
+import {CIRCA_LIFT} from "./circulation";
 import { useReducedMotion } from "../../lib/motion";
 import FloorLabel from "./FloorLabel";
 import LobbyEntrance from "./LobbyEntrance";
@@ -107,17 +108,18 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${displayName} interior`}>
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?allFloorsPose(maxFloor).position:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor} maxFloor={maxFloor}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
-      {floor===-1&&<MovingLift reduced={reduced}/>}
-      <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>
-      {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}
+      {floor===-1&&<MovingLift reduced={reduced} {...(circa?{theme:CIRCA_LIFT}:{})}/>}
+      {/* Circa's apartment floors draw their own oval slab, floor and glass (CircaUpperFloors). */}
+      {!(circa&&circaLevelKind(floor)==="apartments"&&floor>0)&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>
+      {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}</group>}
       {(floor===-1?Array.from({length:maxFloor+1},(_,i)=>i):[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
-      {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
+      {floor===-1&&level>0&&!(circa&&circaLevelKind(level)==="apartments")&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
       <FloorLabel level={level} width={16} depth={12} {...(circa?{name:circaFloorName(level)}:{})}/>
       <group>
         <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?28:5} distance={15} decay={2}/>
         {[-4,4].map(x=><group key={x}><pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={10} decay={2}/><mesh visible={!(circa&&level===1)} position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}
       </group>
-      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d",name:`Floor ${circaFloorNumber(level)}`}:{})}/>
+      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d",name:`Floor ${circaFloorNumber(level)}`,theme:CIRCA_LIFT,night:isNight}:{})}/>
       {level===0 ? <group>
         {business&&!brandedFinancial&&<group>{building==="Wells Fargo"?<group>
           {[-1.5,0,1.5].map(x=><group key={x}><Box p={[x,1.46,-3]} s={[0.65,0.38,0.08]} color="#344a41"/><Box p={[x+0.6,1.65,-3]} s={[0.04,0.8,0.65]} color="#b99957"/></group>)}

@@ -2,9 +2,9 @@ import {useEffect,useMemo} from 'react';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
-import {FINANCIAL as F,financialKey,type FinancialPlan} from './financialPlan';
+import {financialKey,type FinancialPlan} from './financialPlan';
 import {CIRCA,circaParts,circaScreenPath} from './circaPlan';
-import {TRANSPORT} from './transportScale';
+import {circaSitePieces} from './circaSite';
 import {TERRACE_H} from './scene';
 
 const KEY=financialKey('circa');
@@ -59,23 +59,8 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   if(!a?.circa||!b)return;
   const local=circaParts(b.height,res.palette),ox=a.x+b.x,oz=a.z+b.z;
   const place=(list:Inst[])=>list.map(p=>({...p,p:[ox+p.p[0],TERRACE_H+p.p[1],oz+p.p[2]] as Inst['p']}));
-  const site:Inst[]=[],marks:Inst[]=[],lamps:Inst[]=[],s=a.circa;
-  const box=(t:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string)=>t.push({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
-  // Street, north walk and promenade continue west from the district.
-  const x0=-s.w+.3,x1=.3,cx=(x0+x1)/2,span=x1-x0;
-  box(site,cx,.025,F.streetZ,span,.035,TRANSPORT.cityWidth,'#424b50');
-  box(site,cx,.04,F.northWalkZ,span,.045,.6,'#e4ddcd');
-  box(site,cx,.065,F.promenadeZ,span,.045,.65,'#e4ddcd');
-  for(let x=x0+.5;x<x1-.3;x+=.7)box(marks,x,.067,F.streetZ,.32,.006,.025,'#e5dfc9');
-  for(const z of [F.streetZ-TRANSPORT.cityWidth/2-.04,F.streetZ+TRANSPORT.cityWidth/2+.04])box(site,cx,.055,z,span,.055,.07,'#cfcbbd');
-  box(site,x0+.05,.055,F.streetZ,.08,.12,TRANSPORT.cityWidth+.16,'#cfcbbd');
-  // Seawall along the highway side and the north edge; waterfront railing on the south.
-  box(site,-s.w+.18,0,s.d/2,.18,.35,s.d-.4,'#c6c3b4');
-  box(site,-s.w/2,0,.18,s.w,.35,.18,'#c6c3b4');
-  box(site,-s.w/2,0,s.d-.18,s.w,.23,.16,'#c6c3b4');box(site,-s.w/2,.5,s.d-.18,s.w,.035,.035,res.palette.green);
-  for(let x=-s.w+.4;x<0;x+=.5)box(site,x,.23,s.d-.18,.025,.27,.025,res.palette.green);
-  for(let x=-s.w+1;x<-.5;x+=2.5){box(site,x,.02,14.5,.05,.28,.05,res.palette.green);box(lamps,x,.3,14.5,.07,.05,.07,'#ffffff');}
-  return {solid:[...place(local.solid),...site],marks,lamps,storefront:place(local.storefront),towerGlass:place(local.towerGlass),slabs:place(local.slabs),balconies:place(local.balconies),roundWater:place(local.roundWater),lapWater:place(local.lapWater),rounds:place(local.rounds),leaves:place(local.leaves),fronds:place(local.fronds),entryGlass:place(local.entryGlass),entryDrums:place(local.entryDrums),lobbyGlow:place(local.lobbyGlow),lobbyFinish:place(local.lobbyFinish),terrace:[{p:[s.x+s.w/2,0,s.z+s.d/2],s:[s.w,TERRACE_H,s.d]} as Inst],origin:[ox,TERRACE_H,oz] as [number,number,number]};
+  const {site,marks,lamps,terrace}=circaSitePieces(a,res.palette.green);
+  return {solid:[...place(local.solid),...site],marks,lamps,storefront:place(local.storefront),towerGlass:place(local.towerGlass),slabs:place(local.slabs),balconies:place(local.balconies),roundWater:place(local.roundWater),lapWater:place(local.lapWater),rounds:place(local.rounds),leaves:place(local.leaves),fronds:place(local.fronds),entryGlass:place(local.entryGlass),entryDrums:place(local.entryDrums),lobbyGlow:place(local.lobbyGlow),lobbyFinish:place(local.lobbyFinish),terrace,origin:[ox,TERRACE_H,oz] as [number,number,number]};
  },[a,b,res]);
  if(!parts)return null;
  const picked=pick.of([KEY]);

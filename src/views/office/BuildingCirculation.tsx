@@ -3,9 +3,9 @@ import {useRef} from "react";
 import {useFrame} from "@react-three/fiber";
 import {Html} from "@react-three/drei";
 import * as THREE from "three";
-import {elevatorAt} from "./circulation";
+import {ATLAS_LIFT,elevatorAt,type LiftTheme} from "./circulation";
 import {Box,Person} from "./InteriorPrimitives";
-export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c",name}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string;name?:string}) {
+export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c",name,theme=ATLAS_LIFT,night=false}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string;name?:string;theme?:LiftTheme;night?:boolean}) {
   const doors=useRef<THREE.Group>(null),visitor=useRef<THREE.Group>(null);
   useFrame((state)=>{
     const lift=elevatorAt(reduced?0:state.clock.elapsedTime);
@@ -21,22 +21,23 @@ export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#31
     if(doors.current) doors.current.children.forEach((panel,i)=>{panel.position.z=(i?1:-1)*(open?0.85:0.3);});
   });
   return <group>
-    <Box p={[8.5,-0.12,0]} s={[2.7,0.24,2.5]} color="#d4c7aa"/>
-    <Box p={[9.6,1.4,0]} s={[0.13,2.8,2.4]} color="#294c3e" opacity={labels?1:0.18}/>
-    {[-1,1].map(side=><Box key={side} p={[8.5,1.4,side*1.15]} s={[2.3,2.8,0.1]} color="#d4cbb8" opacity={labels?1:0.18}/>)}
-    <Box p={[7.5,2.65,0]} s={[0.18,0.3,2.4]} color="#b69b60"/>
-    <group ref={doors}>{[-1,1].map(side=><Box key={side} p={[7.5,1.2,side*0.3]} s={[0.08,2.4,0.58]} color="#7f9289"/>)}</group>
+    <Box p={[8.5,-0.12,0]} s={[2.7,0.24,2.5]} color={theme.platform}/>
+    <Box p={[9.6,1.4,0]} s={[0.13,2.8,2.4]} color={theme.back} opacity={labels?1:0.18}/>
+    {[-1,1].map(side=><Box key={side} p={[8.5,1.4,side*1.15]} s={[2.3,2.8,0.1]} color={theme.sides} opacity={labels?1:0.18}/>)}
+    <Box p={[7.5,2.65,0]} s={[0.18,0.3,2.4]} color={theme.header}/>
+    <group ref={doors}>{[-1,1].map(side=><Box key={side} p={[7.5,1.2,side*0.3]} s={[0.08,2.4,0.58]} color={theme.doors}/>)}</group>
+    {theme.indicator&&<mesh position={[7.4,2.55,0]}><boxGeometry args={[0.03,0.05,0.9]}/><meshStandardMaterial color={theme.indicator} emissive={theme.indicator} emissiveIntensity={night?1.8:0.6}/></mesh>}
     {labels&&<Html position={[7.4,2.9,0]} center><span className="skyline-room-label">{name??(level===0?"G · Lobby":`Floor ${level}`)} · Lift</span></Html>}
-    <Box p={[7.36,1.15,0.95]} s={[0.08,0.3,0.14]} color="#c5a35c"/>
+    <Box p={[7.36,1.15,0.95]} s={[0.08,0.3,0.14]} color={theme.button}/>
     <group ref={visitor}><Person x={0} z={0} color="#866c49"/></group>
     <Box p={[0,0.055,0]} s={[15.5,0.04,1.9]} color={runner}/>
     {[-1,1].map(side=><Box key={side} p={[0,0.09,side*0.92]} s={[15.5,0.025,0.035]} color={edge}/>)}
   </group>;
 }
-export function MovingLift({reduced}:{reduced:boolean}) {
+export function MovingLift({reduced,theme=ATLAS_LIFT}:{reduced:boolean;theme?:LiftTheme}) {
   const car=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(car.current)car.current.position.y=elevatorAt(reduced?0:state.clock.elapsedTime).height;
   });
-  return <group ref={car}><Box p={[8.6,0.1,0]} s={[1.8,0.2,1.8]} color="#bba36f"/><Box p={[9.4,1.3,0]} s={[0.1,2.4,1.8]} color="#4f6b5d"/><Person x={8.6} z={0.25} color="#506b85"/></group>;
+  return <group ref={car}><Box p={[8.6,0.1,0]} s={[1.8,0.2,1.8]} color={theme.carFloor}/><Box p={[9.4,1.3,0]} s={[0.1,2.4,1.8]} color={theme.carBack}/><Person x={8.6} z={0.25} color="#506b85"/></group>;
 }
