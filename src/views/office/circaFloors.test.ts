@@ -1,11 +1,14 @@
 import {describe,expect,it} from "vitest";
-import {CIRCA_CORRIDOR,CIRCA_UNITS_EAST,circaFacadeZ,circaFloorName,circaLevelKind,circaPickerName,circaUnits,interiorFloors} from "./circaFloors";
+import {CIRCA_CORRIDOR,CIRCA_DOOR_Z,CIRCA_PLATE,CIRCA_UNITS_EAST,circaEdgeZ,circaFacadeZ,circaFloorName,circaLevelKind,circaPickerName,circaRim,circaUnits,interiorFloors,onCircaPlate} from "./circaFloors";
 import {circaApartmentParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
 import {allFloorsPose} from "./interiorPose";
 
 const APARTMENT_LEVELS=[2,3,4,5];
 const opaque=(p:Parts):Part[]=>[...p.box,...p.round];
 /** Footprint half extents, widened for rotated pieces. */
+/** Footprint corners of a piece turned by r about y. */
+const corners=(part:Part)=>{const r=part.r??0,c=Math.cos(r),sn=Math.sin(r),hx=part.s[0]/2,hz=part.s[2]/2;
+  return [[-hx,-hz],[hx,-hz],[-hx,hz],[hx,hz]].map(([x,z])=>[part.p[0]+x*c+z*sn,part.p[2]-x*sn+z*c]);};
 const half=(part:Part)=>{const r=part.r??0,c=Math.abs(Math.cos(r)),s=Math.abs(Math.sin(r));return [(part.s[0]*c+part.s[2]*s)/2,(part.s[0]*s+part.s[2]*c)/2];};
 
 describe("Circa floors inside Enter building",()=>{
@@ -40,16 +43,25 @@ describe("Circa floors inside Enter building",()=>{
     expect(ids.size).toBe(APARTMENT_LEVELS.length*3);
   });
 
-  it("curves the 2 bed façade from z -4.8 at the ends to -6 in the middle",()=>{
-    expect(circaFacadeZ(-8)).toBeCloseTo(-4.8);expect(circaFacadeZ(CIRCA_UNITS_EAST)).toBeCloseTo(-4.8);expect(circaFacadeZ(-.75)).toBeCloseTo(-6);
+  it("makes every floor an oval that holds the 16 × 12 rooms' furniture, the lift landing and the street door",()=>{
+    expect(CIRCA_PLATE.rx).toBeGreaterThan(CIRCA_PLATE.rz);
+    // Lift landing corners (x 7.15..9.85, z ±1.25) and the street door sit on the plate.
+    expect(onCircaPlate(9.85,1.25)).toBe(true);expect(onCircaPlate(-1.2,CIRCA_DOOR_Z)).toBe(true);
+    // Rim segments close the loop and stay on the edge.
+    const rim=circaRim(64);
+    expect(rim.reduce((n,s)=>n+s.len,0)).toBeGreaterThan(2*Math.PI*Math.sqrt((CIRCA_PLATE.rx**2+CIRCA_PLATE.rz**2)/2)*.97);
+    for(const s of rim)expect(onCircaPlate(s.xa,s.za,-.01)).toBe(true);
+    // The 2 bed's glass follows the rim: deepest in the middle.
+    expect(circaFacadeZ(0)).toBeCloseTo(-CIRCA_PLATE.rz+.08);expect(circaFacadeZ(-8)).toBeGreaterThan(circaFacadeZ(0));
+    expect(circaEdgeZ(CIRCA_PLATE.rx)).toBe(0);
   });
 
   const floors:[string,Parts][]=[["pool deck",circaPoolDeckParts()],...APARTMENT_LEVELS.map(l=>[`floor ${l+1}`,circaApartmentParts(l)] as [string,Parts])];
-  it.each(floors)("keeps the %s on the plate and the lift walk along z 0 clear",(_,parts)=>{
+  it.each(floors)("keeps the %s on the oval plate and the lift walk along z 0 clear",(_,parts)=>{
     for(const part of Object.values(parts).flat() as Part[]){
-      const [hx,hz]=half(part);
-      expect(part.p[0]-hx).toBeGreaterThan(-8.1);expect(part.p[0]+hx).toBeLessThan(8.1);
-      expect(part.p[2]-hz).toBeGreaterThan(-6.1);expect(part.p[2]+hz).toBeLessThan(6.1);
+      // The floor finish is the plate itself; everything else keeps its footprint corners on the plate.
+      if(part.s[0]>=CIRCA_PLATE.rx*2-.01)continue;
+      for(const [x,z] of corners(part))expect(onCircaPlate(x,z,-.12),`${part.c} at ${part.p}`).toBe(true);
     }
     // The lift visitor walks from x -4 to the lift along z 0; nothing taller than a floor finish may stand there.
     for(const part of opaque(parts)){

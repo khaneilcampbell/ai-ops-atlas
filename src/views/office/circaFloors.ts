@@ -1,4 +1,5 @@
 import {financialInteriorBrand} from "../map3d/financialBrands";
+import type {LiftFinish} from "./BuildingCirculation";
 
 /**
  * Circa's floors inside "Enter building", numbered like a real building:
@@ -34,7 +35,7 @@ export type CircaUnit={
   beds:1|2;
   /** Short honest description, no rent or availability. */
   label:string;
-  /** Unit footprint on the 16 × 12 plate (x -8..8, z -6..6). */
+  /** Unit footprint on the shared 16 × 12 grid (x -8..8, z -6..6); the outer edge is the plate's curved glass. */
   x0:number;x1:number;z0:number;z1:number;
   /** Door gap in the corridor wall, as an x range. */
   door:[number,number];
@@ -62,5 +63,32 @@ export function circaUnits(level:number):CircaUnit[]{
   ];
 }
 
-/** The curved north façade of the 2 bed: a shallow elliptical arc, deepest (z -6) at the middle of the unit. */
-export function circaFacadeZ(x:number){const t=(x-(-8+CIRCA_UNITS_EAST)/2)/((CIRCA_UNITS_EAST+8)/2);return -6+1.2*t*t;}
+/**
+ * Every Circa floor is an oval, like the elliptical towers outside: x radius `rx`, z radius `rz`, centred on the origin.
+ * It holds the shared 16 × 12 layout plus the lift landing at x ≈ 7.2..9.8; the street door sits on the rim at +z.
+ */
+export const CIRCA_PLATE={rx:10.2,rz:7.4};
+/** Half-width of the oval at depth z, and half-depth at x (0 beyond the rim). */
+export const circaEdgeX=(z:number)=>CIRCA_PLATE.rx*Math.sqrt(Math.max(0,1-(z/CIRCA_PLATE.rz)**2));
+export const circaEdgeZ=(x:number)=>CIRCA_PLATE.rz*Math.sqrt(Math.max(0,1-(x/CIRCA_PLATE.rx)**2));
+/** True when (x, z) lies on the plate, at least `margin` inside the rim. */
+export const onCircaPlate=(x:number,z:number,margin=0)=>(x/(CIRCA_PLATE.rx-margin))**2+(z/(CIRCA_PLATE.rz-margin))**2<=1;
+/** Where the lobby's street door meets the rim. */
+export const CIRCA_DOOR_Z=CIRCA_PLATE.rz-.1;
+
+export type RimSegment={x:number;z:number;xa:number;za:number;len:number;r:number};
+/** The rim as `n` straight segments, `inset` inside the edge. `r` turns a box whose length runs along x onto the segment. */
+export function circaRim(n:number,inset=0):RimSegment[]{
+  const rx=CIRCA_PLATE.rx-inset,rz=CIRCA_PLATE.rz-inset,out:RimSegment[]=[];
+  for(let i=0;i<n;i++){
+    const t0=i/n*Math.PI*2,t1=(i+1)/n*Math.PI*2,xa=rx*Math.cos(t0),za=rz*Math.sin(t0),xb=rx*Math.cos(t1),zb=rz*Math.sin(t1);
+    out.push({x:(xa+xb)/2,z:(za+zb)/2,xa,za,len:Math.hypot(xb-xa,zb-za),r:-Math.atan2(zb-za,xb-xa)});
+  }
+  return out;
+}
+
+/** The 2 bed's floor-to-ceiling glass is the plate's own curved rim on the north side. */
+export function circaFacadeZ(x:number){return -circaEdgeZ(x)+.08;}
+
+/** Circa's lift in its lobby palette: walnut walls, black frames, dark bronze doors, a marble car floor. */
+export const CIRCA_LIFT:LiftFinish={pad:"#a6a49f",back:"#5b3a26",sides:"#76503a",trim:"#1b1b1d",doors:"#3d3b38",button:"#fff1d6",car:"#f3efe8",carWall:"#5b3a26"};

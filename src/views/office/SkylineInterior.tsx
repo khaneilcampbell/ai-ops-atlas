@@ -15,7 +15,7 @@ import FloorLabel from "./FloorLabel";
 import LobbyEntrance from "./LobbyEntrance";
 import CircaLobby from "./CircaLobby";
 import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
-import {circaFloorName,circaFloorNumber,circaLevelKind,circaPickerName} from "./circaFloors";
+import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,circaFloorName,circaFloorNumber,circaLevelKind,circaPickerName} from "./circaFloors";
 import {allFloorsPose} from "./interiorPose";
 import {toolBrand} from "../map3d/toolBrand";
 import CityOutside from "./CityOutside";
@@ -90,6 +90,10 @@ function SkylineCamera({allFloors,floor,maxFloor}:{allFloors:boolean;floor:numbe
   useInteriorTrackpad(()=>controls.current,{x:8,z:6});
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60} maxPolarAngle={Math.PI/2.3}/>;
 }
+/** Circa's oval floor slab, the shape of its elliptical towers. */
+function OvalSlab(){
+  return <mesh position={[0,-0.15,0]} scale={[CIRCA_PLATE.rx,0.3,CIRCA_PLATE.rz]} receiveShadow castShadow><cylinderGeometry args={[1,1,1,72]}/><meshStandardMaterial color="#e7dfcf" roughness={0.65}/></mesh>;
+}
 export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
   const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
@@ -107,17 +111,17 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
   return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${displayName} interior`}>
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:floor===-1?allFloorsPose(maxFloor).position:[14,14,18],fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor} maxFloor={maxFloor}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0}/>
-      {floor===-1&&<MovingLift reduced={reduced}/>}
-      <Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>
-      {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}
+      {floor===-1&&<MovingLift reduced={reduced} {...(circa?{finish:CIRCA_LIFT}:{})}/>}
+      {circa?<OvalSlab/>:<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/><CutawayWall side="left"><Box p={[-8,1.7,0]} s={[0.16,3.4,12]} color="#d0c5ad"/></CutawayWall>
+      {[...Array(9)].map((_,i)=><Box key={i} p={[-8+i*2,0.015,0]} s={[0.014,0.015,12]} color="#c9b992"/>)}</group>}
       {(floor===-1?Array.from({length:maxFloor+1},(_,i)=>i):[floor]).map(level=><group key={level} position={[0,floor===-1?level*4:0,0]}>
-      {floor===-1&&level>0&&<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>}
-      <FloorLabel level={level} width={16} depth={12} {...(circa?{name:circaFloorName(level)}:{})}/>
+      {floor===-1&&level>0&&(circa?<OvalSlab/>:<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>)}
+      <FloorLabel level={level} width={circa?13.2:16} depth={circa?10:12} {...(circa?{name:circaFloorName(level)}:{})}/>
       <group>
         <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?28:5} distance={15} decay={2}/>
         {[-4,4].map(x=><group key={x}><pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={10} decay={2}/><mesh visible={!(circa&&level===1)} position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}
       </group>
-      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d",name:`Floor ${circaFloorNumber(level)}`}:{})}/>
+      <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d",name:`Floor ${circaFloorNumber(level)}`,finish:CIRCA_LIFT}:{})}/>
       {level===0 ? <group>
         {business&&!brandedFinancial&&<group>{building==="Wells Fargo"?<group>
           {[-1.5,0,1.5].map(x=><group key={x}><Box p={[x,1.46,-3]} s={[0.65,0.38,0.08]} color="#344a41"/><Box p={[x+0.6,1.65,-3]} s={[0.04,0.8,0.65]} color="#b99957"/></group>)}
@@ -127,8 +131,8 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
         {floor!==-1&&<Html position={[0,2.8,-5.8]} center><div className={`skyline-wall-sign${brandedFinancial?" financial-wall-sign":""}`}>{displayName.toUpperCase()}<span>{business?.subtitle??"PRIVATE RESIDENCES"}</span></div></Html>}
         {identity?.id==="residence"&&[-6,6].map(x=><group key={x}><Box p={[x,.3,-1.5]} s={[.8,.6,.8]} color="#e9dfca"/><mesh position={[x,1.2,-1.5]}><sphereGeometry args={[.5,10,8]}/><meshStandardMaterial color="#4b6b3d"/></mesh></group>)}
         {!circa&&<group><Sofa x={-4.5} z={1}/><Sofa x={4.5} z={1}/>{[-4.5,4.5].map(x=><group key={x}><Box p={[x,0.35,2.6]} s={[1.4,0.6,0.8]} color="#b89859"/><Person x={x+0.3} z={0.5} color="#5e796a"/></group>)}</group>}
-        <LobbyEntrance z={5.85} width={2.3}/>{floor!==-1&&<Html position={[0,2.8,5.8]} center><span className="skyline-room-label">Main entrance</span></Html>}
-        <Box p={[0,0.02,3]} s={[3,0.03,5]} color={circa?"#9a9893":"#315c49"}/>
+        <LobbyEntrance z={circa?CIRCA_DOOR_Z:5.85} width={2.3}/>{floor!==-1&&<Html position={[0,2.8,circa?CIRCA_DOOR_Z-.05:5.8]} center><span className="skyline-room-label">Main entrance</span></Html>}
+        {circa?<Box p={[0,0.02,(.5+CIRCA_DOOR_Z)/2]} s={[3,0.03,CIRCA_DOOR_Z-.5]} color="#9a9893"/>:<Box p={[0,0.02,3]} s={[3,0.03,5]} color="#315c49"/>}
       </group> : circa ? (circaLevelKind(level)==="pool"?<CircaPoolDeck night={isNight}/>:<CircaApartments level={level} night={isNight} labels={floor!==-1} onPick={setPicked}/>) : <group>
         <Box p={[0,0.02,0]} s={[16,0.035,2]} color="#315c49"/>
         {[-1,1].flatMap(side=>[-1,1].map((row,index)=>{
