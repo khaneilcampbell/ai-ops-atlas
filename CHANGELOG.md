@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-03 · Inside Circa, the lobby now sits on the street instead of floating, the lift matches Circa's black, walnut and bronze finishes, and Floors 3 to 6 are oval with curved glass all round (#228)
 - 2026-11-03 · Inside Circa, the lobby is now Floor 1, the pool deck is Floor 2 (round pool, lap pool, cabanas, spa and fire pit), and Floors 3 to 6 are furnished apartments: two 1 bedrooms and one 2 bedroom with curved glass on each floor (#227)
 - 2026-11-03 · Security fix: the signing setup script no longer prints the names of the secrets it uploads, which clears a GitHub code-scanning alert. Nothing changes in the app (#226)
 - 2026-11-03 · New Inside button on the map: see the offices inside nearby buildings without entering them (#204)
