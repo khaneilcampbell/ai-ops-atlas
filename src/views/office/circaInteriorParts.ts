@@ -222,10 +222,10 @@ export function circaPoolDeckParts():Parts{
  * - Back arc (z < -4.6): walnut in book-matched strips with two dark elevator doors, full height.
  * - West arc: faceted white marble panels with grey veins, full height.
  * - East arc: the sculpted wavy walnut slats, full height behind the lift and low toward the street, open where the lift sits.
- * - Street arc: a low black-framed glass storefront either side of the main door.
+ * - Street arc: floor-to-ceiling glass in slim black frames either side of the main door, with a glass transom above it.
  * Also the floors: light marble, and grey stone tiles across the elevator vestibule.
  */
-export const CIRCA_LOBBY={height:3.4,back:-4.6,front:5,liftGap:1.6,door:1.5,lifts:[-1.4,1.4]};
+export const CIRCA_LOBBY={height:3.4,back:-4.6,front:5,liftGap:1.6,door:1.32,lifts:[-1.4,1.4]};
 export function circaLobbyParts():Parts{
   const o=emptyParts(),L=CIRCA_LOBBY,H=L.height,{rx,rz}=CIRCA_PLATE;
   const walnut=col.walnut,walnutLight="#76503a",marble=col.marble,vein="#b9b4ad",black=col.black;
@@ -267,11 +267,15 @@ export function circaLobbyParts():Parts{
   });
   // Night: a warm cove light along the top of the tall walls (back, west, and east behind the lift).
   for(const seg of circaRim(72,.27))if(seg.z<0||(seg.x<0&&seg.z<L.front))o.glow.push({p:[seg.x,H-.25,seg.z],s:[seg.len,.03,.06],c:"#ffe6bf",r:seg.r});
-  // Street arc: low glass storefront in black frames, leaving the main door open.
-  const frontStep=.08;for(const t of arc(tf,Math.PI-tf,frontStep)){
-    const p=at(t,.06);if(Math.abs(p.x)<L.door)continue;const len=seg(t,frontStep,.06);
-    b(o.box,p.x,0,p.z,len,.12,.1,black,p.r);o.glass.push({p:[p.x,.62,p.z],s:[len,1,.04],c:"#dfe9ea",r:p.r});b(o.box,p.x,1.1,p.z,len,.04,.08,black,p.r);
-  }
+  // Street arc: floor-to-ceiling glass in slim black frames, open at the main door with a glass transom above it.
+  const frontStep=.08;arc(tf,Math.PI-tf,frontStep).forEach((t,i)=>{
+    const p=at(t,.06),len=seg(t,frontStep,.06),door=Math.abs(p.x)<L.door,y0=door?2.6:0;
+    if(!door)b(o.box,p.x,0,p.z,len,.1,.1,black,p.r);
+    o.glass.push({p:[p.x,(y0+H)/2,p.z],s:[len,H-y0,.04],c:"#dfe9ea",r:p.r});
+    b(o.box,p.x,H-.04,p.z,len,.04,.08,black,p.r);
+    if(door)b(o.box,p.x,2.56,p.z,len,.04,.08,black,p.r);
+    else if(i%12===0)b(o.box,p.x,0,p.z,.04,H,.06,black,p.r);
+  });
   return o;
 }
 
