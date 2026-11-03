@@ -19,7 +19,7 @@ describe("Circa floors inside Enter building",()=>{
     expect(interiorFloors("skyline-business:Experian")).toBe(4);
     expect(interiorFloors("skyline-residences")).toBe(4);
     expect([0,1,2,5].map(circaLevelKind)).toEqual(["lobby","pool","apartments","apartments"]);
-    expect([0,1,2].map(circaPickerName)).toEqual(["Floor 1 · Lobby","Floor 2 · Pool","Floor 3"]);
+    expect([0,1,2,5].map(circaPickerName)).toEqual(["Lobby","Pool","Floor 3","Floor 6"]);
     expect([0,1,2,5].map(circaFloorName)).toEqual(["Floor 1 · Lobby","Floor 2 · Pool deck","Floor 3 · Residences","Floor 6 · Residences"]);
   });
 

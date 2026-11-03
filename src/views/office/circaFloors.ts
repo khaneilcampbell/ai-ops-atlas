@@ -26,8 +26,8 @@ export function circaFloorName(level:number){
   return kind==="lobby"?`Floor ${n} · Lobby`:kind==="pool"?`Floor ${n} · Pool deck`:`Floor ${n} · Residences`;
 }
 
-/** Shorter names for the floor picker, so it fits beside the header on a phone. */
-export function circaPickerName(level:number){const kind=circaLevelKind(level),n=circaFloorNumber(level);return kind==='lobby'?`Floor ${n} · Lobby`:kind==='pool'?`Floor ${n} · Pool`:`Floor ${n}`;}
+/** Names in the floor picker: the lobby and pool deck go by name alone, apartment floors by number. */
+export function circaPickerName(level:number){const kind=circaLevelKind(level);return kind==='lobby'?'Lobby':kind==='pool'?'Pool':`Floor ${circaFloorNumber(level)}`;}
 
 export type CircaUnit={
   /** Apartment number, e.g. "301". */
