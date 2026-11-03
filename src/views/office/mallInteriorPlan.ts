@@ -4,6 +4,7 @@ import type {Pt} from '../map3d/roads';
 
 /** Interior scale: the same horseshoe as the map building, drawn at room size. */
 export const MALL_IN={rx:16,rz:13,floor:3.4,levels:4,unitsPerFloor:8,segmentsPerUnit:5} as const;
+export const MALL_CIRCULATION={hallway:1.35,landingWidth:1.6} as const;
 export const MALL_SHAPE={cx:0,cz:0,rx:MALL_IN.rx,rz:MALL_IN.rz};
 
 export type UnitKind='shop'|'vacant'|'food'|'hall'|'studio'|'service';
@@ -46,7 +47,7 @@ export function mallUnits():MallUnit[]{
  for(let level=0;level<MALL_IN.levels;level++){
   const {outer,inner}=mallFloor(MALL_SHAPE,level),n=MALL_IN.segmentsPerUnit;
   // Shops start a corridor's width back from the atrium rail and stop short of the facade.
-  const front=inner.map(([x,z],i):Pt=>[x+(outer[i][0]-x)*.3,z+(outer[i][1]-z)*.3]);
+  const front=inner.map(([x,z],i):Pt=>{const dx=outer[i][0]-x,dz=outer[i][1]-z,k=Math.max(.3,MALL_CIRCULATION.hallway/Math.hypot(dx,dz));return [x+dx*k,z+dz*k];});
   const back=outer.map(([x,z],i):Pt=>[x+(inner[i][0]-x)*.06,z+(inner[i][1]-z)*.06]);
   for(let index=0;index<MALL_IN.unitsPerFloor;index++){
    const a=index*n,b=a+n+1;
@@ -61,7 +62,7 @@ export function mallUnits():MallUnit[]{
  * bridge that reaches out from one side of a floor and climbs at 30° to a bridge on the other side
  * of the floor above, clear of the funnel tree's stem (it runs in front of it, at z).
  */
-export const ESCALATOR={z:3,width:1.1,slope:Math.PI/6,stepDepth:.4,bridgeReach:9} as const;
+export const ESCALATOR={z:3.2,width:1.1,slope:Math.PI/6,stepDepth:.4} as const;
 /** Which side (−1 west, +1 east) of a floor its landing bridge reaches out from. */
 export const bridgeSide=(level:number)=>level%2===0?-1:1;
 export function escalatorFor(level:number){
@@ -70,9 +71,33 @@ export function escalatorFor(level:number){
 }
 
 /** Prepared lift and landing inside the atrium, clear of the escalator at z=3. */
-export const MALL_LIFT={x:0,z:-5.4,width:1.6,depth:1.4,height:3.1,landingEnd:-7.8,opening:1.2} as const;
+export const MALL_LIFT={x:0,z:-5.4,width:1.6,depth:1.4,height:3.1,landingEnd:Math.min(...[-1,0,1].map(x=>landingEdge(mallFloor(MALL_SHAPE,0).inner.map(([px,pz]):Pt=>[pz,px]),x,-1)))-.35,opening:1.2} as const;
 /** A full doorway replaces three front bays, rather than squeezing into one curved segment. */
 export function mallDoorway(u:MallUnit){
  const middle=Math.floor((u.front.length-1)/2),a=u.front[middle-1],b=u.front[middle+2];
  return {middle,a,b,width:Math.min(1.8,Math.hypot(b[0]-a[0],b[1]-a[1])*.8)};
+}
+
+/** Intersect a floor edge with a horizontal landing strip. Rendering and rail openings share it. */
+export function landingEdge(line:Pt[],z:number,side:number):number{
+ for(let i=1;i<line.length;i++){
+  const a=line[i-1],b=line[i];
+  if((z-a[1])*(z-b[1])>0||Math.abs(b[1]-a[1])<1e-8)continue;
+  const x=a[0]+(b[0]-a[0])*(z-a[1])/(b[1]-a[1]);
+  if(Math.sign(x)===side)return x;
+ }
+ throw new Error('Marketplace landing has no floor edge');
+}
+export function mallLandings(level:number){
+ const {inner}=mallFloor(MALL_SHAPE,level),e=escalatorFor(level);
+ // Intermediate floors need both arrival and departure landings.
+ const sides=level===0?[bridgeSide(level)]:level===MALL_IN.levels-1?[-bridgeSide(level-1)]:[-1,1];
+ return sides.map(side=>({side,from:side*(e.run/2-.4),to:side*Math.max(...[-.8,.8].map(dz=>Math.abs(landingEdge(inner,ESCALATOR.z+dz,side))))+.35*side,z:ESCALATOR.z,width:MALL_CIRCULATION.landingWidth}));
+}
+/** Footprint-aware furnishings, leaving the front of every room clear for entry. */
+export function mallFurniture(u:MallUnit){
+ const i=Math.floor(u.front.length/2),f=u.front[i],b=u.back[i];
+ const depth=Math.hypot(f[0]-b[0],f[1]-b[1]);
+ const width=Math.hypot(u.front[0][0]-u.front[u.front.length-1][0],u.front[0][1]-u.front[u.front.length-1][1]);
+ return {depth,width,tableOffsets:width>3.4?[-.9,.9]:[0],tableDepth:-Math.min(.5,depth*.15),stageWidth:Math.min(1.6,width*.5),chairRows:Math.max(1,Math.min(2,Math.floor((depth-1.2)/.6)))};
 }

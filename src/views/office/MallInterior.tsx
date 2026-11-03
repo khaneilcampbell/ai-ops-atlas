@@ -17,7 +17,7 @@ import {useAtlas} from '../../state';
 import {AgentOutput} from '../../components/AgentOutput';
 import {marketplaceWorkspace} from './marketplaceWorkspaces';
 import {leaveBuilding} from './store';
-import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,bridgeSide,escalatorFor,mallDoorway,mallUnits,type MallUnit,type UnitKind} from './mallInteriorPlan';
+import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,escalatorFor,mallDoorway,mallUnits,mallLandings,mallFurniture,type MallUnit,type UnitKind} from './mallInteriorPlan';
 import '../../styles/skyline.css';
 
 const FH=MALL_IN.floor;
@@ -71,13 +71,13 @@ function Doors({a,b,y,accent}:{a:Pt;b:Pt;y:number;accent:string}){
 }
 
 /** A landing bridge from the floor's edge out to the escalator, with glass sides and a gold rail. */
-function Bridge({level,y}:{level:number;y:number}){
- const s=bridgeSide(level),e=escalatorFor(level),x0=s*e.run/2,x1=s*ESCALATOR.bridgeReach,len=Math.abs(x1-x0),cx=(x0+x1)/2,W=ESCALATOR.width+.5;
- return <group>
-  <mesh position={[cx,y-.12,ESCALATOR.z]} receiveShadow castShadow material={finish('stone')}><boxGeometry args={[len,.24,W]}/></mesh>
-  {[-1,1].map(k=><group key={k}><mesh position={[cx,y+.5,ESCALATOR.z+k*W/2]}><boxGeometry args={[len,1,.04]}/><meshStandardMaterial color="#cfe3e0" transparent opacity={.35} depthWrite={false}/></mesh>
-   <mesh position={[cx,y+1.02,ESCALATOR.z+k*W/2]}><boxGeometry args={[len,.05,.08]}/><meshStandardMaterial color="#c9a35a"/></mesh></group>)}
- </group>;
+function Bridge({level,y,single}:{level:number;y:number;single:boolean}){
+ return <group>{mallLandings(level).map(landing=>{const len=Math.abs(landing.to-landing.from),cx=(landing.to+landing.from)/2,W=landing.width;return <group key={landing.side}>
+  <mesh position={[cx,y-.12,landing.z]} receiveShadow castShadow material={finish('stone')}><boxGeometry args={[len,.24,W]}/></mesh>
+  {[-1,1].map(k=><group key={k}><mesh position={[cx,y+.5,landing.z+k*W/2]}><boxGeometry args={[len,1,.04]}/><meshStandardMaterial color="#cfe3e0" transparent opacity={.35} depthWrite={false}/></mesh>
+   <mesh position={[cx,y+1.02,landing.z+k*W/2]}><boxGeometry args={[len,.05,.08]}/><meshStandardMaterial color="#c9a35a"/></mesh></group>)}
+  {single&&<><Box p={[landing.from,y+.5,landing.z]} s={[.06,1,W]} color="#294237"/><Html position={[landing.from,y+1.35,landing.z]} center><span className="skyline-room-label building-floor-label">To other floors</span></Html></>}
+ </group>;})}</group>;
 }
 
 /** One escalator: a silver truss, real steps at 30°, glass balustrades with gold handrails, comb plates. */
@@ -106,6 +106,7 @@ const centre=(u:MallUnit):Pt=>{const f=mid(u.front),b=mid(u.back);return [(f[0]+
 function Fitout({u,y}:{u:MallUnit;y:number}){
  const [x,z]=centre(u),f=mid(u.front),ang=Math.atan2(f[1]-z,f[0]-x);
  const along=(d:number,side:number):[number,number]=>[x+Math.cos(ang)*d-Math.sin(ang)*side,z+Math.sin(ang)*d+Math.cos(ang)*side];
+ const layout=mallFurniture(u);
  const assignment=marketplaceWorkspace(u.id);
  if(assignment){const depth=Math.hypot(mid(u.back)[0]-f[0],mid(u.back)[1]-f[1]);const [dx,dz]=along(-depth*.15,.65);
   return <group position={[dx,y,dz]} rotation={[0,-ang+Math.PI/2,0]}>
@@ -114,16 +115,16 @@ function Fitout({u,y}:{u:MallUnit;y:number}){
    <Person x={0} z={.7} color="#5a8067"/>
   </group>;
  }
- if(u.kind==='food')return <group>{[-1.1,1.1].flatMap(s=>[-.6,.9].map(d=>{const [px,pz]=along(d,s);return <group key={`${s}${d}`}>
+ if(u.kind==='food')return <group>{layout.tableOffsets.flatMap(s=>[layout.tableDepth].map(d=>{const [px,pz]=along(d,s);return <group key={`${s}${d}`}>
   <mesh position={[px,y+.72,pz]} castShadow><cylinderGeometry args={[.42,.42,.06,16]}/><meshStandardMaterial color="#f3eadb"/></mesh>
   <Lift p={[px,y+.36,pz]} s={[.08,.72,.08]} color="#294237"/>
-  {[-1,1].map(k=><Box key={k} p={[px+k*.55,y+.25,pz]} s={[.32,.5,.32]} color="#b8735a"/>)}</group>;}))}</group>;
- if(u.kind==='hall'){const [sx,sz]=along(-.5,0);return <group><Lift p={[sx,y+.15,sz]} s={[2,.3,.9]} color="#4f7a52"/>
-  {[0,1,2].flatMap(r=>[-1,0,1].map(c=>{const [px,pz]=along(.2+r*.6,c*.7);return <Box key={`${r}${c}`} p={[px,y,pz]} s={[.45,.42,.4]} color="#c9a35a"/>;}))}</group>;}
+  {[-1,1].map(k=><Box key={k} p={[px-Math.sin(ang)*k*.6,y+.25,pz+Math.cos(ang)*k*.6]} s={[.32,.5,.32]} color="#b8735a"/>)}</group>;}))}</group>;
+ if(u.kind==='hall'){const [sx,sz]=along(-layout.depth*.25,0);return <group><Lift p={[sx,y+.15,sz]} s={[layout.stageWidth,.3,.6]} color="#4f7a52"/>
+  {Array.from({length:layout.chairRows},(_,i)=>i).flatMap(r=>[-1,1].map(c=>{const [px,pz]=along(-.2+r*.55,c*Math.min(.6,layout.width*.18));return <Box key={`${r}${c}`} p={[px,y,pz]} s={[.45,.42,.4]} color="#c9a35a"/>;}))}</group>;}
  if(u.kind==='service'){return <group><mesh position={[x,y+.5,z]} castShadow><cylinderGeometry args={[.65,.65,1,24]}/><meshStandardMaterial color="#f3eadb"/></mesh><Lift p={[x,y+1,z]} s={[1.3,.06,.5]} color="#c9a35a"/><Person x={x} z={z-.2} color="#344c41"/></group>;}
  if(u.kind==='vacant'){const [px,pz]=along(.8,0);return <group><Lift p={[px,y,pz]} s={[.06,1.1,.06]} color="#294237"/><Lift p={[px,y+1.1,pz]} s={[.7,.45,.05]} color="#f7f7f0"/></group>;}
  // Shop or studio: counter at the front, display wall at the back, one figure.
- const [cx,cz]=along(.9,0),[bx,bz]=along(-1.4,0);
+ const [cx,cz]=along(-layout.depth*.05,.55),[bx,bz]=along(-layout.depth*.3,0);
  return <group><Lift p={[cx,y,cz]} s={[1.6,.95,.55]} color={ACCENT[u.kind]}/><Lift p={[cx,y+.95,cz]} s={[1.7,.06,.65]} color="#f3eadb"/>
   <Lift p={[bx,y,bz]} s={[2,1.9,.3]} color={u.kind==="shop"?"#4f7a52":"#a9b4a0"}/><Person x={cx+.2} z={cz} color={u.kind==='shop'?'#806c9e':'#5a8067'}/></group>;
 }
@@ -141,7 +142,7 @@ function LiftLanding({y}:{y:number}){
  </group>;
 }
 
-function Floor({level,y,labels,onPick,cutaway,night}:{level:number;y:number;labels:boolean;onPick:(u:MallUnit)=>void;cutaway:boolean;night:boolean}){
+function Floor({level,y,labels,onPick,cutaway,night,single}:{level:number;y:number;labels:boolean;onPick:(u:MallUnit)=>void;cutaway:boolean;night:boolean;single:boolean}){
  const {outer,inner}=useMemo(()=>mallFloor(MALL_SHAPE,level),[level]);
  const slab=useMemo(()=>ribbon(outer,inner,y-.25,.25),[outer,inner,y]);
  useEffect(()=>()=>slab.dispose(),[slab]);
@@ -149,15 +150,15 @@ function Floor({level,y,labels,onPick,cutaway,night}:{level:number;y:number;labe
  // Each unit gets its own finish, laid just above the corridor stone.
  const unitFloors=useMemo(()=>units.map(u=>({id:u.id,finish:FLOOR_OF[u.kind],geo:ribbon(u.back,u.front,y,.015)})),[units,y]);
  useEffect(()=>()=>{for(const f of unitFloors)f.geo.dispose();},[unitFloors]);
- const side=bridgeSide(level);
- const atBridge=(a:Pt,b:Pt)=>{const mz=(a[1]+b[1])/2;return Math.sign(a[0]+b[0])===side&&Math.abs(mz-ESCALATOR.z)<ESCALATOR.width/2+.45;};
+ const landings=mallLandings(level);
+ const atBridge=(a:Pt,b:Pt)=>landings.some(l=>Math.sign(a[0]+b[0])===l.side&&Math.min(a[1],b[1])<l.z+l.width/2&&Math.max(a[1],b[1])>l.z-l.width/2);
  // One label per name: the food court and demo hall span several bays.
  const labelled=useMemo(()=>{const by=new Map<string,MallUnit[]>();for(const u of units)by.set(u.name,[...(by.get(u.name)??[]),u]);
   return new Set([...by.values()].map(g=>g[Math.floor((g.length-1)/2)].id));},[units]);
  return <group>
   <mesh geometry={slab} receiveShadow castShadow material={finish('stone')}/>
   {unitFloors.map(f=><mesh key={f.id} geometry={f.geo} material={finish(f.finish)} receiveShadow/>)}
-  <Bridge level={level} y={y}/>
+  <Bridge level={level} y={y} single={single}/>
   <LiftLanding y={y}/>
   {[-1,1].map(side=><group key={`light${side}`}>
    <pointLight position={[side*8,y+2.7,-2]} color="#ffe5b4" intensity={night?22:2} distance={18} decay={2}/>
@@ -170,7 +171,7 @@ function Floor({level,y,labels,onPick,cutaway,night}:{level:number;y:number;labe
    const near=centre(u)[1]>2&&cutaway,wall=near?.9:2.9;
    return <group key={u.id}>
     {u.back.slice(1).map((b,i)=><Seg key={i} a={u.back[i]} b={b} y={y} h={wall} t={.12} color="#f7f7f0"/>)}
-    {[0,u.front.length-1].map(i=><Seg key={i} a={u.front[i]} b={u.back[i]} y={y} h={wall} t={.1} color="#dcd3bd"/>)}
+    {u.kind!=='food'&&u.kind!=='hall'&&[0,u.front.length-1].map(i=><Seg key={i} a={u.front[i]} b={u.back[i]} y={y} h={wall} t={.1} color="#dcd3bd"/>)}
     {u.kind!=='food'&&u.kind!=='hall'&&u.front.slice(1).map((b,i)=>{const {middle,a:doorA,b:doorB}=mallDoorway(u),door=i===middle;
      if(Math.abs(i-middle)===1)return null;
      return <group key={`f${i}`}>{door?<Doors a={doorA} b={doorB} y={y} accent={ACCENT[u.kind]}/>:<Seg a={u.front[i]} b={b} y={y} h={2.6} t={.03} color="#d4e9e6" opacity={.22}/>}
@@ -239,8 +240,8 @@ export default function MallInterior({light}:{light:LightMode}){
    <MallCamera mode={mode}/>
    {/* The real city round the lot, at the interior's scale, reusing the map's own scene. */}
    <CityOutside building="Atlas Marketplace" span={MALL_IN.rx*2} allFloors={mode===ALL} elevation={mode>0&&mode!==ALL?mode*FH:0}/>
-      {levels.map(l=><group key={l} position={[0,mode===ALL?l*FH:0,0]}><Floor level={l} y={0} labels={mode!==ALL} onPick={u=>{setPicked(u);setOutput(false);}} cutaway night={isNight}/>{mode===ALL&&<Html position={[-MALL_IN.rx,0.3,0]} center><span className="skyline-room-label building-floor-label">{l===0?'Lobby':`Floor ${l}`}</span></Html>}</group>)}
-   {<group><Atrium top={(mode===ALL?MALL_IN.levels:1)*FH+.6} night={isNight} escalators={mode===ALL?[0,1,2].map(l=>({level:l,y:l*FH})):mode>=0&&mode<MALL_IN.levels-1?[{level:mode,y:0}]:[]}/><Fins levels={levels} stacked={mode===ALL}/></group>}
+      {levels.map(l=><group key={l} position={[0,mode===ALL?l*FH:0,0]}><Floor level={l} y={0} labels={mode!==ALL} onPick={u=>{setPicked(u);setOutput(false);}} cutaway night={isNight} single={mode!==ALL}/>{mode===ALL&&<Html position={[-MALL_IN.rx,0.3,0]} center><span className="skyline-room-label building-floor-label">{l===0?'Lobby':`Floor ${l}`}</span></Html>}</group>)}
+   {<group><Atrium top={(mode===ALL?MALL_IN.levels:1)*FH+.6} night={isNight} escalators={mode===ALL?[0,1,2].map(l=>({level:l,y:l*FH})):[]}/><Fins levels={levels} stacked={mode===ALL}/></group>}
    {(mode===ALL||mode===0)&&<group>
     {/* Lobby paving is present in both all-floor and single-floor ground views. */}
     <mesh position={[0,-.02,0]} scale={[9,1,7.8]} receiveShadow><cylinderGeometry args={[1,1,.04,40]}/><meshStandardMaterial color="#e6d6b4" roughness={.9}/></mesh>

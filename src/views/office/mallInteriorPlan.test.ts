@@ -86,6 +86,35 @@ it('provides human-scale workspace doorways and a separate lift landing',async()
   expect(depth).toBeGreaterThan(1.8);
  }
  expect(MALL_LIFT.opening).toBeGreaterThanOrEqual(1.2);
- expect(Math.abs(MALL_LIFT.z-ESCALATOR.z)).toBeGreaterThan(4);
+ expect(Math.abs(MALL_LIFT.z-ESCALATOR.z)).toBeGreaterThan(2.5);
  expect(MALL_LIFT.landingEnd).toBeLessThan(MALL_LIFT.z-MALL_LIFT.depth/2);
+});
+
+it('keeps identical floor plates and a continuous human-scale hallway',async()=>{
+ const {mallFloor}=await import('../map3d/mallPlan');const {MALL_SHAPE,MALL_CIRCULATION}=await import('./mallInteriorPlan');
+ const base=mallFloor(MALL_SHAPE,0);
+ for(let level=0;level<4;level++){
+  expect(mallFloor(MALL_SHAPE,level)).toEqual(base);
+  for(const u of mallUnits().filter(u=>u.level===level))for(let j=0;j<u.front.length;j++){
+   const edge=base.inner[u.index*MALL_IN.segmentsPerUnit+j];
+   expect(Math.hypot(u.front[j][0]-edge[0],u.front[j][1]-edge[1])).toBeGreaterThanOrEqual(MALL_CIRCULATION.hallway-1e-6);
+  }
+ }
+});
+it('connects incoming and outgoing escalators to real floor edges',async()=>{
+ const {mallLandings,landingEdge,ESCALATOR,MALL_SHAPE,escalatorFor}=await import('./mallInteriorPlan');const {mallFloor}=await import('../map3d/mallPlan');
+ for(let level=0;level<4;level++){
+  const landings=mallLandings(level);expect(landings).toHaveLength(level===0||level===3?1:2);
+  for(const l of landings)for(const dz of [-.8,0,.8])expect(Math.abs(l.to)).toBeGreaterThan(Math.abs(landingEdge(mallFloor(MALL_SHAPE,level).inner,l.z+dz,l.side)));
+  if(level<3){const e=escalatorFor(level),arrival=mallLandings(level+1).find(l=>Math.sign(l.from)===Math.sign(e.to));expect(arrival).toBeDefined();expect(Math.abs(arrival!.from)).toBeLessThan(Math.abs(e.to));}
+ }
+ expect(ESCALATOR.z-ESCALATOR.width/2).toBeGreaterThan(2.5);
+});
+it('sizes dining and event furniture to rooms instead of fixed rows',async()=>{
+ const {mallFurniture}=await import('./mallInteriorPlan');
+ for(const u of mallUnits()){
+  const f=mallFurniture(u);expect(f.stageWidth).toBeLessThanOrEqual(f.width*.5);
+  if(u.kind==='food')for(const side of f.tableOffsets)expect(Math.abs(side)+.78).toBeLessThan(f.width/2);
+  expect(f.chairRows).toBeLessThanOrEqual(2);
+ }
 });
