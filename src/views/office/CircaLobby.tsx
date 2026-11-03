@@ -21,7 +21,7 @@ import {CIRCA_PODIUM} from "./circaFloors";
 const marble="#f3efe8",walnut="#5b3a26",black="#1b1b1d",slat="#8d8e8f";
 
 function Glow({p,s,night,rotation}:{p:[number,number,number];s:[number,number,number];night:boolean;rotation?:[number,number,number]}) {
-  return <mesh position={p} rotation={rotation}><boxGeometry args={s}/><meshStandardMaterial color="#fff6e6" emissive="#ffe2b0" emissiveIntensity={night?1.6:0.5}/></mesh>;
+  return <mesh position={p} rotation={rotation}><boxGeometry args={s}/><meshStandardMaterial color="#fff6e6" emissive="#ffe2b0" emissiveIntensity={night?2.6:0.5}/></mesh>;
 }
 function Round({p,r,h,color}:{p:[number,number,number];r:number;h:number;color:string}) {
   return <mesh position={p} castShadow receiveShadow><cylinderGeometry args={[r,r,h,24]}/><meshStandardMaterial color={color} roughness={0.5}/></mesh>;

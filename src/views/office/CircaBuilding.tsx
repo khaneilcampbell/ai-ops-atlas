@@ -16,6 +16,8 @@ import type {useMaterials} from "../map3d/models";
  * its own lift; the east tower is the west one mirrored, so the two lifts meet at the middle of the podium.
  */
 const SLAB="#e7dfcf";
+/** Lamp strength after dark: brighter than other interiors so the wide podium and both towers read as lit. */
+const NIGHT_LAMP=48;
 const TOWER_NAME={west:"West",east:"East"} as const;
 
 /** A tower-local group: the west tower as drawn, the east tower mirrored about x. */
@@ -42,20 +44,26 @@ export function CircaSite({scene,m}:{scene:ReturnType<typeof buildScene>;m:Retur
   </group>;
 }
 
+/** A soft warm fill after dark, so the rooms between lamps don't fall into shadow. One light for the whole building. */
+export function CircaNightFill({night}:{night:boolean}) {
+  return night?<ambientLight color="#ffdcae" intensity={0.6}/>:null;
+}
+
 /** The two lift cars moving through the stack in the all-floors view. */
 export function CircaLifts({reduced}:{reduced:boolean}) {
   return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><MovingLift reduced={reduced} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></Tower>)}</group>;
 }
 
 /**
- * One Circa floor. `stack` is the all-floors view, where each floor keeps a single real lamp and lets the emissive cove
- * strips carry the night glow; a single floor gets a lamp per tower (or three across the podium).
+ * One Circa floor. `stack` is the all-floors view, where the podium floors keep a single real lamp and each tower floor
+ * one per tower, and the emissive cove strips carry the rest of the night glow.
  */
 export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,sign}:{level:number;stack:boolean;labels:boolean;night:boolean;reduced:boolean;residents:CircaResident[];onPick:(text:string)=>void;sign:{title:string;subtitle:string}}) {
   const kind=circaLevelKind(level),podium=kind!=="apartments",n=circaFloorNumber(level);
-  const lamp=(x:number,key:string|number,distance:number,boost=1)=><pointLight key={key} position={[x,2.9,0]} color="#ffe2a4" intensity={(night?28:5)*boost} distance={distance} decay={2}/>;
+  const lamp=(x:number,key:string|number,distance:number,boost=1)=><pointLight key={key} position={[x,2.9,0]} color="#ffe2a4" intensity={(night?NIGHT_LAMP:5)*boost} distance={distance} decay={2}/>;
   return <group>
-    {stack?lamp(0,"stack",34,2.2):podium?[-12,0,12].map(x=>lamp(x,x,21)):CIRCA_TOWERS.map(t=>lamp(t.x,t.id,21))}
+    {/* All floors: one lamp across the podium, one per tower above it (10 in all); a single floor gets three or two. */}
+    {podium?(stack?lamp(0,"stack",34,2.2):[-12,0,12].map(x=>lamp(x,x,21))):CIRCA_TOWERS.map(t=>lamp(t.x,t.id,21,stack?1.5:1))}
     {podium&&<Box p={[0,-0.15,0]} s={[CIRCA_PODIUM.w,0.3,CIRCA_PODIUM.d]} color={SLAB}/>}
     {CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}>
       {!podium&&<OvalSlab/>}

@@ -30,7 +30,7 @@ export function CircaParts({parts,night}:{parts:Parts;night:boolean}) {
   return <group>
     <Instances parts={parts.box} geometry={box}><meshStandardMaterial roughness={0.6}/></Instances>
     <Instances parts={parts.round} geometry={cyl}><meshStandardMaterial roughness={0.5}/></Instances>
-    <Instances parts={parts.glow} geometry={box} shadows={false}><meshStandardMaterial color="#fff6e6" emissive="#ffe2b0" emissiveIntensity={night?1.6:0.5}/></Instances>
+    <Instances parts={parts.glow} geometry={box} shadows={false}><meshStandardMaterial color="#fff6e6" emissive="#ffe2b0" emissiveIntensity={night?2.6:0.5}/></Instances>
     <Instances parts={parts.glass} geometry={box} shadows={false}><meshPhysicalMaterial color="#d4e9e6" transparent opacity={0.16} roughness={0.08} metalness={0.1} depthWrite={false}/></Instances>
     <Instances parts={parts.waterRound} geometry={cyl} shadows={false}><meshStandardMaterial color={night?"#2a7fa6":"#3a9cc6"} roughness={0.08} metalness={0.1} transparent opacity={0.92}/></Instances>
     <Instances parts={parts.waterBox} geometry={box} shadows={false}><meshStandardMaterial color={night?"#2a7fa6":"#3a9cc6"} roughness={0.08} metalness={0.1} transparent opacity={0.92}/></Instances>
