@@ -6,7 +6,7 @@ Prepared on `codex/marketplace-production` from main `629a285`. Not merged or de
 
 1. Basement car park and exterior ramp remained in a four-floor client workspace. Removed the basement destination, parked-car geometry and map-side ramp. Existing floor IDs 0–3 and unit IDs remain unchanged.
 2. Single-floor Lobby omitted the central courtyard paving. It now uses the same ground paving as the combined view. Ray tests confirm all four ribbon slabs have upward-facing solid surfaces; no duplicate or double-sided floor workaround was added.
-3. Upper rooms inherited fixed furniture sizes and a one-segment doorway. Interior radii grow from 11×9 to 16×13; the exterior parcel envelope increases from 12.4×11.6 to 13.2×12.4 where the existing road-clearance planner permits. Doors span three facade bays. Six production rooms have compact desks beside their entrances. Floor switches explicitly wake rendering for one bounded second; static interiors otherwise request no idle frames.
+3. Upper rooms inherited fixed furniture sizes and a one-segment doorway. Interior radii grow from 11×9 to 16×13; the exterior parcel envelope remains the original 12.4×11.6. Interior floor spacing is planned separately from the stepped map exterior. Doors span three facade bays. Six production rooms have compact desks beside their entrances. Floor switches explicitly wake rendering for one bounded second; static interiors otherwise request no idle frames.
 
 ## Planned workspace links
 

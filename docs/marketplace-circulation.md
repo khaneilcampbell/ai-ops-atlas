@@ -12,16 +12,16 @@ Act as a senior software engineer and 3D architectural designer for Atlas. Inspe
 
 ## Implemented
 
-- One consistent procedural floor profile, including map exterior and interiors. Stable floors and units are preserved; curved outline and fin detailing remain.
+- Consistent expanded interior floor plates. The map exterior is restored to its original dimensions, stepped curves and fin spacing; it uses a separate floor profile. Stable floors and units are preserved.
 - Named minimum hallway clearance of 1.35 interior units, kept clear of all room furnishings.
 - Landing endpoints computed from both edges of their full-width strip intersecting the actual atrium boundary. Intermediate floors provide both sides. Railing openings use the same landing data.
 - Single-floor connection decks have an end guard and a label directing the viewer to All floors; full flights appear only with their destination floors visible.
 - Fewer dining tables, room-sized event seating/stages, and removal of unnecessary full-height dividers between shared dining/event bays.
-- Decorative fin spacing adjusted to retain the existing under-1000-piece exterior budget after standardizing upper floors.
+- Original exterior envelope (12.4×11.6) and fin spacing restored. The existing under-1000-piece budget still passes.
 
 ## Validation and limits
 
-31 focused tests pass, including identical floor profiles, minimum hallway clearance, arrival/departure connectivity, full-width landing overlap, room-sized furniture, worker IDs, ground slab normals and map/garden clearances across grouping modes. Type checks, lint and build pass; existing bundle-size/Tauri import warnings remain.
+32 focused tests pass, including identical floor profiles, minimum hallway clearance, arrival/departure connectivity, full-width landing overlap, room-sized furniture, worker IDs, ground slab normals and map/garden clearances across grouping modes. Type checks, lint and build pass; existing bundle-size/Tauri import warnings remain.
 
 Day/night browser checks inspect Lobby, Floor 1, Floor 2, Floor 3 and All floors, Output selection and keyboard floor selection. Screenshots use fixture data, not production status. No visual baselines changed.
 

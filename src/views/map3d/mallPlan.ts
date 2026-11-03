@@ -7,7 +7,7 @@ export const MALL_KEY='service:atlas-marketplace';
  * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
  * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
  */
-export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.2,innerFinStep:.32,maxW:13.2,maxD:12.4,plantStep:.95,canopyR:1.5} as const;
+export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.5} as const;
 
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
@@ -71,17 +71,17 @@ export function planMall(s:Input):MallPlan|undefined{
  return {...lot,cx:lot.x+w/2,cz:lot.z+bd/2,rx,rz,plaza,fountain:{x:lot.x+w/2,z:plaza.z+1.45,r:.42}};
 }
 
-/** Shared floor edges. Keep usable dimensions aligned vertically; fins supply the wave detailing. */
-export function mallFloor(p:Pick<MallPlan,'cx'|'cz'|'rx'|'rz'>,_level:number){
+/** Outer and inner edge of one floor. Floors drift in and out, which makes the planted terraces. */
+export function mallFloor(p:Pick<MallPlan,'cx'|'cz'|'rx'|'rz'>,level:number){
  const n=MALL.segments,a0=Math.PI/2+MALL.openingHalf,a1=Math.PI/2+2*Math.PI-MALL.openingHalf;
  const outer:Pt[]=[],inner:Pt[]=[];
  for(let i=0;i<=n;i++){
   const t=a0+(a1-a0)*i/n;
   // Ends taper so each wing finishes in a rounded nose instead of a cut.
   const end=Math.min(1,Math.min(i,n-i)/4);
-  const out=.97+.06*Math.sin(t*1.5+1.3)+.03*Math.sin(t*3);
-  const inn=.52+.04*Math.sin(t*2);
-  const k=inn+(out-inn)*(.7+.3*Math.sqrt(end));
+  const out=.97-.075*level+.06*Math.sin(t*1.5+1.3+level*1.25)+.03*Math.sin(t*3+level);
+  const inn=.52+.04*Math.sin(t*2+level*.9);
+  const k=inn+(out-inn)*(.35+.65*Math.sqrt(end));
   outer.push([p.cx+Math.cos(t)*p.rx*k,p.cz+Math.sin(t)*p.rz*k]);
   inner.push([p.cx+Math.cos(t)*p.rx*inn,p.cz+Math.sin(t)*p.rz*inn]);
  }

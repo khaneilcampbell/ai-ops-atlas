@@ -7,7 +7,6 @@ import {usePageVisible,usePowerProfile,wake} from '../../lib/power';
 import {FramePacer} from '../map3d/pacer';
 import {type LightMode} from '../map3d/living';
 import {night as cityNight} from '../map3d/materials';
-import {mallFloor} from '../map3d/mallPlan';
 import {ribbon} from '../map3d/mallShapes';
 import type {Pt} from '../map3d/roads';
 import {Box,Person} from './InteriorPrimitives';
@@ -17,7 +16,7 @@ import {useAtlas} from '../../state';
 import {AgentOutput} from '../../components/AgentOutput';
 import {marketplaceWorkspace} from './marketplaceWorkspaces';
 import {leaveBuilding} from './store';
-import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,escalatorFor,mallDoorway,mallUnits,mallLandings,mallFurniture,type MallUnit,type UnitKind} from './mallInteriorPlan';
+import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,escalatorFor,mallInteriorFloor,mallDoorway,mallUnits,mallLandings,mallFurniture,type MallUnit,type UnitKind} from './mallInteriorPlan';
 import '../../styles/skyline.css';
 
 const FH=MALL_IN.floor;
@@ -143,7 +142,7 @@ function LiftLanding({y}:{y:number}){
 }
 
 function Floor({level,y,labels,onPick,cutaway,night,single}:{level:number;y:number;labels:boolean;onPick:(u:MallUnit)=>void;cutaway:boolean;night:boolean;single:boolean}){
- const {outer,inner}=useMemo(()=>mallFloor(MALL_SHAPE,level),[level]);
+ const {outer,inner}=useMemo(()=>mallInteriorFloor(MALL_SHAPE,level),[level]);
  const slab=useMemo(()=>ribbon(outer,inner,y-.25,.25),[outer,inner,y]);
  useEffect(()=>()=>slab.dispose(),[slab]);
  const units=useMemo(()=>mallUnits().filter(u=>u.level===level),[level]);
@@ -198,7 +197,7 @@ function Atrium({top,night,escalators}:{top:number;night:boolean;escalators:{lev
 /** The white fin skin on the far half, so the cutaway still reads as the mall from the map. */
 function Fins({levels,stacked}:{levels:number[];stacked:boolean}){
  const ref=useRef<THREE.InstancedMesh>(null);
- const items=useMemo(()=>levels.flatMap(level=>{const {outer}=mallFloor(MALL_SHAPE,level),y=stacked?level*FH:0;
+ const items=useMemo(()=>levels.flatMap(level=>{const {outer}=mallInteriorFloor(MALL_SHAPE,level),y=stacked?level*FH:0;
   return outer.slice(1).flatMap((b,i)=>{const a=outer[i];if((a[1]+b[1])/2>1.5)return [];return Array.from({length:4},(_,k)=>{const t=k/4,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t,h=FH*(.65+.3*Math.sin(i*.9+k*.4+level*1.7));return {x,z,y:y+FH-h,h,r:-Math.atan2(b[1]-a[1],b[0]-a[0])};});});}),[levels,stacked]);
  useLayoutEffect(()=>{const m=ref.current;if(!m)return;const o=new THREE.Object3D();items.forEach((f,i)=>{o.position.set(f.x,f.y+f.h/2,f.z);o.rotation.set(0,f.r,0);o.scale.set(.06,f.h,.3);o.updateMatrix();m.setMatrixAt(i,o.matrix);});m.instanceMatrix.needsUpdate=true;m.computeBoundingSphere();},[items]);
  return <instancedMesh key={items.length} ref={ref} args={[undefined,undefined,items.length]} castShadow><boxGeometry/><meshStandardMaterial color="#f7f7f0" roughness={.5}/></instancedMesh>;

@@ -66,7 +66,7 @@ describe('Marketplace production workspaces',()=>{
  it('has upward-facing, solid floor surfaces in ground view',async()=>{
   const THREE=await import('three');const {ribbon}=await import('../map3d/mallShapes');
   for(const level of [0,1,2,3]){
-   const {mallFloor}=await import('../map3d/mallPlan');const {MALL_SHAPE}=await import('./mallInteriorPlan');
+   const {mallInteriorFloor:mallFloor}=await import('./mallInteriorPlan');const {MALL_SHAPE}=await import('./mallInteriorPlan');
    const {outer,inner}=mallFloor(MALL_SHAPE,level);const geo=ribbon(outer,inner,-.25,.25);
    const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial());mesh.updateMatrixWorld();
    const i=20,x=(outer[i][0]+inner[i][0])/2,z=(outer[i][1]+inner[i][1])/2;
@@ -91,7 +91,7 @@ it('provides human-scale workspace doorways and a separate lift landing',async()
 });
 
 it('keeps identical floor plates and a continuous human-scale hallway',async()=>{
- const {mallFloor}=await import('../map3d/mallPlan');const {MALL_SHAPE,MALL_CIRCULATION}=await import('./mallInteriorPlan');
+ const {mallInteriorFloor:mallFloor}=await import('./mallInteriorPlan');const {MALL_SHAPE,MALL_CIRCULATION}=await import('./mallInteriorPlan');
  const base=mallFloor(MALL_SHAPE,0);
  for(let level=0;level<4;level++){
   expect(mallFloor(MALL_SHAPE,level)).toEqual(base);
@@ -102,7 +102,7 @@ it('keeps identical floor plates and a continuous human-scale hallway',async()=>
  }
 });
 it('connects incoming and outgoing escalators to real floor edges',async()=>{
- const {mallLandings,landingEdge,ESCALATOR,MALL_SHAPE,escalatorFor}=await import('./mallInteriorPlan');const {mallFloor}=await import('../map3d/mallPlan');
+ const {mallLandings,landingEdge,ESCALATOR,MALL_SHAPE,escalatorFor}=await import('./mallInteriorPlan');const {mallInteriorFloor:mallFloor}=await import('./mallInteriorPlan');
  for(let level=0;level<4;level++){
   const landings=mallLandings(level);expect(landings).toHaveLength(level===0||level===3?1:2);
   for(const l of landings)for(const dz of [-.8,0,.8])expect(Math.abs(l.to)).toBeGreaterThan(Math.abs(landingEdge(mallFloor(MALL_SHAPE,level).inner,l.z+dz,l.side)));
@@ -117,4 +117,11 @@ it('sizes dining and event furniture to rooms instead of fixed rows',async()=>{
   if(u.kind==='food')for(const side of f.tableOffsets)expect(Math.abs(side)+.78).toBeLessThan(f.width/2);
   expect(f.chairRows).toBeLessThanOrEqual(2);
  }
+});
+
+it('preserves the original stepped exterior separately from expanded interior plates',async()=>{
+ const {MALL,mallFloor}=await import('../map3d/mallPlan');const {MALL_SHAPE,mallInteriorFloor}=await import('./mallInteriorPlan');
+ expect([MALL.maxW,MALL.maxD,MALL.outerFinStep,MALL.innerFinStep]).toEqual([12.4,11.6,.15,.24]);
+ expect(mallFloor(MALL_SHAPE,3)).not.toEqual(mallFloor(MALL_SHAPE,0));
+ expect(mallInteriorFloor(MALL_SHAPE,3)).toEqual(mallInteriorFloor(MALL_SHAPE,0));
 });
