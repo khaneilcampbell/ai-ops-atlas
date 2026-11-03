@@ -8,6 +8,9 @@ output/
 *.pdf
 ~$*.xlsx
 
+# Spreadsheets may contain personal application records.
+*.xlsx
+
 # Allow the committed, data-free tracker template
 !tracker/application_tracker_template.xlsx
 

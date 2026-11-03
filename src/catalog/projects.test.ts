@@ -72,3 +72,14 @@ it("shares Atlas resources without duplicating Skyline or reviving a retired cac
   expect(rows.find(r => r.name === skyline.repository)?.projects.map(p => p.id)).toEqual(expect.arrayContaining(["ai-ops-atlas", "skyline"]));
   expect(rows.some(r => r.name === "khaneilcampbell/skyline")).toBe(false);
 });
+
+it("keeps Career Applications identities and local source paths after consolidation", () => {
+  const project = bundled.projects.find(p => p.id === "career-optimizer")!;
+  expect(project.repository).toBe("khaneilcampbell/ai-ops-atlas");
+  const agents = bundled.agents.filter(a => a.projectId === project.id);
+  expect(agents.map(a => a.id)).toEqual(["job-analyst", "resume-tailor", "resume-quality-review", "career-db-validator", "career-ci"]);
+  expect(agents.every(a => a.repository === project.repository && (a.id === "career-ci" ? a.source === ".github/workflows/ci.yml" : a.source?.startsWith("ops/career/")))).toBe(true);
+  expect(agents.find(a => a.id === "career-ci")?.observe?.githubWorkflow).toBe("ci.yml");
+  const rows = repoRows(bundled, {}, ["khaneilcampbell/career-application-system"]);
+  expect(rows.some(r => r.name === "khaneilcampbell/career-application-system")).toBe(false);
+});

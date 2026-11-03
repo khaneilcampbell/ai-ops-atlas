@@ -7,6 +7,15 @@ from submission to interview.
 It is built around one principle: **the AI may re-angle facts, but never invent them.**
 Every resume claim must trace back to a verified entry in a structured career database.
 
+## Atlas location
+
+This component is maintained in `khaneilcampbell/ai-ops-atlas` under `ops/career/`.
+Run all commands in this guide from `ops/career/`. Keep real career records and
+credentials out of Git; set `JOBFLOW_DATA` to your existing private workspace.
+See [migration, validation and recovery notes](../../docs/career/README.md).
+The nested `.github` files are retained source history; Atlas root CI and
+Dependabot configuration now maintain this component. The n8n template is not activated.
+
 ## Architecture
 
 ```

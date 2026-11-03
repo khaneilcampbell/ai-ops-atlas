@@ -10,7 +10,7 @@ project:
     ATS-readable resume from a verified career database, and tracks every
     application.
   status: active
-  repository: khaneilcampbell/career-application-system
+  repository: khaneilcampbell/ai-ops-atlas
   tags: [claude, career, human-in-the-loop]
   district: career-portfolio
 
@@ -25,7 +25,7 @@ agents:
     runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, per application
-    source: prompts/job-analysis.md
+    source: ops/career/prompts/job-analysis.md
     last_run: null
     permissions:
       - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
@@ -38,7 +38,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: jobflow/llm.py sends this prompt's task with the career database to the Anthropic API and gets a structured JobAnalysis back; the prompt can also be run by hand
+        evidence: ops/career/jobflow/llm.py sends this prompt's task with the career database to the Anthropic API and gets a structured JobAnalysis back; the prompt can also be run by hand
       mission:
         problem: Deciding whether a job is worth tailoring for means reading the posting against the whole career history.
         outcomes:
@@ -58,7 +58,7 @@ agents:
         credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
         risk: low
       docs:
-        technical: docs/automation.md
+        technical: ops/career/docs/automation.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
         known_issues:
           - No KPI is defined yet
@@ -77,7 +77,7 @@ agents:
     runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, after job analysis
-    source: prompts/resume-tailoring-assistant.md
+    source: ops/career/prompts/resume-tailoring-assistant.md
     last_run: null
     permissions:
       - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
@@ -90,7 +90,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: jobflow/llm.py asks the Anthropic API for a structured TailoredResume; jobflow/verify.py then checks it against the career database in code
+        evidence: ops/career/jobflow/llm.py asks the Anthropic API for a structured TailoredResume; jobflow/verify.py then checks it against the career database in code
       mission:
         problem: Tailoring a resume for each job by hand is slow and invites claims that aren't in the record.
         outcomes:
@@ -113,7 +113,7 @@ agents:
         credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
         risk: low
       docs:
-        technical: docs/automation.md
+        technical: ops/career/docs/automation.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
         known_issues:
           - No KPI is defined yet
@@ -132,7 +132,7 @@ agents:
     runtime: Claude chat by hand, or the jobflow CLI on KC's machine
     status: idle
     trigger: Manual, before the final resume
-    source: prompts/quality-review.md
+    source: ops/career/prompts/quality-review.md
     last_run: null
     permissions:
       - Anthropic API key from the environment (ANTHROPIC_API_KEY), when run through jobflow
@@ -145,7 +145,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: jobflow/llm.py asks the Anthropic API for a structured QualityReview of the tailored resume
+        evidence: ops/career/jobflow/llm.py asks the Anthropic API for a structured QualityReview of the tailored resume
       mission:
         problem: A tailored resume can drift from verified facts or read badly to an ATS before anyone notices.
         outcomes:
@@ -166,7 +166,7 @@ agents:
         credential_owner: KC (ANTHROPIC_API_KEY in the shell environment)
         risk: low
       docs:
-        technical: docs/automation.md
+        technical: ops/career/docs/automation.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#job-analysis-tailoring-and-quality-review
         known_issues:
           - No KPI is defined yet
@@ -184,7 +184,7 @@ agents:
     runtime: Local
     status: idle
     trigger: Manual, python scripts/validate_database.py
-    source: scripts/validate_database.py
+    source: ops/career/scripts/validate_database.py
     last_run: null
     permissions:
       - Reads the career database folder; writes nothing and makes no network calls
@@ -195,7 +195,7 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/validate_database.py parses the JSON files and applies fixed checks; no AI model
+        evidence: ops/career/scripts/validate_database.py parses the JSON files and applies fixed checks; no AI model
       mission:
         problem: A tailored resume is only as accurate as the career database it draws from.
         outcomes:
@@ -216,7 +216,7 @@ agents:
         credential_owner: None needed (reads local files only)
         risk: low
       docs:
-        technical: docs/workflow.md
+        technical: ops/career/docs/workflow.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#career-database-validator
         known_issues:
           - jobflow does not run it before tailoring; it runs only when started by hand
@@ -231,7 +231,7 @@ agents:
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
-    trigger: Push, pull request or manual
+    trigger: Push, pull request or manual through Atlas CI
     source: .github/workflows/ci.yml
     observe:
       github_workflow: ci.yml
@@ -246,7 +246,7 @@ agents:
       classification:
         type: D
         confidence: verified
-        evidence: .github/workflows/ci.yml runs ruff, pytest on templates and scripts, and fails if private/ or documents are tracked; no AI model
+        evidence: Atlas root .github/workflows/ci.yml career job runs ruff, pytest on templates and scripts, and fails if private/ or documents are tracked; no AI model
       mission:
         problem: Keeps the validator and tracker working and personal data out of git.
         outcomes: ["Every pull request is tested and checked for personal data before merge"]
@@ -273,10 +273,10 @@ agents:
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
       docs:
-        technical: docs/automation.md
+        technical: ops/career/docs/automation.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/job-applications-workflow.md#career-workflow-ci
         known_issues:
-          - Actions are pinned by major version tag (checkout@v4, setup-python@v5), not commit
+          - Existing local private data and any n8n runtime configuration require separate migration verification
         improvements:
-          - Pin actions to commit SHAs and let Dependabot bump them
+          - Verify the career CI job on Atlas main before retiring the source repository
         last_review: 2026-10-28

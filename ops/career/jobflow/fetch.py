@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-USER_AGENT = "Mozilla/5.0 (job-application-workflow; +https://github.com/khaneilcampbell/job-applications-workflow)"
+USER_AGENT = "Mozilla/5.0 (job-application-workflow; +https://github.com/khaneilcampbell/ai-ops-atlas/tree/main/ops/career)"
 GREENHOUSE = re.compile(r"(?:job-boards|boards)(?:\.eu)?\.greenhouse\.io/(?P<board>[\w-]+)/jobs/(?P<id>\d+)")
 
 
