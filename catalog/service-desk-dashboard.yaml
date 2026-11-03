@@ -8,7 +8,7 @@ project:
   summary: >-
     Streamlit dashboard that turns service desk ticket data into volume, backlog, SLA health, recurring issue and workload insight. Runs on synthetic tickets.
   status: active
-  repository: khaneilcampbell/service-desk-intelligence
+  repository: khaneilcampbell/ai-ops-atlas
   tags: [itsm, dashboard]
   district: security-infrastructure
 
@@ -20,9 +20,9 @@ agents:
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request and schedule
-    source: .github/workflows/codeql.yml
+    source: .github/workflows/service-desk-codeql.yml
     observe:
-      github_workflow: codeql.yml
+      github_workflow: service-desk-codeql.yml
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: security-events write (upload results), actions read, contents read'
@@ -34,7 +34,7 @@ agents:
       classification:
         type: D
         confidence: verified
-        evidence: .github/workflows/codeql.yml runs CodeQL security-extended queries on actions and python; no AI model
+        evidence: .github/workflows/service-desk-codeql.yml runs CodeQL security-extended queries on actions and python; no AI model
       mission:
         problem: Finds security issues in the Python app and the workflows before they merge.
         outcomes:
@@ -64,10 +64,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
       docs:
-        technical: README.md
+        technical: apps/service-desk/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/service-desk-dashboard.md#codeql-scan
         known_issues:
-          - ci.yml (lint, tests, container smoke test, secret scan, dependency review) also runs but is not in the catalog
+          - service-desk-ci.yml also runs but is not separately registered
+          - Shared Atlas repository health does not verify the deployed Streamlit app
         improvements:
-          - Add ci.yml to the catalog
+          - Verify hosting repository and entry path before retiring the source
         last_review: 2026-10-28
