@@ -26,7 +26,6 @@ import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 import { useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
-import { PropertyIncidentPill } from "./components/PropertyDashboard";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
@@ -94,7 +93,6 @@ export default function App() {
         <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
         <LivePill />
         <AlertPill open={alerts} />
-        <PropertyIncidentPill />
         <VaultLockedPill />
         <UpdateButton />
         <button
