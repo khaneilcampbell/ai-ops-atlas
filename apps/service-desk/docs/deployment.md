@@ -1,3 +1,7 @@
+# Atlas migration note
+
+Run Docker commands below from `apps/service-desk` so the Docker build context remains the app folder. For an existing hosted app, keep it running until a separately approved replacement is verified. The new repository is `khaneilcampbell/ai-ops-atlas`; the Streamlit entry path is `apps/service-desk/streamlit_app.py`. Confirm the platform discovers the nested requirements and `.streamlit` configuration; otherwise use the existing Dockerfile with app-folder build context. No hosting settings or credentials are transferred with Git.
+
 # Deployment
 
 The app is a single Streamlit process with no database. It needs Python 3.11+ or Docker, port 8501, and optionally a tickets CSV.

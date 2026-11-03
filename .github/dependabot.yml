@@ -18,3 +18,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: pip
+    directory: /apps/service-desk
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /apps/service-desk
+    schedule:
+      interval: weekly

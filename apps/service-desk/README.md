@@ -1,3 +1,5 @@
+Maintained in `khaneilcampbell/ai-ops-atlas` under `apps/service-desk`. Run app commands from this folder. See [migration and retirement gates](../../docs/service-desk-migration.md). The external Streamlit/container deployment is not moved automatically.
+
 # Service Desk Intelligence Dashboard
 
 A dashboard that turns service desk ticket data into actionable insight: volume and backlog trends, SLA health, recurring issues, and team workload.
