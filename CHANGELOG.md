@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-03 · Inside Circa you now see both towers on a square lobby: Floor 1 lobby, Floor 2 pool deck, and Floors 3 to 6 with 24 furnished apartments behind floor-to-ceiling glass. Your agents live there and walk it naturally, by lift, between home, the lobby and the pool, and it is warmer and brighter at night (#227)
 - 2026-11-03 · Security fix: the signing setup script no longer prints the names of the secrets it uploads, which clears a GitHub code-scanning alert. Nothing changes in the app (#226)
 - 2026-11-03 · New Inside button on the map: see the offices inside nearby buildings without entering them (#204)
 - 2026-11-03 · Website dashboards moved to a new Website management section in Mission Control. The header no longer shows a website incidents pill, so it fits the screen again, and the Benjaire HQ and Portfolio Site panels are back to their original design. Short-lived SSL certificates on a normal renewal schedule no longer show as expiring (#229)
