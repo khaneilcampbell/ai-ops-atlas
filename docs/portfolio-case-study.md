@@ -59,10 +59,12 @@ honestly as a skill: specifying work, reviewing AI output, setting guardrails, a
 | Signed auto-update on every merge, rollback by revert | Treats a personal tool like production |
 | Buildings become places, workflows become visible routes | Shows product thinking, not just features (see command-center.md) |
 
-## Roles this is written for
+## Tailoring it to a role
 
-KC chose three target roles on 2026-11-03. The same project tells a slightly different story for
-each, so lead with the angle that fits the posting.
+The case study page itself stays role-neutral (KC, 2026-11-03), so it works for a wide range of
+AI and engineering roles. The angles below are for tailoring a resume or cover letter to a
+specific posting, not for the page. Examples KC named: Forward Deployed Engineer, AI Engineer
+and AI Generalist.
 
 | Role | What the hiring manager looks for | Lead with |
 |---|---|---|
@@ -81,14 +83,14 @@ help for FDE roles at security or IT-heavy customers.
    `docs/screenshots/`.
 3. The public repository link. It is public but all rights reserved (PR #119), which suits a
    portfolio: readable, not reusable.
-4. Resume bullets, one set per role:
-   - **Forward Deployed Engineer:** Deployed an agent operations platform for my own small
+4. Resume bullets. Use all three on a general resume, or lead with the one closest to the posting:
+   - **Shipping for a real business:** Deployed an agent operations platform for my own small
      business (Benjaire), connecting its website, n8n workflows and Claude into one monitored
      pipeline, with signed updates reaching the Mac within about 10 minutes of each merge.
-   - **AI Engineer:** Built guarded AI agents with per-run and monthly spend caps, a model tier
+   - **Production AI systems:** Built guarded AI agents with per-run and monthly spend caps, a model tier
      rule (small models classify, large models write code) and status drawn only from observed runs,
      monitoring 51 registered agents and automations across 11 project manifests.
-   - **AI Generalist:** Took Atlas from idea to Mac app, web page and iPhone in one week by
+   - **Range and speed:** Took Atlas from idea to Mac app, web page and iPhone in one week by
      directing AI coding agents through 207 pull requests (146 merged), backed by about 650
      TypeScript tests, 77 Rust tests and 43 visual checks.
 
@@ -114,9 +116,8 @@ The business plan's kill trigger still applies: at day 90, fewer than 2 paid set
 
 ## Decisions for KC
 
-1. **Lead role for the job hunt.** Answered 2026-11-03: Forward Deployed Engineer, AI Engineer
-   and AI Generalist. Still open: which one the khaneilcampbell.com page leads with
-   (recommended: Forward Deployed Engineer, since Benjaire is a real deployment).
+1. **Lead role for the job hunt.** Answered 2026-11-03: keep the page neutral so it is open to a
+   variety of roles; tailor per posting with the angles above.
 2. **How to describe working with Claude.** Recommended: say it openly as "directed AI coding
    agents with review and guardrails", since that is the skill.
 3. **Where it lives.** Recommended: a case study page on khaneilcampbell.com linking the public
