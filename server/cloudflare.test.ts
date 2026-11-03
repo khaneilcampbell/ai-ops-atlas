@@ -35,6 +35,8 @@ function fake(over: Record<string, () => Response> = {}) {
   return { f, seen };
 }
 
+const toCloudflare = (url: string) => new URL(url).host === "api.cloudflare.com";
+
 const mapCache = (): CheckCache => {
   const m = new Map<string, unknown>();
   return { get: async (k) => m.get(k) ?? null, put: async (k, v) => void m.set(k, v) };
@@ -66,7 +68,7 @@ describe("Cloudflare checks in the snapshot", () => {
     const { f, seen } = fake();
     const s = await snapshot("benjaire.com", {}, null, f, NOW);
     expect(s.checks.traffic.state).toBe("not-configured");
-    expect(seen.some((r) => r.url.includes("api.cloudflare.com"))).toBe(false);
+    expect(seen.some((r) => toCloudflare(r.url))).toBe(false);
   });
 
   it("reads traffic and events with the token, sending it only to Cloudflare", async () => {
@@ -75,7 +77,7 @@ describe("Cloudflare checks in the snapshot", () => {
     expect(s.checks.traffic).toMatchObject({ state: "ok", data: { requests24h: 2000 } });
     expect(s.checks.edgeEvents.state === "ok" && s.checks.edgeEvents.data).toHaveLength(2);
     expect(seen.find((r) => r.url.includes("/audit_logs"))?.url).toContain("/accounts/acct9/");
-    expect(seen.filter((r) => r.auth?.includes(TOKEN)).every((r) => r.url.startsWith("https://api.cloudflare.com/"))).toBe(true);
+    expect(seen.filter((r) => r.auth?.includes(TOKEN)).every((r) => toCloudflare(r.url))).toBe(true);
     // Read-only: the only POST is the GraphQL query.
     expect(seen.filter((r) => r.method !== "GET").map((r) => new URL(r.url).pathname)).toEqual(["/client/v4/graphql"]);
   });
