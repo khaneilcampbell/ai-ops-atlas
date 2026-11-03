@@ -55,7 +55,7 @@ describe('Marketplace production workspaces',()=>{
   expect(new Set(MARKETPLACE_WORKSPACES.map(w=>w.agentId)).size).toBe(6);
   for(const w of MARKETPLACE_WORKSPACES){
    expect(catalog.agents.find(a=>a.id===w.agentId)?.projectId).toBe('commerce-pipeline');
-   const room=unitsFor(w.unitId);expect(room?.level).toBe(1);expect(room?.note).toContain('Planned · Not connected');
+   const room=unitsFor(w.unitId);expect(room?.level).toBe(1);expect(room?.note).toContain('Building workflow planned');
   }
  });
  it('keeps stable floor IDs and no car park destination',()=>{

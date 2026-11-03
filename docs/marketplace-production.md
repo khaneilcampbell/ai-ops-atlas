@@ -10,7 +10,7 @@ Prepared on `codex/marketplace-production` from main `629a285`. Not merged or de
 
 ## Planned workspace links
 
-These are links to existing Commerce workers, not duplicate registry agents or changes to their runtime/workplace ownership. Selecting a production room exposes the existing AgentOutput component and its genuine recorded evidence. Figures are static representations, not proof of execution.
+These are existing Commerce workers, not duplicate registry agents. Their primary physical workplace is now Atlas Marketplace; project ownership and execution authority remain unchanged. See `workplace-assignments.md` for the current full roster. Selecting a production room exposes the existing AgentOutput component and its genuine recorded evidence. Figures are static representations, not proof of execution.
 
 | Floor / room | Responsibility | Existing worker ID |
 |---|---|---|
@@ -21,7 +21,7 @@ These are links to existing Commerce workers, not duplicate registry agents or c
 | 1 / L1-U5 | Visual production | canva-mockups |
 | 1 / L1-U6 | Quality and release review | commerce-tests |
 
-All assignments are **Planned · Not connected**. Their owning project remains `commerce-pipeline`; actual execution source is displayed in the workspace inspector. No new agent is registered or activated. Output uses existing cached Atlas evidence and cannot initiate a run.
+Physical workspaces are **Assigned**. Marketplace-specific workflows are **Planned · Not connected**. Their owning project remains `commerce-pipeline`; actual execution source is displayed in the workspace inspector. No new agent is registered or activated. Output uses existing cached Atlas evidence and cannot initiate a run.
 
 ## Benjaire conventions and approval boundary
 

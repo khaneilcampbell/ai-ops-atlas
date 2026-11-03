@@ -16,3 +16,5 @@
 .mall-interior .skyline-room-label{max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:11px;padding:6px 9px}.mall-workspace-panel{border-color:var(--gold)}.mall-interior.night .mall-workspace-panel{background:var(--forest-800);color:var(--on-dark)}
 
 .mall-workspace-panel{display:block}.mall-workspace-panel p{margin:10px 0}.mall-workspace-panel button{border:1px solid var(--gold);border-radius:8px;padding:7px 10px;background:var(--sage-50);color:var(--ink)}.mall-workspace-panel button[aria-pressed=true]{background:var(--gold);color:var(--forest-900)}.mall-interior.night .mall-workspace-panel button{background:var(--forest-700);color:var(--on-dark)}.mall-interior.night .mall-workspace-panel button[aria-pressed=true]{background:var(--gold);color:var(--forest-900)}.mall-interior.night .mall-workspace-panel :is(.muted,.section-title,dt){color:var(--on-dark-2)}
+
+.mall-workspace-panel button[aria-selected=true],.mall-interior.night .mall-workspace-panel button[aria-selected=true]{background:var(--gold);color:var(--forest-900)}

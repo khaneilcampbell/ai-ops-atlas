@@ -19,7 +19,7 @@ export interface MallLevel {level:number;title:string;summary:string}
  */
 export const MALL_LEVELS:MallLevel[]=[
  {level:0,title:'Lobby · Client services',summary:'Entrance, information desk and the first agent shops'},
- {level:1,title:'Floor 1 · Benjaire production',summary:'Proposed workspaces linked to existing Commerce workers'},
+ {level:1,title:'Floor 1 · Benjaire production',summary:'Assigned workspaces for existing Commerce workers'},
  {level:2,title:'Floor 2 · Food court',summary:'Seating around the atrium'},
  {level:3,title:'Floor 3 · Events and demos',summary:'Demo hall for client walk-throughs, plus studios'},
 ];
@@ -35,7 +35,7 @@ function unitName(level:number,index:number):{name:string;kind:UnitKind;note:str
   return {name:`Unit G${index+1}`,kind:'vacant',note:VACANT};
  }
  const workspace=marketplaceWorkspace(`L${level}-U${index}`);
- if(workspace)return {name:workspace.role,kind:'studio',note:`Planned · Not connected. Existing worker: ${workspace.agentId}. ${workspace.deliverable}. No execution authority changed.`};
+ if(workspace)return {name:workspace.role,kind:'studio',note:`Workspace assigned · Building workflow planned. Existing worker: ${workspace.agentId}. ${workspace.deliverable}. No execution authority changed.`};
  if(level===1)return {name:`Unit 1${index+1}`,kind:'vacant',note:VACANT};
  if(level===2)return {name:index<4?'Food court west':'Food court east',kind:'food',note:'Shared seating. Visual only.'};
  return index>=4?{name:'Demo hall',kind:'hall',note:'Client demos of planned agents. No live events.'}:{name:`Studio 3${index+1}`,kind:'studio',note:'Prepared studio. No agents assigned yet.'};

@@ -659,6 +659,7 @@
             "properties": {
               "building": {
                 "enum": [
+                  "Atlas Marketplace",
                   "OpenAI",
                   "Anthropic",
                   "Wells Fargo",
@@ -675,10 +676,38 @@
               },
               "room": {
                 "type": "string",
-                "pattern": "^[1-4]0[1-4]$"
+                "pattern": "^[1-4]0[1-8]$"
               }
             },
-            "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building."
+            "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building.",
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "building": {
+                      "const": "Atlas Marketplace"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "floor": {
+                      "const": 1
+                    },
+                    "room": {
+                      "pattern": "^10[1-8]$"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "room": {
+                      "pattern": "^[1-4]0[1-4]$"
+                    }
+                  }
+                }
+              }
+            ]
           },
           "office_floor": {
             "type": "integer",

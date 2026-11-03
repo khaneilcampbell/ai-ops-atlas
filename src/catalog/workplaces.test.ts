@@ -41,3 +41,21 @@ it("assigns the manual production team only to Atlas Floor 3 and rejects invalid
   expect(buildCatalog({"a.yaml":yaml}).issues.length).toBeGreaterThan(0);
  }
 });
+
+it('assigns Marketplace workers once, preserving their Commerce ownership and runtime',async()=>{
+ const {MARKETPLACE_WORKSPACES,marketplaceAssignedAgent}=await import('../views/office/marketplaceWorkspaces');
+ for(const w of MARKETPLACE_WORKSPACES){
+  const a=marketplaceAssignedAgent(w.unitId,catalog.agents)!;
+  expect(a.id).toBe(w.agentId);expect(a.projectId).toBe('commerce-pipeline');
+  expect(a.repository).toBe('khaneilcampbell/multi-agent-commerce-pipeline');
+  expect(a.workplace?.floor).toBe(1);expect(a.workplace?.building).toBe('Atlas Marketplace');
+  expect(projectOfficeAgents(catalog.agents,a.projectId).some(x=>x.id===a.id)).toBe(false);
+ }
+ const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+ expect(new Set(placements.map(a=>a.id)).size).toBe(catalog.agents.length);
+ expect(placements).toHaveLength(catalog.agents.length);
+});
+it('validates Marketplace rooms without allowing unsupported suites elsewhere',()=>{
+ expect(buildCatalog({'a.yaml':manifest('{building: Atlas Marketplace, floor: 1, room: "108"}')}).issues).toEqual([]);
+ for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: OpenAI, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
+});

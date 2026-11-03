@@ -58,7 +58,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   );
 }
 
-function Head({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
+function Head({ eyebrow, title, children, onClose }: { eyebrow: string; title: string; children?: React.ReactNode; onClose?:()=>void }) {
   const { select } = useAtlas();
   return (
     <div className="panel-head">
@@ -67,7 +67,7 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
         <h2>{title}</h2>
         {children}
       </div>
-      <button className="icon-btn" onClick={() => select(null)} aria-label="Close details" style={{ color: "var(--ink-2)" }}>
+      <button className="icon-btn" onClick={onClose??(() => select(null))} aria-label="Close details" style={{ color: "var(--ink-2)" }}>
         <Icon name="close" />
       </button>
     </div>
@@ -143,7 +143,7 @@ function ServiceDetail({id}:{id:string}) {
     <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
     <div className="panel-body selectable"><p>A four-floor wave-style Marketplace with planned client services and Benjaire product workspaces. Existing Commerce workers are referenced without starting new workflows. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
-      <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Proposed workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
+      <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>
@@ -211,7 +211,7 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
   return agent.source ? `https://github.com/${agent.repository}/blob/${branch}/${agent.source}` : undefined;
 }
 
-function AgentDetail({ id }: { id: string }) {
+export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) {
   const [tab, setTab] = useState<"overview" | "output">("overview");
   const { catalog, repos, select } = useAtlas();
   const agent = catalog.agents.find((a) => a.id === id);
@@ -225,7 +225,7 @@ function AgentDetail({ id }: { id: string }) {
 
   return (
     <>
-      <Head eyebrow={`Agent · ${project?.name ?? agent.projectId}`} title={agent.name}>
+      <Head eyebrow={`Agent · ${project?.name ?? agent.projectId}`} title={agent.name} onClose={onClose}>
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <StatusPill status={agent.status} />
           <span className="chip">{agent.framework}</span>
