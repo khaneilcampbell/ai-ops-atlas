@@ -5,20 +5,21 @@
 // Every source here is public and needs no account: RDAP for the registration, Cloudflare's
 // DNS-over-HTTPS resolver for records, Certificate Transparency logs (crt.sh) for the
 // certificate, one HTTPS request for reachability, and Google PageSpeed Insights for speed (an
-// optional key only raises its quota). Cloudflare analytics and audit events, and Uptime Kuma
-// history, stay "not configured" until KC supplies a token and a status page.
+// optional key only raises its quota). Cloudflare analytics and audit events need KC's read-only
+// token (server/cloudflare.ts); Uptime Kuma history stays "not configured" until KC supplies it.
 //
 // Answers are cached per check (Cache API on Pages), so opening a building or polling from both
 // devices costs at most one upstream request per check per window.
 
-import { PROPERTY_DOMAINS } from "../src/properties/registry";
-import type { Check, CheckName, DnsInfo, DomainInfo, PerfInfo, ProbeInfo, SiteSnapshot, TlsInfo } from "../src/properties/types";
+import { PROPERTY_DOMAINS, propertyByDomain } from "../src/properties/registry";
+import { edgeEvents, findZone, NoZone, traffic, type Zone } from "./cloudflare";
+import type { Check, CheckName, DnsInfo, DomainInfo, EdgeEvent, PerfInfo, ProbeInfo, SiteSnapshot, TlsInfo, TrafficInfo } from "../src/properties/types";
 import { bearerOk } from "./live";
 
 export interface PropertyEnv {
   /** Optional Google API key, only to raise the PageSpeed Insights quota. */
   PAGESPEED_API_KEY?: string;
-  /** Read-only Cloudflare API token (Zone Analytics read, Account Audit Logs read). Not wired yet. */
+  /** Read-only Cloudflare API token: Zone Read, Zone Analytics Read, Account Settings Read (audit log). */
   CLOUDFLARE_API_TOKEN?: string;
   /** Base URL of KC's Uptime Kuma, e.g. https://status.example.com. Not wired yet. */
   UPTIME_KUMA_URL?: string;
@@ -41,13 +42,16 @@ const PSI_TIMEOUT_MS = 45_000;
 const ERROR_TTL = 5 * 60;
 
 /** How long each answer is reused. Registration and certificates change rarely; reachability often. */
-export const TTL: Record<"domain" | "dns" | "tls" | "probe" | "performance", number> = {
+export const TTL: Record<"domain" | "dns" | "tls" | "probe" | "performance" | "traffic" | "edgeEvents", number> = {
   domain: 12 * 3600,
   dns: 10 * 60,
   tls: 6 * 3600,
   probe: 60,
   performance: 6 * 3600,
+  traffic: 10 * 60,
+  edgeEvents: 10 * 60,
 };
+const ZONE_TTL = 24 * 3600;
 
 const noStore = { "cache-control": "no-store" };
 const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
@@ -246,6 +250,36 @@ async function slow<T>(run: Promise<Check<T>>, opts: SnapshotOptions): Promise<C
   }
 }
 
+const CF_NEED = "A read-only Cloudflare API token on the site (CLOUDFLARE_API_TOKEN): Zone Read, Zone Analytics Read and Account Settings Read.";
+
+/** Traffic and audit events, or why they can't be read. The zone lookup is cached for a day. */
+async function cloudflareChecks(domain: string, env: PropertyEnv, cache: CheckCache | null, fetcher: Fetcher, now: number): Promise<[Check<TrafficInfo>, Check<EdgeEvent[]>]> {
+  const token = env.CLOUDFLARE_API_TOKEN;
+  if (!token) return [{ state: "not-configured", source: SOURCES.traffic, need: CF_NEED }, { state: "not-configured", source: SOURCES.edgeEvents, need: CF_NEED }];
+  let zone: Zone;
+  try {
+    const key = `cfzone:${domain}`;
+    const hit = (await cache?.get(key).catch(() => null)) as Zone | { none: string } | null | undefined;
+    if (hit && "none" in hit) throw new NoZone(hit.none);
+    if (hit) zone = hit;
+    else {
+      try {
+        zone = await findZone(fetcher, token, domain);
+        await cache?.put(key, zone, ZONE_TTL).catch(() => undefined);
+      } catch (e) {
+        if (e instanceof NoZone) await cache?.put(key, { none: e.message }, ZONE_TTL).catch(() => undefined);
+        throw e;
+      }
+    }
+  } catch (e) {
+    const checkedAt = new Date(now).toISOString();
+    if (e instanceof NoZone) return [{ state: "not-configured", source: SOURCES.traffic, need: e.message }, { state: "not-configured", source: SOURCES.edgeEvents, need: e.message }];
+    return [{ state: "error", source: SOURCES.traffic, checkedAt, message: why(e) }, { state: "error", source: SOURCES.edgeEvents, checkedAt, message: why(e) }];
+  }
+  const worker = propertyByDomain(domain)?.cloudflareWorker;
+  return Promise.all([cached("traffic", domain, cache, now, () => traffic(fetcher, token, zone, now)), cached("edgeEvents", domain, cache, now, () => edgeEvents(fetcher, token, zone, domain, worker, now))]);
+}
+
 export async function snapshot(domain: string, env: PropertyEnv, cache: CheckCache | null, fetcher: Fetcher = fetch, now = Date.now(), opts: SnapshotOptions = {}): Promise<SiteSnapshot> {
   const [d, n, t, p, perf] = await Promise.all([
     cached("domain", domain, cache, now, async () => parseRdap((await getJson(fetcher, `https://rdap.org/domain/${domain}`, { headers: { accept: "application/rdap+json" } })) as J)),
@@ -258,9 +292,7 @@ export async function snapshot(domain: string, env: PropertyEnv, cache: CheckCac
     cached("probe", domain, cache, now, () => probe(domain, fetcher)),
     slow(cached("performance", domain, cache, now, () => performance(domain, env, fetcher)), opts),
   ]);
-  const cfNeed = env.CLOUDFLARE_API_TOKEN
-    ? "The token is set on the site; reading it ships in the next pull request."
-    : "A read-only Cloudflare API token on the site (CLOUDFLARE_API_TOKEN): Zone Analytics read and Account Audit Logs read.";
+  const [tr, ev] = await cloudflareChecks(domain, env, cache, fetcher, now);
   return {
     domain,
     checks: {
@@ -269,8 +301,8 @@ export async function snapshot(domain: string, env: PropertyEnv, cache: CheckCac
       tls: t,
       probe: p,
       performance: perf,
-      traffic: { state: "not-configured", source: SOURCES.traffic, need: cfNeed },
-      edgeEvents: { state: "not-configured", source: SOURCES.edgeEvents, need: cfNeed },
+      traffic: tr,
+      edgeEvents: ev,
       uptime: {
         state: "not-configured",
         source: SOURCES.uptime,

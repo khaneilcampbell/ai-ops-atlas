@@ -72,7 +72,7 @@ export function PropertyDashboard({ property: p }: { property: WebProperty }) {
       return { value: n ? `${n} address${n === 1 ? "" : "es"}` : "No address", note: `${cf ? "Cloudflare nameservers" : x.ns[0] ?? "No NS records"}${x.mx.length ? " · mail set" : ""}${x.validated ? " · DNSSEC" : ""}`, tone: n ? "good" : "bad" };
     }),
     fromCheck("Mobile speed", s?.performance, loading, (x) => ({ value: x.score === null ? "–" : `${x.score} / 100`, note: `LCP ${ms(x.lcpMs)}${x.field?.overall ? ` · real users ${x.field.overall.toLowerCase()}` : " · lab test"}`, tone: x.score === null ? "idle" : x.score >= 90 ? "good" : x.score >= 50 ? "warn" : "bad" })),
-    fromCheck("Traffic, 24 h", s?.traffic, loading, (x) => ({ value: x.requests24h.toLocaleString(), note: `requests${x.visits24h !== null ? ` · ${x.visits24h.toLocaleString()} visits` : ""}`, tone: "good" })),
+    fromCheck("Traffic, 24 h", s?.traffic, loading, (x) => ({ value: x.requests24h.toLocaleString(), note: `requests${x.visits24h !== null ? ` · ${x.visits24h.toLocaleString()} page views` : ""}${x.threats24h ? ` · ${x.threats24h} threats blocked` : ""}`, tone: "good" })),
     fromCheck("Cloudflare events", s?.edgeEvents, loading, (x) => ({ value: String(x.length), note: x[0] ? `${x[0].action} · ${relative(x[0].at)}` : "No changes in 7 days", tone: "good" })),
   ];
 

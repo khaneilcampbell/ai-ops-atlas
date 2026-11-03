@@ -5,9 +5,10 @@ benjaire.com and khaneilcampbell.com buildings into live property dashboards wit
 expiration, DNS, SSL, uptime, deployments, Cloudflare events, performance and traffic where data
 is available. A failed deployment surfaces as an actionable incident on the building.
 
-**Status:** first slice built (this pull request). Everything that needs no new credential is
-live. Cloudflare analytics and audit events, and Uptime Kuma history, show "Not connected" until
-KC supplies a token and a status page (see [What KC supplies](#what-kc-supplies)).
+**Status:** built in this pull request. Everything that needs no new credential is live.
+Cloudflare traffic and change events read KC's read-only token once it is saved on the site
+(KC created it on Nov 3). Uptime Kuma history shows "Not connected" until KC supplies its address
+(see [What KC supplies](#what-kc-supplies)).
 
 ## Where it shows
 
@@ -32,8 +33,8 @@ they live on the building and the header pill.
 | Domain | RDAP (rdap.org, the registry's own data): registrar, registered, expiry, status, nameservers, DNSSEC | None | Cached 12 h |
 | DNS | Cloudflare DNS over HTTPS (1.1.1.1): A, AAAA, NS, MX, CAA, www, DNSSEC validation | None | Cached 10 min |
 | Mobile speed | Google PageSpeed Insights (mobile): Lighthouse score, LCP, CLS, TBT, and real-user field data when the site has enough traffic | None; optional `PAGESPEED_API_KEY` raises the quota | Cached 6 h |
-| Traffic, 24 h | Cloudflare GraphQL analytics: requests, visits, threats | `CLOUDFLARE_API_TOKEN` | Not wired yet |
-| Cloudflare events | Cloudflare audit log: DNS, rule, certificate and Worker changes | `CLOUDFLARE_API_TOKEN` | Not wired yet |
+| Traffic, 24 h | Cloudflare GraphQL analytics (`httpRequests1hGroups`, last 24 full hours): requests, page views, threats | `CLOUDFLARE_API_TOKEN` | Cached 10 min |
+| Cloudflare events | Cloudflare account audit log, last 7 days, entries that mention the zone, the domain or the site's Worker (DNS, rules, certificates, Worker deploys) | `CLOUDFLARE_API_TOKEN` | Cached 10 min |
 | Uptime | Uptime Kuma status page: uptime % and the last up/down change | `UPTIME_KUMA_URL` and a status page | Not wired yet |
 
 Honesty rules, the same as agent alerts:
@@ -97,9 +98,10 @@ KC presses Create.
 
 Nothing is needed for what shipped here. For the remaining tiles:
 
-1. **Cloudflare API token** (traffic and events). A custom token at
-   https://dash.cloudflare.com/profile/api-tokens with **read only** permissions: Zone → Analytics →
-   Read, Zone → Zone → Read, Account → Account Analytics → Read, Account → Audit Logs → Read;
+1. **Cloudflare API token** (traffic and events). Created Nov 3 as "Read analytics and logs" at
+   https://dash.cloudflare.com/profile/api-tokens. **Read only** permissions it needs: Zone → Zone →
+   Read (find the zone by name), Zone → Analytics → Read, Account → Account Settings → Read (the
+   audit log). Zone Logs, Account Analytics and Workers Observability read are harmless extras;
    resources: the accounts that hold benjaire.com (Workers account "benjaireco") and, if it is on
    Cloudflare, khaneilcampbell.com. Saved as the encrypted Pages secret `CLOUDFLARE_API_TOKEN` at
    https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/pages/view/ai-ops-atlas/settings/production.
@@ -114,8 +116,9 @@ Nothing is needed for what shipped here. For the remaining tiles:
 
 ## Next steps
 
-1. Wire Cloudflare (GraphQL `httpRequests1dGroups` per zone, audit logs for the last 7 days)
-   once the token exists; the tiles and types are already in place.
+1. Confirm the Cloudflare tiles on the deployed site once the token is saved. A domain whose DNS
+   isn't in KC's account (khaneilcampbell.com may be on its registrar's nameservers) shows "not in
+   your Cloudflare account" for traffic and events, not zero.
 2. Wire Uptime Kuma (`/api/status-page/{slug}` and `/api/status-page/heartbeat/{slug}`), and
    let a Kuma "down" open the site-down incident instead of the single probe.
 3. Map: tint the building amber or red while it has an open incident (command center phase 3

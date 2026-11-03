@@ -24,6 +24,8 @@ export interface WebProperty {
   repository: string;
   host: string;
   deploy: DeploySource;
+  /** The Cloudflare Worker that serves the site, so its changes show in the events tile. */
+  cloudflareWorker?: string;
   /** Where KC goes to look at or retry a failed deploy. */
   deployConsole: { label: string; url: string };
 }
@@ -39,6 +41,7 @@ export const PROPERTIES: readonly WebProperty[] = [
     // Workers Builds deploys main with `npx wrangler deploy` (benjaire.com README) and posts a
     // check run named "Workers Builds: benjaire-com" on the commit.
     deploy: { kind: "check-runs", name: "Workers Builds" },
+    cloudflareWorker: "benjaire-com",
     deployConsole: { label: "Cloudflare builds", url: "https://dash.cloudflare.com/?to=/:account/workers/services/view/benjaire-com/production/builds" },
   },
   {

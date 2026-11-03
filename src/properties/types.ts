@@ -66,6 +66,7 @@ export interface PerfInfo {
 
 export interface TrafficInfo {
   requests24h: number;
+  /** Page views (Cloudflare can't sum unique visitors across hours). */
   visits24h: number | null;
   threats24h: number | null;
 }
