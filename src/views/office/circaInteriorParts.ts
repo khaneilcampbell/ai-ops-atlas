@@ -64,8 +64,6 @@ function glassRim(o:Parts,tall:(x:number,z:number)=>boolean,full=WALL.full,rail=
   // Night: a warm LED cove under the head of the tall glass and a low step light along the rail.
   for(const seg of circaRim(64,.16)){const t=tall(seg.x,seg.z);o.glow.push({p:[seg.x,t?full-.1:.12,seg.z],s:[seg.len,t?.03:.015,t?.05:.03],c:"#ffe6bf",r:seg.r});}
 }
-/** Far side of an apartment floor: the 2 bed's glass to the north and the west end of the corridor. */
-const farSide=(x:number,z:number)=>z<0||x<-7;
 
 function bed(o:Parts,x:number,z:number,r:number,w=1.6){
   // Bed runs along x when r = 0 with the headboard at the low-x end.
@@ -160,7 +158,8 @@ function twoBed(o:Parts){
 /** Oak floor, curved glass, corridor walls and front doors shared by every apartment floor. Walls run out to the rim. */
 function corridor(o:Parts,level:number){
   const units=circaUnits(level),west=-circaEdgeX(C.z1)+.12,rim=(x:number)=>circaEdgeZ(x)-.12;
-  ovalFloor(o,col.oak,col.plank,.5);glassRim(o,farSide);
+  // Floor-to-ceiling glass all the way round, so the 1 beds get the same windows as the 2 bed.
+  ovalFloor(o,col.oak,col.plank,.5);glassRim(o,()=>true);
   wallX(o.box,C.z0,west,CIRCA_UNITS_EAST,WALL.low,units.filter(u=>u.z1<=C.z0).map(u=>u.door));
   wallX(o.box,C.z1,west,CIRCA_UNITS_EAST,WALL.low,units.filter(u=>u.z0>=C.z1).map(u=>u.door));
   wallZ(o.box,CIRCA_PARTY_WALL,C.z1,rim(CIRCA_PARTY_WALL),WALL.low);
