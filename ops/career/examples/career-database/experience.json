@@ -1,0 +1,55 @@
+{
+  "positions": [
+    {
+      "id": "exp-acme",
+      "employer": "Acme University",
+      "title": "Service Desk Analyst",
+      "location": "New York, NY | Hybrid",
+      "start": "2022-03",
+      "end": "present",
+      "employment_type": "full-time",
+      "team_or_department": "IT Service Desk",
+      "responsibilities": [
+        "Resolve incidents and requests in ServiceNow",
+        "Support account provisioning in Active Directory"
+      ],
+      "accomplishment_ids": [
+        "acc-001",
+        "acc-002"
+      ],
+      "tools": [
+        "ServiceNow",
+        "Active Directory",
+        "Okta",
+        "Microsoft 365"
+      ],
+      "emphasis_by_version": {
+        "ai-solutions": "",
+        "enterprise-technology": "",
+        "security-automation": ""
+      },
+      "verified": true,
+      "source": "example"
+    },
+    {
+      "id": "exp-city",
+      "employer": "City Hospital",
+      "title": "IT Support Intern",
+      "location": "New York, NY",
+      "start": "2021-06",
+      "end": "2021-08",
+      "employment_type": "internship",
+      "team_or_department": "",
+      "responsibilities": [],
+      "accomplishment_ids": [],
+      "tools": [],
+      "emphasis_by_version": {
+        "ai-solutions": "",
+        "enterprise-technology": "",
+        "security-automation": ""
+      },
+      "verified": true,
+      "source": "example"
+    }
+  ]
+}

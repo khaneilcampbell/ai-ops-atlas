@@ -1,6 +1,6 @@
 # Runbooks: AI Career Application Optimization System
 
-Repository: [khaneilcampbell/job-applications-workflow](https://github.com/khaneilcampbell/job-applications-workflow) (private). Personal data lives only in the git-ignored `private/` folder on KC's machine. The repository's own guides: `docs/workflow.md` (by hand in a Claude Project) and `docs/automation.md` (the `jobflow` command line).
+Repository: [khaneilcampbell/ai-ops-atlas](https://github.com/khaneilcampbell/ai-ops-atlas), maintained under `ops/career/`. Run the commands below from `ops/career/`. Personal data lives only in the git-ignored `private/` folder on KC's machine. The repository's own guides: `docs/workflow.md` (by hand in a Claude Project) and `docs/automation.md` (the `jobflow` command line).
 
 ## Job analysis, tailoring and quality review
 
@@ -22,9 +22,9 @@ The three prompts in `prompts/` can be run by hand in a Claude Project, or by `j
 
 ## Career Workflow CI
 
-`.github/workflows/ci.yml`.
+Atlas root `.github/workflows/ci.yml`, job **Career Applications (Python tests)**. The nested source workflow under `ops/career/.github/` is historical and inactive.
 
 - **Healthy:** latest run on `main` is green.
 - **When it fails:** reproduce with `pip install -r requirements-dev.txt && pytest -q`. The "No personal data committed" step fails if anything under `private/` or `output/`, a `.docx`, `.pdf` or `.env` file is tracked: remove it from git (and from history if it was pushed).
-- **Blank tracker:** run the workflow by hand with **tracker** ticked and download the artifact.
-- **Stop it:** disable the workflow in Actions.
+- **Blank tracker:** run the workflow by hand with **career_tracker** ticked and download the artifact.
+- **Stop it:** stop manually invoking career commands; changing the shared Atlas CI requires a separate reviewed change. Do not disable all Atlas checks to stop this local tool.

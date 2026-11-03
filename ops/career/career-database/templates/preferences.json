@@ -1,0 +1,29 @@
+{
+  "_about": "Your targeting rules. This file is private: salary and search details should never be committed.",
+  "target_roles": [
+    "AI Solutions Engineer",
+    "Business Solutions Specialist",
+    "Enterprise AI Specialist",
+    "Technical Solutions Consultant",
+    "Business Technology Engineer",
+    "Enterprise Technology Engineer",
+    "Security Automation Engineer"
+  ],
+  "target_industries": ["AI companies", "Enterprise technology", "Music-industry technology"],
+  "locations": {
+    "preferred": "New York City",
+    "work_arrangement": ["hybrid", "remote", "onsite"],
+    "preferred_arrangement": "hybrid",
+    "willing_to_relocate": false
+  },
+  "compensation": {
+    "currency": "USD",
+    "minimum_base": "TODO",
+    "target_base": "TODO"
+  },
+  "priority_rules": {
+    "apply_if_match_score_at_least": 70,
+    "high_priority_if_match_score_at_least": 80,
+    "dealbreakers": ["TODO e.g. fully onsite outside NYC"]
+  }
+}

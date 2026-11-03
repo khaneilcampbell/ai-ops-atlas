@@ -6,7 +6,10 @@ for (const file of fs.readdirSync('.github/workflows').filter(name => /\.ya?ml$/
 }
 const ci = yaml.load(fs.readFileSync('.github/workflows/ci.yml', 'utf8'));
 assert.equal(ci.permissions.contents, 'read');
-assert.deepEqual(ci.jobs.macos.needs, ['web', 'rust', 'audit', 'security']);
+assert.deepEqual(ci.jobs.macos.needs, ['web', 'career', 'rust', 'audit', 'security']);
+assert.equal(ci.jobs.career.defaults.run['working-directory'], 'ops/career');
+assert.equal(ci.jobs.career.steps.find(step => step.run === 'pytest -q').env.ANTHROPIC_API_KEY, '');
+assert.ok(ci.jobs.career.steps.some(step => step.name === 'Keep personal career files out of Git'));
 assert.equal(ci.jobs.sign.environment, 'macos-signing');
 assert.equal(ci.jobs.sign.needs, 'macos');
 assert.equal(ci.jobs.publish.needs, 'sign');

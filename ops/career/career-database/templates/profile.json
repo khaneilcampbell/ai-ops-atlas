@@ -1,0 +1,15 @@
+{
+  "_about": "Contact details and branding shared by every resume version. Fill in and keep in private/career-database/.",
+  "name": { "first": "TODO", "last": "TODO" },
+  "location": "TODO (e.g. New York, NY)",
+  "email": "TODO",
+  "phone": "TODO",
+  "links": {
+    "linkedin": "TODO",
+    "github": "TODO",
+    "portfolio": ""
+  },
+  "headline": "TODO one-line professional identity, e.g. 'Enterprise IT professional building AI automation solutions'",
+  "years_of_experience": "TODO",
+  "base_summary": "TODO 2-3 sentence factual summary. Resume versions re-angle this; they must not add facts that are not here."
+}

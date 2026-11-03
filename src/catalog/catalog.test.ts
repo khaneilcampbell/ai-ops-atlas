@@ -23,7 +23,6 @@ describe("bundled catalog", () => {
       "khaneilcampbell/ai-ops-atlas",
       "khaneilcampbell/benjaire-dashboard",
       "khaneilcampbell/benjaire.com",
-      "khaneilcampbell/career-application-system",
       "khaneilcampbell/khaneilcampbell",
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",

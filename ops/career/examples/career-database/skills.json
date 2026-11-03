@@ -1,0 +1,82 @@
+{
+  "skills": [
+    {
+      "name": "ServiceNow",
+      "category": "itsm",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "exp-acme"
+      ],
+      "keywords": [
+        "ITSM"
+      ]
+    },
+    {
+      "name": "Active Directory",
+      "category": "iam",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "exp-acme"
+      ],
+      "keywords": []
+    },
+    {
+      "name": "Okta",
+      "category": "iam",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "exp-acme"
+      ],
+      "keywords": [
+        "SSO"
+      ]
+    },
+    {
+      "name": "Python",
+      "category": "programming",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "acc-002"
+      ],
+      "keywords": []
+    },
+    {
+      "name": "Anthropic API",
+      "category": "ai",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "acc-002"
+      ],
+      "keywords": [
+        "Claude"
+      ]
+    },
+    {
+      "name": "Splunk",
+      "category": "security",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "proj-lab"
+      ],
+      "keywords": [
+        "SIEM"
+      ]
+    },
+    {
+      "name": "Microsoft 365",
+      "category": "enterprise",
+      "level": "proficient",
+      "years": "",
+      "evidence": [
+        "exp-acme"
+      ],
+      "keywords": []
+    }
+  ]
+}

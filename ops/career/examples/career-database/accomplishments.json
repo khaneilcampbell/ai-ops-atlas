@@ -1,0 +1,49 @@
+{
+  "accomplishments": [
+    {
+      "id": "acc-001",
+      "linked_to": "exp-acme",
+      "situation": "Busy service desk",
+      "action": "Resolve incidents and requests in ServiceNow",
+      "result": "High quality scores",
+      "metric": "~150 tickets per month; 98% quality score",
+      "metric_source": "Team scorecards",
+      "skills": [
+        "ServiceNow"
+      ],
+      "themes": [
+        "incident-management"
+      ],
+      "bullet_drafts": {
+        "ai-solutions": "",
+        "enterprise-technology": "Resolve about 150 ServiceNow tickets a month with a 98% quality score.",
+        "security-automation": ""
+      },
+      "interview_story": "",
+      "verified": true
+    },
+    {
+      "id": "acc-002",
+      "linked_to": "exp-acme",
+      "situation": "Manual password reset triage",
+      "action": "Built a Python script that drafts ticket replies with the Anthropic API",
+      "result": "Faster first responses",
+      "metric": "",
+      "metric_source": "",
+      "skills": [
+        "Python",
+        "Anthropic API"
+      ],
+      "themes": [
+        "automation"
+      ],
+      "bullet_drafts": {
+        "ai-solutions": "Built a Python tool that drafts ServiceNow ticket replies with the Anthropic API for analyst review.",
+        "enterprise-technology": "",
+        "security-automation": ""
+      },
+      "interview_story": "",
+      "verified": true
+    }
+  ]
+}

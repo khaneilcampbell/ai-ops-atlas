@@ -1,0 +1,25 @@
+{
+  "_about": "Degrees, certifications and training. Use exact names and dates from the issuing body.",
+  "degrees": [
+    {
+      "institution": "TODO",
+      "degree": "TODO e.g. Bachelor of Science",
+      "field": "TODO",
+      "graduation": "YYYY-MM",
+      "honors": ""
+    }
+  ],
+  "certifications": [
+    {
+      "name": "TODO",
+      "issuer": "TODO",
+      "earned": "YYYY-MM",
+      "expires": "",
+      "credential_url": "",
+      "status": "earned | in-progress"
+    }
+  ],
+  "training": [
+    { "name": "TODO course or program", "provider": "TODO", "completed": "YYYY-MM" }
+  ]
+}

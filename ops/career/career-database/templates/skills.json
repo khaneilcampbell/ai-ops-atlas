@@ -1,0 +1,19 @@
+{
+  "_about": "Only list skills you can discuss in an interview. 'evidence' links each skill to an experience, project or certification id so the AI can prove it.",
+  "levels": {
+    "expert": "used daily in a professional role, could teach it",
+    "proficient": "used professionally or in substantial projects",
+    "working": "built real things with it, still learning",
+    "familiar": "used in coursework or small experiments; do not feature on a resume"
+  },
+  "skills": [
+    {
+      "name": "TODO e.g. ServiceNow",
+      "category": "itsm | iam | programming | ai | cloud | security | data | collaboration",
+      "level": "proficient",
+      "years": "TODO",
+      "evidence": ["exp-employer-1"],
+      "keywords": ["TODO synonyms recruiters search for, e.g. ITSM, incident management"]
+    }
+  ]
+}

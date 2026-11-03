@@ -18,3 +18,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: pip
+    directory: /ops/career
+    schedule:
+      interval: weekly
