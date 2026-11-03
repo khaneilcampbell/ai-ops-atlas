@@ -1,0 +1,18 @@
+{
+  "_about": "Fictional example candidate for demos and tests. Not a real person.",
+  "name": {
+    "first": "Alex",
+    "last": "Rivera"
+  },
+  "location": "New York, NY",
+  "email": "alex.rivera@example.com",
+  "phone": "(555) 010-0199",
+  "links": {
+    "linkedin": "linkedin.com/in/example",
+    "github": "github.com/example",
+    "portfolio": ""
+  },
+  "headline": "IT support specialist who automates service desk work with Python and Claude",
+  "years_of_experience": "5",
+  "base_summary": "IT support specialist with five years of enterprise service desk experience. Automates repetitive support work with Python and the Anthropic API."
+}

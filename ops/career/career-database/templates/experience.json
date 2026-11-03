@@ -1,0 +1,27 @@
+{
+  "_about": "Professional employment only. Independent or personal work goes in projects.json. Titles, employers and dates must match your official records exactly.",
+  "positions": [
+    {
+      "id": "exp-employer-1",
+      "employer": "TODO employer name",
+      "title": "TODO exact job title",
+      "location": "TODO",
+      "start": "YYYY-MM",
+      "end": "YYYY-MM or present",
+      "employment_type": "full-time | part-time | contract | internship",
+      "team_or_department": "TODO",
+      "responsibilities": [
+        "TODO plain factual description of a recurring responsibility"
+      ],
+      "accomplishment_ids": ["acc-001"],
+      "tools": ["TODO e.g. ServiceNow"],
+      "emphasis_by_version": {
+        "ai-solutions": "TODO what to lead with for AI / solutions roles (e.g. customer communication, requirements gathering)",
+        "enterprise-technology": "TODO what to lead with for enterprise IT roles (e.g. incident management, SLAs)",
+        "security-automation": "TODO what to lead with for security roles (e.g. IAM, access reviews)"
+      },
+      "verified": false,
+      "source": "master resume"
+    }
+  ]
+}

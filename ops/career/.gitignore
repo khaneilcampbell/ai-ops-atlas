@@ -1,0 +1,25 @@
+# ---- Personal data: never commit ----
+# Your real career database, resumes, tracker and job analyses live here.
+private/
+
+# Generated documents
+output/
+*.docx
+*.pdf
+~$*.xlsx
+
+# Allow the committed, data-free tracker template
+!tracker/application_tracker_template.xlsx
+
+# Secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
