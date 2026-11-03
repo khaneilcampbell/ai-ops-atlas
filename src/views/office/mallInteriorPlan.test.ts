@@ -90,13 +90,14 @@ it('provides human-scale workspace doorways and a separate lift landing',async()
  expect(MALL_LIFT.landingEnd).toBeLessThan(MALL_LIFT.z-MALL_LIFT.depth/2);
 });
 
-it('keeps identical floor plates and a continuous human-scale hallway',async()=>{
+it('matches stepped exterior floor plates and preserves a clear hallway',async()=>{
  const {mallInteriorFloor:mallFloor}=await import('./mallInteriorPlan');const {MALL_SHAPE,MALL_CIRCULATION}=await import('./mallInteriorPlan');
- const base=mallFloor(MALL_SHAPE,0);
+
  for(let level=0;level<4;level++){
-  expect(mallFloor(MALL_SHAPE,level)).toEqual(base);
+  const {mallFloor:exteriorFloor}=await import('../map3d/mallPlan');
+  const plate=mallFloor(MALL_SHAPE,level);expect(plate).toEqual(exteriorFloor(MALL_SHAPE,level));
   for(const u of mallUnits().filter(u=>u.level===level))for(let j=0;j<u.front.length;j++){
-   const edge=base.inner[u.index*MALL_IN.segmentsPerUnit+j];
+   const edge=plate.inner[u.index*MALL_IN.segmentsPerUnit+j];
    expect(Math.hypot(u.front[j][0]-edge[0],u.front[j][1]-edge[1])).toBeGreaterThanOrEqual(MALL_CIRCULATION.hallway-1e-6);
   }
  }
@@ -123,5 +124,13 @@ it('preserves the original stepped exterior separately from expanded interior pl
  const {MALL,mallFloor}=await import('../map3d/mallPlan');const {MALL_SHAPE,mallInteriorFloor}=await import('./mallInteriorPlan');
  expect([MALL.maxW,MALL.maxD,MALL.outerFinStep,MALL.innerFinStep]).toEqual([12.4,11.6,.15,.24]);
  expect(mallFloor(MALL_SHAPE,3)).not.toEqual(mallFloor(MALL_SHAPE,0));
- expect(mallInteriorFloor(MALL_SHAPE,3)).toEqual(mallInteriorFloor(MALL_SHAPE,0));
+ expect(mallInteriorFloor(MALL_SHAPE,3)).toEqual(mallFloor(MALL_SHAPE,3));
+});
+
+it('aligns the lift landing with each stepped floor',async()=>{
+ const {MALL_SHAPE,mallInteriorFloor,mallLiftEnd,landingEdge}=await import('./mallInteriorPlan');
+ for(let l=0;l<4;l++)for(const x of [-1,0,1]){
+  const edge=landingEdge(mallInteriorFloor(MALL_SHAPE,l).inner.map(([px,pz])=>[pz,px]),x,-1);
+  expect(mallLiftEnd(l)).toBeLessThan(edge);
+ }
 });
