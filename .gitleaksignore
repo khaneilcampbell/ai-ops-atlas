@@ -1,0 +1,5 @@
+# Existing inquiry-reply unit-test fixture: `good.key` is the literal sample
+# idempotency key "key-12345678", used with fakeD1 and mocked fetch responses.
+# This is not an API credential. Exempt only this exact historical finding;
+# new commits, files, lines and other findings remain scanned.
+cfb8b6004abcf314e1c474dcda7e60a6e73c935d:server/inquiryReply.test.ts:generic-api-key:29

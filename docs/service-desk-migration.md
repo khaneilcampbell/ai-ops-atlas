@@ -51,3 +51,7 @@ Before merge, close the PR to leave production unchanged. After merge, prepare a
 - Local Streamlit root-entry health returned `ok`. The compiled Atlas browser test passed repository selection, building entry, Lobby, All floors, exit and no page errors.
 - Docker is unavailable locally; the preserved container build and health check run in GitHub CI. External host settings and production are not verified.
 - Screenshots use synthetic GitHub fixtures; green badges are not production verification. No visual baselines changed. Existing Atlas build warnings remain.
+
+### Merge validation scanner repair
+
+The imported root commit has no parent, so the scanner action's inferred PR range failed. Its PR base now uses GitHub's actual Atlas base SHA, followed by a full-history `--all` scan including subtree ancestry. One existing historical test fixture (`good.key = "key-12345678"` in `server/inquiryReply.test.ts`, fakeD1/mocked fetch) triggered generic-api-key. `.gitleaksignore` documents only that exact commit/file/rule/line fingerprint; no rule or directory is excluded. Full local history scan and inquiry-reply tests passed with that narrow fixture exception.
