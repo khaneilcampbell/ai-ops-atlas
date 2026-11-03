@@ -61,6 +61,8 @@ function glassRim(o:Parts,tall:(x:number,z:number)=>boolean,full=WALL.full,rail=
     b(o.box,seg.x,0,seg.z,seg.len,.1,.1,col.black,seg.r);
     b(o.box,seg.x,h-.035,seg.z,seg.len,.035,.07,col.black,seg.r);
   });
+  // Night: a warm LED cove under the head of the tall glass and a low step light along the rail.
+  for(const seg of circaRim(64,.16)){const t=tall(seg.x,seg.z);o.glow.push({p:[seg.x,t?full-.1:.12,seg.z],s:[seg.len,t?.03:.015,t?.05:.03],c:"#ffe6bf",r:seg.r});}
 }
 /** Far side of an apartment floor: the 2 bed's glass to the north and the west end of the corridor. */
 const farSide=(x:number,z:number)=>z<0||x<-7;
@@ -261,6 +263,8 @@ export function circaLobbyParts():Parts{
     const d=.15+.45*(1+Math.sin(i*.45))/2,h=z<0?H:1.2,p=at(t,.04+d/2);
     b(o.box,p.x,0,p.z,.14,h,d,i%3?walnut:walnutLight,p.r);
   });
+  // Night: a warm cove light along the top of the tall walls (back, west, and east behind the lift).
+  for(const seg of circaRim(72,.27))if(seg.z<0||(seg.x<0&&seg.z<L.front))o.glow.push({p:[seg.x,H-.25,seg.z],s:[seg.len,.03,.06],c:"#ffe6bf",r:seg.r});
   // Street arc: low glass storefront in black frames, leaving the main door open.
   const frontStep=.08;for(const t of arc(tf,Math.PI-tf,frontStep)){
     const p=at(t,.06);if(Math.abs(p.x)<L.door)continue;const len=seg(t,frontStep,.06);

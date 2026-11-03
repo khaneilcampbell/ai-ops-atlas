@@ -102,6 +102,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
   const business=building==="Skyline"?undefined:BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
   const brandedFinancial=!!identity;
   const isNight=light==="night";
+  const circaStack=circa&&floor===-1;
   useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
   const [picked,setPicked]=useState<string|null>(null);
   const {catalog}=useAtlas();
@@ -118,8 +119,10 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
       {floor===-1&&level>0&&(circa?<OvalSlab/>:<group><Box p={[0,-0.15,0]} s={[16,0.3,12]} color="#e7dfcf"/></group>)}
       <FloorLabel level={level} width={circa?13.2:16} depth={circa?10:12} {...(circa?{name:circaFloorName(level)}:{})}/>
       <group>
-        <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?28:5} distance={15} decay={2}/>
-        {[-4,4].map(x=><group key={x}><pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={10} decay={2}/><mesh visible={!(circa&&level===1)} position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}
+        {/* Circa's oval floors are wider, so its lights reach further. With all six floors showing it keeps one real light per
+            floor (6 instead of 18) and lets the emissive cove strips along its curved walls carry the night glow. */}
+        <pointLight position={[0,2.9,0]} color="#ffe2a4" intensity={isNight?(circaStack?40:28):5} distance={circa?21:15} decay={2}/>
+        {[-4,4].map(x=><group key={x}>{!circaStack&&<pointLight position={[x,2.7,-2]} color="#ffebc4" intensity={isNight?18:3} distance={circa?14:10} decay={2}/>}<mesh visible={!(circa&&level===1)} position={[x,2.85,-2]}><boxGeometry args={[1.4,0.06,0.55]}/><meshStandardMaterial color="#eee4cb" emissive="#ffe0a0" emissiveIntensity={isNight?2:0.2}/></mesh></group>)}
       </group>
       <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1} {...(circa?{runner:"#9a9893",edge:"#1b1b1d",name:`Floor ${circaFloorNumber(level)}`,finish:CIRCA_LIFT}:{})}/>
       {level===0 ? <group>
