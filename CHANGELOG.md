@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-03 · Benjaire HQ and Portfolio Site now show a live dashboard for their websites: deploys, reachability, SSL certificate, domain renewal, DNS and mobile speed. A failed deploy, an expiring certificate or domain, or a site that stops answering shows as an incident on the building and in the header, with links to fix it (#PR)
+- 2026-11-03 · Benjaire HQ and Portfolio Site now show a live dashboard for their websites: deploys, reachability, SSL certificate, domain renewal, DNS and mobile speed. A failed deploy, an expiring certificate or domain, or a site that stops answering shows as an incident on the building and in the header, with links to fix it (#214)
 - 2026-11-03 · Skyline links to the Atlas repository while retaining its district, buildings and planned assistant (#207)
 - 2026-11-01 · AI agents now have a workday: each one lives in a Circa apartment, walks the city streets (in gold) to its office for its shift, and walks home after. The new Workday tab on each agent shows its role, owner, home, office, shift, budget and daily output (#196)
 - 2026-11-01 · Behind the scenes: a plan for giving every AI agent a home, a shift, a budget and an owner, with a daily commute on the map, laid out through the end of November (#195)
