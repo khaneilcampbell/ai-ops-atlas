@@ -1,0 +1,37 @@
+// Benjaire private dashboard (ADR-0005 in khancam15/benjaire.com).
+// Every request, static assets included, runs the Worker first so the
+// Cloudflare Access JWT is checked before anything is served.
+//
+// Settings that are not secret but differ per account live in `vars`.
+// Secrets are set with `wrangler secret put` or in the dashboard, never here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "benjaire-dashboard",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  // No public hostnames until Access protects them (ADR-0005 §1).
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "vars": {
+    // Zero Trust team domain, e.g. "benjaire.cloudflareaccess.com".
+    "ACCESS_TEAM_DOMAIN": "",
+    // Application Audience (AUD) tag from the Access application.
+    "ACCESS_AUD": ""
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "benjaire-dashboard",
+      // Filled in after `wrangler d1 create benjaire-dashboard` (needs approval).
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

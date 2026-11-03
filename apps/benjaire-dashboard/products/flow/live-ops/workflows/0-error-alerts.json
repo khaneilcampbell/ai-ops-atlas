@@ -1,0 +1,146 @@
+{
+  "name": "Flow · 0 Error alerts",
+  "nodes": [
+    {
+      "id": "34e1f8e0-8c95-46f4-a8f1-9eb1919a07fb",
+      "name": "Flow Workflow Failed",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "ed8d39c2-3eca-4a8d-a74a-5ed56a2dca1e",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "4bb2aa06-5048-46df-b6a2-c32c70b2964d",
+      "name": "Compose Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const e = $('Flow Workflow Failed').first().json;\nconst s = $json;\nconst esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };\nconst ex = e.execution || {};\nconst wf = e.workflow || {};\nconst err = ex.error || e.trigger && e.trigger.error || {};\nconst html = '<p><b>' + esc(wf.name || 'A Flow workflow') + '</b> failed at ' + $now.toFormat('ccc d LLL, h:mm a') + '.</p>' +\n  '<table cellpadding=\"4\"><tr><td>Step</td><td>' + esc(ex.lastNodeExecuted || 'unknown') + '</td></tr><tr><td>Error</td><td>' + esc(String(err.message || 'No message').slice(0, 500)) + '</td></tr><tr><td>Mode</td><td>' + esc(ex.mode || '') + '</td></tr></table>' +\n  (ex.url ? '<p><a href=\"' + esc(ex.url) + '\">Open the failed run in n8n</a></p>' : '') +\n  '<p style=\"color:#666\">Benjaire Flow error alert. Customer data is not included in this email.</p>';\nreturn [{ json: { to: s.ops_email || s.owner_email, from: s.from_address, subject: '[Flow error] ' + (wf.name || 'Workflow') + ': ' + String(err.message || 'failed').slice(0, 80), html: html } }];"
+      }
+    },
+    {
+      "id": "90905deb-f192-4a71-914f-0380dc02f4be",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $json.from, to: [$json.to], subject: $json.subject, html: $json.html }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "AC12xxRxpzZMqWxw",
+          "name": "Resend API"
+        }
+      }
+    },
+    {
+      "id": "79488760-9268-4e5a-ace5-c25a1792e96f",
+      "name": "Sticky Note 85350051",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -20
+      ],
+      "parameters": {
+        "content": "## Benjaire Flow · Error alerts\nSet as the error workflow for Flow 1 to 4. When a production run fails, the ops address gets the workflow, failing step, error message and a link to the run. No customer data is included.",
+        "color": 7,
+        "width": 520,
+        "height": 180
+      }
+    }
+  ],
+  "connections": {
+    "Flow Workflow Failed": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Compose Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "America/New_York"
+  },
+  "description": "Benjaire Flow error handler: when any Flow workflow fails, emails the ops address from contact@ with the workflow, step, error and a link to the run.",
+  "meta": {
+    "source": "n8n Cloud export",
+    "workflowId": "F4A9rMTqPZunNoqb",
+    "versionId": "17d1a60c-25c2-43ea-938a-830a59a74035"
+  }
+}
