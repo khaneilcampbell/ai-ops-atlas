@@ -1,48 +1,54 @@
-import {CIRCA_PLATE,circaFloorNumber,circaLevelKind,mirrorX,onCircaPlate,CIRCA_UPPER_LEVELS,type CircaLevel} from "./circaFloors";
+import {CIRCA_DOOR_Z,CIRCA_PLATE,CIRCA_PODIUM,circaLevelKind,circaUnits,mirrorX,onCircaPlate,onCircaPodium,towerToPodium,CIRCA_UPPER_LEVELS,type CircaLevel,type CircaTower} from "./circaFloors";
 import {circaApartmentParts,circaLobbyParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
 
 /**
  * Walking routes inside Circa. Each floor kind gets a walk grid (10 cm cells) built from the same part lists that draw
- * the floor, plus the lift landing and the lobby furniture (which CircaLobby draws as JSX). Agents walk A* paths on
- * that grid between named stops: every room of every apartment, the lobby's front desk, lounges and elevators, and the
- * pool deck's amenities. Pure and memoized, so tests prove every stop is reachable from the lift.
+ * the floor, plus the lift landings and the lobby furniture (which CircaLobby draws as JSX). The lobby and pool deck
+ * grids cover the rectangular podium, in podium coordinates, with both towers' lifts at the middle. The apartment grid
+ * covers one oval tower in tower-local coordinates; the east tower is the same plan drawn mirrored, so one grid serves
+ * both. Agents walk A* paths between named stops: every room of every apartment, the lobby's desk, lounges, lockers
+ * and work table, and the pool deck's amenities. Pure and memoized, so tests prove every stop is reachable from a lift.
  */
 export const WALK={cell:.1,radius:.14,speed:1.1,dwell:2.6,ride:5};
 
 type Rect={x:number;z:number;w:number;d:number;r?:number};
 type Circle={x:number;z:number;rad:number};
 
-/** The shared lift landing (BuildingCirculation): side walls and back. Its sliding doors are left open to walk through. */
+/** A tower's lift landing (BuildingCirculation), tower-local: side walls and back. Its sliding doors are left open. */
 const LIFT_WALLS:Rect[]=[{x:8.5,z:1.15,w:2.3,d:.1},{x:8.5,z:-1.15,w:2.3,d:.1},{x:9.6,z:0,w:.13,d:2.4}];
+/** Both towers' lift landings, placed on the podium. */
+const PODIUM_LIFT_WALLS:Rect[]=(["west","east"] as const).flatMap(t=>LIFT_WALLS.map(r=>{const [x,z]=towerToPodium(t,r.x,r.z);return {...r,x,z};}));
 /** Lobby furniture drawn in CircaLobby.tsx; keep in step with it. */
 const LOBBY_RECTS:Rect[]=[
   {x:3.6,z:-2.5,w:3,d:1},                                      // reception desk
   {x:-5.75,z:3,w:1.05,d:.9},{x:-3.45,z:3,w:1.05,d:.9},{x:-4.6,z:3,w:.9,d:.6}, // west lounge chairs and glass table
   {x:4.4,z:4.25,w:2.4,d:1.2},{x:4.4,z:3.2,w:1.2,d:.6},          // east lounge sofa and table
   {x:3.75,z:2.12,w:.7,d:.8},{x:5.05,z:2.12,w:.7,d:.8},          // cognac chairs
-  {x:-1.22,z:CIRCA_PLATE.rz-.1,w:.12,d:.15},{x:1.22,z:CIRCA_PLATE.rz-.1,w:.12,d:.15}, // street door posts
+  {x:-1.22,z:CIRCA_DOOR_Z,w:.12,d:.15},{x:1.22,z:CIRCA_DOOR_Z,w:.12,d:.15}, // street door posts
 ];
 const LOBBY_CIRCLES:Circle[]=[
   {x:-3.6,z:-3.9,rad:.4},{x:3.6,z:-3.9,rad:.4},{x:-3,z:-2.3,rad:.75},{x:3.6,z:-3.2,rad:.2},
   {x:6.6,z:4.3,rad:.25},{x:-5.2,z:5.2,rad:.35},{x:5.2,z:5.2,rad:.35},
 ];
 /** The two people who stay put on the pool deck (CircaUpperFloors). */
-const POOL_CIRCLES:Circle[]=[{x:-3.2,z:4.2,rad:.2},{x:3.3,z:-1.6,rad:.2}];
+export const POOL_PEOPLE:[number,number][]=[[-8.5,3],[8.5,-3]];
+const POOL_CIRCLES:Circle[]=POOL_PEOPLE.map(([x,z])=>({x,z,rad:.2}));
 
-export type Grid={w:number;h:number;free:Uint8Array};
-const W=Math.ceil(CIRCA_PLATE.rx*2/WALK.cell),H=Math.ceil(CIRCA_PLATE.rz*2/WALK.cell);
-const toCell=(x:number,z:number):[number,number]=>[Math.floor((x+CIRCA_PLATE.rx)/WALK.cell),Math.floor((z+CIRCA_PLATE.rz)/WALK.cell)];
-const cellCentre=(i:number,j:number):[number,number]=>[(i+.5)*WALK.cell-CIRCA_PLATE.rx,(j+.5)*WALK.cell-CIRCA_PLATE.rz];
+/** A walk grid: `hx`/`hz` half extents, centred on the origin. */
+export type Grid={w:number;h:number;hx:number;hz:number;free:Uint8Array};
+const toCell=(g:{hx:number;hz:number},x:number,z:number):[number,number]=>[Math.floor((x+g.hx)/WALK.cell),Math.floor((z+g.hz)/WALK.cell)];
+const cellCentre=(g:{hx:number;hz:number},i:number,j:number):[number,number]=>[(i+.5)*WALK.cell-g.hx,(j+.5)*WALK.cell-g.hz];
 
 /** Parts that stand in the way: taller than a rug or floor light, and not hung overhead. */
 const blocking=(p:Part)=>p.p[1]+p.s[1]/2>.15&&p.p[1]-p.s[1]/2<1.9;
 
-export function buildGrid(parts:Parts,rects:Rect[],circles:Circle[]):Grid{
-  const free=new Uint8Array(W*H),R=WALK.radius;
-  for(let j=0;j<H;j++)for(let i=0;i<W;i++){const [x,z]=cellCentre(i,j);free[j*W+i]=onCircaPlate(x,z,R+.08)?1:0;}
+export function buildGrid(parts:Parts,rects:Rect[],circles:Circle[],podium:boolean):Grid{
+  const hx=podium?CIRCA_PODIUM.w/2:CIRCA_PLATE.rx,hz=podium?CIRCA_PODIUM.d/2:CIRCA_PLATE.rz,W=Math.ceil(hx*2/WALK.cell),H=Math.ceil(hz*2/WALK.cell),g={hx,hz};
+  const free=new Uint8Array(W*H),R=WALK.radius,on=podium?onCircaPodium:onCircaPlate;
+  for(let j=0;j<H;j++)for(let i=0;i<W;i++){const [x,z]=cellCentre(g,i,j);free[j*W+i]=on(x,z,R+.08)?1:0;}
   const fill=(x0:number,x1:number,z0:number,z1:number,hit:(x:number,z:number)=>boolean)=>{
-    const [i0,j0]=toCell(x0,z0),[i1,j1]=toCell(x1,z1);
-    for(let j=Math.max(0,j0);j<=Math.min(H-1,j1);j++)for(let i=Math.max(0,i0);i<=Math.min(W-1,i1);i++){const [x,z]=cellCentre(i,j);if(hit(x,z))free[j*W+i]=0;}
+    const [i0,j0]=toCell(g,x0,z0),[i1,j1]=toCell(g,x1,z1);
+    for(let j=Math.max(0,j0);j<=Math.min(H-1,j1);j++)for(let i=Math.max(0,i0);i<=Math.min(W-1,i1);i++){const [x,z]=cellCentre(g,i,j);if(hit(x,z))free[j*W+i]=0;}
   };
   const rect=(o:Rect)=>{
     const c=Math.cos(o.r??0),s=Math.sin(o.r??0),hx=o.w/2+R,hz=o.d/2+R,ext=Math.abs(hx*c)+Math.abs(hz*s),ezt=Math.abs(hx*s)+Math.abs(hz*c);
@@ -52,15 +58,17 @@ export function buildGrid(parts:Parts,rects:Rect[],circles:Circle[]):Grid{
   const ellipse=(x:number,z:number,a:number,b:number)=>fill(x-a-R,x+a+R,z-b-R,z+b+R,(px,pz)=>((px-x)/(a+R))**2+((pz-z)/(b+R))**2<=1);
   for(const p of [...parts.box,...parts.glass,...parts.waterBox,...parts.glow])if(blocking(p))rect({x:p.p[0],z:p.p[2],w:p.s[0],d:p.s[2],...(p.r?{r:p.r}:{})});
   for(const p of [...parts.round,...parts.waterRound])if(blocking(p)&&p.s[0]<CIRCA_PLATE.rx*2-.01)ellipse(p.p[0],p.p[2],p.s[0]/2,p.s[2]/2);
-  for(const o of [...LIFT_WALLS,...rects])rect(o);
+  for(const o of [...(podium?PODIUM_LIFT_WALLS:LIFT_WALLS),...rects])rect(o);
   for(const c of circles)ellipse(c.x,c.z,c.rad,c.rad);
-  return {w:W,h:H,free};
+  return {w:W,h:H,hx,hz,free};
 }
 
 export type Stop={id:string;label:string;x:number;z:number};
 const stop=(id:string,label:string,x:number,z:number):Stop=>({id,label,x,z});
-/** In front of the lift doors, and inside the car where a rider leaves the floor. */
+/** In front of a tower's lift doors, and inside the car where a rider leaves the floor (tower-local). */
 export const LIFT_STOP=stop("lift","Lift",6.9,0),LIFT_CAR=stop("car","Lift car",8.5,0);
+/** The same two points for a tower's lift, on the podium. */
+export const podiumLift=(tower:CircaTower)=>{const [sx,sz]=towerToPodium(tower,LIFT_STOP.x,LIFT_STOP.z),[cx,cz]=towerToPodium(tower,LIFT_CAR.x,LIFT_CAR.z);return {stop:stop("lift",`${tower} lift`,sx,sz),car:stop("car",`${tower} lift car`,cx,cz)};};
 
 /** Rooms of each apartment, in the order a resident walks them. Unit 03 mirrors 02 about the party wall. */
 const ONE_BED=[stop("door","Front door",-1.72,1),stop("kitchen","Kitchen",-3.9,1.9),stop("bath","Bathroom",-6.8,2.05),stop("bedroom","Bedroom",-5.7,4),stop("living","Living room",-2.2,4),stop("dining","Dining",-1.9,3)];
@@ -70,19 +78,19 @@ export function unitStops(suffix:string):Stop[]{
   if(suffix==="02")return ONE_BED;
   return ONE_BED.map(s=>({...s,x:mirrorX(s.x)}));
 }
-export const LOBBY_STOPS=[stop("desk","Front desk",3.6,-1.55),stop("elevators","Elevator hall",0,-6.3),stop("lounge-west","West lounge",-4.6,1.95),stop("entrance","Main entrance",0,6.6),stop("lounge-east","East lounge",4.4,1.25)];
-export const POOL_STOPS=[stop("poolside","Pool",1,.7),stop("cabana","Cabanas",4.85,3.25),stop("fire-pit","Fire pit",-4.6,1.25),stop("lap-pool","Lap pool",-2.2,-2.95),stop("spa","Spa",4.3,-1.9)];
+export const LOBBY_STOPS=[stop("desk","Front desk",3.6,-1.55),stop("lockers","Parcel lockers",-13,-6.7),stop("residents-lounge","Residents' lounge",-15.6,4.6),stop("lounge-west","West lounge",-4.6,1.95),stop("entrance","Main entrance",0,7.6),stop("lounge-east","East lounge",4.4,1.25),stop("reading","Reading corner",13,3),stop("work-table","Work table",13,-3.2)];
+export const POOL_STOPS=[stop("poolside","Pool",0,2.1),stop("cabana","Cabanas",13,3.9),stop("spa","Spa",13,-2.9),stop("lap-pool","Lap pool",0,-4.3),stop("sun-lawn","Sun lawn",-13,-3),stop("fire-pit","Fire pit",-13,2.7)];
 
 const grids=new Map<CircaLevel,Grid>();
 export function circaGrid(kind:CircaLevel):Grid{
   let g=grids.get(kind);
-  if(!g){g=kind==="lobby"?buildGrid(circaLobbyParts(),LOBBY_RECTS,LOBBY_CIRCLES):kind==="pool"?buildGrid(circaPoolDeckParts(),[],POOL_CIRCLES):buildGrid(circaApartmentParts(2),[],[]);grids.set(kind,g);}
+  if(!g){g=kind==="lobby"?buildGrid(circaLobbyParts(),LOBBY_RECTS,LOBBY_CIRCLES,true):kind==="pool"?buildGrid(circaPoolDeckParts(),[],POOL_CIRCLES,true):buildGrid(circaApartmentParts(2),[],[],false);grids.set(kind,g);}
   return g;
 }
 
 /** Nearest free cell within `reach` metres of (x, z), or null. */
 export function snap(g:Grid,x:number,z:number,reach=.5):[number,number]|null{
-  const [ci,cj]=toCell(x,z),n=Math.ceil(reach/WALK.cell);let best:[number,number]|null=null,bd=Infinity;
+  const [ci,cj]=toCell(g,x,z),n=Math.ceil(reach/WALK.cell);let best:[number,number]|null=null,bd=Infinity;
   for(let dj=-n;dj<=n;dj++)for(let di=-n;di<=n;di++){const i=ci+di,j=cj+dj;if(i<0||j<0||i>=g.w||j>=g.h||!g.free[j*g.w+i])continue;const d=di*di+dj*dj;if(d<bd&&d<=n*n){bd=d;best=[i,j];}}
   return best;
 }
@@ -111,7 +119,7 @@ function astar(g:Grid,a:[number,number],b:[number,number]):number[]|null{
 /** Every grid cell the straight walk from p to q crosses is free. */
 export function clearLine(g:Grid,p:[number,number],q:[number,number]){
   const len=Math.hypot(q[0]-p[0],q[1]-p[1]),n=Math.max(1,Math.ceil(len/(WALK.cell/3)));
-  for(let s=0;s<=n;s++){const [i,j]=toCell(p[0]+(q[0]-p[0])*s/n,p[1]+(q[1]-p[1])*s/n);if(i<0||j<0||i>=g.w||j>=g.h||!g.free[j*g.w+i])return false;}
+  for(let s=0;s<=n;s++){const [i,j]=toCell(g,p[0]+(q[0]-p[0])*s/n,p[1]+(q[1]-p[1])*s/n);if(i<0||j<0||i>=g.w||j>=g.h||!g.free[j*g.w+i])return false;}
   return true;
 }
 
@@ -124,7 +132,7 @@ export function circaPath(kind:CircaLevel,from:{x:number;z:number},to:{x:number;
   let out:Path|null=null;
   const cells=a&&b?astar(g,a,b):null;
   if(cells){
-    const pts=cells.map(k=>cellCentre(k%g.w,Math.floor(k/g.w)));
+    const pts=cells.map(k=>cellCentre(g,k%g.w,Math.floor(k/g.w)));
     // Pull the string: keep only the corners the walker can't see past.
     out=[pts[0]];let i=0;
     while(i<pts.length-1){let j=pts.length-1;while(j>i+1&&!clearLine(g,pts[i],pts[j]))j--;out.push(pts[j]);i=j;}
@@ -133,51 +141,60 @@ export function circaPath(kind:CircaLevel,from:{x:number;z:number},to:{x:number;
 }
 export const pathLength=(p:Path)=>p.slice(1).reduce((n,q,i)=>n+Math.hypot(q[0]-p[i][0],q[1]-p[i][1]),0);
 
-/** One stretch of an agent's day: walking a path on a level, pausing at a stop, or riding the lift (hidden). */
-export type Leg={level:number;t0:number;t1:number;path?:Path;at?:Stop;ride?:true};
-export type Itinerary={legs:Leg[];period:number;home:{level:number;unit:string}};
+/**
+ * One stretch of an agent's day: walking a path on a level, pausing at a stop, or riding the lift (hidden).
+ * `tower` is set on apartment floors, where the path is tower-local; on the podium floors it is unset.
+ */
+export type Leg={level:number;tower?:CircaTower;t0:number;t1:number;path?:Path;at?:Stop;ride?:true};
+export type Itinerary={legs:Leg[];period:number;home:{level:number;tower:CircaTower;unit:string;layout:"01"|"02"|"03"}};
 
-/** The twelve apartments, Floors 3 to 6, as level and unit number. */
-export function circaApartments(){const out:{level:number;unit:string;suffix:string}[]=[];for(let level=2;level<=CIRCA_UPPER_LEVELS;level++)for(const s of ["01","02","03"])out.push({level,unit:`${circaFloorNumber(level)}${s}`,suffix:s});return out;}
+/** The twenty-four apartments, Floors 3 to 6, west tower then east tower on each floor. */
+export function circaApartments(){
+  const out:{level:number;tower:CircaTower;unit:string;layout:"01"|"02"|"03"}[]=[];
+  for(let level=2;level<=CIRCA_UPPER_LEVELS;level++)for(const tower of ["west","east"] as const)for(const u of circaUnits(level,tower))out.push({level,tower,unit:u.id,layout:u.layout});
+  return out;
+}
 
 /**
- * An agent's looping day inside Circa: walk every room of its apartment, take the lift down to the lobby and stop at
- * the desk, lounges, elevators and front door, ride up to the pool deck and do its amenities, then ride home.
+ * An agent's looping day inside Circa: walk every room of its apartment, take its tower's lift down to the lobby and
+ * stop at the desk, lockers, lounges, work table and front door, ride up to the pool deck and do its amenities, then
+ * ride home. On the podium floors it leaves and returns by its own tower's lift.
  */
 export function circaItinerary(homeIndex:number):Itinerary{
   const apts=circaApartments(),home=apts[((homeIndex%apts.length)+apts.length)%apts.length];
   const legs:Leg[]=[];let t=0;
-  const tour=(level:number,stops:Stop[])=>{
-    const kind=circaLevelKind(level);let prev:Stop=LIFT_CAR;
-    for(const s of [LIFT_STOP,...stops,LIFT_STOP,LIFT_CAR]){
+  const tour=(level:number,stops:Stop[],tower?:CircaTower)=>{
+    const kind=circaLevelKind(level),lift=tower?{stop:LIFT_STOP,car:LIFT_CAR}:podiumLift(home.tower);let prev:Stop=lift.car;
+    for(const s of [lift.stop,...stops,lift.stop,lift.car]){
       const path=circaPath(kind,prev,s);
-      if(path&&path.length>1){const d=pathLength(path)/WALK.speed;legs.push({level,t0:t,t1:t+d,path});t+=d;}
-      if(s!==LIFT_STOP&&s!==LIFT_CAR){legs.push({level,t0:t,t1:t+WALK.dwell,at:s});t+=WALK.dwell;}
+      if(path&&path.length>1){const d=pathLength(path)/WALK.speed;legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+d,path});t+=d;}
+      if(s!==lift.stop&&s!==lift.car){legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+WALK.dwell,at:s});t+=WALK.dwell;}
       prev=s;
     }
-    legs.push({level,t0:t,t1:t+WALK.ride,ride:true});t+=WALK.ride;
+    legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+WALK.ride,ride:true});t+=WALK.ride;
   };
-  tour(home.level,unitStops(home.suffix));
+  tour(home.level,unitStops(home.layout),home.tower);
   tour(0,LOBBY_STOPS);
   tour(1,POOL_STOPS);
-  return {legs,period:t,home:{level:home.level,unit:home.unit}};
+  return {legs,period:t,home};
 }
 
 /** Where an agent is at time `t` (seconds, looping): its level and position, or riding the lift. */
-export function walkerAt(it:Itinerary,t:number):{level:number;x:number;z:number;heading:number;riding:boolean;stop?:Stop}{
+export function walkerAt(it:Itinerary,t:number):{level:number;tower?:CircaTower;x:number;z:number;heading:number;riding:boolean;stop?:Stop}{
   const tt=((t%it.period)+it.period)%it.period;
   let lo=0,hi=it.legs.length-1;while(lo<hi){const m=(lo+hi)>>1;if(it.legs[m].t1<=tt)lo=m+1;else hi=m;}
   const leg=it.legs[lo];
-  if(leg.ride)return {level:leg.level,x:LIFT_CAR.x,z:LIFT_CAR.z,heading:0,riding:true};
+  const where={level:leg.level,...(leg.tower?{tower:leg.tower}:{})};
+  if(leg.ride)return {...where,x:LIFT_CAR.x,z:LIFT_CAR.z,heading:0,riding:true};
   if(leg.at){
     // Face the way it last walked: look back to the previous walking leg.
     const prev=it.legs[lo-1]?.path;const h=prev&&prev.length>1?heading(prev[prev.length-2],prev[prev.length-1]):0;
-    return {level:leg.level,x:leg.at.x,z:leg.at.z,heading:h,riding:false,stop:leg.at};
+    return {...where,x:leg.at.x,z:leg.at.z,heading:h,riding:false,stop:leg.at};
   }
   const p=leg.path!;let d=(tt-leg.t0)*WALK.speed;
   for(let i=1;i<p.length;i++){const seg=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);
-    if(d<=seg||i===p.length-1){const f=seg?Math.min(1,d/seg):1;return {level:leg.level,x:p[i-1][0]+(p[i][0]-p[i-1][0])*f,z:p[i-1][1]+(p[i][1]-p[i-1][1])*f,heading:heading(p[i-1],p[i]),riding:false};}
+    if(d<=seg||i===p.length-1){const f=seg?Math.min(1,d/seg):1;return {...where,x:p[i-1][0]+(p[i][0]-p[i-1][0])*f,z:p[i-1][1]+(p[i][1]-p[i-1][1])*f,heading:heading(p[i-1],p[i]),riding:false};}
     d-=seg;}
-  const end=p[p.length-1];return {level:leg.level,x:end[0],z:end[1],heading:0,riding:false};
+  const end=p[p.length-1];return {...where,x:end[0],z:end[1],heading:0,riding:false};
 }
 const heading=(a:[number,number],b:[number,number])=>Math.atan2(b[0]-a[0],b[1]-a[1]);

@@ -1,6 +1,6 @@
 import {describe,expect,it} from "vitest";
 import {circaLevelKind} from "./circaFloors";
-import {LIFT_CAR,LIFT_STOP,LOBBY_STOPS,POOL_STOPS,WALK,circaApartments,circaGrid,circaItinerary,circaPath,clearLine,pathLength,snap,unitStops,walkerAt,type Stop} from "./circaNav";
+import {LIFT_CAR,LIFT_STOP,LOBBY_STOPS,POOL_STOPS,WALK,circaApartments,circaGrid,circaItinerary,circaPath,clearLine,pathLength,podiumLift,snap,unitStops,walkerAt,type Stop} from "./circaNav";
 import type {CircaLevel} from "./circaFloors";
 
 const floors:[CircaLevel,Stop[]][]=[
@@ -9,31 +9,37 @@ const floors:[CircaLevel,Stop[]][]=[
 ];
 
 describe("Walking inside Circa",()=>{
+  // Apartment floors use the tower's own lift; the podium floors have both towers' lifts.
+  const lifts=(kind:CircaLevel)=>kind==="apartments"?[{stop:LIFT_STOP,car:LIFT_CAR}]:[podiumLift("west"),podiumLift("east")];
   it.each(floors)("puts every %s stop on open floor",(kind,stops)=>{
     const g=circaGrid(kind);
-    for(const s of [LIFT_STOP,LIFT_CAR,...stops])expect(snap(g,s.x,s.z,.25),`${kind} ${s.id} at ${s.x},${s.z}`).not.toBeNull();
+    for(const s of [...lifts(kind).flatMap(l=>[l.stop,l.car]),...stops])expect(snap(g,s.x,s.z,.25),`${kind} ${s.id} at ${s.x},${s.z}`).not.toBeNull();
   });
 
-  it.each(floors)("reaches every %s stop from the lift, walking only on open floor",(kind,stops)=>{
+  it.each(floors)("reaches every %s stop from each lift, walking only on open floor",(kind,stops)=>{
     const g=circaGrid(kind);
-    for(const s of stops){
-      const there=circaPath(kind,LIFT_CAR,s),back=circaPath(kind,s,LIFT_CAR);
-      expect(there,`${kind}: lift to ${s.id}`).not.toBeNull();expect(back,`${kind}: ${s.id} to lift`).not.toBeNull();
+    for(const {car} of lifts(kind))for(const s of stops){
+      const there=circaPath(kind,car,s),back=circaPath(kind,s,car);
+      expect(there,`${kind}: ${car.label} to ${s.id}`).not.toBeNull();expect(back,`${kind}: ${s.id} to ${car.label}`).not.toBeNull();
       for(let i=1;i<there!.length;i++)expect(clearLine(g,there![i-1],there![i])).toBe(true);
-      // No teleporting through walls: a route is never much shorter than the straight line, never absurdly longer.
-      expect(pathLength(there!)).toBeGreaterThanOrEqual(Math.hypot(s.x-LIFT_CAR.x,s.z-LIFT_CAR.z)-.6);
+      // No teleporting through walls: a route is never much shorter than the straight line.
+      expect(pathLength(there!)).toBeGreaterThanOrEqual(Math.hypot(s.x-car.x,s.z-car.z)-.6);
     }
   });
 
-  it("covers every room of every apartment on Floors 3 to 6",()=>{
+  it("covers every room of every apartment in both towers on Floors 3 to 6",()=>{
     const apts=circaApartments();
-    expect(apts.map(a=>a.unit)).toEqual(["301","302","303","401","402","403","501","502","503","601","602","603"]);
+    expect(apts.map(a=>a.unit)).toEqual([3,4,5,6].flatMap(n=>[1,2,3,4,5,6].map(u=>`${n}0${u}`)));
+    expect(apts.filter(a=>a.tower==="east").map(a=>a.layout).slice(0,3)).toEqual(["01","02","03"]);
     expect(unitStops("01").map(s=>s.id)).toEqual(["door","kitchen","dining","master","master-bath","living","bedroom","bath"]);
     for(const s of ["02","03"])expect(unitStops(s).map(s=>s.id)).toEqual(["door","kitchen","bath","bedroom","living","dining"]);
   });
 
-  it("loops each agent through its apartment, the lobby and the pool deck by lift",()=>{
+  it("loops each agent through its apartment, the lobby and the pool deck by its tower's lift",()=>{
     const it0=circaItinerary(0),levels=new Set(it0.legs.map(l=>l.level));
+    // Tower-local legs on the home floor carry the tower; podium legs don't.
+    for(const l of it0.legs)expect(l.tower).toBe(l.level===it0.home.level?it0.home.tower:undefined);
+    expect(circaItinerary(3).home.tower).toBe("east");
     expect(levels).toEqual(new Set([it0.home.level,0,1]));
     expect(it0.legs.filter(l=>l.ride).length).toBe(3);
     // Legs are back to back and every stop of the home unit, lobby and pool is visited.
@@ -42,9 +48,9 @@ describe("Walking inside Circa",()=>{
     for(const s of unitStops("01"))expect(visited.has(`apartments:${s.id}`)).toBe(true);
     for(const s of LOBBY_STOPS)expect(visited.has(`lobby:${s.id}`)).toBe(true);
     for(const s of POOL_STOPS)expect(visited.has(`pool:${s.id}`)).toBe(true);
-    // Twelve homes, one per apartment, wrapping for more agents.
-    expect(new Set(Array.from({length:12},(_,i)=>circaItinerary(i).home.unit)).size).toBe(12);
-    expect(circaItinerary(12).home).toEqual(circaItinerary(0).home);
+    // Twenty-four homes, one per apartment, wrapping for more agents.
+    expect(new Set(Array.from({length:24},(_,i)=>circaItinerary(i).home.unit)).size).toBe(24);
+    expect(circaItinerary(24).home).toEqual(circaItinerary(0).home);
   });
 
   it("moves at walking pace and hides the walker while it rides the lift",()=>{

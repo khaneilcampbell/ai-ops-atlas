@@ -3,10 +3,11 @@ import * as THREE from "three";
 import {Html} from "@react-three/drei";
 import {Person} from "./InteriorPrimitives";
 import {circaApartmentParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
-import {circaUnits} from "./circaFloors";
+import {circaUnits,type CircaTower} from "./circaFloors";
+import {POOL_PEOPLE} from "./circaNav";
 
 /**
- * Circa's Floor 2 pool deck and Floors 3 to 6 apartments inside "Enter building".
+ * Circa's Floor 2 pool deck on the podium and Floors 3 to 6 apartments in each tower inside "Enter building".
  * Each floor draws as six instanced meshes (opaque boxes, cylinders, glow, glass and two water lists),
  * so the furniture count doesn't add draw calls. No lights: night glow is emissive only.
  */
@@ -40,14 +41,14 @@ export function CircaPoolDeck({night}:{night:boolean}) {
   const parts=useMemo(()=>circaPoolDeckParts(),[]);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    <Person x={-3.2} z={4.2} color="#4c6a86"/>
-    <Person x={3.3} z={-1.6} color="#b58b49"/>
+    {POOL_PEOPLE.map(([x,z],i)=><Person key={i} x={x} z={z} color={i?"#b58b49":"#4c6a86"}/>)}
   </group>;
 }
 
-export function CircaApartments({level,night,labels,onPick}:{level:number;night:boolean;labels:boolean;onPick:(text:string)=>void}) {
+/** One tower's apartment floor, tower-local; the east tower is drawn mirrored by its parent group. */
+export function CircaApartments({level,tower="west",night,labels,onPick}:{level:number;tower?:CircaTower;night:boolean;labels:boolean;onPick:(text:string)=>void}) {
   const parts=useMemo(()=>circaApartmentParts(level),[level]);
-  const units=circaUnits(level);
+  const units=circaUnits(level,tower);
   return <group>
     <CircaParts parts={parts} night={night}/>
     {/* Residents are the AI agents who live here; CircaWalkers moves them through their rooms. */}

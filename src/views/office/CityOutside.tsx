@@ -13,7 +13,9 @@ import {layoutMap,type GroupBy} from "../mapLayout";
 import {buildScene,TERRACE_H} from "../map3d/scene";
 import {Traffic,Vehicles} from "../map3d/living";
 import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
-export default function CityOutside({building="",projectId,span=16,elevation=0,allFloors=false,anchorAt,extras}:{building?:string;projectId?:string;span?:number;elevation?:number;allFloors?:boolean;
+export default function CityOutside({building="",projectId,span=16,clearSpan=span,elevation=0,allFloors=false,anchorAt,extras}:{building?:string;projectId?:string;span?:number;
+  /** Width of the interior to keep trees, rocks and paths out of, when it is wider than `span` (Circa's podium). */
+  clearSpan?:number;elevation?:number;allFloors?:boolean;
   /** A map position to centre on, for buildings that are not towers or shops. */
   anchorAt?:(scene:ReturnType<typeof buildScene>)=>{x:number;z:number}|undefined;
   /** Extra map pieces drawn in the same frame as the city, such as a building's own plaza. */
@@ -35,7 +37,7 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   const anchor=mallAnchor??anchorAt?.(source)??financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building));
   // The mall interior is drawn to its map footprint, so the city around it lines up with the lot.
   const scale=mallAnchor&&source.mall?span/(source.mall.rx*2):Math.max(4,span/4),cx=anchor?.x??(park?park.x+park.w/2:0),cz=anchor?.z??(park?park.z+park.d/2:0);
-  const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(span/2+2)/scale),[source,cx,cz,span,scale]);
+  const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(clearSpan/2+2)/scale),[source,cx,cz,clearSpan,scale]);
   // In the all-floors view, neighbours in the quarter the camera looks from would hide the
   // building. The camera can turn all the way round, so follow it, re-rendering only when it
   // crosses into another quarter.

@@ -1,4 +1,4 @@
-import {CIRCA_CORRIDOR as C,CIRCA_PARTY_WALL,CIRCA_PLATE,CIRCA_UNITS_EAST,circaEdgeX,circaEdgeZ,circaRim,circaUnits,mirrorX} from "./circaFloors";
+import {CIRCA_CORRIDOR as C,CIRCA_PARTY_WALL,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_UNITS_EAST,circaEdgeX,circaEdgeZ,circaRim,circaUnits,mirrorX} from "./circaFloors";
 
 /**
  * Pure part lists for Circa's pool deck and apartment floors inside "Enter building".
@@ -181,101 +181,105 @@ function palm(o:Parts,x:number,z:number,y0:number,h=2.4){
   for(let i=0;i<7;i++){const a=i*Math.PI*2/7,len=.95;o.box.push({p:[x+Math.sin(a)*len*.42,y0+h-.12,z+Math.cos(a)*len*.42],s:[.22,.03,len],c:col.green,r:a,rx:.35});}
 }
 
-/** Floor 2: the outdoor amenity deck on the podium roof, open to the sky. Mirrors the deck seen on the map. */
+/** Rectangular floor finish covering the podium, with faint lines `step` apart running along z. */
+function podiumFloor(o:Parts,c:string,line:string,step:number,y=.006,h=.012){
+  const {w,d}=CIRCA_PODIUM;b(o.box,0,y-h/2,0,w,h,d,c);
+  for(let x=-w/2+step;x<w/2;x+=step)b(o.box,x,y+h/2,0,.012,.002,d-.1,line);
+}
+/** Low glass guard rail around the podium roof, with a warm step light along its foot. */
+function podiumRail(o:Parts,y0:number){
+  const {w,d}=CIRCA_PODIUM,hw=w/2-.06,hd=d/2-.06,h=1.1;
+  for(const [x,z,len,r] of [[0,-hd,w-.12,0],[0,hd,w-.12,0],[-hw,0,d-.12,Math.PI/2],[hw,0,d-.12,Math.PI/2]] as const){
+    b(o.box,x,y0,z,len,.1,.1,col.black,r);o.glass.push({p:[x,y0+h/2,z],s:[len,h,.04],c:"#dfeef0",r});b(o.box,x,y0+h-.035,z,len,.035,.07,col.black,r);
+    const n=Math.round(len/1.5);for(let i=0;i<=n;i++){const t=-len/2+len*i/n;b(o.box,r?x:x+t,y0,r?z+t:z,.04,h,.06,col.black,r);}
+    o.glow.push({p:[x+(r?(x<0?.1:-.1):0),y0+.12,z+(r?0:(z<0?.1:-.1))],s:[len-.3,.015,.03],c:"#ffe6bf",r});
+  }
+}
+
+/**
+ * Floor 2: the outdoor amenity deck on the podium roof, between the two towers' lifts. Mirrors the deck seen on the map.
+ * Round pool to the street, lap pool under a colonnade at the back, a fire pit lounge and sun lawn in the west wing,
+ * cabanas and a spa in the east wing. The lift walks along z 0 on both sides stay clear.
+ */
 export function circaPoolDeckParts():Parts{
   const o=emptyParts(),deck=.04;
-  ovalFloor(o,col.paving,"#cbc3b2",1,true);
+  podiumFloor(o,col.paving,"#cbc3b2",1,.025,.03);
   // Round resort pool on a paved ring, loungers set around it, glow strips on the rim.
-  const px=1,pz=3.5;
+  const px=0,pz=4.9;
   o.round.push({p:[px,deck+.015,pz],s:[4.8,.03,4.8],c:"#e6e0d3"},{p:[px,deck+.05,pz],s:[3.6,.1,3.6],c:col.stone});
   o.waterRound.push({p:[px,deck+.06,pz],s:[3.3,.1,3.3],c:"#ffffff"});
   for(let i=0;i<12;i++){const a=i*Math.PI/6;o.glow.push({p:[px+Math.cos(a)*1.72,deck+.11,pz+Math.sin(a)*1.72],s:[.18,.02,.06],c:"#bfe9ff",r:-a+Math.PI/2});}
-  for(let i=0;i<9;i++){const a=Math.PI*.95+i*(Math.PI*1.1)/8,x=px+Math.cos(a)*2.25,z=pz+Math.sin(a)*2.25;if(z<1.15||z>5.85)continue;
+  for(let i=0;i<12;i++){const a=i*Math.PI/6+Math.PI/12,x=px+Math.cos(a)*2.3,z=pz+Math.sin(a)*2.3;if(z<3.4||Math.abs(a-Math.PI*1.5)<.6)continue;
     const r=-a+Math.PI/2;b(o.box,x,deck,z,.36,.16,.85,col.white,r);b(o.box,x+Math.cos(a)*.3,deck+.16,z+Math.sin(a)*.3,.36,.22,.2,col.white,r);}
-  // Lap pool along the north edge with lane lines, under a white colonnade canopy with lantern strips.
-  b(o.box,-2.2,deck,-4.2,8,.08,1.7,col.stone);o.waterBox.push({p:[-2.2,deck+.07,-4.2],s:[7.6,.04,1.3],c:"#ffffff"});
-  for(const z of [-4.5,-3.9])b(o.box,-2.2,deck+.09,z,7.2,.004,.04,"#24577a");
-  for(let i=0;i<6;i++)o.round.push({p:[-5.9+i*1.48,deck+1.3,-5.4],s:[.16,2.6,.16],c:col.white});
-  b(o.box,-2.2,deck+2.6,-5.25,8.3,.1,1.1,col.white);o.glow.push({p:[-2.2,deck+2.58,-4.85],s:[7.8,.03,.06],c:"#ffe2b0"});
-  // Cabanas along the east curve: teak frame, white canopy, turquoise daybed.
-  for(const z of [1.8,3.25,4.7]){
-    for(const [dx,dz] of [[-.6,-.6],[.6,-.6],[-.6,.6],[.6,.6]] as const)b(o.box,5.9+dx,deck,z+dz*.85,.07,1.8,.07,col.teak);
-    b(o.box,5.9,deck+1.8,z,1.4,.08,1.2,col.white);b(o.box,5.9,deck,z,1.1,.32,.9,col.turquoise);b(o.box,5.9,deck+.32,z,1.05,.08,.85,col.white);
-    o.glow.push({p:[5.9,deck+1.74,z],s:[.3,.05,.3],c:"#ffe2b0"});
+  // Lap pool along the back with lane lines, under a white colonnade canopy with lantern strips.
+  b(o.box,0,deck,-5.6,12,.08,1.7,col.stone);o.waterBox.push({p:[0,deck+.07,-5.6],s:[11.6,.04,1.3],c:"#ffffff"});
+  for(const z of [-5.9,-5.3])b(o.box,0,deck+.09,z,11.2,.004,.04,"#24577a");
+  for(let i=0;i<9;i++)o.round.push({p:[-6+i*1.5,deck+1.3,-7.1],s:[.16,2.6,.16],c:col.white});
+  b(o.box,0,deck+2.6,-6.95,12.6,.1,1.1,col.white);o.glow.push({p:[0,deck+2.58,-6.55],s:[12.2,.03,.06],c:"#ffe2b0"});
+  // East wing: a row of cabanas (teak frame, white canopy, turquoise daybed) and a round spa.
+  for(const x of [10.5,13,15.5]){const z=5.6;
+    for(const [dx,dz] of [[-.6,-.6],[.6,-.6],[-.6,.6],[.6,.6]] as const)b(o.box,x+dx*.85,deck,z+dz,.07,1.8,.07,col.teak);
+    b(o.box,x,deck+1.8,z,1.2,.08,1.4,col.white);b(o.box,x,deck,z,.9,.32,1.1,col.turquoise);b(o.box,x,deck+.32,z,.85,.08,1.05,col.white);
+    o.glow.push({p:[x,deck+1.74,z],s:[.3,.05,.3],c:"#ffe2b0"});
   }
-  // Small round spa.
-  o.round.push({p:[4.3,deck+.12,-3.3],s:[1.9,.24,1.9],c:col.stone});o.waterRound.push({p:[4.3,deck+.2,-3.3],s:[1.6,.1,1.6],c:"#ffffff"});
-  // Fire pit with a ring of low lounge chairs.
-  o.round.push({p:[-4.6,deck+.18,3.2],s:[1.2,.36,1.2],c:"#5d5853"},{p:[-4.6,deck+.37,3.2],s:[.9,.04,.9],c:col.ember});
-  o.glow.push({p:[-4.6,deck+.42,3.2],s:[.5,.06,.5],c:"#ff9a4a",r:.4});
-  for(let i=0;i<6;i++){const a=i*Math.PI/3,x=-4.6+Math.cos(a)*1.45,z=3.2+Math.sin(a)*1.45;if(z<1.2)continue;b(o.box,x,deck,z,.6,.3,.6,"#6a6f73",-a);b(o.box,x+Math.cos(a)*.26,deck+.3,z+Math.sin(a)*.26,.6,.3,.1,"#6a6f73",-a+Math.PI/2);}
-  // Planters with palms and low hedges at the edges, keeping the lift walk along z 0 clear.
-  for(const [x,z] of [[-6.2,4.3],[-7.2,-2.2],[2.6,-2.3],[-1.6,5.0]] as const){b(o.box,x,deck,z,.9,.45,.9,col.stone);palm(o,x,z,deck+.45);}
-  b(o.box,-7.4,deck,-.0,.6,.5,1.6,col.stone);b(o.box,-7.4,deck+.5,0,.5,.3,1.5,col.green);
-  // Glass guard rail around the curved edge of the deck.
-  glassRim(o,()=>false,WALL.full,1.1);
+  o.round.push({p:[13,deck+.12,-4.6],s:[2.4,.24,2.4],c:col.stone});o.waterRound.push({p:[13,deck+.2,-4.6],s:[2.1,.1,2.1],c:"#ffffff"});
+  // West wing: fire pit with a ring of low lounge chairs, and a sun lawn with loungers.
+  const fx=-13,fz=4.6;
+  o.round.push({p:[fx,deck+.18,fz],s:[1.2,.36,1.2],c:"#5d5853"},{p:[fx,deck+.37,fz],s:[.9,.04,.9],c:col.ember});
+  o.glow.push({p:[fx,deck+.42,fz],s:[.5,.06,.5],c:"#ff9a4a",r:.4});
+  for(let i=0;i<6;i++){const a=i*Math.PI/3+Math.PI/6,x=fx+Math.cos(a)*1.45,z=fz+Math.sin(a)*1.45;if(a>Math.PI*1.3&&a<Math.PI*1.7)continue;b(o.box,x,deck,z,.6,.3,.6,"#6a6f73",-a);b(o.box,x+Math.cos(a)*.26,deck+.3,z+Math.sin(a)*.26,.6,.3,.1,"#6a6f73",-a+Math.PI/2);}
+  b(o.box,-13,deck,-5,7,.02,3.4,"#7d9a5c");
+  for(const x of [-15.5,-14,-12.5,-11,-9.5]){b(o.box,x,deck+.02,-5.4,.6,.18,1.6,col.white);b(o.box,x,deck+.2,-6.05,.6,.24,.3,col.white);}
+  // Planters with palms at the corners of each wing and beside the lap pool.
+  for(const [x,z] of [[-20,6.8],[-20,-6.8],[20,6.8],[20,-6.8],[-7.6,-6.8],[7.6,-6.8],[-7.6,6.8],[7.6,6.8]] as const){b(o.box,x,deck,z,.9,.45,.9,col.stone);palm(o,x,z,deck+.45);}
+  podiumRail(o,deck);
   return o;
 }
 
 /**
- * The lobby's curved walls, following the oval rim (the furniture stays in CircaLobby):
- * - Back arc (z < -4.6): walnut in book-matched strips with two dark elevator doors, full height.
- * - West arc: faceted white marble panels with grey veins, full height.
- * - East arc: the sculpted wavy walnut slats, full height behind the lift and low toward the street, open where the lift sits.
- * - Street arc: floor-to-ceiling glass in slim black frames either side of the main door, with a glass transom above it.
- * Also the floors: light marble, and grey stone tiles across the elevator vestibule.
+ * The lobby's walls and wing furniture on the rectangular podium (the central furniture stays in CircaLobby):
+ * - Back wall: walnut in book-matched strips, full height, with a warm cove light.
+ * - West wall: faceted white marble panels with grey veins, full height, with a cove light.
+ * - East wall: the sculpted wavy walnut slats, full height at the back and low toward the street.
+ * - Street wall: floor-to-ceiling glass in slim black frames, open at the main door with a glass transom above it.
+ * - West wing: a residents' lounge and a wall of parcel lockers. East wing: a communal work table and a reading corner.
+ * - Floors: light marble, with grey stone tiles around the two lifts at the middle.
  */
-export const CIRCA_LOBBY={height:3.4,back:-4.6,front:5,liftGap:1.6,door:1.32,lifts:[-1.4,1.4]};
+export const CIRCA_LOBBY={height:3.4,door:1.32};
 export function circaLobbyParts():Parts{
-  const o=emptyParts(),L=CIRCA_LOBBY,H=L.height,{rx,rz}=CIRCA_PLATE;
+  const o=emptyParts(),L=CIRCA_LOBBY,H=L.height,hw=CIRCA_PODIUM.w/2,hd=CIRCA_PODIUM.d/2;
   const walnut=col.walnut,walnutLight="#76503a",marble=col.marble,vein="#b9b4ad",black=col.black;
-  // Floors: marble oval; grey tile strips across the back of the oval, with grout lines.
-  o.round.push({p:[0,.006,0],s:[rx*2,.012,rz*2],c:marble});
-  for(let z=-rz+.1;z<-3.6;z+=.2){const w=circaEdgeX(z)*2-.1;if(w>.2)b(o.box,0,.012,z+.1,w,.006,.2,"#a6a49f");}
-  for(let x=-6;x<=6;x+=2){const d=circaEdgeZ(x)-3.6-.05;if(d>0)b(o.box,x,.016,-3.6-d/2,.03,.004,d,"#8e8c87");}
-  // Point on the rim, inset toward the middle, and the angle that lays a box along the rim there.
-  const at=(t:number,inset:number)=>{const x=(rx-inset)*Math.cos(t),z=(rz-inset)*Math.sin(t);return {x,z,r:-Math.atan2(rz*Math.cos(t),-rx*Math.sin(t))};};
-  const arc=(t0:number,t1:number,step:number)=>{const n=Math.max(1,Math.round(Math.abs(t1-t0)/step)),out:number[]=[];for(let i=0;i<n;i++)out.push(t0+(t1-t0)*(i+.5)/n);return out;};
-  const seg=(t:number,dt:number,inset:number)=>{const a=at(t-dt/2,inset),c=at(t+dt/2,inset);return Math.hypot(c.x-a.x,c.z-a.z);};
-  // The z = back line meets the rim at these angles (west and east).
-  const tb=Math.asin(L.back/rz),tf=Math.asin(L.front/rz);
-  // Back arc: walnut wall with alternating strips; gaps in the strips for the elevator doors.
-  const backStep=.05;
-  for(const t of arc(Math.PI-tb,2*Math.PI+tb,backStep)){
-    const p=at(t,.08),len=seg(t,backStep,.08)+.01;b(o.box,p.x,0,p.z,len,H,.16,walnut,p.r);
-  }
-  {const span=Math.PI+2*tb,n=Math.round(span/.03);for(let i=0;i<n;i++){const t=Math.PI-tb+(i+.5)*span/n,p=at(t,.17);
-    if(L.lifts.some(x=>Math.abs(p.x-x)<.9))continue;if(i%4<2)continue;b(o.box,p.x,.1,p.z,.24,H-.2,.02,(i>>2)%2?walnutLight:walnut,p.r);}}
-  for(const x of L.lifts){
-    const t=2*Math.PI-Math.acos(x/rx),p=at(t,.2);
-    b(o.box,p.x,0,p.z,1.5,2.45,.05,black,p.r);
-    const q=at(t,.23);b(o.box,q.x,0,q.z,1.25,2.3,.03,"#3d3b38",q.r);
-    const m=at(t,.25);b(o.box,m.x,0,m.z,.02,2.3,.02,"#26241f",m.r);
-    o.glow.push({p:[m.x,2.5,m.z],s:[.5,.05,.02],c:"#fff1d6",r:m.r});
-  }
-  // West arc: faceted marble panels folded at alternating angles.
-  const westStep=.2;arc(Math.PI-tf,Math.PI-tb,westStep).forEach((t,i)=>{
-    const p=at(t,.12),len=seg(t,westStep,.12)+.06,fold=i%2?.28:-.28;
-    b(o.box,p.x,0,p.z,len,H,.12,marble,p.r+fold);
-    const v=at(t,.19);b(o.box,v.x,.25,v.z,.03,H-.6,.01,vein,p.r+fold+.4);
-  });
-  // East arc: wavy walnut slats set on the normal, deeper and shallower along a slow wave; open for the lift.
-  const eastStep=.026;arc(tb,tf,eastStep).forEach((t,i)=>{
-    const z=rz*Math.sin(t);if(Math.abs(z)<L.liftGap)return;
-    const d=.15+.45*(1+Math.sin(i*.45))/2,h=z<0?H:1.2,p=at(t,.04+d/2);
-    b(o.box,p.x,0,p.z,.14,h,d,i%3?walnut:walnutLight,p.r);
-  });
-  // Night: a warm cove light along the top of the tall walls (back, west, and east behind the lift).
-  for(const seg of circaRim(72,.27))if(seg.z<0||(seg.x<0&&seg.z<L.front))o.glow.push({p:[seg.x,H-.25,seg.z],s:[seg.len,.03,.06],c:"#ffe6bf",r:seg.r});
-  // Street arc: floor-to-ceiling glass in slim black frames, open at the main door with a glass transom above it.
-  const frontStep=.08;arc(tf,Math.PI-tf,frontStep).forEach((t,i)=>{
-    const p=at(t,.06),len=seg(t,frontStep,.06),door=Math.abs(p.x)<L.door,y0=door?2.6:0;
-    if(!door)b(o.box,p.x,0,p.z,len,.1,.1,black,p.r);
-    o.glass.push({p:[p.x,(y0+H)/2,p.z],s:[len,H-y0,.04],c:"#dfe9ea",r:p.r});
-    b(o.box,p.x,H-.04,p.z,len,.04,.08,black,p.r);
-    if(door)b(o.box,p.x,2.56,p.z,len,.04,.08,black,p.r);
-    else if(i%12===0)b(o.box,p.x,0,p.z,.04,H,.06,black,p.r);
-  });
+  podiumFloor(o,marble,"#e6e1d8",2);
+  b(o.box,0,.012,0,10,.006,4.6,"#a6a49f");for(let x=-4;x<=4;x+=1)b(o.box,x,.016,0,.03,.004,4.6,"#8e8c87");
+  // Back wall with book-matched strips and a cove light.
+  b(o.box,0,0,-hd+.08,hw*2,H,.16,walnut);
+  for(let x=-hw+.3,i=0;x<hw-.2;x+=.5,i++)b(o.box,x,.1,-hd+.17,.24,H-.2,.02,i%2?walnutLight:walnut);
+  o.glow.push({p:[0,H-.25,-hd+.3],s:[hw*2-.6,.03,.06],c:"#ffe6bf"});
+  // West wall: faceted marble.
+  for(let z=-hd+.8,i=0;z<hd-.3;z+=1.6,i++){const fold=Math.PI/2+(i%2?.28:-.28);b(o.box,-hw+.3,0,z,1.62,H,.12,marble,fold);b(o.box,-hw+.38,.25,z+(i%2?-.3:.25),.03,H-.6,.01,vein,fold+.4);}
+  o.glow.push({p:[-hw+.5,H-.25,0],s:[hd*2-.6,.03,.06],c:"#ffe6bf",r:Math.PI/2});
+  // East wall: wavy walnut slats.
+  for(let z=-hd+.15,i=0;z<hd-.15;z+=.2,i++){const d=.15+.45*(1+Math.sin(i*.45))/2,h=z<0?H:1.2;b(o.box,hw-.04-d/2,0,z,d,h,.14,i%3?walnut:walnutLight);}
+  // Street wall: floor-to-ceiling glass, mullions every 1.5, open at the door with a transom over it.
+  for(const side of [-1,1]){const x0=side*L.door,x1=side*(hw-.06),cx=(x0+x1)/2,len=Math.abs(x1-x0);
+    b(o.box,cx,0,hd-.06,len,.1,.1,black);o.glass.push({p:[cx,H/2,hd-.06],s:[len,H,.04],c:"#dfe9ea"});
+    for(let x=Math.abs(x0);x<=hw;x+=1.5)b(o.box,side*x,0,hd-.06,.04,H,.06,black);}
+  o.glass.push({p:[0,(2.6+H)/2,hd-.06],s:[L.door*2,H-2.6,.04],c:"#dfe9ea"});b(o.box,0,2.56,hd-.06,L.door*2,.04,.08,black);
+  b(o.box,0,H-.04,hd-.06,hw*2-.12,.04,.08,black);
+  // West wing: residents' lounge (two grey sofas facing over a rug, walnut table) and parcel lockers on the back wall.
+  b(o.box,-13,.012,4.6,5.6,.012,3.4,col.rug);
+  for(const z of [3.2,6]){const back=z<4.6?-1:1;b(o.box,-13,0,z,3,.42,.85,col.greySofa);b(o.box,-13,.42,z+back*.35,3,.4,.16,col.greySofa);}
+  b(o.box,-13,0,4.6,1.4,.36,.7,col.walnut);
+  b(o.box,-13,0,-hd+.55,7,2.2,.7,col.walnut);for(let x=-16.2;x<-9.8;x+=.8)b(o.box,x,.1,-hd+.91,.01,2,.01,black);
+  b(o.box,-13,1.9,-hd+.91,7,.01,.01,black);o.glow.push({p:[-13,2.25,-hd+.6],s:[7,.03,.6],c:"#ffe6bf"});
+  // East wing: a long marble work table with black chairs, and a reading corner with cognac chairs.
+  b(o.box,13,.72,-4.6,5,.06,1.1,marble);for(const dx of [-2,2])b(o.box,13+dx,0,-4.6,.12,.72,.8,black);
+  for(const dx of [-1.8,-.6,.6,1.8])for(const side of [-1,1]){b(o.box,13+dx,.42,-4.6+side*.85,.42,.06,.42,black);b(o.box,13+dx,.48,-4.6+side*1.04,.42,.38,.05,black);
+    for(const sx of [-.15,.15])b(o.box,13+dx+sx,0,-4.6+side*.85,.03,.42,.03,black);}
+  for(const dx of [-.9,.9]){b(o.box,13+dx,0,4.4,.8,.3,.8,col.cognac);b(o.box,13+dx,.3,4.4+.32,.8,.45,.15,col.cognac);}
+  o.round.push({p:[13,.25,4.2],s:[.7,.5,.7],c:col.walnut});
+  // Olive trees in stone pots at the corners of each wing.
+  for(const [x,z] of [[-20,-6.6],[-20,6.6],[20,-6.6],[20,6.6],[-8,-6.6],[8,-6.6]] as const){o.round.push({p:[x,.3,z],s:[.7,.6,.7],c:"#e0d9cc"},{p:[x,.95,z],s:[.08,.7,.08],c:"#6f5a43"},{p:[x,1.55,z],s:[1.1,.9,1.1],c:"#8a9a6a"});}
   return o;
 }
 

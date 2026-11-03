@@ -2,19 +2,21 @@ import {useMemo} from "react";
 import {Box,Person} from "./InteriorPrimitives";
 import {CircaParts} from "./CircaUpperFloors";
 import {circaLobbyParts} from "./circaInteriorParts";
-import {circaEdgeX} from "./circaFloors";
+import {CIRCA_PODIUM} from "./circaFloors";
 
 /**
  * Circa's ground-floor lobby inside "Enter building", matching the lobby seen through the glass on the map.
  * A stylized, unofficial take on a modern residential lobby, with no signage or logos:
- * - Back: a walnut elevator vestibule on grey stone tile, framed by two sculptural pillars.
- * - West wall: faceted white marble. East wall: a sculpted wavy walnut wall.
+ * - Middle: the two towers' lifts on grey stone tile, framed by two sculptural pillars, under a walnut back wall.
+ * - West wall: faceted white marble. East wall: a sculpted wavy walnut wall. The wings hold a residents' lounge,
+ *   parcel lockers, a communal work table and a reading corner.
  * - Reception: a marble-and-walnut desk under hanging light rods.
  * - Centre: a diamond chandelier over a round flower table.
  * - Front: two lounges. One has black leather chairs on a hide-pattern rug; the other a navy sofa with
  *   cognac chairs and an arc lamp on a blue-grey rug.
- * Room: the oval plate (CIRCA_PLATE, x ±10.2, z ±7.4). The street door is on the rim at z +7.3 and the shared lift at x +7.5, z 0.
- * Keep the walk from the door to the lift (x 0 from the door to the centre, then z 0 east) clear.
+ * Room: the rectangular podium (CIRCA_PODIUM, x ±22, z ±8.5), with the wings drawn in circaLobbyParts. The street door
+ * is at z +8.4 and the two towers' lifts face away from each other at x ±2.7, z 0.
+ * Keep the walk from the door to the centre (x 0) and along z 0 to each lift clear.
  */
 const marble="#f3efe8",walnut="#5b3a26",black="#1b1b1d",slat="#8d8e8f";
 
@@ -28,11 +30,11 @@ function Round({p,r,h,color}:{p:[number,number,number];r:number;h:number;color:s
 export default function CircaLobby({night}:{night:boolean}) {
   const rim=useMemo(()=>circaLobbyParts(),[]);
   return <group>
-    {/* Oval floor and curved walls: walnut vestibule with the elevator doors, faceted marble, wavy walnut, glass storefront. */}
+    {/* Podium floor, walls and wing furniture: walnut back wall, faceted marble, wavy walnut, glass street wall. */}
     <CircaParts parts={rim} night={night}/>
     {/* Slatted grey ceiling over the vestibule, with black spotlights. Kept to the back so the cutaway stays open. */}
-    {Array.from({length:18},(_,i)=>-7.1+i*.2).map(z=><Box key={z} p={[0,3.35,z]} s={[circaEdgeX(z)*2-.5,.08,.08]} color={slat}/>)}
-    {[-6,-3,0,3,6].map(x=><group key={x}><Round p={[x,3.26,-4.4]} r={.12} h={.1} color={black}/><Glow p={[x,3.2,-4.4]} s={[.14,.02,.14]} night={night}/></group>)}
+    {Array.from({length:12},(_,i)=>-CIRCA_PODIUM.d/2+.3+i*.2).map(z=><Box key={z} p={[0,3.35,z]} s={[CIRCA_PODIUM.w-.6,.08,.08]} color={slat}/>)}
+    {[-18,-12,-6,0,6,12,18].map(x=><group key={x}><Round p={[x,3.26,-6.6]} r={.12} h={.1} color={black}/><Glow p={[x,3.2,-6.6]} s={[.14,.02,.14]} night={night}/></group>)}
     {/* Reception: white marble base, walnut top and a glow reveal, under a cluster of hanging light rods. */}
     <Box p={[3.6,.5,-2.5]} s={[2.8,1,.8]} color={marble}/><Box p={[3.6,1.04,-2.5]} s={[3,.08,1]} color={walnut}/><Glow p={[3.6,.06,-2.08]} s={[2.7,.04,.02]} night={night}/>
     <Person x={3.6} z={-3.2} color="#2b3440"/>
