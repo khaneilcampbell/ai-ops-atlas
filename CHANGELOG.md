@@ -3,7 +3,11 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · New Inside button on the map: see the offices inside nearby buildings without entering them (#204)
+- 2026-11-03 · New Inside button on the map: see the offices inside nearby buildings without entering them (#204)
+- 2026-11-03 · Skyline links to the Atlas repository while retaining its district, buildings and planned assistant (#207)
+- 2026-11-01 · AI agents now have a workday: each one lives in a Circa apartment, walks the city streets (in gold) to its office for its shift, and walks home after. The new Workday tab on each agent shows its role, owner, home, office, shift, budget and daily output (#196)
+- 2026-11-01 · Behind the scenes: a plan for giving every AI agent a home, a shift, a budget and an owner, with a daily commute on the map, laid out through the end of November (#195)
+- 2026-11-01 · City opens without loading messages and draws a lighter first frame before restoring normal quality (#202)
 - 2026-11-01 · Draft reply can now send the Benjaire-designed email straight from Atlas after you review it, with a copy to your Gmail (#203)
 - 2026-11-01 · Draft reply and Draft follow-up in Client inquiries now open Gmail and copy the reply in the Benjaire email design (logo header, card, footer); paste it into the message and press Send (#201)
 - 2026-11-01 · Map groupings keep district locations stable, building names share overview rules, and the extra map message is removed (#200)

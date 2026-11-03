@@ -829,4 +829,5 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .projects-host { position: absolute; inset: 0; }
 .projects-host.inactive { visibility: hidden; opacity: 0; pointer-events: none; }
 .projects-host.inactive * { pointer-events: none !important; }
-.map-loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--sage-200); color: var(--ink); font-size: 14px; z-index: 1; }
+
+.map-stage.night, .map-stage.night .map3d { background: #071827; }

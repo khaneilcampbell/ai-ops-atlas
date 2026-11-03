@@ -169,7 +169,7 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, projects: [p], agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
     const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
     return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);

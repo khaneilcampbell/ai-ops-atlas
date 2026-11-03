@@ -65,7 +65,7 @@ test("branded business interior opens with its own workspace navigation",async({
   await page.locator('.m3-plaque[title^="Anthropic ·"]').dispatchEvent("click");await settle(page,4);
   await expect(page.getByRole("region",{name:"Anthropic interior"})).toHaveCount(0);
   await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Anthropic",exact:true})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/ai-ops-atlas",exact:true})).toBeVisible();
   await shot(page,"anthropic-building-details");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
   await expect(page.getByRole("region",{name:"Anthropic interior"})).toBeVisible();
@@ -132,7 +132,7 @@ test("Skyline project panel links its repository before entering the district",a
   await openAtlas(page);
   await selectBuilding(page,"Skyline");
   await expect(page.getByRole("region",{name:"Linked repositories"})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/skyline",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/ai-ops-atlas",exact:true})).toBeVisible();
   await expect(page.locator(".map-bar h3")).toHaveText("Skyline");
   await expect(page.locator(".map-bar")).toContainText("1 AI agent");
   await expect(page.locator(".map-bar").getByRole("button",{name:/^Benjaire Inquiry/})).toBeVisible();

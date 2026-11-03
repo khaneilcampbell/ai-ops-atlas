@@ -1,0 +1,16 @@
+[server]
+headless = true
+port = 8501
+# Uploads are not used; keep request bodies small.
+maxUploadSize = 1
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"
+showErrorDetails = "none"
+
+[runner]
+fastReruns = true
