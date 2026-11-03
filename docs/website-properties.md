@@ -102,8 +102,8 @@ Nothing is needed for what shipped here. For the remaining tiles:
    https://dash.cloudflare.com/profile/api-tokens. **Read only** permissions it needs: Zone → Zone →
    Read (find the zone by name), Zone → Analytics → Read, Account → Account Settings → Read (the
    audit log). Zone Logs, Account Analytics and Workers Observability read are harmless extras;
-   resources: the accounts that hold benjaire.com (Workers account "benjaireco") and, if it is on
-   Cloudflare, khaneilcampbell.com. Saved as the encrypted Pages secret `CLOUDFLARE_API_TOKEN` at
+   resources: the accounts that hold benjaire.com (Workers account "benjaireco") and
+   khaneilcampbell.com (registered on Cloudflare, which runs its DNS; GitHub Pages serves it). Saved as the encrypted Pages secret `CLOUDFLARE_API_TOKEN` at
    https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/pages/view/ai-ops-atlas/settings/production.
    Never in the repository, never on the web page.
 2. **Uptime Kuma**: the address of the self-hosted Kuma, a monitor for each site, and a public
@@ -116,9 +116,10 @@ Nothing is needed for what shipped here. For the remaining tiles:
 
 ## Next steps
 
-1. Confirm the Cloudflare tiles on the deployed site once the token is saved. A domain whose DNS
-   isn't in KC's account (khaneilcampbell.com may be on its registrar's nameservers) shows "not in
-   your Cloudflare account" for traffic and events, not zero.
+1. Confirm the Cloudflare tiles on the deployed site once the token is saved. Both domains are
+   zones in KC's account. khaneilcampbell.com is served by GitHub Pages: if its records are DNS
+   only (grey cloud), Cloudflare sees no requests and the Traffic tile says "Not proxied", not zero.
+   A domain outside the account shows "not in your Cloudflare account".
 2. Wire Uptime Kuma (`/api/status-page/{slug}` and `/api/status-page/heartbeat/{slug}`), and
    let a Kuma "down" open the site-down incident instead of the single probe.
 3. Map: tint the building amber or red while it has an open incident (command center phase 3
