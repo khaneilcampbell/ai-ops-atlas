@@ -7,6 +7,8 @@ import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
 import {CircaWalkers,type CircaResident} from "./CircaWalkers";
 import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
 import {CIRCA_LIFT_OFFSET,CIRCA_LIFT_TOP} from "./circaNav";
+import {LAND_BOTTOM,type buildScene} from "../map3d/scene";
+import type {useMaterials} from "../map3d/models";
 
 /**
  * Circa inside "Enter building": twin oval towers on a rectangular podium, like the exterior.
@@ -22,6 +24,22 @@ function Tower({x,mirror,children}:{x:number;mirror:boolean;children:React.React
 }
 function OvalSlab(){
   return <mesh position={[0,-0.15,0]} scale={[CIRCA_PLATE.rx,0.3,CIRCA_PLATE.rz]} receiveShadow castShadow><cylinderGeometry args={[1,1,1,72]}/><meshStandardMaterial color={SLAB} roughness={0.65}/></mesh>;
+}
+
+/** How far the interior is scaled up from the map (CityOutside: 4 interior units per map unit). */
+const MAP_SCALE=4;
+/**
+ * Circa's own ground, drawn in the city outside (map units, at the building's spot): the interior podium is wider than
+ * the parcel on the map, so a block of land runs under it with a paved forecourt around the building, and nothing
+ * hangs over the water.
+ */
+export function CircaSite({scene,m}:{scene:ReturnType<typeof buildScene>;m:ReturnType<typeof useMaterials>}) {
+  const b=scene.financial?.buildings.find(x=>x.id==="circa");if(!scene.financial||!b)return null;
+  const x=scene.financial.x+b.x,z=scene.financial.z+b.z,w=(CIRCA_PODIUM.w+10)/MAP_SCALE,d=(CIRCA_PODIUM.d+10)/MAP_SCALE;
+  return <group position={[x,0,z]}>
+    <mesh position={[0,LAND_BOTTOM/2,0]} material={m.land} receiveShadow><boxGeometry args={[w,-LAND_BOTTOM,d]}/></mesh>
+    <mesh position={[0,.006,0]} material={m.step} receiveShadow><boxGeometry args={[(CIRCA_PODIUM.w+3)/MAP_SCALE,.012,(CIRCA_PODIUM.d+3)/MAP_SCALE]}/></mesh>
+  </group>;
 }
 
 /** The two lift cars moving through the stack in the all-floors view. */
