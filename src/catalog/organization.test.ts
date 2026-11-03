@@ -82,6 +82,7 @@ describe("automation categories", () => {
       business: [
         "benjaire-contact-worker",
         "benjaire-flow-intake",
+        "benjaire-inquiry-to-client",
         "brand-strategist",
         "canva-mockups",
         "commerce-loop",
