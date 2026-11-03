@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-03 · Inside every Financial District building except BMW and Circa (Chase, Robinhood, Navy Federal, Experian, The Ritz-Carlton, Wells Fargo, Vanguard, American Express, Benjaire Finance): a square floor plan shaped like the outside, floor-to-ceiling glass all round, Circa's walnut, marble and oak furniture, and agents who walk in, ride the lift to their floor and work between their rooms, the lobby and other floors. The Ritz-Carlton has guest suites
 - 2026-11-03 · Inside Circa you now see both towers on a square lobby: Floor 1 lobby, Floor 2 pool deck, and Floors 3 to 6 with 24 furnished apartments behind floor-to-ceiling glass. Your agents live there and walk it naturally, by lift, between home, the lobby and the pool, and it is warmer and brighter at night (#227)
 - 2026-11-03 · Security fix: the signing setup script no longer prints the names of the secrets it uploads, which clears a GitHub code-scanning alert. Nothing changes in the app (#226)
 - 2026-11-03 · New Inside button on the map: see the offices inside nearby buildings without entering them (#204)

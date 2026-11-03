@@ -21,7 +21,7 @@ export const emptyParts=():Parts=>({box:[],round:[],glow:[],glass:[],waterRound:
 
 /** Wall height on the far sides and the cutaway height used on near partitions. */
 export const WALL={full:3.2,low:1.1,t:.1};
-const col={
+export const col={
   oak:"#d8c09a",plank:"#c8ae86",wall:"#f1eee8",black:"#1b1b1d",cabinet:"#c9c6c0",quartz:"#f6f4ef",steel:"#a9abad",
   walnut:"#5b3a26",liveEdge:"#a8743f",cognac:"#9a5a2e",rug:"#8e8f8c",brass:"#c9a35a",marble:"#f3efe8",bathStone:"#bdbab4",
   hex:"#9d9c98",sheet:"#f4f1ea",duvet:"#e3ddd2",greySofa:"#a9aaa8",bronze:"#7a5a36",champagne:"#d8cbb0",column:"#f2f0ec",
@@ -31,14 +31,14 @@ const col={
 const SOFAS=["#36533c","#26314f","#cdbfa6"];
 
 /** Push a box whose base sits at y0. */
-function b(out:Part[],x:number,y0:number,z:number,w:number,h:number,d:number,c:string,r=0){out.push({p:[x,y0+h/2,z],s:[w,h,d],c,...(r?{r}:{})});}
+export function b(out:Part[],x:number,y0:number,z:number,w:number,h:number,d:number,c:string,r=0){out.push({p:[x,y0+h/2,z],s:[w,h,d],c,...(r?{r}:{})});}
 /** A wall along x (constant z) from xa to xb, leaving any door gaps open. */
-function wallX(out:Part[],z:number,xa:number,xb:number,h:number,gaps:[number,number][]=[],c=col.wall){
+export function wallX(out:Part[],z:number,xa:number,xb:number,h:number,gaps:[number,number][]=[],c=col.wall){
   let x=xa;for(const [g0,g1] of [...gaps].sort((a,b2)=>a[0]-b2[0])){if(g0>x)b(out,(x+g0)/2,0,z,g0-x,h,WALL.t,c);x=Math.max(x,g1);}
   if(xb>x)b(out,(x+xb)/2,0,z,xb-x,h,WALL.t,c);
 }
 /** A wall along z (constant x) from za to zb, leaving any door gaps open. */
-function wallZ(out:Part[],x:number,za:number,zb:number,h:number,gaps:[number,number][]=[],c=col.wall){
+export function wallZ(out:Part[],x:number,za:number,zb:number,h:number,gaps:[number,number][]=[],c=col.wall){
   let z=za;for(const [g0,g1] of [...gaps].sort((a,b2)=>a[0]-b2[0])){if(g0>z)b(out,x,0,(z+g0)/2,WALL.t,h,g0-z,c);z=Math.max(z,g1);}
   if(zb>z)b(out,x,0,(z+zb)/2,WALL.t,h,zb-z,c);
 }
@@ -65,7 +65,7 @@ function glassRim(o:Parts,tall:(x:number,z:number)=>boolean,full=WALL.full,rail=
   for(const seg of circaRim(64,.16)){const t=tall(seg.x,seg.z);o.glow.push({p:[seg.x,t?full-.1:.12,seg.z],s:[seg.len,t?.03:.015,t?.05:.03],c:"#ffe6bf",r:seg.r});}
 }
 
-function bed(o:Parts,x:number,z:number,r:number,w=1.6){
+export function bed(o:Parts,x:number,z:number,r:number,w=1.6){
   // Bed runs along x when r = 0 with the headboard at the low-x end.
   const L=2.05,c=Math.cos(r),s=Math.sin(r),at=(dx:number,dz:number):[number,number]=>[x+dx*c+dz*s,z-dx*s+dz*c];
   const put=(dx:number,dz:number,y0:number,lw:number,h:number,ld:number,cc:string)=>{const [px,pz]=at(dx,dz);b(o.box,px,y0,pz,lw,h,ld,cc,r);};
@@ -74,7 +74,7 @@ function bed(o:Parts,x:number,z:number,r:number,w=1.6){
   for(const side of [-1,1]){put(-L/2+.35,side*w*.25,.48,.35,.12,w*.42,col.white);put(-L/2+.2,side*(w/2+.4),0,.42,.5,.42,col.walnut);
     const [lx,lz]=at(-L/2+.2,side*(w/2+.4));o.glow.push({p:[lx,.62,lz],s:[.16,.18,.16],c:"#fff1d6"});}
 }
-function bath(o:Parts,x0:number,x1:number,z0:number,z1:number,tubAlongX:boolean,flip:number){
+export function bath(o:Parts,x0:number,x1:number,z0:number,z1:number,tubAlongX:boolean,flip:number){
   b(o.box,(x0+x1)/2,.03,(z0+z1)/2,x1-x0-.1,.012,z1-z0-.1,col.hex);
   for(let x=x0+.25;x<x1-.1;x+=.25)b(o.box,x,.043,(z0+z1)/2,.01,.002,z1-z0-.12,"#8a8985");
   // Tub against the far wall, grey marble surround, white floating vanity with a lit mirror, toilet.

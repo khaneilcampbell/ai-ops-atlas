@@ -43,7 +43,7 @@ describe("Walking inside Circa",()=>{
     const it0=circaItinerary(0,0);
     expect(new Set(it0.legs.map(l=>l.level))).toEqual(new Set([it0.home.level,0,1]));
     // Tower-local legs on apartment floors carry the tower; podium legs don't.
-    for(const l of it0.legs)expect(l.tower).toBe(circaLevelKind(l.level)==="apartments"?it0.home.tower:undefined);
+    for(const l of it0.legs)expect(l.frame).toBe(circaLevelKind(l.level)==="apartments"?it0.home.tower:undefined);
     expect(circaItinerary(3).home.tower).toBe("east");
     expect(it0.legs.filter(l=>l.hidden==="ride").length).toBe(6);
     expect(it0.legs[0].at?.id).toBe("entrance");expect(it0.legs[it0.legs.length-1].hidden).toBe("away");
