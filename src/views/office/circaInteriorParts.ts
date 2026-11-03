@@ -80,10 +80,12 @@ function bath(o:Parts,x0:number,x1:number,z0:number,z1:number,tubAlongX:boolean,
   b(o.box,(x0+x1)/2,.03,(z0+z1)/2,x1-x0-.1,.012,z1-z0-.1,col.hex);
   for(let x=x0+.25;x<x1-.1;x+=.25)b(o.box,x,.043,(z0+z1)/2,.01,.002,z1-z0-.12,"#8a8985");
   // Tub against the far wall, grey marble surround, white floating vanity with a lit mirror, toilet.
-  if(tubAlongX){const tz=flip>0?z0+.42:z1-.42;b(o.box,x0+.85,.04,tz,1.5,.5,.72,col.white);b(o.box,x0+.85,.4,tz,1.3,.12,.5,"#d9e7ea");b(o.box,x0+.85,.54,tz-flip*.38,1.6,1.4,.04,col.bathStone);}
-  const vx=x1-.55,vz=flip>0?z1-.33:z0+.33;b(o.box,vx,.35,vz,.9,.4,.48,col.white);b(o.box,vx,.75,vz,.95,.04,.5,col.quartz);
+  // Slim tub and vanity so there's a clear standing spot between them.
+  if(tubAlongX){const tz=flip>0?z0+.36:z1-.36;b(o.box,x0+.85,.04,tz,1.5,.5,.6,col.white);b(o.box,x0+.85,.4,tz,1.3,.12,.42,"#d9e7ea");b(o.box,x0+.85,.54,tz-flip*.32,1.6,1.4,.04,col.bathStone);}
+  const vx=x1-.55,vz=flip>0?z1-.28:z0+.28;b(o.box,vx,.35,vz,.9,.4,.4,col.white);b(o.box,vx,.75,vz,.95,.04,.42,col.quartz);
   o.glow.push({p:[vx,1.5,flip>0?z1-.07:z0+.07],s:[.7,.75,.02],c:"#eef3f2"});
-  o.round.push({p:[x0+.45,.22,flip>0?z1-.4:z0+.4],s:[.36,.42,.5],c:col.white});
+  // Toilet in the corner away from the vanity; without a tub it moves to the other wall to keep the doorway clear.
+  o.round.push({p:[x0+.45,.22,(flip>0)===tubAlongX?z1-.4:z0+.4],s:[.36,.42,.5],c:col.white});
 }
 
 /** Furniture and partitions of the west 1 bed; the east unit mirrors it about the party wall. */
@@ -131,7 +133,8 @@ function twoBed(o:Parts){
   wallZ(o.box,3.6,-circaEdgeZ(3.6)+.12,Z1,WALL.low,[[-4.9,-4.1]]);
   wallX(o.box,-2.6,5,X1,WALL.low);wallZ(o.box,5,-2.6,Z1,WALL.low,[[-2.4,-1.7]]);
   bath(o,5,X1,-2.6,Z1,false,-1);
-  bed(o,4.9,-3.75,Math.PI/2,1.5);
+  // Headboard on the east wall, so a clear aisle runs from the door up to the bathroom.
+  bed(o,5.35,-4.4,Math.PI,1.5);
   // Kitchen on the corridor wall, long champagne island with a white top.
   b(o.box,-2.0,0,-1.38,3.2,.86,.6,col.white);b(o.box,-2.0,.86,-1.38,3.24,.05,.64,col.quartz);b(o.box,-1.6,.86,-1.38,.62,.03,.5,col.steel);
   b(o.box,-3.72,0,-1.4,.5,2.1,.62,col.white);
@@ -151,7 +154,7 @@ function twoBed(o:Parts){
   o.round.push({p:[2.6,.18,-4.2],s:[.75,.36,.6],c:col.white},{p:[2.6,.38,-4.2],s:[.82,.04,.66],c:col.marble});
   o.round.push({p:[3.15,.25,-3.4],s:[.8,.5,.8],c:col.bronze},{p:[3.15,.5,-3.4],s:[.66,.12,.66],c:"#3b3530"});
   b(o.box,2.4,0,-5.2,.03,1.5,.03,col.black);o.glow.push({p:[2.4,1.55,-5.2],s:[.3,.18,.3],c:"#ffe9b8"});
-  for(const [x,z] of [[-.6,-4.9],[3.3,-4.9]] as const){o.round.push({p:[x,.2,z],s:[.4,.4,.4],c:col.white});o.round.push({p:[x,.75,z],s:[.5,.7,.5],c:col.green});}
+  for(const [x,z] of [[-.6,-4.9],[3.1,-5.7]] as const){o.round.push({p:[x,.2,z],s:[.4,.4,.4],c:col.white});o.round.push({p:[x,.75,z],s:[.5,.7,.5],c:col.green});}
 }
 
 /** Oak floor, curved glass, corridor walls and front doors shared by every apartment floor. Walls run out to the rim. */

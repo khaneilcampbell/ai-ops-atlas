@@ -45,18 +45,14 @@ export function CircaPoolDeck({night}:{night:boolean}) {
   </group>;
 }
 
-const RESIDENT_COLORS=["#806c9e","#496e84","#b58b49","#5a8067"];
-/** Where a resident may stand in each unit (west 1 bed, then mirrored): clear of furniture and the lift walk. */
-const STANDS:Record<string,[number,number]>={"01":[-.9,-3.9],"02":[-2.1,3.7],"03":[.6,3.7]};
-
 export function CircaApartments({level,night,labels,onPick}:{level:number;night:boolean;labels:boolean;onPick:(text:string)=>void}) {
   const parts=useMemo(()=>circaApartmentParts(level),[level]);
   const units=circaUnits(level);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    {units.map((u,i)=>{const stand=STANDS[u.id.slice(-2)];return <group key={u.id}>
-      {(level+i)%2===0&&stand&&<Person x={stand[0]} z={stand[1]} color={RESIDENT_COLORS[(level+i)%4]}/>}
+    {/* Residents are the AI agents who live here; CircaWalkers moves them through their rooms. */}
+    {units.map(u=><group key={u.id}>
       {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(`Apartment ${u.id} · ${u.label}`)}>{`Apartment ${u.id}`}<span>{u.beds===2?"2 bed":"1 bed"}</span></button></Html>}
-    </group>;})}
+    </group>)}
   </group>;
 }

@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-03 · The AI agents who live in Circa now walk the building: each one tours every room of its apartment, takes the lift down to the lobby (front desk, lounges, elevators, front door), rides up to the pool deck, then goes home. Click one to see its name and apartment. Every room on every floor is checked to be reachable from the lift (#227)
 - 2026-11-03 · Circa at night is lighter on your Mac: the all-floors view uses 6 lamps instead of 18, with warm cove strips along the curved walls, and each floor's lamps now reach the edges of the round rooms (#227)
 - 2026-11-03 · Inside Circa, every floor is now round like the towers outside, with curved glass all the way around; the lobby sits on the ground instead of floating, and the lift is walnut and black to match the lobby (#227)
 - 2026-11-03 · Inside Circa, the lobby is now Floor 1, the pool deck is Floor 2 (round pool, lap pool, cabanas, spa and fire pit), and Floors 3 to 6 are furnished apartments: two 1 bedrooms and one 2 bedroom with curved glass on each floor (#227)
