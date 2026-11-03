@@ -28,9 +28,15 @@ describe("bundled catalog", () => {
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",
       "khaneilcampbell/projects-intelligence-hub",
-      "khaneilcampbell/service-desk-intelligence",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
+  });
+
+  it("preserves the Service Desk project and its real security workflow", () => {
+    expect(catalog.projects.find(p => p.id === "service-desk")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
+    const agent = catalog.agents.find(a => a.id === "service-desk-codeql");
+    expect(agent?.observe?.githubWorkflow).toBe("service-desk-codeql.yml");
+    expect(readFileSync(join(dir, "..", agent!.source!), "utf8")).toContain("security-extended");
   });
 
   it("links every agent to a known project", () => {
