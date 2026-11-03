@@ -1,8 +1,8 @@
 # Atlas case study: portfolio first, Benjaire product later
 
 **Status: draft for KC.** This is the written case study for KC's job hunt, plus the path from
-portfolio piece to a Benjaire product. Nothing here is published anywhere yet. Figures marked
-*(check)* should be confirmed by KC before the page goes on khaneilcampbell.com or a resume.
+portfolio piece to a Benjaire product. Nothing here is published anywhere yet. The figures were
+counted from the repository at main `d8e9189` on 2026-11-03.
 
 It pairs with [command-center.md](command-center.md): the command center reframe is the story this
 case study tells, and the product section reuses the Nov 2 business plan.
@@ -41,8 +41,10 @@ money, and what is waiting for a human decision.
 ## How it was built
 
 Atlas was built by KC directing Claude agents through small, reviewed pull requests: one change per
-pull request, tests and screenshots on each, and KC as the only person who merges. Roughly 200
-pull requests between Oct 27 and Nov 3, 2026 *(check)*. The case study should present this
+pull request, tests and screenshots on each, and KC as the only person who merges. Between Oct 27
+and Nov 3, 2026: 207 pull requests opened and 146 merged; about 42,000 lines of TypeScript and
+React (16,000 of them the 3D map) and 16,000 lines of Rust; about 650 TypeScript tests, 77 Rust
+tests and 43 Playwright visual specs (counted at main `d8e9189`). The case study should present this
 honestly as a skill: specifying work, reviewing AI output, setting guardrails, and saying no
 (for example rejecting a lighting change and asking for a revert, PR #170).
 
@@ -57,11 +59,19 @@ honestly as a skill: specifying work, reviewing AI output, setting guardrails, a
 | Signed auto-update on every merge, rollback by revert | Treats a personal tool like production |
 | Buildings become places, workflows become visible routes | Shows product thinking, not just features (see command-center.md) |
 
-## Roles this supports
+## Roles this is written for
 
-AI operations or automation engineer, solutions engineer for AI products, technical program or
-product roles around agents, and IT or service desk roles moving toward automation (it connects to
-the SOC lab and the Service Desk dashboard already in the portfolio).
+KC chose three target roles on 2026-11-03. The same project tells a slightly different story for
+each, so lead with the angle that fits the posting.
+
+| Role | What the hiring manager looks for | Lead with |
+|---|---|---|
+| **Forward Deployed Engineer** | Takes a messy real problem, builds the fix in the customer's environment, ships it fast and safely, talks to non-engineers | Atlas as a deployment for a real business (Benjaire): the inquiry pipeline from website to n8n to Claude to reply, guarded write actions, signed updates in about 10 minutes, and the plan to install it for agencies |
+| **AI Engineer** | Builds production systems around models: evaluation, cost, reliability, tool use, guardrails | Model tier rule and spend caps, honest observed-run status, Repository Intelligence and Engineering Review with per-run caps, prompt-injection-safe data blocks, performance budget on every PR |
+| **AI Generalist** | Range: product sense, design, automation, code, writing, using AI tools to do a team's worth of work | The whole arc: concept to Mac app, web page and iPhone in one week, the 3D city as interface, the command center reframe, directing AI coding agents with review |
+
+It also connects to the SOC lab and the Service Desk dashboard already in the portfolio, which
+help for FDE roles at security or IT-heavy customers.
 
 ## What to put in front of a recruiter
 
@@ -71,13 +81,16 @@ the SOC lab and the Service Desk dashboard already in the portfolio).
    `docs/screenshots/`.
 3. The public repository link. It is public but all rights reserved (PR #119), which suits a
    portfolio: readable, not reusable.
-4. Three resume bullets, for example:
-   - Built a Tauri and React command center that monitors about 50 agents and automations across
-     11 repositories *(check)*, with signed auto-updates on every merge.
-   - Designed guarded write actions (scoped tokens, Touch ID approval, audit log) and spend caps
-     that keep AI agent costs under a fixed monthly budget.
-   - Directed AI coding agents through about 200 reviewed pull requests in one week *(check)*,
-     with tests, visual checks and a performance budget on every change.
+4. Resume bullets, one set per role:
+   - **Forward Deployed Engineer:** Deployed an agent operations platform for my own small
+     business (Benjaire), connecting its website, n8n workflows and Claude into one monitored
+     pipeline, with signed updates reaching the Mac within about 10 minutes of each merge.
+   - **AI Engineer:** Built guarded AI agents with per-run and monthly spend caps, a model tier
+     rule (small models classify, large models write code) and status drawn only from observed runs,
+     monitoring 51 registered agents and automations across 11 project manifests.
+   - **AI Generalist:** Took Atlas from idea to Mac app, web page and iPhone in one week by
+     directing AI coding agents through 207 pull requests (146 merged), backed by about 650
+     TypeScript tests, 77 Rust tests and 43 visual checks.
 
 Before showing it publicly, the real company names in the city (Experian, BMW, Starbucks, OpenAI,
 Anthropic, airline liveries and others) should be swapped for functional names in screenshots and
@@ -101,8 +114,9 @@ The business plan's kill trigger still applies: at day 90, fewer than 2 paid set
 
 ## Decisions for KC
 
-1. **Lead role for the job hunt.** Which role title the case study should be written toward
-   (recommended: AI operations or automation engineer).
+1. **Lead role for the job hunt.** Answered 2026-11-03: Forward Deployed Engineer, AI Engineer
+   and AI Generalist. Still open: which one the khaneilcampbell.com page leads with
+   (recommended: Forward Deployed Engineer, since Benjaire is a real deployment).
 2. **How to describe working with Claude.** Recommended: say it openly as "directed AI coding
    agents with review and guardrails", since that is the skill.
 3. **Where it lives.** Recommended: a case study page on khaneilcampbell.com linking the public
