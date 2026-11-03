@@ -12,7 +12,7 @@ Act as a senior software engineer and 3D architectural designer for Atlas. Inspe
 
 ## Implemented
 
-- The original stepped floor profile is shared by map exterior and interior cutaway. The map stays at its original dimensions; the cutaway uses a larger room scale (24×20 radii), adaptive furnishings and minimum hallway clearance. Stable floors and units are preserved.
+- Consistent expanded interior floor plates. The map exterior is restored to its original dimensions, stepped curves and fin spacing; it uses a separate floor profile. Stable floors and units are preserved.
 - Named minimum hallway clearance of 1.35 interior units, kept clear of all room furnishings.
 - Landing endpoints computed from both edges of their full-width strip intersecting the actual atrium boundary. Intermediate floors provide both sides. Railing openings use the same landing data.
 - Single-floor connection decks have an end guard and a label directing the viewer to All floors; full flights appear only with their destination floors visible.
@@ -21,10 +21,8 @@ Act as a senior software engineer and 3D architectural designer for Atlas. Inspe
 
 ## Validation and limits
 
-33 focused tests pass, including interior/exterior profile agreement and per-floor lift alignment, minimum hallway clearance, arrival/departure connectivity, full-width landing overlap, room-sized furniture, worker IDs, ground slab normals and map/garden clearances across grouping modes. Type checks, lint and build pass; existing bundle-size/Tauri import warnings remain.
+32 focused tests pass, including identical floor profiles, minimum hallway clearance, arrival/departure connectivity, full-width landing overlap, room-sized furniture, worker IDs, ground slab normals and map/garden clearances across grouping modes. Type checks, lint and build pass; existing bundle-size/Tauri import warnings remain.
 
 Day/night browser checks inspect Lobby, Floor 1, Floor 2, Floor 3 and All floors, Output selection and keyboard floor selection. Screenshots use fixture data, not production status. No visual baselines changed.
 
 The lift and commuters remain schematic/static. This repairs the circulation geometry; it does not activate agents or implement a new walking/elevator simulation. Not merged or deployed.
-
-The current interior matches the exterior silhouette, including upper-floor setbacks and curved wings. Interior spacing is enlarged through room scale instead of replacing the stepped profile with identical plates. Ground paving is derived from the actual atrium boundary.

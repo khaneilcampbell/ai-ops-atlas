@@ -16,7 +16,7 @@ import {useAtlas} from '../../state';
 import {AgentOutput} from '../../components/AgentOutput';
 import {marketplaceWorkspace} from './marketplaceWorkspaces';
 import {leaveBuilding} from './store';
-import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,escalatorFor,mallInteriorFloor,mallDoorway,mallUnits,mallLandings,mallLiftEnd,mallFurniture,type MallUnit,type UnitKind} from './mallInteriorPlan';
+import {ESCALATOR,MALL_LIFT,MALL_IN,MALL_LEVELS,MALL_SHAPE,escalatorFor,mallInteriorFloor,mallDoorway,mallUnits,mallLandings,mallFurniture,type MallUnit,type UnitKind} from './mallInteriorPlan';
 import '../../styles/skyline.css';
 
 const FH=MALL_IN.floor;
@@ -106,7 +106,6 @@ function Fitout({u,y}:{u:MallUnit;y:number}){
  const [x,z]=centre(u),f=mid(u.front),ang=Math.atan2(f[1]-z,f[0]-x);
  const along=(d:number,side:number):[number,number]=>[x+Math.cos(ang)*d-Math.sin(ang)*side,z+Math.sin(ang)*d+Math.cos(ang)*side];
  const layout=mallFurniture(u);
- if(layout.depth<1.8||layout.width<1.5)return null;
  const assignment=marketplaceWorkspace(u.id);
  if(assignment){const depth=Math.hypot(mid(u.back)[0]-f[0],mid(u.back)[1]-f[1]);const [dx,dz]=along(-depth*.15,.65);
   return <group position={[dx,y,dz]} rotation={[0,-ang+Math.PI/2,0]}>
@@ -130,15 +129,15 @@ function Fitout({u,y}:{u:MallUnit;y:number}){
 }
 
 /** Schematic accessible lift; static doors, no invented passenger travel. */
-function LiftLanding({y,level}:{y:number;level:number}){
- const l=MALL_LIFT,back=l.z-l.depth/2,end=mallLiftEnd(level),len=back-end;
+function LiftLanding({y}:{y:number}){
+ const l=MALL_LIFT,back=l.z-l.depth/2,len=back-l.landingEnd;
  return <group>
   <Box p={[l.x,y+l.height/2,l.z]} s={[l.width,l.height,l.depth]} color="#b3beb8"/>
   <Box p={[l.x,y+1.15,back-.012]} s={[l.opening,2.3,.035]} color="#294237"/>
   {[-1,1].map(k=><Box key={k} p={[l.x+k*.31,y+1.12,back-.04]} s={[.59,2.2,.025]} color="#c4d7d2"/>)}
   <Box p={[l.x,y+2.5,back-.05]} s={[.65,.12,.04]} color="#c9a35a"/>
-  <Box p={[l.x,y-.12,(back+end)/2]} s={[2,.24,len]} color="#ece5d6"/>
-  {[-1,1].map(k=><Box key={k} p={[k,y+.5,(back+end)/2]} s={[.06,1,len]} color="#294237"/>)}
+  <Box p={[l.x,y-.12,(back+l.landingEnd)/2]} s={[2,.24,len]} color="#ece5d6"/>
+  {[-1,1].map(k=><Box key={k} p={[k,y+.5,(back+l.landingEnd)/2]} s={[.06,1,len]} color="#294237"/>)}
  </group>;
 }
 
@@ -159,10 +158,10 @@ function Floor({level,y,labels,onPick,cutaway,night,single}:{level:number;y:numb
   <mesh geometry={slab} receiveShadow castShadow material={finish('stone')}/>
   {unitFloors.map(f=><mesh key={f.id} geometry={f.geo} material={finish(f.finish)} receiveShadow/>)}
   <Bridge level={level} y={y} single={single}/>
-  <LiftLanding y={y} level={level}/>
+  <LiftLanding y={y}/>
   {[-1,1].map(side=><group key={`light${side}`}>
-   <pointLight position={[side*12,y+2.7,-2]} color="#ffe5b4" intensity={night?30:2} distance={25} decay={2}/>
-   <mesh position={[side*12,y+3.05,-2]}><boxGeometry args={[3,.035,.15]}/><meshStandardMaterial color="#fff4dc" emissive="#ffe5b4" emissiveIntensity={night?1.3:.15}/></mesh>
+   <pointLight position={[side*8,y+2.7,-2]} color="#ffe5b4" intensity={night?22:2} distance={18} decay={2}/>
+   <mesh position={[side*8,y+3.05,-2]}><boxGeometry args={[3,.035,.15]}/><meshStandardMaterial color="#fff4dc" emissive="#ffe5b4" emissiveIntensity={night?1.3:.15}/></mesh>
   </group>)}
   {/* Glass balustrade round the atrium, open where the escalator bridge leaves. */}
   {inner.slice(1).map((b,i)=>(atBridge(inner[i],b)||(Math.abs((inner[i][0]+b[0])/2)<1.1&&(inner[i][1]+b[1])/2<-5))?null:<group key={i}><Seg a={inner[i]} b={b} y={y} h={.95} t={.04} color="#cfe3e0" opacity={.35}/><Seg a={inner[i]} b={b} y={y+.95} h={.05} t={.08} color="#c9a35a"/></group>)}
@@ -210,21 +209,11 @@ function MallCamera({mode}:{mode:number}){
  const far=size.width<size.height?1.7:1;
  useLayoutEffect(()=>{
   wake(1000);
-  const all=mode===ALL;camera.position.set(...((all?[44,36,48]:[32,32,38]).map(v=>v*far)) as [number,number,number]);
+  const all=mode===ALL;camera.position.set(...((all?[34,30,38]:[23,25,29]).map(v=>v*far)) as [number,number,number]);
   const t=controls.current?.target;if(t){t.set(0,all?5:0,-1);camera.lookAt(t);controls.current?.update();}invalidate();
  },[mode,camera,invalidate,far]);
  useInteriorTrackpad(()=>controls.current,{x:MALL_IN.rx,z:MALL_IN.rz});
- return <OrbitControls ref={controls} makeDefault minDistance={8} maxDistance={90} maxPolarAngle={Math.PI/2.2}/>;
-}
-
-/** Ground paving follows the actual atrium edge instead of a fixed-size ellipse. */
-function Courtyard(){
- const geometry=useMemo(()=>{const {inner}=mallInteriorFloor(MALL_SHAPE,0),shape=new THREE.Shape();
-  shape.moveTo(inner[0][0],-inner[0][1]);for(const [x,z] of inner.slice(1))shape.lineTo(x,-z);shape.closePath();
-  const geo=new THREE.ShapeGeometry(shape);geo.rotateX(-Math.PI/2);geo.translate(0,-.005,0);return geo;
- },[]);
- useEffect(()=>()=>geometry.dispose(),[geometry]);
- return <mesh geometry={geometry} receiveShadow><meshStandardMaterial color="#e6d6b4" roughness={.9}/></mesh>;
+ return <OrbitControls ref={controls} makeDefault minDistance={8} maxDistance={70} maxPolarAngle={Math.PI/2.2}/>;
 }
 
 /** Atlas Marketplace inside: the shop ring of each floor round the funnel-tree atrium. */
@@ -246,7 +235,7 @@ export default function MallInterior({light}:{light:LightMode}){
    <FramePacer profile={power} running={false}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
-   <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-30} shadow-camera-right={30} shadow-camera-top={30} shadow-camera-bottom={-30}/>
+   <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-20} shadow-camera-right={20} shadow-camera-top={20} shadow-camera-bottom={-20}/>
    <MallCamera mode={mode}/>
    {/* The real city round the lot, at the interior's scale, reusing the map's own scene. */}
    <CityOutside building="Atlas Marketplace" span={MALL_IN.rx*2} allFloors={mode===ALL} elevation={mode>0&&mode!==ALL?mode*FH:0}/>
@@ -254,7 +243,7 @@ export default function MallInterior({light}:{light:LightMode}){
    {<group><Atrium top={(mode===ALL?MALL_IN.levels:1)*FH+.6} night={isNight} escalators={mode===ALL?[0,1,2].map(l=>({level:l,y:l*FH})):[]}/><Fins levels={levels} stacked={mode===ALL}/></group>}
    {(mode===ALL||mode===0)&&<group>
     {/* Lobby paving is present in both all-floor and single-floor ground views. */}
-    <Courtyard/>
+    <mesh position={[0,-.02,0]} scale={[9,1,7.8]} receiveShadow><cylinderGeometry args={[1,1,.04,40]}/><meshStandardMaterial color="#e6d6b4" roughness={.9}/></mesh>
     <Box p={[0,-.02,8]} s={[14,.04,12]} color="#e6d6b4"/>
    </group>}
    {(mode===ALL||mode===0)&&<group>

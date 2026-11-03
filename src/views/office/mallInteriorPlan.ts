@@ -1,9 +1,9 @@
-import {MALL_SHOPS,mallFloor} from '../map3d/mallPlan';
+import {MALL_SHOPS,MALL} from '../map3d/mallPlan';
 import {marketplaceWorkspace} from './marketplaceWorkspaces';
 import type {Pt} from '../map3d/roads';
 
 /** Interior scale: the same horseshoe as the map building, drawn at room size. */
-export const MALL_IN={rx:24,rz:20,floor:3.4,levels:4,unitsPerFloor:8,segmentsPerUnit:5} as const;
+export const MALL_IN={rx:16,rz:13,floor:3.4,levels:4,unitsPerFloor:8,segmentsPerUnit:5} as const;
 export const MALL_CIRCULATION={hallway:1.35,landingWidth:1.6} as const;
 export const MALL_SHAPE={cx:0,cz:0,rx:MALL_IN.rx,rz:MALL_IN.rz};
 
@@ -102,11 +102,19 @@ export function mallFurniture(u:MallUnit){
  return {depth,width,tableOffsets:width>3.4?[-.9,.9]:[0],tableDepth:-Math.min(.5,depth*.15),stageWidth:Math.min(1.6,width*.5),chairRows:Math.max(1,Math.min(2,Math.floor((depth-1.2)/.6)))};
 }
 
-/** The cutaway uses the original exterior profile at expanded room scale. */
-export function mallInteriorFloor(p:{cx:number;cz:number;rx:number;rz:number},level:number){
- return mallFloor(p,level);
-}
-/** Each stepped floor meets the same lift shaft through its own calculated landing. */
-export function mallLiftEnd(level:number){
- return Math.min(...[-1,0,1].map(x=>landingEdge(mallInteriorFloor(MALL_SHAPE,level).inner.map(([px,pz]):Pt=>[pz,px]),x,-1)))-.35;
+/** Schematic interior has its own expanded floor plate; never changes the map exterior. */
+export function mallInteriorFloor(p:{cx:number;cz:number;rx:number;rz:number},_level:number){
+ const n=MALL.segments,a0=Math.PI/2+MALL.openingHalf,a1=Math.PI/2+2*Math.PI-MALL.openingHalf;
+ const outer:Pt[]=[],inner:Pt[]=[];
+ for(let i=0;i<=n;i++){
+  const t=a0+(a1-a0)*i/n;
+  // Ends taper so each wing finishes in a rounded nose instead of a cut.
+  const end=Math.min(1,Math.min(i,n-i)/4);
+  const out=.97+.06*Math.sin(t*1.5+1.3)+.03*Math.sin(t*3);
+  const inn=.52+.04*Math.sin(t*2);
+  const k=inn+(out-inn)*(.7+.3*Math.sqrt(end));
+  outer.push([p.cx+Math.cos(t)*p.rx*k,p.cz+Math.sin(t)*p.rz*k]);
+  inner.push([p.cx+Math.cos(t)*p.rx*inn,p.cz+Math.sin(t)*p.rz*inn]);
+ }
+ return {outer,inner};
 }
