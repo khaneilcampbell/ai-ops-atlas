@@ -7,9 +7,10 @@ project:
   summary: >-
     Skyline residences and business district. Initial service: Benjaire
     Inquiry Assistant, a planned client intake package based on Benjaire Flow. No client workflow
-    or live telemetry is connected through this registration.
+    or live telemetry is connected through this registration. Implementation is maintained in Atlas;
+    shared repository health does not verify Skyline business operations.
   status: idle
-  repository: khaneilcampbell/skyline
+  repository: khaneilcampbell/ai-ops-atlas
   district: business-operations
   tags: [business, residences, intake]
   links:

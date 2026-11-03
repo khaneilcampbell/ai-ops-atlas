@@ -85,7 +85,7 @@ describe("bundled registry", () => {
       expect(action.profile.governance.approval).toBeTruthy();
       expect(action.profile.governance.permissions.length).toBeGreaterThan(0);
     }
-    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && e.profile.repository === "khaneilcampbell/ai-ops-atlas").map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr"]);
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && catalog.agents.some(a => a.id === e.profile.id && a.projectId === "ai-ops-atlas")).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr"]);
   });
 });
 

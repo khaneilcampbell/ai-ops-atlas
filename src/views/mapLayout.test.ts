@@ -176,7 +176,7 @@ it("keeps one accessible Skyline district in every map grouping",()=>{
 });
 
 it("registers Skyline without duplicating its existing residential district", () => {
-  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/skyline");
+  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
   const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
   expect(layout.parks.filter(p => !p.strays.length)).toHaveLength(1);
