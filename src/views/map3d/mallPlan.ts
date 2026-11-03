@@ -7,7 +7,7 @@ export const MALL_KEY='service:atlas-marketplace';
  * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
  * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
  */
-export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.5} as const;
+export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:13.2,maxD:12.4,plantStep:.95,canopyR:1.5} as const;
 
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
@@ -117,5 +117,5 @@ export function mallPieceCount(p:MallPlan,y0=0){
  const plants=Array.from({length:MALL.levels},(_,l)=>along(mallFloor(p,l).outer,MALL.plantStep).length).reduce((a,b)=>a+b,0);
  return mallFins(p,y0).length+plants+MALL_FIXED_PIECES;
 }
-/** Plaza, fountain, canopy, sign, entrance and ramp pieces. */
-export const MALL_FIXED_PIECES=14;
+/** Plaza, fountain, canopy, sign, entrance pieces. */
+export const MALL_FIXED_PIECES=12;

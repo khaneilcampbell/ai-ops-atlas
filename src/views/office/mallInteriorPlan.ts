@@ -1,8 +1,9 @@
 import {MALL_SHOPS,mallFloor} from '../map3d/mallPlan';
+import {marketplaceWorkspace} from './marketplaceWorkspaces';
 import type {Pt} from '../map3d/roads';
 
 /** Interior scale: the same horseshoe as the map building, drawn at room size. */
-export const MALL_IN={rx:11,rz:9,floor:3.4,levels:4,unitsPerFloor:8,segmentsPerUnit:5} as const;
+export const MALL_IN={rx:16,rz:13,floor:3.4,levels:4,unitsPerFloor:8,segmentsPerUnit:5} as const;
 export const MALL_SHAPE={cx:0,cz:0,rx:MALL_IN.rx,rz:MALL_IN.rz};
 
 export type UnitKind='shop'|'vacant'|'food'|'hall'|'studio'|'service';
@@ -13,11 +14,11 @@ export interface MallLevel {level:number;title:string;summary:string}
 
 /**
  * Floors follow the reference's section: shops around a central atrium on the ground and first
- * floors, a food court on the second, and an events floor on top, over a basement car park.
+ * floors, a food court on the second, and an events floor on top. Stable floor and unit IDs are retained.
  */
 export const MALL_LEVELS:MallLevel[]=[
- {level:0,title:'Ground · Client services',summary:'Entrance, information desk and the first agent shops'},
- {level:1,title:'Floor 1 · Agent shops',summary:'Open units for the next sellable agents'},
+ {level:0,title:'Lobby · Client services',summary:'Entrance, information desk and the first agent shops'},
+ {level:1,title:'Floor 1 · Benjaire production',summary:'Proposed workspaces linked to existing Commerce workers'},
  {level:2,title:'Floor 2 · Food court',summary:'Seating around the atrium'},
  {level:3,title:'Floor 3 · Events and demos',summary:'Demo hall for client walk-throughs, plus studios'},
 ];
@@ -32,6 +33,8 @@ function unitName(level:number,index:number):{name:string;kind:UnitKind;note:str
   if(shop)return {name:shop.name,kind:shop.status==='planned'?'shop':'vacant',note:shop.status==='planned'?`Planned · not selling yet. ${shop.offer}`:VACANT};
   return {name:`Unit G${index+1}`,kind:'vacant',note:VACANT};
  }
+ const workspace=marketplaceWorkspace(`L${level}-U${index}`);
+ if(workspace)return {name:workspace.role,kind:'studio',note:`Planned · Not connected. Existing worker: ${workspace.agentId}. ${workspace.deliverable}. No execution authority changed.`};
  if(level===1)return {name:`Unit 1${index+1}`,kind:'vacant',note:VACANT};
  if(level===2)return {name:index<4?'Food court west':'Food court east',kind:'food',note:'Shared seating. Visual only.'};
  return index>=4?{name:'Demo hall',kind:'hall',note:'Client demos of planned agents. No live events.'}:{name:`Studio 3${index+1}`,kind:'studio',note:'Prepared studio. No agents assigned yet.'};
@@ -58,10 +61,18 @@ export function mallUnits():MallUnit[]{
  * bridge that reaches out from one side of a floor and climbs at 30° to a bridge on the other side
  * of the floor above, clear of the funnel tree's stem (it runs in front of it, at z).
  */
-export const ESCALATOR={z:3,width:1.1,slope:Math.PI/6,stepDepth:.4,bridgeReach:6.2} as const;
+export const ESCALATOR={z:3,width:1.1,slope:Math.PI/6,stepDepth:.4,bridgeReach:9} as const;
 /** Which side (−1 west, +1 east) of a floor its landing bridge reaches out from. */
 export const bridgeSide=(level:number)=>level%2===0?-1:1;
 export function escalatorFor(level:number){
  const run=MALL_IN.floor/Math.tan(ESCALATOR.slope),s=bridgeSide(level);
  return {level,from:s*run/2,to:-s*run/2,run,rise:MALL_IN.floor,steps:Math.round(run/ESCALATOR.stepDepth)};
+}
+
+/** Prepared lift and landing inside the atrium, clear of the escalator at z=3. */
+export const MALL_LIFT={x:0,z:-5.4,width:1.6,depth:1.4,height:3.1,landingEnd:-7.8,opening:1.2} as const;
+/** A full doorway replaces three front bays, rather than squeezing into one curved segment. */
+export function mallDoorway(u:MallUnit){
+ const middle=Math.floor((u.front.length-1)/2),a=u.front[middle-1],b=u.front[middle+2];
+ return {middle,a,b,width:Math.min(1.8,Math.hypot(b[0]-a[0],b[1]-a[1])*.8)};
 }
