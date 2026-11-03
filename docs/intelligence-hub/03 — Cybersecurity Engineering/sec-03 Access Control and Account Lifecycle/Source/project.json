@@ -1,0 +1,22 @@
+{
+  "id": "sec-03",
+  "name": "Access Control and Account Lifecycle",
+  "category": "03 — Cybersecurity Engineering",
+  "status": "Active Development",
+  "status_note": "Marked In progress on khaneilcampbell.com; no lab files found",
+  "repo": null,
+  "local_folder": null,
+  "site_pages": [
+    "https://khaneilcampbell.com/labs.html",
+    "https://khaneilcampbell.com/lab-details.html"
+  ],
+  "last_verified": "2026-10-26",
+  "last_synced_commit": {
+    "khaneilcampbell.com main": "b6283c4"
+  },
+  "tags": [
+    "security",
+    "identity",
+    "portfolio"
+  ]
+}

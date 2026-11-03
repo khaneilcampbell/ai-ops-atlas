@@ -137,7 +137,7 @@ agents:
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
       docs:
-        technical: https://github.com/khaneilcampbell/benjaire-dashboard/blob/main/products/flow/live-ops/README.md
+        technical: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/apps/benjaire-dashboard/products/flow/live-ops/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#benjaire-flow-intake
         known_issues:
           - The export in benjaire-dashboard is updated by hand, so it can drift from the live workflow

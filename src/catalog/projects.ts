@@ -9,4 +9,4 @@ export function projectRepositories(project: Pick<Project, "id" | "repository" |
 export const LANDMARK_REPOSITORIES: string[] = [];
 
 /** Suppress retired repositories in saved discovery results without fetching them. */
-export const RETIRED_REPOSITORIES = ["khaneilcampbell/skyline", "khaneilcampbell/service-desk-intelligence"];
+export const RETIRED_REPOSITORIES = ["khaneilcampbell/skyline", "khaneilcampbell/benjaire-dashboard", "khaneilcampbell/projects-intelligence-hub", "khaneilcampbell/service-desk-intelligence"];
