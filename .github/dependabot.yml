@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "build(deps)"
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
@@ -11,6 +13,8 @@ updates:
     directory: /src-tauri
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "build(deps)"
     groups:
       cargo-minor-and-patch:
         update-types: [minor, patch]
@@ -18,3 +22,5 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "ci(deps)"

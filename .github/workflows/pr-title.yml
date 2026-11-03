@@ -1,0 +1,41 @@
+name: PR title
+
+# Squash merges use the pull request title as the commit title, and GitHub appends the
+# pull request number. Requiring a Conventional Commits title here keeps main's history
+# readable, for example "feat: add the Skyline retail floor (#120)".
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  conventional-title:
+    name: Conventional Commits title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # The title is user controlled text. It reaches the script only through an
+      # environment variable, never by interpolating it into the shell command.
+      - name: Check the pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .*[^[:space:]]$'
+          if [[ "$PR_TITLE" =~ $pattern ]]; then
+            echo "OK: $PR_TITLE"
+            exit 0
+          fi
+          {
+            echo "::error title=Pull request title::Use a Conventional Commits title: type(scope): summary"
+            echo "Got: $PR_TITLE"
+            echo "Types: feat fix docs style refactor perf test build ci chore revert"
+            echo "Examples: 'feat: add the Skyline retail floor'  'fix(map): keep the header on one line'"
+            echo "Do not add (#number); GitHub adds it when the pull request is squash merged."
+          } >&2
+          exit 1
