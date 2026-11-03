@@ -1,3 +1,4 @@
+import {financialDistrictBounds} from "./financialDistrictMembership";
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -158,7 +159,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
     m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
   }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
-  if(scene.financial){const f=scene.financial;m.set(FINANCIAL_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:f.w,d:f.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
+  if(scene.financial){const f=scene.financial,bounds=financialDistrictBounds(f,scene.dealership);m.set(FINANCIAL_KEY,{x:bounds.x+bounds.w/2,z:bounds.z+bounds.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:bounds.w,d:bounds.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
   if(scene.hills)m.set(HILLS_KEY,{x:scene.hills.x+scene.hills.w/2,z:scene.hills.z+scene.hills.d/2,y0:TERRACE_H,y1:TERRACE_H+5,w:scene.hills.w,d:scene.hills.d});
   if(scene.community)for(const b of COMMUNITY_BUILDINGS)m.set(communityKey(b.id),{x:scene.community.x+b.x,z:scene.community.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.communityRail){const [x,z]=scene.communityRail.financial;m.set("service:financial-station",{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
@@ -353,15 +354,15 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
     const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => out.push(buildingPlaque({ ...p, selKey, hover, onSelect: select }));
     if(scene.financial){
-      const f=scene.financial,top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
-      plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:f.x+f.w/2,roof:top,z:f.z+f.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
+      const f=scene.financial,bounds=financialDistrictBounds(f,scene.dealership),top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
+      plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:bounds.x+bounds.w/2,roof:top,z:bounds.z+bounds.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
       for(const b of f.buildings)if(mapLabelVisible("building",near,selKey===financialKey(b.id),hover===financialKey(b.id)))plaque({id:financialKey(b.id),select:financialKey(b.id),name:b.name,x:f.x+b.x,roof:TERRACE_H+b.height+1.2,z:f.z+b.z,priority:3,mark:PLANNED,title:`${b.name} · Planned workspace`});
       if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
     if(scene.community&&(mapLabelVisible("detail",near,false,false,selKey===HILLS_KEY||!!selKey?.startsWith("service:hills:"))))for(const b of COMMUNITY_BUILDINGS)plaque({id:communityKey(b.id),select:communityKey(b.id),name:b.name,x:scene.community.x+b.x,roof:TERRACE_H+b.h,z:scene.community.z+b.z,priority:8,mark:PLANNED,title:`${b.name} · Planned community`});
     if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial;plaque({id:"service:financial-station",select:"service:financial-station",name:"Financial District Station",x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:"Financial District Station · Visual simulation"});}
     if(scene.hills)plaque({id:HILLS_KEY,select:HILLS_KEY,name:"Atlas Hills",x:scene.hills.x+HILLS.mansion.x,roof:TERRACE_H+HILLS.mansion.h+.25,z:scene.hills.z+HILLS.mansion.z,priority:2,mark:PLANNED,title:"Atlas Hills · Planned community"});
-    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
+    if(scene.dealership&&mapLabelVisible("building",near,selKey===DEALERSHIP_KEY,hover===DEALERSHIP_KEY))plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:3,mark:PLANNED,title:"BMW · Financial District · Planned showroom"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:"Stadium",x:scene.stadium.x+4,roof:TERRACE_H+2.3,z:scene.stadium.z+3.5,priority:2,mark:PLANNED,title:"Stadium · Planned venue"});
