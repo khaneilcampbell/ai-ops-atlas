@@ -18,19 +18,28 @@ describe("bundled catalog", () => {
     expect(issues).toEqual([]);
   });
 
-  it("registers the expected repositories and shares Atlas with Skyline", () => {
+  it("registers the expected repositories and shares Atlas with migrated projects", () => {
     expect([...new Set(catalog.projects.map((p) => p.repository))].sort()).toEqual([
       "khaneilcampbell/ai-ops-atlas",
-      "khaneilcampbell/benjaire-dashboard",
       "khaneilcampbell/benjaire.com",
       "khaneilcampbell/career-application-system",
       "khaneilcampbell/khaneilcampbell",
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",
-      "khaneilcampbell/projects-intelligence-hub",
       "khaneilcampbell/service-desk-intelligence",
       "khaneilcampbell/splunk-bruteforce-detection-lab",
     ]);
+  });
+
+  it("preserves dashboard and documentation projects with real migrated sources", () => {
+    for (const id of ["benjaire-ops", "intelligence-hub"]) {
+      expect(catalog.projects.find(p => p.id === id)?.repository).toBe("khaneilcampbell/ai-ops-atlas");
+    }
+    for (const id of ["benjaire-ops-ci", "hub-ci", "docs-builder"]) {
+      const agent = catalog.agents.find(a => a.id === id);
+      expect(agent).toBeDefined();
+      expect(readFileSync(join(dir, "..", agent!.source!), "utf8").length).toBeGreaterThan(0);
+    }
   });
 
   it("links every agent to a known project", () => {

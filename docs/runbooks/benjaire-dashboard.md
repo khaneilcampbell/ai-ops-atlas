@@ -1,6 +1,6 @@
 # Runbooks: Benjaire Ops Dashboard
 
-Repository: [khaneilcampbell/benjaire-dashboard](https://github.com/khaneilcampbell/benjaire-dashboard) (private). Setup and deployment steps are in its `docs/SETUP.md`.
+Repository: [Atlas dashboard app](https://github.com/khaneilcampbell/ai-ops-atlas/tree/main/apps/benjaire-dashboard). Run dashboard commands from `apps/benjaire-dashboard`; setup is in `docs/SETUP.md` there. Business data stays private.
 
 ## Dashboard CI
 

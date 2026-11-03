@@ -1,3 +1,5 @@
+This documentation collection is now maintained inside `khaneilcampbell/ai-ops-atlas` at `docs/intelligence-hub`. Run collection commands from this folder. Existing source metadata and document links retain historical provenance. See [migration and retirement gates](https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/consolidation/README.md).
+
 # Project Intelligence Hub
 
 Documentation for Khaneil Campbell's engineering projects: one folder per project, five documents each.

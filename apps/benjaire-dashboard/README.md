@@ -1,3 +1,5 @@
+This app is now maintained inside `khaneilcampbell/ai-ops-atlas` at `apps/benjaire-dashboard`. Run app commands from this folder. Consolidation does not migrate the live Cloudflare deployment, D1 data, secrets or n8n runtime automatically. See [migration and retirement gates](https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/consolidation/README.md).
+
 # Benjaire Ops
 
 Private business dashboard for Benjaire LLC: website traffic, product sales and downloads, inquiries, n8n automation health, Cloudflare infrastructure, and a manual finance ledger. One owner, one screen.
