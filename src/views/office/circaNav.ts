@@ -1,5 +1,6 @@
 import {CIRCA_DOOR_Z,CIRCA_PLATE,CIRCA_PODIUM,circaLevelKind,circaUnits,mirrorX,onCircaPlate,onCircaPodium,towerToPodium,CIRCA_UPPER_LEVELS,type CircaLevel,type CircaTower} from "./circaFloors";
 import {circaApartmentParts,circaLobbyParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
+import {LIFT_STOP_SECONDS,elevatorAt} from "./circulation";
 
 /**
  * Walking routes inside Circa. Each floor kind gets a walk grid (10 cm cells) built from the same part lists that draw
@@ -141,12 +142,34 @@ export function circaPath(kind:CircaLevel,from:{x:number;z:number},to:{x:number;
 }
 export const pathLength=(p:Path)=>p.slice(1).reduce((n,q,i)=>n+Math.hypot(q[0]-p[i][0],q[1]-p[i][1]),0);
 
+/** Circa's two lifts run the shared timeline (elevatorAt) to the top floor; the east car runs half a cycle behind. */
+export const CIRCA_LIFT_TOP=CIRCA_UPPER_LEVELS;
+export const CIRCA_LIFT_OFFSET:Record<CircaTower,number>={west:0,east:CIRCA_UPPER_LEVELS*LIFT_STOP_SECONDS};
+const liftLanding=(tower:CircaTower,t:number)=>elevatorAt(t,CIRCA_LIFT_TOP,CIRCA_LIFT_OFFSET[tower]).landing;
+/** Start of the lift stop that contains time t, in the same clock as t. */
+const stopStart=(tower:CircaTower,t:number)=>{const o=CIRCA_LIFT_OFFSET[tower];return Math.floor((t+o)/LIFT_STOP_SECONDS)*LIFT_STOP_SECONDS-o;};
+/** Seconds a rider needs to step into or out of the car while the doors are open. */
+const STEP=1.6;
+/** Earliest time from t when the tower's car stands open at `level` with time left to step in. */
+export function boardingTime(tower:CircaTower,level:number,t:number){
+  for(let s=stopStart(tower,t),k=0;k<4*CIRCA_LIFT_TOP;k++,s+=LIFT_STOP_SECONDS)
+    if(liftLanding(tower,s+.01)===level&&t<=s+5-STEP-.2)return Math.max(t,s);
+  throw new Error(`lift never reaches ${level}`);
+}
+/** When the car, having left after boarding at `boarded`, next opens at `level`. */
+export function arrivalTime(tower:CircaTower,level:number,boarded:number){
+  for(let s=stopStart(tower,boarded)+LIFT_STOP_SECONDS,k=0;k<4*CIRCA_LIFT_TOP;k++,s+=LIFT_STOP_SECONDS)if(liftLanding(tower,s+.01)===level)return s;
+  throw new Error(`lift never reaches ${level}`);
+}
+
 /**
- * One stretch of an agent's day: walking a path on a level, pausing at a stop, or riding the lift (hidden).
- * `tower` is set on apartment floors, where the path is tower-local; on the podium floors it is unset.
+ * One stretch of an agent's day: walking a path on a level, standing at a stop (a room, or waiting for the lift), or
+ * hidden (riding the lift, or out of the building). `tower` is set on apartment floors, where positions are
+ * tower-local; on the podium floors it is unset.
  */
-export type Leg={level:number;tower?:CircaTower;t0:number;t1:number;path?:Path;at?:Stop;ride?:true};
-export type Itinerary={legs:Leg[];period:number;home:{level:number;tower:CircaTower;unit:string;layout:"01"|"02"|"03"}};
+export type Leg={level:number;tower?:CircaTower;t0:number;t1:number;path?:Path;at?:Stop;hidden?:"ride"|"away"};
+/** A looping day in absolute seconds: legs run from `start` to `start + period`, and `period` is whole lift cycles. */
+export type Itinerary={legs:Leg[];start:number;period:number;home:{level:number;tower:CircaTower;unit:string;layout:"01"|"02"|"03"}};
 
 /** The twenty-four apartments, Floors 3 to 6, west tower then east tower on each floor. */
 export function circaApartments(){
@@ -155,46 +178,73 @@ export function circaApartments(){
   return out;
 }
 
+const rotate=<T,>(list:T[],k:number)=>list.map((_,i)=>list[(i+k)%list.length]);
+export const ENTRANCE_STOP=stop("entrance","Main entrance",0,CIRCA_DOOR_Z-.7);
+/** How long an agent lingers: longer in the living room and bedroom, a short look elsewhere. */
+const linger=(s:Stop)=>s.id==="living"||s.id==="bedroom"||s.id==="master"?7:s.id==="door"?.8:WALK.dwell+1;
+
 /**
- * An agent's looping day inside Circa: walk every room of its apartment, take its tower's lift down to the lobby and
- * stop at the desk, lockers, lounges, work table and front door, ride up to the pool deck and do its amenities, then
- * ride home. On the podium floors it leaves and returns by its own tower's lift.
+ * An agent's day inside Circa, timed to the real lifts:
+ * 1. It comes in the front door, walks to its tower's lift and waits until the car opens at the lobby, steps in,
+ *    rides (hidden) until the car opens at its floor, steps out and walks to its apartment.
+ * 2. It moves between some of its rooms, then makes two outings by lift: one to the pool deck and one to the lobby
+ *    (which comes first varies by agent), visiting a few amenities each time and coming home in between.
+ * 3. It ends the day leaving through the front door, and is out of the building until its loop starts again.
+ * Every room of its apartment is visited during the day. `start` spreads agents across the lift cycle.
  */
-export function circaItinerary(homeIndex:number):Itinerary{
-  const apts=circaApartments(),home=apts[((homeIndex%apts.length)+apts.length)%apts.length];
-  const legs:Leg[]=[];let t=0;
-  const tour=(level:number,stops:Stop[],tower?:CircaTower)=>{
-    const kind=circaLevelKind(level),lift=tower?{stop:LIFT_STOP,car:LIFT_CAR}:podiumLift(home.tower);let prev:Stop=lift.car;
-    for(const s of [lift.stop,...stops,lift.stop,lift.car]){
-      const path=circaPath(kind,prev,s);
-      if(path&&path.length>1){const d=pathLength(path)/WALK.speed;legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+d,path});t+=d;}
-      if(s!==lift.stop&&s!==lift.car){legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+WALK.dwell,at:s});t+=WALK.dwell;}
-      prev=s;
-    }
-    legs.push({level,...(tower?{tower}:{}),t0:t,t1:t+WALK.ride,ride:true});t+=WALK.ride;
+export function circaItinerary(homeIndex:number,start=0):Itinerary{
+  const apts=circaApartments(),home=apts[((homeIndex%apts.length)+apts.length)%apts.length],seed=Math.abs(homeIndex);
+  const legs:Leg[]=[];let t=start,level=0,at:Stop=ENTRANCE_STOP;
+  const frame=(l:number)=>circaLevelKind(l)==="apartments"?{tower:home.tower as CircaTower}:{};
+  const lift=(l:number)=>circaLevelKind(l)==="apartments"?{stop:LIFT_STOP,car:LIFT_CAR}:podiumLift(home.tower);
+  const walk=(to:Stop)=>{
+    const path=circaPath(circaLevelKind(level),at,to);
+    if(path&&path.length>1){const d=pathLength(path)/WALK.speed;legs.push({level,...frame(level),t0:t,t1:t+d,path});t+=d;}
+    at=to;
   };
-  tour(home.level,unitStops(home.layout),home.tower);
-  tour(0,LOBBY_STOPS);
-  tour(1,POOL_STOPS);
-  return {legs,period:t,home};
+  const stay=(seconds:number,s=at)=>{if(seconds>0){legs.push({level,...frame(level),t0:t,t1:t+seconds,at:s});t+=seconds;}};
+  const ride=(to:number)=>{
+    const L=lift(level);walk(L.stop);
+    const board=boardingTime(home.tower,level,t);
+    stay(board-t,{...L.stop,label:"Waiting for the lift"});
+    walk(L.car);
+    const open=arrivalTime(home.tower,to,board);
+    legs.push({level:to,...frame(to),t0:t,t1:open+.3,hidden:"ride"});t=open+.3;
+    level=to;at=lift(to).car;walk(lift(to).stop);
+  };
+  const visit=(stops:Stop[])=>{for(const s of stops){walk(s);stay(linger(s));}};
+  const rooms=rotate(unitStops(home.layout).filter(s=>s.id!=="door"&&s.id!=="living"),seed),door=unitStops(home.layout)[0];
+  const living=unitStops(home.layout).find(s=>s.id==="living")!,third=Math.ceil(rooms.length/3);
+  const lobby=rotate(LOBBY_STOPS.filter(s=>s.id!=="entrance"),seed).slice(0,3),pool=rotate(POOL_STOPS,seed).slice(0,3);
+  const goHome=()=>{ride(home.level);visit([door]);};
+  // Arrive and settle in.
+  stay(1.2);ride(home.level);visit([door,...rooms.slice(0,third),living]);
+  // Two outings by lift, in an order that varies by agent, with time at home in between.
+  const outings:[number,Stop[]][]=seed%2?[[1,pool],[0,lobby]]:[[0,lobby],[1,pool]];
+  outings.forEach(([to,stops],i)=>{ride(to);visit(stops);goHome();visit([...rooms.slice((i+1)*third,(i+2)*third),living]);});
+  // Leave through the front door; out of the building until the loop comes round, on a whole lift cycle.
+  ride(0);walk(ENTRANCE_STOP);
+  const cycle=CIRCA_LIFT_TOP*2*LIFT_STOP_SECONDS,period=Math.ceil((t-start+20)/cycle)*cycle;
+  legs.push({level:0,t0:t,t1:start+period,hidden:"away",at:ENTRANCE_STOP});
+  return {legs,start,period,home};
 }
 
-/** Where an agent is at time `t` (seconds, looping): its level and position, or riding the lift. */
-export function walkerAt(it:Itinerary,t:number):{level:number;tower?:CircaTower;x:number;z:number;heading:number;riding:boolean;stop?:Stop}{
-  const tt=((t%it.period)+it.period)%it.period;
+/** Where an agent is at time `t` (seconds, looping): its level and position, or hidden in the lift or out. */
+export function walkerAt(it:Itinerary,t:number):{level:number;tower?:CircaTower;x:number;z:number;heading:number;hidden:boolean;stop?:Stop}{
+  const tt=it.start+(((t-it.start)%it.period)+it.period)%it.period;
   let lo=0,hi=it.legs.length-1;while(lo<hi){const m=(lo+hi)>>1;if(it.legs[m].t1<=tt)lo=m+1;else hi=m;}
-  const leg=it.legs[lo];
-  const where={level:leg.level,...(leg.tower?{tower:leg.tower}:{})};
-  if(leg.ride)return {...where,x:LIFT_CAR.x,z:LIFT_CAR.z,heading:0,riding:true};
+  const leg=it.legs[lo],where={level:leg.level,...(leg.tower?{tower:leg.tower}:{})};
+  if(leg.hidden)return {...where,x:0,z:0,heading:0,hidden:true};
   if(leg.at){
-    // Face the way it last walked: look back to the previous walking leg.
-    const prev=it.legs[lo-1]?.path;const h=prev&&prev.length>1?heading(prev[prev.length-2],prev[prev.length-1]):0;
-    return {...where,x:leg.at.x,z:leg.at.z,heading:h,riding:false,stop:leg.at};
+    // Face the way it last walked.
+    let prev:Path|undefined;for(let i=lo-1;i>=0&&!prev;i--)prev=it.legs[i].path;
+    const h=prev&&prev.length>1?heading(prev[prev.length-2],prev[prev.length-1]):0;
+    return {...where,x:leg.at.x,z:leg.at.z,heading:h,hidden:false,stop:leg.at};
   }
   const p=leg.path!;let d=(tt-leg.t0)*WALK.speed;
   for(let i=1;i<p.length;i++){const seg=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]);
-    if(d<=seg||i===p.length-1){const f=seg?Math.min(1,d/seg):1;return {...where,x:p[i-1][0]+(p[i][0]-p[i-1][0])*f,z:p[i-1][1]+(p[i][1]-p[i-1][1])*f,heading:heading(p[i-1],p[i]),riding:false};}
+    if(d<=seg||i===p.length-1){const f=seg?Math.min(1,d/seg):1;return {...where,x:p[i-1][0]+(p[i][0]-p[i-1][0])*f,z:p[i-1][1]+(p[i][1]-p[i-1][1])*f,heading:heading(p[i-1],p[i]),hidden:false};}
     d-=seg;}
-  const end=p[p.length-1];return {...where,x:end[0],z:end[1],heading:0,riding:false};
+  const end=p[p.length-1];return {...where,x:end[0],z:end[1],heading:0,hidden:false};
 }
 const heading=(a:[number,number],b:[number,number])=>Math.atan2(b[0]-a[0],b[1]-a[1]);

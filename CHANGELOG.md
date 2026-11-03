@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-03 · Circa's agents now move naturally: they come in the front door, wait at their tower's lift, step in when the doors open, ride to their floor and walk to their apartment, then make trips to the pool and lobby and leave at the end of the day. No more figure dashing out of the lift on every floor, and the lifts now reach Floor 6 (#227)
 - 2026-11-03 · Inside Circa you now see both towers, like the outside: the lobby and pool deck span a square-cornered podium, and Floors 3 to 6 rise as two oval towers with their own lifts, 6 apartments per floor (301 to 606). The lobby wings add a residents' lounge, parcel lockers, a work table and a reading corner; the pool deck adds a sun lawn. Each agent lives in one tower and uses its lift (#227)
 - 2026-11-03 · Circa's 1 bedroom apartments and its lobby now have floor-to-ceiling curved windows like the 2 bedroom, with a glass panel above the lobby's main door (#227)
 - 2026-11-03 · The AI agents who live in Circa now walk the building: each one tours every room of its apartment, takes the lift down to the lobby (front desk, lounges, elevators, front door), rides up to the pool deck, then goes home. Click one to see its name and apartment. Every room on every floor is checked to be reachable from the lift (#227)

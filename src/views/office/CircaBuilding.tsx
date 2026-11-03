@@ -6,6 +6,7 @@ import CircaLobby from "./CircaLobby";
 import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
 import {CircaWalkers,type CircaResident} from "./CircaWalkers";
 import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
+import {CIRCA_LIFT_OFFSET,CIRCA_LIFT_TOP} from "./circaNav";
 
 /**
  * Circa inside "Enter building": twin oval towers on a rectangular podium, like the exterior.
@@ -25,7 +26,7 @@ function OvalSlab(){
 
 /** The two lift cars moving through the stack in the all-floors view. */
 export function CircaLifts({reduced}:{reduced:boolean}) {
-  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><MovingLift reduced={reduced} finish={CIRCA_LIFT}/></Tower>)}</group>;
+  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><MovingLift reduced={reduced} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></Tower>)}</group>;
 }
 
 /**
@@ -40,7 +41,8 @@ export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,si
     {podium&&<Box p={[0,-0.15,0]} s={[CIRCA_PODIUM.w,0.3,CIRCA_PODIUM.d]} color={SLAB}/>}
     {CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}>
       {!podium&&<OvalSlab/>}
-      <ElevatorLanding level={level} reduced={reduced} labels={labels} lobbyWalk={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT}
+      {/* The residents ride for real, so the stand-in lift visitor stays off. */}
+      <ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
         name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/>
       {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick}/>}
       {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} reduced={reduced} onPick={onPick}/>}
