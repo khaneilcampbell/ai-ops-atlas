@@ -5,7 +5,7 @@ import {Html} from "@react-three/drei";
 import * as THREE from "three";
 import {elevatorAt} from "./circulation";
 import {Box,Person} from "./InteriorPrimitives";
-export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c"}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string}) {
+export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c",name}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string;name?:string}) {
   const doors=useRef<THREE.Group>(null),visitor=useRef<THREE.Group>(null);
   useFrame((state)=>{
     const lift=elevatorAt(reduced?0:state.clock.elapsedTime);
@@ -26,7 +26,7 @@ export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#31
     {[-1,1].map(side=><Box key={side} p={[8.5,1.4,side*1.15]} s={[2.3,2.8,0.1]} color="#d4cbb8" opacity={labels?1:0.18}/>)}
     <Box p={[7.5,2.65,0]} s={[0.18,0.3,2.4]} color="#b69b60"/>
     <group ref={doors}>{[-1,1].map(side=><Box key={side} p={[7.5,1.2,side*0.3]} s={[0.08,2.4,0.58]} color="#7f9289"/>)}</group>
-    {labels&&<Html position={[7.4,2.9,0]} center><span className="skyline-room-label">{level===0?"G · Lobby":`Floor ${level}`} · Lift</span></Html>}
+    {labels&&<Html position={[7.4,2.9,0]} center><span className="skyline-room-label">{name??(level===0?"G · Lobby":`Floor ${level}`)} · Lift</span></Html>}
     <Box p={[7.36,1.15,0.95]} s={[0.08,0.3,0.14]} color="#c5a35c"/>
     <group ref={visitor}><Person x={0} z={0} color="#866c49"/></group>
     <Box p={[0,0.055,0]} s={[15.5,0.04,1.9]} color={runner}/>
