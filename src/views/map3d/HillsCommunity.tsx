@@ -1,4 +1,5 @@
 import {commuterAt,planRailCommuters} from './railCommuters';
+import {agentAt,type CommutePlan} from './agentCommutes';
 import {crowdLimit,planDistrictWalkers,walkerAt} from './districtWalkers';
 import {useQualityLevel} from '../../lib/governor';
 import type {FinancialPlan} from './financialPlan';
@@ -68,7 +69,7 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
 const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
 /** Elevated track, platforms and stair approaches share the same sampled route as the train. */
-export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,night}:{plan?:RailPlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
+export function CommunityRail({plan:p,agents,community,financial,roads,g,m,pick,moving,night}:{plan?:RailPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
  const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0);
  const enabled=moving&&focused&&power.idleFps>15;
  const deck=useMemo(()=>p?railDeck(p):undefined,[p]);
@@ -108,21 +109,22 @@ export function CommunityRail({plan:p,community,financial,roads,g,m,pick,moving,
  for(const path of [p.financialWalk,p.hillsWalk]){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,night,palette,deck]);
  // Simulated people, all drawn as two instanced meshes (bodies and heads): KC's twelve rail
- // commuters first, then Financial District people riding to Hills places and office workers
- // walking the sidewalk between towers, interleaved so a smaller crowd keeps both kinds.
+ // commuters first, then the AI agents walking between their Circa apartments and workplaces
+ // (agentCommutes.ts, always drawn), then Financial District people riding to Hills places and
+ // office workers walking the sidewalk between towers, interleaved so a smaller crowd keeps both kinds.
  const commuters=useMemo(()=>planRailCommuters(community,financial,p),[community,financial,p]);
  const walkers=useMemo(()=>planDistrictWalkers(financial),[financial]);
- const people=useMemo(()=>{if(!commuters)return [];const riders=commuters.commuters,base=riders.slice(0,12),extra=riders.slice(12),out:{rider?:typeof riders[number];walker?:typeof walkers[number]}[]=base.map(rider=>({rider}));
-  for(let i=0;i<Math.max(extra.length,walkers.length);i++){if(extra[i])out.push({rider:extra[i]});if(walkers[i])out.push({walker:walkers[i]});}return out;},[commuters,walkers]);
- const count=people.length,qualityLevel=useQualityLevel(),limit=crowdLimit(count,{qualityLevel,saver:power.pauseInBackground});
- useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],c=new THREE.Color();for(let i=0;i<count;i++){bodies.current?.setColorAt(i,c.set(colors[i%colors.length]));heads.current?.setColorAt(i,c.set('#c6ad8f'));}for(const mesh of [bodies.current,heads.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count]);
+ const people=useMemo(()=>{if(!commuters)return [];const riders=commuters.commuters,base=riders.slice(0,12),extra=riders.slice(12),out:{rider?:typeof riders[number];walker?:typeof walkers[number];agent?:CommutePlan['commutes'][number]}[]=[...base.map(rider=>({rider})),...(agents?.commutes??[]).map(agent=>({agent}))];
+  for(let i=0;i<Math.max(extra.length,walkers.length);i++){if(extra[i])out.push({rider:extra[i]});if(walkers[i])out.push({walker:walkers[i]});}return out;},[commuters,walkers,agents]);
+ const count=people.length,qualityLevel=useQualityLevel(),agentCount=agents?.commutes.length??0,limit=crowdLimit(count,{qualityLevel,saver:power.pauseInBackground,base:12+agentCount});
+ useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],c=new THREE.Color();for(let i=0;i<count;i++){const agent=!!people[i]?.agent;bodies.current?.setColorAt(i,c.set(agent?palette.gold:colors[i%colors.length]));heads.current?.setColorAt(i,c.set(agent?palette.green:'#c6ad8f'));}for(const mesh of [bodies.current,heads.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count,people,palette]);
  const pose=useMemo(()=>new THREE.Object3D(),[]);
  const placePeople=(seconds:number)=>{
   const body=bodies.current,head=heads.current;if(!commuters||!body||!head)return {outbound:false,back:false};
   let outbound=false,back=false;body.count=head.count=limit;
-  for(let i=0;i<limit;i++){const {rider,walker}=people[i],at=rider?commuterAt(commuters,rider,seconds):walkerAt(walker!,seconds);
+  for(let i=0;i<limit;i++){const {rider,walker,agent}=people[i],at=rider?commuterAt(commuters,rider,seconds):agent?agentAt(agent,seconds):walkerAt(walker!,seconds);
    if(!at.visible){if('where' in at&&at.where==='aboard'){if(at.direction==='outbound')outbound=true;else back=true;}pose.scale.setScalar(0);pose.position.set(0,-10,0);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);head.setMatrixAt(i,pose.matrix);continue;}
-   const y=TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
+   const y=agent?TERRACE_H+.105+at.y:TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
    pose.rotation.set(0,at.yaw,0);pose.position.set(at.x,y,at.z);pose.scale.set(.07,.16,.06);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);
    pose.position.set(at.x,y+.21,at.z);pose.scale.setScalar(.035);pose.updateMatrix();head.setMatrixAt(i,pose.matrix);
   }

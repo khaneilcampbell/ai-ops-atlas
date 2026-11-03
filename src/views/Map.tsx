@@ -5,6 +5,7 @@ import { SYMBOLS } from "./map3d/symbols";
 import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAiAgent, residentsLabel } from "../catalog/roles";
+import { agentJobs } from "../catalog/agentJobs";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
 import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
@@ -423,6 +424,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
   const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
+  const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
   // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
@@ -995,6 +997,7 @@ export function MapView({active=true}:{active?:boolean}) {
               active={active}
               ref={map3d}
               layout={layout}
+              jobs={jobs}
               displayNeighborhoods={displayNeighborhoods}
               // On a phone the inspector is a sheet over the lower half of the map (mobile.css).
               cover={phone && (selection || pickedLink) ? 0.4 : 0}
