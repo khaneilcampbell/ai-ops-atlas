@@ -5,7 +5,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
-  server: { port: 1420, strictPort: true },
+  server: {
+    port: 1420, strictPort: true,
+    // Generated HTML reports must not force a full reload of an open city during validation.
+    watch: { ignored: ["**/playwright-report/**", "**/test-results/**", "**/visual/out/**", "**/artifacts/**"] },
+  },
   envPrefix: ["VITE_", "TAURI_ENV_"],
   build: {
     target: "safari15",

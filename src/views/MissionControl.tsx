@@ -13,6 +13,7 @@ import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { rollup, usd } from "../intel/format";
 import { AgentAlerts } from "./AgentAlerts";
+import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
@@ -53,6 +54,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <MissionFocus attention={attention} />
 
       <AgentAlerts />
+
+      <ClientInquiries />
 
       <div className="grid kpis">
         <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />

@@ -1,3 +1,4 @@
+import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
@@ -42,7 +43,9 @@ import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
-const Map3D = lazy(() => import("./map3d/Map3D"));
+// Begin loading the default view while the app initializes, rather than after React mounts it.
+const cityModule = import("./map3d/Map3D");
+const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
 import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
@@ -406,8 +409,9 @@ function anchors(districts: District[], parks: Park[]) {
   return m;
 }
 
-export function MapView() {
-  const { catalog, repos, uncataloged, select, selection, setView } = useAtlas();
+export function MapView({active=true}:{active?:boolean}) {
+  const { catalog, repos, uncataloged, select, selection: appSelection, setView } = useAtlas();
+  const selection = active ? appSelection : null;
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -419,7 +423,7 @@ export function MapView() {
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
-  const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
+  const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
   const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -439,6 +443,8 @@ export function MapView() {
   const is3d = mode === "3d";
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
+  useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
+  const displayNeighborhoods = useMemo(() => districtHeadings(layout, groupBy), [layout, groupBy]);
   const map3d = useRef<Map3DApi>(null);
   const phone = useMedia(PHONE_QUERY);
 
@@ -487,11 +493,11 @@ export function MapView() {
     if (selection) setLinkSel(null);
   }, [selection]);
   useEffect(() => {
-    if (!pickedLink) return;
+    if (!active || !pickedLink) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLinkSel(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pickedLink]);
+  }, [active, pickedLink]);
   const linkTip = (id: string) => {
     const c = connections.find((x) => x.id === id);
     return c ? { title: c.relation, sub: `${CONNECTION_LABEL[c.type]} · ${CONNECTION_STATUS_LABEL[c.status]} · click to inspect` } : null;
@@ -525,10 +531,11 @@ export function MapView() {
     camRef.current = cam;
   }, [cam]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     if (anim.current !== null) cancelAnimationFrame(anim.current);
     anim.current = null;
-  };
+  }, []);
+  useEffect(() => { if (!active) stop(); }, [active, stop]);
 
   const animateTo = useCallback(
     (to: Cam) => {
@@ -547,7 +554,7 @@ export function MapView() {
       };
       anim.current = requestAnimationFrame(step);
     },
-    [reduced],
+    [reduced, stop],
   );
 
   const fitCam = useCallback(
@@ -596,9 +603,9 @@ export function MapView() {
     const ro = new ResizeObserver(onResize);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fitCam]);
+  }, [fitCam, stop]);
 
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => stop(), [stop]);
 
   const kMin = () => Math.min(0.3, fitK.current * 0.8);
 
@@ -615,7 +622,7 @@ export function MapView() {
       const f = k / v.k;
       return { k, x: px - (px - v.x) * f, y: py - (py - v.y) * f };
     });
-  }, []);
+  }, [stop]);
 
   const endPointer = (id: number) => {
     fingers.current.delete(id);
@@ -673,14 +680,14 @@ export function MapView() {
   const selectedProject = selection?.kind === "repo" ? catalog.projects.find(p => projectRepositories(p, catalog.agents).includes(selection.id)) : undefined;
   const selKey = selectedProject ? `project:${selectedProject.id}` : selection ? `${selection.kind}:${selection.id}` : null;
   useEffect(() => {
-    if (!selKey) return;
+    if (!active || !selKey) return;
     const p = where.get(selKey);
     if (!p) return;
     if (p.district) setFocus(p.district);
     // Wait a frame so the docked inspector has taken its width before measuring.
     const id = requestAnimationFrame(() => reveal(p, 0.55));
     return () => cancelAnimationFrame(id);
-  }, [selKey, where, reveal]);
+  }, [active, selKey, where, reveal]);
 
   const showTip = (e: React.MouseEvent, title: string, sub: string) => {
     const r = stage.current!.getBoundingClientRect();
@@ -918,7 +925,7 @@ export function MapView() {
 
   return (
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
-      {office.projectId && (
+      {active && office.projectId && (
         <Suspense fallback={null}>
           {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
@@ -987,9 +994,11 @@ export function MapView() {
           {is3d ? (
             <Suspense fallback={null}>
             <Map3D
+              active={active}
               ref={map3d}
               layout={layout}
               jobs={jobs}
+              displayNeighborhoods={displayNeighborhoods}
               // On a phone the inspector is a sheet over the lower half of the map (mobile.css).
               cover={phone && (selection || pickedLink) ? 0.4 : 0}
               selKey={selKey}
@@ -1022,7 +1031,7 @@ export function MapView() {
           <svg aria-hidden="true">
             <MapDefs />
             <g transform={`translate(${cam.x},${cam.y}) scale(${k})`}>
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
               <Meadows meadows={layout.meadows} walks={layout.walks} visible={rectVisible} texture={detail} />
               {islands.map((it) => {
                 if (!rectVisible(it.ox, it.oy, it.w, it.w)) return null;
@@ -1133,7 +1142,7 @@ export function MapView() {
                 );
               })}
               {labels.filter((b) => ptVisible({ x: b.x, y: b.top + b.dy })).map((b) => b.draw(b.dy))}
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
             {layout.districts.flatMap(d => d.kiosks.map(k => <Box key={`tool:${d.project.id}:${k.service.id}`} id={`tool:${d.project.id}:${k.service.id}`} kind="tower" gx={k.gx} gy={k.gy} w={k.size} h={88} wall={toolBrand(k.service.name).wall} roof={toolBrand(k.service.name).primary} windows={detail} onClick={() => { setFocus(d.project.id); select({ kind: "service", id: `${d.project.id}:${k.service.id}` }); }} selected={selection?.kind === "service" && selection.id === `${d.project.id}:${k.service.id}`} onEnter={() => { setHover(`service:${d.project.id}:${k.service.id}`); setTip(null); }} onLeave={leave} />))}
           </svg>
@@ -1161,12 +1170,11 @@ export function MapView() {
             </div>
           )}
 
-          <div className="map-view-context" role="status">{is3d?<><strong>{LENS_INFO[lens].label}</strong><span>{lens==="infrastructure"?(linkPrefs.on?"Showing enabled connection types":"Select a project to inspect its workers and connections"):mapLinks.length?`${mapLinks.length} declared links · Select a project to see its workers`:LENS_INFO[lens].empty}</span></>:<><strong>Flat map</strong><span>Project overview · Switch to 3D for connection views and interiors</span></>}</div>
           <div className="map-controls">
             <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
               title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
             <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Group projects into districts or neighborhoods" />
+              title="Keep district locations and clean district names; no grouping hides district headings" />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>

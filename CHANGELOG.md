@@ -1,9 +1,17 @@
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#196)`. The newest five lines are
+top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-01 · AI agents now have a workday: each one lives in a Circa apartment, walks the city streets (in gold) to its office for its shift, and walks home after. The new Workday tab on each agent shows its role, owner, home, office, shift, budget and daily output (#196)
+- 2026-11-01 · City opens without loading messages and draws a lighter first frame before restoring normal quality (#202)
+- 2026-11-01 · Draft reply can now send the Benjaire-designed email straight from Atlas after you review it, with a copy to your Gmail (#203)
+- 2026-11-01 · Draft reply and Draft follow-up in Client inquiries now open Gmail and copy the reply in the Benjaire email design (logo header, card, footer); paste it into the message and press Send (#201)
+- 2026-11-01 · Map groupings keep district locations stable, building names share overview rules, and the extra map message is removed (#200)
+- 2026-11-01 · Map zoom stays near the city and night mode uses direct rendering to avoid offscreen black-frame artifacts (#199)
+- 2026-11-01 · New Client inquiries list in Mission Control: every benjaire.com inquiry with a drafted reply that opens in your mail app, plus follow-up reminders on day 3 and day 7. Nothing is sent without you (#183)
+- 2026-11-01 · Projects keeps its city ready between visits, pauses hidden graphics, and releases unused night effects (#179)
+- 2026-11-01 · Inside any building, two fingers on the Mac trackpad now look around the room all the way round, pinch zooms, twist turns, and Option with two fingers moves across the floor. Walls on your side step aside so you can see in from any angle (#191)
 - 2026-11-01 · The "Read-only" pill in the top bar now shows CI health across your repositories (how many are passing, or how many are failing, in red). Click it to open Mission Control (#187)
 - 2026-11-01 · The app is now called Atlas: the top bar (without the "01"), sign-in screen, browser tab, Mac menu bar and window all say Atlas. Your tokens, settings and updates carry on as before (#187)
 - 2026-11-01 · Behind the scenes: when GitHub blocks the Design Consistency agent from opening its fix pull request, the run now says exactly which setting to turn on and cleans up its branch (#175)
@@ -23,7 +31,7 @@ shown in the Mac app's **Update available** button, so write them for KC, not fo
 - 2026-10-31 · Move around the 3D map with your Mac trackpad: scroll to slide, pinch to zoom, twist to turn, Option+scroll to tilt (#173)
 - 2026-10-31 · The GitHub building is now a stacked-slab tower with terrace stairs, trees and a roof garden, sized with the Financial District, beside a three-storey glass podium on new land east of it (#171)
 - 2026-10-31 · Every building label on the map now looks the same: one size, one height above the roof, one color, and a status dot on each
-- 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#196)
+- 2026-10-31 · The map's view and grouping menus now match the other map buttons and fit on iPhone, and By tag names its groups the same way By district does (#201)
 - 2026-10-31 · New Benjaire Marketing Agency on new land in the bay below the Financial District: a cream building with a diamond screen, a diagonal glass cut, a copper-framed glass sweep and reflecting pools, with paths to Benjaire HQ and Benjaire Dashboard, a copper-framed Benjaire sign and a glass entrance with a canopy and lit bollards. Enter building opens four floors round a central atrium: lobby and café, studios, galleries and a presentation hall, with the stair reaching every floor and people moving through it: desk workers, lobby visitors, stair traffic, a hall audience and a presenter on stage (#163)
 - 2026-11-01 · Buildings now sit at the same scale as the Atlas Marketplace: project headquarters stand half again as tall, and the Skyline shops and Skyline residence are bigger, so nothing looks toy-sized beside the mall. The Financial District rises with them (#160)
 - 2026-11-01 · Behind the scenes: every map change is now checked against a performance budget, and the screenshot check has more time so it stops getting cut off

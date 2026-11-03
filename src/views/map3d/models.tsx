@@ -375,6 +375,9 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   );
 }
 
+// The sea must extend beyond the camera's far range, so zoom/orbit never exposes its hard edge.
+const OCEAN_SPAN = 2000;
+
 // ── Terrain ─────────────────────────────────────────
 
 export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M; onTerrace: Pick }) {
@@ -422,7 +425,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
   return (
     <group>
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
-        <planeGeometry args={[400, 400]} />
+        <planeGeometry args={[OCEAN_SPAN, OCEAN_SPAN]} />
       </mesh>
       <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />

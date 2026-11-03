@@ -3,7 +3,7 @@ import {Canvas,useThree} from '@react-three/fiber';
 import {Html,OrbitControls} from '@react-three/drei';
 import type {OrbitControls as OrbitControlsImpl} from 'three-stdlib';
 import * as THREE from 'three';
-import {usePowerProfile} from '../../lib/power';
+import {usePageVisible,usePowerProfile} from '../../lib/power';
 import {useReducedMotion} from '../../lib/motion';
 import {FramePacer} from '../map3d/pacer';
 import {night as cityNight} from '../map3d/materials';
@@ -11,6 +11,7 @@ import type {LightMode} from '../map3d/living';
 import {MarketingAgency} from '../map3d/MarketingAgency';
 import {AGENCY_NAME} from '../map3d/marketingAgencyPlan';
 import CityOutside from './CityOutside';
+import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import FloorLabel from './FloorLabel';
 import AgencyCrowd from './AgencyCrowd';
 import {agencyCrowd,hallSeats} from './agencyCrowdPlan';
@@ -77,6 +78,7 @@ function Camera({all}:{all:boolean}){
   const t=controls.current?.target;if(t){t.set(2,all?7:0,0);camera.lookAt(t);controls.current?.update();}
   invalidate();
  },[all,camera,invalidate,far]);
+ useInteriorTrackpad(()=>controls.current,{x:INTERIOR.width/2,z:INTERIOR.depth/2});
  return <OrbitControls ref={controls} makeDefault minDistance={14} maxDistance={170} maxPolarAngle={Math.PI/2.25}/>;
 }
 
@@ -146,13 +148,13 @@ function Floor({level,single,night,animate,onPick}:{level:number;single:boolean;
  */
 export default function AgencyInterior({light}:{light:LightMode}){
  const [floor,setFloor]=useState(-1);const [picked,setPicked]=useState<string|null>(null);
- const power=usePowerProfile(),reduced=useReducedMotion(),isNight=light==='night';
+ const power=usePowerProfile(),visible=usePageVisible(),reduced=useReducedMotion(),isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const all=floor===-1,levels=all?Array.from({length:INTERIOR.levels},(_,i)=>i):[floor];
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${AGENCY_NAME} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop="demand" dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.3:.75}/>
@@ -165,6 +167,6 @@ export default function AgencyInterior({light}:{light:LightMode}){
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${AGENCY_NAME} and return to city`}>← Exit building</button><div><small>{AGENCY_NAME.toUpperCase()} · BRAND, CONTENT & CAMPAIGNS</small><h2>{all?'All floors · Open cutaway':floor===0?AGENCY_FLOORS[0]:`Floor ${floor} · ${AGENCY_FLOORS[floor]}`}</h2></div></header>
   <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
-  <aside className="skyline-interior-note">{picked??(all?'Lobby + 3 floors round a central atrium · Drag to orbit · Scroll to zoom':`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · No ad, email or social accounts connected · People shown are scripted illustrations, not running agents`}</span></aside>
+  <aside className="skyline-interior-note">{picked??(all?`Lobby + 3 floors round a central atrium · ${lookHint()}`:`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · No ad, email or social accounts connected · People shown are scripted illustrations, not running agents`}</span></aside>
  </section>;
 }

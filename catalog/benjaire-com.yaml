@@ -150,6 +150,62 @@ agents:
           - Connect n8n executions to Atlas
         last_review: 2026-10-28
 
+  - id: benjaire-inquiry-to-client
+    name: Inquiry to Client
+    purpose: >-
+      Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds KC to follow up on day 3 and day 7. KC sends every message from their own mail app.
+    framework: Atlas (plain code, no model)
+    runtime: AI Ops Atlas site (Cloudflare Pages + D1) and app
+    status: idle
+    trigger: Inquiry copied from the contact Worker to POST /api/hooks/inquiries
+    source: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/src/inquiries/model.ts
+    last_run: null
+    permissions:
+      - 'Atlas AGENT_FEED_TOKEN, add-only: the Worker can store an inquiry but never read one back'
+      - 'D1 table inquiries: kept 180 days, then deleted'
+    registry:
+      title: Client Reply Assistant
+      category: business
+      subcategory: Customer inquiry processing
+      classification:
+        type: C
+        confidence: verified
+        evidence: server/inquiries.ts stores inquiries; src/inquiries/model.ts drafts replies from fixed templates and schedules follow-ups; no model call and no mail sending
+      mission:
+        problem: Website inquiries arrive by email with nothing to track whether each one got a reply and a follow-up.
+        outcomes:
+          - Every inquiry gets a reply within a day
+          - Quiet leads get two follow-ups, then close
+        beneficiaries: [Benjaire customers, KC]
+      responsibilities:
+        tasks:
+          - Store each inquiry once (retried copies are ignored)
+          - Show what needs a reply or a follow-up
+          - Draft the reply and follow-ups from templates
+          - Open the draft in KC's mail app
+        tools: [Cloudflare D1, Atlas Mission Control]
+        inputs: [Inquiry from the contact Worker]
+        outputs: [Mission Control inbox, Reply and follow-up drafts in KC's mail app]
+        dependencies: [benjaire-contact-worker]
+      execution:
+        trigger_type: event
+        environment: AI Ops Atlas
+      governance:
+        autonomy: 1
+        autonomy_note: Prepares drafts only. Nothing is sent from Atlas; KC reads, edits and sends each message from their own mail app.
+        data_sensitivity: confidential
+        credential_owner: KC (AGENT_FEED_TOKEN on the site and ATLAS_FEED_TOKEN on the Worker)
+        risk: low
+      cost:
+        notes: No model calls. Runs inside the existing Pages site and D1 free tier, so $0 a month.
+      docs:
+        technical: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/inquiry-inbox.md
+        known_issues:
+          - Reply and follow-up progress is kept on each device, so marking a reply on the Mac doesn't show on the phone
+        improvements:
+          - Optional Claude Haiku polish of a draft on click, behind a monthly cap
+        last_review: 2026-11-01
+
   - id: benjaire-site-ci
     name: Site CI
     purpose: Builds and tests the Astro site on every pull request and push to main.
