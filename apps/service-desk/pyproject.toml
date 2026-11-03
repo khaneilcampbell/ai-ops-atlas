@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "service-desk-dashboard"
+version = "0.1.0"
+description = "Service desk ticket analytics: volume, backlog, SLA health, first contact resolution, knowledge coverage and workload."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2,<4",
+  "numpy>=1.26,<3",
+  "plotly>=5.24,<8",
+  "streamlit>=1.50,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[project.scripts]
+sdd-generate = "service_desk_dashboard.generate:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# The synthetic data generator uses a seeded PRNG on purpose; it is not used for security.
+"src/service_desk_dashboard/generate.py" = ["S311"]

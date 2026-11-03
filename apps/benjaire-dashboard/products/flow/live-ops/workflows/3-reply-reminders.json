@@ -1,0 +1,293 @@
+{
+  "name": "Flow · 3 Reply reminders",
+  "nodes": [
+    {
+      "id": "b9c2cb17-496a-4c03-bed8-17916699da0a",
+      "name": "Weekdays Every 2h 8am to 8pm",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8-20/2 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bcdcc3b9-003b-4a6e-b160-a0bd9e18c40c",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "2e189cbf-5ba4-4d04-8de1-dcd2e1239543",
+      "name": "Find Overdue Inquiries",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "new"
+            },
+            {
+              "keyName": "reminded",
+              "condition": "isFalse"
+            },
+            {
+              "keyName": "reply_due_at",
+              "condition": "lt",
+              "keyValue": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "373ba064-60f2-44fc-857f-5857ce85df5d",
+      "name": "Compose Reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const r = $json;\nconst s = $('Load Client Settings').first().json;\nconst esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); };\nconst due = DateTime.fromISO(String(r.reply_due_at));\nconst hours = Math.max(1, Math.round($now.diff(due, 'hours').hours));\nconst base = String(s.n8n_base_url || '').replace(/\\/+$/, '');\nconst link = function (st) { return base + '/webhook/flow-status?ref=' + encodeURIComponent(r.inquiry_ref) + '&t=' + r.action_token + '&s=' + st; };\nconst btn = function (st, label) { return base ? '<a href=\"' + esc(link(st)) + '\" style=\"display:inline-block;padding:8px 14px;margin:0 6px 6px 0;border-radius:999px;background:#1f2124;color:#fff;text-decoration:none\">' + label + '</a>' : ''; };\nconst html = '<p><b>' + esc(r.name) + (r.company ? ', ' + esc(r.company) : '') + '</b> is still waiting for a reply. It is ' + hours + ' hour' + (hours === 1 ? '' : 's') + ' past your reply target.</p>' +\n  '<p>' + esc(r.summary) + '</p>' +\n  '<p>Email: <a href=\"mailto:' + esc(r.email) + '\">' + esc(r.email) + '</a></p>' +\n  (r.suggested_reply ? '<p><b>Suggested reply</b></p><blockquote>' + esc(r.suggested_reply).replace(/\\n/g, '<br>') + '</blockquote>' : '') +\n  '<p>' + btn('replied', 'I replied') + btn('won', 'Mark as won') + btn('lost', 'Mark as lost') + '</p><p style=\"color:#666\">Reference ' + esc(r.inquiry_ref) + '. This is the only reminder for this inquiry.</p>';\nreturn { json: { inquiry_ref: r.inquiry_ref, hours_overdue: hours, to: s.owner_email, from: s.from_address, reply_to: r.email, subject: 'Reminder: reply to ' + r.name + ' (' + r.inquiry_ref + ')', html: html } };"
+      }
+    },
+    {
+      "id": "694a6a5c-a8fb-4481-a9b7-009d4c353f92",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $json.from, to: [$json.to], reply_to: $json.reply_to, subject: $json.subject, html: $json.html }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "AC12xxRxpzZMqWxw",
+          "name": "Resend API"
+        }
+      }
+    },
+    {
+      "id": "f8dd0673-38f4-4b0f-984c-56be8ca3ef9e",
+      "name": "Mark Reminded",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_ref",
+              "condition": "eq",
+              "keyValue": "={{ $('Compose Reminder').item.json.inquiry_ref }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "reminded": true
+          }
+        }
+      }
+    },
+    {
+      "id": "fbf1978d-e30e-48d9-8ee3-526326f8fc7c",
+      "name": "Log Reminder Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $('Compose Reminder').item.json.inquiry_ref }}",
+            "event": "reminded",
+            "detail": "={{ $(\"Compose Reminder\").item.json.hours_overdue }}h overdue · email {{ $(\"Send Reminder\").item.json.id ? \"sent\" : \"failed\" }}",
+            "at": "={{ $now.toISO() }}"
+          }
+        }
+      }
+    },
+    {
+      "id": "187e2a57-64e7-41de-acbd-a013f9216978",
+      "name": "Sticky Note 3a29ef19",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -20
+      ],
+      "parameters": {
+        "content": "## Benjaire Flow · Reply reminders\nEvery 2 hours on weekdays, 8am to 8pm New York time (about 130 runs a month). Any inquiry still marked new after its reply target gets one reminder to the owner, from contact@ via Resend, with the status buttons. Each inquiry is reminded once.",
+        "color": 7,
+        "width": 520,
+        "height": 200
+      }
+    }
+  ],
+  "connections": {
+    "Weekdays Every 2h 8am to 8pm": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Find Overdue Inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Overdue Inquiries": {
+      "main": [
+        [
+          {
+            "node": "Compose Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Reminder": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark Reminded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Reminded": {
+      "main": [
+        [
+          {
+            "node": "Log Reminder Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timezone": "America/New_York",
+    "errorWorkflow": "F4A9rMTqPZunNoqb"
+  },
+  "description": "Benjaire Flow reminders: every 2 hours on weekdays, emails the owner once about any inquiry still unanswered after its reply target.",
+  "meta": {
+    "source": "n8n Cloud export",
+    "workflowId": "FXEm2O630Yw6h1iw",
+    "versionId": "4a81caa5-0eb7-4e1b-a866-8e4b82aa81d6"
+  }
+}
