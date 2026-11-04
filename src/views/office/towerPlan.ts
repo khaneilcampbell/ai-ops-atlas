@@ -4,15 +4,33 @@ import {stop,type Stop} from "./walkNav";
 
 /**
  * The Financial District's other buildings inside "Enter building", in Circa's style: square floor plates in the
- * proportions of each exterior, floor-to-ceiling glass all round, walnut, marble, oak and black furniture, and agents
- * who walk the building on the real lift. BMW and Circa keep their own interiors.
+ * proportions of each exterior, floor-to-ceiling glass all round, Circa's oak and marble floors with walls, desks and
+ * upholstery in each brand's colours (TOWER_THEMES), and agents who walk the building on the real lift. BMW and Circa
+ * keep their own interiors.
  *
  * Plan (the same frame on every floor): x across the building, z from the back (-) to the street (+). The lift landing
  * is at the east end (x ≈ 7.2..9.8, z 0). Upper floors have a corridor along z 0 to the lift with four rooms off it,
  * two each side; the lobby is one open room with the street door at +z.
  */
 export type TowerProgram="office"|"hotel";
-export type TowerSpec={key:string;id:string;name:string;w:number;d:number;program:TowerProgram;accent:string;subtitle:string;rooms:string[]};
+/**
+ * A building's colour theme, from its brand: `primary` on walls, desks and upholstery, `deep` on frames, chairs and
+ * dark wood, `highlight` on glowing strips. Floors stay oak and marble.
+ */
+export type TowerTheme={primary:string;deep:string;highlight:string};
+export type TowerSpec={key:string;id:string;name:string;w:number;d:number;program:TowerProgram;accent:string;theme:TowerTheme;subtitle:string;rooms:string[]};
+/** Brand themes (colours from financialBrands, with Experian's purple and a deeper shade of each brand colour). */
+export const TOWER_THEMES:Record<string,TowerTheme>={
+  banks:{primary:"#126bc4",deep:"#143b65",highlight:"#7fb6ea"},                       // Chase blue
+  investments:{primary:"#7fae1f",deep:"#203735",highlight:"#c5ed6c"},                 // Robinhood green
+  insurance:{primary:"#204e7b",deep:"#183c60",highlight:"#9cc3e6"},                   // Navy Federal navy
+  residence:{primary:"#6d2077",deep:"#3f1446",highlight:"#af1685"},                   // Experian purple and magenta
+  "harbor-residence":{primary:"#bfa16b",deep:"#283538",highlight:"#e9d9b7"},          // The Ritz-Carlton gold and charcoal
+  records:{primary:"#b51c32",deep:"#6f1220",highlight:"#f4dd94"},                     // Wells Fargo red and gold
+  "financial-planning":{primary:"#8c2434",deep:"#561520",highlight:"#e3b9bf"},        // Vanguard maroon
+  budget:{primary:"#006fcf",deep:"#00335f",highlight:"#8cc4f2"},                      // American Express blue
+  "business-finance":{primary:"#3b4045",deep:"#1d2023",highlight:"#d8d2c4"},          // Benjaire charcoal and pearl
+};
 /** Plate width on every building; depth follows the exterior's footprint. */
 export const TOWER_W=22;
 /** Upper floors, above the lobby. */
@@ -25,7 +43,7 @@ export function towerSpec(building:string):TowerSpec|undefined{
   if(!brand||brand.id==="circa")return undefined;
   const dims=financialDimensions(brand.id);
   return {key:building,id:brand.id,name:brand.name,w:TOWER_W,d:Math.round(TOWER_W*dims.depth/dims.width),
-    program:brand.architecture==="hotel"?"hotel":"office",accent:brand.accent??"#84b8bf",subtitle:brand.subtitle,rooms:[...brand.rooms]};
+    program:brand.architecture==="hotel"?"hotel":"office",accent:brand.accent??"#84b8bf",theme:TOWER_THEMES[brand.id]??{primary:"#5b3a26",deep:"#1b1b1d",highlight:"#ffe6bf"},subtitle:brand.subtitle,rooms:[...brand.rooms]};
 }
 
 export type RoomKind="reception"|"workspace"|"meeting"|"private"|"suite";
