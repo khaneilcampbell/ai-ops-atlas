@@ -1,0 +1,17 @@
+{
+  "agent_id": "atlas-reliability-reviewer",
+  "repository": "khaneilcampbell/ai-ops-atlas",
+  "commit": "e0ec4911d3266a99a2037353c85bc5bc22233e88",
+  "observed_at": "2026-11-04T03:54:04.241887+00:00",
+  "model_calls": 0,
+  "findings": [],
+  "unavailable": [
+    "Workflow run 41769552744 is unfinished; its result is unknown.",
+    "Workflow run 41769552739 is unfinished; its result is unknown."
+  ],
+  "status": "incomplete",
+  "task": "Review bounded main-branch CI evidence",
+  "fingerprint": "425f8dd2552ca1ff61a7dea040afd4db3ab6eb44c503e0d84c8bdd5101fdcc01",
+  "changed": true,
+  "next_action": "No failures found in the bounded sample; unavailable evidence remains unknown."
+}

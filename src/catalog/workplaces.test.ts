@@ -35,7 +35,8 @@ it("keeps the UI designer manual-only in its own OpenAI suite",()=>{
 it("assigns the manual production team only to Atlas Floor 3 and rejects invalid floors",()=>{
  const team=catalog.agents.filter(a=>a.officeFloor===3);
  expect(team.map(a=>a.id).sort()).toEqual(["atlas-performance-reviewer","atlas-production-coordinator","atlas-reliability-reviewer"]);
- expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&!a.observe&&a.status==="idle")).toBe(true);
+ expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&a.status==="idle")).toBe(true);
+ expect(team.find(a=>a.id==="atlas-reliability-reviewer")?.observe?.githubWorkflow).toBe("reliability-report.yml");
  for(const floor of [0,5,2.5,'"2"']) {
   const yaml=manifest('{building: OpenAI, floor: 4, room: "401"}').replace('workplace: {building: OpenAI, floor: 4, room: "401"}',`office_floor: ${floor}`);
   expect(buildCatalog({"a.yaml":yaml}).issues.length).toBeGreaterThan(0);
