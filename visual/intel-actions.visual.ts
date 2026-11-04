@@ -96,9 +96,11 @@ async function checkReview(page: Page) {
   // Every scorecard area shows, missing ones as unknown.
   await expect(box.locator(".score")).toHaveCount(9);
   await expect(box.locator(".score", { hasText: "Not rated in this review" }).first()).toBeVisible();
-  // Recommendations: owner shown as unknown; Fix with Claude and Open issue per repository.
+  // Recommendations: the owner opens its agent, KC, or unknown; Fix with Claude and Open issue per repository.
   const rec = box.locator(".recs > li").first();
-  await expect(rec).toContainText("Owner unknown");
+  await expect(rec.locator(".rec-meta button.ref-link", { hasText: "Commerce Loop" })).toBeVisible();
+  await expect(box.locator(".recs > li").nth(1)).toContainText("Owner: KC");
+  await expect(box.locator(".recs > li").nth(2)).toContainText("Owner unknown");
   const fix = new URL((await rec.locator(".fix-claude").first().getAttribute("href"))!);
   expect(fix.pathname).toBe(`/${ATLAS}/issues/new`);
   expect(fix.searchParams.get("labels")).toBe("claude-fix");
