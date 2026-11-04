@@ -162,15 +162,15 @@ export function ActivityView() {
                     <span className={`feed-icon ${e.result ?? ""}`} aria-hidden>
                       <Icon name={KINDS.find((k) => k.kind === e.kind)!.icon} size={12} />
                     </span>
-                    <span className="grow">
+                    <div className="grow">
                       <span className="title">{e.url ? <ExternalLink href={e.url}>{e.title}</ExternalLink> : e.title}</span>
-                      <details className="small"><summary>Evidence and next action</summary><p>Source: {eventSource(e)} · Event time: {e.at} · Collected: {e.collectedAt ?? "Not recorded"}</p><p>{e.url ? <ExternalLink href={e.url}>Inspect source result</ExternalLink> : "No external evidence link recorded. Inspect the related record below."} · Run/job: {e.id}</p>{e.collectedAt && Date.now()-Date.parse(e.collectedAt)>86400000 && <p>Saved evidence is over a day old; refresh before acting.</p>}</details>
+                      <details className="small" style={{overflowWrap:"anywhere"}}><summary>Evidence and next action</summary><p>Source: {eventSource(e)} · Event time: {e.at} · Collected: {e.collectedAt ?? "Not recorded"}</p><p>{e.url ? <ExternalLink href={e.url}>Inspect source result</ExternalLink> : "No external evidence link recorded. Inspect the related record below."} · Run/job: {e.id}</p>{e.collectedAt && Date.now()-Date.parse(e.collectedAt)>86400000 && <p>Saved evidence is over a day old; refresh before acting.</p>}</details>
                       <span className="meta">
                         <button className="text-btn inline" onClick={() => select(e.agentId ? { kind: "agent", id: e.agentId } : e.repo ? { kind: "repo", id: e.repo } : null)}>
                           {e.detail}
                         </button>
                       </span>
-                    </span>
+                    </div>
                     {e.result && <span className={`result r-${e.result}`}>{RESULT_LABEL[e.result]}</span>}
                     <span className="muted small nowrap">{relative(e.at)}</span>
                   </li>
