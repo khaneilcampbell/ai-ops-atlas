@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2 · sorting
+- Intake prompt now says when an inquiry is low urgency (no timeline, or planning months ahead) instead of leaving Claude to guess between low and normal. Measured with the new eval suite.
+
 ## 1.0.1 · packaging
 - Added 00-START-HERE.pdf, a three page guide with a setup checklist.
 - Folders renamed 1 to 5 in setup order. Workflows and the Worker are unchanged.
