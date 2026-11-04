@@ -66,3 +66,18 @@ it("keeps the Inquiry Assistant in Skyline with its original ownership",()=>{
  expect(a.id).toBe("skyline-inquiry-assistant");expect(a.projectId).toBe("skyline");
  expect(projectOfficeAgents(catalog.agents,"skyline")).not.toContain(a);
 });
+
+it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the interior plan",async()=>{
+ const {AGENCY_ROOMS}=await import("../views/office/agencyInteriorPlan");
+ const {AGENCY_WORKPLACE_ROOMS}=await import("./workplaces");
+ expect([...AGENCY_WORKPLACE_ROOMS].sort()).toEqual(AGENCY_ROOMS.filter(r=>r.level>=1).map(r=>r.id).sort());
+ const seats:Record<string,string>={"1-strategy":"benjaire-product-lab","2-insights":"benjaire-product-lab-research","2-archive":"benjaire-product-lab-competitors","1-social":"benjaire-product-lab-customers","2-workshop":"benjaire-product-lab-scoring","1-review":"benjaire-product-lab-brief"};
+ for(const [room,id] of Object.entries(seats)){
+  const a=workplaceAgent(catalog.agents,"Benjaire Marketing Agency",Number(room[0]),room)!;
+  expect(a.id).toBe(id);expect(a.repository).toBe("khaneilcampbell/benjaire.com");
+  expect(projectOfficeAgents(catalog.agents,a.projectId)).not.toContain(a);
+ }
+ expect(buildCatalog({"a.yaml":manifest('{building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}')}).issues).toEqual([]);
+ for(const w of ['{building: Benjaire Marketing Agency, floor: 1, room: "101"}','{building: Benjaire Marketing Agency, floor: 2, room: "1-strategy"}','{building: Benjaire Marketing Agency, floor: 1, room: "1-lobby"}','{building: OpenAI, floor: 1, room: "1-strategy"}'])
+  expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
+});

@@ -261,3 +261,309 @@ agents:
         improvements:
           - Pin actions to commit SHAs, as the commerce pipeline does
         last_review: 2026-10-28
+
+  # Benjaire Product Lab: one first-class n8n Agent (id ruOvE7nfE713WDUL on khancam15.app.n8n.cloud),
+  # read through the n8n MCP on 2026-11-04. Its five roles are skills inside the same agent run, listed
+  # here so each has a desk in the Benjaire Marketing Agency. Atlas has seen no run yet, and n8n Agent
+  # runs are not workflow executions, so there is no `observe` source until the agent posts reports.
+  - id: benjaire-product-lab
+    workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}
+    name: Benjaire Product Lab
+    purpose: >-
+      n8n agent that researches, scores and recommends the next best product for Benjaire each month, running five research roles in order and emailing KC the brief.
+    framework: n8n Agent
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: 'Schedule: 09:00 ET on the 1st of each month (task "Monthly next-product report")'
+    last_run: null
+    permissions:
+      - 'Gmail tool email_kc_report: sends only to benjaireco@gmail.com (n8n Gmail credential)'
+      - 'Notion MCP server: creates or updates Product Lab pages (n8n Notion credential)'
+      - 'Anthropic web search: at most 5 searches per run'
+    registry:
+      title: Product Lab Lead
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: n8n Agent config read 2026-11-04 (Sonnet 5.5, reasoning high, web search, five skills, one monthly task, Gmail and Notion tools)
+      mission:
+        problem: Benjaire needs an evidence-backed pick for the next product to launch, validated cheaply before money is spent.
+        outcomes:
+          - One top recommendation and two runners-up each month, with sources
+          - Ideas are called hypotheses until real demand evidence exists
+        beneficiaries: [KC]
+      responsibilities:
+        tasks:
+          - Run Market Research, Competitor Analysis, Customer Insight, Product Scoring and Product Brief in order
+          - Note what changed since last month's pick
+          - Email KC the brief and save it to Notion
+        tools: [n8n Agent, Claude (claude-sonnet-5-5), Anthropic web search, Gmail, Notion MCP]
+        inputs: [Monthly schedule, A topic from KC in chat]
+        outputs: [Monthly next-product brief by email, Notion page]
+        dependencies: [benjaire-product-lab-research, benjaire-product-lab-competitors, benjaire-product-lab-customers, benjaire-product-lab-scoring, benjaire-product-lab-brief]
+      execution:
+        trigger_type: scheduled
+        schedule: '0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Recommends only. It emails KC and writes Notion pages without approval, never contacts anyone else and changes nothing outside KC's own inbox and Notion.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials for Anthropic, Gmail and Notion)
+        risk: low
+      cost:
+        notes: One run a month on Sonnet 5.5 with reasoning high, up to 5 web searches and n8n memory. Not measured yet; Atlas makes no model calls for it.
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        known_issues:
+          - Atlas cannot see its runs yet; n8n Agent runs are not workflow executions and the agent does not post to Atlas
+          - Reasoning high plus observational memory on every run is the main cost
+        improvements:
+          - Post each finished brief to Atlas through POST /api/hooks/reports
+        last_review: 2026-11-04
+
+  - id: benjaire-product-lab-research
+    workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-insights"}
+    name: Product Lab · Market Research
+    purpose: >-
+      Builds a long list of 6 to 10 product ideas for Benjaire with dated, linked demand signals from web search.
+    framework: n8n Agent skill
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    last_run: null
+    permissions:
+      - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
+    registry:
+      title: Market Research Analyst
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      responsibilities:
+        tasks:
+            - 'Search trend signals from the last 12 months'
+            - 'Look for service-firm pain points for digital offers'
+            - 'List 6 to 10 ideas with pillar, demand signals, trend and price'
+            - 'Drop ideas needing heavy inventory, regulatory approval or patents'
+        tools: [Claude (claude-sonnet-5-5), Anthropic web search]
+        inputs:
+            - 'Topic from KC or the monthly task'
+            - 'Web search'
+        outputs:
+            - 'Long list of 6 to 10 ideas with source links'
+        dependencies: [benjaire-product-lab]
+      execution:
+        trigger_type: scheduled
+        schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: low
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        last_review: 2026-11-04
+
+  - id: benjaire-product-lab-competitors
+    workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-archive"}
+    name: Product Lab · Competitor Analysis
+    purpose: >-
+      Maps who already sells each shortlisted idea, their prices, ratings and review complaints, and proposes a differentiation angle.
+    framework: n8n Agent skill
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    last_run: null
+    permissions:
+      - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
+    registry:
+      title: Competitor Analyst
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      responsibilities:
+        tasks:
+            - 'Find the top 3 to 5 sellers per idea'
+            - 'Record price, rating, positioning and channel'
+            - 'Summarise the top 3 complaints from 1 to 3 star reviews'
+            - 'Rate saturation and propose an angle'
+        tools: [Claude (claude-sonnet-5-5), Anthropic web search]
+        inputs:
+            - 'Shortlisted ideas'
+            - 'Web search'
+        outputs:
+            - 'Competitor table per idea with links and the date prices were checked'
+            - 'Saturation and differentiation angle'
+        dependencies: [benjaire-product-lab]
+      execution:
+        trigger_type: scheduled
+        schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: low
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        last_review: 2026-11-04
+
+  - id: benjaire-product-lab-customers
+    workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-social"}
+    name: Product Lab · Customer Insight
+    purpose: >-
+      Defines who would buy each shortlisted idea, their pains in their own words, buying triggers and the cheapest channels to reach them.
+    framework: n8n Agent skill
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    last_run: null
+    permissions:
+      - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
+    registry:
+      title: Customer Insight Researcher
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      responsibilities:
+        tasks:
+            - 'Write 1 to 2 specific personas per idea'
+            - 'Quote real posts or reviews for the top pains'
+            - 'List buying triggers'
+            - 'Name the 3 cheapest reach channels'
+            - 'Draft a headline and value proposition'
+        tools: [Claude (claude-sonnet-5-5), Anthropic web search]
+        inputs:
+            - 'Shortlisted ideas with competitor findings'
+            - 'Web search'
+        outputs:
+            - 'Personas, quoted pains, triggers, channels and a headline per idea'
+        dependencies: [benjaire-product-lab]
+      execution:
+        trigger_type: scheduled
+        schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: low
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        last_review: 2026-11-04
+
+  - id: benjaire-product-lab-scoring
+    workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-workshop"}
+    name: Product Lab · Product Scoring
+    purpose: >-
+      Ranks candidate ideas with the Benjaire weighted scorecard and picks one top recommendation plus two runners-up.
+    framework: n8n Agent skill
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    last_run: null
+    permissions:
+      - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
+    registry:
+      title: Product Scoring Analyst
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      responsibilities:
+        tasks:
+            - 'Score each idea 1 to 5 on demand (25%), gap (20%), brand fit (15%), margin (15%), validation speed and cost (15%) and Flow synergy (10%)'
+            - 'Compute the weighted total out of 5.00'
+            - 'Justify very low and top scores'
+            - 'Pick the top idea and two runners-up with their biggest risk'
+        tools: [Claude (claude-sonnet-5-5), Anthropic web search]
+        inputs:
+            - 'Market, competitor and customer findings'
+        outputs:
+            - 'Scorecard table sorted highest first'
+            - 'Top pick and two runners-up'
+        dependencies: [benjaire-product-lab]
+      execution:
+        trigger_type: scheduled
+        schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: low
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        last_review: 2026-11-04
+
+  - id: benjaire-product-lab-brief
+    workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-review"}
+    name: Product Lab · Product Brief
+    purpose: >-
+      Turns the research and scorecard into a decision-ready brief of about 900 words with a 30-day validation plan and numeric success metrics.
+    framework: n8n Agent skill
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
+    status: active
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    last_run: null
+    permissions:
+      - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
+    registry:
+      title: Product Brief Writer
+      category: business
+      subcategory: Product research
+      classification:
+        type: A
+        confidence: verified
+        evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      responsibilities:
+        tasks:
+            - 'Write the brief sections from recommendation to success metrics'
+            - 'Lay out a week-by-week 30-day validation plan'
+            - 'Set numeric success metrics'
+            - 'Save to Notion and email KC when asked'
+        tools: [Claude (claude-sonnet-5-5), Anthropic web search]
+        inputs:
+            - 'Scorecard and supporting research'
+        outputs:
+            - 'Product brief'
+            - 'Notion page Product Lab – <topic> – <date>'
+            - 'Email to KC'
+        dependencies: [benjaire-product-lab]
+      execution:
+        trigger_type: scheduled
+        schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: low
+      docs:
+        technical: https://khancam15.app.n8n.cloud
+        last_review: 2026-11-04

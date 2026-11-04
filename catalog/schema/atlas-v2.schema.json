@@ -667,7 +667,8 @@
                   "Starbucks",
                   "Smashburger",
                   "Chipotle",
-                  "Zara"
+                  "Zara",
+                  "Benjaire Marketing Agency"
                 ]
               },
               "floor": {
@@ -677,7 +678,7 @@
               },
               "room": {
                 "type": "string",
-                "pattern": "^[1-4]0[1-8]$"
+                "pattern": "^([1-4]0[1-8]|[1-3]-[a-z]+)$"
               }
             },
             "description": "Physical workplace only; repository and project ownership stay unchanged. Room must match floor and be unique per building.",
@@ -701,9 +702,25 @@
                   }
                 },
                 "else": {
-                  "properties": {
-                    "room": {
-                      "pattern": "^[1-4]0[1-4]$"
+                  "if": {
+                    "properties": {
+                      "building": {
+                        "const": "Benjaire Marketing Agency"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "room": {
+                        "enum": ["1-content", "1-social", "1-strategy", "1-review", "1-gallery", "2-archive", "2-insights", "2-exhibition", "2-workshop", "3-hall", "3-foyer", "3-green"]
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "room": {
+                        "pattern": "^[1-4]0[1-4]$"
+                      }
                     }
                   }
                 }
