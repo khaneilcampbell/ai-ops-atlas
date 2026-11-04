@@ -103,6 +103,7 @@ async function checkReview(page: Page) {
   expect(fix.pathname).toBe(`/${ATLAS}/issues/new`);
   expect(fix.searchParams.get("labels")).toBe("claude-fix");
   expect(fix.searchParams.get("body")).toContain("khaneilcampbell/multi-agent-commerce-pipeline");
+  await expect(rec.locator(".codex-copy").first()).toContainText("Copy Codex prompt");
   const issue = new URL((await rec.locator(".open-issue").first().getAttribute("href"))!);
   expect(issue.pathname).toBe("/khaneilcampbell/multi-agent-commerce-pipeline/issues/new");
   expect(issue.searchParams.get("labels")).toBeNull();
@@ -143,7 +144,7 @@ test.describe("phone", () => {
   test("engineering review fits a phone", async ({ page }) => {
     await openReview(page);
     if (CHECK) {
-      for (const b of await page.locator(".review .fix-claude, .review .open-issue").all()) {
+      for (const b of await page.locator(".review .fix-claude, .review .open-issue, .review .codex-copy").all()) {
         const box = (await b.boundingBox())!;
         expect(box.x + box.width).toBeLessThanOrEqual(390);
       }

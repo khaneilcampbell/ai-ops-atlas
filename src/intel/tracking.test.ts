@@ -79,3 +79,24 @@ describe("screenshot fixtures", () => {
     expect(f.recKey("Upgrade minimatch", "khaneilcampbell/ai-ops-atlas")).toBe(recKey("Upgrade minimatch", "khaneilcampbell/ai-ops-atlas"));
   });
 });
+
+describe("Fix with Codex (copied prompt)", () => {
+  it("carries the item, the rules and the hidden marker, and never a link to run anything", async () => {
+    const { codexPrompt } = await import("../lib/fixWithClaude");
+    const text = codexPrompt(req)!;
+    expect(text).toContain("AGENTS.md");
+    expect(text).toContain(`Repository: ${COMMERCE}`);
+    expect(text).toContain("never merge");
+    expect(text).toContain(`<!-- atlas-rec:${req.marker} -->`);
+    expect(codexPrompt({ ...req, repo: "bad" })).toBeNull();
+  });
+  it("finds the Codex pull request by its marker and reports it merged", async () => {
+    const get = async (p: string): Promise<unknown> =>
+      p.startsWith(`/repos/${COMMERCE}/issues?`) ? [issue({ number: 44, html_url: `https://github.com/${COMMERCE}/pull/44`, state: "closed", body: `x <!-- atlas-rec:${req.marker} -->`, pull_request: { merged_at: "2026-11-04T00:00:00Z" } })] : [];
+    const r = await loadTracking([req], get);
+    const [t] = r.byKey[req.marker!];
+    expect(t).toMatchObject({ via: "codex", number: 44 });
+    expect(trackedLabel(t, COMMERCE)).toMatchObject({ text: "Fixed in PR #44", done: true });
+    expect(trackedLabel({ ...t, state: "open", pr: { ...t.pr!, state: "open" } }, COMMERCE).text).toBe("Codex PR #44 open");
+  });
+});

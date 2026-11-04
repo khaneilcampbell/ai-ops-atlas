@@ -16,7 +16,7 @@ export interface GhIssue {
   state_reason?: string | null;
   html_url: string;
   created_at: string;
-  pull_request?: unknown;
+  pull_request?: { merged_at?: string | null } | null;
 }
 
 export interface LinkedPr {
@@ -27,8 +27,8 @@ export interface LinkedPr {
 }
 
 export interface Tracked {
-  /** "fix": the labeled Fix with Claude issue in the Atlas queue; "issue": a plain issue in the repository. */
-  via: "fix" | "issue";
+  /** "fix": the labeled Fix with Claude issue in the Atlas queue; "issue": a plain issue in the repository; "codex": a pull request from a pasted Codex prompt. */
+  via: "fix" | "issue" | "codex";
   repo: string;
   number: number;
   url: string;
@@ -43,6 +43,13 @@ const markerOf = (key: string) => `atlas-rec:${key}`;
 export function findIssue(issues: GhIssue[], key: string, title: string): GhIssue | null {
   const want = title.trim().toLowerCase();
   const hits = issues.filter((i) => !i.pull_request && ((i.body ?? "").includes(markerOf(key)) || i.title.trim().toLowerCase() === want));
+  hits.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  return hits[0] ?? null;
+}
+
+/** The newest pull request whose body carries the marker (a Codex fix from a copied prompt). */
+export function findPr(items: GhIssue[], key: string): GhIssue | null {
+  const hits = items.filter((i) => i.pull_request && (i.body ?? "").includes(markerOf(key)));
   hits.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   return hits[0] ?? null;
 }
@@ -72,7 +79,8 @@ const ref = (repo: string, n: number, here: string) => (repo.toLowerCase() === h
 /** One plain line for a tracked item, and whether the advice counts as handled. */
 export function trackedLabel(t: Tracked, recRepo: string): { text: string; url: string; done: boolean } {
   if (t.pr?.state === "merged") return { text: `Fixed in PR ${ref(t.pr.repo, t.pr.number, recRepo)}`, url: t.pr.url, done: true };
-  if (t.pr?.state === "open") return { text: `PR ${ref(t.pr.repo, t.pr.number, recRepo)} open`, url: t.pr.url, done: false };
+  if (t.pr?.state === "open") return { text: `${t.via === "codex" ? "Codex PR" : "PR"} ${ref(t.pr.repo, t.pr.number, recRepo)} open`, url: t.pr.url, done: false };
+  if (t.via === "codex") return { text: `Codex PR ${ref(t.repo, t.number, recRepo)} closed without merging`, url: t.url, done: false };
   const issue = `${t.via === "fix" ? "Fix request" : "Issue"} ${ref(t.repo, t.number, recRepo)}`;
   if (t.state === "open") return { text: `${issue} open`, url: t.url, done: false };
   if (t.stateReason === "not_planned") return { text: `${issue} closed as not planned`, url: t.url, done: true };
@@ -113,11 +121,14 @@ export async function loadTracking(requests: FixRequest[], get: (path: string) =
     const issue = findIssue(own, req.marker, openIssueTitle(req));
     if (issue && !(req.repo.toLowerCase() === FIX_QUEUE_REPO && fix?.number === issue.number))
       out.push({ via: "issue", repo: req.repo, number: issue.number, url: issue.html_url, state: issue.state, stateReason: issue.state_reason ?? null, pr: null });
+    const pr = findPr(own, req.marker);
+    if (pr)
+      out.push({ via: "codex", repo: req.repo, number: pr.number, url: pr.html_url, state: pr.state, stateReason: null, pr: { number: pr.number, repo: req.repo, url: pr.html_url, state: pr.pull_request?.merged_at ? "merged" : pr.state === "open" ? "open" : "closed" } });
     byKey[req.marker] = out;
     found.push(...out);
   }
   await Promise.all(
-    found.slice(0, MAX_TIMELINES).map(async (t) => {
+    found.filter((t) => t.via !== "codex").slice(0, MAX_TIMELINES).map(async (t) => {
       try {
         const events = await get(`/repos/${t.repo}/issues/${t.number}/timeline?per_page=100`);
         t.pr = Array.isArray(events) ? linkedPr(events as TimelineEvent[]) : null;

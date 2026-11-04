@@ -1,8 +1,8 @@
 import { useAtlas } from "../state";
 import type { RefTarget } from "../intel/links";
 import { openIssueUrl } from "../intel/links";
-import type { FixRequest } from "../lib/fixWithClaude";
-import { ExternalLink } from "./bits";
+import { codexPrompt, type FixRequest } from "../lib/fixWithClaude";
+import { CopyButton, ExternalLink } from "./bits";
 import { FixWithClaude } from "./FixWithClaude";
 import { Icon } from "./Icon";
 import { trackedLabel, type Tracked } from "../intel/tracking";
@@ -63,8 +63,8 @@ export function TrackingNote({ error }: { error: string | null | undefined }) {
 }
 
 /**
- * Hand-off for one recommendation: "Fix with Claude" (the existing labeled-issue flow) and a plain
- * "Open issue" in the repository. Both are links to GitHub's new-issue page; nothing is sent or
+ * Hand-off for one recommendation: "Fix with Claude" (the existing labeled-issue flow), a plain
+ * "Open issue" in the repository, and "Copy Codex prompt" for KC to paste into Codex. Both are links to GitHub's new-issue page; nothing is sent or
  * changed until KC presses Create there.
  */
 export function RecActions({ requests, reason, tracked }: { requests: FixRequest[]; reason?: string; tracked?: Record<string, Tracked[]> }) {
@@ -91,6 +91,11 @@ export function RecActions({ requests, reason, tracked }: { requests: FixRequest
               <ExternalLink href={issue} className="btn small open-issue">
                 <Icon name="external" size={12} /> Open issue
               </ExternalLink>
+            )}
+            {codexPrompt(req) && (
+              <span className="codex-copy">
+                <CopyButton text={() => codexPrompt(req) ?? ""} label="Copy Codex prompt" title="Copies a fix prompt to paste into Codex. Nothing runs until you paste it; Codex opens a draft PR for you to merge." />
+              </span>
             )}
           </span>
         );
