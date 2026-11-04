@@ -1,3 +1,4 @@
+import { OperationsBriefing } from "../components/OperationsBriefing";
 import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
@@ -52,6 +53,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
         </button>
       </div>
 
+      <OperationsBriefing />
       <MissionFocus attention={attention} />
 
       <AgentAlerts />
