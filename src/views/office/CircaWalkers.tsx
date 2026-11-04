@@ -34,7 +34,7 @@ export function CircaWalkers({level,tower,residents,reduced,onPick}:{level:numbe
     residents.forEach((r,i)=>{
       const g=refs.current[i];if(!g)return;
       const w=walkerAt(r.itinerary,t);
-      g.visible=w.level===level&&w.tower===tower&&!w.hidden;
+      g.visible=w.level===level&&w.frame===tower&&!w.hidden;
       if(g.visible){g.position.set(w.x,0.03,w.z);g.rotation.y=w.heading;}
     });
   });
