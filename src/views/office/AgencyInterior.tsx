@@ -17,6 +17,10 @@ import AgencyCrowd from './AgencyCrowd';
 import {agencyCrowd,hallSeats} from './agencyCrowdPlan';
 import {leaveBuilding} from './store';
 import {AGENCY_FLOORS,AGENCY_OWNER,AGENCY_ROOMS,INTERIOR,SLOT_HALF,atriumOpen,entranceX,flightEnd,slotX,stairLanding,stairSteps,type AgencyRoom} from './agencyInteriorPlan';
+import {catalog} from '../../catalog';
+import type {Agent} from '../../catalog/types';
+import {WorkplaceInspector} from './WorkplaceInspector';
+import {agencyAssignedAgent,agencySeat} from './agencyWorkplaces';
 import '../../styles/skyline.css';
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
@@ -24,6 +28,19 @@ type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number}
 const CROWD=agencyCrowd();
 const W=INTERIOR.width/2,D=INTERIOR.depth/2,H=INTERIOR.storey;
 const CREAM='#efe8dc',COPPER='#a2552f',OAK='#c7a27a',INK='#2b2a28',LINEN='#e9e2d4';
+
+/** Agents the catalog seats in this building, per room id. Static figures; seating is not live work. */
+const SEATED=new Map(AGENCY_ROOMS.flatMap(r=>{const a=agencyAssignedAgent(r,catalog.agents);return a?[[r.id,a] as const]:[];}));
+const GOLD='#d9a441';
+/** A seated agent: chair, body, head and, where the room has no table, a desk with a monitor. */
+function seatedFigure(room:AgencyRoom):Item[]{
+ const s=agencySeat(room),out:Item[]=[];
+ const at=(dx:number,dz:number):[number,number]=>[s.x+Math.cos(s.yaw)*dx+Math.sin(s.yaw)*dz,s.z-Math.sin(s.yaw)*dx+Math.cos(s.yaw)*dz];
+ if(s.desk){out.push({p:[s.desk.x,.37,s.desk.z],s:[s.desk.w,.74,s.desk.d],c:LINEN},{p:[s.desk.x,.95,s.desk.z-.2],s:[.7,.42,.05],c:INK});}
+ const [bx,bz]=at(0,.08);
+ out.push({p:[s.x,.24,s.z],s:[.5,.48,.5],c:'#56636b',r:s.yaw},{p:[bx,.78,bz],s:[.42,.6,.28],c:GOLD,r:s.yaw},{p:[bx,1.22,bz],s:[.24,.26,.24],c:'#e3c39d',r:s.yaw});
+ return out;
+}
 
 /** All the small furniture of a floor in one instanced mesh, coloured per piece. */
 function Boxes({items,shadow=true}:{items:Item[];shadow?:boolean}){
@@ -91,9 +108,11 @@ function slabGeometry(level:number){
  g.rotateX(Math.PI/2);return g;
 }
 
-function Floor({level,single,night,animate,onPick}:{level:number;single:boolean;night:boolean;animate:boolean;onPick:(text:string)=>void}){
- const rooms=AGENCY_ROOMS.filter(r=>r.level===level);
+function Floor({level,single,night,animate,onPick,onAgent}:{level:number;single:boolean;night:boolean;animate:boolean;onPick:(text:string)=>void;onAgent:(a:Agent)=>void}){
+ const rooms=useMemo(()=>AGENCY_ROOMS.filter(r=>r.level===level),[level]);
  const crowd=useMemo(()=>CROWD.filter(p=>p.level===level),[level]);
+ const seated=useMemo(()=>rooms.filter(r=>SEATED.has(r.id)),[rooms]);
+ const figures=useMemo(()=>new Map(seated.map(r=>[r.id,seatedFigure(r)])),[seated]);
  const slab=useMemo(()=>slabGeometry(level),[level]);useEffect(()=>()=>slab.dispose(),[slab]);
  const {items}=useMemo(()=>{
   const items:Item[]=[];
@@ -132,9 +151,10 @@ function Floor({level,single,night,animate,onPick}:{level:number;single:boolean;
   {single&&atriumOpen(level)&&<mesh position={[INTERIOR.atrium.x,-INTERIOR.slab-.6,INTERIOR.atrium.z]} rotation={[-Math.PI/2,0,0]} receiveShadow><circleGeometry args={[INTERIOR.atrium.r+.2,48]}/><meshStandardMaterial color="#d9c3a5" roughness={.8}/></mesh>}
   {atriumOpen(level)&&<mesh position={[INTERIOR.atrium.x,-INTERIOR.slab/2,INTERIOR.atrium.z]}><torusGeometry args={[INTERIOR.atrium.r,.09,6,64]}/><meshStandardMaterial color={COPPER} roughness={.35} metalness={.5}/></mesh>}
   <Boxes items={items}/><Boxes items={steps}/><Boxes items={arriving} shadow={false}/>
+  {seated.map(r=><group key={r.id} onClick={e=>{e.stopPropagation();onAgent(SEATED.get(r.id)!);}}><Boxes items={figures.get(r.id)!}/></group>)}
   <AgencyCrowd people={crowd} animate={animate}/>
   <FloorLabel level={level} width={W*2} depth={D*2}/>
-  {single&&rooms.map(r=><Html key={r.id} position={[r.x+r.w/2,2.6,r.z+r.d/2]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>onPick(`${r.name} · ${r.role} · Planned, not running`)}>{r.name}<span>{r.role}</span></button></Html>)}
+  {single&&rooms.map(r=>{const agent=SEATED.get(r.id);return <Html key={r.id} position={[r.x+r.w/2,2.6,r.z+r.d/2]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>agent?onAgent(agent):onPick(`${r.name} · ${r.role} · Planned, not running`)}>{r.name}<span>{agent?`${agent.registry?.title??agent.name} · Configured, not verified`:r.role}</span></button></Html>;})}
   {single&&level===0&&<Html position={[entranceX(),2.9,D]} center zIndexRange={[8,0]}><span className="skyline-room-label">Plaza entrance</span></Html>}
   {/* Warm downlights; the scene's only point lights, one per floor. */}
   <pointLight position={[INTERIOR.atrium.x,H-.8,INTERIOR.atrium.z]} color="#ffd9a8" intensity={night?40:8} distance={22} decay={2}/>
@@ -143,11 +163,11 @@ function Floor({level,single,night,animate,onPick}:{level:number;single:boolean;
 
 /**
  * Inside the Benjaire Marketing Agency: four floors in an open cutaway, the city and the plaza
- * outside at matching scale, a floor picker and room labels. Visual plan only: every role is
- * planned, nothing runs, no accounts are connected.
+ * outside at matching scale, a floor picker and room labels. Rooms whose agent the catalog seats here
+ * (Benjaire Product Lab, an n8n agent) show it at a desk with its inspector; every other role is planned.
  */
 export default function AgencyInterior({light}:{light:LightMode}){
- const [floor,setFloor]=useState(-1);const [picked,setPicked]=useState<string|null>(null);
+ const [floor,setFloor]=useState(-1);const [picked,setPicked]=useState<string|null>(null);const [agent,setAgent]=useState<Agent|null>(null);
  const power=usePowerProfile(),visible=usePageVisible(),reduced=useReducedMotion(),isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
@@ -163,10 +183,11 @@ export default function AgencyInterior({light}:{light:LightMode}){
    <Camera all={all}/>
    <CityOutside allFloors={all} building={AGENCY_NAME} elevation={floor>0?floor*H:0} anchorAt={s=>s.agency&&{x:s.agency.cx,z:s.agency.cz}}
     extras={({scene,g,m})=><MarketingAgency plan={scene.agency} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
-   {levels.map(level=><group key={level} position={[0,all?level*H:0,0]}><Floor level={level} single={!all} night={isNight} animate={!reduced} onPick={setPicked}/></group>)}
+   {levels.map(level=><group key={level} position={[0,all?level*H:0,0]}><Floor level={level} single={!all} night={isNight} animate={!reduced} onPick={t=>{setAgent(null);setPicked(t);}} onAgent={a=>{setPicked(null);setAgent(a);}}/></group>)}
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${AGENCY_NAME} and return to city`}>← Exit building</button><div><small>{AGENCY_NAME.toUpperCase()} · BRAND, CONTENT & CAMPAIGNS</small><h2>{all?'All floors · Open cutaway':floor===0?AGENCY_FLOORS[0]:`Floor ${floor} · ${AGENCY_FLOORS[floor]}`}</h2></div></header>
-  <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
-  <aside className="skyline-interior-note">{picked??(all?`Lobby + 3 floors round a central atrium · ${lookHint()}`:`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · No ad, email or social accounts connected · People shown are scripted illustrations, not running agents`}</span></aside>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);setAgent(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
+  <aside className="skyline-interior-note">{picked??(all?`Lobby + 3 floors round a central atrium · ${lookHint()}`:`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · ${SEATED.size} Benjaire Product Lab agents seated (gold), configured in n8n, not verified · No ad, email or social accounts connected · Other people shown are scripted illustrations, not running agents`}</span></aside>
+  {agent&&<WorkplaceInspector agent={agent} onClose={()=>setAgent(null)}/>}
  </section>;
 }
