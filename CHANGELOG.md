@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#PR3)
 - 2026-11-04 · Inside the Benjaire Marketing Agency, the six Product Lab agents now sit at desks in gold. Tap one, or its room label, to open the agent. The building panel lists them too (#PR2)
 - 2026-11-04 · Your n8n Benjaire Product Lab is now in the Agents list: the lead plus its five research roles, each assigned a room in the Benjaire Marketing Agency. They show as "Configured, not verified" until Atlas sees a real run (#247)
 - 2026-11-04 · Benjaire Flow now has an eval suite: 60 labeled test inquiries score how well Claude sorts spam, service, urgency and budget and whether its reply follows the rules. Run it before changing the intake prompt (#240)
