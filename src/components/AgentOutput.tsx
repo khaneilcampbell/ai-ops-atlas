@@ -1,3 +1,4 @@
+import { TaskCheckpoint } from "./TaskCheckpoint";
 import type { Agent } from "../catalog/types";
 import { useIntel } from "../intel/state";
 import { repoData } from "../lib/derive";
@@ -21,6 +22,7 @@ export function AgentOutput({ agent }: { agent: Agent }) {
   const checkedAt = telemetry.source === "github" ? snap?.runsCheckedAt ?? snap?.fetchedAt : intel.telemetry?.observedAt;
   const stale = state?.kind === "error" || (state?.kind === "ok" && state.stale);
   return <>
+    {agent.id === "atlas-production-coordinator" && <TaskCheckpoint/>}
     <section aria-label="Latest recorded work">
       <div className="section-title">Latest recorded work</div>
       <p>{latest ? RESULT[latest.result] : "No execution recorded"}</p>
