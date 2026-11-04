@@ -14,7 +14,7 @@ test('Complete rendered commuter round trip',async({page})=>{
  // Exercise the real useFrame callbacks using Fiber's installed manual-advance API.
  // Skip GPU draws between checkpoints; no production hooks, timers, or animation changes.
  const result=await page.evaluate(async()=>{
-  const [data,layout,planner,commute,walkers]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/railCommuters.ts','/src/views/map3d/districtWalkers.ts'].map(url=>import(url)));
+  const [data,layout,planner,commute,walkers,jobs,agents]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/railCommuters.ts','/src/views/map3d/districtWalkers.ts','/src/catalog/agentJobs.ts','/src/views/map3d/agentCommutes.ts'].map(url=>import(url)));
   // The map always lays the city out by district; grouping only changes labels (#200).
   const scene=planner.buildScene(layout.layoutMap(data.catalog,[],'district'));
   const plan=commute.planRailCommuters(scene.community,scene.financial,scene.communityRail),rail=scene.communityRail;if(!plan||!rail)throw new Error('Commuter plan not found');
@@ -24,8 +24,16 @@ test('Complete rendered commuter round trip',async({page})=>{
   const cars:Obj[]=[];state.scene.traverse(o=>{if(o.type==='Group'&&Math.abs(o.position.y-2.5)<.001&&o.children.some(c=>'isInstancedMesh' in c)&&o.children.some(c=>c.type==='Group'&&Math.abs(c.position.y-.16)<.001))cars.push(o);});
   if(cars.length!==3)throw new Error(`Expected 3 carriages, found ${cars.length}`);
   const mesh=state.scene.getObjectByName('rail-commuters') as import('three').InstancedMesh|undefined;if(!mesh)throw new Error('Commuter mesh not found');
-  const segments=plan.commuters.flatMap((p:{hills:{points:number[][]};financial:{points:number[][]}})=>[p.hills.points,p.financial.points].flatMap(r=>r.slice(1).map((b,i)=>[r[i],b])));
-  const offRoute=(x:number,z:number)=>Math.min(...segments.map(([a,b]:number[][])=>{const dx=b[0]-a[0],dz=b[2]-a[2],l=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[2])*dz)/l));return Math.hypot(a[0]+dx*t-x,a[2]+dz*t-z);}));
+  // The same people, in the same order, that HillsCommunity.tsx puts in the mesh: KC's twelve rail
+  // commuters, then the AI agents walking the streets (#196), then the other riders interleaved with
+  // the sidewalk walkers (#162). Each body is checked against its own route; agents walk by the curb.
+  type Route={points:number[][]};type Who={kind:string;routes:number[][][];slack:number};
+  const riders=plan.commuters as {hills:Route;financial:Route}[],sidewalk=walkers.planDistrictWalkers(scene.financial) as {route:Route}[];
+  const streetAgents=agents.planAgentCommutes(scene,jobs.agentJobs(data.catalog)).commutes as {route:Route}[];
+  const rider=(p:{hills:Route;financial:Route}):Who=>({kind:'rider',routes:[p.hills.points,p.financial.points],slack:.2});
+  const who:Who[]=[...riders.slice(0,12).map(rider),...streetAgents.map(a=>({kind:'agent',routes:[a.route.points],slack:.2+agents.AGENT_COMMUTE.lane+.04}))];
+  for(let i=0;i<Math.max(riders.length-12,sidewalk.length);i++){if(riders[12+i])who.push(rider(riders[12+i]));if(sidewalk[i])who.push({kind:'walker',routes:[sidewalk[i].route.points],slack:.2});}
+  const offRoute=(i:number,x:number,z:number)=>Math.min(...who[i].routes.flatMap(r=>r.slice(1).map((b,k)=>[r[k],b])).map(([a,b]:number[][])=>{const dx=b[0]-a[0],dz=b[2]-a[2],l=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[2])*dz)/l));return Math.hypot(a[0]+dx*t-x,a[2]+dz*t-z);}));
   const people=()=>Array.from({length:mesh.count},(_,i)=>{const e=mesh.instanceMatrix.array,k=i*16;return {visible:Math.hypot(e[k],e[k+1],e[k+2])>1e-3,x:e[k+12],z:e[k+14]};});
   const centre=()=>cars[1].position,near=(p:number[])=>Math.min(...cars.map(c=>Math.hypot(c.position.x-p[0],c.position.z-p[1])));
   const render=state.gl.render.bind(state.gl);state.setFrameloop('never');const manual=fiber._roots.get(canvas)!.store.getState();state.gl.render=()=>{};
@@ -40,16 +48,17 @@ test('Complete rendered commuter round trip',async({page})=>{
    if(riding&&!open){const out=toHills>lastTrain+1e-4,back=toHills<lastTrain-1e-4;if(out&&!seen.outbound){seen.outbound=true;shoot('outbound',centre(),8);}if(back&&!seen.back){seen.back=true;shoot('return',centre(),8);}}
    const walking=now.filter(p=>p.visible);seen.walking=Math.max(seen.walking,walking.length);
    if(walking.length>maxWalking&&walking.length>=6){maxWalking=walking.length;const x=walking.reduce((s,p)=>s+p.x,0)/walking.length,z=walking.reduce((s,p)=>s+p.z,0)/walking.length;const prior=shots.findIndex(s=>s.phase==='walking');if(prior>=0)shots.splice(prior,1);shoot('walking',{x,y:2.2,z},6);}
-   now.forEach((p,i)=>{if(!p.visible)return;const off=offRoute(p.x,p.z);if(off>.2)faults.push(`commuter ${i} ${off.toFixed(2)} off route at ${time.toFixed(1)}s`);if(last[i].visible&&Math.hypot(p.x-last[i].x,p.z-last[i].z)>.12)faults.push(`commuter ${i} jumped at ${time.toFixed(1)}s`);});
+   now.forEach((p,i)=>{if(!p.visible)return;const off=offRoute(i,p.x,p.z);if(off>who[i].slack)faults.push(`${who[i].kind} ${i} ${off.toFixed(2)} off route at ${time.toFixed(1)}s`);if(last[i].visible&&Math.hypot(p.x-last[i].x,p.z-last[i].z)>.12)faults.push(`${who[i].kind} ${i} jumped at ${time.toFixed(1)}s`);});
    last=now;lastTrain=toHills;if(faults.length>5)break;}
    shoot('arrived',centre(),8);
   }finally{state.gl.render=render;}
-  return {shots,seen,faults,count:mesh.count,planned:plan.commuters.length+walkers.planDistrictWalkers(scene.financial).length};
+  return {shots,seen,faults,count:mesh.count,planned:who.length,agents:streetAgents.length};
  });
  for(const s of result.shots)writeFileSync(`artifacts/compact-city/commute-${s.phase}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  writeFileSync('artifacts/compact-city/commute-trace.json',JSON.stringify({seen:result.seen,faults:result.faults},null,2));
  // One body per planned person: the rail riders (two commuter groups of six plus the visitor
- // groups) and the Financial District sidewalk walkers, all in the same instanced mesh (#162).
+ // groups), the AI agents' street commutes (#196) and the Financial District sidewalk walkers (#162),
+ // all in the same instanced mesh.
  expect(result.count).toBe(result.planned);
  expect(result.count).toBeGreaterThanOrEqual(12);
  expect(result.faults).toEqual([]);
