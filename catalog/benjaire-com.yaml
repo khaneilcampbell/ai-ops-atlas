@@ -327,7 +327,7 @@ agents:
 
   - id: benjaire-product-lab-research
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-insights"}
-    name: Product Lab · Market Research
+    name: Product Lab Market Research
     purpose: >-
       Builds a long list of 6 to 10 product ideas for Benjaire with dated, linked demand signals from web search.
     framework: n8n Agent skill
@@ -375,7 +375,7 @@ agents:
 
   - id: benjaire-product-lab-competitors
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-archive"}
-    name: Product Lab · Competitor Analysis
+    name: Product Lab Competitor Analysis
     purpose: >-
       Maps who already sells each shortlisted idea, their prices, ratings and review complaints, and proposes a differentiation angle.
     framework: n8n Agent skill
@@ -424,7 +424,7 @@ agents:
 
   - id: benjaire-product-lab-customers
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-social"}
-    name: Product Lab · Customer Insight
+    name: Product Lab Customer Insight
     purpose: >-
       Defines who would buy each shortlisted idea, their pains in their own words, buying triggers and the cheapest channels to reach them.
     framework: n8n Agent skill
@@ -473,7 +473,7 @@ agents:
 
   - id: benjaire-product-lab-scoring
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-workshop"}
-    name: Product Lab · Product Scoring
+    name: Product Lab Product Scoring
     purpose: >-
       Ranks candidate ideas with the Benjaire weighted scorecard and picks one top recommendation plus two runners-up.
     framework: n8n Agent skill
@@ -521,7 +521,7 @@ agents:
 
   - id: benjaire-product-lab-brief
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-review"}
-    name: Product Lab · Product Brief
+    name: Product Lab Product Brief
     purpose: >-
       Turns the research and scorecard into a decision-ready brief of about 900 words with a 30-day validation plan and numeric success metrics.
     framework: n8n Agent skill
