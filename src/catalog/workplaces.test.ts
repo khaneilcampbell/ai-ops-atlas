@@ -59,3 +59,9 @@ it('validates Marketplace rooms without allowing unsupported suites elsewhere',(
  expect(buildCatalog({'a.yaml':manifest('{building: Atlas Marketplace, floor: 1, room: "108"}')}).issues).toEqual([]);
  for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: OpenAI, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
 });
+
+it("keeps the Inquiry Assistant in Skyline with its original ownership",()=>{
+ const a=workplaceAgent(catalog.agents,"Skyline",1,"101")!;
+ expect(a.id).toBe("skyline-inquiry-assistant");expect(a.projectId).toBe("skyline");
+ expect(projectOfficeAgents(catalog.agents,"skyline")).not.toContain(a);
+});

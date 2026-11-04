@@ -659,6 +659,7 @@
             "properties": {
               "building": {
                 "enum": [
+                  "Skyline",
                   "Atlas Marketplace",
                   "OpenAI",
                   "Anthropic",

@@ -133,7 +133,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
           const slot=(level-1)*4+(side===-1?0:2)+index;
           const suite=business?.rooms[((level-1)+index+(side===1?2:0))%4];
           const x=side*4,z=row*3.5, room=`${level}0${(side===-1?0:2)+index+1}`;
-          const agent=business?workplaceAgent(assigned,building,level,room):agents[slot];
+          const agent=workplaceAgent(assigned,building,level,room)??(business?undefined:agents[slot]);
           return <group key={room} onClick={event=>{if(agent?.workplace){event.stopPropagation();setPickedAgent(agent.id);}}}>
             {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} residential={residential} bank={["Wells Fargo","Chase","Navy Federal Credit Union"].includes(displayName)} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
             <Box p={[x,0.06,row*1.1]} s={[0.85,0.04,0.6]} color="#bca371"/>

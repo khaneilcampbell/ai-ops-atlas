@@ -27,6 +27,7 @@ project:
 agents:
   - id: skyline-inquiry-assistant
     name: Benjaire Inquiry Assistant
+    workplace: {building: Skyline, floor: 1, room: "101"}
     purpose: Planned service that captures website inquiries, classifies requests, saves an inquiry log, alerts the owner and acknowledges the sender.
     framework: Planned n8n workflow with an AI classification step
     runtime: Not deployed

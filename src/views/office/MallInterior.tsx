@@ -9,10 +9,13 @@ import {type LightMode} from '../map3d/living';
 import {night as cityNight} from '../map3d/materials';
 import {ribbon} from '../map3d/mallShapes';
 import type {Pt} from '../map3d/roads';
-import {Box,Person,SeatedPerson} from './InteriorPrimitives';
+import {Box,Person} from './InteriorPrimitives';
 import CityOutside from './CityOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {useAtlas} from '../../state';
+import {OfficeWander} from './OfficeWander';
+import {marketplaceWalk} from './officeWalk';
+import {useReducedMotion} from '../../lib/motion';
 import {WorkplaceInspector} from './WorkplaceInspector';
 import type {Agent} from '../../catalog/types';
 import {marketplaceAssignedAgent} from './marketplaceWorkspaces';
@@ -103,17 +106,17 @@ const mid=(pts:Pt[]):Pt=>{const p=pts[Math.floor(pts.length/2)];return p;};
 const centre=(u:MallUnit):Pt=>{const f=mid(u.front),b=mid(u.back);return [(f[0]+b[0])/2,(f[1]+b[1])/2];};
 
 /** What stands inside one unit. Plain boxes, so a floor stays a few hundred meshes. */
-function Fitout({u,y,agents}:{u:MallUnit;y:number;agents:Agent[]}){
+function Fitout({u,y,agents,animate}:{u:MallUnit;y:number;agents:Agent[];animate:boolean}){
  const [x,z]=centre(u),f=mid(u.front),ang=Math.atan2(f[1]-z,f[0]-x);
  const along=(d:number,side:number):[number,number]=>[x+Math.cos(ang)*d-Math.sin(ang)*side,z+Math.sin(ang)*d+Math.cos(ang)*side];
+ const walk=useMemo(()=>marketplaceWalk(u),[u]);
  const layout=mallFurniture(u);
  const assignment=marketplaceAssignedAgent(u.id,agents);
  if(assignment){const depth=Math.hypot(mid(u.back)[0]-f[0],mid(u.back)[1]-f[1]);const [dx,dz]=along(-depth*.15,.65);
-  return <group position={[dx,y,dz]} rotation={[0,-ang+Math.PI/2,0]}>
+  return <group><group position={[dx,y,dz]} rotation={[0,-ang+Math.PI/2,0]}>
    <Lift p={[0,0,0]} s={[1.1,.76,.6]} color="#b28c56"/><Box p={[0,.94,-.12]} s={[.58,.36,.045]} color="#18372b"/>
    <Box p={[0,.8,.12]} s={[.5,.025,.16]} color="#ece5d6"/><Box p={[0,.27,.7]} s={[.45,.54,.45]} color="#294237"/>
-   <SeatedPerson x={0} z={.7} color="#5a8067"/>
-  </group>;
+  </group><group position={[0,y,0]}><OfficeWander route={walk} active={animate}/></group></group>;
  }
  if(u.kind==='food')return <group>{layout.tableOffsets.flatMap(s=>[layout.tableDepth].map(d=>{const [px,pz]=along(d,s);return <group key={`${s}${d}`}>
   <mesh position={[px,y+.72,pz]} castShadow><cylinderGeometry args={[.42,.42,.06,16]}/><meshStandardMaterial color="#f3eadb"/></mesh>
@@ -142,7 +145,7 @@ function LiftLanding({y}:{y:number}){
  </group>;
 }
 
-function Floor({level,y,labels,onPick,cutaway,night,single,agents}:{level:number;y:number;labels:boolean;onPick:(u:MallUnit)=>void;cutaway:boolean;night:boolean;single:boolean;agents:Agent[]}){
+function Floor({level,y,labels,onPick,cutaway,night,single,agents,animate}:{level:number;y:number;labels:boolean;onPick:(u:MallUnit)=>void;cutaway:boolean;night:boolean;single:boolean;agents:Agent[];animate:boolean}){
  const {outer,inner}=useMemo(()=>mallInteriorFloor(MALL_SHAPE,level),[level]);
  const slab=useMemo(()=>ribbon(outer,inner,y-.25,.25),[outer,inner,y]);
  useEffect(()=>()=>slab.dispose(),[slab]);
@@ -176,7 +179,7 @@ function Floor({level,y,labels,onPick,cutaway,night,single,agents}:{level:number
      if(Math.abs(i-middle)===1)return null;
      return <group key={`f${i}`}>{door?<Doors a={doorA} b={doorB} y={y} accent={ACCENT[u.kind]}/>:<Seg a={u.front[i]} b={b} y={y} h={2.6} t={.03} color="#d4e9e6" opacity={.22}/>}
       {door&&<Seg a={doorA} b={doorB} y={y+2.38} h={.22} t={.03} color="#d4e9e6" opacity={.22}/>}<Seg a={u.front[i]} b={b} y={y+2.6} h={.35} t={.12} color={ACCENT[u.kind]}/></group>;})}
-    <Fitout u={u} y={y} agents={agents}/>
+    <Fitout u={u} y={y} agents={agents} animate={animate}/>
     {labels&&labelled.has(u.id)&&<Html position={[mid(u.front)[0],y+3.3+(u.index%2)*.65,mid(u.front)[1]]} center><button className="skyline-room-label" title={u.name} onClick={()=>onPick(u)}>{marketplaceAssignedAgent(u.id,agents)?.name??u.name}<span>{marketplaceAssignedAgent(u.id,agents)?'Workspace assigned':u.kind==='shop'?'Planned · not selling yet':u.kind==='vacant'?'Vacant':u.kind==='food'?'Food court':u.kind==='hall'?'Demo hall':u.kind==='service'?'Information':'Studio'}</span></button></Html>}
    </group>;
   })}
@@ -223,22 +226,25 @@ export default function MallInterior({light}:{light:LightMode}){
  const [picked,setPicked]=useState<MallUnit|null>(null);
  const {catalog}=useAtlas();
  const worker=picked?marketplaceAssignedAgent(picked.id,catalog.agents):undefined;
+ const [life,setLife]=useState(true);
+ const reduced=useReducedMotion();
  const power=usePowerProfile(),visible=usePageVisible();const isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
+ const animate=catalog.agents.some(a=>a.workplace?.building==='Atlas Marketplace')&&life&&visible&&!reduced&&!power.pauseInBackground&&(mode===ALL||mode===1);
  const levels=mode===ALL?[0,1,2,3]:[mode];
  const info=MALL_LEVELS.find(l=>l.level===mode);
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label="Atlas Marketplace interior">
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
-   <FramePacer profile={power} running={false}/>
+   <FramePacer profile={power} running={animate}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
    <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-20} shadow-camera-right={20} shadow-camera-top={20} shadow-camera-bottom={-20}/>
    <MallCamera mode={mode}/>
    {/* The real city round the lot, at the interior's scale, reusing the map's own scene. */}
    <CityOutside building="Atlas Marketplace" span={MALL_IN.rx*2} allFloors={mode===ALL} elevation={mode>0&&mode!==ALL?mode*FH:0}/>
-      {levels.map(l=><group key={l} position={[0,mode===ALL?l*FH:0,0]}><Floor level={l} y={0} labels={mode!==ALL} onPick={u=>{setPicked(u);}} cutaway night={isNight} single={mode!==ALL} agents={catalog.agents}/>{mode===ALL&&<Html position={[-MALL_IN.rx,0.3,0]} center><span className="skyline-room-label building-floor-label">{l===0?'Lobby':`Floor ${l}`}</span></Html>}</group>)}
+      {levels.map(l=><group key={l} position={[0,mode===ALL?l*FH:0,0]}><Floor level={l} y={0} labels={mode!==ALL} onPick={u=>{setPicked(u);}} cutaway night={isNight} single={mode!==ALL} agents={catalog.agents} animate={animate}/>{mode===ALL&&<Html position={[-MALL_IN.rx,0.3,0]} center><span className="skyline-room-label building-floor-label">{l===0?'Lobby':`Floor ${l}`}</span></Html>}</group>)}
    {<group><Atrium top={(mode===ALL?MALL_IN.levels:1)*FH+.6} night={isNight} escalators={mode===ALL?[0,1,2].map(l=>({level:l,y:l*FH})):[]}/><Fins levels={levels} stacked={mode===ALL}/></group>}
    {(mode===ALL||mode===0)&&<group>
     {/* Lobby paving is present in both all-floor and single-floor ground views. */}
@@ -252,10 +258,10 @@ export default function MallInterior({light}:{light:LightMode}){
     <mesh position={[0,.21,13]}><cylinderGeometry args={[1.1,1.1,.02,32]}/><meshStandardMaterial color="#5aaac0" emissive="#3d7f99" emissiveIntensity={isNight?.8:0}/></mesh>
    </group>}
   </Canvas>
-  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label="Exit Atlas Marketplace and return to city">← Exit building</button><div><small>ATLAS MARKETPLACE · BENJAIRE PRODUCT WORKSPACES</small><h2>{title}</h2></div></header>
+  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label="Exit Atlas Marketplace and return to city">← Exit building</button><div><small>ATLAS MARKETPLACE · BENJAIRE PRODUCT WORKSPACES</small><h2>{title}</h2></div><button aria-pressed={life} title="Visual office movement only; pauses in Battery saver and reduced motion" onClick={()=>setLife(v=>!v)}>{!life?'Office life: Off':reduced||power.pauseInBackground?'Office life paused':'Office life: On'}</button></header>
   <nav className="skyline-floor-picker" aria-label="Choose Atlas Marketplace floor"><strong>Floor navigation</strong>
    {[ALL,3,2,1,0].map(n=><button key={n} aria-pressed={mode===n} onClick={()=>{setMode(n);setPicked(null);}}>{n===ALL?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
   {worker&&<WorkplaceInspector agent={worker} onClose={()=>setPicked(null)}/>}
-  <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Four floors round a funnel-tree atrium · {lookHint()}<span>Assigned workspaces · No agents started · No publishing connected.</span></>:<>{info!.summary}<span>Select a unit to see what it is.</span></>}</aside>
+  <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Four floors round a funnel-tree atrium · {lookHint()}<span>Visual office simulation · No agents started · No publishing connected.</span></>:<>{info!.summary}<span>Visual office simulation · Select a workspace to inspect its agent.</span></>}</aside>
  </section>;
 }
