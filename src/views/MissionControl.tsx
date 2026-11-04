@@ -15,6 +15,7 @@ import { rollup, usd } from "../intel/format";
 import { AgentAlerts } from "./AgentAlerts";
 import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
+import { WebsiteManagement } from "./WebsiteManagement";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
 const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
@@ -56,6 +57,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <AgentAlerts />
 
       <ClientInquiries />
+
+      <WebsiteManagement />
 
       <div className="grid kpis">
         <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />

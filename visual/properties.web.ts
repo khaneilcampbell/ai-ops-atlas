@@ -5,7 +5,7 @@ import { openAtlas, selectBuilding, settle } from "./atlas";
 import { NOW } from "./github";
 import { sampleGithub, sampleSite } from "./propertiesFixtures";
 
-// The live website dashboards on Benjaire HQ and Portfolio Site, as the hosted page shows them.
+// The website dashboards in Mission Control's Website management section, as the hosted page shows them.
 // The sample answers are in propertiesFixtures.ts. Screenshots go to visual/out/properties-*.png.
 // Run with: npx playwright test -c visual/properties.config.ts
 const OUT = join(import.meta.dirname, "out");
@@ -27,46 +27,55 @@ async function open(page: Page) {
   await settle(page, 4);
 }
 
-const inspector = (page: Page) => page.getByRole("complementary", { name: "Inspector" }).or(page.getByRole("dialog", { name: "Details" }));
+const toMission = async (page: Page) => {
+  // The header's view switch on a desktop; the bottom navigation on a phone.
+  await page.locator(".view-switch button[aria-label='Mission Control']:visible, .nav-item:visible:has-text('Mission')").first().click();
+  await settle(page);
+};
+const section = (page: Page) => page.locator("#website-management");
+const site = (page: Page, domain: string) => section(page).getByRole("region", { name: `${domain} live dashboard` });
 
-test("a failed deploy is an incident on Benjaire HQ, with links to act", async ({ page }) => {
+test("Mission Control's Website management shows a failed deploy as an incident, with links to act", async ({ page }) => {
   await open(page);
-  await expect(page.locator(".property-pill")).toHaveText(/2 website incidents/);
+  // No website pill in the header any more: the header keeps its width.
+  await expect(page.locator(".property-pill")).toHaveCount(0);
   mkdirSync(OUT, { recursive: true });
   await page.locator(".header").screenshot({ path: join(OUT, "properties-1-header.png") });
-  await page.locator(".property-pill").click();
-  await settle(page, 4);
-  const dash = inspector(page).locator(".property");
+  await toMission(page);
+  await expect(section(page).locator(".card-head .chip")).toHaveText(/2 open/);
+  const dash = site(page, "benjaire.com");
   await expect(dash.locator(".property-incident")).toHaveCount(2);
   await expect(dash.locator(".property-incident").first()).toContainText("Production deploy failed");
   await expect(dash.locator(".property-incident").first().getByRole("link", { name: /Fix with Claude/ })).toHaveAttribute("href", /labels=claude-fix/);
   await expect(dash.locator(".property-tile", { hasText: "Deploys" })).toContainText("Failed");
   await expect(dash.locator(".property-tile", { hasText: "Traffic" })).toContainText("Needs Cloudflare analytics");
-  await page.screenshot({ path: join(OUT, "properties-2-benjaire.png"), animations: "disabled", caret: "hide" });
-  
+  await section(page).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(OUT, "properties-2-mission.png"), animations: "disabled", caret: "hide" });
+
   await dash.locator(".property-incident").first().getByRole("button", { name: "Dismiss" }).click();
   await expect(dash.locator(".property-incident")).toHaveCount(1);
 });
 
-test("a healthy site shows every signal and what still needs connecting", async ({ page }) => {
+test("a healthy site shows every signal, and the building panel is back to its original design", async ({ page }) => {
   await open(page);
   await selectBuilding(page, "Portfolio Site");
-  const dash = inspector(page).locator(".property");
+  await expect(page.locator(".property")).toHaveCount(0);
+  await toMission(page);
+  const dash = site(page, "khaneilcampbell.com");
   await expect(dash.locator(".property-chip")).toHaveText("No incidents");
   await expect(dash.locator(".property-tile", { hasText: "Deploys" })).toContainText("Live");
   await expect(dash.locator(".property-tile", { hasText: "SSL certificate" })).toContainText(/6\d days left/);
-  await page.screenshot({ path: join(OUT, "properties-4-portfolio.png"), animations: "disabled", caret: "hide" });
 });
 
 test.describe("on iPhone", () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
-  test("the dashboard fits the phone panel", async ({ page }) => {
+  test("Website management fits the phone", async ({ page }) => {
     await open(page);
-    await page.locator(".property-pill").click();
-    await settle(page, 4);
-    const dash = inspector(page).locator(".property");
-    await expect(dash).toBeVisible();
-    await dash.scrollIntoViewIfNeeded();
+    await toMission(page);
+    await expect(section(page)).toBeVisible();
+    await section(page).scrollIntoViewIfNeeded();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
     await page.screenshot({ path: join(OUT, "properties-5-phone.png"), animations: "disabled", caret: "hide" });
   });
 });

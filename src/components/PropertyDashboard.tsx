@@ -1,6 +1,6 @@
 import { daysUntil, type Incident } from "../properties/incidents";
 import type { Deploy } from "../properties/deploys";
-import { PROPERTIES, type WebProperty } from "../properties/registry";
+import type { WebProperty } from "../properties/registry";
 import {
   dismissIncidents,
   refreshSite,
@@ -10,7 +10,6 @@ import {
 } from "../properties/state";
 import type { Check } from "../properties/types";
 import { relative } from "../lib/time";
-import { useAtlas } from "../state";
 import { ExternalLink } from "./bits";
 import { Icon } from "./Icon";
 import "../styles/properties.css";
@@ -308,32 +307,3 @@ function IncidentRow({ incident: i }: { incident: Incident }) {
 }
 
 /** Header pill: shows only while a website incident is open, and opens that site's building. */
-export function PropertyIncidentPill() {
-  const { open } = usePropertyIncidents();
-  const { select, setView, view } = useAtlas();
-  if (!open.length) return null;
-  const first = open[0];
-  const domain = PROPERTIES.find((p) => p.id === first.propertyId)!;
-  const text =
-    open.length === 1
-      ? `${domain.domain}: ${first.title.toLowerCase()}`
-      : `${open.length} website incidents`;
-  return (
-    <button
-      className={`alert-pill property-pill ${first.severity}`}
-      title={open
-        .map(
-          (i) =>
-            `${PROPERTIES.find((p) => p.id === i.propertyId)?.domain}: ${i.title}`,
-        )
-        .join("\n")}
-      onClick={() => {
-        if (view !== "map") setView("map");
-        select({ kind: "project", id: domain.projectId });
-      }}
-    >
-      <Icon name="alert" size={13} />
-      <span className="alert-text">{text}</span>
-    </button>
-  );
-}

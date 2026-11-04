@@ -31,6 +31,17 @@ const DAY = 86_400_000;
 /** Cloudflare renews edge certificates about 30 days ahead, so two weeks left means renewal failed. */
 export const TLS_WARN_DAYS = 14;
 export const TLS_CRITICAL_DAYS = 3;
+
+/**
+ * Warning and critical thresholds in days for a certificate. Issuers renew with about a third of
+ * the lifetime left, so a short-lived certificate (Let's Encrypt's 45- or 6-day ones) is normal
+ * with fewer days left than a 90-day one: the thresholds shrink with the lifetime.
+ */
+export function tlsThresholds(notBefore: string, notAfter: string): { warn: number; critical: number } {
+  const life = (Date.parse(notAfter) - Date.parse(notBefore)) / DAY;
+  if (!(life > 0)) return { warn: TLS_WARN_DAYS, critical: TLS_CRITICAL_DAYS };
+  return { warn: Math.min(TLS_WARN_DAYS, life / 6), critical: Math.min(TLS_CRITICAL_DAYS, life / 20) };
+}
 /** Registrars auto-renew about a month ahead; inside that, check auto-renew and the card. */
 export const DOMAIN_WARN_DAYS = 30;
 export const DOMAIN_CRITICAL_DAYS = 7;
@@ -91,17 +102,18 @@ export function siteIncidents(p: WebProperty, s: SiteSnapshot, now: number): Inc
 
   if (tls.state === "ok") {
     const left = Date.parse(tls.data.notAfter) - now;
-    if (left < TLS_WARN_DAYS * DAY) {
+    const { warn, critical } = tlsThresholds(tls.data.notBefore, tls.data.notAfter);
+    if (left < warn * DAY) {
       const d = days(left);
       out.push({
         key: `${p.id}:tls:${tls.data.notAfter}`,
         propertyId: p.id,
         kind: "tls-expiring",
-        severity: d < TLS_CRITICAL_DAYS ? "critical" : "warning",
+        severity: left < critical * DAY ? "critical" : "warning",
         title: `Certificate expires in ${plural(d, "day")}`,
         detail: `The newest logged certificate for ${p.domain} (${tls.data.issuer ?? "unknown issuer"}) ends ${dateOnly(tls.data.notAfter)}. Automatic renewal normally happens weeks earlier.`,
-        since: new Date(Date.parse(tls.data.notAfter) - TLS_WARN_DAYS * DAY).toISOString(),
-        actions: [{ label: "Certificates", url: "https://dash.cloudflare.com/?to=/:account/:zone/ssl-tls/edge-certificates" }, { label: "Certificate log", url: `https://crt.sh/?q=${encodeURIComponent(p.domain)}` }],
+        since: new Date(Date.parse(tls.data.notAfter) - warn * DAY).toISOString(),
+        actions: [p.host === "GitHub Pages" ? { label: "Pages settings", url: `https://github.com/${p.repository}/settings/pages` } : { label: "Certificates", url: "https://dash.cloudflare.com/?to=/:account/:zone/ssl-tls/edge-certificates" }, { label: "Certificate log", url: `https://crt.sh/?q=${encodeURIComponent(p.domain)}` }],
       });
     }
   }
