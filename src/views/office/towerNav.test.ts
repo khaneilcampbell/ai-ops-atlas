@@ -19,6 +19,18 @@ describe("Financial District interiors",()=>{
     expect(specs.find(s=>s.name==="The Ritz-Carlton")!.program).toBe("hotel");
   });
 
+  it("dresses each building in its brand colours",()=>{
+    const theme=(name:string)=>specs.find(s=>s.name===name)!.theme.primary;
+    expect(theme("American Express")).toBe("#006fcf");expect(theme("Experian")).toBe("#6d2077");expect(theme("Robinhood")).toBe("#7fae1f");
+    expect(theme("Wells Fargo")).toBe("#b51c32");expect(theme("Chase")).toBe("#126bc4");
+    // Every building has its own theme, and its lobby back wall and room walls use it.
+    expect(new Set(specs.map(s=>s.theme.primary)).size).toBe(specs.length);
+    for(const s of specs){
+      expect(towerLobbyParts(s).box.some(p=>p.c===s.theme.primary&&p.s[1]>3)).toBe(true);
+      expect(towerFloorParts(s,1).box.some(p=>p.c===s.theme.deep)).toBe(true);
+    }
+  });
+
   it("names rooms after the brand and furnishes them by what they're for",()=>{
     expect(["Grand reception","Private advisory","Planning lounge","Records review"].map(roomKind)).toEqual(["reception","private","meeting","workspace"]);
     const chase=specs.find(s=>s.name==="Chase")!;

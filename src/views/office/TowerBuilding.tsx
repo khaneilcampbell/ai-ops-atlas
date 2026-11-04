@@ -6,7 +6,7 @@ import {Box,Person} from "./InteriorPrimitives";
 import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
 import LobbyEntrance from "./LobbyEntrance";
 import {CircaParts} from "./CircaUpperFloors";
-import {CIRCA_LIFT} from "./circaFloors";
+import type {LiftFinish} from "./BuildingCirculation";
 import {TOWER_FLOORS,towerDoorZ,towerRooms,roomPoint,type TowerSpec} from "./towerPlan";
 import {towerFloorParts,towerLobbyParts} from "./towerParts";
 import {towerDay,towerLift,type TowerDay} from "./towerNav";
@@ -16,7 +16,7 @@ import type {useMaterials} from "../map3d/models";
 
 /**
  * A Financial District building inside "Enter building" (see towerPlan): the lobby and four floors of rooms, glass all
- * round, Circa's furniture palette, and people who walk in, ride the lift and work their floors.
+ * round, furnished in the building's brand colours, and people who walk in, ride the lift and work their floors.
  */
 const SLAB="#e7dfcf",NIGHT_LAMP=44;
 const COLORS=["#806c9e","#496e84","#b58b49","#5a8067","#8a5a4a","#4f6f8f","#9a7b3c","#6b5a86"];
@@ -51,9 +51,12 @@ function TowerWalkers({level,people,reduced,spec,onPick}:{level:number;people:To
   })}</group>;
 }
 
+/** The lift in the building's brand colours: brand walls, deep frames and doors, a glowing call button. */
+const liftFinish=(spec:TowerSpec):LiftFinish=>({pad:"#a6a49f",back:spec.theme.primary,sides:spec.theme.deep,trim:spec.theme.deep,doors:spec.theme.deep,button:spec.theme.highlight,car:"#f3efe8",carWall:spec.theme.primary});
+
 /** The lift car moving through the stack in the all-floors view. */
 export function TowerLift({spec,reduced}:{spec:TowerSpec;reduced:boolean}) {
-  const l=towerLift(spec);return <MovingLift reduced={reduced} finish={CIRCA_LIFT} top={l.top} offset={l.offset}/>;
+  const l=towerLift(spec);return <MovingLift reduced={reduced} finish={liftFinish(spec)} top={l.top} offset={l.offset}/>;
 }
 
 /**
@@ -67,7 +70,7 @@ export function TowerLevel({spec,level,stack,labels,night,reduced,people,onPick}
     {stack?lamp(0,"stack",1.6):[-5,4].map(x=>lamp(x,x))}
     <Box p={[0,-0.15,0]} s={[spec.w,0.3,spec.d]} color={SLAB}/>
     <CircaParts parts={parts} night={night}/>
-    <ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={l.top} offset={l.offset} name={level===0?"Lobby":`Floor ${level}`}/>
+    <ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={liftFinish(spec)} top={l.top} offset={l.offset} name={level===0?"Lobby":`Floor ${level}`}/>
     {level===0&&<group>
       <LobbyEntrance z={towerDoorZ(spec)} width={2.3}/>
       {labels&&<Html position={[0,2.8,towerDoorZ(spec)-.05]} center><span className="skyline-room-label">Main entrance</span></Html>}
