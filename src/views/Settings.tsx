@@ -9,6 +9,7 @@ import { PHONE_QUERY, useMedia } from "../lib/media";
 import { SCROLL_MODES, setNavigationPrefs, TRACKPAD_SPEEDS, useNavigationPrefs } from "../lib/navigation";
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
+import { IntegrationCenter } from "../integrations/IntegrationCenter";
 import { SyncSettings } from "./SyncSettings";
 
 export function SettingsView() {
@@ -24,11 +25,13 @@ export function SettingsView() {
 
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">
-          <h2 className="grow">GitHub access</h2>
+          <h2 className="grow">Integration Center</h2>
           <span className="chip">
             <Icon name="lock" size={12} /> Read-only
           </span>
         </div>
+        <IntegrationCenter />
+        <h3 style={{padding:16}}>GitHub access</h3>
         <TokenSetting onChange={() => void refresh(true)} />
         <UsageSetting usage={usage} />
       </section>
