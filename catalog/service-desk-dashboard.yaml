@@ -15,11 +15,11 @@ project:
 agents:
   - id: service-desk-codeql
     name: CodeQL Scan
-    purpose: GitHub code scanning for security issues on pushes and pull requests.
+    purpose: GitHub code scanning on pushes and pull requests, plus manually requested model-free triage of bounded Atlas and SOC Lab GitHub alerts. Unavailable security data remains unknown; no automatic repairs or alert dismissals.
     framework: GitHub Actions
     runtime: GitHub-hosted runner
     status: active
-    trigger: Push, pull request and schedule
+    trigger: Existing push, pull request and weekly scans; manual-only B4 alert triage
     source: .github/workflows/service-desk-codeql.yml
     observe:
       github_workflow: service-desk-codeql.yml
@@ -45,7 +45,7 @@ agents:
         tools: [GitHub Actions, CodeQL]
         inputs:
           - Pushes to main, pull requests, weekly schedule
-        outputs: [Code scanning alerts, Check results]
+        outputs: [Code scanning alerts, Check results, Manual B4 triage summary and artifact]
       goals:
         objective: Catch security issues before merge.
         kpis:
