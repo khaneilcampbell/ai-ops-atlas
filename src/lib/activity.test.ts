@@ -87,3 +87,15 @@ describe("approval-required actions", () => {
     expect(events[1].detail).toContain("CI #7");
   });
 });
+
+it("retains a completed outcome when an older running copy is replayed", () => {
+  const snapshot = structuredClone(repos);
+  if(snapshot['me/p'].kind !== 'ok') throw new Error('fixture');
+  snapshot['me/p'].data.workflowRuns['audit.yml'] = [{...shared,status:'in_progress',conclusion:null}];
+  const events = workspaceEvents(catalog,snapshot);
+  expect(events.find(e=>e.url===shared.url)?.result).toBe('failure');
+  expect(events.filter(e=>e.url===shared.url)).toHaveLength(1);
+  const base = {kinds:[],project:'',result:'' as const,sinceMs:null,query:''};
+  expect(filterEvents(events,{...base,agent:'a',source:'GitHub'}).every(e=>e.agentId==='a')).toBe(true);
+  expect(filterEvents(events,{...base,source:'unknown'})).toHaveLength(0);
+});

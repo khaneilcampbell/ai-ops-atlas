@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Icon, type IconName } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
-import { filterEvents, workspaceEvents, type AtlasEvent, type EventKind, type EventResult } from "../lib/activity";
+import { eventSource, filterEvents, workspaceEvents, type AtlasEvent, type EventKind, type EventResult } from "../lib/activity";
 import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
@@ -38,6 +38,8 @@ function dayHeading(iso: string) {
 export function ActivityView() {
   const { catalog, repos, uncataloged, select } = useAtlas();
   const [kinds, setKinds] = useState<EventKind[]>([]);
+  const [agent, setAgent] = useState("");
+  const [source, setSource] = useState("");
   const [project, setProject] = useState("");
   const [result, setResult] = useState<"" | EventResult>("");
   const [range, setRangeState] = useState<number>(() => load<number>("activityRange", 1));
@@ -51,7 +53,7 @@ export function ActivityView() {
   const intelRuns = useIntel().status?.runs;
   const actionLog = useActions().audit;
   const all = useMemo(() => workspaceEvents(catalog, repos, uncataloged, intelRuns, actionLog), [catalog, repos, uncataloged, intelRuns, actionLog]);
-  const events = useMemo(() => filterEvents(all, { kinds, project, result, sinceMs: RANGES[range]?.ms ?? null, query }), [all, kinds, project, result, range, query]);
+  const events = useMemo(() => filterEvents(all, { agent, source, kinds, project, result, sinceMs: RANGES[range]?.ms ?? null, query }), [all, agent, source, kinds, project, result, range, query]);
   const counts = useMemo(() => {
     const c: Record<EventKind, number> = { commit: 0, ci: 0, agent: 0, intel: 0, action: 0, manifest: 0 };
     for (const e of filterEvents(all, { kinds: [], project, result: "", sinceMs: RANGES[range]?.ms ?? null, query })) c[e.kind]++;
@@ -69,7 +71,7 @@ export function ActivityView() {
   }, [events, shown]);
 
   const toggleKind = (k: EventKind) => setKinds((ks) => (ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]));
-  const anyFilter = kinds.length || project || result || query;
+  const anyFilter = kinds.length || project || result || query || agent || source;
 
   return (
     <div className="page">
@@ -108,6 +110,8 @@ export function ActivityView() {
             ))}
           </select>
         </label>
+        <label className="field">Agent<select aria-label="Agent" value={agent} onChange={e => setAgent(e.target.value)}><option value="">All</option>{catalog.agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+        <label className="field">Source<select aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All</option>{[...new Set(all.map(eventSource))].sort().map(s => <option key={s}>{s}</option>)}</select></label>
         <div className="seg-ctl" role="group" aria-label="Time range">
           {RANGES.map((r, i) => (
             <button key={r.label} className={range === i ? "on" : ""} aria-pressed={range === i} onClick={() => setRange(i)}>
@@ -119,6 +123,7 @@ export function ActivityView() {
           <button
             className="text-btn"
             onClick={() => {
+              setAgent(""); setSource("");
               setKinds([]);
               setProject("");
               setResult("");
@@ -159,6 +164,7 @@ export function ActivityView() {
                     </span>
                     <span className="grow">
                       <span className="title">{e.url ? <ExternalLink href={e.url}>{e.title}</ExternalLink> : e.title}</span>
+                      <details className="small"><summary>Evidence and next action</summary><p>Source: {eventSource(e)} · Event time: {e.at} · Collected: {e.collectedAt ?? "Not recorded"}</p><p>{e.url ? <ExternalLink href={e.url}>Inspect source result</ExternalLink> : "No external evidence link recorded. Inspect the related record below."} · Run/job: {e.id}</p>{e.collectedAt && Date.now()-Date.parse(e.collectedAt)>86400000 && <p>Saved evidence is over a day old; refresh before acting.</p>}</details>
                       <span className="meta">
                         <button className="text-btn inline" onClick={() => select(e.agentId ? { kind: "agent", id: e.agentId } : e.repo ? { kind: "repo", id: e.repo } : null)}>
                           {e.detail}
@@ -182,7 +188,7 @@ export function ActivityView() {
         )}
       </div>
       <p className="muted small" style={{ marginTop: 12 }}>
-        GitHub keeps the latest 10 commits and 10 default-branch runs per repository in Atlas. Live run logs from n8n and CrewAI arrive with their adapters.
+        GitHub keeps the latest 10 commits and 10 default-branch runs per repository in Atlas. This timeline does not ingest n8n logs, external task checkpoints, or product-version approvals yet. A merge is not deployment evidence. Failed or missing sources retain only their last saved events.
       </p>
     </div>
   );
