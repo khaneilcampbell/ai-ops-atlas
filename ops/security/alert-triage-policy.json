@@ -1,0 +1,11 @@
+{
+  "mode": "observe",
+  "enabled": true,
+  "repositories": ["khaneilcampbell/ai-ops-atlas", "khaneilcampbell/splunk-bruteforce-detection-lab"],
+  "maxRepositoriesPerRun": 2,
+  "maxRequestsPerRun": 8,
+  "requestTimeoutSeconds": 8,
+  "maxRunSeconds": 70,
+  "maxPaidSpendUsd": 0,
+  "stopFile": "SECURITY_TRIAGE_STOP"
+}
