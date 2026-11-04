@@ -47,6 +47,8 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
   const projectByRepo = new Map(catalog.projects.flatMap(p => projectRepositories(p, catalog.agents).map(repo => [repo, p] as const)));
+  // Shared repositories do not prove which owning project caused a commit or run.
+  for (const name of [...projectByRepo.keys()]) if (catalog.projects.filter(p => projectRepositories(p, catalog.agents).includes(name)).length > 1) projectByRepo.delete(name);
   const best = new Map<string, WorkflowRun>();
   for (const state of Object.values(repos)) {
     const snap = repoData(state);

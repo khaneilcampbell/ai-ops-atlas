@@ -99,3 +99,7 @@ it("retains a completed outcome when an older running copy is replayed", () => {
   expect(filterEvents(events,{...base,agent:'a',source:'GitHub'}).every(e=>e.agentId==='a')).toBe(true);
   expect(filterEvents(events,{...base,source:'unknown'})).toHaveLength(0);
 });
+it("does not attribute shared repository commits to one arbitrary building", () => {
+ const sharedCatalog = {...catalog,projects:[...catalog.projects,{...catalog.projects[0],id:'second',name:'Second'}]};
+ expect(workspaceEvents(sharedCatalog,repos).find(e=>e.kind==='commit')?.projectId).toBeUndefined();
+});
