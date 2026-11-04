@@ -1,0 +1,51 @@
+name: Atlas reliability review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: atlas-reliability-review
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Reliability Reviewer
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/reliability-state.json
+          key: reliability-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: reliability-${{ github.ref_name }}-
+      - name: Collect read-only CI evidence
+        id: report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATLAS_RELIABILITY_STOP: ${{ vars.ATLAS_RELIABILITY_STOP || 'false' }}
+        run: python3 ops/system-improvements/reliability.py --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/reliability-report" --state "$RUNNER_TEMP/reliability-state.json"
+      - name: Publish report summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/reliability-report/report.md" ]; then
+            cat "$RUNNER_TEMP/reliability-report/report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: atlas-reliability-report
+          path: ${{ runner.temp }}/reliability-report/
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: success() && steps.report.outputs.changed == 'true'
+        with:
+          path: ${{ runner.temp }}/reliability-state.json
+          key: reliability-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}

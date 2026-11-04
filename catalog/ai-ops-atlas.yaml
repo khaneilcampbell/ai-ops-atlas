@@ -531,14 +531,16 @@ agents:
 
   - id: atlas-reliability-reviewer
     name: Atlas Reliability Reviewer
-    purpose: Reviews existing test failures, building transitions, navigation, and error reports for reproducible reliability issues. Manual reports only, using existing evidence and at most three findings.
+    purpose: Manually produces a bounded, read-only main-branch CI report with evidence-linked failures, unavailable evidence and at most three findings. Uses no AI calls; does not certify UI correctness or production health.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
-    runtime: Explicitly requested review session
+    model: None; deterministic Python report
+    framework: GitHub Actions + Python standard library
+    runtime: Manually dispatched GitHub-hosted report
     status: idle
-    trigger: Explicit user request only; no schedule
-    source: ops/system-improvements/production-team.md
+    trigger: Manual GitHub Actions dispatch only; no schedule
+    source: ops/system-improvements/reliability.py
+    observe:
+      github_workflow: reliability-report.yml
     last_run: null
     permissions: [Read supplied evidence, Produce a review report]
     registry:
@@ -551,17 +553,17 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: Catalog role and manual review instructions only; no autonomous runner.
+        evidence: Manual-only deterministic runner with bounded reads, deduplication, stop control, summary and artifact.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
-        stages: [Read existing evidence, Return three or fewer prioritized findings]
+        environment: GitHub Actions; explicit manual dispatch
+        stages: [Check stop control, Read bounded CI evidence, Compare evidence fingerprint, Publish report and unavailable evidence]
       governance:
         autonomy: 1
         autonomy_note: Reports only; implementation requires a separate user request.
         risk: low
       cost:
-        budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+        budget: Zero model calls. At most two read-only GitHub requests with ten-second timeouts and no retries; one runner job capped at two minutes. GitHub runner and storage usage follow the account plan.
 
   - id: atlas-performance-reviewer
     name: Atlas Performance Reviewer
