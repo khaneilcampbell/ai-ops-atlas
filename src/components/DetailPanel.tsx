@@ -4,6 +4,7 @@ import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrand
 import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
+import { ProjectEvidence } from "./ProjectEvidence";
 import { AgentOutput } from "./AgentOutput";
 import { RepositoryNotice } from "./RepositoryNotice";
 import {CodexReviewHandoff} from "./CodexReviewHandoff";
@@ -107,6 +108,7 @@ function SkylineBusinessDetail({name}:{name:string}) {
     <div className="panel-body selectable">
       <p style={{margin:0,fontSize:14}}>A prepared {name} building in Skyline, with a lobby, hallways, elevators, and four floors for {building.subtitle.toLowerCase()}.</p>
       <LinkedRepositories project={project}/>
+      <ProjectEvidence project={project}/>
       <section><div className="section-title">Project</div><button className="text-btn" onClick={()=>select({kind:"project",id:project.id})}>{project.name} →</button><p className="muted small">This building shares Skyline’s project repository.</p></section>
       <section><div className="section-title">Prepared workspaces</div><ul>{building.rooms.map(room=><li key={room}>{room}</li>)}</ul></section>
       <section><div className="section-title">Agents & automations</div>{assigned.length?<ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · Suite {a.workplace!.room} · {catalog.projects.find(p=>p.id===a.projectId)?.name}</span></li>)}</ul>:<p className="muted">No workers assigned to this building yet.</p>}</section>
@@ -179,6 +181,7 @@ function ToolDetail({ id }: { id: string }) {
       {route.length > 1 && <section><div className="section-title">Tool workflow · left to right around headquarters</div><div className="link-list">{route.map((tool, index) => <button key={tool.id} className="text-btn" aria-current={tool.id === service.id ? "step" : undefined} onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{index + 1}. {tool.name}{tool.id === service.id ? " · selected" : " →"}</button>)}</div><p className="muted small">Placement follows declared dependencies and documented workflow phases.</p></section>}
       <ToolWorkflow service={service} projectAgents={catalog.agents.filter(a => a.projectId === project.id)} />
       <LinkedRepositories project={project}/>
+      <ProjectEvidence project={project}/>
     </div>
   </>;
 }
@@ -197,6 +200,7 @@ function ProjectDetail({ id }: { id: string }) {
     <div className="panel-body selectable">
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
       <LinkedRepositories project={project}/>
+      <ProjectEvidence project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
     </div>
