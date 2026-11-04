@@ -31,6 +31,19 @@ test('Benjaire Marketing Agency on a phone',async({page})=>{
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  for(const s of await views(page,[['phone',[23,0,3],[34,22,24]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });
+for(const [name,size] of [['desktop',{width:1440,height:900}],['phone',{width:390,height:844}]] as const)test(`Benjaire Product Lab desk opens its inspector, ${name}`,async({page})=>{
+ test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize(size);await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
+ await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
+ await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);
+ const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
+ await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await floorMarkers(page,1);await settle(page,3);
+ await page.getByRole('button',{name:/Strategy room/}).click();await settle(page,2);
+ const panel=page.getByRole('complementary',{name:'Assigned agent inspector'});
+ await expect(panel).toBeVisible();await expect(panel).toContainText('Runs in n8n · Configured, not verified');await expect(panel).toContainText('Strategy room');
+ await page.screenshot({path:`${out}/product-lab-inspector-${name}.png`});
+ expect(errors).toEqual([]);
+});
 async function floorMarkers(page:import('@playwright/test').Page,count:number){
  for(let i=0;i<20&&(await page.locator('[data-floor-label]').count())!==count;i++){await page.waitForTimeout(150);await settle(page,2);}
  await expect(page.locator('[data-floor-label]')).toHaveCount(count);
@@ -44,7 +57,7 @@ for(const [light,size] of [['day',{width:1440,height:900}],['night',{width:1440,
  const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
  await floorMarkers(page,4);await settle(page,3);await page.screenshot({path:`${out}/interior-all-${light}.png`});
  for(const [label,name] of [['Lobby','lobby'],['Floor 1','floor1'],['Floor 2','floor2'],['Floor 3','floor3']] as const){
-  if(light==='phone'&&name!=='lobby')continue;
+  if(light==='phone'&&name==='floor3')continue;
   await nav.getByRole('button',{name:label,exact:true}).click();await floorMarkers(page,1);await settle(page,3);
   await page.screenshot({path:`${out}/interior-${name}-${light}.png`});
  }
