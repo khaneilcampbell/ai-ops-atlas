@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import { ExternalLink } from "./bits";
 import { useAtlas } from "../state";
@@ -8,7 +8,8 @@ import { AI_STATE_LABEL, RUN_LABEL, isActive, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
 import type { AiAnalysis, CostEstimate, Depth, Facts, Observation, Rating, Report, Severity } from "../intel/types";
 import { alertsListUrl, evidenceLinks, recFixRequest, repoRefTarget, type AlertKind, type RefTarget } from "../intel/links";
-import { RecActions, RefLinks } from "./IntelLinks";
+import { RecActions, RefLinks, TrackingNote } from "./IntelLinks";
+import { useRecTracking } from "../intel/useTracking";
 
 const SEV_CLASS: Record<Severity, string> = { critical: "high", high: "high", medium: "medium", low: "low", info: "low" };
 const RATING_CLASS: Record<Rating, string> = { good: "h-good", fair: "h-warn", poor: "h-bad", unknown: "h-unknown" };
@@ -286,6 +287,11 @@ function ObsList({ title, items, note, resolve }: { title: string; items: Observ
 
 export function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
   const resolve = (ref: string) => repoRefTarget(ref, report);
+  const requests = useMemo(
+    () => ai.recommendations.map((r) => recFixRequest({ title: r.title, rationale: r.rationale, evidence: r.evidence }, report.repo, "Repository Intelligence", evidenceLinks(r.evidence, (ref) => repoRefTarget(ref, report)))),
+    [ai, report],
+  );
+  const tracking = useRecTracking(requests);
   return (
     <div className="ai-box">
       <div className="box-label">
@@ -323,6 +329,7 @@ export function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
       {ai.recommendations.length > 0 && (
         <div>
           <div className="section-title">Recommended next tasks</div>
+          <TrackingNote error={tracking?.error} />
           <ol className="recs">
             {ai.recommendations.map((r, i) => (
               <li key={i}>
@@ -333,7 +340,7 @@ export function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
                 <div className="small">
                   {r.rationale} <RefLinks refs={r.evidence} grounded={r.grounded} resolve={resolve} />
                 </div>
-                <RecActions requests={[recFixRequest({ title: r.title, rationale: r.rationale, evidence: r.evidence }, report.repo, "Repository Intelligence", evidenceLinks(r.evidence, resolve))]} />
+                <RecActions requests={[requests[i]]} tracked={tracking?.byKey} />
               </li>
             ))}
           </ol>

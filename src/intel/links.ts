@@ -4,7 +4,7 @@
  * the agent, repository or GitHub page they name, using only facts Atlas already read from GitHub.
  * A reference that does not match those facts stays plain text: nothing here guesses.
  */
-import type { FixRequest } from "../lib/fixWithClaude";
+import { markerLine, type FixRequest } from "../lib/fixWithClaude";
 import type { AlertsFact, EcoReport, EcoReview, Facts, Report } from "./types";
 
 export type RefTarget =
@@ -182,6 +182,7 @@ export interface Actionable {
 /** "Fix with Claude" for one AI recommendation in one repository; reuses the existing pre-filled issue flow. */
 export function recFixRequest(rec: Actionable, repo: string, source: string, links: { label: string; url: string }[]): FixRequest {
   return {
+    marker: recKey(rec.title, repo),
     kind: `${source} recommendation (AI-generated, not verified)`,
     title: rec.title,
     detail: rec.firstStep ? `${rec.rationale} First step: ${rec.firstStep}` : rec.rationale,
@@ -194,6 +195,8 @@ export function recFixRequest(rec: Actionable, repo: string, source: string, lin
  * "Open issue": a plain new-issue page in the repository itself, with no label, so no automation
  * picks it up. Opening it sends nothing; KC reads it and presses Create.
  */
+export const openIssueTitle = (req: Pick<FixRequest, "title">) => req.title.replace(/\s+/g, " ").trim().slice(0, 120);
+
 export function openIssueUrl(req: FixRequest): string | null {
   if (!REPO.test(req.repo)) return null;
   const body = [
@@ -202,7 +205,22 @@ export function openIssueUrl(req: FixRequest): string | null {
     req.detail.replace(/\s+/g, " ").trim().slice(0, 1200),
     "",
     ...(req.links ?? []).filter((l) => GITHUB.test(l.url)).map((l) => `- ${l.label}: ${l.url}`),
+    ...markerLine(req.marker),
   ].join("\n");
-  const q = new URLSearchParams({ title: req.title.replace(/\s+/g, " ").trim().slice(0, 120), body });
+  const q = new URLSearchParams({ title: openIssueTitle(req), body });
   return `https://github.com/${req.repo}/issues/new?${q.toString()}`;
+}
+
+/**
+ * A short, stable id for one recommendation in one repository (FNV-1a of title and repo). The same
+ * advice in a later review gets the same id, so Atlas can tell it was already acted on.
+ */
+export function recKey(title: string, repo: string): string {
+  const text = `${title.replace(/\s+/g, " ").trim().toLowerCase()}|${repo.trim().toLowerCase()}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
 }

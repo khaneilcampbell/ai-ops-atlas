@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { CopyButton, ExternalLink } from "../components/bits";
-import { RecActions, RefLinks, RepoLink } from "../components/IntelLinks";
+import { RecActions, RefLinks, RepoLink, TrackingNote } from "../components/IntelLinks";
+import { useRecTracking } from "../intel/useTracking";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { intelApi } from "../intel/api";
@@ -206,6 +207,15 @@ export function Review({ report, review }: { report: EcoReport; review: EcoRevie
   const agentName = new Map(report.context.agents.map((a) => [a.id, a.name]));
   const resolve = (ref: string) => ecoRefTarget(ref, report);
   const { select } = useAtlas();
+  const requestsByRec = useMemo(
+    () =>
+      review.recommendations.map((r) => {
+        const links = evidenceLinks(r.evidence, (ref) => ecoRefTarget(ref, report));
+        return recRepos(r, report).map((repo) => recFixRequest({ title: r.title, rationale: r.rationale, firstStep: r.first_step, evidence: r.evidence }, repo, "Engineering review", links));
+      }),
+    [review, report],
+  );
+  const tracking = useRecTracking(useMemo(() => requestsByRec.flat(), [requestsByRec]));
   return (
     <div className="ai-box selectable">
       <div className="box-head">
@@ -258,10 +268,10 @@ export function Review({ report, review }: { report: EcoReport; review: EcoRevie
       {review.recommendations.length > 0 && (
         <div>
           <SectionHead title="Recommendations" copy={() => recommendationsMarkdown(review)} />
+          <TrackingNote error={tracking?.error} />
           <ol className="recs">
             {review.recommendations.map((r, i) => {
-              const links = evidenceLinks(r.evidence, resolve);
-              const requests = recRepos(r, report).map((repo) => recFixRequest({ title: r.title, rationale: r.rationale, firstStep: r.first_step, evidence: r.evidence }, repo, "Engineering review", links));
+              const requests = requestsByRec[i];
               return (
                 <li key={i}>
                   <div className="rec-head">
@@ -281,7 +291,7 @@ export function Review({ report, review }: { report: EcoReport; review: EcoRevie
                   <div className="small">
                     <RepoChips repos={r.repos} /> <RefLinks refs={r.evidence} grounded={r.grounded} resolve={resolve} />
                   </div>
-                  <RecActions requests={requests} reason="No reviewed repository is named, so there is nowhere to open an issue." />
+                  <RecActions requests={requests} tracked={tracking?.byKey} reason="No reviewed repository is named, so there is nowhere to open an issue." />
                 </li>
               );
             })}

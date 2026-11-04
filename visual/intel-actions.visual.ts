@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { answer, NOW } from "./github";
-import { atlasReport, ecoReport, intelStatus } from "./intel-fixtures";
+import { atlasReport, ecoReport, intelStatus, trackingAnswer } from "./intel-fixtures";
 
 // Repository Insights and Intel → Engineering review, the two Tauri-only screens. The page gets a
 // stand-in for the desktop bridge (window.__TAURI_INTERNALS__) that answers the intel commands
@@ -14,7 +14,7 @@ const CHECK = PHASE === "after";
 const ATLAS = "khaneilcampbell/ai-ops-atlas";
 
 async function openDesktop(page: Page, resume: { view: string; selection?: { kind: string; id: string } }) {
-  await page.exposeFunction("__atlasGithub", (path: string) => answer(path) ?? null);
+  await page.exposeFunction("__atlasGithub", (path: string) => trackingAnswer(path) ?? answer(path) ?? null);
   await page.addInitScript(
     ({ status, reports, review, resume }) => {
       localStorage.clear();
@@ -106,6 +106,9 @@ async function checkReview(page: Page) {
   const issue = new URL((await rec.locator(".open-issue").first().getAttribute("href"))!);
   expect(issue.pathname).toBe("/khaneilcampbell/multi-agent-commerce-pipeline/issues/new");
   expect(issue.searchParams.get("labels")).toBeNull();
+  // Earlier hand-offs are found again: the VPS fix request has a merged PR, minimatch an open issue.
+  await expect(rec.locator(".rec-status.done")).toContainText("Fixed in PR #31");
+  await expect(box.locator(".recs > li").nth(2).locator(".rec-status")).toContainText("Issue #240 open");
   // The recommendation that names only agents still reaches their repositories.
   await expect(box.locator(".recs > li").nth(1).locator(".fix-claude")).toHaveCount(2);
   // An unreadable repository is shown as unknown with GitHub's reason.

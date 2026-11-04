@@ -149,3 +149,37 @@ export const intelStatus: AgentStatus = {
   runs: [],
   month_spent_usd: 0.4,
 };
+
+// Same id as recKey in src/intel/links.ts (kept here so "before" screenshots run on older code too).
+export function recKey(title: string, repo: string): string {
+  const text = `${title.replace(/\s+/g, " ").trim().toLowerCase()}|${repo.trim().toLowerCase()}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+// Issues KC "already created" from earlier reviews, so the screenshots show tracked states.
+const vpsKey = recKey("Reduce blast radius of the commerce VPS credentials", COMMERCE);
+const minimatchKey = recKey("Upgrade minimatch", ATLAS);
+const issue = (repo: string, number: number, title: string, key: string, state: "open" | "closed") => ({
+  number,
+  title,
+  body: `Sent from Atlas\n<!-- atlas-rec:${key} -->`,
+  state,
+  state_reason: state === "closed" ? "completed" : null,
+  html_url: `https://github.com/${repo}/issues/${number}`,
+  created_at: "2026-10-27T12:00:00Z",
+});
+
+/** Answers the read-only issue and timeline GETs the tracking makes; null for anything else. */
+export function trackingAnswer(path: string): unknown {
+  if (path.startsWith(`/repos/${ATLAS}/issues?labels=claude-fix`)) return [issue(ATLAS, 236, `Fix: Reduce blast radius of the commerce VPS credentials (${COMMERCE})`, vpsKey, "closed")];
+  if (path.startsWith(`/repos/${ATLAS}/issues?`)) return [issue(ATLAS, 240, "Upgrade minimatch", minimatchKey, "open")];
+  if (path.startsWith(`/repos/${ATLAS}/issues/236/timeline`))
+    return [{ event: "cross-referenced", source: { issue: { number: 31, html_url: `https://github.com/${COMMERCE}/pull/31`, state: "closed", pull_request: { merged_at: "2026-10-28T10:00:00Z" }, repository: { full_name: COMMERCE } } } }];
+  if (/^\/repos\/[^/]+\/[^/]+\/issues(\?|\/\d+\/timeline)/.test(path)) return [];
+  return null;
+}

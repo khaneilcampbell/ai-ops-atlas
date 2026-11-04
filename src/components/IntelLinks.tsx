@@ -5,6 +5,7 @@ import type { FixRequest } from "../lib/fixWithClaude";
 import { ExternalLink } from "./bits";
 import { FixWithClaude } from "./FixWithClaude";
 import { Icon } from "./Icon";
+import { trackedLabel, type Tracked } from "../intel/tracking";
 
 /**
  * Claude's citations, each linked to what it names: agents and repositories open inside Atlas,
@@ -55,21 +56,36 @@ export function RepoLink({ repo }: { repo: string }) {
   );
 }
 
+/** One quiet line when Atlas couldn't read GitHub to check what happened to earlier recommendations. */
+export function TrackingNote({ error }: { error: string | null | undefined }) {
+  if (!error) return null;
+  return <div className="muted small">Issue status unknown: {error}</div>;
+}
+
 /**
  * Hand-off for one recommendation: "Fix with Claude" (the existing labeled-issue flow) and a plain
  * "Open issue" in the repository. Both are links to GitHub's new-issue page; nothing is sent or
  * changed until KC presses Create there.
  */
-export function RecActions({ requests, reason }: { requests: FixRequest[]; reason?: string }) {
+export function RecActions({ requests, reason, tracked }: { requests: FixRequest[]; reason?: string; tracked?: Record<string, Tracked[]> }) {
   if (!requests.length) return reason ? <div className="muted small">{reason}</div> : null;
   const many = requests.length > 1;
   return (
     <div className="rec-actions">
       {requests.map((req) => {
         const issue = openIssueUrl(req);
+        const seen = (req.marker && tracked?.[req.marker]) || [];
         return (
           <span key={req.repo} className="rec-action">
             {many && <span className="muted small">{req.repo.split("/").pop()}:</span>}
+            {seen.map((t) => {
+              const l = trackedLabel(t, req.repo);
+              return (
+                <ExternalLink key={`${t.repo}#${t.number}`} href={l.url} className={`chip rec-status${l.done ? " done" : ""}`}>
+                  <Icon name={l.done ? "check" : "external"} size={11} /> {l.text}
+                </ExternalLink>
+              );
+            })}
             <FixWithClaude request={req} />
             {issue && (
               <ExternalLink href={issue} className="btn small open-issue">

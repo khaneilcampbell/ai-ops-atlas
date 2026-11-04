@@ -21,7 +21,13 @@ export interface FixRequest {
   repo: string;
   /** Evidence: run, profile or repository links. */
   links?: { label: string; url: string }[];
+  /** A short id Atlas hides in the issue body, so it can find the issue again later (read-only). */
+  marker?: string;
 }
+
+const MARKER = /^[a-f0-9]{8}$/;
+/** The hidden line that ties an issue back to the item it came from. */
+export const markerLine = (m: string | undefined) => (m && MARKER.test(m) ? [`<!-- atlas-rec:${m} -->`] : []);
 
 const clip = (s: string, n = MAX_FIELD) => {
   const one = s.replace(/\s+/g, " ").trim();
@@ -45,6 +51,7 @@ export function fixIssueBody(r: FixRequest, now = new Date()): string {
     `- **Repository:** ${REPO.test(r.repo) ? r.repo : "unknown"}`,
     ...links.map((l) => `- **${clip(l.label, 40)}:** ${l.url}`),
     `- **Seen at:** ${now.toISOString()}`,
+    ...markerLine(r.marker),
   ].join("\n");
 }
 
