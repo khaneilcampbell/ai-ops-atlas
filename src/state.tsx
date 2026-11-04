@@ -67,6 +67,8 @@ interface AtlasState {
 }
 
 const Ctx = createContext<AtlasState | null>(null);
+/** For tests that render one component without the whole provider. */
+export const AtlasContext = Ctx;
 
 const repoNames = [...new Set([...LANDMARK_REPOSITORIES, ...catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)), ...catalog.agents.map((a) => a.repository)])];
 const known = new Set([...repoNames, ...RETIRED_REPOSITORIES].map((n) => n.toLowerCase()));

@@ -588,10 +588,10 @@ function RepoInsights({ name }: { name: string }) {
   const recentCommits = snap.commits.filter((c) => Date.parse(c.date) >= since).length;
   const authors = new Set(snap.commits.map((c) => c.author)).size;
   const tiles = [
-    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "–", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs" },
-    { label: "Commits, 14 days", value: String(recentCommits), note: `of the latest ${snap.commits.length} synced` },
-    { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "–", note: snap.pushedAt ? formatDate(snap.pushedAt) : "Not reported" },
-    { label: "Contributors", value: String(authors), note: "in the synced commits" },
+    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "Unknown", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs synced" },
+    { label: "Commits, 14 days", value: snap.commits.length ? String(recentCommits) : "Unknown", note: snap.commits.length ? `of the latest ${snap.commits.length} synced` : "No commits synced" },
+    { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "Unknown", note: snap.pushedAt ? formatDate(snap.pushedAt) : "GitHub didn't report it" },
+    { label: "Contributors", value: snap.commits.length ? String(authors) : "Unknown", note: snap.commits.length ? "in the synced commits" : "No commits synced" },
     { label: "Open issues + PRs", value: String(snap.openIssues), note: "Reported by GitHub" },
     { label: "Agents", value: String(agents.length), note: `${agents.filter((a) => a.status === "active").length} active` },
   ];

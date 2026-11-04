@@ -1,0 +1,105 @@
+import { useAtlas } from "../state";
+import type { RefTarget } from "../intel/links";
+import { openIssueUrl } from "../intel/links";
+import { codexPrompt, type FixRequest } from "../lib/fixWithClaude";
+import { CopyButton, ExternalLink } from "./bits";
+import { FixWithClaude } from "./FixWithClaude";
+import { Icon } from "./Icon";
+import { trackedLabel, type Tracked } from "../intel/tracking";
+
+/**
+ * Claude's citations, each linked to what it names: agents and repositories open inside Atlas,
+ * alerts, workflows and files open on GitHub. Ids that match no fact stay plain text.
+ */
+export function RefLinks({ refs, grounded, resolve }: { refs: string[]; grounded: boolean; resolve?: (ref: string) => RefTarget }) {
+  const { select } = useAtlas();
+  if (!grounded) return <span className="ref ungrounded">no supporting reference</span>;
+  return (
+    <>
+      {refs.map((r) => {
+        const t = resolve ? resolve(r) : ({ kind: "text", label: r } as RefTarget);
+        if (t.kind === "agent")
+          return (
+            <button key={r} type="button" className="ref ref-link" title={`Open agent ${t.label} (${r})`} onClick={() => select({ kind: "agent", id: t.id })}>
+              {t.label}
+            </button>
+          );
+        if (t.kind === "repo")
+          return (
+            <button key={r} type="button" className="ref ref-link" title={`Open repository ${t.repo}`} onClick={() => select({ kind: "repo", id: t.repo })}>
+              {r}
+            </button>
+          );
+        if (t.kind === "external")
+          return (
+            <ExternalLink key={r} href={t.href} className="ref ref-link">
+              {r}
+            </ExternalLink>
+          );
+        return (
+          <span key={r} className="ref">
+            {r}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** A repository chip that opens the repository inside Atlas. */
+export function RepoLink({ repo }: { repo: string }) {
+  const { select } = useAtlas();
+  return (
+    <button type="button" className="chip chip-link" title={`Open ${repo}`} onClick={() => select({ kind: "repo", id: repo })}>
+      {repo.split("/").pop()}
+    </button>
+  );
+}
+
+/** One quiet line when Atlas couldn't read GitHub to check what happened to earlier recommendations. */
+export function TrackingNote({ error }: { error: string | null | undefined }) {
+  if (!error) return null;
+  return <div className="muted small">Issue status unknown: {error}</div>;
+}
+
+/**
+ * Hand-off for one recommendation: "Fix with Claude" (the existing labeled-issue flow), a plain
+ * "Open issue" in the repository, and "Copy Codex prompt" for KC to paste into Codex. Both are links to GitHub's new-issue page; nothing is sent or
+ * changed until KC presses Create there.
+ */
+export function RecActions({ requests, reason, tracked }: { requests: FixRequest[]; reason?: string; tracked?: Record<string, Tracked[]> }) {
+  if (!requests.length) return reason ? <div className="muted small">{reason}</div> : null;
+  const many = requests.length > 1;
+  return (
+    <div className="rec-actions">
+      {requests.map((req) => {
+        const issue = openIssueUrl(req);
+        const seen = (req.marker && tracked?.[req.marker]) || [];
+        return (
+          <span key={req.repo} className="rec-action">
+            {many && <span className="muted small">{req.repo.split("/").pop()}:</span>}
+            {seen.map((t) => {
+              const l = trackedLabel(t, req.repo);
+              return (
+                <ExternalLink key={`${t.repo}#${t.number}`} href={l.url} className={`chip rec-status${l.done ? " done" : ""}`}>
+                  <Icon name={l.done ? "check" : "external"} size={11} /> {l.text}
+                </ExternalLink>
+              );
+            })}
+            <FixWithClaude request={req} />
+            {issue && (
+              <ExternalLink href={issue} className="btn small open-issue">
+                <Icon name="external" size={12} /> Open issue
+              </ExternalLink>
+            )}
+            {codexPrompt(req) && (
+              <span className="codex-copy">
+                <CopyButton text={() => codexPrompt(req) ?? ""} label="Copy Codex prompt" title="Copies a fix prompt to paste into Codex. Nothing runs until you paste it; Codex opens a draft PR for you to merge." />
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
