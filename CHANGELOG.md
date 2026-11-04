@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-04 · Made Website management cards more compact and easier to scan (#246).
 - 2026-11-04 · Benjaire Flow now has an eval suite: 60 labeled test inquiries score how well Claude sorts spam, service, urgency and budget and whether its reply follows the rules. Run it before changing the intake prompt (#240)
 - 2026-11-04 · Added a manual Benjaire draft handoff with quality checks, saved progress and exact-version approval; the demo stays synthetic and never publishes (#238).
 - 2026-11-04 · Engineering review recommendations now name who should do them: an agent (click to open it) or you. If the review names no one, it still says "Owner unknown" (#239)
