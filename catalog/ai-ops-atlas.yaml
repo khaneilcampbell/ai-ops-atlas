@@ -497,7 +497,7 @@ agents:
 
   - id: atlas-production-coordinator
     name: Atlas Production Coordinator
-    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation. The hosted run is a synthetic fixture; external creation is not invoked.
+    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation. The hosted workflow is fixture-only; external creation is not invoked.
     office_floor: 3
     model: No runner model calls; paid creation remains disabled
     framework: Manual Python handoff + Codex review on request
