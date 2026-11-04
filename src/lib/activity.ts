@@ -22,6 +22,7 @@ export interface AtlasEvent {
   projectId?: string;
   agentId?: string;
   url?: string;
+  collectedAt?: string;
 }
 
 export function runResult(r: WorkflowRun): EventResult {
@@ -45,7 +46,15 @@ export function intelResult(r: IntelRun): EventResult {
 export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = [], actionLog: AuditRecord[] = []): AtlasEvent[] {
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
-  const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
+  const projectByRepo = new Map(catalog.projects.flatMap(p => projectRepositories(p, catalog.agents).map(repo => [repo, p] as const)));
+  const best = new Map<string, WorkflowRun>();
+  for (const state of Object.values(repos)) {
+    const snap = repoData(state);
+    for (const run of [...(snap?.runs ?? []), ...Object.values(snap?.workflowRuns ?? {}).flat()]) {
+      const previous = best.get(run.url);
+      if (!previous || (run.attempt ?? 1) > (previous.attempt ?? 1) || ((run.attempt ?? 1) === (previous.attempt ?? 1) && run.status === "completed")) best.set(run.url, run);
+    }
+  }
   const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   const label = (repo: string) => projectByRepo.get(repo)?.name ?? repo;
 
@@ -53,10 +62,12 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
   for (const a of catalog.agents) {
     const wf = a.observe?.githubWorkflow;
     const snap = repoData(repos[a.repository]);
-    for (const r of (wf && snap?.workflowRuns[wf]) || []) {
+    for (const candidate of (wf && snap?.workflowRuns[wf]) || []) {
+      const r = best.get(candidate.url) ?? candidate;
       if (seen.has(r.url)) continue;
       seen.add(r.url);
       out.push({
+        collectedAt: snap?.runsCheckedAt ?? snap?.fetchedAt,
         id: `run:${r.url}`,
         at: r.createdAt,
         kind: "agent",
@@ -74,13 +85,14 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
     const snap = repoData(repos[name]);
     if (!snap) continue;
     const projectId = projectByRepo.get(name)?.id;
-    for (const r of snap.runs) {
+    for (const candidate of snap.runs) {
+      const r = best.get(candidate.url) ?? candidate;
       if (seen.has(r.url)) continue;
       seen.add(r.url);
-      out.push({ id: `run:${r.url}`, at: r.createdAt, kind: "ci", result: runResult(r), title: r.name, detail: `${label(name)} · ${r.event} on ${r.branch}`, repo: name, projectId, url: r.url });
+      out.push({ collectedAt: snap.runsCheckedAt ?? snap.fetchedAt, id: `run:${r.url}`, at: r.createdAt, kind: "ci", result: runResult(r), title: r.name, detail: `${label(name)} · ${r.event} on ${r.branch}`, repo: name, projectId, url: r.url });
     }
     for (const c of snap.commits) {
-      out.push({ id: `commit:${name}:${c.sha}`, at: c.date, kind: "commit", title: c.message.split("\n")[0], detail: `${label(name)} · ${c.author} · ${c.sha.slice(0, 7)}`, repo: name, projectId, url: c.url });
+      out.push({ collectedAt: snap.fetchedAt, id: `commit:${name}:${c.sha}`, at: c.date, kind: "commit", title: c.message.split("\n")[0], detail: `${label(name)} · ${c.author} · ${c.sha.slice(0, 7)}`, repo: name, projectId, url: c.url });
     }
   }
   for (const a of catalog.agents) {
@@ -130,10 +142,16 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
       url: d.url,
     });
   }
-  return out.sort((x, y) => y.at.localeCompare(x.at));
+  return [...new Map(out.filter(e => Number.isFinite(Date.parse(e.at))).map(e => [e.id, e])).values()].sort((x, y) => y.at.localeCompare(x.at) || x.id.localeCompare(y.id));
+}
+
+export function eventSource(e: AtlasEvent): string {
+  return e.kind === "commit" || e.kind === "ci" || e.kind === "agent" ? "GitHub" : e.kind === "manifest" ? "Catalog" : e.kind === "action" ? "Desktop audit" : "Repository intelligence";
 }
 
 export interface EventFilter {
+  agent?: string;
+  source?: string;
   kinds: EventKind[];
   project: string;
   result: "" | EventResult;
@@ -145,6 +163,8 @@ export function filterEvents(events: AtlasEvent[], f: EventFilter, now = Date.no
   const q = f.query.trim().toLowerCase();
   return events.filter(
     (e) =>
+      (!f.agent || e.agentId === f.agent) &&
+      (!f.source || eventSource(e) === f.source) &&
       (f.kinds.length === 0 || f.kinds.includes(e.kind)) &&
       (!f.project || e.projectId === f.project) &&
       (!f.result || e.result === f.result) &&
