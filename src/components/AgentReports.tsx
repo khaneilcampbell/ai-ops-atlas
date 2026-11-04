@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { formatDate, relative } from "../lib/time";
 import { useAgentReports } from "../reports/client";
-import { MECHANISM_LABEL, type AgentSpec, type ReportAgent, type StoredReport } from "../reports/model";
+import { MECHANISM_LABEL, type AgentSpec, type OpportunityReport, type ReportAgent, type StoredReport } from "../reports/model";
+import type { ProductLabReport } from "../reports/productLab";
+import { ProductLabFull, ProductLabSummary } from "./ProductLabReport";
 import { opportunityPdf, savePdf } from "../reports/pdf";
 import { CopyButton, ExternalLink } from "./bits";
 import { Icon } from "./Icon";
@@ -29,7 +31,7 @@ export function specMarkdown(s: AgentSpec): string {
 }
 
 /** Builds the PDF on this device from the stored report; nothing is sent anywhere. */
-function PdfButton({ report }: { report: StoredReport }) {
+function PdfButton({ report }: { report: StoredReport<OpportunityReport> }) {
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const save = async () => {
     setState("saving");
@@ -54,11 +56,12 @@ function Empty({ state, message }: { state: string; message: string | null }) {
 }
 
 /** The latest top idea, for the office panel. */
-export function AgentReportSummary({ agent, onOpen }: { agent: ReportAgent; onOpen: () => void }) {
+export function AgentReportSummary({ agent, onOpen }: { agent: ReportAgent; onOpen?: () => void }) {
   const { state, message, reports } = useAgentReports(agent);
   const latest = reports[0];
   if (!latest) return <Empty state={state} message={message} />;
   const r = latest.body;
+  if (r.agent === "benjaire-product-lab") return <ProductLabSummary report={latest as StoredReport<ProductLabReport>} onOpen={onOpen} />;
   const top = r.ideas[0];
   return (
     <div className="report-summary">
@@ -81,9 +84,11 @@ export function AgentReportSummary({ agent, onOpen }: { agent: ReportAgent; onOp
       ) : (
         <div className="muted small">The last run had no ideas ({relative(latest.at)}).</div>
       )}
-      <button className="text-btn inline" onClick={onOpen}>
-        Open full report
-      </button>
+      {onOpen && (
+        <button className="text-btn inline" onClick={onOpen}>
+          Open full report
+        </button>
+      )}
     </div>
   );
 }
@@ -95,6 +100,7 @@ export function AgentReports({ agent }: { agent: ReportAgent }) {
   const current: StoredReport | undefined = reports.find((r) => r.id === picked) ?? reports[0];
   if (!current) return <Empty state={state} message={message} />;
   const r = current.body;
+  if (r.agent === "benjaire-product-lab") return <ProductLabFull reports={reports} current={current as StoredReport<ProductLabReport>} onPick={setPicked} error={state === "error" ? message : null} />;
   return (
     <div className="agent-reports">
       <div className="report-head">
@@ -117,7 +123,7 @@ export function AgentReports({ agent }: { agent: ReportAgent }) {
             <Icon name="external" size={13} /> Run on GitHub
           </ExternalLink>
         )}
-        <PdfButton key={current.id} report={current} />
+        <PdfButton key={current.id} report={current as StoredReport<OpportunityReport>} />
         {state === "error" && message && <span className="muted small">Couldn't refresh: {message}</span>}
       </div>
 
