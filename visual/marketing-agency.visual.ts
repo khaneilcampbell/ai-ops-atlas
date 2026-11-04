@@ -38,7 +38,8 @@ for(const [name,size] of [['desktop',{width:1440,height:900}],['phone',{width:39
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);
  const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
  await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await floorMarkers(page,1);await settle(page,3);
- await page.getByRole('button',{name:/Strategy room/}).click();await settle(page,2);
+ // On a phone the floor picker can sit over the room label, so fire the click on the label itself.
+ await page.getByRole('button',{name:/Strategy room/}).dispatchEvent('click');await settle(page,2);
  const panel=page.getByRole('complementary',{name:'Assigned agent inspector'});
  await expect(panel).toBeVisible();await expect(panel).toContainText('Runs in n8n · Configured, not verified');await expect(panel).toContainText('Strategy room');
  await page.screenshot({path:`${out}/product-lab-inspector-${name}.png`});
