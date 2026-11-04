@@ -56,12 +56,17 @@ import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
 import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
+import type { AgentJob } from "../../catalog/agentJobs";
+import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
-import { usePageVisible, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
+import { insideLimits, type InsideLimits } from "./inside";
+import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
@@ -96,6 +101,8 @@ interface Props {
   /** Keep the renderer warm while Projects is closed, without drawing hidden frames. */
   active?: boolean;
   layout: Layout;
+  /** AI agents' jobs: each walks between its Circa apartment and its workplace on a simulated day. */
+  jobs?: AgentJob[];
   /** Share of the view covered from below by a sheet; selections are framed above it. */
   cover?: number;
   displayNeighborhoods?: {key:string;label:string;count:number}[];
@@ -124,6 +131,8 @@ interface Props {
   linksMoving: boolean;
   /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
   traffic: boolean;
+  /** The toolbar's Inside toggle: nearby headquarters show their offices as cutaways (InsideView). */
+  inside?: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -181,12 +190,17 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
 }
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
-  const { layout, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
+  const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
+  const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
+  // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
+  const [opened, setOpened] = useState<string[]>([]);
+  const openSet = useMemo(() => new Set(props.inside ? opened : []), [opened, props.inside]);
+  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? INSIDE_ROOF : towerTop(t)), [openSet]);
   const api = useRef<Map3DApi | null>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
   const labelEls = useRef(new Map<string, HTMLDivElement>());
@@ -254,7 +268,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: towerTop(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -264,7 +278,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: `hq:${t.projectId}`,
         key: t.key,
-        pos: new THREE.Vector3(t.x, towerTop(t) + PLAQUE.roofGap, t.z),
+        pos: new THREE.Vector3(t.x, roofOf(t) + PLAQUE.roofGap, t.z),
         w,
         h: h + 8,
         priority: 0,
@@ -362,15 +376,15 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:"Stadium",x:scene.stadium.x+4,roof:TERRACE_H+2.3,z:scene.stadium.z+3.5,priority:2,mark:PLANNED,title:"Stadium · Planned venue"});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
-    const skylineHealth=healthFor("khaneilcampbell/skyline"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name)))plaque({id:shop.key,key:shop.key,select:skylineBuildingKey(shop.name),name:shop.name,x:shop.x,roof:TERRACE_H+shopHeight(shop)+0.4,z:shop.z,priority:7,mark:skylineMark,title:`${shop.name} · khaneilcampbell/skyline`});
+    const skylineHealth=healthFor("khaneilcampbell/ai-ops-atlas"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
+    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name)))plaque({id:shop.key,key:shop.key,select:skylineBuildingKey(shop.name),name:shop.name,x:shop.x,roof:TERRACE_H+shopHeight(shop)+0.4,z:shop.z,priority:7,mark:skylineMark,title:`${shop.name} · khaneilcampbell/ai-ops-atlas`});
     for (const p of scene.parks) {
       if(near!=="near"&&byDistrict) out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
       plaque({id:p.id,key:p.id,select:"project:skyline",name:p.label,x:p.x+p.w/2,roof:TERRACE_H+4.95*CITY_SCALE.skyline,z:p.z+p.d/2,priority:3,mark:skylineMark,title:`skyline · ${skylineHealth.label}`});
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet]);
+  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -421,6 +435,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const activity = useBuildingActivity();
   // Frame rate, pixels and shadow detail follow the Performance setting.
   const power = usePowerProfile();
+  // Inside view: how many buildings open follows the device and the Performance setting.
+  const powerMode = usePowerMode();
+  const battery = useOnBattery();
+  const insideCaps = useMemo(() => insideLimits(phone, powerMode, battery), [phone, powerMode, battery]);
+  const insideOffices = useInsideOffices(!!props.inside);
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
@@ -449,10 +468,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   return (
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
+          agentCommutes={agentCommutes}
           power={power}
           light={props.light}
           health={health}
@@ -460,6 +480,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
           traffic={props.traffic}
+          inside={!!props.inside}
+          insideOffices={insideOffices}
+          insideCaps={insideCaps}
+          onInsideOpen={setOpened}
+          insideOpen={openSet}
           onLinkHover={(id, e) => {
             setHoverLink(id);
             const t = id ? props.linkTip(id) : null;
@@ -491,7 +516,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           surface={wrapEl}
         />
       </Canvas>
-      {readyKey !== glKey && <div className="map-loading" role="status">Preparing city…</div>}
       </MapGuard>
       <div
         className="m3-labels"
@@ -543,6 +567,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
+  agentCommutes,
   power,
   light: lightMode,
   health,
@@ -550,6 +575,11 @@ function World({
   hoverLink,
   linksMoving,
   traffic,
+  inside,
+  insideOffices,
+  insideCaps,
+  onInsideOpen,
+  insideOpen,
   onLinkHover,
   onLinkPick,
   hoods,
@@ -574,6 +604,7 @@ function World({
   cover,
   surface,
 }: {
+  agentCommutes?: CommutePlan;
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -581,6 +612,11 @@ function World({
   hoverLink: string | null;
   linksMoving: boolean;
   traffic: boolean;
+  inside: boolean;
+  insideOffices: Map<string, InsideOffice>;
+  insideCaps: InsideLimits;
+  onInsideOpen: (keys: string[]) => void;
+  insideOpen: Set<string>;
   onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
   onLinkPick: (id: string) => void;
   hoods: number;
@@ -1083,35 +1119,47 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [net.picked?.id]);
 
+  // Let the core city draw before mounting expanded districts and decorative simulations.
+  const [detailsReady, setDetailsReady] = useState(false);
+  const detailFrame = useRef(0);
+  useFrame(() => {
+    if (detailsReady || detailFrame.current) return;
+    detailFrame.current = requestAnimationFrame(() => setDetailsReady(true));
+  });
+  useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
+  // An open building's outline hugs its office, not the shell that was cut away.
+  const hl = (key: string | null) => {
+    const a = key ? anchors.get(key) : undefined;
+    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a;
+  };
   const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
   return (
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
       <MapRenderer />
-      <Traffic scene={scene} g={g} m={m} moving={!reduced} />
-      {traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
+      {detailsReady && <Traffic scene={scene} g={g} m={m} moving={!reduced} />}
+      {detailsReady && traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
-      <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />
+      {detailsReady && <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />}
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <VenueBridge scene={scene} g={g} m={m}/>
-      <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>
-      <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>
-      <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>
-      <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>
-      <CommunityRail plan={scene.communityRail} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>
-      <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>
-      <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>
-      <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>
-      <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>
-      <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>
-      <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>
-      <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />
-      <Landscape scene={scene} g={g} m={m} />
+      {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
+      {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
+      {detailsReady && <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>}
+      {detailsReady && <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
+      {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
+      {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
+      {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
+      {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
+      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
+      {detailsReady && <Landscape scene={scene} g={g} m={m} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
@@ -1120,6 +1168,7 @@ function World({
       {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <CommerceTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />

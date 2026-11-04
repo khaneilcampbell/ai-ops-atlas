@@ -10,3 +10,11 @@
 .skyline-wall-sign.financial-wall-sign{width:300px;padding:10px 14px;border:1px solid #bca16a;border-radius:8px;background:#faf5e9ee;font-size:18px;letter-spacing:1px;white-space:normal}.skyline-wall-sign.financial-wall-sign span{letter-spacing:1px;line-height:1.5}
 /* Atlas Marketplace on phones: the six floor buttons run in one row above the note, so the ring stays visible. */
 @media(max-width:650px){.mall-interior .skyline-floor-picker{top:auto;bottom:150px;left:10px;right:10px;flex-direction:row;overflow-x:auto;max-height:none;border-radius:18px;padding:8px}.mall-interior .skyline-floor-picker strong{display:none}.mall-interior .skyline-floor-picker button{white-space:nowrap;flex:none}}
+
+.mall-workspace-panel{position:absolute;left:18px;top:120px;bottom:90px;width:min(330px,calc(100% - 200px));overflow:auto;z-index:31;background:var(--sage-50);color:var(--ink);border:1px solid #b99c62;border-radius:14px;padding:16px;box-shadow:0 6px 24px #172b2326}.mall-workspace-panel button{min-height:36px;margin-right:6px}.mall-workspace-panel h3{margin:10px 0}.mall-interior.night .mall-workspace-panel{background:#172721;color:#f3ead7}@media(max-width:650px){.mall-workspace-panel{left:10px;right:10px;top:180px;bottom:210px;width:auto}.mall-interior-note{max-width:calc(100% - 36px)}}
+
+.mall-interior .skyline-room-label{max-width:150px;overflow:hidden;text-overflow:ellipsis;font-size:11px;padding:6px 9px}.mall-workspace-panel{border-color:var(--gold)}.mall-interior.night .mall-workspace-panel{background:var(--forest-800);color:var(--on-dark)}
+
+.mall-workspace-panel{display:block}.mall-workspace-panel p{margin:10px 0}.mall-workspace-panel button{border:1px solid var(--gold);border-radius:8px;padding:7px 10px;background:var(--sage-50);color:var(--ink)}.mall-workspace-panel button[aria-pressed=true]{background:var(--gold);color:var(--forest-900)}.mall-interior.night .mall-workspace-panel button{background:var(--forest-700);color:var(--on-dark)}.mall-interior.night .mall-workspace-panel button[aria-pressed=true]{background:var(--gold);color:var(--forest-900)}.mall-interior.night .mall-workspace-panel :is(.muted,.section-title,dt){color:var(--on-dark-2)}
+
+.mall-workspace-panel button[aria-selected=true],.mall-interior.night .mall-workspace-panel button[aria-selected=true]{background:var(--gold);color:var(--forest-900)}

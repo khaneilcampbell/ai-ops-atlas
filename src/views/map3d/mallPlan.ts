@@ -117,5 +117,5 @@ export function mallPieceCount(p:MallPlan,y0=0){
  const plants=Array.from({length:MALL.levels},(_,l)=>along(mallFloor(p,l).outer,MALL.plantStep).length).reduce((a,b)=>a+b,0);
  return mallFins(p,y0).length+plants+MALL_FIXED_PIECES;
 }
-/** Plaza, fountain, canopy, sign, entrance and ramp pieces. */
-export const MALL_FIXED_PIECES=14;
+/** Plaza, fountain, canopy, sign, entrance pieces. */
+export const MALL_FIXED_PIECES=12;

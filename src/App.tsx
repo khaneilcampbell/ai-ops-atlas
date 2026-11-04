@@ -26,6 +26,7 @@ import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 import { useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
+import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 
@@ -48,6 +49,8 @@ export default function App() {
   useLiveFeed();
   const alerts = useAlerts().open;
   useAlertNotifications(alerts);
+  usePropertyPolling();
+  usePropertyNotifications(usePropertyIncidents().open);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const lastFetched = useMemo(() => {
@@ -169,7 +172,7 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, projects: [p], agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
     const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
     return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
