@@ -1,4 +1,4 @@
-import {WORKPLACE_BUILDINGS} from "./workplaces";
+import {WORKPLACE_BUILDINGS,validWorkplaceRoom} from "./workplaces";
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader, type Raw } from "./reader";
@@ -52,9 +52,9 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
         if(w.building===undefined)r.fail(`${path}.workplace.building`,"is required");
         const floor=w.floor,room=r.str(w,"room",`${path}.workplace`);
         if(typeof floor!=="number"||!Number.isInteger(floor)||floor<1||floor>4)r.fail(`${path}.workplace.floor`,"must be an integer from 1 to 4");
-        if(room&&!/^[1-4]0[1-4]$/.test(room))r.fail(`${path}.workplace.room`,"must identify a room from 101 to 404");
+        if(room&&building&&!validWorkplaceRoom(building,Number(room[0]),room))r.fail(`${path}.workplace.room`,"must identify a supported room in this building");
         else if(room&&Number(room[0])!==floor)r.fail(`${path}.workplace.room`,"must match the workplace floor");
-        if(building&&typeof floor==="number"&&Number.isInteger(floor)&&floor>=1&&floor<=4&&room&&/^[1-4]0[1-4]$/.test(room)&&Number(room[0])===floor)workplace={building,floor,room};
+        if(building&&typeof floor==="number"&&Number.isInteger(floor)&&floor>=1&&floor<=4&&room&&validWorkplaceRoom(building,floor,room))workplace={building,floor,room};
       }
     }
     const officeFloor = ao.office_floor;

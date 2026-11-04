@@ -72,8 +72,6 @@ export function Mall({plan:a,garden,g,m,pick,night=false}:{plan?:MallPlan;garden
   solid.push({p:[a.cx,y0+.006,a.cz+a.rz*.45],s:[a.rx*.9,.02,a.rz*1.1],c:'#e6d6b4'});
   // Monument sign at the head of the plaza, facing the boulevard.
   solid.push({p:[a.cx,y0,a.z+a.d-1.75],s:[2.05,.42,.07],c:'#294237'});
-  // Basement car park ramp off the boulevard side.
-  solid.push({p:[a.x+a.w-.35,y0+.01,a.z+1.6],s:[.5,.03,1.4],c:'#2b3833'},{p:[a.x+a.w-.35,y0+.03,a.z+.9],s:[.55,.12,.05],c:'#d0ad69'});
   for(const dx of [-.9,.9])solid.push({p:[a.cx+dx,y0,a.z+a.d-.2],s:[.05,.55,.05],c:'#294237'},{p:[a.cx+dx,y0+.55,a.z+a.d-.2],s:[.1,.06,.1],c:'#f6e7c4'});
   return {fins,plants,solid};
  },[a]);
