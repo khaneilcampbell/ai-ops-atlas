@@ -24,8 +24,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: khaneilcampbell/multi-agent-commerce-pipeline
-          # PR #26: dependency is pinned, never followed by a moving branch.
-          ref: 4ad15f3018cb1de9b4b4c06c3a0f3d74a535c19e
+          # Merged PR #26: dependency is pinned, never followed by a moving branch.
+          ref: 230605fdbde89585a96f35ded61cc17562f39135
           persist-credentials: false
           path: commerce
       - name: Run one synthetic handoff without approval or publishing

@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-COMMERCE_SHA = '4ad15f3018cb1de9b4b4c06c3a0f3d74a535c19e'  # Reviewed PR #26 dependency.
+COMMERCE_SHA = '230605fdbde89585a96f35ded61cc17562f39135'  # Merged Commerce PR #26 dependency.
 AGENTS = {'validate': 'atlas-production-coordinator', 'draft': 'canva-mockups', 'quality': 'commerce-tests', 'release': 'atlas-production-coordinator'}
 
 

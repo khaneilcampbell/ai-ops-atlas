@@ -25,7 +25,7 @@ These are stage owners, not fabricated agent executions. Existing workplace assi
 
 ## Dependencies and inspected evidence
 
-- Commerce PR #26 adds safe non-text input handling and explicit local asset-root parameters to the existing validator. This runner/workflow pins its inspected commit `4ad15f3018cb1de9b4b4c06c3a0f3d74a535c19e`. Merge that dependency separately before production rollout, then update the pin through a reviewed PR when needed.
+- Commerce PR #26 adds safe non-text input handling and explicit local asset-root parameters to the existing validator. This runner/workflow pins its inspected commit `230605fdbde89585a96f35ded61cc17562f39135`. That dependency is merged; update the pin through a reviewed PR when needed.
 - Atlas PR #234 (Reliability Reviewer) and #237 (B4 triage) were open at inspection. Their runners are not duplicated or activated here.
 - `scripts/listing_generator.py`, `canva_image_generator.py` and `canva_product_creator.py` require paid/provider access. They are never imported. Paid calls remain disabled because a hard durable budget ledger is not implemented.
 - Existing Skyline n8n export is a synthetic inquiry sandbox, not a product-production engine. Its manual-start/approval separation is reused conceptually. No new n8n export or verified engine run is claimed; a future n8n adapter must invoke this contract through an approved local runner and retain its lock/state boundary.
