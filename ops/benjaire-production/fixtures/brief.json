@@ -1,0 +1,11 @@
+{
+  "id": "benjaire-demo-001",
+  "product": "Benjaire Fixture Planner",
+  "fixture": true,
+  "creation_mode": "supplied",
+  "title": "Synthetic planner handoff fixture",
+  "description": "Synthetic test listing for validating a local production handoff. This is not a completed product or an approved listing.",
+  "price": 9.99,
+  "tags": ["fixture", "planner"],
+  "assets": ["fixture.jpg"]
+}
