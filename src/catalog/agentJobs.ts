@@ -107,7 +107,7 @@ export function agentJobs(catalog: Catalog): AgentJob[] {
       owner: ownerOf(a),
       home: homes.get(a.id)!,
       work: a.workplace
-        ? { kind: "workplace", projectId: a.projectId, building: a.workplace.building, label: `${a.workplace.building}, floor ${a.workplace.floor}, suite ${a.workplace.room}` }
+        ? { kind: "workplace", projectId: a.projectId, building: a.workplace.building, label: `${a.workplace.building}, floor ${a.workplace.floor}, ${/^\d+$/.test(a.workplace.room) ? "suite" : "room"} ${a.workplace.room}` }
         : { kind: "headquarters", projectId: a.projectId, building: a.projectId, label: `${project?.name ?? a.projectId} headquarters${a.officeFloor ? `, floor ${a.officeFloor}` : ""}` },
       shift: shiftOf(a),
       budget: budget ? declared(budget, "registry.cost.budget in the manifest") : inferred("Not documented", "no budget written in the manifest"),
