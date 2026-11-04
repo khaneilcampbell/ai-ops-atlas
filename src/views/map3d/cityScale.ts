@@ -14,6 +14,10 @@ import {toolOfficeHeight} from './toolBrand';
  * - Skyline shops (1.25x) and the Skyline residence (1.35x): the whole building grows evenly (doors,
  *   windows, signs). 1.4x shops push the highway ramps off their route in the 'none' and 'status' maps,
  *   and 1.3x reroutes the freight line beside the Financial District street (with #158).
+ * - Standard headquarters (the eight fixed-height projects) have 18 storeys, as many as the tallest
+ *   plain HQ (Commerce Pipeline), so they read as towers beside the Financial District (KC,
+ *   2026-11-04). More would lift the Financial District's reference height: 18 is the most that
+ *   leaves the district, the city's reference scale, exactly as it is.
  * - The Financial District keeps rising with the headquarters (its HQ-relative rule), so it still
  *   stands above them.
  * - Not scaled: the airport offices
@@ -21,8 +25,9 @@ import {toolOfficeHeight} from './toolBrand';
  *   city layout), so their roads and lots stay where they are.
  */
 export const CITY_SCALE={
- /** Project headquarters: height of one storey, and footprint, against the old 0.32 storey. */
- hq:{storey:1.5,footprint:1},
+ /** Project headquarters: height of one storey and footprint (against the old 0.32 storey), and
+  * the storey count of the standard HQs (was 14). Footprints are lot-bound: 1.1 puts cars in the walls. */
+ hq:{storey:1.5,footprint:1,floors:18},
  /** Skyline tenants (Anthropic, OpenAI, Zara, Wells Fargo, Smashburger, Starbucks, Chipotle). */
  shop:1.25,
  /** The Skyline residence in the middle of the park. */

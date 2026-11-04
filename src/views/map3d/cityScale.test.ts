@@ -3,6 +3,8 @@ import {catalog} from "../../catalog";
 import {layoutMap} from "../mapLayout";
 import {buildScene,FLOOR_H} from "./scene";
 import {CITY_SCALE,scaleParts,shopHeight} from "./cityScale";
+import {headquartersEnvelope} from "./financialPlan";
+import {isCommerceTower} from "./commerceTowerPlan";
 import type {Inst} from "./models";
 
 /** The Atlas Marketplace roof: four 1.6 storeys (twice the Atlas Hills mansion). */
@@ -13,6 +15,15 @@ describe("city scale", () => {
  it("puts every project headquarters roof above the Marketplace roof", () => {
   expect(FLOOR_H).toBeCloseTo(.32*CITY_SCALE.hq.storey);
   for(const t of s.towers)expect(t.height,t.name).toBeGreaterThan(MARKETPLACE_ROOF);
+ });
+ it("raises the standard headquarters without moving the Financial District", () => {
+  const standard=s.towers.filter(t=>t.floors===CITY_SCALE.hq.floors&&!isCommerceTower(t.projectId));
+  expect(standard.length).toBeGreaterThanOrEqual(6);
+  for(const t of standard)expect(t.height,t.name).toBeCloseTo(CITY_SCALE.hq.floors*FLOOR_H);
+  // Commerce Pipeline gets 18 from its agents, not from the standard count.
+  // The district's reference height is what it was with 14-storey headquarters, so its buildings keep their size.
+  const before=s.towers.map(t=>standard.includes(t)?{...t,height:Math.min(t.height,14*FLOOR_H)}:t);
+  expect(s.financial?.referenceHeight).toBeCloseTo(headquartersEnvelope(before));
  });
  it("grows the Skyline shops, not the tool kiosks", () => {
   const chipotle=s.retail.find(k=>k.name==="Chipotle")!,anthropic=s.retail.find(k=>k.name==="Anthropic")!;
