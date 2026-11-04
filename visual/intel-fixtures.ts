@@ -102,8 +102,8 @@ export const ecoReport: EcoReport = {
       { title: "Open minimatch DoS advisory", severity: "medium", why: "A known medium advisory remains open.", repos: [ATLAS], evidence: ["alert:ai-ops-atlas:dependabot:17"], grounded: true },
     ],
     recommendations: [
-      { priority: "now", category: "security", title: "Reduce blast radius of the commerce VPS credentials", rationale: "One compromise could spend money or email customers.", first_step: "Move commerce-loop to a non-root user with a least-privilege .env.", effort: "a_day", repos: [COMMERCE], evidence: ["agent:commerce-loop", `repo:${COMMERCE}`], grounded: true },
-      { priority: "now", category: "autonomy", title: "Add kill switches and caps to L3 agents", rationale: "Autonomous agents that email or spend money have no recorded stop control.", first_step: "Add a documented kill switch to each L3 agent.", effort: "hours", repos: [], evidence: ["agent:benjaire-contact-worker", "agent:commerce-loop"], grounded: true },
+      { priority: "now", category: "security", title: "Reduce blast radius of the commerce VPS credentials", rationale: "One compromise could spend money or email customers.", first_step: "Move commerce-loop to a non-root user with a least-privilege .env.", effort: "a_day", owner: "commerce-loop", repos: [COMMERCE], evidence: ["agent:commerce-loop", `repo:${COMMERCE}`], grounded: true },
+      { priority: "now", category: "autonomy", title: "Add kill switches and caps to L3 agents", rationale: "Autonomous agents that email or spend money have no recorded stop control.", first_step: "Add a documented kill switch to each L3 agent.", effort: "hours", owner: "KC", repos: [], evidence: ["agent:benjaire-contact-worker", "agent:commerce-loop"], grounded: true },
       { priority: "next", category: "dependencies", title: "Upgrade minimatch", rationale: "Closes the open advisory.", first_step: "Run npm update minimatch.", effort: "hours", repos: [ATLAS], evidence: ["alert:ai-ops-atlas:dependabot:17", "made-up:ref"], grounded: true },
     ],
     tools: [],

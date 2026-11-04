@@ -82,7 +82,9 @@ describe("unknown states", () => {
     const html = wrap(<Review report={ecoReport} review={ecoReport.review!} />);
     expect(html).toContain("AI-generated, not verified");
     expect(html).toContain(`href="https://github.com/${ATLAS}/security/dependabot/17"`);
-    expect(html).toContain("Owner unknown");
+    expect(html).toMatch(/Owner: <button[^>]*>Commerce Loop<\/button>/);
+    expect(html).toContain("Owner: KC");
+    expect(html).toContain("Owner unknown: the review didn&#x27;t name one");
     expect(html.match(/class="score unrated"/g)).toHaveLength(5);
     expect(html.match(/Fix with Claude/g)!.length).toBeGreaterThanOrEqual(4);
     expect(html).toContain('<span class="ref">made-up:ref</span>');

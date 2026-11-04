@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-04 · Engineering review recommendations now name who should do them: an agent (click to open it) or you. If the review names no one, it still says "Owner unknown" (#239)
 - 2026-11-04 · New Copy Codex prompt button next to Fix with Claude: paste it into Codex and it opens a draft fix PR under the same rules (new AGENTS.md). Nothing runs until you paste it, and Codex PRs show up on the recommendation too (#235)
 - 2026-11-04 · Each recommendation now shows what already happened to it: "Fix request #N open", "Issue #N closed", or "Fixed in PR #N", read from GitHub, so advice you already acted on doesn't look new (#235)
 - 2026-11-04 · Engineering review and repository Insights now link every cited agent, repository and security alert to the real page, show anything missing as Unknown with the reason, and give each recommendation Fix with Claude and Open issue buttons. Nothing is sent until you press Create on GitHub (#235)
