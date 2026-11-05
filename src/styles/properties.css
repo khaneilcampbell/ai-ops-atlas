@@ -1,4 +1,4 @@
-/* Website property dashboards on the Benjaire HQ and Portfolio Site buildings. */
+/* Website dashboards in Mission Control's Website management section. */
 
 .property-chip.good { color: var(--good); border-color: rgba(79, 122, 82, 0.4); }
 .property-chip.warn { color: #fff; background: var(--warn); border-color: var(--warn); }
@@ -26,4 +26,6 @@
 .property-foot { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; }
 .property-links { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 
-.alert-pill.property-pill.warning { background: var(--warn); border-color: var(--warn); }
+.website-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 18px; }
+.website-grid .property { min-width: 0; }
+.website-grid .property-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }

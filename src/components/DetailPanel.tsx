@@ -3,6 +3,7 @@ import {MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
 import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
+import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import { AgentOutput } from "./AgentOutput";
 import { RepositoryNotice } from "./RepositoryNotice";
@@ -27,8 +28,6 @@ import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
-import { PropertyDashboard } from "./PropertyDashboard";
-import { propertyForProject } from "../properties/registry";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -58,7 +57,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   );
 }
 
-function Head({ eyebrow, title, children }: { eyebrow: string; title: string; children?: React.ReactNode }) {
+function Head({ eyebrow, title, children, onClose }: { eyebrow: string; title: string; children?: React.ReactNode; onClose?:()=>void }) {
   const { select } = useAtlas();
   return (
     <div className="panel-head">
@@ -67,7 +66,7 @@ function Head({ eyebrow, title, children }: { eyebrow: string; title: string; ch
         <h2>{title}</h2>
         {children}
       </div>
-      <button className="icon-btn" onClick={() => select(null)} aria-label="Close details" style={{ color: "var(--ink-2)" }}>
+      <button className="icon-btn" onClick={onClose??(() => select(null))} aria-label="Close details" style={{ color: "var(--ink-2)" }}>
         <Icon name="close" />
       </button>
     </div>
@@ -93,6 +92,14 @@ function LinkedRepositories({project}:{project:Project}) {
       </li>;
     })}</ul>
   </section>;
+}
+
+/** Agents the catalog seats in the Benjaire Marketing Agency, with their room names. */
+function AgencyAgents(){
+  const {catalog,select}=useAtlas();
+  const assigned=catalog.agents.filter(a=>a.workplace?.building===AGENCY_BUILDING);
+  if(!assigned.length)return null;
+  return <section><div className="section-title">Agents & automations</div><ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.registry?.title??a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · {agencyRoom(a.workplace!.room)?.name??a.workplace!.room} · Configured in n8n, not verified</span></li>)}</ul></section>;
 }
 
 function SkylineBusinessDetail({name}:{name:string}) {
@@ -137,13 +144,13 @@ function ServiceDetail({id}:{id:string}) {
  }
  if(id==="atlas-hills")return <><Head eyebrow="Residential district · Planned community" title="Atlas Hills"><span className="chip">Planned · Visual district</span><EnterBuildingButton id="skyline-business:Atlas Hills"/></Head><div className="panel-body selectable"><p>A residential community around the preserved two-story mansion: gated homes, village shops and café, community and social clubs, fitness studio, wellness spa, a compact three-hole course and an elevated Financial District train connection.</p><dl className="kv"><dt>Prepared role</dt><dd>Estate Planning Coordinator · Not active</dd><dt>Repository / workflows</dt><dd>None linked</dd><dt>Agent activity</dt><dd>No running agents or model calls</dd></dl><section><div className="section-title">Inside the mansion</div><p>Explore the entrance lobby, living spaces and upstairs study with a furnished desk. Floor navigation and lighting follow the existing Atlas interior system.</p></section><section><div className="section-title">Grounds</div><ul><li>Three-car garage and separate driveway</li><li>Pool terrace, loungers and shaded seating</li><li>Tennis court and landscaped courtyard</li><li>Connected pedestrian entrance and city access</li></ul></section><section><div className="section-title">Community places</div><ul className="link-list">{COMMUNITY_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`hills:${b.id}`})}>{b.name} →</button></li>)}</ul><p>Planned visual community. Commuters are unnamed simulated residents, not active agents. Rail pauses in Battery saver, with Traffic off, or for reduced motion.</p></section></div></>;
 
- if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>None linked</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None</dd></dl><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Every room shows the role planned for it; none of them run yet.</p></section></div></>;
+ if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>Benjaire Product Lab, an n8n agent (no repository)</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
     <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
-    <div className="panel-body selectable"><p>A four-floor wave-style mall where each shop is one agent or service that clients can buy. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
+    <div className="panel-body selectable"><p>A four-floor wave-style Marketplace with planned client services and Benjaire product workspaces. Existing Commerce workers are referenced without starting new workflows. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
-      <dl className="kv"><dt>Owning agent</dt><dd>Marketplace Steward · Planned, not running</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
+      <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>
@@ -191,7 +198,6 @@ function ProjectDetail({ id }: { id: string }) {
   const project = catalog.projects.find(p => p.id === id);
   if (!project) return <Head eyebrow="Project" title="Not found" />;
   const repositories = projectRepositories(project, catalog.agents);
-  const property = propertyForProject(project.id);
   return <>
     <Head eyebrow="Project building" title={project.name}>
       <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
@@ -199,7 +205,6 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable">
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
-      {property && <PropertyDashboard property={property} />}
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
@@ -211,7 +216,7 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
   return agent.source ? `https://github.com/${agent.repository}/blob/${branch}/${agent.source}` : undefined;
 }
 
-function AgentDetail({ id }: { id: string }) {
+export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) {
   const [tab, setTab] = useState<"overview" | "output">("overview");
   const { catalog, repos, select } = useAtlas();
   const agent = catalog.agents.find((a) => a.id === id);
@@ -225,7 +230,7 @@ function AgentDetail({ id }: { id: string }) {
 
   return (
     <>
-      <Head eyebrow={`Agent · ${project?.name ?? agent.projectId}`} title={agent.name}>
+      <Head eyebrow={`Agent · ${project?.name ?? agent.projectId}`} title={agent.name} onClose={onClose}>
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <StatusPill status={agent.status} />
           <span className="chip">{agent.framework}</span>
@@ -592,10 +597,10 @@ function RepoInsights({ name }: { name: string }) {
   const recentCommits = snap.commits.filter((c) => Date.parse(c.date) >= since).length;
   const authors = new Set(snap.commits.map((c) => c.author)).size;
   const tiles = [
-    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "–", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs" },
-    { label: "Commits, 14 days", value: String(recentCommits), note: `of the latest ${snap.commits.length} synced` },
-    { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "–", note: snap.pushedAt ? formatDate(snap.pushedAt) : "Not reported" },
-    { label: "Contributors", value: String(authors), note: "in the synced commits" },
+    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "Unknown", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs synced" },
+    { label: "Commits, 14 days", value: snap.commits.length ? String(recentCommits) : "Unknown", note: snap.commits.length ? `of the latest ${snap.commits.length} synced` : "No commits synced" },
+    { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "Unknown", note: snap.pushedAt ? formatDate(snap.pushedAt) : "GitHub didn't report it" },
+    { label: "Contributors", value: snap.commits.length ? String(authors) : "Unknown", note: snap.commits.length ? "in the synced commits" : "No commits synced" },
     { label: "Open issues + PRs", value: String(snap.openIssues), note: "Reported by GitHub" },
     { label: "Agents", value: String(agents.length), note: `${agents.filter((a) => a.status === "active").length} active` },
   ];

@@ -13,7 +13,9 @@ import {layoutMap,type GroupBy} from "../mapLayout";
 import {buildScene,TERRACE_H} from "../map3d/scene";
 import {Traffic,Vehicles} from "../map3d/living";
 import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
-export default function CityOutside({building="",projectId,span=16,elevation=0,allFloors=false,anchorAt,extras}:{building?:string;projectId?:string;span?:number;elevation?:number;allFloors?:boolean;
+export default function CityOutside({building="",projectId,span=16,clearSpan=span,elevation=0,allFloors=false,anchorAt,extras}:{building?:string;projectId?:string;span?:number;
+  /** Width of the interior to keep trees, rocks and paths out of, when it is wider than `span` (Circa's podium). */
+  clearSpan?:number;elevation?:number;allFloors?:boolean;
   /** A map position to centre on, for buildings that are not towers or shops. */
   anchorAt?:(scene:ReturnType<typeof buildScene>)=>{x:number;z:number}|undefined;
   /** Extra map pieces drawn in the same frame as the city, such as a building's own plaza. */
@@ -35,7 +37,7 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   const anchor=mallAnchor??anchorAt?.(source)??financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building));
   // The mall interior is drawn to its map footprint, so the city around it lines up with the lot.
   const scale=mallAnchor&&source.mall?span/(source.mall.rx*2):Math.max(4,span/4),cx=anchor?.x??(park?park.x+park.w/2:0),cz=anchor?.z??(park?park.z+park.d/2:0);
-  const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(span/2+2)/scale),[source,cx,cz,span,scale]);
+  const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(clearSpan/2+2)/scale),[source,cx,cz,clearSpan,scale]);
   // In the all-floors view, neighbours in the quarter the camera looks from would hide the
   // building. The camera can turn all the way round, so follow it, re-rendering only when it
   // crosses into another quarter.
@@ -43,7 +45,10 @@ export default function CityOutside({building="",projectId,span=16,elevation=0,a
   useFrame(({camera})=>{if(!allFloors)return;const n=quarterOf(camera.position);if(n.x!==q.x||n.z!==q.z)setQ(n);});
   const visible=(p:{x:number;z:number})=>!allFloors||(p.x-cx)*q.x<0||(p.z-cz)*q.z<0||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;
   if(!park&&!anchor)return null;
-  return <group scale={scale} position={[-cx*scale,-TERRACE_H*scale-0.35-elevation,-cz*scale]}>
+  // Financial District buildings stand on plain district land (y 0), not a raised terrace, and the district's own plaza
+  // isn't drawn here, so the city drops only by the slab depth to put the lobby on the ground.
+  const groundY=financialInteriorBrand(building)?0:TERRACE_H;
+  return <group scale={scale} position={[-cx*scale,-groundY*scale-0.35-elevation,-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}
     <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={[...scene.kiosks,...scene.retail].filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
   </group>;

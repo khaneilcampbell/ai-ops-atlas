@@ -35,9 +35,49 @@ it("keeps the UI designer manual-only in its own OpenAI suite",()=>{
 it("assigns the manual production team only to Atlas Floor 3 and rejects invalid floors",()=>{
  const team=catalog.agents.filter(a=>a.officeFloor===3);
  expect(team.map(a=>a.id).sort()).toEqual(["atlas-performance-reviewer","atlas-production-coordinator","atlas-reliability-reviewer"]);
- expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&!a.observe&&a.status==="idle")).toBe(true);
+ expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&a.status==="idle")).toBe(true);
+ expect(team.find(a=>a.id==="atlas-production-coordinator")?.observe?.githubWorkflow).toBe("benjaire-production.yml");
  for(const floor of [0,5,2.5,'"2"']) {
   const yaml=manifest('{building: OpenAI, floor: 4, room: "401"}').replace('workplace: {building: OpenAI, floor: 4, room: "401"}',`office_floor: ${floor}`);
   expect(buildCatalog({"a.yaml":yaml}).issues.length).toBeGreaterThan(0);
  }
+});
+
+it('assigns Marketplace workers once, preserving their Commerce ownership and runtime',async()=>{
+ const {MARKETPLACE_WORKSPACES,marketplaceAssignedAgent}=await import('../views/office/marketplaceWorkspaces');
+ for(const w of MARKETPLACE_WORKSPACES){
+  const a=marketplaceAssignedAgent(w.unitId,catalog.agents)!;
+  expect(a.id).toBe(w.agentId);expect(a.projectId).toBe('commerce-pipeline');
+  expect(a.repository).toBe('khaneilcampbell/multi-agent-commerce-pipeline');
+  expect(a.workplace?.floor).toBe(1);expect(a.workplace?.building).toBe('Atlas Marketplace');
+  expect(projectOfficeAgents(catalog.agents,a.projectId).some(x=>x.id===a.id)).toBe(false);
+ }
+ const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+ expect(new Set(placements.map(a=>a.id)).size).toBe(catalog.agents.length);
+ expect(placements).toHaveLength(catalog.agents.length);
+});
+it('validates Marketplace rooms without allowing unsupported suites elsewhere',()=>{
+ expect(buildCatalog({'a.yaml':manifest('{building: Atlas Marketplace, floor: 1, room: "108"}')}).issues).toEqual([]);
+ for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: OpenAI, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
+});
+
+it("keeps the Inquiry Assistant in Skyline with its original ownership",()=>{
+ const a=workplaceAgent(catalog.agents,"Skyline",1,"101")!;
+ expect(a.id).toBe("skyline-inquiry-assistant");expect(a.projectId).toBe("skyline");
+ expect(projectOfficeAgents(catalog.agents,"skyline")).not.toContain(a);
+});
+
+it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the interior plan",async()=>{
+ const {AGENCY_ROOMS}=await import("../views/office/agencyInteriorPlan");
+ const {AGENCY_WORKPLACE_ROOMS}=await import("./workplaces");
+ expect([...AGENCY_WORKPLACE_ROOMS].sort()).toEqual(AGENCY_ROOMS.filter(r=>r.level>=1).map(r=>r.id).sort());
+ const seats:Record<string,string>={"1-strategy":"benjaire-product-lab","2-insights":"benjaire-product-lab-research","2-archive":"benjaire-product-lab-competitors","1-social":"benjaire-product-lab-customers","2-workshop":"benjaire-product-lab-scoring","1-review":"benjaire-product-lab-brief"};
+ for(const [room,id] of Object.entries(seats)){
+  const a=workplaceAgent(catalog.agents,"Benjaire Marketing Agency",Number(room[0]),room)!;
+  expect(a.id).toBe(id);expect(a.repository).toBe("khaneilcampbell/benjaire.com");
+  expect(projectOfficeAgents(catalog.agents,a.projectId)).not.toContain(a);
+ }
+ expect(buildCatalog({"a.yaml":manifest('{building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}')}).issues).toEqual([]);
+ for(const w of ['{building: Benjaire Marketing Agency, floor: 1, room: "101"}','{building: Benjaire Marketing Agency, floor: 2, room: "1-strategy"}','{building: Benjaire Marketing Agency, floor: 1, room: "1-lobby"}','{building: OpenAI, floor: 1, room: "1-strategy"}'])
+  expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
 });

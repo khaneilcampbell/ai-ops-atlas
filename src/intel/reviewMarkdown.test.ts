@@ -54,5 +54,6 @@ describe("review markdown", () => {
 
   it("copies one recommendation without a number", () => {
     expect(recommendationMarkdown(review.recommendations[0]).split("\n")[0]).toBe("**Harden the VPS** [Do now · Security · About a day]");
+    expect(recommendationMarkdown({ ...review.recommendations[0], owner: "commerce-loop" }).split("\n")[0]).toBe("**Harden the VPS** [Do now · Security · About a day · owner commerce-loop]");
   });
 });
