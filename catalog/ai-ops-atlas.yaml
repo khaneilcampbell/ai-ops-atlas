@@ -511,7 +511,7 @@ agents:
     permissions: [Read supplied evidence, Produce a review report]
     registry:
       title: Atlas Production Coordinator
-      version: 1.0.0
+      version: 1.1.0
       tier: specialized
       category: engineering
       subcategory: Atlas system production
@@ -520,14 +520,67 @@ agents:
         type: B
         confidence: verified
         evidence: Manual deterministic handoff runner and fixture workflow; no external creation, publication or schedule.
+      mission:
+        problem: Production issues, review delays and CI evidence need one clear handoff without confusing a prepared change, a web deployment and an installed desktop update.
+        outcomes: [A prioritized production brief, A focused check and review plan, A version-bound supplied-draft handoff when requested]
+        beneficiaries: [KC, Atlas contributors, Benjaire product team]
+      responsibilities:
+        tasks:
+          - Prioritize at most three production issues using current failure evidence and business impact
+          - Identify review blockers, failed required checks and stale branches without merging or deleting them
+          - Recommend the smallest safe change and change-appropriate validation
+          - Reuse check results only when the commit, configuration and relevant inputs still match
+          - Record prepared, tested, merged, web-deployed and desktop-installed states separately
+          - Coordinate supplied drafts through quality review, exact-version approval and local release preparation
+          - Hand off blockers and the next authorized action to KC
+        tools: [Existing CI results and review evidence, Local manual production runner, Atlas Output]
+        inputs: [Explicit user request, Current commit and branch evidence, Existing CI and review results, Supplied product brief and assets when requested]
+        outputs:
+          - A concise production brief with priorities, evidence, blockers, next actions and separate web and desktop readiness
+          - A focused validation plan identifying reusable checks and checks still required
+          - A local draft checkpoint and release-preparation packet only when explicitly requested
+        dependencies: [atlas-ci, commerce-tests]
+        limitations:
+          - Manual work only; the visual workday is not a real execution schedule
+          - Never bypasses required checks, merges branches, deploys or changes production access
+          - Hosted handoff runs are fixture-only and do not invoke external creation
+          - Quality review and local approval do not authorize publishing or customer messages
+          - Desktop installation requires device or updater evidence; web deployment is not proof
+      goals:
+        objective: Reduce avoidable production delay while keeping every readiness claim evidence-backed and every sensitive action with KC.
+        review_frequency: At the end of each explicitly requested review or manual handoff; no automatic review schedule
+        kpis:
+          - name: Evidence-backed handoff completeness
+            kind: quality
+            target: Each brief identifies the reviewed commit, check results, blockers and next action
+            basis: Manual review of the production brief; no automated measurement connected
+          - name: Safe validation reuse
+            kind: cost
+            target: Reuse valid checks without skipping required or change-relevant validation
+            basis: Manual comparison of commits, inputs and required checks; no time-saved estimate claimed
+          - name: Platform readiness clarity
+            kind: reliability
+            target: Distinguish web deployment evidence from desktop installation evidence
+            basis: Source deployment and device evidence when available; unknown otherwise
       execution:
         trigger_type: manual
-        environment: Maintainer-started local handoff or GitHub Actions fixture
-        stages: [Validate brief, Prepare supplied draft, Reuse Commerce quality checks, Await exact-version approval, Prepare local release packet]
+        schedule: Request-based workday — triage evidence, plan a focused change, review checks, prepare the handoff, then report blockers and readiness. No timed execution or background schedule.
+        environment: Maintainer-started review or local handoff; GitHub Actions is fixture-only
+        stages:
+          - Start — read the request, current commit and existing production evidence
+          - Triage — rank issues and identify review, CI and branch blockers
+          - Plan — propose the smallest safe change and relevant checks; reuse only valid results
+          - Review — record check evidence and remaining approval requirements
+          - Handoff when requested — validate brief, prepare supplied draft and run Commerce quality checks
+          - Approval gate — await exact-version approval before local release preparation
+          - Close — report next actions and separate web deployment from desktop installation
       governance:
         autonomy: 1
         autonomy_note: Local draft handoff and evidence only. Approval never authorizes publishing or external actions.
         risk: low
+        approval: KC authorizes implementation and sensitive actions separately; local release approval never authorizes publishing
+        audit_log: Existing CI run history and local versioned handoff checkpoints; no continuous activity log is claimed
+        credential_owner: KC (existing credential stores; no new credentials)
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
 
