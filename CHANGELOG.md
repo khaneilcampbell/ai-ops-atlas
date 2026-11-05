@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-05 · Defined the Production Coordinator’s responsibilities, review goals and request-based workday without activating new work (#252).
+- 2026-11-05 · Linked the Production Coordinator profile to its verified n8n advisor configuration, with clear reporting and live-budget gaps (#252).
 - 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#249)
 - 2026-11-04 · Inside the Benjaire Marketing Agency, the six Product Lab agents now sit at desks in gold. Tap one, or its room label, to open the agent. The building panel lists them too (#248)
 - 2026-11-04 · Your n8n Benjaire Product Lab is now in the Agents list: the lead plus its five research roles, each assigned a room in the Benjaire Marketing Agency. They show as "Configured, not verified" until Atlas sees a real run (#247)
