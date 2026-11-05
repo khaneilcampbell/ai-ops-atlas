@@ -5,7 +5,7 @@
 // Each stored report also drops a one-line `agent_report` event into the live feed, so an
 // open inspector refreshes as soon as a new report lands.
 
-import { isReportAgent, MAX_REPORT_BYTES, validOpportunityReport, type StoredReport } from "../src/reports/model";
+import { isReportAgent, MAX_REPORT_BYTES, reportLine, validReport, type StoredReport } from "../src/reports/model";
 import { bearerOk, ensureSchema as ensureFeed, type D1, type LiveEnv } from "./live";
 
 export const REPORTS_PATH = "/api/hooks/reports";
@@ -40,13 +40,12 @@ export async function receiveReport(req: Request, env: LiveEnv, now = Date.now()
   } catch {
     return reply(400, { message: "Body isn't JSON." });
   }
-  if (!validOpportunityReport(body)) return reply(400, { message: "Not a valid report (see src/reports/model.ts)." });
+  if (!validReport(body)) return reply(400, { message: "Not a valid report (see src/reports/model.ts)." });
   const db = env.LIVE;
   await ensureSchema(db);
   await ensureFeed(db);
   const at = new Date(now).toISOString();
-  const top = body.ideas[0];
-  const line = top ? `${body.ideas.length} ideas. Top: ${top.title} (score ${top.score}).` : "No ideas this run.";
+  const line = reportLine(body);
   await db.batch([
     db.prepare("INSERT INTO agent_reports (agent, at, body) VALUES (?, ?, ?)").bind(body.agent, at, JSON.stringify(body)),
     // Only the newest few per agent; the report itself is the record, the run on GitHub the audit trail.
@@ -66,7 +65,7 @@ export async function readReports(url: URL, env: LiveEnv): Promise<Response> {
   const reports: StoredReport[] = [];
   for (const r of results) {
     const body = JSON.parse(r.body);
-    if (validOpportunityReport(body)) reports.push({ id: r.id, at: r.at, body });
+    if (validReport(body) && body.agent === agent) reports.push({ id: r.id, at: r.at, body });
   }
   return reply(200, { configured: true, reports });
 }

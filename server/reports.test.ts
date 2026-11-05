@@ -101,3 +101,32 @@ describe("reading agent reports", () => {
     expect((await ok.json()).reports).toHaveLength(1);
   });
 });
+
+describe("Benjaire Product Lab briefs", () => {
+  const brief = () => JSON.parse(readFileSync(new URL("../ops/product-lab/fixtures/report.json", import.meta.url), "utf8"));
+
+  it("stores a brief under its own agent with a one-line feed note, and keeps agents apart", async () => {
+    const d = fakeD1();
+    const env = { LIVE: d.db, AGENT_FEED_TOKEN: TOKEN };
+    expect((await receiveReport(post(brief()), env, NOW)).status).toBe(202);
+    expect((await receiveReport(post(report()), env, NOW)).status).toBe(202);
+    expect(d.events[0]).toEqual({ kind: "agent_report", body: JSON.stringify({ agent: "benjaire-product-lab", detail: "2026-12: Flow for dental clinics (score 4.55, hypothesis)." }) });
+    const page = await (await readReports(new URL("https://x/api/reports?agent=benjaire-product-lab"), env)).json();
+    expect(page.reports.map((r: { body: { agent: string } }) => r.body.agent)).toEqual(["benjaire-product-lab"]);
+  });
+
+  it("refuses a brief whose scorecard total doesn't add up", async () => {
+    const d = fakeD1();
+    const bad = brief();
+    bad.scorecard[0].total = 5;
+    expect((await receiveReport(post(bad), { LIVE: d.db, AGENT_FEED_TOKEN: TOKEN }, NOW)).status).toBe(400);
+    expect(d.reports).toHaveLength(0);
+  });
+
+  it("does not show a brief stored under the wrong agent", async () => {
+    const d = fakeD1();
+    d.reports.push({ id: 1, agent: AGENT, at: "2026-12-01T00:00:00.000Z", body: JSON.stringify(brief()) });
+    const page = await (await readReports(new URL(`https://x/api/reports?agent=${AGENT}`), { LIVE: d.db })).json();
+    expect(page.reports).toEqual([]);
+  });
+});

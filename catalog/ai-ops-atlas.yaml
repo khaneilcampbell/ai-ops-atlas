@@ -497,14 +497,16 @@ agents:
 
   - id: atlas-production-coordinator
     name: Atlas Production Coordinator
-    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Manual reports only, using existing evidence and at most three findings.
+    purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation. The hosted workflow is fixture-only; external creation is not invoked.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
-    runtime: Explicitly requested review session
+    model: No runner model calls; paid creation remains disabled
+    framework: Manual Python handoff + Codex review on request
+    runtime: Local deterministic runner; manually dispatched fixture on GitHub Actions
     status: idle
     trigger: Explicit user request only; no schedule
-    source: ops/system-improvements/production-team.md
+    source: ops/benjaire-production/team.py
+    observe:
+      github_workflow: benjaire-production.yml
     last_run: null
     permissions: [Read supplied evidence, Produce a review report]
     registry:
@@ -517,14 +519,14 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: Catalog role and manual review instructions only; no autonomous runner.
+        evidence: Manual deterministic handoff runner and fixture workflow; no external creation, publication or schedule.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
-        stages: [Read existing evidence, Return three or fewer prioritized findings]
+        environment: Maintainer-started local handoff or GitHub Actions fixture
+        stages: [Validate brief, Prepare supplied draft, Reuse Commerce quality checks, Await exact-version approval, Prepare local release packet]
       governance:
         autonomy: 1
-        autonomy_note: Reports only; implementation requires a separate user request.
+        autonomy_note: Local draft handoff and evidence only. Approval never authorizes publishing or external actions.
         risk: low
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.

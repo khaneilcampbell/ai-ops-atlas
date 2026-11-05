@@ -285,6 +285,8 @@ export interface EcoReview {
     rationale: string;
     first_step: string;
     effort: "hours" | "a_day" | "a_week";
+    /** A catalog agent id or "KC". Missing in reviews saved before owners existed. */
+    owner?: string | null;
     repos: string[];
     evidence: string[];
     grounded: boolean;
