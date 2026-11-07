@@ -729,7 +729,8 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26+(i%3)*.02,kind:'round' as TreeKind})));
+    // Slim cone trees: a formal plaza row, and about 3% of a round tree's triangles.
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'cone' as TreeKind})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
