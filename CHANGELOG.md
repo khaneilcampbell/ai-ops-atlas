@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-07 · Added a plan with new original names for every building that uses a real company name (banks, BMW, Circa, shops); nothing changes in the app yet (#PR)
 - 2026-11-07 · Closed a security alert in a developer tool (minimatch); nothing changes in the app (#254)
 - 2026-11-05 · Agent keys pasted with a stray space, line break, quotes or an extra "Bearer" are no longer refused, so the Product Lab brief and other agent reports can reach Atlas (#253)
 - 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#249)
