@@ -1,3 +1,4 @@
+import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
 import {MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
@@ -147,6 +148,13 @@ function ServiceDetail({id}:{id:string}) {
     <div className="panel-body selectable"><p>A four-floor wave-style Marketplace with planned client services and Benjaire product workspaces. Existing Commerce workers are referenced without starting new workflows. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
       <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
+    </div>
+  </>;
+  if(id === GALLERIA_ID) return <>
+    <Head eyebrow="Shopping mall · Behind Atlas Marketplace" title={GALLERIA_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <div className="panel-body selectable"><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
+      <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
+      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>

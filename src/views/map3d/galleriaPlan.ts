@@ -33,7 +33,7 @@ export const GALLERIA={
  /** Plan metres to map units: never larger, so a big lot does not grow the building. */
  maxScale:.13,minScale:.1,
  /** Planted terraces: a bush every plantStep, a small tree every treeStep, along each lip. */
- plantStep:.5,treeStep:2.1,
+ plantStep:.75,treeStep:3,
  /** Funnel column foot (plan metres, grid about 4.6/D) and its canopy radius in metres. */
  column:[37.5,30.5] as Pt,canopyR:11.5,
  /** Below this, the green is too small for the building to read, and nothing is drawn. */
@@ -86,7 +86,7 @@ function shares(p:Pt[]){
 }
 
 /** The ground outline, smoothed: the base every slab drifts from. */
-export const GALLERIA_BASE=smoothClosed(GALLERIA_OUTLINE,4);
+export const GALLERIA_BASE=smoothClosed(GALLERIA_OUTLINE,3);
 const BASE_N=normals(GALLERIA_BASE),BASE_U=shares(GALLERIA_BASE);
 /**
  * How far (plan metres, outward positive) slab `level` stands from the ground outline at point i:
