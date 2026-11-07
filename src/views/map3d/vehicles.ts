@@ -158,7 +158,7 @@ export function dealershipGarageOpen(plans:VehiclePlan[],seconds:number):number{
 export const HIGHWAY_TRAFFIC_SPEED=1.55;
 export const HIGHWAY_TRAFFIC_COUNT=16;
 export function planHighwayTraffic(scene:Pick<Scene3D,'freight'>):VehiclePlan[]{
- if(!scene.freight)return [];
+ if(!scene.freight||scene.freight.highway.length<2)return [];
  const fleet:VehicleKind[]=['taxi','pickup','bmw','van','gwagon','convertible','sedan','semi'];
  const road=scene.freight.highway;
  const lanes=[road,[...road].reverse()].map(center=>{

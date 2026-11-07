@@ -15,7 +15,7 @@ describe("Atlas Marketplace mall", () => {
   expect(m).toBeDefined();
   const park=s.parks.find(p=>p.label==="Skyline")!;
   expect(m.x).toBeGreaterThan(park.x+park.w);
-  expect(m.z+m.d).toBeLessThanOrEqual(s.hills!.z);
+  expect(m.z+m.d).toBeCloseTo(s.transportConnections.find(c=>c.id==="marketplace-city-boulevard")!.road[0][1]-1.95);
  });
  it("keeps clear of every building", () => {
   for(const b of [...s.towers,...s.kiosks,...s.retail])

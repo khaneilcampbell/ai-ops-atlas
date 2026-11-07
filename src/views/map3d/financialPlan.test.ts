@@ -31,7 +31,7 @@ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans 
  for(const access of scene.freight!.access)expect(pathClear(access.collector,[park,...boxes],.3)).toBe(true);
  expect(pathClear(f.road,boxes,.3)).toBe(true);expect(pathClear(f.walk,boxes,.3)).toBe(true);
  expect(distanceToRoad(f.road.at(-1)!,f.street)).toBeLessThan(.001);expect(distanceToRoad(f.walk.at(-1)!,f.sidewalk)).toBeLessThan(.001);
- expect(scene.freight?.access.some(a=>a.id==='financial-district')).toBe(true);
+ expect(scene.transportConnections.some(a=>a.id==='financial-district'&&a.road.length>1)).toBe(true);
 });
 
 describe('Financial Park central green',()=>{

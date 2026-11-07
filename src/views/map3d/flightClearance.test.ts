@@ -4,8 +4,6 @@ import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {airportPoint} from './airport';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
-import {COMMUNITY_BUILDINGS} from './hillsCommunityPlan';
-import {HILLS} from './hillsPlan';
 import {headquartersEnvelope} from './financialPlan';
 import {financialDimensions} from './financialArchitecture';
 import {fleetPose,FLIGHT_SCHEDULE} from './flightSchedule';
@@ -18,8 +16,6 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`clears ev
   ...s.financial!.buildings.map(b=>({id:b.id,x:s.financial!.x+b.x,z:s.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d,h:b.height+financialDimensions(b.id).top})),
   ...[...s.kiosks,...s.retail].map(b=>({id:b.key,x:b.x,z:b.z,w:b.size,d:b.size,h:8})),
   ...AIRPORT_BUILDINGS.map(b=>{const [x,z]=airportPoint(a,b.x,b.z);return {id:b.id,x,z,w:b.w,d:b.d,h:b.h+1};}),
-  ...COMMUNITY_BUILDINGS.map(b=>({id:b.id,x:s.community!.x+b.x,z:s.community!.z+b.z,w:b.w,d:b.d,h:b.h+1})),
-  {id:'mansion',x:s.hills!.x+HILLS.mansion.x,z:s.hills!.z+HILLS.mansion.z,w:HILLS.mansion.w,d:HILLS.mansion.d,h:HILLS.mansion.h+1},
   {id:'bmw',x:s.dealership!.x+s.dealership!.showroom.cx,z:s.dealership!.z+s.dealership!.showroom.cz,w:s.dealership!.showroom.w+.25,d:s.dealership!.showroom.d+.25,h:s.dealership!.showroom.height+.9},
   ...s.parks.map(p=>({id:p.id,x:p.x+p.w/2,z:p.z+p.d/2,w:4.5,d:1.2,h:5.1})),
  ];

@@ -1,27 +1,14 @@
-import {financialParkStation} from './hillsCommunityPlan';
 import {it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {planHighwayTraffic,HIGHWAY_TRAFFIC_COUNT} from './vehicles';
-import {distanceToRoad} from './highway';
+import {planHighwayTraffic,planVehicles,vehicleAt,MAX_VEHICLES} from './vehicles';
 import {pathClear} from './roads';
-for(const group of ['none','district','status','tag'] as GroupBy[])it(`connects district ramps to the perimeter without building collisions: ${group}`,()=>{
+for(const group of ['none','district','status','tag'] as GroupBy[])it(`removes ramps and preserves connected local traffic: ${group}`,()=>{
  const scene=buildScene(layoutMap(catalog,[],group)),f=scene.freight!;
- expect(f.access.map(a=>a.id)).toEqual(['skyline-airport','profile-stadium','financial-district']);
+ expect(f.highway).toEqual([]);expect(f.access).toEqual([]);expect(f.exits).toEqual([]);expect(planHighwayTraffic(scene)).toEqual([]);
  const boxes=[...scene.towers,...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
- // Ramps stay clear of the Financial Park station's lift and stairs.
- {const r=financialParkStation(scene.financial!);for(const a of f.access)expect(pathClear(a.collector,[{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}],.4),`${a.id} collector`).toBe(true);}
- for(const a of f.access){expect(a.collector[0]).toEqual(a.junction);
-  for(const ramp of a.ramps){expect(ramp[0]).toEqual(a.collector.at(-1));expect(distanceToRoad(ramp.at(-1)!,f.highway)).toBeLessThan(.001);expect(pathClear(ramp,boxes,.7)).toBe(true);}
-  expect(pathClear(a.collector,boxes,.7)).toBe(true);
- }
-});
-it('uses opposing highway lanes and continuous closed traffic routes',()=>{
- const s=buildScene(layoutMap(catalog)),plans=planHighwayTraffic(s);
- expect(plans).toHaveLength(HIGHWAY_TRAFFIC_COUNT);
- for(const v of plans){expect(v.legs.at(-1)!.b).toEqual(v.legs[0].a);
-  for(const l of v.legs){expect(l.dur).toBeGreaterThan(0);expect(distanceToRoad(l.a,s.freight!.highway)).toBeLessThan(.5);}
- }
- expect(plans[0].legs[0].b[0]-plans[0].legs[0].a[0]).not.toBe(plans[1].legs[0].b[0]-plans[1].legs[0].a[0]);
+ expect(pathClear(f.route,boxes,.4)).toBe(true);expect(f.cityAccess.length).toBeGreaterThan(1);
+ const plans=planVehicles(scene);expect(plans).toHaveLength(MAX_VEHICLES);
+ for(const v of plans){expect(v.legs[v.legs.length-1].b).toEqual(v.legs[0].a);for(const l of v.legs)expect(l.dur).toBeGreaterThan(0);expect(Number.isFinite(vehicleAt(v,30).x)).toBe(true);}
 });
