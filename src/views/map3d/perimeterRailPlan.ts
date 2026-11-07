@@ -50,10 +50,17 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
  // Reserve the airside parcel as a whole; public walks approach the terminal along its eastern edge.
  const airsideRight=front[0]-.8;boxes.push({x:(airportLand.x+airsideRight)/2,z:airportLand.z+airportLand.d/2,w:airsideRight-airportLand.x,d:airportLand.d});
  const stops=seeds.map(seed=>{
-  const distance=distanceAt(route,lengths,seed.point),pose=loopPoint({route,lengths,length},distance),basis={point:seed.point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
-  const ground=routeAround(seed.target,landing,boxes,.3);if(!ground)throw new Error(`No protected public walk to ${seed.name}`);
-  const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
-  return {...seed,yaw:pose.yaw,distance,arrival:0,walk};
+  // When a district (such as the bigger stadium) covers the stairs' landing, slide the station
+  // along its straight edge, nearest first, until the walk to the platform is clear.
+  const alongX=seed.point[1]===top||seed.point[1]===bottom;
+  for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
+   const point:Pt=alongX?[clamp(seed.point[0]+shift,left,right),seed.point[1]]:[seed.point[0],clamp(seed.point[1]+shift,top,bottom)];
+   const distance=distanceAt(route,lengths,point),pose=loopPoint({route,lengths,length},distance),basis={point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
+   const ground=routeAround(seed.target,landing,boxes,.3);if(!ground)continue;
+   const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
+   return {...seed,point,yaw:pose.yaw,distance,arrival:0,walk};
+  }
+  throw new Error(`No protected public walk to ${seed.name}`);
  }).sort((a,b)=>a.distance-b.distance);
  stops.forEach((stop,i)=>stop.arrival=stop.distance/PERIMETER_RAIL.speed+i*PERIMETER_RAIL.dwell);
  return {route,lengths,length,stops,period:length/PERIMETER_RAIL.speed+stops.length*PERIMETER_RAIL.dwell};

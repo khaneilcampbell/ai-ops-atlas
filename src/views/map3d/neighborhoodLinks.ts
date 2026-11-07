@@ -35,7 +35,8 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
  * green between it and the Skyline park reaches north to the city's terraces (or this far, if none),
  * so the mall's lot is about twice the Atlas Hills mansion's footprint and joins the city.
  */
-export const MALL_LOT={east:4,north:3} as const;
+/** minWidth: park edge to boulevard centre when the catalog shrinks, room for the full-size mall (MALL.maxW) plus its gaps. */
+export const MALL_LOT={east:4,north:3,minWidth:14} as const;
 type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'parks'|'land'|'carBridges'|'paving'> & {marketplace?:Rect;coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
 /** The original grid's easternmost street end and the nearest open plaza, where the Hills boulevard joins the city. */
 export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:Box[]):{road:Pt;walk:Pt}|undefined{
@@ -55,7 +56,7 @@ export function planNeighborhoodLinks(s:Input){
  };
  if(core&&h&&d){
   const sky=s.parks.find(p=>p.label==='Skyline'),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
-  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road,east=Math.max(core.x+core.w+.9,start[0])+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
+  const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road,east=Math.max(core.x+core.w+.9,start[0],mallRoom?sky.x+sky.w+MALL_LOT.minWidth-MALL_LOT.east:-Infinity)+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
   const road=route([start,[east,start[1]],[east,target[1]],target],.4);
   const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[1]],d.walk],.3);
   if(road&&walk){
