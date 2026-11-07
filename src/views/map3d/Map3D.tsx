@@ -1,3 +1,4 @@
+import {marinaFootprint,marinaSite} from './marinaPlan';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -652,6 +653,8 @@ function World({
   const g = useGeometries();
   const m = useMaterials();
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
+  // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
+  const railKeepClear=useMemo(()=>[marinaFootprint(marinaSite(scene,TERRACE_H))],[scene]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.map(c=>c.road)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -1145,7 +1148,7 @@ function World({
       <VenueBridge scene={scene} g={g} m={m}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
