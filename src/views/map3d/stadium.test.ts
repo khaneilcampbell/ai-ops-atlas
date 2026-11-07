@@ -30,7 +30,7 @@ import {MALL} from "./mallPlan";
 import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
-import {STADIUM,STADIUM_SCALE,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
+import {STADIUM,STADIUM_SCALE,stadiumPlaza,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
 import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
 describe("Atlas Stadium",()=>{
@@ -108,6 +108,35 @@ describe("Atlas Stadium",()=>{
     expect(map).toMatch(/plaque\(\{id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,[^}]*roof:TERRACE_H\+stadiumCrown\(\)/);
     const panel=readFileSync(join(__dirname,"../../components/DetailPanel.tsx"),"utf8");
     expect(panel).toContain('title="Atlas Stadium"');
+  });
+});
+
+describe("Atlas Stadium realism",()=>{
+  it("lifts every shell's lower edge over a glazed lobby that stays under the shells",()=>{
+    const S=STADIUM,L=S.lobby;
+    for(let i=0;i<S.shells;i++){
+      // The middle of each lower edge clears the lobby glass; the corners still meet the concourse.
+      expect(shellPoint(i,0,0)[1]).toBeGreaterThan(S.concourse.y+L.h);
+      expect(shellPoint(i,1,0)[1]).toBeLessThan(S.concourse.y);
+      // Wherever a shell is above the lobby ring, it is higher than the glass.
+      for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.02){
+        const [x,y,z]=shellPoint(i,u,v,S.thickness);
+        if((x/L.rx)**2+(z/L.rz)**2<1&&y>S.concourse.y)expect(y).toBeGreaterThan(S.concourse.y+L.h-.02);
+      }
+    }
+  });
+  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`plants the plaza on the lot, off the concourse, gates and walks: ${grouping}`,()=>{
+    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.concourse.outer;
+    expect(plaza.trees.length).toBeGreaterThan(15);expect(plaza.bollards.length).toBeGreaterThan(10);
+    for(const p of [...plaza.trees,...plaza.beds,...plaza.bollards]){
+      expect(p[0]).toBeGreaterThan(a.x-2);expect(p[0]).toBeLessThan(a.x+a.w+2);expect(p[1]).toBeGreaterThan(a.z-2);expect(p[1]).toBeLessThan(a.z+a.d+2);
+      expect(((p[0]-cx)/(o.rx*K))**2+((p[1]-cz)/(o.rz*K))**2).toBeGreaterThan(1);
+    }
+    // Nothing planted stands in the main gate's approach.
+    for(const t of [...plaza.trees,...plaza.beds])expect(t[0]>cx&&Math.abs(t[1]-cz)<STADIUM.gate.width*K/2).toBe(false);
+    // Plaza trees that survived the road and walk clean-up are in the scene; none sits on a station walk.
+    const walks=(s.communityRail?.loop?.stops??[]).map(st=>st.walk.map(([x,,z]):Pt=>[x,z]));
+    for(const t of s.trees)for(const w of walks)expect(distanceToRoad([t.x,t.z],w)).toBeGreaterThanOrEqual(.45);
   });
 });
 

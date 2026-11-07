@@ -4,6 +4,7 @@ import * as THREE from "three";
 import {TERRACE_H} from "./scene";
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from "./models";
 import {focusable} from "./materials";
+import {stadiumSkinTexture} from "./stadiumTextures";
 import {STADIUM,STADIUM_SCALE as K,pitchLines,stadiumCentre,stadiumColumns,stadiumGeometry} from "./stadiumGeometry";
 export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
@@ -11,27 +12,31 @@ import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
 const noRaycast=()=>null;
 
 /**
- * Atlas Stadium: five merged meshes (shell skins, shell undersides, lit seams, seating, concourse)
- * and four instanced sets (columns and pitch lines, pitch, scoreboards, terrace). All static: no
- * lights and no frame loop. Night raises the emissive glow on the seams, undersides, pitch and
- * scoreboards, the same way the other buildings light up.
+ * Atlas Stadium: six merged meshes (perforated shell skins, shell undersides, lit seams with the
+ * floodlight ring, seating, concourse, glazed lobby) and four instanced sets (columns and pitch
+ * lines, pitch, scoreboards, terrace). All static: no lights and no frame loop. Night lights the
+ * skin's perforations, the seams, undersides, lobby glass, pitch and scoreboards, the same way the
+ * other buildings light up. Trees, beds and bollards on the plaza are drawn with the city's own.
  */
 export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
   const geo=useMemo(()=>a?stadiumGeometry():undefined,[a]);
   useEffect(()=>()=>{if(geo)for(const v of Object.values(geo))v.dispose();},[geo]);
+  const skin=useMemo(()=>stadiumSkinTexture(),[]);
+  useEffect(()=>()=>{skin.map.dispose();skin.glow.dispose();},[skin]);
   const mats=useMemo(()=>({
-    shell:focusable(new THREE.MeshStandardMaterial({color:"#f3eee4",roughness:.55,metalness:.05,emissive:"#ffd9a0",emissiveIntensity:0})),
+    shell:focusable(new THREE.MeshStandardMaterial({color:"#ffffff",map:skin.map,roughness:.5,metalness:.08,emissive:"#ffffff",emissiveMap:skin.glow,emissiveIntensity:0})),
+    glass:focusable(new THREE.MeshStandardMaterial({color:"#8fa9ad",roughness:.12,metalness:.45,emissive:"#ffc98a",emissiveIntensity:0})),
     under:focusable(new THREE.MeshStandardMaterial({color:"#e9e1d2",roughness:.7,emissive:"#ffc477",emissiveIntensity:0})),
     seam:focusable(new THREE.MeshStandardMaterial({color:"#c4b597",roughness:.5,emissive:"#ffcf86",emissiveIntensity:0})),
     seats:focusable(new THREE.MeshStandardMaterial({color:"#46675d",roughness:.85})),
     deck:focusable(new THREE.MeshStandardMaterial({color:"#ddd6c7",roughness:.8})),
     pitch:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#4f9a5f",emissiveIntensity:0,roughness:.9}),
     screen:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#9fe6cf",emissiveIntensity:0,roughness:.4}),
-  }),[]);
+  }),[skin]);
   // Warm and calm at night: no real-time lights, no colour cycling (KC, 2026-10-31: buildings show lights at night).
   useEffect(()=>{
-    mats.shell.emissiveIntensity=night?.12:0;mats.under.emissiveIntensity=night?.7:0;mats.seam.emissiveIntensity=night?1.25:0;
-    mats.pitch.emissiveIntensity=night?.5:0;mats.screen.emissiveIntensity=night?.9:0;
+    mats.shell.emissiveIntensity=night?1.1:0;mats.glass.emissiveIntensity=night?.85:0;mats.under.emissiveIntensity=night?.7:0;mats.seam.emissiveIntensity=night?1.25:0;
+    mats.pitch.emissiveIntensity=night?.75:0;mats.screen.emissiveIntensity=night?.9:0;
   },[mats,night]);
   useEffect(()=>()=>{for(const v of Object.values(mats))v.dispose();},[mats]);
   const handlers=useMemo(()=>({
@@ -59,6 +64,7 @@ export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:Stad
       <mesh geometry={geo.seams} material={mats.seam} raycast={noRaycast}/>
       <mesh geometry={geo.seats} material={mats.seats} receiveShadow raycast={noRaycast}/>
       <mesh geometry={geo.deck} material={mats.deck} castShadow receiveShadow {...handlers}/>
+      <mesh geometry={geo.glass} material={mats.glass} {...handlers}/>
     </group>
     <Instanced items={parts.pitch} geometry={g.box} material={mats.pitch}/>
     <Instanced items={parts.screens} geometry={g.box} material={mats.screen}/>

@@ -12,6 +12,7 @@ import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
+import {stadiumPlaza} from "./stadiumGeometry";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planMallGarden,type MallGarden} from "./mallGarden";
@@ -725,6 +726,12 @@ function buildCity(layout: Layout): Scene3D {
   }
   const stadium=planStadium(land,paving,terraces.find(t=>t.id==="github-profile"));
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
+  if(stadium){
+    // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
+    const plaza=stadiumPlaza(stadium);
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26+(i%3)*.02,kind:'round' as TreeKind})));
+    bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
+  }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
   const core=cityEnvelope(cityLand)!;
   const marketplaceSite={x:core.x+core.w-27,z:core.z+core.d+.6,w:0,d:0};
@@ -779,6 +786,9 @@ function buildCity(layout: Layout): Scene3D {
   land.push(...compactSquareLand(land,cityLand));
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
+  // Keep station walks clear of plaza trees, beds and bollards.
+  const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
+  for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
   if(communityRail){
     const areas=stationAccessAreas(communityRail.hills);
     if(mallGarden)areas.push(...areas.map(a=>({...a,x:2*mallGarden.axis-a.x-a.w})));

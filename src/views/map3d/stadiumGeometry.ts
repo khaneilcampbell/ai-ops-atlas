@@ -36,6 +36,15 @@ export const STADIUM={
  seam:.12,rim:.06,
  /** Gap between a shell's outer skin and its underside. */
  thickness:.05,
+ /**
+  * Each shell's lower edge arches up in its middle by `h`, easing back to the plain curve by
+  * `reach` up the shell, so the glazed lobby shows under the shells all round.
+  */
+ lift:{h:.75,reach:.32},
+ /** Glazed lobby ring on the concourse, under the arches; a mullion every `mullions`th of the ring. */
+ lobby:{rx:3.07,rz:2.63,h:.4,mullions:56},
+ /** Floodlight heads under the opening rim, per shell, aimed at the pitch. */
+ floods:3,
  segments:{u:8,v:10},
  /** Coarser grid for the undersides, only seen through the roof opening. */
  underSegments:{u:6,v:6},
@@ -45,7 +54,7 @@ export const STADIUM={
  /** Scoreboards on the two short ends of the bowl, facing the pitch. */
  screens:{x:2.95,y:1.55,w:1.25,h:.42},
  /** Raised ring walkway on slim columns. */
- concourse:{y:.5,thick:.07,inner:{rx:3.25,rz:2.8},outer:{rx:3.95,rz:3.45},edge:.025,segments:48,columns:24},
+ concourse:{y:.5,thick:.07,inner:{rx:3.04,rz:2.6},outer:{rx:3.95,rz:3.45},edge:.025,segments:48,columns:24},
  /**
   * Gates: steps from the deck down to street level. The main gate faces east, where the roads
   * and walks from GitHub Profile, the Financial District, the airport and Stadium Station arrive;
@@ -76,19 +85,20 @@ export function shellPoint(i:number,u:number,v:number,inset=0):V3{
  const puff=S.bulge*Math.sin(Math.PI*Math.min(1,v*1.1))*(1-u*u)+S.lip*u*(.4+.6*v)-inset;
  const rx=lerp(S.base.rx,S.open.rx,t)+puff,rz=lerp(S.base.rz,S.open.rz,t)+puff;
  const crown=S.rhythm[i%S.rhythm.length];
- const y=S.base.y+(crown-S.base.y)*Math.sin(Math.PI/2*v)+.06*Math.sin(Math.PI*v)*(1-u*u)-inset*.6;
+ const arch=S.lift.h*(1-u*u)*Math.max(0,1-v/S.lift.reach)**2;
+ const y=S.base.y+(crown-S.base.y)*Math.sin(Math.PI/2*v)+.06*Math.sin(Math.PI*v)*(1-u*u)+arch-inset*.6;
  return [rx*Math.cos(a),y,rz*Math.sin(a)];
 }
 
 /** A grid surface from a point function; winding chosen so normals face `outward`. */
-function surface(nu:number,nv:number,at:(u:number,v:number)=>V3,outward:boolean){
- const pos:number[]=[],idx:number[]=[];
- for(let j=0;j<=nv;j++)for(let i=0;i<=nu;i++)pos.push(...at(i/nu,j/nv));
+function surface(nu:number,nv:number,at:(u:number,v:number)=>V3,outward:boolean,uvScale?:[number,number]){
+ const pos:number[]=[],idx:number[]=[],uv:number[]=[];
+ for(let j=0;j<=nv;j++)for(let i=0;i<=nu;i++){pos.push(...at(i/nu,j/nv));if(uvScale)uv.push(i/nu*uvScale[0],j/nv*uvScale[1]);}
  for(let j=0;j<nv;j++)for(let i=0;i<nu;i++){
   const a=j*(nu+1)+i,b=a+1,c=a+nu+1,d=c+1;
   if(outward)idx.push(a,c,b,b,c,d);else idx.push(a,b,c,b,d,c);
  }
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));if(uvScale)g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
 }
 
 /** A sloped elliptical band from (s0 at y0) to (s1 at y1), seen from above and the pitch. */
@@ -100,8 +110,8 @@ function wall(e:{rx:number;rz:number},y0:number,y1:number,n:number,out:boolean){
  return surface(n,1,(u,v)=>{const a=u*Math.PI*2;return [e.rx*Math.cos(a),lerp(y0,y1,v),e.rz*Math.sin(a)];},out);
 }
 const box=(x:number,y:number,z:number,w:number,h:number,d:number,r=0)=>{const g=new THREE.BoxGeometry(w,h,d);g.rotateY(r);g.translate(x,y+h/2,z);g.deleteAttribute('uv');return g;};
-const merge=(parts:THREE.BufferGeometry[])=>{
- const flat=parts.map(p=>{const g=p.index?p.toNonIndexed():p;if(g!==p)p.dispose();if(g.getAttribute('uv'))g.deleteAttribute('uv');return g;});
+const merge=(parts:THREE.BufferGeometry[],keepUv=false)=>{
+ const flat=parts.map(p=>{const g=p.index?p.toNonIndexed():p;if(g!==p)p.dispose();if(!keepUv&&g.getAttribute('uv'))g.deleteAttribute('uv');return g;});
  const out=mergeGeometries(flat)!;flat.forEach(g=>g.dispose());return compactGeometry(out);
 };
 
@@ -114,7 +124,12 @@ export interface StadiumGeometry {
  seams:THREE.BufferGeometry;
  seats:THREE.BufferGeometry;
  deck:THREE.BufferGeometry;
+ /** Glazed lobby ring under the arches: warm at night. */
+ glass:THREE.BufferGeometry;
 }
+
+/** Panels across and up one shell skin, for the perforated skin texture (one tile = 4 x 4 panels). */
+export const SKIN_TILES:[number,number]=[1.5,2.5];
 
 /** Built once per stadium, centred on the box centre at terrace height. */
 export function stadiumGeometry():StadiumGeometry{
@@ -122,10 +137,16 @@ export function stadiumGeometry():StadiumGeometry{
  const cut=1-S.seam*2,top=1-S.rim;
  for(let i=0;i<S.shells;i++){
   // Skin from the trailing edge to the seam, seam to the leading edge, rim around the top.
-  shells.push(surface(NU,NV,(u,v)=>shellPoint(i,-1+u*(1+cut),v*top),true));
-  seams.push(surface(2,NV,(u,v)=>shellPoint(i,cut+u*(1-cut),v*top),true));
+  // Rows packed towards the base (v^1.5), so the arched lower edge stays a smooth curve.
+  shells.push(surface(NU,NV,(u,v)=>shellPoint(i,-1+u*(1+cut),v**1.5*top),true,SKIN_TILES));
+  seams.push(surface(2,NV,(u,v)=>shellPoint(i,cut+u*(1-cut),v**1.5*top),true));
   seams.push(surface(NU,1,(u,v)=>shellPoint(i,-1+u*2,top+v*(1-top)),true));
   under.push(surface(S.underSegments.u,S.underSegments.v,(u,v)=>shellPoint(i,-1+u*2,v,S.thickness),false));
+  // Floodlight heads tucked under the rim, facing the pitch.
+  for(let k=0;k<S.floods;k++){
+   const [x,y,z]=shellPoint(i,-.6+1.2*k/(S.floods-1),.96,S.thickness+.04),a=Math.atan2(z,x);
+   seams.push(box(x,y-.05,z,.05,.05,.16,-a));
+  }
  }
  const C=S.concourse,deckTop=C.y,deckLow=C.y-C.thick;
  seams.push(wall(C.outer,deckTop-C.edge,deckTop,C.segments,true));
@@ -135,6 +156,10 @@ export function stadiumGeometry():StadiumGeometry{
   wall(C.outer,deckLow,deckTop-C.edge,C.segments,true),
   wall(C.inner,deckLow,deckTop,C.segments,false),
  ];
+ // Glazed lobby under the arches: a glass ring with mullions and a slim head rail.
+ const L=S.lobby,glass=[wall(L,deckTop,deckTop+L.h,C.segments,true),wall({rx:L.rx-.01,rz:L.rz-.01},deckTop,deckTop+L.h,C.segments,false)];
+ for(let k=0;k<L.mullions;k++){const a=k/L.mullions*Math.PI*2;deck.push(box(L.rx*Math.cos(a),deckTop,L.rz*Math.sin(a),.025,L.h,.025,-a));}
+ deck.push(wall({rx:L.rx+.015,rz:L.rz+.015},deckTop+L.h-.03,deckTop+L.h,C.segments,true));
  // Main gate: wide steps from the deck's east edge down to the street.
  const G=S.gate,east=C.outer.rx-.05,run=(G.foot-east)/G.steps;
  for(let k=0;k<G.steps;k++){const h=deckTop*(G.steps-k)/G.steps;deck.push(box(east+run*(k+.5),0,0,run,h,G.width));}
@@ -153,7 +178,7 @@ export function stadiumGeometry():StadiumGeometry{
   seats.push(band(e(t0),e(t1),y0,y1,T.segments,true),wall(e(t0),k?lerp(T.low,T.high,t0):0,y0,T.segments,false));
  }
  seats.push(wall(T.outer,0,T.high,T.segments,true));
- return {shells:merge(shells),undersides:merge(under),seams:merge(seams),seats:merge(seats),deck:merge(deck)};
+ return {shells:merge(shells,true),undersides:merge(under),seams:merge(seams),seats:merge(seats),deck:merge(deck),glass:merge(glass)};
 }
 
 /** Instanced extras (all g.box): concourse columns and pitch lines. */
@@ -174,7 +199,25 @@ export function pitchLines(){
 
 /** Draw calls the stadium makes, for the performance budget. Nothing here adds a light. */
 export function stadiumPieceCount(){
- const meshes=['shells','undersides','seams','seats','deck'].length,instanced=['columns + lines','pitch','screens','terrace'].length;
+ const meshes=['shells','undersides','seams','seats','deck','glass'].length,instanced=['columns + lines','pitch','screens','terrace'].length;
  return {meshes,instanced,draws:meshes+instanced,instances:stadiumColumns().length+pitchLines().length+1+2+1};
 }
 export const stadiumTriangles=(g:StadiumGeometry)=>Object.values(g).reduce((n,v)=>n+(v.index?v.index.count:v.getAttribute('position').count)/3,0);
+
+/**
+ * The plaza on the stadium lot, in world units: a ring of trees round the concourse with planted
+ * beds between them, and lit bollards along the main approach and round the ring. Gates and their
+ * approaches stay open.
+ */
+export function stadiumPlaza(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>){
+ const [cx,cz]=stadiumCentre(a),K=STADIUM_SCALE,C=STADIUM.concourse,G=STADIUM.gate,trees:Pt[]=[],beds:Pt[]=[],bollards:Pt[]=[];
+ const feet=sideGateFeet().map(([x,z]):Pt=>[cx+x*K,cz+z*K]),gate=stadiumGate(a);
+ const open=(p:Pt,pad:number)=>Math.abs(p[1]-cz)<G.width*K/2+pad&&p[0]>cx||feet.some(f=>Math.hypot(p[0]-f[0],p[1]-f[1])<pad+.6);
+ const ring=(grow:number,n:number,phase:number,out:Pt[],pad:number)=>{
+  for(let k=0;k<n;k++){const t=(k+phase)/n*Math.PI*2,p:Pt=[cx+(C.outer.rx*K+grow)*Math.cos(t),cz+(C.outer.rz*K+grow)*Math.sin(t)];if(!open(p,pad))out.push(p);}
+ };
+ ring(1.05,30,0,trees,.55);ring(1.05,30,.5,beds,.45);ring(.4,24,.25,bollards,.25);
+ // Two lines of bollards lead from the main gate to the edge of the lot.
+ for(let x=gate[0]+.2;x<a.x+a.w+1.8;x+=.45)for(const side of [-1,1])bollards.push([x,cz+side*(G.width*K/2+.35)]);
+ return {trees,beds,bollards};
+}
