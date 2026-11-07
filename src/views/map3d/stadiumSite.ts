@@ -1,7 +1,7 @@
 import type {Rect} from './scene';
 import type {Pt} from './roads';
 import {distanceToRoad} from './highway';
-import {STADIUM,STADIUM_SCALE,sideGateFeet,stadiumCentre} from './stadiumGeometry';
+import {STADIUM,STADIUM_SCALE,sideGateFeet,stadiumCentre,stadiumRingCentre} from './stadiumGeometry';
 import {SITE_EDGE,type StadiumPlan} from './stadiumPlan';
 
 /**
@@ -61,13 +61,13 @@ export function planStadiumSite({stadium:a,land,envelope,paths}:{stadium:Stadium
  Object.assign(site,{x:cx-ew,w:ew*2,z:cz-ns,d:ns*2});
  const boxes:SiteBox[]=[];
  // Reflecting pools in arcs round the concourse, open at the gates.
- const o=STADIUM.ring,P=S.pools,ring={rx:o.rx*STADIUM_SCALE+P.grow,rz:o.rz*STADIUM_SCALE+P.grow};
+ const [rcx]=stadiumRingCentre(a),o=STADIUM.ring,P=S.pools,ring={rx:o.rx*STADIUM_SCALE+P.grow,rz:o.rz*STADIUM_SCALE+P.grow};
  const feet=sideGateFeet().map(([x,z]):Pt=>[cx+x*STADIUM_SCALE,cz+z*STADIUM_SCALE]);
  for(let k=0;k<P.segments;k++){
-  const a0=k/P.segments*Math.PI*2,a1=(k+1)/P.segments*Math.PI*2,am=(a0+a1)/2,[mx,mz]=[cx+ring.rx*Math.cos(am),cz+ring.rz*Math.sin(am)];
+  const a0=k/P.segments*Math.PI*2,a1=(k+1)/P.segments*Math.PI*2,am=(a0+a1)/2,[mx,mz]=[rcx+ring.rx*Math.cos(am),cz+ring.rz*Math.sin(am)];
   if(Math.abs(mz-cz)<STADIUM.gate.width*STADIUM_SCALE/2+.5&&mx>cx||feet.some(f=>Math.hypot(f[0]-mx,f[1]-mz)<1.1))continue;
   if(paths.some(path=>distanceToRoad([mx,mz],path)<.5))continue;
-  const [x0,z0]=[cx+ring.rx*Math.cos(a0),cz+ring.rz*Math.sin(a0)],[x1,z1]=[cx+ring.rx*Math.cos(a1),cz+ring.rz*Math.sin(a1)],len=Math.hypot(x1-x0,z1-z0)+.02,r=-Math.atan2(z1-z0,x1-x0);
+  const [x0,z0]=[rcx+ring.rx*Math.cos(a0),cz+ring.rz*Math.sin(a0)],[x1,z1]=[rcx+ring.rx*Math.cos(a1),cz+ring.rz*Math.sin(a1)],len=Math.hypot(x1-x0,z1-z0)+.02,r=-Math.atan2(z1-z0,x1-x0);
   boxes.push({x:mx,z:mz,w:len,d:P.width+.12,c:'#d9d2c4',h:.05,r},{x:mx,z:mz,w:len,d:P.width,c:'#5aaac0',h:.065,r});
  }
  return {site,boxes};

@@ -31,7 +31,7 @@ import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
 import {cityEnvelope} from "./citySpacing";
-import {STADIUM,STADIUM_SCALE,mainRoofAt,practiceRoofAt,stadiumPlaza,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet,stairLine,treeColumns,trussXs} from "./stadiumGeometry";
+import {STADIUM,STADIUM_SCALE,mainRoofAt,practiceRoofAt,stadiumPlaza,stadiumCentre,stadiumRingCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet,stairLine,treeColumns,trussXs} from "./stadiumGeometry";
 import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
 describe("Atlas Stadium",()=>{
@@ -54,22 +54,27 @@ describe("Atlas Stadium",()=>{
     const P=S.practice;expect(practiceRoofAt(P.x0,P.z0)).toBeGreaterThan(practiceRoofAt(P.x1,P.z0));
     for(let x=P.x0-P.over;x<=P.x1+P.over;x+=.1)expect(practiceRoofAt(x,-H.z-R.over)).toBeLessThan(mainRoofAt(x,-H.z-R.over)-R.thick-.1);
   });
-  it("carries the roof on twelve trusses and six tree columns, with a diagonal grand stair to the main gate",()=>{
-    expect(S.trusses.main).toBe(12);expect(trussXs().length).toBe(12);expect(trussXs(S.trusses.practice).length).toBe(5);
+  it("carries the roof on fourteen trusses and six tree columns, with a straight grand stair square to the main gate",()=>{
+    expect(S.trusses.main).toBe(14);expect(trussXs().length).toBe(14);expect(trussXs(S.trusses.practice).length).toBe(5);
     const xs=trussXs();for(let k=1;k<xs.length;k++)expect(xs[k]).toBeGreaterThan(xs[k-1]);
     const trees=treeColumns();expect(trees.length).toBe(6);
     for(const [x,z] of trees)expect(trees.some(([x2,z2])=>Math.abs(x2-x)<1e-9&&Math.abs(z2+z)<1e-9)).toBe(true);
-    const st=stairLine();expect(S.stair.angle).toBe(35);
-    expect(Math.atan2(st.foot[1]-st.top[1],st.foot[0]-st.top[0])*180/Math.PI).toBeCloseTo(35,6);
-    expect(st.foot[0]).toBe(S.gate.foot);expect(st.foot[1]).toBe(0);expect(st.top[0]).toBeCloseTo(S.podium.x1,6);
-    expect(Math.abs(st.top[1])).toBeLessThan(S.podium.z-S.gate.width/2);
+    // KC, 14:34: the diagonal stair crossed the pools onto the road. It is now one straight flight
+    // on the centre line, from the gate foot up to the entrance deck, inside the pools' gap.
+    const st=stairLine();
+    expect(st.foot).toEqual([S.gate.foot,0]);expect(st.top).toEqual([S.podium.x1,0]);expect(st.len).toBeGreaterThan(0);
+    const rise=S.podium.h/S.stair.steps,tread=st.len/S.stair.steps;expect(Math.atan2(rise,tread)*180/Math.PI).toBeLessThan(40);
+    expect(S.stair.width).toBeLessThan(2*S.podium.z);
   });
   it("keeps both halls inside the 8 x 7 design box and the pools' ring, with the gates on its lot",()=>{
     const H=S.hall,P=S.practice,Pd=S.podium,R=S.ring;
     for(const x of [Pd.x0,Pd.x1,P.podium.x0,P.podium.x1])expect(Math.abs(x)).toBeLessThan(box/2);
     for(const z of [Pd.z,P.podium.z0])expect(Math.abs(z)).toBeLessThan(depth/2);
     const corners=[[Pd.x0,Pd.z],[Pd.x1,Pd.z],[P.podium.x0,P.podium.z0],[P.podium.x1,P.podium.z0],[H.x0-S.roof.over,H.z+S.roof.over]];
-    for(const [x,z] of corners)expect((x/R.rx)**2+(z/R.rz)**2).toBeLessThan(1);
+    for(const [x,z] of corners)expect(((x-R.cx)/R.rx)**2+(z/R.rz)**2).toBeLessThan(1);
+    for(const [x,z] of treeColumns())expect(((x-R.cx)/R.rx)**2+(z/R.rz)**2).toBeLessThan(1);
+    // The gate foot is outside the ring, so the stair lands in the pools' gap.
+    expect(S.gate.foot-R.cx).toBeGreaterThan(R.rx);
     expect(S.gate.foot).toBeLessThan(box/2+2);
     for(const [x,z]of sideGateFeet()){expect(Math.abs(x)).toBeLessThan(box/2);expect(Math.abs(z)).toBeLessThan(depth/2);}
   });
@@ -95,7 +100,7 @@ describe("Atlas Stadium",()=>{
     const stop=s.communityRail?.loop?.stops.find(x=>x.id==="service:stadium-station");
     if(stop){const [x,,z]=stop.walk[0];expect(atGate([x,z])).toBeLessThan(.05);}
     // Nothing that moves crosses the halls, the podium or the ring round them.
-    const o={rx:S.ring.rx*STADIUM_SCALE,rz:S.ring.rz*STADIUM_SCALE},inside=([x,z]:Pt)=>((x-cx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
+    const [rcx]=stadiumRingCentre(a),o={rx:S.ring.rx*STADIUM_SCALE,rz:S.ring.rz*STADIUM_SCALE},inside=([x,z]:Pt)=>((x-rcx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
     const paths:Pt[][]=[...s.transportConnections.flatMap(l=>[l.road,l.walk])];
     if(s.freight)paths.push(s.freight.route,s.freight.highway,s.freight.cityAccess,...s.freight.access.flatMap(x=>[x.collector,...x.ramps]));
     if(s.communityRail?.loop)paths.push(s.communityRail.loop.route,...s.communityRail.loop.stops.map(st=>st.walk.map(([x,,z])=>[x,z] as Pt)));
@@ -103,7 +108,7 @@ describe("Atlas Stadium",()=>{
       const p:Pt=[path[i-1][0]+(path[i][0]-path[i-1][0])*t,path[i-1][1]+(path[i][1]-path[i-1][1])*t];expect(inside(p)).toBe(false);
     }
     // Street lights keep off the ring.
-    expect(lightingObstacles(s).some(b=>b.x===cx&&b.z===cz&&b.w===o.rx*2&&b.d===o.rz*2)).toBe(true);
+    expect(lightingObstacles(s).some(b=>b.x===rcx&&b.z===cz&&b.w===o.rx*2&&b.d===o.rz*2)).toBe(true);
   });
   it("stays cheap: seven draws, under 20,000 triangles, no lights",()=>{
     const pieces=stadiumPieceCount(),geo=stadiumGeometry();
@@ -128,11 +133,11 @@ describe("Atlas Stadium",()=>{
 
 describe("Atlas Stadium grounds",()=>{
   for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`plants the plaza on the lot, off the halls, gates and walks: ${grouping}`,()=>{
-    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.ring;
+    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.ring,[rcx]=stadiumRingCentre(a);
     expect(plaza.trees.length).toBeGreaterThanOrEqual(12);expect(plaza.bollards.length).toBeGreaterThan(10);
     for(const p of [...plaza.trees,...plaza.beds,...plaza.bollards]){
       expect(p[0]).toBeGreaterThan(a.x-2);expect(p[0]).toBeLessThan(a.x+a.w+2);expect(p[1]).toBeGreaterThan(a.z-2);expect(p[1]).toBeLessThan(a.z+a.d+2);
-      expect(((p[0]-cx)/(o.rx*K))**2+((p[1]-cz)/(o.rz*K))**2).toBeGreaterThan(1);
+      expect(((p[0]-rcx)/(o.rx*K))**2+((p[1]-cz)/(o.rz*K))**2).toBeGreaterThan(1);
     }
     // Nothing planted stands in the main gate's approach.
     for(const t of [...plaza.trees,...plaza.beds])expect(t[0]>cx&&Math.abs(t[1]-cz)<STADIUM.gate.width*K/2).toBe(false);

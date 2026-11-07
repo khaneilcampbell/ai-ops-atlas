@@ -20,33 +20,37 @@ import type {Pt} from './roads';
  */
 export const STADIUM={
  /** Main hall glass line: x from x0 to x1, z from -z to z. */
- hall:{x0:-2.6,x1:2.6,z:1.85},
+ hall:{x0:-3.4,x1:2.6,z:1.85},
  /** White podium under the main hall, running east past the hall as the entrance deck. */
- podium:{h:.45,slab:.08,x0:-2.75,x1:3.4,z:1.95,inset:.18,column:.5},
+ podium:{h:.45,slab:.08,x0:-3.55,x1:3.4,z:1.95,inset:.18,column:.5},
  /** Main roof: a thin plane from `low` (east) to `high` (west), `over` past the glass, curling up by `curl` at the eaves. */
- roof:{low:1.75,high:2.45,over:.4,thick:.06,curl:.14,edge:.62,seg:{x:14,z:10}},
+ roof:{low:1.75,high:2.45,over:.32,thick:.06,curl:.14,edge:.62,seg:{x:17,z:10}},
  /** Practice hall, north of the main hall (z0 is its far side), and its own podium and roof. */
  practice:{x0:-2,x1:-.4,z0:-2.95,z1:-2.05,low:1.05,high:1.3,over:.25,curl:.08,podium:{x0:-2.1,x1:-.3,z0:-3.08}},
  /** Planar trusses across the short span (Warren web), `panels` per truss, `depth` deep. */
- trusses:{main:12,practice:5,panels:8,depth:.2},
+ trusses:{main:14,practice:5,panels:8,depth:.2},
  /** Purlins along the length of each roof, under the sheeting. */
  purlins:{main:9,practice:5},
  /** Zig-zag bracing bays outside the glass: long faces, end faces, practice faces. */
- bracing:{long:8,short:6,practice:4,off:.07},
+ bracing:{long:10,short:6,practice:4,off:.07},
  /** Tree columns: a concrete pier that splits into `struts` splayed steel arms holding the eave. */
  trees:{struts:5,pier:.32,reach:.42,east:[-.62,.62]},
  /** Mullion spacing on every glass wall, and the transom heights above the podium. */
  mullion:.28,transoms:[.42,.84],
- /** Grand stair: a diagonal of `angle` degrees from the forecourt up to the entrance deck. */
- stair:{angle:35,steps:7},
+ /** Grand stair: one straight flight square to the entrance, from the gate up to the entrance deck. */
+ stair:{steps:7,width:1.7},
  /**
   * Gates: the main gate is the grand stair's foot, `foot` east of the centre, where the roads and
   * walks from GitHub Profile, the Financial District, the airport and Stadium Station arrive. Two
   * short side flights come down off the podium's long sides at x = side.x.
   */
  gate:{foot:4.45,width:1.2,side:{x:1.6,run:.45,steps:3,width:.7}},
- /** The ring the grounds keep clear: pools, palms and street lights stay outside it. */
- ring:{rx:4.1,rz:3.65},
+ /**
+  * The ring the grounds keep clear: pools, palms and street lights stay outside it. Its centre sits
+  * `cx` west of the box centre, because the main hall grows west toward the ocean (KC, 14:34) while
+  * the entrance and the gate stay put.
+  */
+ ring:{cx:-.25,rx:4.38,rz:3.65},
  /** Slim light poles along the practice hall's north side. */
  poles:4,
 } as const;
@@ -69,6 +73,8 @@ export const practiceRoofAt=(x:number,z:number)=>roofAt(practiceRoof,x,z);
 /** Highest point of the roof above the terrace: the main roof's curled west tips. */
 export const stadiumCrown=()=>(STADIUM.roof.high+2.5*STADIUM.roof.curl)*STADIUM_SCALE;
 export const stadiumCentre=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>[a.x+a.w/2,a.z+a.d/2];
+/** Centre of the grounds' ring, in world units. */
+export const stadiumRingCentre=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>{const [x,z]=stadiumCentre(a);return [x+STADIUM.ring.cx*STADIUM_SCALE,z];};
 /** Street-level point where the grand stair lands: every stadium road and walk ends here. */
 export const stadiumGate=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>{const [x,z]=stadiumCentre(a);return [x+STADIUM.gate.foot*STADIUM_SCALE,z];};
 /** Where the two side flights land, as offsets from the centre, in design units: north, then south. */
@@ -76,10 +82,10 @@ export function sideGateFeet():Pt[]{
  const {x,run}=STADIUM.gate.side,z=STADIUM.podium.z+run;
  return [[x,-z],[x,z]];
 }
-/** Top and foot of the grand stair, in design units: it climbs north-west from the main gate. */
+/** Foot and top of the grand stair, in design units: it climbs straight west from the main gate to the deck. */
 export function stairLine(){
- const a=STADIUM.stair.angle*Math.PI/180,foot:Pt=[STADIUM.gate.foot,0],len=(STADIUM.gate.foot-STADIUM.podium.x1)/Math.cos(a);
- return {foot,top:[foot[0]-len*Math.cos(a),foot[1]-len*Math.sin(a)] as Pt,len,angle:a};
+ const foot:Pt=[STADIUM.gate.foot,0],top:Pt=[STADIUM.podium.x1,0];
+ return {foot,top,len:foot[0]-top[0]};
 }
 /** Tree column piers, in design units: the main hall's four corners and two on the entrance face. */
 export function treeColumns():Pt[]{
@@ -107,10 +113,16 @@ function surface(nu:number,nv:number,at:(u:number,v:number)=>V3,outward:boolean,
 const box=(x:number,y:number,z:number,w:number,h:number,d:number,r=0)=>{const g=new THREE.BoxGeometry(w,h,d);g.rotateY(r);g.translate(x,y+h/2,z);g.deleteAttribute('uv');return g;};
 const column=(x:number,y:number,z:number,r:number,h:number)=>{const g=new THREE.CylinderGeometry(r,r,h,8,1,true);g.translate(x,y+h/2,z);g.deleteAttribute('uv');return g;};
 const Z=new THREE.Vector3(0,0,1);
-/** A square steel member from a to b. */
+/**
+ * A steel member from a to b: a four-sided tube with no end caps and soft normals, so it reads as
+ * a round tube and costs 8 vertices instead of a box's 24 (the map's geometry budget).
+ */
 function beam(a:V3,b:V3,t=.03){
- const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),len=A.distanceTo(B);
- const g=new THREE.BoxGeometry(t,t,len);g.deleteAttribute('uv');
+ const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),len=A.distanceTo(B),h=t/2,pos:number[]=[],nor:number[]=[],idx:number[]=[];
+ const ring:[number,number][]=[[h,h],[-h,h],[-h,-h],[h,-h]];
+ for(const z of [-len/2,len/2])for(const [x,y] of ring){pos.push(x,y,z);nor.push(x/(h*Math.SQRT2),y/(h*Math.SQRT2),0);}
+ for(let k=0;k<4;k++){const i=k,j=(k+1)%4;idx.push(i,j,i+4,j,j+4,i+4);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setIndex(idx);
  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(Z,B.clone().sub(A).normalize()));
  g.translate((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);return g;
 }
@@ -245,15 +257,18 @@ export function stadiumGeometry():StadiumGeometry{
   for(let k=0;k<=nx;k++){const x=lerp(s.x0+.08,s.x1-.08,k/nx);for(const z of [s.z0+.08,s.z1-.08])podium.push(column(x,0,z,.045,h));}
   for(let k=1;k<nz;k++){const z=lerp(s.z0+.08,s.z1-.08,k/nz);for(const x of [s.x0+.08,s.x1-.08])podium.push(column(x,0,z,.045,h));}
  }
- // Grand stair: wide steps on a diagonal from the main gate up to the entrance deck, with handrails.
- const st=stairLine(),G=S.gate,n=S.stair.steps,dx=Math.cos(st.angle),dz=Math.sin(st.angle),run=st.len/n;
+ // Grand stair: one straight flight square to the entrance, from the gate up to the deck, between
+ // two low cheek walls with handrails on top.
+ const st=stairLine(),G=S.gate,n=S.stair.steps,W=S.stair.width,run=st.len/n;
  for(let k=0;k<n;k++){
-  const d=run*(k+.5),h=y0*(k+1)/n;
-  podium.push(box(st.foot[0]-dx*d,0,st.foot[1]-dz*d,run+.02,h,G.width,-st.angle));
+  // Step k counts up from the foot: the lowest step is at the gate, the top one meets the deck.
+  const x=st.foot[0]-run*(k+.5),h=y0*(k+1)/n;
+  podium.push(box(x,0,0,run+.01,h,W));
  }
  for(const side of [-1,1]){
-  const ox=-dz*side*(G.width/2-.04),oz=dx*side*(G.width/2-.04);
-  roof.push(beam([st.foot[0]+ox,.2,st.foot[1]+oz],[st.top[0]+ox,y0+.2,st.top[1]+oz],.016));
+  const z=side*(W/2+.04);
+  podium.push(box((st.foot[0]+st.top[0])/2,0,z,st.len,y0*.55,.08));
+  steel.push(beam([st.foot[0],.22,z],[st.top[0],y0+.2,z],.02));
  }
  // Side flights off the podium's long sides.
  for(const [fx,fz] of sideGateFeet()){
@@ -278,11 +293,11 @@ export const stadiumTriangles=(g:StadiumGeometry)=>Object.values(g).reduce((n,v)
  * approach. The gates and their approaches stay open.
  */
 export function stadiumPlaza(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>){
- const [cx,cz]=stadiumCentre(a),K=STADIUM_SCALE,R=STADIUM.ring,G=STADIUM.gate,trees:Pt[]=[],beds:Pt[]=[],bollards:Pt[]=[];
+ const [cx,cz]=stadiumCentre(a),[rx0]=stadiumRingCentre(a),K=STADIUM_SCALE,R=STADIUM.ring,G=STADIUM.gate,trees:Pt[]=[],beds:Pt[]=[],bollards:Pt[]=[];
  const feet=sideGateFeet().map(([x,z]):Pt=>[cx+x*K,cz+z*K]),gate=stadiumGate(a);
  const open=(p:Pt,pad:number)=>Math.abs(p[1]-cz)<G.width*K/2+pad&&p[0]>cx||feet.some(f=>Math.hypot(p[0]-f[0],p[1]-f[1])<pad+.6);
  const ring=(grow:number,n:number,phase:number,out:Pt[],pad:number)=>{
-  for(let k=0;k<n;k++){const t=(k+phase)/n*Math.PI*2,p:Pt=[cx+(R.rx*K+grow)*Math.cos(t),cz+(R.rz*K+grow)*Math.sin(t)];if(!open(p,pad))out.push(p);}
+  for(let k=0;k<n;k++){const t=(k+phase)/n*Math.PI*2,p:Pt=[rx0+(R.rx*K+grow)*Math.cos(t),cz+(R.rz*K+grow)*Math.sin(t)];if(!open(p,pad))out.push(p);}
  };
  ring(1.05,26,0,trees,.5);ring(1.05,10,.5,beds,.45);ring(.4,20,.25,bollards,.25);
  // Two lines of bollards lead from the main gate to the edge of the lot.
