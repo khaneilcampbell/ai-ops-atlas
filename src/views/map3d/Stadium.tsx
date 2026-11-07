@@ -1,49 +1,67 @@
-import {stadiumFloodPositions} from './streetLighting';
 import {useEffect,useMemo} from "react";
+import type {ThreeEvent} from "@react-three/fiber";
 import * as THREE from "three";
 import {TERRACE_H} from "./scene";
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from "./models";
+import {focusable} from "./materials";
+import {STADIUM,pitchLines,stadiumCentre,stadiumColumns,stadiumGeometry} from "./stadiumGeometry";
 export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
-/** Static instanced bowl: shared geometry, no assets or animation loop. */
+
+const noRaycast=()=>null;
+
+/**
+ * Atlas Stadium: five merged meshes (shell skins, shell undersides, lit seams, seating, concourse)
+ * and four instanced sets (columns and pitch lines, pitch, scoreboards, terrace). All static: no
+ * lights and no frame loop. Night raises the emissive glow on the seams, undersides, pitch and
+ * scoreboards, the same way the other buildings light up.
+ */
 export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
+  const geo=useMemo(()=>a?stadiumGeometry():undefined,[a]);
+  useEffect(()=>()=>{if(geo)for(const v of Object.values(geo))v.dispose();},[geo]);
+  const mats=useMemo(()=>({
+    shell:focusable(new THREE.MeshStandardMaterial({color:"#f3eee4",roughness:.55,metalness:.05,emissive:"#ffd9a0",emissiveIntensity:0})),
+    under:focusable(new THREE.MeshStandardMaterial({color:"#e9e1d2",roughness:.7,emissive:"#ffc477",emissiveIntensity:0})),
+    seam:focusable(new THREE.MeshStandardMaterial({color:"#c4b597",roughness:.5,emissive:"#ffcf86",emissiveIntensity:0})),
+    seats:focusable(new THREE.MeshStandardMaterial({color:"#46675d",roughness:.85})),
+    deck:focusable(new THREE.MeshStandardMaterial({color:"#ddd6c7",roughness:.8})),
+    pitch:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#4f9a5f",emissiveIntensity:0,roughness:.9}),
+    screen:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#9fe6cf",emissiveIntensity:0,roughness:.4}),
+  }),[]);
+  // Warm and calm at night: no real-time lights, no colour cycling (KC, 2026-10-31: buildings show lights at night).
+  useEffect(()=>{
+    mats.shell.emissiveIntensity=night?.12:0;mats.under.emissiveIntensity=night?.7:0;mats.seam.emissiveIntensity=night?1.25:0;
+    mats.pitch.emissiveIntensity=night?.5:0;mats.screen.emissiveIntensity=night?.9:0;
+  },[mats,night]);
+  useEffect(()=>()=>{for(const v of Object.values(mats))v.dispose();},[mats]);
+  const handlers=useMemo(()=>({
+    onPointerOver:(e:ThreeEvent<PointerEvent>)=>{e.stopPropagation();pick.over(STADIUM_KEY,e);},
+    onPointerOut:()=>pick.out(),
+    onClick:(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();pick.click(STADIUM_KEY,e);},
+  }),[pick]);
   const parts=useMemo(()=>{
-    if(!a)return [];
-    const y=TERRACE_H,cx=a.x+4,cz=a.z+3.5;
-    const box=(x:number,h:number,z:number,w:number,t:number,d:number,c:string):Inst=>({p:[x,h,z],s:[w,t,d],c});
-    const out:Inst[]=[box(cx,y,cz,7.5,.06,6.5,"#d7cdb6")];
-    // Three stepped seating tiers with silver horizontal louvers, inspired by MetLife.
-    for(let tier=0;tier<3;tier++)for(let i=0;i<40;i++){
-      const angle=i*Math.PI*2/40,rx=2.05+tier*.38,rz=2.45+tier*.3;
-      out.push({p:[cx+Math.cos(angle)*rx,y+.1+tier*.38,cz+Math.sin(angle)*rz],s:[.6,.38,.6],r:-angle,c:tier===1?"#405c55":"#758d89"});
-      out.push({p:[cx+Math.cos(angle)*(rx+.16),y+.35+tier*.38,cz+Math.sin(angle)*(rz+.16)],s:[.65,.06,.35],r:-angle,c:"#c7d0cd"});
-    }
-    for(let i=0;i<11;i++)out.push(box(cx,y+.1,cz-1.95+i*.39,3,.012,.025,"#f0eee0"));
-    for(const side of [-1,1]){
-      out.push(box(cx,y+.1,cz+side*2,3.2,.015,.28,"#244b3b"));
-      out.push(box(cx,y+1.2,cz+side*2.7,1.8,.65,.12,"#172e27"));
-      for(const dx of [-2.4,2.4]){out.push(box(cx+dx,y,cz+side*2.3,.07,2,.07,"#63736b"));out.push(box(cx+dx,y+2,cz+side*2.3,.5,.12,.2,"#eadcaa"));}
-    }
-    // Low entrance concourse keeps the field visible from the city overview.
-    out.push(box(cx+2.6,y,cz,.65,.55,1.2,"#294237"),box(cx+2.95,y+.55,cz,.8,.1,1.4,"#c9a35a"));
-    out.push(box(a.x+7.45,y+.035,cz,1,.045,.45,"#e6d6b4"));
-    return out;
-  },[a]);
-  // Night match lighting (KC, 2026-10-31: buildings must show lights at night): floodlit pitch,
-  // glowing scoreboards and lamp faces turned toward the field. Emissive only, no real-time lights.
-  const lit=useMemo(()=>({pitch:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#4f9a5f",emissiveIntensity:0,roughness:.9}),screen:new THREE.MeshStandardMaterial({color:"#ffffff",emissive:"#9fe6cf",emissiveIntensity:0,roughness:.4})}),[]);
-  useEffect(()=>{lit.pitch.emissiveIntensity=night?.45:0;lit.screen.emissiveIntensity=night?.9:0;},[lit,night]);
-  useEffect(()=>()=>{lit.pitch.dispose();lit.screen.dispose();},[lit]);
-  const glowing=useMemo(()=>{
-    if(!a)return {pitch:[],screens:[],faces:[]};
-    const y=TERRACE_H,cx=a.x+4,cz=a.z+3.5;
+    if(!a)return {plain:[],pitch:[],screens:[]};
+    const [cx,cz]=stadiumCentre(a),y=TERRACE_H,S=STADIUM;
+    const at=(it:{p:[number,number,number];s:[number,number,number]},c:string):Inst=>({p:[cx+it.p[0],y+it.p[1],cz+it.p[2]],s:it.s,c});
     return {
-      pitch:[{p:[cx,y+.065,cz],s:[3.3,.03,4.3],c:"#356c45"}] as Inst[],
-      screens:[-1,1].map(side=>({p:[cx,y+1.24,cz+side*2.68],s:[1.5,.5,.13],c:"#52796a"})) as Inst[],
-      // Lamp faces on the field side of each floodlight head, below the existing top lamp.
-      faces:stadiumFloodPositions(a).map(([x,z])=>({p:[x,y+2.005,z+(z>cz?-.11:.11)],s:[.44,.11,.02],c:"#fff1d0"})) as Inst[],
+      plain:[...stadiumColumns().map(c=>at(c,"#d6cfbf")),...pitchLines().map(l=>at(l,"#f3f1e6"))],
+      pitch:[{p:[cx,y+.04,cz],s:[S.pitch.w,.045,S.pitch.d],c:"#356c45"}] as Inst[],
+      screens:[-1,1].map(side=>({p:[cx+side*S.screens.x,y+S.screens.y,cz],s:[.08,S.screens.h,S.screens.w],c:"#52796a"})) as Inst[],
     };
   },[a]);
-  if(!a)return null;
-  return <><Instanced items={glowing.pitch} geometry={g.box} material={lit.pitch}/><Instanced items={glowing.screens} geometry={g.box} material={lit.screen}/><Instanced items={glowing.faces} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/><Instanced items={stadiumFloodPositions(a).map(([x,z])=>({p:[x,TERRACE_H+2.121,z],s:[.46,.025,.19],c:"#fff1d0"}))} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/><Instanced items={[{p:[a.x+4,0,a.z+3.5],s:[12,TERRACE_H,11]}]} geometry={g.box} material={m.terrace}/><Instanced items={parts} geometry={g.box} material={m.plain}/><Instanced items={[{p:[a.x+6.6,TERRACE_H,a.z+3.5],s:[.65,.55,1.2],c:"#294237"}]} geometry={g.box} material={m.plain} pick={{...pick,keys:[STADIUM_KEY]}}/></>;
+  if(!a||!geo)return null;
+  const [cx,cz]=stadiumCentre(a);
+  return <>
+    <Instanced items={[{p:[cx,0,cz],s:[a.w+4,TERRACE_H,a.d+4]}]} geometry={g.box} material={m.terrace}/>
+    <group position={[cx,TERRACE_H,cz]}>
+      <mesh geometry={geo.shells} material={mats.shell} castShadow receiveShadow {...handlers}/>
+      <mesh geometry={geo.undersides} material={mats.under} raycast={noRaycast}/>
+      <mesh geometry={geo.seams} material={mats.seam} raycast={noRaycast}/>
+      <mesh geometry={geo.seats} material={mats.seats} receiveShadow raycast={noRaycast}/>
+      <mesh geometry={geo.deck} material={mats.deck} castShadow receiveShadow {...handlers}/>
+    </group>
+    <Instanced items={parts.pitch} geometry={g.box} material={mats.pitch}/>
+    <Instanced items={parts.screens} geometry={g.box} material={mats.screen}/>
+    <Instanced items={parts.plain} geometry={g.box} material={m.plain}/>
+  </>;
 }

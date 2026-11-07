@@ -1,5 +1,7 @@
 import type {Rect,Slab} from "./scene";
 export const STADIUM_KEY="service:skyline-stadium";
+/** Display name on the nameplate and panel; the key and id stay as they were. */
+export const STADIUM_NAME="Atlas Stadium";
 export interface StadiumPlan extends Rect {accessX:number;accessZ:number}
 export function planStadium(land:Rect[],paving:Slab[],profile?:Rect):StadiumPlan|undefined {
   if(!profile||!paving.length)return;

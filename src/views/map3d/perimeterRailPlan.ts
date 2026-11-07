@@ -7,6 +7,7 @@ import {cityEnvelope} from './citySpacing';
 import {roundedRoad,distanceToRoad} from './highway';
 import {routeAround} from './routing';
 import {airportFootprint,airportPoint} from './airport';
+import {stadiumGate} from './stadiumGeometry';
 
 export const PERIMETER_RAIL={margin:2,radius:5,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6,passengersPerStop:2} as const;
 export const LOOP_STATIONS=[
@@ -39,7 +40,7 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
   {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt},
   {...LOOP_STATIONS[2],point:[clamp(sky.x+sky.w/2,left,right),bottom] as Pt,target:[sky.x+sky.w/2,sky.z+sky.d-.4] as Pt},
-  {...LOOP_STATIONS[3],point:[clamp(stadium.x+stadium.w/2,left,right),bottom] as Pt,target:[stadium.x+stadium.w+.5,stadium.z+stadium.d/2] as Pt},
+  {...LOOP_STATIONS[3],point:[clamp(stadium.x+stadium.w/2,left,right),bottom] as Pt,target:stadiumGate(stadium)},
   {...LOOP_STATIONS[4],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
  ];
  const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));

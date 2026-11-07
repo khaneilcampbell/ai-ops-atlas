@@ -16,6 +16,8 @@ import {DEALERSHIP_KEY} from "./dealershipPlan";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
+import {STADIUM_NAME} from "./stadiumPlan";
+import {stadiumCrown} from "./stadiumGeometry";
 import {MarketingAgency} from "./MarketingAgency";
 import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import {Mall} from "./Mall";
@@ -167,7 +169,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
-  if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+4,z:scene.stadium.z+3.5,y0:TERRACE_H,y1:TERRACE_H+2.3,w:8,d:7});
+  if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+scene.stadium.w/2,z:scene.stadium.z+scene.stadium.d/2,y0:TERRACE_H,y1:TERRACE_H+stadiumCrown(),w:scene.stadium.w,d:scene.stadium.d});
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
   const skyline=skylineProjectAnchor(scene);
   if(skyline)m.set("project:skyline",skyline);
@@ -368,7 +370,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
-    if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:"Stadium",x:scene.stadium.x+4,roof:TERRACE_H+2.3,z:scene.stadium.z+3.5,priority:2,mark:PLANNED,title:"Stadium · Planned venue"});
+    if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
     const skylineHealth=healthFor("khaneilcampbell/ai-ops-atlas"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
