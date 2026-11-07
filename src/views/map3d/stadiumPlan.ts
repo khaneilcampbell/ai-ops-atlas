@@ -24,3 +24,5 @@ export function planStadium(land:Rect[],paving:Slab[],profile?:Rect):StadiumPlan
   if(!access)return;
   return {x,z,w,d,accessX:access.x+.05,accessZ:access.z+access.d/2};
 }
+/** Office id the Enter building button and the interior route share. */
+export const STADIUM_OFFICE_ID=`skyline-business:${STADIUM_NAME}`;

@@ -18,8 +18,9 @@ const noRaycast=()=>null;
  * skin's perforations, the seams, undersides, lobby glass, pitch and scoreboards, the same way the
  * other buildings light up. Trees, beds and bollards on the plaza are drawn with the city's own.
  */
-export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
-  const geo=useMemo(()=>a?stadiumGeometry():undefined,[a]);
+/** `building={false}` draws only the lot, for the interior, where the bowl is drawn inside. */
+export function Stadium({plan:a,g,m,pick,night=false,building=true}:{night?:boolean;building?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
+  const geo=useMemo(()=>a&&building?stadiumGeometry():undefined,[a,building]);
   useEffect(()=>()=>{if(geo)for(const v of Object.values(geo))v.dispose();},[geo]);
   const skin=useMemo(()=>stadiumSkinTexture(),[]);
   useEffect(()=>()=>{skin.map.dispose();skin.glow.dispose();},[skin]);
@@ -54,20 +55,22 @@ export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:Stad
       screens:[-1,1].map(side=>({p:[cx+side*S.screens.x*K,y+S.screens.y*K,cz],s:[.08*K,S.screens.h*K,S.screens.w*K],c:"#52796a"})) as Inst[],
     };
   },[a]);
-  if(!a||!geo)return null;
+  if(!a)return null;
   const [cx,cz]=stadiumCentre(a);
   return <>
     <Instanced items={[{p:[cx,0,cz],s:[a.w+4,TERRACE_H,a.d+4]}]} geometry={g.box} material={m.terrace}/>
-    <group position={[cx,TERRACE_H,cz]} scale={K}>
+    {geo&&<group position={[cx,TERRACE_H,cz]} scale={K}>
       <mesh geometry={geo.shells} material={mats.shell} castShadow receiveShadow {...handlers}/>
       <mesh geometry={geo.undersides} material={mats.under} raycast={noRaycast}/>
       <mesh geometry={geo.seams} material={mats.seam} raycast={noRaycast}/>
       <mesh geometry={geo.seats} material={mats.seats} receiveShadow raycast={noRaycast}/>
       <mesh geometry={geo.deck} material={mats.deck} castShadow receiveShadow {...handlers}/>
       <mesh geometry={geo.glass} material={mats.glass} {...handlers}/>
-    </group>
-    <Instanced items={parts.pitch} geometry={g.box} material={mats.pitch}/>
-    <Instanced items={parts.screens} geometry={g.box} material={mats.screen}/>
-    <Instanced items={parts.plain} geometry={g.box} material={m.plain}/>
+    </group>}
+    {geo&&<>
+      <Instanced items={parts.pitch} geometry={g.box} material={mats.pitch}/>
+      <Instanced items={parts.screens} geometry={g.box} material={mats.screen}/>
+      <Instanced items={parts.plain} geometry={g.box} material={m.plain}/>
+    </>}
   </>;
 }

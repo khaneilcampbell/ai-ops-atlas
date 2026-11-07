@@ -3,7 +3,7 @@ import {mkdirSync} from 'node:fs';
 import {openAtlas,waitForScene,settle} from './atlas';
 /**
  * Atlas Stadium screenshots: the overview, close views by day and night, the concourse with
- * Stadium Station, and the stadium selected with its panel. Written only when SHOT_DIR is set;
+ * Stadium Station, the stadium selected with its panel, and the interior views. Written only when SHOT_DIR is set;
  * no baseline comparison.
  */
 const out=process.env.SHOT_DIR;
@@ -34,10 +34,18 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
  },width===390);
  const {writeFileSync}=await import('node:fs');
  for(const s of shots)writeFileSync(`${out}/${tag}-${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
- if(light==='day'){
-  // Old and new plaques share the title ending, so the same spec shoots before and after.
-  await page.locator('.m3-plaque[title$="Stadium · Planned venue"]').first().dispatchEvent('click');await settle(page,4);
-  await page.screenshot({path:`${out}/${tag}-selected-${light}.png`});
+ // Old and new plaques share the title ending, so the same spec shoots before and after.
+ await page.locator('.m3-plaque[title$="Stadium · Planned venue"]').first().dispatchEvent('click');await settle(page,4);
+ if(light==='day')await page.screenshot({path:`${out}/${tag}-selected-${light}.png`});
+ // The interior, where the build has one: the open cutaway, then each view.
+ const enter=page.getByRole('button',{name:'Enter building'});
+ if(await enter.count()){
+  await enter.first().click();await page.locator('.skyline-interior').waitFor();await settle(page,6);
+  await page.screenshot({path:`${out}/${tag}-interior-all-${light}.png`});
+  for(const [name,file] of [['Concourse','concourse'],['Seating bowl','bowl']]){
+   await page.locator('.skyline-floor-picker button',{hasText:name}).click();await settle(page,4);
+   await page.screenshot({path:`${out}/${tag}-interior-${file}-${light}.png`});
+  }
  }
  expect(errors).toEqual([]);
 });
