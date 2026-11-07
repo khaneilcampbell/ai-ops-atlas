@@ -43,6 +43,8 @@ const BROOK_W = 0.55;
 export const FLOOR_H = 0.32 * CITY_SCALE.hq.storey;
 /** A fountain's basin radius at full size. */
 export const FOUNTAIN_R = 0.475;
+/** Most the Marketplace site may sit below the Skyline park (map units); keeps the lot beside the park. */
+const MARKETPLACE_PARK_GAP = 1.125;
 
 export interface Rect {
   x: number;
@@ -718,7 +720,11 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
   const core=cityEnvelope(cityLand)!;
-  const marketplaceSite={x:core.x+core.w-27,z:core.z+core.d+.6,w:0,d:0};
+  // The lot sits just south of the Skyline park, so it must follow the park, not the core's south
+  // edge: a project dropping out of the catalog (an archived repository) moves the two apart and
+  // the whole Marketplace, its garden and the railway used to disappear.
+  const sky=parks.find(p=>p.label==="Skyline");
+  const marketplaceSite={x:core.x+core.w-27,z:sky?Math.min(core.z+core.d,sky.z+sky.d+MARKETPLACE_PARK_GAP)+.6:core.z+core.d+.6,w:0,d:0};
   const hills:HillsPlan|undefined=undefined;
   sizeCustomTowers(towers, kiosks);
   sizeGithubTower(towers);
