@@ -9,10 +9,10 @@ import {railPoint,railState,stationAccessAreas,COMMUNITY} from './hillsCommunity
 
 describe('compact city and Marketplace passenger service',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`keeps connected square infrastructure in ${group}`,()=>{
-  const before=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,m=s.mall!,h=s.freight!.highway;
+  const before=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,m=s.mall!;
   expect(s.hills).toBeUndefined();expect(s.community).toBeUndefined();expect(JSON.stringify(catalog)).toBe(before);
   expect(s.transportConnections.map(c=>c.id)).not.toContain('atlas-hills');
-  expect(h).toEqual([]);expect(s.freight!.access).toEqual([]);
+  expect(s.freight).toBeUndefined();
   const e=cityEnvelope(s.land)!;expect(e.w).toBeCloseTo(e.d,6);
   expect(r.route[0]).toEqual(r.hills);expect(r.route.at(-1)).toEqual(r.financial);
   expect(r.hillsWalk[0]).toEqual([m.cx,0,m.z+m.d]);

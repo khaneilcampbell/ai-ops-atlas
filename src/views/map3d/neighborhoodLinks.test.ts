@@ -1,13 +1,12 @@
 import {financialDimensions} from './financialArchitecture';
 import {expect,it} from 'vitest';import {catalog} from '../../catalog';import {layoutMap,type GroupBy} from '../mapLayout';import {buildScene} from './scene';import {uncoveredLand} from './neighborhoodLinks';import {overlapsParcel} from './citySpacing';import {closedRoadArc,distanceToRoad} from './highway';import {splitAtLand,connectionSpans} from './connectionGeometry';import {pathClear,type Pt} from './roads';import {COMMUNITY as C} from './hillsCommunityPlan';
-const length=(p:Pt[])=>p.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-p[i][0],b[1]-p[i][1]),0);
 const previous={none:{rail:169.227,highway:438.735},district:{rail:178.408,highway:452.874},status:{rail:169.227,highway:438.735},tag:{rail:168.5,highway:459.624}};
 for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compact connected city without changing district contents: ${g}`,()=>{
  const s=buildScene(layoutMap(catalog,[],g)),f=s.financial!,r=s.communityRail!;
  expect(s.hills).toBeUndefined();expect(f.x).toBeGreaterThan(Math.min(...s.terraces.map(t=>t.x))-10);
  expect(f.buildings).toHaveLength(10);expect(s.community).toBeUndefined();expect(s.mall).toBeDefined();
  // The line now continues behind BMW and the towers to Financial Park (KC, 2026-10-31).
- expect(r.length).toBeLessThan(previous[g].rail*.82);expect(length(s.freight!.highway)).toBeLessThan(previous[g].highway*.95);
+ expect(r.length).toBeLessThan(previous[g].rail*.82);expect(s.freight).toBeUndefined();
  expect(s.transportConnections.map(c=>c.id)).toEqual(expect.arrayContaining(['marketplace-city-boulevard','financial-stadium-local','financial-district']));
  for(const a of s.neighborhoodLand!){for(const b of s.land)if(a!==b)expect(Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>1e-8&&Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)>1e-8,`new terrain overlap: ${JSON.stringify({a,b,dx:Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),dz:Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)})}`).toBe(false);}
  const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
