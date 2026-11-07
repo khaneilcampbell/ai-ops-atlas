@@ -22,7 +22,7 @@ const BUILDING_LAYOUT=[
  {id:'financial-planning',name:'Financial Planning',x:-20,z:9,rise:1.1,style:'stepped',role:'Financial Planning Analyst',purpose:'Planned budgeting and scenario reviews. No transactions or investment execution.'},
  {id:'harbor-residence',name:'Harbor Residence',x:-12.5,z:9.2,rise:1.22,style:'balcony',role:'Harbor Residence Coordinator',purpose:'Planned residential and household organization spaces. No financial services connected.'},
  // West waterfront parcel by the highway; already district-local, so no expansion offset.
- {id:'circa',name:'Circa',x:CIRCA.x-FINANCIAL.expansion,z:CIRCA.z,rise:CIRCA.rise,style:'twin',role:'Residential Amenities Planning Coordinator',purpose:'Planned twin-tower residence.'},
+ {id:'circa',name:'Ellipse Residences',x:CIRCA.x-FINANCIAL.expansion,z:CIRCA.z,rise:CIRCA.rise,style:'twin',role:'Residential Amenities Planning Coordinator',purpose:'Planned twin-tower residence.'},
 ] as const;
 export const FINANCIAL_BUILDINGS=BUILDING_LAYOUT.map(b=>{const brand=financialBrand(b.id);return {...b,name:brand?.name??b.name,role:brand?.role??b.role,purpose:brand?.purpose??b.purpose};});
 export interface FinancialPark extends Rect {

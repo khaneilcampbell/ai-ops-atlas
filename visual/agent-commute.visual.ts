@@ -46,7 +46,7 @@ test('Workday tab, desktop',async({page})=>{
  await page.locator('.reg-row[data-id="repo-intelligence"]').click();await settle(page,1);
  await page.getByRole('tab',{name:'Workday',exact:true}).click();await settle(page,1);
  const panel=page.getByRole('tabpanel');
- await expect(panel).toContainText('Circa');
+ await expect(panel).toContainText('Ellipse Residences');
  await expect(panel).toContainText('Per-run and monthly limits');
  await expect(panel).toContainText('not a live run');
  if(out){mkdirSync(out,{recursive:true});await page.screenshot({path:`${out}/workday-tab-desktop.png`});}

@@ -11,7 +11,7 @@ import {airportFootprint,airportPoint} from './airport';
 export const PERIMETER_RAIL={margin:2,radius:5,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6,passengersPerStop:2} as const;
 export const LOOP_STATIONS=[
  {id:'service:financial-station',name:'Financial District Station',district:'Financial District'},
- {id:'service:atlas-station',name:'Atlas Station',district:'Atlas Marketplace'},
+ {id:'service:atlas-station',name:'Atlas Central Station',district:'Atlas Marketplace'},
  {id:'service:skyline-station',name:'Skyline Station',district:'Skyline'},
  {id:'service:stadium-station',name:'Stadium Station',district:'Stadium'},
  {id:'service:airport-station',name:'Airport Station',district:'Atlas Airport'},

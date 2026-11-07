@@ -661,9 +661,9 @@
                 "enum": [
                   "Skyline",
                   "Atlas Marketplace",
-                  "OpenAI",
-                  "Anthropic",
-                  "Wells Fargo",
+                  "Model Lab",
+                  "Reasoning Lab",
+                  "Halden Branch",
                   "Starbucks",
                   "Smashburger",
                   "Chipotle",

@@ -70,7 +70,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
  useEffect(()=>{mats.glass.emissiveIntensity=night?.9:0;mats.podiumGlass.emissiveIntensity=night?.85:0;mats.lobby.emissiveIntensity=night?.7:0;},[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const x of mats.textures)x.dispose();},[mats]);
  const signs=useMemo(()=>{
-  const word=wordmark('GitHub'),badge=signTexture(t.identity,t.name);
+  const word=wordmark('Profile Tower'),badge=signTexture(t.identity,t.name);
   const mat=(map:THREE.Texture,glow:number)=>focusable(new THREE.MeshStandardMaterial({map,emissiveMap:map,emissive:'#ffffff',emissiveIntensity:glow,transparent:true,alphaTest:.3,roughness:.4}));
   const worker=t.agents+t.automations>0?signTexture({symbol:t.agents>0?'agent':'automation',style:'tech',accent:'#a5afa5'},'Project workers'):null;
   return {textures:[word,badge,worker].filter((x):x is THREE.CanvasTexture=>!!x),word:mat(word,.5),badge:mat(badge,.55),worker:worker?mat(worker,.55):null};
