@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-07 · Repair city browser checks for current building names, five-stop train service and reviewed screenshots (PR pending)
 - 2026-11-07 · Remove Atlas Hills and the highway, compact the city and connect five stations with one perimeter train (#256)
 - 2026-11-07 · Closed a security alert in a developer tool (minimatch); nothing changes in the app (#254)
 - 2026-11-05 · Agent keys pasted with a stray space, line break, quotes or an extra "Bearer" are no longer refused, so the Product Lab brief and other agent reports can reach Atlas (#253)
