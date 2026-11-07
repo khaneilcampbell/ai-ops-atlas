@@ -15,7 +15,7 @@ import {TRANSPORT} from './transportScale';
 import {MANSION_COLORS} from './hillsMansion';
 import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
-import {PARK_STATION,parkStationParts} from './parkStationPlan';
+import {FINANCIAL_STATION_KEY,PARK_STATION,parkStationParts,placeParkStation} from './parkStationPlan';
 function useCommunityPalette(){return useMemo(()=>{const css=getComputedStyle(document.documentElement);return {green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a'};},[]);}
 type Shared={g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>};
 /** All neighborhood architecture is static and instanced. The original estate stays separate. */
@@ -79,7 +79,8 @@ export function CommunityRail({plan:p,agents,community,financial,roads,g,m,pick,
  useEffect(()=>()=>trainGlass.dispose(),[trainGlass]);
  const stationGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.42,depthWrite:false,roughness:.15,metalness:.3,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.25:0}),[night]);
  useEffect(()=>()=>stationGlass.dispose(),[stationGlass]);
- const station=useMemo(()=>p&&!p.loop?parkStationParts(p.financial,TERRACE_H):undefined,[p]);
+ // Financial District keeps the Dubai-style shell and glazed skybridge from #158 on the perimeter loop too.
+ const station=useMemo(()=>{if(!p)return undefined;if(!p.loop)return parkStationParts(p.financial,TERRACE_H);const stop=p.loop.stops.find(s=>s.id===FINANCIAL_STATION_KEY);return stop?placeParkStation(parkStationParts([0,0],TERRACE_H),stop):undefined;},[p]);
  const palette=useCommunityPalette();
  const parts=useMemo(()=>{const solid:Inst[]=[],lights:Inst[]=[],platforms:Inst[]=[],paths:Inst[]=[],stationKeys:string[]=[];if(!p)return {solid,lights,platforms,paths,stationKeys};
  const track=deck!;
@@ -101,13 +102,14 @@ export function CommunityRail({plan:p,agents,community,financial,roads,g,m,pick,
   platforms.push(box(x,C.platformRise-.2,z+.85,C.platformLength,.2,C.platformWidth,'#ded8c7'));stationKeys.push(key);
   solid.push(box(x,C.platformRise+.005,z+.38,C.platformLength,.015,.07,'#d0ad69'));
   // The Hills keeps its flat canopy; Financial Park has the Dubai-style shell instead (parkStationPlan).
-  if(index!==1||p.loop)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
+  const financialShell=p.loop?item.key===FINANCIAL_STATION_KEY:index===1;
+  if(!financialShell)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
   for(const dx of [-3.5,3.5])solid.push(box(x+dx,C.platformRise,z+1.25,.07,1.15,.07,palette.green));
   solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+1.5,.7,.2,.5,'#ded8c7'));
   strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+1.8],.48,.075,.03,'#e3dfd2',paths);
   for(let i=0;i<15;i++)solid.push(box(x+1,C.platformRise*(1-(i+1)/15),z+1.7+i*.28,1,C.platformRise/15,.29,'#d6d0bd'));
   // Separate protected lift and stairs make the raised platform reachable from ground paths.
-  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,index===0?'#819f9b':PARK_STATION.colors.lift),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
+  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,financialShell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
   for(const dx of [-.58,.58]){solid.push({...box(x+1+dx,C.platformRise/2+.6,z+3.8,.035,.035,Math.hypot(C.platformRise,4.2),palette.green),rx:Math.atan2(C.platformRise,4.2)});}
   for(const dx of [-.58,.58])for(let i=0;i<15;i++)solid.push(box(x+1+dx,C.platformRise*(1-i/15),z+1.7+i*.28,.035,.6,.035,palette.green));
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
