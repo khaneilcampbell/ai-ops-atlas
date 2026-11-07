@@ -24,13 +24,6 @@ export const GITHUB_ANNEX={
  skybridge:{width:.42,height:.3,lift:.62},
 } as const;
 
-/**
- * Whether the podium itself is drawn. KC, 2026-11-07: the stepped glass podium was the building
- * behind the Marketplace Gardens that Atlas Galleria replaced, so it is off; the GitHub tower and
- * the added terrace (now open lawn) stay. Set back to true to bring the podium back.
- */
-export const GITHUB_PODIUM_SHOWN=false;
-
 export type Side='+x'|'-x'|'+z'|'-z';
 export interface GithubAnnex {
  side:Side;

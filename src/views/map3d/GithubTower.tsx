@@ -6,7 +6,7 @@ import type {Tower} from './scene';
 import {focusable,patterned,signTexture} from './materials';
 import {GITHUB_TOWER,githubTowerHeight,planGithubTower} from './githubTowerPlan';
 import {githubAnnexGeometry,githubTowerGeometry} from './githubTowerGeometry';
-import {GITHUB_ANNEX,GITHUB_PODIUM_SHOWN,type GithubAnnex} from './githubAnnex';
+import {GITHUB_ANNEX,type GithubAnnex} from './githubAnnex';
 import {TERRACE_H} from './scene';
 import {useQualityLevel} from '../../lib/governor';
 
@@ -51,7 +51,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
  const plan=useMemo(()=>planGithubTower(t.size,height),[t.size,height]);
  const geo=useMemo(()=>githubTowerGeometry(plan),[plan]);
  useEffect(()=>()=>{for(const v of Object.values(geo))v.dispose();},[geo]);
- const podium=useMemo(()=>annex&&GITHUB_PODIUM_SHOWN?githubAnnexGeometry(annex,TERRACE_H):null,[annex]);
+ const podium=useMemo(()=>annex?githubAnnexGeometry(annex,TERRACE_H):null,[annex]);
  useEffect(()=>()=>{if(podium)for(const v of Object.values(podium))v.dispose();},[podium]);
  const mats=useMemo(()=>{
   const tex=glassTextures();
@@ -70,7 +70,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
  useEffect(()=>{mats.glass.emissiveIntensity=night?.9:0;mats.podiumGlass.emissiveIntensity=night?.85:0;mats.lobby.emissiveIntensity=night?.7:0;},[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const x of mats.textures)x.dispose();},[mats]);
  const signs=useMemo(()=>{
-  const word=wordmark('Profile Tower'),badge=signTexture(t.identity,t.name);
+  const word=wordmark('GitHub'),badge=signTexture(t.identity,t.name);
   const mat=(map:THREE.Texture,glow:number)=>focusable(new THREE.MeshStandardMaterial({map,emissiveMap:map,emissive:'#ffffff',emissiveIntensity:glow,transparent:true,alphaTest:.3,roughness:.4}));
   const worker=t.agents+t.automations>0?signTexture({symbol:t.agents>0?'agent':'automation',style:'tech',accent:'#a5afa5'},'Project workers'):null;
   return {textures:[word,badge,worker].filter((x):x is THREE.CanvasTexture=>!!x),word:mat(word,.5),badge:mat(badge,.55),worker:worker?mat(worker,.55):null};
@@ -93,7 +93,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
   const [lower,upper]=plan.podium;
   for(let x=lower.x0+.1*plan.k;x<lower.x1-.08*plan.k;x+=.11*plan.k)shrubs.push({p:w(x,lower.y1+.05,(upper.z1+lower.z1)/2),s:[.045,.035,.045],c:x%2>1?'#5f8f4a':'#77a35a'});
   // The podium's planted lips and roof-garden trees.
-  if(annex&&GITHUB_PODIUM_SHOWN){
+  if(annex){
    for(const [x,y,z] of annex.shrubs)shrubs.push({p:[x,TERRACE_H+y+.03,z],s:[.06,.045,.06],c:x%1>.5?'#5f8f4a':'#77a35a'});
    for(const [i,[x,y,z]] of annex.trees.entries()){
     trunks.push({p:[x,TERRACE_H+y,z],s:[.02,.22,.02],c:'#6b5a48'});
