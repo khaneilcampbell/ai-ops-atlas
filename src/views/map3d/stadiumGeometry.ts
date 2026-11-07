@@ -35,14 +35,16 @@ export const STADIUM={
  seam:.12,rim:.06,
  /** Gap between a shell's outer skin and its underside. */
  thickness:.05,
- segments:{u:10,v:14},
+ segments:{u:8,v:10},
+ /** Coarser grid for the undersides, only seen through the roof opening. */
+ underSegments:{u:6,v:6},
  /** Three seating tiers between the pitch and the back of the bowl. */
- seats:{tiers:3,inner:{rx:2.05,rz:1.45},outer:{rx:3.0,rz:2.55},low:.12,high:1.15,segments:64},
+ seats:{tiers:3,inner:{rx:2.05,rz:1.45},outer:{rx:3.0,rz:2.55},low:.12,high:1.15,segments:48},
  pitch:{w:3.5,d:2.15},
  /** Scoreboards on the two short ends of the bowl, facing the pitch. */
  screens:{x:2.95,y:1.55,w:1.25,h:.42},
  /** Raised ring walkway on slim columns. */
- concourse:{y:.5,thick:.07,inner:{rx:3.25,rz:2.8},outer:{rx:3.95,rz:3.45},edge:.025,segments:72,columns:24},
+ concourse:{y:.5,thick:.07,inner:{rx:3.25,rz:2.8},outer:{rx:3.95,rz:3.45},edge:.025,segments:48,columns:24},
  /**
   * Gates: steps from the deck down to street level. The main gate faces east, where the roads
   * and walks from GitHub Profile, the Financial District, the airport and Stadium Station arrive;
@@ -121,8 +123,8 @@ export function stadiumGeometry():StadiumGeometry{
   // Skin from the trailing edge to the seam, seam to the leading edge, rim around the top.
   shells.push(surface(NU,NV,(u,v)=>shellPoint(i,-1+u*(1+cut),v*top),true));
   seams.push(surface(2,NV,(u,v)=>shellPoint(i,cut+u*(1-cut),v*top),true));
-  seams.push(surface(NU+2,1,(u,v)=>shellPoint(i,-1+u*2,top+v*(1-top)),true));
-  under.push(surface(NU+2,NV,(u,v)=>shellPoint(i,-1+u*2,v,S.thickness),false));
+  seams.push(surface(NU,1,(u,v)=>shellPoint(i,-1+u*2,top+v*(1-top)),true));
+  under.push(surface(S.underSegments.u,S.underSegments.v,(u,v)=>shellPoint(i,-1+u*2,v,S.thickness),false));
  }
  const C=S.concourse,deckTop=C.y,deckLow=C.y-C.thick;
  seams.push(wall(C.outer,deckTop-C.edge,deckTop,C.segments,true));
