@@ -61,7 +61,7 @@ export function planStadiumSite({stadium:a,land,envelope,paths}:{stadium:Stadium
  Object.assign(site,{x:cx-ew,w:ew*2,z:cz-ns,d:ns*2});
  const boxes:SiteBox[]=[];
  // Reflecting pools in arcs round the concourse, open at the gates.
- const o=STADIUM.concourse.outer,P=S.pools,ring={rx:o.rx*STADIUM_SCALE+P.grow,rz:o.rz*STADIUM_SCALE+P.grow};
+ const o=STADIUM.ring,P=S.pools,ring={rx:o.rx*STADIUM_SCALE+P.grow,rz:o.rz*STADIUM_SCALE+P.grow};
  const feet=sideGateFeet().map(([x,z]):Pt=>[cx+x*STADIUM_SCALE,cz+z*STADIUM_SCALE]);
  for(let k=0;k<P.segments;k++){
   const a0=k/P.segments*Math.PI*2,a1=(k+1)/P.segments*Math.PI*2,am=(a0+a1)/2,[mx,mz]=[cx+ring.rx*Math.cos(am),cz+ring.rz*Math.sin(am)];

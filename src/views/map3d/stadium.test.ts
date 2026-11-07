@@ -31,7 +31,7 @@ import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
 import {cityEnvelope} from "./citySpacing";
-import {STADIUM,STADIUM_SCALE,stadiumPlaza,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
+import {STADIUM,STADIUM_SCALE,mainRoofAt,practiceRoofAt,stadiumPlaza,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet,stairLine,treeColumns,trussXs} from "./stadiumGeometry";
 import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
 describe("Atlas Stadium",()=>{
@@ -41,37 +41,44 @@ describe("Atlas Stadium",()=>{
     expect(STADIUM_BOX.w).toBeCloseTo(box*STADIUM_SCALE);expect(STADIUM_BOX.d).toBeCloseTo(depth*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
   });
-  it("is symmetrical: petals mirror across the pitch's long and short axes (KC, 2026-11-07)",()=>{
-    expect(S.shells%4).toBe(0);
-    const near=(a:number[],b:number[])=>a.every((x,k)=>Math.abs(x-b[k])<1e-9);
-    for(let i=0;i<S.shells;i++)for(const u of [-1,-.5,0,.5,1])for(const v of [0,.3,.7,1]){
-      const [x,y,z]=shellPoint(i,u,v);
-      // Mirror in z (across the main gate's axis), in x (across the pitch's short axis), and about each petal's own centre line.
-      expect(near(shellPoint(S.shells-1-i,-u,v),[x,y,-z])).toBe(true);
-      expect(near(shellPoint((S.shells/2-1-i+S.shells)%S.shells,-u,v),[-x,y,z])).toBe(true);
-    }
-    // One smooth roof line: lowest at the ends, highest on the long sides, the same each side.
-    for(let i=0;i<S.shells;i++){const [,y]=shellPoint(i,0,1);expect(y).toBeGreaterThanOrEqual(S.crown.end-1e-9);expect(y).toBeLessThanOrEqual(S.crown.side+1e-9);}
+  it("is a sloping steel-and-glass hall: low at the entrance, high at the far end, mirrored across its long axis (KC, 2026-11-07)",()=>{
+    const H=S.hall,R=S.roof;
+    expect(mainRoofAt(H.x0,0)).toBeGreaterThan(mainRoofAt(H.x1,0)+.5);
+    expect(mainRoofAt(H.x1+R.over,0)).toBeGreaterThanOrEqual(R.low);expect(mainRoofAt(H.x1+R.over,0)).toBeLessThan(R.low+R.curl);
+    for(let x=H.x0-R.over;x<=H.x1+R.over;x+=.25)for(let z=0;z<=H.z+R.over;z+=.25)expect(mainRoofAt(x,z)).toBeCloseTo(mainRoofAt(x,-z),9);
+    // Upswept eaves: each long edge sits above the roof's centre line, and the corners highest of all.
+    expect(mainRoofAt(0,H.z+R.over)).toBeGreaterThan(mainRoofAt(0,0));
+    expect(mainRoofAt(H.x0-R.over,H.z+R.over)).toBeGreaterThan(mainRoofAt(H.x0-R.over,0));
+    expect(stadiumCrown()).toBeCloseTo(mainRoofAt(H.x0-R.over,H.z+R.over)*STADIUM_SCALE,6);
+    // The practice hall is lower, with the same slope, and sits under the main roof where they overlap.
+    const P=S.practice;expect(practiceRoofAt(P.x0,P.z0)).toBeGreaterThan(practiceRoofAt(P.x1,P.z0));
+    for(let x=P.x0-P.over;x<=P.x1+P.over;x+=.1)expect(practiceRoofAt(x,-H.z-R.over)).toBeLessThan(mainRoofAt(x,-H.z-R.over)-R.thick-.1);
   });
-  it("keeps the shells inside the 8 x 7 design box and the concourse and gates inside its lot",()=>{
-    for(let i=0;i<S.shells;i++)for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.05){
-      const [x,,z]=shellPoint(i,u,v);expect(Math.abs(x)).toBeLessThan(box/2);expect(Math.abs(z)).toBeLessThan(depth/2);
-    }
-    expect(S.concourse.outer.rx).toBeLessThan(box/2);expect(S.concourse.outer.rz).toBeLessThan(depth/2);
+  it("carries the roof on twelve trusses and six tree columns, with a diagonal grand stair to the main gate",()=>{
+    expect(S.trusses.main).toBe(12);expect(trussXs().length).toBe(12);expect(trussXs(S.trusses.practice).length).toBe(5);
+    const xs=trussXs();for(let k=1;k<xs.length;k++)expect(xs[k]).toBeGreaterThan(xs[k-1]);
+    const trees=treeColumns();expect(trees.length).toBe(6);
+    for(const [x,z] of trees)expect(trees.some(([x2,z2])=>Math.abs(x2-x)<1e-9&&Math.abs(z2+z)<1e-9)).toBe(true);
+    const st=stairLine();expect(S.stair.angle).toBe(35);
+    expect(Math.atan2(st.foot[1]-st.top[1],st.foot[0]-st.top[0])*180/Math.PI).toBeCloseTo(35,6);
+    expect(st.foot[0]).toBe(S.gate.foot);expect(st.foot[1]).toBe(0);expect(st.top[0]).toBeCloseTo(S.podium.x1,6);
+    expect(Math.abs(st.top[1])).toBeLessThan(S.podium.z-S.gate.width/2);
+  });
+  it("keeps both halls inside the 8 x 7 design box and the pools' ring, with the gates on its lot",()=>{
+    const H=S.hall,P=S.practice,Pd=S.podium,R=S.ring;
+    for(const x of [Pd.x0,Pd.x1,P.podium.x0,P.podium.x1])expect(Math.abs(x)).toBeLessThan(box/2);
+    for(const z of [Pd.z,P.podium.z0])expect(Math.abs(z)).toBeLessThan(depth/2);
+    const corners=[[Pd.x0,Pd.z],[Pd.x1,Pd.z],[P.podium.x0,P.podium.z0],[P.podium.x1,P.podium.z0],[H.x0-S.roof.over,H.z+S.roof.over]];
+    for(const [x,z] of corners)expect((x/R.rx)**2+(z/R.rz)**2).toBeLessThan(1);
     expect(S.gate.foot).toBeLessThan(box/2+2);
     for(const [x,z]of sideGateFeet()){expect(Math.abs(x)).toBeLessThan(box/2);expect(Math.abs(z)).toBeLessThan(depth/2);}
-    // The shells stand on the concourse; the seating sits inside the shells.
-    expect(S.base.rx).toBeGreaterThan(S.concourse.inner.rx);expect(S.base.rx).toBeLessThan(S.concourse.outer.rx);
-    expect(S.seats.outer.rx).toBeLessThan(S.base.rx);
-    // From above, the pitch shows through the roof opening.
-    expect(S.pitch.w/2).toBeLessThan(S.open.rx);expect(S.pitch.d/2).toBeLessThan(S.open.rz);
   });
   for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`stays below the Marketplace and every HQ, with every link at a gate: ${grouping}`,()=>{
     const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),gate=stadiumGate(a);
     // The bigger district: the box and the gate grow by one factor; the lot keeps its 2-unit margin.
     expect(a.w).toBeCloseTo(STADIUM_BOX.w);expect(a.d).toBeCloseTo(STADIUM_BOX.d);
     expect(gate[0]-cx).toBeCloseTo(S.gate.foot*STADIUM_SCALE);expect(gate[0]).toBeLessThan(a.x+a.w+2);
-    expect(stadiumCrown()).toBeCloseTo(S.crown.side*STADIUM_SCALE);
+    expect(stadiumCrown()).toBeCloseTo((S.roof.high+2.5*S.roof.curl)*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
     for(const t of s.towers)expect(TERRACE_H+stadiumCrown()).toBeLessThan(towerTop(t));
     // Roads and walks that serve the stadium end at the main gate, or on a road that does.
@@ -87,18 +94,18 @@ describe("Atlas Stadium",()=>{
     }
     const stop=s.communityRail?.loop?.stops.find(x=>x.id==="service:stadium-station");
     if(stop){const [x,,z]=stop.walk[0];expect(atGate([x,z])).toBeLessThan(.05);}
-    // Nothing that moves crosses the shells or the concourse.
-    const o={rx:S.concourse.outer.rx*STADIUM_SCALE,rz:S.concourse.outer.rz*STADIUM_SCALE},inside=([x,z]:Pt)=>((x-cx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
+    // Nothing that moves crosses the halls, the podium or the ring round them.
+    const o={rx:S.ring.rx*STADIUM_SCALE,rz:S.ring.rz*STADIUM_SCALE},inside=([x,z]:Pt)=>((x-cx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
     const paths:Pt[][]=[...s.transportConnections.flatMap(l=>[l.road,l.walk])];
     if(s.freight)paths.push(s.freight.route,s.freight.highway,s.freight.cityAccess,...s.freight.access.flatMap(x=>[x.collector,...x.ramps]));
     if(s.communityRail?.loop)paths.push(s.communityRail.loop.route,...s.communityRail.loop.stops.map(st=>st.walk.map(([x,,z])=>[x,z] as Pt)));
     for(const path of paths)for(let i=1;i<path.length;i++)for(let t=0;t<=1;t+=.05){
       const p:Pt=[path[i-1][0]+(path[i][0]-path[i-1][0])*t,path[i-1][1]+(path[i][1]-path[i-1][1])*t];expect(inside(p)).toBe(false);
     }
-    // Street lights keep off the concourse.
+    // Street lights keep off the ring.
     expect(lightingObstacles(s).some(b=>b.x===cx&&b.z===cz&&b.w===o.rx*2&&b.d===o.rz*2)).toBe(true);
   });
-  it("stays about as cheap as the bowl it replaced: nine draws, under 20,000 triangles, no lights",()=>{
+  it("stays cheap: seven draws, under 20,000 triangles, no lights",()=>{
     const pieces=stadiumPieceCount(),geo=stadiumGeometry();
     expect(pieces.draws).toBeLessThanOrEqual(10);
     expect(pieces.instances).toBeLessThan(60);
@@ -119,22 +126,9 @@ describe("Atlas Stadium",()=>{
   });
 });
 
-describe("Atlas Stadium realism",()=>{
-  it("tapers every petal to a point at the base, with an even glazed slot to its neighbours, and keeps the glass under the shells",()=>{
-    const S=STADIUM,L=S.lobby,ang=(p:number[])=>Math.atan2(p[2]/S.base.rz,p[0]/S.base.rx);
-    const gap=(i:number,v:number)=>{const lead=ang(shellPoint(i,1,v)),trail=ang(shellPoint((i+1)%S.shells,-1,v));return Math.atan2(Math.sin(trail-lead),Math.cos(trail-lead));};
-    for(let i=0;i<S.shells;i++){
-      // Wide glazed triangles at the base narrowing to a slim slot higher up; the same between every pair.
-      expect(gap(i,0)).toBeGreaterThan(.3);expect(gap(i,S.taper.full+.1)).toBeGreaterThan(0);expect(gap(i,S.taper.full+.1)).toBeLessThan(.12);
-      expect(gap(i,.8)).toBeCloseTo(gap((2*S.shells-2-i)%S.shells,.8),9);
-      for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.02){
-        const [x,y,z]=shellPoint(i,u,v,S.thickness);
-        if((x/L.rx)**2+(z/L.rz)**2<1&&y>S.concourse.y)expect(y).toBeGreaterThan(S.concourse.y+L.h-.02);
-      }
-    }
-  });
-  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`plants the plaza on the lot, off the concourse, gates and walks: ${grouping}`,()=>{
-    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.concourse.outer;
+describe("Atlas Stadium grounds",()=>{
+  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`plants the plaza on the lot, off the halls, gates and walks: ${grouping}`,()=>{
+    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.ring;
     expect(plaza.trees.length).toBeGreaterThanOrEqual(12);expect(plaza.bollards.length).toBeGreaterThan(10);
     for(const p of [...plaza.trees,...plaza.beds,...plaza.bollards]){
       expect(p[0]).toBeGreaterThan(a.x-2);expect(p[0]).toBeLessThan(a.x+a.w+2);expect(p[1]).toBeGreaterThan(a.z-2);expect(p[1]).toBeLessThan(a.z+a.d+2);
@@ -158,19 +152,9 @@ describe("Atlas Stadium realism",()=>{
     expect(g.palms!.length).toBeGreaterThanOrEqual(12);
     for(const t of s.trees.filter(t=>t.kind==='palm'))expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
     expect(readFileSync(join(__dirname,"models.tsx"),"utf8")).toMatch(/t\.kind === "palm"\) return/);
-    // The pools ring the concourse but leave the main gate open.
+    // The pools ring the halls but leave the main gate open.
     const [cx,cz]=stadiumCentre(a),water=g.boxes.filter(b=>b.c==='#5aaac0');
     expect(water.length).toBeGreaterThan(20);
     for(const w of water)expect(w.x>cx&&Math.abs(w.z-cz)<STADIUM.gate.width*STADIUM_SCALE/2).toBe(false);
-  });
-});
-
-describe("Atlas Stadium seating",()=>{
-  it("stays under the shells at every height",()=>{
-    const T=STADIUM.seats;
-    for(let i=0;i<STADIUM.shells;i++)for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.02){
-      const [x,y,z]=shellPoint(i,u,v,STADIUM.thickness);if(y>T.high)continue;
-      expect((x/T.outer.rx)**2+(z/T.outer.rz)**2).toBeGreaterThan(1);
-    }
   });
 });

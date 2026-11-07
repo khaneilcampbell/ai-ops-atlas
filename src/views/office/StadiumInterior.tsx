@@ -15,13 +15,13 @@ import CityOutside from './CityOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import FloorLabel from './FloorLabel';
 import {leaveBuilding} from './store';
-import {CONCOURSE_SPACES,STADIUM_INTERIOR as I,STADIUM_STATUS,STADIUM_VIEWS,aisleAngles,concourseMid,hospitalityBoxes,inAisle,lerpEllipse,onEllipse,seatRows,spacePoint,type ConcourseSpace,type Ellipse} from './stadiumInteriorPlan';
+import {CONCOURSE_SPACES,STADIUM_INTERIOR as I,STADIUM_STATUS,STADIUM_VIEWS,aisleAngles,concourseMid,hospitalityBoxes,inAisle,lerpRing,onRing,seatRows,spacePoint,type ConcourseSpace,type Ring} from './stadiumInteriorPlan';
 import '../../styles/skyline.css';
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
-const STONE='#d9d2c4',CREAM='#efe9dd',INK='#2b2a28',GLASS='#a9c3c6',GREEN='#3f7a4c',LINE='#f3f1e6';
-/** Seat colours by tier and alternating rows: Atlas's sage, forest and gold, no team colours. */
-const SEAT=[['#7f9c86','#6f8d77'],['#2f4a3a','#3a5646'],['#c9a35a','#b8924f']];
+const STONE='#d9d9d4',CREAM='#efefea',INK='#2b2a28',GLASS='#a9bdc9',COURT='#2f5f63',SURROUND='#4f6670',LINE='#f3f1e6',STEEL='#f2f2ef';
+/** Seat colours: blue rows, with a brown band across the front of the upper tier (KC's reference), no team colours. */
+const SEAT=['#2e5a86','#336394'],BAND='#7a5a48';
 
 /** All the boxes of one view in one instanced mesh, coloured per piece (the AgencyInterior pattern). */
 function Boxes({items,shadow=true}:{items:Item[];shadow?:boolean}){
@@ -36,11 +36,11 @@ function Boxes({items,shadow=true}:{items:Item[];shadow?:boolean}){
 }
 
 /** Boxes laid end to end round an ellipse, skipping where `skip` says (aisles, gates, the cutaway). */
-function ringOf(e:Ellipse,n:number,y:number,h:number,thick:number,color:(k:number,a:number)=>string,skip:(a:number)=>boolean=()=>false):Item[]{
+function ringOf(e:Ring,n:number,y:number,h:number,thick:number,color:(k:number,a:number)=>string,skip:(a:number)=>boolean=()=>false):Item[]{
  const out:Item[]=[];
  for(let k=0;k<n;k++){
   const a0=k/n*Math.PI*2,a1=(k+1)/n*Math.PI*2,am=(a0+a1)/2;if(skip(am))continue;
-  const [x0,z0]=onEllipse(e,a0),[x1,z1]=onEllipse(e,a1);
+  const [x0,z0]=onRing(e,a0),[x1,z1]=onRing(e,a1);
   out.push({p:[(x0+x1)/2,y+h/2,(z0+z1)/2],s:[Math.hypot(x1-x0,z1-z0)+.02,h,thick],c:color(k,am),r:-Math.atan2(z1-z0,x1-x0)});
  }
  return out;
@@ -50,37 +50,41 @@ const cutaway=(a:number)=>{const n=((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);retur
 
 function bowlItems(all:boolean):Item[]{
  const items:Item[]=[];
- // Pitch, run-off, markings and goals.
- const P=I.pitch;items.push({p:[0,.05,0],s:[P.w,.04,P.d],c:GREEN});
- for(let k=0;k<8;k++)items.push({p:[-P.w/2+P.w*(k+.5)/8,.072,0],s:[P.w/8-.02,.004,P.d-.02],c:k%2?'#3a7347':'#448253'});
- const lw=.12,ly=.08;
- items.push({p:[0,ly,-P.d/2],s:[P.w,.01,lw],c:LINE},{p:[0,ly,P.d/2],s:[P.w,.01,lw],c:LINE},{p:[-P.w/2,ly,0],s:[lw,.01,P.d],c:LINE},{p:[P.w/2,ly,0],s:[lw,.01,P.d],c:LINE},{p:[0,ly,0],s:[lw,.01,P.d],c:LINE});
- items.push(...ringOf({rx:2.6,rz:2.6},24,ly-.005,.01,lw,()=>LINE));
- for(const side of [-1,1]){
-  const gx=side*P.w/2;
-  // Penalty box and goal: two posts and a crossbar, with a net box behind.
-  items.push({p:[gx-side*2.6,ly,-3.2],s:[5.2,.01,lw],c:LINE},{p:[gx-side*2.6,ly,3.2],s:[5.2,.01,lw],c:LINE},{p:[gx-side*5.2,ly,0],s:[lw,.01,6.5],c:LINE});
-  items.push({p:[gx,.6,-1.1],s:[.1,1.2,.1],c:'#ffffff'},{p:[gx,.6,1.1],s:[.1,1.2,.1],c:'#ffffff'},{p:[gx,1.2,0],s:[.1,.1,2.3],c:'#ffffff'},{p:[gx+side*.5,.6,0],s:[1,1.15,2.2],c:'#dfe4df'});
- }
+ // One show court: teal, white lines, a net between two posts.
+ const C=I.court,lw=.1,ly=.08;items.push({p:[0,.05,0],s:[C.w,.04,C.d],c:COURT});
+ const single=C.d*.75;
+ items.push({p:[0,ly,-C.d/2],s:[C.w,.01,lw],c:LINE},{p:[0,ly,C.d/2],s:[C.w,.01,lw],c:LINE},{p:[0,ly,-single/2],s:[C.w,.01,lw*.8],c:LINE},{p:[0,ly,single/2],s:[C.w,.01,lw*.8],c:LINE});
+ for(const x of [-C.w/2,C.w/2])items.push({p:[x,ly,0],s:[lw,.01,C.d],c:LINE});
+ for(const x of [-C.w*.27,C.w*.27])items.push({p:[x,ly,0],s:[lw*.8,.01,single],c:LINE});
+ items.push({p:[0,ly,0],s:[C.w*.54,.01,lw*.8],c:LINE});
+ for(const z of [-C.d/2-.4,C.d/2+.4])items.push({p:[0,.5,z],s:[.1,1,.1],c:INK});
+ items.push({p:[0,.45,0],s:[.04,.8,C.d+.8],c:'#3d4a4f'},{p:[0,.88,0],s:[.06,.06,C.d+.8],c:'#f4f4f0'});
  // Seat rows: a riser and a seat line for each row, aisles left open.
  const rows=seatRows();
  for(const r of rows){
-  const n=Math.round(r.ring.rx*1.6),low=all&&cutaway;
-  items.push(...ringOf(r.ring,n,r.y-.5,.5,.85,()=>'#cfc8b9',a=>inAisle(a)||(!!low&&low(a)&&r.tier>0)));
-  items.push(...ringOf(r.ring,n,r.y,.28,.5,k=>SEAT[r.tier][(r.row+k)%2],a=>inAisle(a)||(!!low&&low(a)&&r.tier>0)));
+  const n=Math.round(r.ring.rx*2.2),low=all&&cutaway;
+  items.push(...ringOf(r.ring,n,r.y-.5,.5,.85,()=>'#c9cac6',a=>inAisle(a)||(!!low&&low(a)&&r.tier>0)));
+  items.push(...ringOf(r.ring,n,r.y,.28,.5,k=>r.tier===1&&r.row<2?BAND:SEAT[(r.row+k)%2],a=>inAisle(a)||(!!low&&low(a)&&r.tier>0)));
  }
  // Aisle steps up through every tier.
- for(const a of aisleAngles())for(const r of rows){if(all&&cutaway(a)&&r.tier>0)continue;const [x,z]=onEllipse(r.ring,a);items.push({p:[x,r.y-.25,z],s:[.6,.5,.75],c:'#bdb5a5',r:-a});}
+ for(const a of aisleAngles())for(const r of rows){if(all&&cutaway(a)&&r.tier>0)continue;const [x,z]=onRing(r.ring,a);items.push({p:[x,r.y-.25,z],s:[.6,.5,.75],c:'#b9bab5',r:-a});}
  // Tier fronts: a low wall at the front of each tier.
- for(let t=0;t<I.tiers;t++){const f=rows.find(r=>r.tier===t&&r.row===0)!;items.push(...ringOf(lerpEllipse(f.ring,{rx:0,rz:0},.015),Math.round(f.ring.rx*1.6),f.y-.5,.9,.18,()=>CREAM,a=>!!(all&&t>0&&cutaway(a))));}
- // Hospitality ring between the middle and upper tiers: glass-fronted boxes.
+ for(let t=0;t<I.tiers;t++){const f=rows.find(r=>r.tier===t&&r.row===0)!;items.push(...ringOf(lerpRing(f.ring,{rx:0,rz:0,k:f.ring.k},.015),Math.round(f.ring.rx*2.2),f.y-.5,.9,.18,()=>CREAM,a=>!!(all&&t>0&&cutaway(a))));}
+ // Hospitality ring between the lower and upper tiers: glass-fronted boxes.
  for(const b of hospitalityBoxes()){
-  const a=-b.yaw;if(all&&cutaway(a))continue;const o=I.hospitality,[fx,fz]=onEllipse(lerpEllipse(b.ring,{rx:0,rz:0},-.02),a);
-  items.push({p:[b.x,b.y+o.height/2-.4,b.z],s:[3.4,o.height,o.depth],c:'#e7dfd0',r:b.yaw+Math.PI/2},{p:[fx,b.y+o.height/2-.3,fz],s:[3.2,o.height*.7,.06],c:GLASS,r:b.yaw+Math.PI/2});
+  const a=-b.yaw;if(all&&cutaway(a))continue;const o=I.hospitality,[fx,fz]=onRing(lerpRing(b.ring,{rx:0,rz:0,k:b.ring.k},-.02),a);
+  items.push({p:[b.x,b.y+o.height/2-.4,b.z],s:[3.4,o.height,o.depth],c:'#e3e3de',r:b.yaw+Math.PI/2},{p:[fx,b.y+o.height/2-.3,fz],s:[3.2,o.height*.7,.06],c:GLASS,r:b.yaw+Math.PI/2});
  }
- // Two scoreboards on the short ends, above the top row, facing the pitch.
- const top=rows[rows.length-1];
- for(const side of [-1,1]){const x=side*(top.ring.rx-1.2);items.push({p:[x,top.y+I.scoreboard.h/2+1.4,0],s:[.3,I.scoreboard.h+.4,I.scoreboard.w+.4],c:INK},{p:[x-side*.17,top.y+I.scoreboard.h/2+1.4,0],s:[.04,I.scoreboard.h,I.scoreboard.w],c:'#3f6f66'},{p:[x,top.y/2+.7,0],s:[.3,top.y+1.4,.3],c:'#8d8a82'});}
+ // Exposed roof trusses across the short span, with a light grid between them (not in the cutaway, so the camera sees in).
+ if(!all){
+  const top=I.glassH+.6,hz=I.glass.rz;
+  for(let k=0;k<I.trusses;k++){
+   const x=-I.glass.rx+.6+(I.glass.rx*2-1.2)*k/(I.trusses-1);
+   items.push({p:[x,top,0],s:[.14,.14,hz*2],c:STEEL},{p:[x,top-.9,0],s:[.1,.1,hz*2-1.4],c:STEEL});
+   for(let j=0;j<=4;j++)items.push({p:[x,top-.45,-hz+.7+(hz*2-1.4)*j/4],s:[.08,.9,.08],c:STEEL});
+  }
+  for(const z of [-hz*.5,0,hz*.5])items.push({p:[0,top-1,z],s:[I.glass.rx*2-1.2,.06,.22],c:'#fff5dc'});
+ }
  return items;
 }
 
@@ -153,18 +157,18 @@ export default function StadiumInterior({light}:{light:LightMode}){
    <Camera view={view}/>
    <CityOutside allFloors={all} building={STADIUM_NAME} span={16} clearSpan={I.glass.rx*2} anchorAt={s=>s.stadium&&(()=>{const [x,z]=stadiumCentre(s.stadium);return {x,z};})()}
     extras={({scene,g,m})=><Stadium plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
-   <group scale={[I.glass.rx+.2,1,I.glass.rz+.2]}><mesh position={[0,-.18,0]} receiveShadow><cylinderGeometry args={[1,1,.33,64]}/><meshStandardMaterial color="#e4dccd" roughness={.85}/></mesh></group>
-   {/* Run-off round the pitch, oval like the first row of seats. */}
-   {view!==0&&<group scale={[I.seatsInner.rx,1,I.seatsInner.rz]}><mesh position={[0,.02,0]} receiveShadow><cylinderGeometry args={[1,1,.04,64]}/><meshStandardMaterial color="#5d7f61" roughness={.9}/></mesh></group>}
+   <mesh position={[0,-.18,0]} receiveShadow><boxGeometry args={[I.glass.rx*2+.4,.33,I.glass.rz*2+.4]}/><meshStandardMaterial color="#e2e2dd" roughness={.85}/></mesh>
+   {/* The court's surround, out to the first row of seats. */}
+   {view!==0&&<mesh position={[0,.02,0]} receiveShadow><boxGeometry args={[I.seatsInner.rx*2,.04,I.seatsInner.rz*2]}/><meshStandardMaterial color={SURROUND} roughness={.9}/></mesh>}
    <Boxes items={concourse}/><Boxes items={bowl}/>
    <FloorLabel level={view<0?0:view} width={I.glass.rx*2} depth={I.glass.rz*2} name={all?'Concourse and bowl':title}/>
-   {view===0&&CONCOURSE_SPACES.map(s=>{const [x,z]=onEllipse(mid,s.angle);return <Html key={s.id} position={[x,3.4,z]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${s.name} · ${s.what} · ${STADIUM_STATUS}`)}>{s.name}</button></Html>;})}
-   {view===1&&[['Pitch','Grass field with goals and markings',[0,2,0]],['Lower tier','Seat rows nearest the pitch',[0,3.4,I.seatsInner.rz+2]],['Hospitality boxes','Glass-fronted boxes between the middle and upper tiers',[0,9,-(I.seatsOuter.rz-1.5)]],['Scoreboard','Blank screen, no scores shown',[I.seatsOuter.rx-1.2,12.5,0]]].map(([name,what,p])=><Html key={name as string} position={p as [number,number,number]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${name} · ${what} · ${STADIUM_STATUS}`)}>{name as string}<span>{what as string}</span></button></Html>)}
-   {/* The view's only point light: a warm wash over the pitch, or over the concourse ring. */}
+   {view===0&&CONCOURSE_SPACES.map(s=>{const [x,z]=onRing(mid,s.angle);return <Html key={s.id} position={[x,3.4,z]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${s.name} · ${s.what} · ${STADIUM_STATUS}`)}>{s.name}</button></Html>;})}
+   {view===1&&[['Show court','One court with its lines and net, empty',[0,2,0]],['Lower tier','Seat rows nearest the court',[0,3.4,I.seatsInner.rz+2]],['Hospitality boxes','Glass-fronted boxes between the lower and upper tiers',[0,8,-(I.seatsOuter.rz-1.5)]],['Roof trusses','Exposed steel trusses under the sloping roof',[I.glass.rx-3,I.glassH,0]]].map(([name,what,p])=><Html key={name as string} position={p as [number,number,number]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${name} · ${what} · ${STADIUM_STATUS}`)}>{name as string}<span>{what as string}</span></button></Html>)}
+   {/* The view's only point light: a warm wash over the court, or over the concourse ring. */}
    <pointLight position={view===0?[0,6,0]:[0,16,0]} color="#ffe6bf" intensity={isNight?(view===0?60:140):10} distance={view===0?40:48} decay={1.6}/>
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${STADIUM_NAME} and return to city`}>← Exit building</button><div><small>{STADIUM_NAME.toUpperCase()} · SPORTS AND EVENTS VENUE</small><h2>{title}</h2></div></header>
   <nav className="skyline-floor-picker" aria-label={`Choose ${STADIUM_NAME} view`}><strong>Floor navigation</strong>{[-1,1,0].map(n=><button key={n} aria-pressed={view===n} onClick={()=>{setView(n);setPicked(null);}}>{n===-1?'All':STADIUM_VIEWS[n]}</button>)}</nav>
-  <aside className="skyline-interior-note">{picked??(all?`Concourse under the stands, and the seating bowl round the pitch · ${lookHint()}`:view===0?'Gates, stair cores, escalators, food kiosks, the shop, first aid and restrooms · Select a space':'Pitch, three tiers with aisles, hospitality boxes and two scoreboards · Select a part')}<span>{`${STADIUM_STATUS} · No tickets, attendance, scores or schedules · Nobody is shown inside · A schematic of the venue, not a seat-by-seat model`}</span></aside>
+  <aside className="skyline-interior-note">{picked??(all?`Concourse inside the glass, and the seating bowl round the show court · ${lookHint()}`:view===0?'Gates, stair cores, escalators, food kiosks, the shop, first aid and restrooms · Select a space':'An octagonal bowl round one show court, two tiers with aisles, hospitality boxes and the roof trusses · Select a part')}<span>{`${STADIUM_STATUS} · No tickets, attendance, scores or schedules · Nobody is shown inside · A schematic of the venue, not a seat-by-seat model`}</span></aside>
  </section>;
 }

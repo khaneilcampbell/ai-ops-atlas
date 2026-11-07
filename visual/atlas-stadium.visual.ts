@@ -26,6 +26,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
    ['close',[cx,1.6,cz],[cx+8*k,6.5*k,cz+9*k]],
    ['low',[cx,1.8,cz],[cx+10*k,2.6,cz-3*k]],
    ['top',[cx,0,cz],[cx+.01,16*k,cz+6*k]],
+   ['corner',[cx+1.5,2.2,cz],[cx+11*k,3.2*k,cz+7.5*k]],
    ...(stop?[['station',[(cx+stop.point[0])/2+2,1,(cz+stop.point[1])/2],[cx+12*k,7*k,stop.point[1]+8*k]] as View]:[]),
   ];
   const result:{name:string;png:string}[]=[];

@@ -1,27 +1,19 @@
 import * as THREE from 'three';
 
 /**
- * Atlas Stadium's shell skin, one tile = 4 x 4 panels: fine panel joints and a scatter of small
- * perforation dots, thicker towards each panel's lower edge. The glow map lights about two thirds
- * of the dots warm, so at night the shells sparkle with tiny static points. Drawn on a canvas:
- * no images, no downloads, no animation.
+ * Atlas Stadium's roof sheeting: dark grey-blue standing seams running across the short span, eave to eave, with a
+ * faint lighter ridge on each seam and a slight variation between sheets. Drawn on a canvas: no
+ * images, no downloads, no animation.
  */
-export function stadiumSkinTexture(seed=7){
+export function stadiumRoofTexture(seed=7){
  let s=seed;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
- const dots:{x:number;y:number;r:number;lit:boolean}[]=[];
- for(let py=0;py<4;py++)for(let px=0;px<4;px++)for(let k=0;k<40;k++){
-  const fy=Math.pow(rnd(),.7);dots.push({x:px*64+5+rnd()*54,y:py*64+5+fy*54,r:.55+rnd()*.6,lit:rnd()<.66});
+ const c=document.createElement('canvas');c.width=128;c.height=128;const g=c.getContext('2d')!;
+ g.fillStyle='#3b4652';g.fillRect(0,0,128,128);
+ const sheets=8,step=128/sheets;
+ for(let k=0;k<sheets;k++){
+  g.fillStyle=`rgba(${rnd()<.5?'70,82,96':'52,62,74'},${.25+rnd()*.3})`;g.fillRect(k*step,0,step,128);
+  g.fillStyle='rgba(150,166,182,.55)';g.fillRect(k*step,0,1.5,128);
+  g.fillStyle='rgba(20,26,32,.45)';g.fillRect(k*step+1.5,0,1,128);
  }
- const make=(lit:boolean)=>{
-  const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d')!;
-  g.fillStyle=lit?'#000':'#f4efe4';g.fillRect(0,0,256,256);
-  if(!lit){
-   // Each panel a touch warmer or cooler, so the skin reads as many pieces.
-   for(let py=0;py<4;py++)for(let px=0;px<4;px++){g.fillStyle=`rgba(${rnd()<.5?'214,204,186':'236,232,224'},${.25+rnd()*.25})`;g.fillRect(px*64,py*64,64,64);}
-   g.fillStyle='rgba(150,138,116,.75)';for(let k=0;k<4;k++){g.fillRect(k*64,0,2,256);g.fillRect(0,k*64,256,2);}
-  }
-  for(const d of dots){if(lit&&!d.lit)continue;g.fillStyle=lit?'#ffcf8a':'rgba(128,118,100,.32)';g.beginPath();g.arc(d.x,d.y,lit?d.r*1.2:d.r,0,Math.PI*2);g.fill();}
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
- };
- return {map:make(false),glow:make(true)};
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
 }
