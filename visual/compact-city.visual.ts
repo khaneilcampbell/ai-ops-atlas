@@ -1,5 +1,6 @@
 import {transportPlan} from './compact-city-plan';
 import {test,expect} from '@playwright/test';import {openAtlas,settle,selectBuilding,waitForScene} from './atlas';
+test.use({deviceScaleFactor:1});
 for(const light of ['day','night'] as const)test(`Compact connected city: ${light}`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);
@@ -19,10 +20,10 @@ for(const light of ['day','night'] as const)test(`Final perimeter and local conn
  await page.getByRole('button',{name:'Financial District Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
  await page.getByRole('button',{name:'Atlas Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/marketplace-connections-${light}.png`});expect(errors).toEqual([]);
 });
-for(const light of ['day','night'] as const)test(`Overview fit includes the highway: ${light}`,async({page})=>{
+for(const light of ['day','night'] as const)test(`Overview fit includes the railway: ${light}`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);
- const highway=(await transportPlan(page)).highway;
- const projected=await page.evaluate(async(points)=>{const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Renderer import missing');const fiber:typeof import('@react-three/fiber')=await import(url),state=fiber._roots.get(document.querySelector('canvas')!)!.store.getState();return (points as [number,number][]).map(([x,z])=>{const v=state.camera.position.clone().set(x,.7,z).project(state.camera);return [v.x,v.y];});},highway);
+ const perimeter=(await transportPlan(page)).rail.loop!.route;
+ const projected=await page.evaluate(async(points)=>{const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Renderer import missing');const fiber:typeof import('@react-three/fiber')=await import(url),state=fiber._roots.get(document.querySelector('canvas')!)!.store.getState();return (points as [number,number][]).map(([x,z])=>{const v=state.camera.position.clone().set(x,.7,z).project(state.camera);return [v.x,v.y];});},perimeter);
  expect(Math.max(...projected.map(p=>Math.abs(p[0])))).toBeLessThan(.98);expect(Math.min(...projected.map(p=>p[1]))).toBeGreaterThan(-.92);expect(Math.max(...projected.map(p=>p[1]))).toBeLessThan(.9);
  await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});expect(errors).toEqual([]);
 });

@@ -8,7 +8,7 @@ import {layoutMap,type GroupBy} from '../mapLayout';
 import {catalog} from '../../catalog';
 for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps lamps outside junctions and arrows opposed in ${grouping} grouping`,()=>{
  const f=buildScene(layoutMap(catalog,[],grouping)).freight!;
- const poles=highwayLightPositions(f.highway,f.exits);expect(poles.length).toBeGreaterThan(0);
+ const poles=highwayLightPositions(f.highway,f.exits);expect(poles).toEqual([]);expect(f.highway).toEqual([]);expect(f.access).toEqual([]);
  for(const p of poles)for(const q of f.exits)expect(Math.hypot(p[0]-q[0],p[1]-q[1])).toBeGreaterThanOrEqual(HIGHWAY.junctionRadius+.05);
  for(const access of f.access){
   const arrows=interchangeArrows([access]);expect(arrows).toHaveLength(2);

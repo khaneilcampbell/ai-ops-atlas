@@ -4,7 +4,9 @@ import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {planHighwayTraffic,vehicleAt,HIGHWAY_TRAFFIC_COUNT,HIGHWAY_TRAFFIC_SPEED} from './vehicles';
 it('adds sixteen highway vehicles, cruising in both directions with clear following gaps',()=>{
- const plans=planHighwayTraffic(buildScene(layoutMap(catalog,[],'district')));
+ const scene=buildScene(layoutMap(catalog,[],'district'));
+ expect(planHighwayTraffic(scene)).toEqual([]);
+ const plans=planHighwayTraffic({freight:{...scene.freight!,highway:[[0,0],[100,0],[100,100],[0,100],[0,0]]}});
  expect(plans).toHaveLength(HIGHWAY_TRAFFIC_COUNT);expect(new Set(plans.map(p=>p.id)).size).toBe(plans.length);
  expect(new Set(plans.map(p=>p.kind)).size).toBeGreaterThanOrEqual(7);
  for(const p of plans)for(const l of p.legs)expect(Math.hypot(l.b[0]-l.a[0],l.b[1]-l.a[1])/l.dur).toBeCloseTo(HIGHWAY_TRAFFIC_SPEED);

@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
+import {cityEnvelope} from './citySpacing';
 import {squareCityBounds} from './cityPerimeter';
 import {pathClear} from './roads';
 import {railPoint,railState,stationAccessAreas,COMMUNITY} from './hillsCommunityPlan';
@@ -11,9 +12,8 @@ describe('compact city and Marketplace passenger service',()=>{
   const before=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,m=s.mall!,h=s.freight!.highway;
   expect(s.hills).toBeUndefined();expect(s.community).toBeUndefined();expect(JSON.stringify(catalog)).toBe(before);
   expect(s.transportConnections.map(c=>c.id)).not.toContain('atlas-hills');
-  const xs=h.map(p=>p[0]),zs=h.map(p=>p[1]);
-  expect(Math.max(...xs)-Math.min(...xs)).toBeCloseTo(Math.max(...zs)-Math.min(...zs),6);
-  for(const land of s.land){expect(land.x).toBeGreaterThan(Math.min(...xs));expect(land.x+land.w).toBeLessThan(Math.max(...xs));expect(land.z).toBeGreaterThan(Math.min(...zs));expect(land.z+land.d).toBeLessThan(Math.max(...zs));}
+  expect(h).toEqual([]);expect(s.freight!.access).toEqual([]);
+  const e=cityEnvelope(s.land)!;expect(e.w).toBeCloseTo(e.d,6);
   expect(r.route[0]).toEqual(r.hills);expect(r.route.at(-1)).toEqual(r.financial);
   expect(r.hillsWalk[0]).toEqual([m.cx,0,m.z+m.d]);
   const ground=r.hillsWalk.filter(p=>p[1]===0).map(p=>[p[0],p[2]] as [number,number]);

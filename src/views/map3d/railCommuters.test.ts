@@ -2,7 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {COMMUNITY as C,railState} from './hillsCommunityPlan';
+import {COMMUNITY as C,railState,railServiceState} from './hillsCommunityPlan';
 import {financialDimensions} from './financialArchitecture';
 import {pathClear,type Pt} from './roads';
 import {COMMUTER_TOWERS,RAIL_COMMUTERS,RAIL_COMMUTER_COUNT,commuterAt,commuterTimes,planRailCommuters} from './railCommuters';
@@ -31,8 +31,8 @@ describe('rail commuters',()=>{
   for(const p of plan.commuters){
    const k=commuterTimes(plan,p),dwell=C.dwell;
    // Everyone boards and alights only while the train stands at that station with its doors open.
-   expect(railState(k.board,s.communityRail!.length)).toMatchObject({phase:'hills',doors:1});expect(railState(k.alightFinancial,s.communityRail!.length)).toMatchObject({phase:'financial',doors:1});
-   expect(railState(k.returnBoard,s.communityRail!.length)).toMatchObject({phase:'financial',doors:1});expect(railState(k.alightHills,s.communityRail!.length)).toMatchObject({phase:'hills',doors:1});
+   expect(railServiceState(k.board,s.communityRail!)).toMatchObject({phase:'hills',doors:1});expect(railServiceState(k.alightFinancial,s.communityRail!)).toMatchObject({phase:'financial',doors:1});
+   expect(railServiceState(k.returnBoard,s.communityRail!)).toMatchObject({phase:'financial',doors:1});expect(railServiceState(k.alightHills,s.communityRail!)).toMatchObject({phase:'hills',doors:1});
    expect(k.board).toBeLessThan(dwell);expect(k.board).toBeGreaterThan(0);
    // No one needs to be in two places: a full stop at work and at home between walks.
    expect(k.leaveWork-k.atWork).toBeGreaterThanOrEqual(RAIL_COMMUTERS.rest);expect(k.leaveHome+k.period-k.atHome).toBeGreaterThanOrEqual(RAIL_COMMUTERS.rest);
