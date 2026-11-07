@@ -173,7 +173,8 @@ export default function GalleriaInterior({light}:{light:LightMode}){
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
    <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-22} shadow-camera-right={22} shadow-camera-top={22} shadow-camera-bottom={-22}/>
    <GalleriaCamera mode={mode}/>
-   {(mode===ALL||mode===1)&&<CityOutside building={GALLERIA_NAME} span={34} clearSpan={44} scaleOverride={(s)=>s.galleria?GALLERIA_IN.k/s.galleria.s:undefined} anchorAt={s=>{if(!s.galleria)return;const [x,z]=s.galleria.toMap([40,30]);return {x,z};}} allFloors={mode===ALL}/>}
+   {/* The city on every floor: an upper floor is drawn at y 0, so the city drops by that floor's height to stay level with the street; the basement keeps the street at its own level, like the Marketplace. */}
+   <CityOutside building={GALLERIA_NAME} span={34} clearSpan={44} scaleOverride={(s)=>s.galleria?GALLERIA_IN.k/s.galleria.s:undefined} anchorAt={s=>{if(!s.galleria)return;const [x,z]=s.galleria.toMap([40,30]);return {x,z};}} allFloors={mode===ALL} elevation={mode>=2&&mode!==ALL?BASE[mode]:0}/>
    {floors.map(f=><group key={f} position={[0,offset(f)-BASE[f],0]}>
     <Floor floor={f} y={BASE[f]} labels={mode!==ALL} cutaway night={isNight} picked={picked?.id} onPick={setPicked}/>
     {mode===ALL&&<Html position={[-18,BASE[f]+.3,0]} center><span className="skyline-room-label building-floor-label">{GALLERIA_FLOORS[f].label}</span></Html>}
