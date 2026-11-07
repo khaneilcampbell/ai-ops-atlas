@@ -18,7 +18,10 @@ describe("agent jobs", () => {
     for (const j of jobs) expect(reversed.get(j.agentId)).toEqual(j.home);
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
-    const suite = jobs.find((j) => j.agentId === "atlas-system-improvements")!;
+    // Exercise declared-workplace mapping independently of the real workflow's classification.
+    const original = catalog.agents.find(a => a.id === "atlas-system-improvements")!;
+    const fixture = { ...original, registry: { ...original.registry, classification: { type: "A" as const, confidence: "verified" as const } } };
+    const suite = agentJobs({ ...catalog, agents: [fixture] })[0];
     expect(suite.work).toMatchObject({ kind: "workplace", building: "OpenAI" });
     const hq = jobs.find((j) => j.agentId === "niche-scout")!;
     expect(hq.work).toMatchObject({ kind: "headquarters", projectId: "commerce-pipeline" });
@@ -34,11 +37,11 @@ describe("agent jobs", () => {
     }
   });
   it("labels what the manifest says and what Atlas worked out", () => {
-    const scout = jobs.find((j) => j.agentId === "github-opportunity-scout")!;
-    expect(scout.budget.provenance).toBe("declared");
-    expect(scout.budget.value).toContain("$1 a month");
-    const analyst = jobs.find((j) => j.agentId === "job-analyst")!;
-    expect(analyst.budget).toMatchObject({ provenance: "inferred", value: "Not documented" });
+    const declared = jobs.find(j => j.agentId === "repo-intelligence")!;
+    expect(declared.budget.provenance).toBe("declared");
+    expect(declared.budget.value).toContain("limits");
+    const inferred = jobs.find(j => j.agentId === "niche-scout")!;
+    expect(inferred.budget).toMatchObject({ provenance: "inferred", value: "Not documented" });
     expect(jobs.every((j) => j.shift.provenance === "inferred")).toBe(true);
   });
   it("keeps planned agents home", () => {
