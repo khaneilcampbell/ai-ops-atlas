@@ -459,6 +459,7 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const cones: Inst[] = [];
     scene.trees.forEach((t, i) => {
       const s = t.s;
+      if (t.kind === "palm") return;
       if (t.kind === "cone") {
         trunks.push({ p: [t.x, t.y, t.z], s: [0.07, s * 0.6, 0.07], c: "#6b5038" });
         cones.push({ p: [t.x, t.y + s * 0.4, t.z], s: [s * 1.8, s * 2.2, s * 1.8], c: "#3f7342" });

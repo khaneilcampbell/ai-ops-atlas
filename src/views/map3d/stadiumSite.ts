@@ -22,6 +22,8 @@ export interface StadiumSite {
  site:Rect;
  /** Flat pieces on the ground, all g.box: the pool water and its rims. */
  boxes:SiteBox[];
+ /** Palms round the plaza that survived the road, walk and station clean-up; set by the scene. */
+ palms?:Pt[];
 }
 
 const overlaps=(a:Rect,b:Rect,gap=0)=>a.x<b.x+b.w+gap&&a.x+a.w+gap>b.x&&a.z<b.z+b.d+gap&&a.z+a.d+gap>b.z;

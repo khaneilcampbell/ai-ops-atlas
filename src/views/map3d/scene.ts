@@ -129,7 +129,8 @@ export interface StrayBuilding {
   size: number;
   height: number;
 }
-export type TreeKind = "round" | "cone" | "blossom";
+/** "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. */
+export type TreeKind = "round" | "cone" | "blossom" | "palm";
 export interface Tree {
   x: number;
   y: number;
@@ -739,8 +740,8 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
-    // Slim cone trees: a formal plaza row, and about 3% of a round tree's triangles.
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'cone' as TreeKind})));
+    // Palms in a ring round the stadium (KC, 2026-11-07), drawn with the stadium's plain boxes.
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'palm' as TreeKind})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
@@ -848,6 +849,7 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
+  if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     financial,
     community,

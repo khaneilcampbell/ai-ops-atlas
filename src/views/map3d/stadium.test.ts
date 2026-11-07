@@ -154,6 +154,10 @@ describe("Atlas Stadium realism",()=>{
     expect(Math.abs((r.x+r.w/2)-(lot.x+lot.w/2))).toBeLessThan(1.5);
     expect(g.boxes.every(b=>b.c==='#5aaac0'||b.c==='#d9d2c4')).toBe(true);
     for(const t of s.trees)if(t.x>r.x&&t.x<r.x+r.w&&t.z>r.z&&t.z<r.z+r.d)expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
+    // Palms ring the plaza (KC, 2026-11-07), only on the stadium's lot, drawn by the stadium.
+    expect(g.palms!.length).toBeGreaterThanOrEqual(12);
+    for(const t of s.trees.filter(t=>t.kind==='palm'))expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
+    expect(readFileSync(join(__dirname,"models.tsx"),"utf8")).toMatch(/t\.kind === "palm"\) return/);
     // The pools ring the concourse but leave the main gate open.
     const [cx,cz]=stadiumCentre(a),water=g.boxes.filter(b=>b.c==='#5aaac0');
     expect(water.length).toBeGreaterThan(20);
