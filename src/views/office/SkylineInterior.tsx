@@ -144,7 +144,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
       </group>
       <ElevatorLanding level={level} reduced={reduced} labels={floor!==-1}/>
       {level===0 ? <group>
-        {business&&!brandedFinancial&&<group>{building==="Wells Fargo"?<group>
+        {business&&!brandedFinancial&&<group>{building==="Halden Branch"?<group>
           {[-1.5,0,1.5].map(x=><group key={x}><Box p={[x,1.46,-3]} s={[0.65,0.38,0.08]} color="#344a41"/><Box p={[x+0.6,1.65,-3]} s={[0.04,0.8,0.65]} color="#b99957"/></group>)}
           <Box p={[-6.5,1,-4]} s={[1,2,0.7]} color="#a71d30"/><Box p={[-6.5,1.25,-3.62]} s={[0.65,0.5,0.05]} color="#a9c8c3"/>
         </group>:<group><Box p={[-5.8,1.5,-5.6]} s={[3,1.7,0.15]} color="#223d32"/><Html position={[-5.8,1.6,-5.45]} center><span className="skyline-room-label">{business.subtitle}</span></Html></group>}</group>}
@@ -162,7 +162,7 @@ export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{b
           const x=side*4,z=row*3.5, room=`${level}0${(side===-1?0:2)+index+1}`;
           const agent=workplaceAgent(assigned,building,level,room)??(business?undefined:agents[slot]);
           return <group key={room} onClick={event=>{if(agent?.workplace){event.stopPropagation();setPickedAgent(agent.id);}}}>
-            {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} residential={residential} bank={["Wells Fargo","Chase","Navy Federal Credit Union"].includes(displayName)} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
+            {business?<BusinessSuite x={x} z={z} name={suite!} accent={business.accent} residential={residential} bank={["Halden Branch","Halden Trust","Bayvale Bank","Merrow Credit Union"].includes(displayName)} hospitality={["Starbucks","Smashburger","Chipotle"].includes(building)} fashion={building==="Zara"} labels={false}/>:<ResidenceDetails x={x} z={z}/>}
             <Box p={[x,0.06,row*1.1]} s={[0.85,0.04,0.6]} color="#bca371"/>
             <Box p={[x,0.025,z]} s={[7.4,0.04,4.6]} color={row===-1?"#eee4d0":"#ded9cc"}/><Box p={[side*0.15,0.65,z]} s={[0.12,1.3,4.7]} color="#c9bea5"/>
             {!business&&<group><Box p={[x+1.8,0.4,z-0.7]} s={[1.7,0.6,2]} color="#657c70"/><Box p={[x+1.8,0.74,z-1.4]} s={[1.5,0.12,0.5]} color="#f8f1e2"/></group>}

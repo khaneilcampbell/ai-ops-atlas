@@ -1,6 +1,6 @@
 import type {Agent} from "./types";
 
-export const WORKPLACE_BUILDINGS=["Skyline","Atlas Marketplace","OpenAI","Anthropic","Wells Fargo","Starbucks","Smashburger","Chipotle","Zara","Benjaire Marketing Agency"] as const;
+export const WORKPLACE_BUILDINGS=["Skyline","Atlas Marketplace","Model Lab","Reasoning Lab","Halden Branch","Starbucks","Smashburger","Chipotle","Zara","Benjaire Marketing Agency"] as const;
 /**
  * Benjaire Marketing Agency rooms that can hold a worker: the upper-floor room ids of AGENCY_ROOMS
  * in views/office/agencyInteriorPlan.ts (level = floor). Kept as a plain list so the catalog does not

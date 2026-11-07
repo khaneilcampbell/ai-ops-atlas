@@ -9,9 +9,9 @@ for(const width of [1512,390])for(const light of (before?['day']:['day','night']
  if(!before){
   await expect(page.locator('.m3-plaque').filter({hasText:'Atlas Hills'})).toHaveCount(0);
   if(width===1512){
-   for(let i=0;i<3;i++){const station=page.locator('.m3-plaque').filter({hasText:'Atlas Station'});if(await station.count())break;await page.getByRole('button',{name:'Zoom in',exact:true}).click();await settle(page,2);}
-   await selectBuilding(page,'Atlas Station');
-   await expect(page.locator('.panel').getByText('Atlas Station',{exact:true}).first()).toBeVisible();
+   for(let i=0;i<3;i++){const station=page.locator('.m3-plaque').filter({hasText:'Atlas Central Station'});if(await station.count())break;await page.getByRole('button',{name:'Zoom in',exact:true}).click();await settle(page,2);}
+   await selectBuilding(page,'Atlas Central Station');
+   await expect(page.locator('.panel').getByText('Atlas Central Station',{exact:true}).first()).toBeVisible();
    await page.screenshot({path:`/private/tmp/atlas-compact-city/docs/compact-city/station-${light}.png`});
   }
  }

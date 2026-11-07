@@ -10,7 +10,7 @@ export const STADIUM_KEY="service:skyline-stadium";
 export const STADIUM_NAME="Atlas Stadium";
 /** Grass kept between the stadium grounds and the island edge. */
 export const SITE_EDGE=1.2;
-/** Furthest the stadium's lot may slide west of GitHub Profile to centre it in open land. */
+/** Furthest the stadium's lot may slide west of Profile Tower to centre it in open land. */
 const SLIDE_MAX=10;
 export interface StadiumPlan extends Rect {accessX:number;accessZ:number}
 export function planStadium(land:Rect[],paving:Slab[],profile?:Rect,centre=true):StadiumPlan|undefined {
@@ -30,7 +30,7 @@ export function planStadium(land:Rect[],paving:Slab[],profile?:Rect,centre=true)
   const west=Math.min(...land.map(r=>r.x))+SITE_EDGE;
   let far=parcel.x;
   if(centre)
-  // At most SLIDE_MAX west, so its roads and walks still reach GitHub Profile's plaza.
+  // At most SLIDE_MAX west, so its roads and walks still reach Profile Tower's plaza.
   for(let px=parcel.x-.5;px>=Math.max(west,parcel.x-SLIDE_MAX)&&free(lot(px));px-=.5)far=px;
   const x=(parcel.x+far)/2+margin,z=parcel.z+margin;
   const access=paving.filter(p=>p.x>=profile.x&&p.x<=profile.x+profile.w&&p.z>=profile.z&&p.z<=profile.z+profile.d).sort((a,b)=>a.x-b.x)[0];

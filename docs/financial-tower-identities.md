@@ -1,5 +1,9 @@
 # Financial District tower identities
 
+> **Renamed 2026-11-07 (PR #257):** the towers below now use original names (Bayvale Bank, Robin Exchange,
+> Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences) and
+> Vantor Motors replaces BMW. See `docs/building-names.md`. The history below keeps the names used at the time.
+
 Four existing IDs retain their placement and gain distinct, static procedural architecture:
 
 | Stable ID | Display name | Architecture |

@@ -7,7 +7,7 @@ and pure planners remain in source rather than deleting shared code.
 
 Marketplace has its own local-access reservation instead of depending on an estate parcel. Atlas
 Station sits beside the Marketplace garden, with a platform, stairs, lift and pedestrian approach
-to the public plaza. No separate named Atlas Station existed in current main: the former Hills
+to the public plaza. No separate named Atlas Central Station existed in current main: the former Hills
 endpoint is replaced, not supplemented. Its new selection key is `service:atlas-station`.
 The Financial District station keeps its identity. Legacy rail field names remain internal for
 compatibility; they no longer point to residential destinations.
@@ -15,7 +15,7 @@ compatibility; they no longer point to residential destinations.
 ```mermaid
 flowchart LR
  M[Marketplace public plaza] --> W[Sidewalk and garden terrace]
- W --> A[Atlas Station: stairs / lift / platform]
+ W --> A[Atlas Central Station: stairs / lift / platform]
  A <-->|One simulated train; 15-second stops| F[Financial District Station]
  F --> P[Financial Park paths]
  P --> B[Financial District entrances]
@@ -39,7 +39,7 @@ remain intact.
 - Full unit suite: 981 passed; two pre-existing skipped tests unchanged.
 - Lint, type checks and production build pass. Existing bundle-size/import warnings remain.
 - Focused desktop/phone browser checks capture day/night, no Hills nameplate, no page errors,
-  and Atlas Station selection. Before screenshots captured from main `316315c`.
+  and Atlas Central Station selection. Before screenshots captured from main `316315c`.
 - Existing commuter tests exercise boarding/alighting timing, continuous travel and the complete
   round-trip state machine; new checks cover square bounds, station access and retained records.
 - Screenshots use synthetic GitHub fixtures; header CI badges are not production evidence.

@@ -1,3 +1,4 @@
+import {marinaFootprint,marinaSite} from './marinaPlan';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -367,7 +368,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
     if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${stop.district} · Visual simulation`});}
-    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
+    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
@@ -654,6 +655,8 @@ function World({
   const g = useGeometries();
   const m = useMaterials();
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
+  // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
+  const railKeepClear=useMemo(()=>[marinaFootprint(marinaSite(scene,TERRACE_H))],[scene]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.map(c=>c.road)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -1147,7 +1150,7 @@ function World({
       <VenueBridge scene={scene} g={g} m={m}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

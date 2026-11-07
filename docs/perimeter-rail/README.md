@@ -6,7 +6,7 @@ The active city has a square outer land envelope, with its original core canals 
 
 ```mermaid
 flowchart LR
- F[Financial District] --> M[Atlas Station · Marketplace]
+ F[Financial District] --> M[Atlas Central Station · Marketplace]
  M --> S[Skyline]
  S --> V[Stadium]
  V --> A[Airport]

@@ -1,6 +1,7 @@
 import type {Inst} from './models';
 import {COMMUNITY as C} from './hillsCommunityPlan';
 import type {Pt} from './roads';
+import {stationPoint,type RailStop} from './perimeterRailPlan';
 
 /**
  * Financial Park station, after Dubai's rail architecture (KC, 2026-10-31): a Dubai Metro style
@@ -56,4 +57,15 @@ export function parkStationParts([x,z]:Pt,base:number):ParkStationParts{
   metal.push({p:[sx+side*(b.halfWidth+.12),(ay+by)/2,(az+bz)/2],s:[.08,.08,Math.hypot(bz-az,by-ay)+.04],rx:tilt(bz-az,by-ay),c:PARK_STATION.colors.rib});
  }
  return {metal,glass,accents};
+}
+
+/** Moves station parts built around [0,0] (track along x, park toward +z) into a loop stop's frame. */
+export function placeParkStation(parts:ParkStationParts,stop:Pick<RailStop,'point'|'yaw'>):ParkStationParts{
+ const angle=stop.yaw-Math.PI/2,move=(items:Inst[])=>items.map(v=>{const [x,z]=stationPoint(stop,v.p[0],v.p[2]);return {...v,p:[x,v.p[1],z] as [number,number,number],r:(v.r??0)+angle};});
+ return {metal:move(parts.metal),glass:move(parts.glass),accents:move(parts.accents)};
+}
+
+/** One set of instanced parts for several stations, so all of them stay three draw calls. */
+export function mergeStationParts(list:ParkStationParts[]):ParkStationParts{
+ return {metal:list.flatMap(p=>p.metal),glass:list.flatMap(p=>p.glass),accents:list.flatMap(p=>p.accents)};
 }

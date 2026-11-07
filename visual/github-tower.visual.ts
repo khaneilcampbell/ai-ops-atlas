@@ -27,7 +27,7 @@ for(const light of ['day','night'] as const)test(`GitHub tower, ${light}`,async(
 });
 test('GitHub tower nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'GitHub Profile');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'GitHub Profile',exact:true})).toBeVisible();
+ await selectBuilding(page,'Profile Tower');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Profile Tower',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('GitHub tower on a phone',async({page})=>{

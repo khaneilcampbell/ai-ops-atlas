@@ -592,7 +592,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       const OFFICE_H = k.height ?? toolOfficeHeight(k.name);
       // Skyline shops are drawn at their base size, then grown evenly (CITY_SCALE.shop).
       const brand = toolBrand(k.name), w = k.size / shopScale(k), d = w * 0.8;
-      if (["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].includes(k.name)) {
+      if (["Starbucks","Zara","Smashburger","Chipotle","Halden Branch"].includes(k.name)) {
         const zara=k.name==="Zara",cafe=k.name==="Starbucks",chipotle=k.name==="Chipotle";
         walls.push({p:[k.x,y,k.z],s:[w,OFFICE_H,d],c:chipotle?"#845544":brand.wall});
         slabs.push({p:[k.x,y,k.z],s:[w*1.12,0.06,d*1.12],c:"#c2b7a4"});
@@ -616,7 +616,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
           for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.46,y+0.98,k.z+d/2+0.04],s:[0.045,1.72,0.08],c:"#181818"});
           for(let floor=0;floor<3;floor++) for(const side of [-1,1]) windows.push({p:[k.x+side*w*0.25,y+1.05+floor*0.4,k.z+d/2+0.014],s:[w*0.33,0.3,0.025],c:"#ffeed1"});
           slabs.push({p:[k.x,y+0.94,k.z+d/2+0.07],s:[w*1.05,0.04,0.22],c:"#171717"});
-        } else if(k.name==="Wells Fargo") {
+        } else if(k.name==="Halden Branch") {
           // Classical branch portico: paired columns, broad steps and a triangular pediment.
           for(const side of [-1,1]) {
             accents.push({p:[k.x+side*w*0.36,y+0.12,k.z+d/2+0.17],s:[w*0.09,0.81,0.09],c:"#e9ddbc"});
@@ -642,7 +642,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         }
         // Upper-floor windows on every side, so shops show lit rooms at night like the offices
         // around them instead of blank walls (KC, 2026-10-31). Zara and Wells Fargo keep their fronts.
-        const front=!zara&&k.name!=="Wells Fargo";
+        const front=!zara&&k.name!=="Halden Branch";
         for(let yy=1.08;yy<OFFICE_H-0.3;yy+=0.42)for(let col=-1;col<=1;col++){
           windows.push({p:[k.x+col*w*0.27,y+yy,k.z-d/2-0.012],s:[w*0.17,0.24,0.025],c:"#fff5d9"});
           for(const side of [-1,1])windows.push({p:[k.x+side*(w/2+0.012),y+yy,k.z+col*d*0.27],s:[0.025,0.24,d*0.17],c:"#fff5d9"});
@@ -653,19 +653,19 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
-      if(k.name==="Anthropic") {
+      if(k.name==="Reasoning Lab") {
         // Keep facade ribs between the lobby and the dedicated sign band.
         for(let rib=0;rib<5;rib++) accents.push({p:[k.x+(rib-2)*w*0.21,y+0.72,k.z+d/2+0.025],s:[w*0.025,OFFICE_H-1.38,0.025],c:brand.primary});
         slabs.push({p:[k.x,y+OFFICE_H+0.1,k.z-d*0.08],s:[w*0.62,0.14,d*0.6],c:brand.primary});
       }
-      if(k.name==="OpenAI") {
+      if(k.name==="Model Lab") {
         // A layered glass pavilion with a floating green roof and an entrance portal.
         for(let tier=0;tier<3;tier++) slabs.push({p:[k.x,y+OFFICE_H+0.1+tier*0.12,k.z],s:[w*(1.14-tier*0.16),0.06,d*(1.14-tier*0.16)],c:tier%2?"#e8eeeb":brand.primary});
         for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
       }
       // Six office floors with a regular curtain-wall grid and branded cornices.
       const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
-      const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
+      const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Reasoning Lab"?1.1:0.68))/floorCount);
       for (let floor = 0; floor < floorCount; floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
@@ -679,13 +679,13 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       for (const side of [-1, 1]) {
         accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
       }
-      if(k.name!=="Anthropic") slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
+      if(k.name!=="Reasoning Lab") slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
       accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
       accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
       doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
       slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
-      if (brand.stepped && k.name!=="Anthropic") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+      if (brand.stepped && k.name!=="Reasoning Lab") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
     };
     const all = [walls, slabs, accents, windows, domes, pediments, doors];
     for (const k of kiosks) {
@@ -712,7 +712,7 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
   const texture = useMemo(() => toolSignTexture(tool.name), [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Anthropic"?0.32:0.08)) * shopScale(tool);
+  const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Reasoning Lab"?0.32:0.08)) * shopScale(tool);
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />

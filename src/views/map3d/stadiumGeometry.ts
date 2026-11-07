@@ -41,7 +41,7 @@ export const STADIUM={
  stair:{steps:7,width:1.7},
  /**
   * Gates: the main gate is the grand stair's foot, `foot` east of the centre, where the roads and
-  * walks from GitHub Profile, the Financial District, the airport and Stadium Station arrive. Two
+  * walks from Profile Tower, the Financial District, the airport and Stadium Station arrive. Two
   * short side flights come down off the podium's long sides at x = side.x.
   */
  gate:{foot:4.45,width:1.2,side:{x:1.6,run:.45,steps:3,width:.7}},

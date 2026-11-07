@@ -17,7 +17,7 @@ At least one report goes out every 7 days (`heartbeatDays`) even when nothing ch
 
 ## Privacy
 
-ai-ops-atlas is public, so its job summaries are public. Once Atlas has stored a report (`POST /api/hooks/reports`, 202), the summary only says how many ideas there are and where to find them: GitHub Profile building, Opportunity Scout, Reports. Atlas shows each report in full there, with its history and a Download PDF button; the PDF is built on the device, nothing else sees it. If Atlas isn't set up or refuses the report, the summary falls back to the full report, or to titles and scores with `"publishDetails": false` in `policy.json`. The cached state holds a fingerprint, timestamps, spend and the last idea titles, nothing else. Pull request runs are dry runs with no secrets.
+ai-ops-atlas is public, so its job summaries are public. Once Atlas has stored a report (`POST /api/hooks/reports`, 202), the summary only says how many ideas there are and where to find them: Profile Tower building, Opportunity Scout, Reports. Atlas shows each report in full there, with its history and a Download PDF button; the PDF is built on the device, nothing else sees it. If Atlas isn't set up or refuses the report, the summary falls back to the full report, or to titles and scores with `"publishDetails": false` in `policy.json`. The cached state holds a fingerprint, timestamps, spend and the last idea titles, nothing else. Pull request runs are dry runs with no secrets.
 
 ## Setup
 

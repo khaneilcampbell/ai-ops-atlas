@@ -22,7 +22,7 @@ describe("agent jobs", () => {
     const original = catalog.agents.find(a => a.id === "atlas-system-improvements")!;
     const fixture = { ...original, registry: { ...original.registry, classification: { type: "A" as const, confidence: "verified" as const } } };
     const suite = agentJobs({ ...catalog, agents: [fixture] })[0];
-    expect(suite.work).toMatchObject({ kind: "workplace", building: "OpenAI" });
+    expect(suite.work).toMatchObject({ kind: "workplace", building: "Model Lab" });
     const hq = jobs.find((j) => j.agentId === "niche-scout")!;
     expect(hq.work).toMatchObject({ kind: "headquarters", projectId: "commerce-pipeline" });
   });

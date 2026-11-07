@@ -30,7 +30,7 @@ const shotDir=process.env.CIRCA_SHOT_DIR??'artifacts/circa';
 /** Each Circa floor inside "Enter building": Floor 1 lobby, Floor 2 pool deck, Floor 3 apartments, then the whole stack. */
 const FLOORS:[string,RegExp][]=[['lobby',/^(Floor 1 · )?Lobby$/],['pool',/^Floor 2( · Pool)?$/],['apartments',/^Floor 3( · Residences)?$/],['all',/^All floors$/]];
 async function shootFloors(page:import('@playwright/test').Page,suffix:string){
- await page.evaluate(async()=>{const m=await import('/src/views/office/store.ts' as string);m.enterBuilding('skyline-business:Circa',true);});
+ await page.evaluate(async()=>{const m=await import('/src/views/office/store.ts' as string);m.enterBuilding('skyline-business:Ellipse Residences',true);});
  await settle(page,4);
  for(const [name,label] of FLOORS){
   await page.getByRole('button',{name:label}).click();
