@@ -11,29 +11,27 @@ import type {Pt} from './roads';
  * centre and from the terrace top. The map draws it STADIUM_SCALE times larger (stadiumPlan.ts), so
  * one factor grows the whole stadium and its lot together.
  *
- * The roof is Atlas's own: nine shells in a repeating tall-short-middle rhythm of three, each
- * leaning a little, the leading edge of each lifting over the next so a thin seam shows between
- * them. The seams, the opening rim and the shell undersides carry the night glow.
+ * The roof is Atlas's own: twelve upright petals, mirrored across both axes of the pitch (KC,
+ * 2026-11-07: "make it more symmetrical"). Each petal stands on its own radial line, tapers to a
+ * point at the concourse and leaves an even glazed slot to its neighbours; a lit seam runs down
+ * both edges. The roof line rises smoothly from the ends to the long sides. The seams, the opening
+ * rim and the shell undersides carry the night glow.
  */
 export const STADIUM={
- /** Shell count: odd, between 7 and 11. */
- shells:9,
- /** Crown height of each shell above the terrace, repeated around the ring. */
- rhythm:[3.05,2.82,2.94],
+ /** Petal count: a multiple of four, so the roof mirrors across the pitch's long and short axes. */
+ shells:12,
+ /** Crown height above the terrace: lowest at the two ends, highest on the long sides, smoothly. */
+ crown:{end:2.9,side:3.05},
  /** Where the shells meet the concourse. */
  base:{rx:3.35,rz:2.9,y:.3},
  /** The oval roof opening over the pitch. */
  open:{rx:2.15,rz:1.55},
- /** Lean of each shell from base to crown, radians (about 12 degrees). */
- twist:.21,
- /** Each shell is this much wider than its share of the ring, so neighbours overlap. */
- overlap:1.3,
- /** The leading edge lifts out by this much, the trailing edge tucks in, so shells never touch. */
- lip:.08,
+ /** Each petal's width as a share of its slice of the ring: under 1 leaves an even glazed slot. */
+ overlap:.93,
  /** How far a shell puffs out in the middle. */
  bulge:.17,
- /** Share of each shell's width, at its leading edge, drawn as the lit seam; and the lit rim at the top. */
- seam:.12,rim:.06,
+ /** Share of each petal's width drawn as the lit seam on each edge; and the lit rim at the top. */
+ seam:.08,rim:.06,
  /** Gap between a shell's outer skin and its underside. */
  thickness:.05,
  /**
@@ -66,7 +64,7 @@ export const STADIUM={
 } as const;
 
 /** Highest point of the roof above the terrace. */
-export const stadiumCrown=()=>Math.max(...STADIUM.rhythm)*STADIUM_SCALE;
+export const stadiumCrown=()=>STADIUM.crown.side*STADIUM_SCALE;
 export const stadiumCentre=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>[a.x+a.w/2,a.z+a.d/2];
 /** Street-level point where the main gate's bottom step lands: every stadium road and walk ends here. */
 export const stadiumGate=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>{const [x,z]=stadiumCentre(a);return [x+STADIUM.gate.foot*STADIUM_SCALE,z];};
@@ -79,14 +77,19 @@ export function sideGateFeet():Pt[]{
 type V3=[number,number,number];
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
 
-/** One point on shell i at (u across, -1 trailing to 1 leading; v up, 0 base to 1 crown). */
+/** Centre angle of petal i: half a step round, so glazed slots sit on the main gate and both axes. */
+export const petalAngle=(i:number)=>(i+.5)*Math.PI*2/STADIUM.shells;
+/** Crown height of petal i: a smooth rise from the ends (x axis) to the long sides (z axis). */
+export const petalCrown=(i:number)=>{const c=STADIUM.crown;return c.end+(c.side-c.end)*Math.sin(petalAngle(i))**2;};
+
+/** One point on petal i at (u across, -1 to 1, mirror-symmetric about 0; v up, 0 base to 1 crown). */
 export function shellPoint(i:number,u:number,v:number,inset=0):V3{
  const S=STADIUM,step=Math.PI*2/S.shells,k=Math.min(1,v/S.taper.full),leaf=S.taper.tip+(1-S.taper.tip)*k*k*(3-2*k);
  const half=step/2*S.overlap*(1-.12*v)*leaf;
- const a=i*step+u*half+S.twist*v,t=Math.pow(v,1.4);
- const puff=S.bulge*Math.sin(Math.PI*Math.min(1,v*1.1))*(1-u*u)+S.lip*u*(.4+.6*v)-inset;
+ const a=petalAngle(i)+u*half,t=Math.pow(v,1.4);
+ const puff=S.bulge*Math.sin(Math.PI*Math.min(1,v*1.1))*(1-u*u)-inset;
  const rx=lerp(S.base.rx,S.open.rx,t)+puff,rz=lerp(S.base.rz,S.open.rz,t)+puff;
- const crown=S.rhythm[i%S.rhythm.length];
+ const crown=petalCrown(i);
  const y=S.base.y+(crown-S.base.y)*Math.sin(Math.PI/2*v)+.06*Math.sin(Math.PI*v)*(1-u*u)-inset*.6;
  return [rx*Math.cos(a),y,rz*Math.sin(a)];
 }
@@ -135,12 +138,12 @@ export const SKIN_TILES:[number,number]=[1.5,2.5];
 /** Built once per stadium, centred on the box centre at terrace height. */
 export function stadiumGeometry():StadiumGeometry{
  const S=STADIUM,{u:NU,v:NV}=S.segments,shells:THREE.BufferGeometry[]=[],under:THREE.BufferGeometry[]=[],seams:THREE.BufferGeometry[]=[];
- const cut=1-S.seam*2,top=1-S.rim;
+ const cut=1-S.seam,top=1-S.rim;
  for(let i=0;i<S.shells;i++){
-  // Skin from the trailing edge to the seam, seam to the leading edge, rim around the top.
-  // Rows packed towards the base (v^1.5), so the arched lower edge stays a smooth curve.
-  shells.push(surface(NU,NV,(u,v)=>shellPoint(i,-1+u*(1+cut),v**1.5*top),true,SKIN_TILES));
-  seams.push(surface(2,NV,(u,v)=>shellPoint(i,cut+u*(1-cut),v**1.5*top),true));
+  // Skin between the two edge seams, a lit seam down each edge, rim around the top.
+  // Rows packed towards the base (v^1.5), so the pointed lower edge stays a smooth curve.
+  shells.push(surface(NU,NV,(u,v)=>shellPoint(i,-cut+u*2*cut,v**1.5*top),true,SKIN_TILES));
+  for(const side of [-1,1])seams.push(surface(1,NV,(u,v)=>shellPoint(i,side*(cut+u*(1-cut)),v**1.5*top),side>0));
   seams.push(surface(NU,1,(u,v)=>shellPoint(i,-1+u*2,top+v*(1-top)),true));
   under.push(surface(S.underSegments.u,S.underSegments.v,(u,v)=>shellPoint(i,-1+u*2,v,S.thickness),false));
   // Floodlight heads tucked under the rim, facing the pitch.

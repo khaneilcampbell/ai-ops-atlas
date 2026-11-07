@@ -42,10 +42,17 @@ describe("Atlas Stadium",()=>{
     expect(STADIUM_BOX.w).toBeCloseTo(box*STADIUM_SCALE);expect(STADIUM_BOX.d).toBeCloseTo(depth*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
   });
-  it("has an odd number of shells, seven to eleven, in Atlas's own rhythm",()=>{
-    expect(S.shells%2).toBe(1);expect(S.shells).toBeGreaterThanOrEqual(7);expect(S.shells).toBeLessThanOrEqual(11);
-    expect(new Set(S.rhythm).size).toBeGreaterThan(1);
-    expect(S.twist).toBeLessThanOrEqual(20*Math.PI/180);
+  it("is symmetrical: petals mirror across the pitch's long and short axes (KC, 2026-11-07)",()=>{
+    expect(S.shells%4).toBe(0);
+    const near=(a:number[],b:number[])=>a.every((x,k)=>Math.abs(x-b[k])<1e-9);
+    for(let i=0;i<S.shells;i++)for(const u of [-1,-.5,0,.5,1])for(const v of [0,.3,.7,1]){
+      const [x,y,z]=shellPoint(i,u,v);
+      // Mirror in z (across the main gate's axis), in x (across the pitch's short axis), and about each petal's own centre line.
+      expect(near(shellPoint(S.shells-1-i,-u,v),[x,y,-z])).toBe(true);
+      expect(near(shellPoint((S.shells/2-1-i+S.shells)%S.shells,-u,v),[-x,y,z])).toBe(true);
+    }
+    // One smooth roof line: lowest at the ends, highest on the long sides, the same each side.
+    for(let i=0;i<S.shells;i++){const [,y]=shellPoint(i,0,1);expect(y).toBeGreaterThanOrEqual(S.crown.end-1e-9);expect(y).toBeLessThanOrEqual(S.crown.side+1e-9);}
   });
   it("keeps the shells inside the 8 x 7 design box and the concourse and gates inside its lot",()=>{
     for(let i=0;i<S.shells;i++)for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.05){
@@ -65,7 +72,7 @@ describe("Atlas Stadium",()=>{
     // The bigger district: the box and the gate grow by one factor; the lot keeps its 2-unit margin.
     expect(a.w).toBeCloseTo(STADIUM_BOX.w);expect(a.d).toBeCloseTo(STADIUM_BOX.d);
     expect(gate[0]-cx).toBeCloseTo(S.gate.foot*STADIUM_SCALE);expect(gate[0]).toBeLessThan(a.x+a.w+2);
-    expect(stadiumCrown()).toBeCloseTo(Math.max(...S.rhythm)*STADIUM_SCALE);
+    expect(stadiumCrown()).toBeCloseTo(S.crown.side*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
     for(const t of s.towers)expect(TERRACE_H+stadiumCrown()).toBeLessThan(towerTop(t));
     // Roads and walks that serve the stadium end at the main gate, or on a road that does.
@@ -114,12 +121,13 @@ describe("Atlas Stadium",()=>{
 });
 
 describe("Atlas Stadium realism",()=>{
-  it("tapers every shell to a point at the base, so the glazed drum shows between them, and keeps the glass under the shells",()=>{
+  it("tapers every petal to a point at the base, with an even glazed slot to its neighbours, and keeps the glass under the shells",()=>{
     const S=STADIUM,L=S.lobby,ang=(p:number[])=>Math.atan2(p[2]/S.base.rz,p[0]/S.base.rx);
     const gap=(i:number,v:number)=>{const lead=ang(shellPoint(i,1,v)),trail=ang(shellPoint((i+1)%S.shells,-1,v));return Math.atan2(Math.sin(trail-lead),Math.cos(trail-lead));};
     for(let i=0;i<S.shells;i++){
-      // Open glazed triangles at the base, a closed roof above the drum.
-      expect(gap(i,0)).toBeGreaterThan(.3);expect(gap(i,S.taper.full+.1)).toBeLessThan(0);
+      // Wide glazed triangles at the base narrowing to a slim slot higher up; the same between every pair.
+      expect(gap(i,0)).toBeGreaterThan(.3);expect(gap(i,S.taper.full+.1)).toBeGreaterThan(0);expect(gap(i,S.taper.full+.1)).toBeLessThan(.12);
+      expect(gap(i,.8)).toBeCloseTo(gap((2*S.shells-2-i)%S.shells,.8),9);
       for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.02){
         const [x,y,z]=shellPoint(i,u,v,S.thickness);
         if((x/L.rx)**2+(z/L.rz)**2<1&&y>S.concourse.y)expect(y).toBeGreaterThan(S.concourse.y+L.h-.02);
