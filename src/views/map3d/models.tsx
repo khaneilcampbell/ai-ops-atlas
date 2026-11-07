@@ -16,7 +16,7 @@ import { HQ, hqTop } from "./atlasHqPlan";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -384,25 +384,25 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
   const items = useMemo(() => {
     const top = TERRACE_H;
     return {
-      land: scene.land.map((r) => slab(r, LAND_BOTTOM, 0)),
+      land: scene.land.map((r) => slab(r, LAND_BOTTOM, LAND_TOP)),
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
       neighborhood: [...(scene.neighborhoodLand??[]),...(scene.raisedLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
-      steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
-      brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
-      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, 0, 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, 0, 0.035)]),
+      steps: scene.steps.map((s) => slab(s, LAND_TOP, Math.max(LAND_TOP, s.y) + 0.01)),
+      brooks: scene.brooks.map((b) => slab(b, LAND_TOP - 0.03, LAND_TOP + 0.016)),
+      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035)]),
       ponds: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.03, p.z], s: [p.r * 2, 0.058, p.r * 2] }) as Inst),
       pondRims: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.02, p.z], s: [p.r * 2 + 0.16, 0.035, p.r * 2 + 0.16] }) as Inst),
       bridges: scene.bridges.flatMap((b) => [
-        slab(b, 0.05, 0.13),
-        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
-        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
+        slab(b, LAND_TOP + 0.05, LAND_TOP + 0.13),
+        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
+        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
       ]),
       falls: scene.falls.map((f) => {
         const x = f.axis === "x";
-        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, -WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
+        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02 + LAND_TOP) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, LAND_TOP - WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
       }),
       splash: scene.falls.flatMap((f) =>
         [0, 1, 2, 3, 4].map((i) => {

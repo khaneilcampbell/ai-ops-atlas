@@ -1,9 +1,7 @@
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
-import {planLocalFreight} from './localFreight';
-import {financialDimensions} from './financialArchitecture';
 import { ANNEX } from "./commerceAnnexPlan";
-import {planCommunityRail,planMarketplaceRail,stationAccessAreas,financialParkStation,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
+import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
@@ -37,6 +35,13 @@ export const TERRACE_M = 0.35;
 /** The sea sits this far below the meadow; the cliffs fill the gap. */
 export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
+/**
+ * Atlas stands on one ground plane (KC, 2026-11-07): open land is level with the district terraces,
+ * streets, bridges' landings and stations, instead of a meadow 0.6 below them. It sits a hair under
+ * TERRACE_H so a terrace, plaza or forecourt top never flickers against it. Only the canals and the
+ * sea stay lower, and only bridges and the elevated railway stay higher.
+ */
+export const LAND_TOP = TERRACE_H - 0.004;
 const INNER_PATH_W = 0.32;
 const BROOK_W = 0.55;
 /** One headquarters storey: 0.32 grown by CITY_SCALE.hq.storey to sit with the Marketplace. */
@@ -162,6 +167,10 @@ export interface Scene3D {
   mall?:MallPlan;
   /** Marketplace Gardens on the green behind the mall, and the beds on its plaza. */
   mallGarden?:MallGarden;
+  /**
+   * Canva's freight route to the airport. Not built since KC's 2026-11-07 road review: the Commerce
+   * district keeps its own streets and grass, without a trunk road or truck lot cut through it.
+   */
   freight?: FreightPlan;
   /** Area reserved by an interior cutaway; outdoor crowds must stay outside. */
   pedestrianExclusion?: Rect;
@@ -744,12 +753,7 @@ function buildCity(layout: Layout): Scene3D {
     const route=link.walk.map(([gx,gy])=>({gx,gy}));
     walks.push({x0:route[0].gx,z0:route[0].gy,x1:route[route.length-1].gx,z1:route[route.length-1].gy,y:top+.08,route});
   }
-  const freight=planLocalFreight({airport,stadium,towers,kiosks,retail,fountains,land,carBridges,connections,reserved:[...(financial?(()=>{const r=financialParkStation(financial);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[]),...(financial?[{x:financial.x+financial.park.x+financial.park.w/2,z:financial.z+financial.park.z+financial.park.d/2,w:financial.park.w,d:financial.park.d}]:[]),...(financial?financial.buildings.map(b=>({x:financial.x+b.x,z:financial.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})):[]),...(dealership?[{x:dealership.lot.x+dealership.lot.w/2,z:dealership.lot.z+dealership.lot.d/2,w:dealership.lot.w,d:dealership.lot.d}]:[])]});
-  if(freight){
-    const nearRoad=(x:number,z:number)=>distanceToRoad([x,z],freight.cityAccess)<.4 || freight.route.slice(1).some((b,i)=>{const a=freight.route[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.65;}) || (Math.abs(x-freight.lot.x)<1.3&&Math.abs(z-freight.lot.z)<1.2);
-    for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
-  }
-  const agency=planAgency({city:cityLand,land,top,paving,terraces,roads:[...carBridges.flatMap(b=>b.roads),...connections.flatMap(c=>[c.road,c.walk]),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])],obstacles:[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}))});
+  const agency=planAgency({city:cityLand,land,top,paving,terraces,roads:[...carBridges.flatMap(b=>b.roads),...connections.flatMap(c=>[c.road,c.walk])],obstacles:[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}))});
   if(agency){
     const inLot=(x:number,z:number,pad:number)=>agency.land.some(r=>inRect(r,x,z,pad));
     for(let i=rocks.length-1;i>=0;i--)if(inLot(rocks[i].x,rocks[i].z,.5))rocks.splice(i,1);
@@ -758,7 +762,7 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of agency.walks)walks.push({x0:path[0][0],z0:path[0][1],x1:path[path.length-1][0],z1:path[path.length-1][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
-  const mall=planMall({parks,land,towers,kiosks,retail,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])]});
+  const mall=planMall({parks,land,towers,kiosks,retail,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road)]});
   if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
   if(mall){
     const edge=mall.plaza.z+mall.plaza.d+.3,side=mall.x+mall.w+.4;
@@ -786,15 +790,15 @@ function buildCity(layout: Layout): Scene3D {
     }
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
   }
+  // Trees, bushes and ponds planted on open land stand on the one ground plane, not 0.6 below it.
+  for(const items of [trees,bushes,ponds])for(const item of items)if(Math.abs(item.y)<.05)item.y=LAND_TOP;
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
-  if(freight)xs.push(...freight.highway.map(p=>p[0]));
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);
-  if(freight)zs.push(...freight.highway.map(p=>p[1]));
   // Join the terminal entrance to the district across the meadow, unless a street, path or stream runs there.
   const forecourtLand:Rect[]=[];
   const forecourt=airport?airportForecourt(airport,terraces):undefined;
   if(forecourt&&airport){
-    const ground=[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(x=>[x.collector,...x.ramps])]:[])];
+    const ground=[...connections.map(c=>c.road)];
     const blocked=ground.some(p=>pathCrossesRect(p,forecourt,.35))||[...brooks,...bridges].some(r=>r.x<forecourt.x+forecourt.w&&r.x+r.w>forecourt.x&&r.z<forecourt.z+forecourt.d&&r.z+r.d>forecourt.z);
     if(!blocked){
       forecourtLand.push(forecourt);
@@ -815,7 +819,6 @@ function buildCity(layout: Layout): Scene3D {
     stadium,
     dealership,
     agency,
-    freight,
     land,
     neighborhoodLand:neighborhood.land,
     airportForecourt:forecourtLand[0],

@@ -12,7 +12,7 @@ import {cityEnvelope} from './citySpacing';
 describe('perimeter passenger railway',()=>{
  for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`has one closed track and five accessible stops: ${grouping}`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),p=s.communityRail!.loop!,e=cityEnvelope(s.land)!;
-  expect(p).toBeDefined();expect(s.freight!.highway).toEqual([]);expect(s.freight!.access).toEqual([]);
+  expect(p).toBeDefined();expect(s.freight).toBeUndefined();
   expect(p.route[0]).toEqual(p.route[p.route.length-1]);expect(p.length).toBeGreaterThan(4*e.w);
   expect(new Set(p.stops.map(s=>s.id))).toEqual(new Set(LOOP_STATIONS.map(s=>s.id)));
   expect(p.stops[0].name).toBe('Financial District Station');expect(p.stops.every((s,i)=>i===0||s.distance>p.stops[i-1].distance)).toBe(true);
