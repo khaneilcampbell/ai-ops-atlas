@@ -24,7 +24,7 @@ export interface MallPlan extends Rect {
  plaza:Rect;fountain:{x:number;z:number;r:number};
 }
 
-type Input=Pick<Scene3D,'parks'|'land'|'towers'|'kiosks'|'retail'>&{hills?:Rect;links:{id?:string;road:Pt[]}[];
+type Input=Pick<Scene3D,'parks'|'land'|'towers'|'kiosks'|'retail'>&{hills?:Rect;marketplace?:Rect;links:{id?:string;road:Pt[]}[];
  /** Every drivable road, so the lot stops short of any that crosses it. */
  roads?:Pt[][]};
 /** Half a road plus its sidewalk: how far the lot stays back from a road's centre line. */
@@ -39,20 +39,26 @@ const inside=(r:Rect,x:number,z:number)=>x>=r.x-1e-6&&x<=r.x+r.w+1e-6&&z>=r.z-1e
  */
 export function planMall(s:Input):MallPlan|undefined{
  const park=s.parks.find(p=>p.label==='Skyline');
- const boulevard=s.links.find(l=>l.id==='hills-city-boulevard');
- if(!park||!boulevard||!s.hills)return;
+ const boulevard=s.links.find(l=>l.id==='marketplace-city-boulevard'||l.id==='hills-city-boulevard'),site=s.marketplace??s.hills;
+ if(!park||!boulevard||!site)return;
  // The boulevard's long north-south run is the lot's east edge.
  const xs=boulevard.road.slice(1).flatMap((b,i)=>{const a=boulevard.road[i];return Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[1])>4?[a[0]]:[];});
  if(!xs.length)return;
  const east=Math.min(...xs)-1.2,west=park.x+park.w+MALL.gap;
  // The green east of the park may reach further north than the park (MALL_LOT); start from it.
  const green=s.land.find(r=>Math.abs(r.x-(park.x+park.w))<.01&&r.z<park.z-.01);
- const north=green?green.z:park.z-.6;let south=s.hills.z-.45;
- // A road running across the lot (the highway's local collector does) ends the lot on its near side.
+ const top=green?green.z:park.z-.6,bottom=site.z-.45;
+ // Roads running across the lot (the highway's local collector does) split it into bands. The lot
+ // takes the northernmost band deep enough for the mall; when a smaller catalog moves the park, the
+ // city's own streets can cross the top of the green, and the lot then starts south of them.
+ const crossings:number[]=[];
  for(const road of s.roads??[])for(let i=1;i<road.length;i++){
   const [a,b]=[road[i-1],road[i]];
-  if(Math.abs(a[1]-b[1])<1e-6&&Math.max(a[0],b[0])>west&&Math.min(a[0],b[0])<east&&a[1]>north&&a[1]-ROAD_CLEAR<south)south=a[1]-ROAD_CLEAR;
+  if(Math.abs(a[1]-b[1])<1e-6&&Math.max(a[0],b[0])>west&&Math.min(a[0],b[0])<east&&a[1]>top&&a[1]-ROAD_CLEAR<bottom)crossings.push(a[1]);
  }
+ crossings.sort((a,b)=>a-b);
+ const bands=[top,...crossings.map(z=>z+ROAD_CLEAR)].map((n,i)=>[n,i<crossings.length?crossings[i]-ROAD_CLEAR:bottom] as const);
+ const [north,south]=bands.find(([n,s])=>s-n>=8)??bands[0];
  if(east-west<6.5||south-north<8)return;
  // A bigger lot (other map groupings) gets the same-size mall, centred, not a bigger one.
  const w=Math.min(east-west,MALL.maxW),x=(west+east-w)/2;

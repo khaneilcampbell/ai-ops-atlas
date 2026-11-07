@@ -133,5 +133,6 @@ export function streetRoute(g: StreetGraph, from: Pt3, to: Pt3): Pt3[] | undefin
   if (cost[T] === Infinity) return;
   const path: Pt3[] = [];
   for (let i = T; i >= 0; i = came[i]) path.push(nodes[i]);
-  return path.reverse().filter((p, i, all) => !i || len3(p, all[i - 1]) > 1e-6);
+  const clean=path.reverse().filter((p, i, all) => !i || len3(p, all[i - 1]) > 1e-6);
+  return clean.flatMap((p,i)=>{if(!i)return [p];const a=clean[i-1],n=Math.ceil(len3(a,p)/20);return Array.from({length:n},(_,j)=>p.map((v,k)=>a[k]+(v-a[k])*(j+1)/n) as Pt3);});
 }
