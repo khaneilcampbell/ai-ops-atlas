@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-07 · The garden behind Atlas Marketplace is now the Atlas Galleria, a three-storey shopping mall with wavy white fins, rope lights, planted terraces and a funnel atrium. Enter it to see the car park and shop floors (#269)
 - 2026-11-07 · The train bridge no longer has a pillar standing on the harbour boardwalk dock. Pillars near the marina now step aside so the stairs, pier and dock stay clear (#266)
 - 2026-11-07 · All five train stations now have the curved shell roof, gold-edged arches and glass stair bridge that the Financial District station had before the new perimeter railway replaced it with a plain flat platform (#265)
 - 2026-11-07 · Buildings that used real company names now have original names: Bayvale Bank, Robin Exchange, Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences, Vantor Motors and Profile Tower. Tool offices are named for what they do (Model Lab, Payments Office and so on), and company logos are off the signs. Old names still work in search (#257)
