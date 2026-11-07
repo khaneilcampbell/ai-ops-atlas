@@ -1,3 +1,4 @@
+import { isAiAgent } from "../../catalog/roles";
 import { AgentOutput } from "../../components/AgentOutput";
 import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
@@ -41,6 +42,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job));
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
+  const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
   const snap = repoData(repos[p.repository]);
   const branch = snap?.defaultBranch ?? "HEAD";
   const sourceUrl = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
@@ -63,7 +65,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
     <section className="card agent-profile reg-inspector" aria-label={p.title}>
       <header className="ap-head">
         <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
-          <Icon name="agents" size={20} />
+          <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
         </span>
         <div className="grow">
           <div className="eyebrow">
@@ -125,7 +127,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         </div>
       </div>
 
-      <div className="tabs" role="tablist" aria-label="Agent details" onKeyDown={onTabKey}>
+      <div className="tabs" role="tablist" aria-label={`${itemLabel} details`} onKeyDown={onTabKey}>
         {TABS.map((x) => (
           <button
             key={x.id}
@@ -155,11 +157,11 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
             <dl className="kv">
               <dt>Title</dt>
               <dd>{p.title}</dd>
-              <dt>Agent ID</dt>
+              <dt>{itemLabel} ID</dt>
               <dd className="mono">{p.id}</dd>
               <dt>Description</dt>
               <dd>{p.summary}</dd>
-              <dt>Agent type</dt>
+              <dt>{itemLabel} type</dt>
               <dd>
                 Type {p.classification === "unclassified" ? "?" : p.classification} · {CLASSIFICATION_INFO[p.classification].label}
                 <div className="muted small">{CLASSIFICATION_INFO[p.classification].description}</div>
