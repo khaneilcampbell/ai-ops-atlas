@@ -8,7 +8,7 @@ import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
 import {TERRACE_H} from './scene';
-import {COMMUNITY as C,communityKey,railDeck,railPoint,railState,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
+import {ATLAS_STATION_KEY,COMMUNITY as C,communityKey,railDeck,railPoint,railState,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {TRANSPORT} from './transportScale';
 import {MANSION_COLORS} from './hillsMansion';
 import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
@@ -89,7 +89,7 @@ export function CommunityRail({plan:p,agents,community,financial,roads,g,m,pick,
  for(let d=.3;d<track.length;d+=.48){const q=railPoint(track,d);solid.push({...box(q.x,C.railRise,q.z,.66,.035,.08,'#6d766e'),r:q.yaw});}
  for(let d=6;d<track.length-5;d+=6){const q=railPoint(track,d);if(roads.every(path=>distanceToRoad([q.x,q.z],path)>1.4))solid.push({p:[q.x,-1.2,q.z],s:[.25,TERRACE_H+C.railRise+1,.4],c:'#bdb59e'});for(const side of [-1,1])if(d>5&&d<track.length-5)solid.push(box(q.x+Math.cos(q.yaw)*side*.51,C.railRise,q.z-Math.sin(q.yaw)*side*.51,.035,.45,.035,palette.green));}
  for(const [index,s]of [p.hills,p.financial].entries()){
-  const [x,z]=s,key=index===0?communityKey('station'):'service:financial-station';
+  const [x,z]=s,key=index===0?ATLAS_STATION_KEY:'service:financial-station';
   platforms.push(box(x,C.platformRise-.2,z+.85,C.platformLength,.2,C.platformWidth,'#ded8c7'));stationKeys.push(key);
   solid.push(box(x,C.platformRise+.005,z+.38,C.platformLength,.015,.07,'#d0ad69'));
   // The Hills keeps its flat canopy; Financial Park has the Dubai-style shell instead (parkStationPlan).

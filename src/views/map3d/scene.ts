@@ -1,13 +1,13 @@
 import {financialDimensions} from './financialArchitecture';
 import { ANNEX } from "./commerceAnnexPlan";
-import {planCommunity,planCommunityRail,financialParkStation,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
+import {planCommunityRail,planMarketplaceRail,stationAccessAreas,financialParkStation,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
-import {planHills,type HillsPlan} from "./hillsPlan";
+import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {planFreight,type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
@@ -710,22 +710,23 @@ function buildCity(layout: Layout): Scene3D {
   }
   const stadium=planStadium(land,paving,terraces.find(t=>t.id==="github-profile"));
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
-  const hills=planHills({land,paving,carBridges,towers,kiosks,retail,terraces,coreLand:cityLand,fountains:safeFountains});
-  if(hills)land.push({x:hills.x,z:hills.z,w:hills.w,d:hills.d});
+  // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
+  const core=cityEnvelope(cityLand)!;
+  const marketplaceSite={x:core.x+core.w-27,z:core.z+core.d+.6,w:0,d:0};
+  const hills:HillsPlan|undefined=undefined;
   sizeCustomTowers(towers, kiosks);
   sizeGithubTower(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
-  const community=planCommunity(hills);
+  const community:CommunityPlan|undefined=undefined;
   // BMW takes the waterfront parcel east of the district; the train now stops in Financial Park.
   const dealership=planDealership({financial});
   if(dealership)land.push(dealership.lot);
   const connections=districtConnections(airport,stadium,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
-  if(hills)connections.push({id:"atlas-hills",road:hills.road,walk:hills.walk});
-  const neighborhood=planNeighborhoodLinks({hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
+  const neighborhood=planNeighborhoodLinks({marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
   for(const path of neighborhood.walks){
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
@@ -736,7 +737,7 @@ function buildCity(layout: Layout): Scene3D {
     const route=link.walk.map(([gx,gy])=>({gx,gy}));
     walks.push({x0:route[0].gx,z0:route[0].gy,x1:route[route.length-1].gx,z1:route[route.length-1].gy,y:top+.08,route});
   }
-  const freight=planFreight({streets:financial?[financial.street]:[],compactParcels:hills&&financial&&stadium&&airport?{core:cityEnvelope(cityLand)!,hills,financial,circa:financial.circa,stadium:{x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4},airport:airportFootprint(airport)}:undefined,airport,stadium,towers,kiosks,retail,fountains,land,carBridges,connections,reserved:[...(community&&financial?(()=>{const r=financialParkStation(financial);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[]),...(financial?[{x:financial.x+financial.park.x+financial.park.w/2,z:financial.z+financial.park.z+financial.park.d/2,w:financial.park.w,d:financial.park.d}]:[]),...(financial?financial.buildings.map(b=>({x:financial.x+b.x,z:financial.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})):[]),...(dealership?[{x:dealership.lot.x+dealership.lot.w/2,z:dealership.lot.z+dealership.lot.d/2,w:dealership.lot.w,d:dealership.lot.d}]:[]),...(hills?[{x:hills.x+hills.w/2,z:hills.z+hills.d/2,w:hills.w,d:hills.d}]:[])]});
+  const freight=planFreight({streets:financial?[financial.street]:[],airport,stadium,towers,kiosks,retail,fountains,land,carBridges,connections,reserved:[...(financial?(()=>{const r=financialParkStation(financial);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[]),...(financial?[{x:financial.x+financial.park.x+financial.park.w/2,z:financial.z+financial.park.z+financial.park.d/2,w:financial.park.w,d:financial.park.d}]:[]),...(financial?financial.buildings.map(b=>({x:financial.x+b.x,z:financial.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})):[]),...(dealership?[{x:dealership.lot.x+dealership.lot.w/2,z:dealership.lot.z+dealership.lot.d/2,w:dealership.lot.w,d:dealership.lot.d}]:[])]});
   if(freight){
     const nearRoad=(x:number,z:number)=>distanceToRoad([x,z],freight.cityAccess)<.4 || freight.route.slice(1).some((b,i)=>{const a=freight.route[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.65;}) || (Math.abs(x-freight.lot.x)<1.3&&Math.abs(z-freight.lot.z)<1.2);
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(nearRoad(items[i].x,items[i].z))items.splice(i,1);
@@ -750,15 +751,32 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of agency.walks)walks.push({x0:path[0][0],z0:path[0][1],x1:path[path.length-1][0],z1:path[path.length-1][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
-  const mall=planMall({parks,land,towers,kiosks,retail,hills,links:connections,roads:[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])]});
+  const mall=planMall({parks,land,towers,kiosks,retail,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road),...(freight?[freight.highway,freight.route,freight.cityAccess,...freight.access.flatMap(a=>[a.collector,...a.ramps])]:[])]});
   if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
+  if(mall){
+    const edge=mall.plaza.z+mall.plaza.d+.3,side=mall.x+mall.w+.4;
+    const path:[[number,number],[number,number],[number,number]]=[[mall.cx,edge],[side,edge],[side,edge-2.5]];
+    for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
+    walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
+  }
   const mallGarden=mall?planMallGarden(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
   if(mallGarden){
     const r=mallGarden.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...mallGarden.trees);bushes.push(...mallGarden.bushes);bollards.push(...mallGarden.bollards);
   }
-  const communityRail=planCommunityRail(community,financial,dealership?.lot);
+  const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land):planCommunityRail(community,financial,dealership?.lot);
+  if(communityRail){
+    const areas=stationAccessAreas(communityRail.hills);
+    if(mallGarden)areas.push(...areas.map(a=>({...a,x:2*mallGarden.axis-a.x-a.w})));
+    const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
+    // Keep paving and water features; planting must not stand in the station's stair or lift opening.
+    if(mallGarden){
+      mallGarden.boxes=mallGarden.boxes.filter(b=>b.h<=.03||!touches(b.x,b.z,b.w,b.d));
+      for(const items of [mallGarden.trees,mallGarden.bushes,mallGarden.bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
+    }
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
+  }
   const xs = land.flatMap((r) => [r.x, r.x + r.w]);
   if(freight)xs.push(...freight.highway.map(p=>p[0]));
   const zs = land.flatMap((r) => [r.z, r.z + r.d]);

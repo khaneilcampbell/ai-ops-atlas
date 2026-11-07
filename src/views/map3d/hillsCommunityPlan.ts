@@ -62,3 +62,19 @@ export function walkPoint(path:Point3[],t:number):Point3{const lengths=[0];for(l
 /** Physical track extends past stop centers, supporting the complete parked train. */
 export function railDeck(p:RailPlan):RailPlan{const extension=COMMUNITY.trainLength/2+.7,a=railPoint(p,0),b=railPoint(p,p.length);return {...p,route:[[a.x-Math.sin(a.yaw)*extension,a.z-Math.cos(a.yaw)*extension],...p.route,[b.x+Math.sin(b.yaw)*extension,b.z+Math.cos(b.yaw)*extension]],lengths:[0,...p.lengths.map(d=>d+extension),p.length+2*extension],length:p.length+2*extension};}
 
+
+export const ATLAS_STATION_KEY='service:atlas-station';
+/** Marketplace station replaces the residential endpoint; legacy rail field names remain stable. */
+export function planMarketplaceRail(m:import('./mallPlan').MallPlan,f:FinancialPlan,land:Rect[]):RailPlan{
+ const a:Pt=[m.cx,m.z-6.2],b=financialParkStop(f),east=Math.max(...land.map(r=>r.x+r.w))+CITY_SPACING.railEdgeClearance+.6;
+ const route=roundedRoad([a,[east,a[1]],[east,b[1]],b],4),lengths=[0];
+ for(let i=1;i<route.length;i++)lengths.push(lengths[i-1]+Math.hypot(route[i][0]-route[i-1][0],route[i][1]-route[i-1][1]));
+ const bank=f.buildings.find(b=>b.id==='banks')!;
+ // Approach the public plaza along the west side, outside the showroom footprint.
+ const walk:Point3[]=[[m.cx,0,m.z+m.d],[m.x-.5,0,m.z+m.d],[m.x-.5,0,a[1]+5.9],[a[0]+1,0,a[1]+5.9],[a[0]+1,COMMUNITY.platformRise,a[1]+1.7],[a[0]+1,COMMUNITY.platformRise,a[1]+1.05],[a[0],COMMUNITY.platformRise,a[1]+1.05],[a[0],COMMUNITY.platformRise,a[1]+.3]];
+ return {route,lengths,length:lengths[lengths.length-1],hills:a,financial:b,hillsWalk:walk,
+ financialWalk:[[b[0],COMMUNITY.platformRise,b[1]+.3],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[b[0]+1,0,f.z+FINANCIAL.northWalkZ],[f.x+bank.x,0,f.z+FINANCIAL.northWalkZ],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
+}
+
+/** Ground clearances under the shared station stairs and lift, also used to trim landscaping. */
+export function stationAccessAreas([x,z]:Pt):Rect[]{return [{x:x+.4,z:z+1.4,w:1.2,d:4.9},{x:x-3.8,z:z+.9,w:.8,d:1.3}];}

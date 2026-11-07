@@ -4,20 +4,13 @@ import {roundedRoad} from './highway';
 import {ACCESS} from './highwayAccess';
 export interface CompactParcels {core:Rect;hills:Rect;financial:Rect;stadium:Rect;airport:Rect;/** Circa sits by the highway on purpose, with a tighter gap. */circa?:Rect}
 export const CIRCA_HIGHWAY_GAP=2;
-/** Trim the two empty western corners, retaining the original full-size district parcels. */
-export function cityPerimeter(bounds:{left:number;right:number;top:number;bottom:number},parcels?:CompactParcels){
- const {left,right,top,bottom}=bounds;
- let northWest=left,southWest=left,northZ=top,southZ=bottom;
- if(parcels){
-  const p=parcels,minStep=ACCESS.cornerRadius*2+2;
-  const nx=Math.min(Math.min(p.core.x,p.financial.x,p.stadium.x)-ACCESS.setback,p.circa?p.circa.x-CIRCA_HIGHWAY_GAP:Infinity),nz=p.airport.z-ACCESS.setback;
-  if(nx-left>minStep&&nz-top>minStep){northWest=nx;northZ=nz;}
-  const sx=p.hills.x-ACCESS.setback,sz=Math.max(p.airport.z+p.airport.d,p.core.z+p.core.d,p.stadium.z+p.stadium.d,p.financial.z+p.financial.d)+ACCESS.setback;
-  if(sx-left>minStep&&bottom-sz>minStep){southWest=sx;southZ=sz;}
- }
- const points:Pt[]=[[northWest,top],[right,top],[right,bottom],[southWest,bottom]];
- if(southWest!==left)points.push([southWest,southZ],[left,southZ]);
- points.push([left,northZ]);if(northWest!==left)points.push([northWest,northZ]);
- if(points[points.length-1][0]!==points[0][0]||points[points.length-1][1]!==points[0][1])points.push(points[0]);
- return {route:roundedRoad(points,ACCESS.cornerRadius,true),northWest};
+/** Smallest axis-aligned square enclosing the complete city, including airport clearances. */
+export function squareCityBounds(bounds:{left:number;right:number;top:number;bottom:number}){
+ const side=Math.max(bounds.right-bounds.left,bounds.bottom-bounds.top),cx=(bounds.left+bounds.right)/2,cz=(bounds.top+bounds.bottom)/2;
+ return {left:cx-side/2,right:cx+side/2,top:cz-side/2,bottom:cz+side/2};
+}
+export function cityPerimeter(bounds:{left:number;right:number;top:number;bottom:number},..._legacy:[CompactParcels?]){
+ const {left,right,top,bottom}=squareCityBounds(bounds);
+ const points:Pt[]=[[left,top],[right,top],[right,bottom],[left,bottom],[left,top]];
+ return {route:roundedRoad(points,ACCESS.cornerRadius,true),northWest:left};
 }

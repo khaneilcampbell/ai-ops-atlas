@@ -78,7 +78,7 @@ function financialRoute(f:FinancialPlan,r:RailPlan,building:FinancialPlan['build
 }
 
 export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|undefined,r:RailPlan|undefined):CommuterPlan|undefined{
- if(!c||!f||!r)return;
+ if(!f||!r)return;
  const towerId=(key:string)=>key in COMMUTER_TOWERS?COMMUTER_TOWERS[key as keyof typeof COMMUTER_TOWERS]:key;
  const tower=(key:string)=>f.buildings.find(b=>b.id===towerId(key)&&b.approach.length>1)??f.buildings.find(b=>b.id===COMMUTER_TOWERS.amex&&b.approach.length>1);
  const dwell=COMMUNITY.dwell,travel=r.length/COMMUNITY.speed,cycle=2*(travel+dwell),doors=[-1.3,-.8,-.3,.2,.7,1.2];
@@ -88,8 +88,8 @@ export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|unde
  const commuters=trips.map(({home,work,group,k},i):RailCommuter=>{
   // Circa is optional (its own pull request); until it exists its guests use American Express.
   const building=tower(work)!,door=doors[k%doors.length];
-  return {id:`commuter:${i}`,group,home,work:building.id,pace:RAIL_COMMUTERS.paces[(k*5+group)%RAIL_COMMUTERS.paces.length],lane:((k%5)-2)*RAIL_COMMUTERS.laneWidth/2,offset:0,
-   hills:commuterRoute(hillsRoute(c,home,door)),financial:commuterRoute(financialRoute(f,r,building,door)),
+  return {id:`commuter:${i}`,group,home:c?home:'marketplace',work:building.id,pace:RAIL_COMMUTERS.paces[(k*5+group)%RAIL_COMMUTERS.paces.length],lane:((k%5)-2)*RAIL_COMMUTERS.laneWidth/2,offset:0,
+   hills:commuterRoute(c?hillsRoute(c,home,door):[...r.hillsWalk.slice(0,-1),[r.hills[0]+door,COMMUNITY.platformRise,r.hills[1]+.3]]),financial:commuterRoute(financialRoute(f,r,building,door)),
    // Arrivals spread across the stop: some are waiting at the doors early, others hurry in at the end.
    hillsLead:1.2+spread(i,1)*(dwell-2.6),financialLead:1.2+spread(i,2)*(dwell-2.6),alight:.4+spread(i,3)*2.6};
  });
