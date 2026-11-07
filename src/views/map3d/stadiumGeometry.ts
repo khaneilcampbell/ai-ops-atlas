@@ -37,12 +37,13 @@ export const STADIUM={
  /** Gap between a shell's outer skin and its underside. */
  thickness:.05,
  /**
-  * Each shell's lower edge arches up in its middle by `h`, easing back to the plain curve by
-  * `reach` up the shell, so the glazed lobby shows under the shells all round.
+  * Each shell is a leaf: it narrows to a point (`tip` of its full width) where it meets the
+  * concourse and reaches full width `full` of the way up, so tall glazed triangles of the drum show
+  * between the shells all round (KC's blueprint, 2026-11-07).
   */
- lift:{h:.75,reach:.32},
- /** Glazed lobby ring on the concourse, under the arches; a mullion every `mullions`th of the ring. */
- lobby:{rx:3.07,rz:2.63,h:.4,mullions:56},
+ taper:{tip:.1,full:.5},
+ /** Glazed drum on the concourse, behind the shells; a mullion every `mullions`th of the ring. */
+ lobby:{rx:3.07,rz:2.63,h:.7,mullions:72},
  /** Floodlight heads under the opening rim, per shell, aimed at the pitch. */
  floods:3,
  segments:{u:8,v:10},
@@ -80,13 +81,13 @@ const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
 
 /** One point on shell i at (u across, -1 trailing to 1 leading; v up, 0 base to 1 crown). */
 export function shellPoint(i:number,u:number,v:number,inset=0):V3{
- const S=STADIUM,step=Math.PI*2/S.shells,half=step/2*S.overlap*(1-.12*v);
+ const S=STADIUM,step=Math.PI*2/S.shells,k=Math.min(1,v/S.taper.full),leaf=S.taper.tip+(1-S.taper.tip)*k*k*(3-2*k);
+ const half=step/2*S.overlap*(1-.12*v)*leaf;
  const a=i*step+u*half+S.twist*v,t=Math.pow(v,1.4);
  const puff=S.bulge*Math.sin(Math.PI*Math.min(1,v*1.1))*(1-u*u)+S.lip*u*(.4+.6*v)-inset;
  const rx=lerp(S.base.rx,S.open.rx,t)+puff,rz=lerp(S.base.rz,S.open.rz,t)+puff;
  const crown=S.rhythm[i%S.rhythm.length];
- const arch=S.lift.h*(1-u*u)*Math.max(0,1-v/S.lift.reach)**2;
- const y=S.base.y+(crown-S.base.y)*Math.sin(Math.PI/2*v)+.06*Math.sin(Math.PI*v)*(1-u*u)+arch-inset*.6;
+ const y=S.base.y+(crown-S.base.y)*Math.sin(Math.PI/2*v)+.06*Math.sin(Math.PI*v)*(1-u*u)-inset*.6;
  return [rx*Math.cos(a),y,rz*Math.sin(a)];
 }
 
@@ -124,7 +125,7 @@ export interface StadiumGeometry {
  seams:THREE.BufferGeometry;
  seats:THREE.BufferGeometry;
  deck:THREE.BufferGeometry;
- /** Glazed lobby ring under the arches: warm at night. */
+ /** Glazed drum showing between the shells: warm at night. */
  glass:THREE.BufferGeometry;
 }
 
@@ -156,7 +157,7 @@ export function stadiumGeometry():StadiumGeometry{
   wall(C.outer,deckLow,deckTop-C.edge,C.segments,true),
   wall(C.inner,deckLow,deckTop,C.segments,false),
  ];
- // Glazed lobby under the arches: a glass ring with mullions and a slim head rail.
+ // Glazed drum behind the shells: a glass ring with mullions and a slim head rail.
  const L=S.lobby,glass=[wall(L,deckTop,deckTop+L.h,C.segments,true),wall({rx:L.rx-.01,rz:L.rz-.01},deckTop,deckTop+L.h,C.segments,false)];
  for(let k=0;k<L.mullions;k++){const a=k/L.mullions*Math.PI*2;deck.push(box(L.rx*Math.cos(a),deckTop,L.rz*Math.sin(a),.025,L.h,.025,-a));}
  deck.push(wall({rx:L.rx+.015,rz:L.rz+.015},deckTop+L.h-.03,deckTop+L.h,C.segments,true));

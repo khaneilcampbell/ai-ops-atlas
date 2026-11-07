@@ -30,6 +30,8 @@ import {MALL} from "./mallPlan";
 import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
+import {cityEnvelope} from "./citySpacing";
+import {airportFootprint} from "./airport";
 import {STADIUM,STADIUM_SCALE,stadiumPlaza,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
 import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
@@ -112,13 +114,12 @@ describe("Atlas Stadium",()=>{
 });
 
 describe("Atlas Stadium realism",()=>{
-  it("lifts every shell's lower edge over a glazed lobby that stays under the shells",()=>{
-    const S=STADIUM,L=S.lobby;
+  it("tapers every shell to a point at the base, so the glazed drum shows between them, and keeps the glass under the shells",()=>{
+    const S=STADIUM,L=S.lobby,ang=(p:number[])=>Math.atan2(p[2]/S.base.rz,p[0]/S.base.rx);
+    const gap=(i:number,v:number)=>{const lead=ang(shellPoint(i,1,v)),trail=ang(shellPoint((i+1)%S.shells,-1,v));return Math.atan2(Math.sin(trail-lead),Math.cos(trail-lead));};
     for(let i=0;i<S.shells;i++){
-      // The middle of each lower edge clears the lobby glass; the corners still meet the concourse.
-      expect(shellPoint(i,0,0)[1]).toBeGreaterThan(S.concourse.y+L.h);
-      expect(shellPoint(i,1,0)[1]).toBeLessThan(S.concourse.y);
-      // Wherever a shell is above the lobby ring, it is higher than the glass.
+      // Open glazed triangles at the base, a closed roof above the drum.
+      expect(gap(i,0)).toBeGreaterThan(.3);expect(gap(i,S.taper.full+.1)).toBeLessThan(0);
       for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.02){
         const [x,y,z]=shellPoint(i,u,v,S.thickness);
         if((x/L.rx)**2+(z/L.rz)**2<1&&y>S.concourse.y)expect(y).toBeGreaterThan(S.concourse.y+L.h-.02);
@@ -137,6 +138,33 @@ describe("Atlas Stadium realism",()=>{
     // Plaza trees that survived the road and walk clean-up are in the scene; none sits on a station walk.
     const walks=(s.communityRail?.loop?.stops??[]).map(st=>st.walk.map(([x,,z]):Pt=>[x,z]));
     for(const t of s.trees)for(const w of walks)expect(distanceToRoad([t.x,t.z],w)).toBeGreaterThanOrEqual(.45);
+  });
+  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`builds grounds over the open land round the lot, clear of roads and walks: ${grouping}`,()=>{
+    const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,g=s.stadiumSite!,lot={x:a.x-2,z:a.z-2,w:a.w+4,d:a.d+4},r=g.site,env=cityEnvelope(s.land)!;
+    // KC, 2026-11-07: use the whole space. The grounds hold the lot and reach well past it, on the island.
+    expect(r.x).toBeLessThanOrEqual(lot.x);expect(r.z).toBeLessThanOrEqual(lot.z);expect(r.x+r.w).toBeGreaterThanOrEqual(lot.x+lot.w);expect(r.z+r.d).toBeGreaterThanOrEqual(lot.z+lot.d);
+    expect(r.w*r.d).toBeGreaterThan(lot.w*lot.d*1.5);
+    expect(r.x).toBeGreaterThanOrEqual(env.x);expect(r.z).toBeGreaterThanOrEqual(env.z);expect(r.x+r.w).toBeLessThanOrEqual(env.x+env.w);expect(r.z+r.d).toBeLessThanOrEqual(env.z+env.d);
+    expect(g.pitches.length).toBe(2);expect(g.fountains.length).toBeGreaterThanOrEqual(2);expect(g.trees.length).toBeGreaterThanOrEqual(12);
+    const paths:Pt[][]=[...s.transportConnections.flatMap(c=>[c.road,c.walk]),...s.carBridges.flatMap(b=>b.roads),...(s.communityRail?.loop?.stops??[]).map(st=>st.walk.map(([x,,z]):Pt=>[x,z]))];
+    const pieces=[...g.pitches,...g.parking,...g.fountains.map(f=>({x:f.x-1.2,z:f.z-1.2,w:2.4,d:2.4}))];
+    for(const p of pieces){
+      // Off the lot, inside the grounds, and no road, walk or station stair runs through it.
+      expect(p.x>=lot.x+lot.w||p.x+p.w<=lot.x||p.z>=lot.z+lot.d||p.z+p.d<=lot.z).toBe(true);
+      expect(p.x).toBeGreaterThanOrEqual(r.x-1e-6);expect(p.x+p.w).toBeLessThanOrEqual(r.x+r.w+1e-6);
+      for(const path of paths)for(let i=1;i<path.length;i++)for(let k=0;k<=20;k++){
+        const x=path[i-1][0]+(path[i][0]-path[i-1][0])*k/20,z=path[i-1][1]+(path[i][1]-path[i-1][1])*k/20;
+        expect(x>p.x&&x<p.x+p.w&&z>p.z&&z<p.z+p.d).toBe(false);
+      }
+      // Never on a district, terrace or the airport.
+      for(const t of s.terraces)expect(p.x<t.x+t.w&&p.x+p.w>t.x&&p.z<t.z+t.d&&p.z+p.d>t.z).toBe(false);
+      if(s.airport){const f=airportFootprint(s.airport);expect(p.x<f.x+f.w&&p.x+p.w>f.x&&p.z<f.z+f.d&&p.z+p.d>f.z).toBe(false);}
+    }
+    for(const t of g.trees)for(const path of paths)expect(distanceToRoad([t.x,t.z],path)).toBeGreaterThan(.3);
+    // The pools ring the concourse but leave the main gate open.
+    const [cx,cz]=stadiumCentre(a),water=g.boxes.filter(b=>b.c==='#5aaac0');
+    expect(water.length).toBeGreaterThan(20);
+    for(const w of water)expect(w.x>cx&&Math.abs(w.z-cz)<STADIUM.gate.width*STADIUM_SCALE/2).toBe(false);
   });
 });
 

@@ -152,7 +152,7 @@ export default function StadiumInterior({light}:{light:LightMode}){
    <directionalLight color={isNight?'#99b8ed':'#fff4da'} position={[16,34,20]} intensity={isNight?.35:1.9} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-34} shadow-camera-right={34} shadow-camera-top={34} shadow-camera-bottom={-34}/>
    <Camera view={view}/>
    <CityOutside allFloors={all} building={STADIUM_NAME} span={16} clearSpan={I.glass.rx*2} anchorAt={s=>s.stadium&&(()=>{const [x,z]=stadiumCentre(s.stadium);return {x,z};})()}
-    extras={({scene,g,m})=><Stadium plan={scene.stadium} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
+    extras={({scene,g,m})=><Stadium plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
    <group scale={[I.glass.rx+.2,1,I.glass.rz+.2]}><mesh position={[0,-.18,0]} receiveShadow><cylinderGeometry args={[1,1,.33,64]}/><meshStandardMaterial color="#e4dccd" roughness={.85}/></mesh></group>
    {/* Run-off round the pitch, oval like the first row of seats. */}
    {view!==0&&<group scale={[I.seatsInner.rx,1,I.seatsInner.rz]}><mesh position={[0,.02,0]} receiveShadow><cylinderGeometry args={[1,1,.04,64]}/><meshStandardMaterial color="#5d7f61" roughness={.9}/></mesh></group>}

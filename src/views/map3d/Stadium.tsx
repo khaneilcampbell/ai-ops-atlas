@@ -8,6 +8,8 @@ import {stadiumSkinTexture} from "./stadiumTextures";
 import {STADIUM,STADIUM_SCALE as K,pitchLines,stadiumCentre,stadiumColumns,stadiumGeometry} from "./stadiumGeometry";
 export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
+import type {StadiumSite} from "./stadiumSite";
+import {LAND_TOP} from "./scene";
 
 const noRaycast=()=>null;
 
@@ -17,9 +19,10 @@ const noRaycast=()=>null;
  * lines, pitch, scoreboards, terrace). All static: no lights and no frame loop. Night lights the
  * skin's perforations, the seams, undersides, lobby glass, pitch and scoreboards, the same way the
  * other buildings light up. Trees, beds and bollards on the plaza are drawn with the city's own.
+ * The grounds (pools, training pitches, car parks, plaza paving) join the plain set: no extra draws.
  */
 /** `building={false}` draws only the lot, for the interior, where the bowl is drawn inside. */
-export function Stadium({plan:a,g,m,pick,night=false,building=true}:{night?:boolean;building?:boolean;plan?:StadiumPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
+export function Stadium({plan:a,site,g,m,pick,night=false,building=true}:{night?:boolean;building?:boolean;plan?:StadiumPlan;site?:StadiumSite;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
   const geo=useMemo(()=>a&&building?stadiumGeometry():undefined,[a,building]);
   useEffect(()=>()=>{if(geo)for(const v of Object.values(geo))v.dispose();},[geo]);
   const skin=useMemo(()=>stadiumSkinTexture(),[]);
@@ -45,6 +48,7 @@ export function Stadium({plan:a,g,m,pick,night=false,building=true}:{night?:bool
     onPointerOut:()=>pick.out(),
     onClick:(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();pick.click(STADIUM_KEY,e);},
   }),[pick]);
+  const ground=useMemo(()=>(site?.boxes??[]).map((b):Inst=>{const h=b.h??.04;return {p:[b.x,LAND_TOP+h/2,b.z],s:[b.w,h,b.d],r:b.r,c:b.c};}),[site]);
   const parts=useMemo(()=>{
     if(!a)return {plain:[],pitch:[],screens:[]};
     const [cx,cz]=stadiumCentre(a),y=TERRACE_H,S=STADIUM;
@@ -70,7 +74,7 @@ export function Stadium({plan:a,g,m,pick,night=false,building=true}:{night?:bool
     {geo&&<>
       <Instanced items={parts.pitch} geometry={g.box} material={mats.pitch}/>
       <Instanced items={parts.screens} geometry={g.box} material={mats.screen}/>
-      <Instanced items={parts.plain} geometry={g.box} material={m.plain}/>
     </>}
+    <Instanced items={geo?[...parts.plain,...ground]:ground} geometry={g.box} material={m.plain}/>
   </>;
 }

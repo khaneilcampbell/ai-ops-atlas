@@ -13,6 +13,7 @@ import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
 import {stadiumPlaza} from "./stadiumGeometry";
+import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planMallGarden,type MallGarden} from "./mallGarden";
@@ -163,6 +164,8 @@ export interface Scene3D {
   airport?: AirportPlan;
   transportConnections:DistrictConnection[];
   stadium?: StadiumPlan;
+  /** Atlas Stadium's grounds on the open land round its lot: pools, training pitches, car parks, plazas. */
+  stadiumSite?: StadiumSite;
   dealership?:DealershipPlan;
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
@@ -792,7 +795,9 @@ function buildCity(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...mallGarden.trees);bushes.push(...mallGarden.bushes);bollards.push(...mallGarden.bollards);
   }
-  land.push(...compactSquareLand(land,cityLand));
+  // Plain meadow filling the island out to a square; the stadium grounds may build on it.
+  const meadowLand=compactSquareLand(land,cityLand);
+  land.push(...meadowLand);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
   // Keep station walks clear of plaza trees, beds and bollards.
@@ -826,6 +831,22 @@ function buildCity(layout: Layout): Scene3D {
       for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
     }
   }
+  // Atlas Stadium takes the open land round its lot, last, so no other plan moves.
+  const env=cityEnvelope(land);
+  const stadiumSite=stadium&&env?planStadiumSite({stadium,envelope:env,
+    land:[...land.filter(r=>!meadowLand.includes(r)),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+      ...fountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))],
+    paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
+      ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]])],
+    paving:paving.filter(p=>!(stadium&&p.x>=stadium.x-2&&p.z>=stadium.z-2&&p.x+p.w<=stadium.x+stadium.w+2&&p.z+p.d<=stadium.z+stadium.d+2))}):undefined;
+  if(stadiumSite&&stadium){
+    const r=stadiumSite.site,lot={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};
+    // The grounds replace the scattered meadow planting; the plaza inside the lot stays.
+    for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(inRect(r,items[i].x,items[i].z)&&!inRect(lot,items[i].x,items[i].z))items.splice(i,1);
+    trees.push(...stadiumSite.trees.map((t,i)=>({x:t.x,z:t.z,y:LAND_TOP,s:t.kind==='cone'?.3+(i%3)*.03:.27,kind:t.kind as TreeKind})));
+    bushes.push(...stadiumSite.beds.map(([x,z],i)=>({x,y:LAND_TOP,z,s:.14+(i%2)*.03})));
+    fountains.push(...stadiumSite.fountains);
+  }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
   return {
@@ -836,6 +857,7 @@ function buildCity(layout: Layout): Scene3D {
     airport,
     transportConnections:connections,
     stadium,
+    stadiumSite,
     dealership,
     agency,
     land,
