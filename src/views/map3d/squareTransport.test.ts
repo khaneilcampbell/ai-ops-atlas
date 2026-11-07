@@ -7,13 +7,12 @@ import {airportFootprint,airportPoint,AIRPORT_LAYOUT} from './airport';
 import {railTimetable,railServiceState,serviceRailDeck,railPoint,COMMUNITY} from './hillsCommunityPlan';
 import {planAirportCommuters,planRailCommuters,commuterTimes,commuterAt} from './railCommuters';
 import {pathClear} from './roads';
-import {vehicleAt} from './vehicles';
 
-describe('square city with local logistics and three-stop passenger rail',()=>{
+describe('square city with three-stop passenger rail',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`preserves clear, connected infrastructure: ${group}`,()=>{
-  const original=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,f=s.freight!,e=cityEnvelope(s.land)!;
+  const original=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,e=cityEnvelope(s.land)!;
   expect(JSON.stringify(catalog)).toBe(original);expect(s.hills).toBeUndefined();
-  expect(f).toBeDefined();expect(f.highway).toEqual([]);expect(f.access).toEqual([]);expect(f.exits).toEqual([]);
+  expect(s.freight,'no freight trunk road (KC, 2026-11-07)').toBeUndefined();
   expect(e.w).toBeCloseTo(e.d,6);
   // The outer land itself is filled, not merely a square enclosing road. Original core canals stay.
   const core=cityEnvelope(s.coreLand!)!;
@@ -30,10 +29,6 @@ describe('square city with local logistics and three-stop passenger rail',()=>{
   for(const p of airport.route)expect(Math.abs(p[0]-runway)).toBeGreaterThan(AIRPORT_LAYOUT.runwayWidth/2+1);
   const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
   expect(pathClear(airport.route,boxes,.5)).toBe(true);expect(pathClear(r.airportWalk!.filter(p=>p[1]===0).map(p=>[p[0],p[2]]),boxes,.15)).toBe(true);
-  expect(pathClear(f.route,boxes,.4)).toBe(true);
-  for(let i=1;i<f.truck.legs.length;i++)expect(f.truck.legs[i].a).toEqual(f.truck.legs[i-1].b);
-  expect(f.truck.legs[f.truck.legs.length-1].b).toEqual(f.truck.legs[0].a);
-  for(let t=0;t<f.truck.period;t+=.5){const p=vehicleAt(f.truck,t);expect(Number.isFinite(p.x+p.z+p.y)).toBe(true);}
  });
  it('runs a continuous round trip with a 15-second dwell and closed doors while moving',()=>{
   const s=buildScene(layoutMap(catalog,[],'district')),r=s.communityRail!,deck=serviceRailDeck(r),timing=railTimetable(r),phases=new Set<string>();
