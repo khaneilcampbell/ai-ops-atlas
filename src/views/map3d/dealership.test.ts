@@ -3,7 +3,7 @@ import {it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {pathClear,type Pt} from './roads';
+import {pathClear} from './roads';
 import {DEALERSHIP as d,SHOWROOM_FRONT,dealershipShowroom,planDealership} from './dealershipPlan';
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`places and connects the dealership safely in ${group} grouping`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),a=s.dealership!,f=s.financial!;
@@ -26,11 +26,7 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`places an
  expect(a.road[a.road.length-1],'vehicle bridge joins the parking aisle').toEqual(a.drive[0]);
  expect(a.walk[a.walk.length-1],'footbridge joins the promenade').toEqual(a.promenade[0]);
  expect(a.promenade[a.promenade.length-1]).toEqual([a.x+5,a.z+3.7]);
- const freight=s.freight!;expect(freight).toBeDefined();
- for(let i=1;i<freight.route.length;i++){
-  const b=freight.route[i],q=freight.route[i-1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-q[0],b[1]-q[1])/.15));
-  for(let j=0;j<=n;j++){const p:Pt=[q[0]+(b[0]-q[0])*j/n,q[1]+(b[1]-q[1])*j/n];expect(p[0]>a.x-.7&&p[0]<a.x+a.w+.7&&p[1]>a.z-.7&&p[1]<a.z+a.d+.7,'freight stays outside display lot').toBe(false);}
- }
+ expect(s.freight,'no freight road runs past the display lot').toBeUndefined();
 });
 it('does not create disconnected dealership land without the Financial District street',()=>{expect(planDealership({})).toBeUndefined();expect(planDealership({financial:{x:0,z:0,w:10,d:10,road:[],street:[],sidewalk:[]}})).toBeUndefined();});
 it('fits evenly spaced upper galleries below the roof',async()=>{

@@ -41,7 +41,7 @@ describe('street intersections',()=>{
   expect(spans.length).toBeGreaterThanOrEqual(2);
   for(let i=1;i<spans.length;i++)expect(spans[i].lo,'junctions never overlap').toBeGreaterThan(spans[i-1].hi);
   // The stadium collector reaches the street at a junction, not a short S-bend beside it.
-  for(const a of s.freight!.access)for(let i=1;i<a.collector.length;i++){
+  for(const a of s.freight?.access??[])for(let i=1;i<a.collector.length;i++){
    const p=a.collector[i-1],q=a.collector[i];if(Math.abs(p[1]-q[1])>1e-6||Math.abs(p[1]-z)<1e-6)continue;
    const d=Math.abs(p[1]-z);expect(d<.05||d>1.75,`${a.id}: no jog squeezed between the street and the promenade`).toBe(true);
   }
