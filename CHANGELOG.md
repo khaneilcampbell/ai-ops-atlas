@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-07 · The Financial District train station has its curved shell roof, gold-edged arches and glass stair bridge back. The new perimeter railway had swapped it for a plain flat platform (#265)
+- 2026-11-07 · All five train stations now have the curved shell roof, gold-edged arches and glass stair bridge that the Financial District station had before the new perimeter railway replaced it with a plain flat platform (#265)
 - 2026-11-07 · Buildings that used real company names now have original names: Bayvale Bank, Robin Exchange, Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences, Vantor Motors and Profile Tower. Tool offices are named for what they do (Model Lab, Payments Office and so on), and company logos are off the signs. Old names still work in search (#257)
 - 2026-11-07 · Separate AI agents from fixed automations, including AI-assisted workflows, consistently in directories and map counts (#264)
 - 2026-11-07 · Repair city browser checks for current building names, five-stop train service and reviewed screenshots (#262)

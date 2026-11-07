@@ -1,5 +1,10 @@
 import {describe,expect,it} from 'vitest';
-import {FINANCIAL_STATION_KEY,PARK_STATION,parkStationParts,placeParkStation} from './parkStationPlan';
+import {PARK_STATION,mergeStationParts,parkStationParts,placeParkStation} from './parkStationPlan';
+import {catalog} from '../../catalog';
+import {layoutMap,type GroupBy} from '../mapLayout';
+import {buildScene} from './scene';
+import {financialDimensions} from './financialArchitecture';
+import {airportPoint,AIRPORT_LAYOUT} from './airport';
 import {COMMUNITY as C} from './hillsCommunityPlan';
 
 describe('Financial Park station (Dubai-style shell and skybridge)',()=>{
@@ -20,9 +25,8 @@ describe('Financial Park station (Dubai-style shell and skybridge)',()=>{
  });
 });
 
-describe('Financial District stop on the perimeter loop',()=>{
+describe('Shell stations on the perimeter loop',()=>{
  const local=parkStationParts([0,0],0);
- it('is the loop\'s Financial District station',()=>{expect(FINANCIAL_STATION_KEY).toBe('service:financial-station');});
  it('places the shell exactly where the old shuttle stop built it when the track runs east',()=>{
   const stop={point:[10,-20] as [number,number],yaw:Math.PI/2},placed=placeParkStation(local,stop),direct=parkStationParts(stop.point,0);
   for(const key of ['metal','glass','accents'] as const){
@@ -36,5 +40,20 @@ describe('Financial District stop on the perimeter loop',()=>{
   // Track runs south: land is to the west, so the arches land at negative x.
   expect(Math.min(...arches.map(p=>p.p[0]))).toBeLessThan(-5.5);
   expect(arches.every(p=>Math.abs((p.r??0)+Math.PI/2)<1e-9)).toBe(true);
+ });
+});
+
+describe('every perimeter stop wears the shell (KC, 2026-11-07)',()=>{
+ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps all five shells clear of buildings and the runway: ${grouping}`,()=>{
+  const s=buildScene(layoutMap(catalog,[],grouping)),loop=s.communityRail!.loop!,local=parkStationParts([0,0],0);
+  const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+  boxes.push(...s.financial!.buildings.map(b=>({x:s.financial!.x+b.x,z:s.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})));
+  if(s.mall)boxes.push({x:s.mall.cx,z:s.mall.cz-.8,w:s.mall.w,d:s.mall.d-2.5});
+  if(s.stadium)boxes.push({x:s.stadium.x+s.stadium.w/2,z:s.stadium.z+s.stadium.d/2,w:s.stadium.w,d:s.stadium.d});
+  const a=s.airport!,runway=airportPoint(a,AIRPORT_LAYOUT.runwayX,AIRPORT_LAYOUT.runwayZ);
+  boxes.push({x:runway[0],z:runway[1],w:AIRPORT_LAYOUT.runwayWidth+2,d:AIRPORT_LAYOUT.runwayLength+2});
+  const all=mergeStationParts(loop.stops.map(stop=>placeParkStation(local,stop)));
+  expect(all.accents.length).toBe(loop.stops.length*local.accents.length);
+  for(const part of [...all.metal,...all.glass,...all.accents])for(const b of boxes)expect(Math.abs(part.p[0]-b.x)<b.w/2&&Math.abs(part.p[2]-b.z)<b.d/2).toBe(false);
  });
 });

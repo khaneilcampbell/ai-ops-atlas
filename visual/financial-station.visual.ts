@@ -1,5 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Financial District Station keeps its Dubai-style shell and glazed skybridge on the perimeter loop (KC, 2026-11-07). */
+/** Every perimeter loop station has the Dubai-style shell and glazed skybridge from #158 (KC, 2026-11-07). */
+const STATIONS=['Financial District Station','Atlas Central Station','Skyline Station','Stadium Station','Airport Station'];
+const slug=(name:string)=>name.split(' ')[0].toLowerCase();
 const out=process.env.SHOT_DIR??'artifacts/financial-station';
 async function openStation(page:Page){
  await selectBuilding(page,'Financial District');await settle(page,2);
@@ -21,12 +23,17 @@ async function closeViews(page:Page){
 for(const light of ['day','night'] as const)test(`Financial District Station, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
- await openStation(page);await page.screenshot({path:`${out}/desktop-selected-${light}.png`});
- for(const s of await closeViews(page))writeFileSync(`${out}/desktop-${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ await openStation(page);
+ for(const name of STATIONS){
+  if(name!==STATIONS[0]){await page.getByRole('button',{name:`${name} →`,exact:true}).click();await settle(page,3);await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();}
+  await page.screenshot({path:`${out}/desktop-${slug(name)}-selected-${light}.png`});
+  for(const s of await closeViews(page))writeFileSync(`${out}/desktop-${slug(name)}-${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ }
  expect(errors).toEqual([]);
 });
 test('Financial District Station on a phone',async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await openStation(page);await page.screenshot({path:`${out}/phone-selected-day.png`});
+ await openStation(page);await page.screenshot({path:`${out}/phone-financial-selected-day.png`});
+ await page.getByRole('button',{name:'Airport Station →',exact:true}).click();await settle(page,3);await page.screenshot({path:`${out}/phone-airport-selected-day.png`});
 });
