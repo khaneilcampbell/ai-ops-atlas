@@ -11,7 +11,7 @@ import {CodexReviewHandoff} from "./CodexReviewHandoff";
 import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
-import { servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
+import { isAiAgent, residentsLabel, servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
 import { projectRepositories } from "../catalog/projects";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
@@ -218,6 +218,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
   const agent = catalog.agents.find((a) => a.id === id);
   const history = useMemo(() => activityFeed(catalog, repos, { agent: id }), [catalog, repos, id]);
   if (!agent) return <Head eyebrow="Agent" title="Not found" />;
+  const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
   const project = catalog.projects.find((p) => p.id === agent.projectId);
   const snap = repoData(repos[agent.repository]);
   const last = effectiveLastRun(agent, snap);
@@ -226,13 +227,13 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
 
   return (
     <>
-      <Head eyebrow={`Agent · ${project?.name ?? agent.projectId}`} title={agent.name} onClose={onClose}>
+      <Head eyebrow={`${itemLabel} · ${project?.name ?? agent.projectId}`} title={agent.name} onClose={onClose}>
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <StatusPill status={agent.status} />
           <span className="chip">{agent.framework}</span>
         </div>
       </Head>
-      <div className="panel-tabs" role="tablist" aria-label="Agent sections">
+      <div className="panel-tabs" role="tablist" aria-label={`${itemLabel} sections`}>
         {(["overview", "output"] as const).map((name) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
@@ -334,7 +335,7 @@ type RepoTab = "overview" | "pulls" | "agents" | "activity" | "insights";
 const REPO_TABS: { id: RepoTab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "pulls", label: "PRs" },
-  { id: "agents", label: "Agents" },
+  { id: "agents", label: "Agents & automations" },
   { id: "activity", label: "Activity" },
   { id: "insights", label: "Insights" },
 ];
@@ -559,7 +560,7 @@ function RepoDetail({ name }: { name: string }) {
     setFilters({ project: project.id });
     setView("agents");
   }}>
-            <Icon name="agents" size={14} /> View agents
+            <Icon name="agents" size={14} /> View agents & automations
           </button>
         ) : (
           <button className="btn" onClick={() => setView("repos")}>
@@ -598,7 +599,7 @@ function RepoInsights({ name }: { name: string }) {
     { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "Unknown", note: snap.pushedAt ? formatDate(snap.pushedAt) : "GitHub didn't report it" },
     { label: "Contributors", value: snap.commits.length ? String(authors) : "Unknown", note: snap.commits.length ? "in the synced commits" : "No commits synced" },
     { label: "Open issues + PRs", value: String(snap.openIssues), note: "Reported by GitHub" },
-    { label: "Agents", value: String(agents.length), note: `${agents.filter((a) => a.status === "active").length} active` },
+    { label: "Agents & automations", value: String(agents.length), note: residentsLabel(agents.filter(isAiAgent).length, agents.filter(a => !isAiAgent(a)).length) },
   ];
   return (
     <>

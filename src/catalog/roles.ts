@@ -3,8 +3,8 @@ import type { Agent } from "./types";
 // How the map places each registered item, read from its manifest's registry classification:
 // AI agents work at desks inside their project's building, automations get a house beside it.
 
-/** A: AI agent, B: AI-assisted workflow, F: planned agent. C, D and E run without an AI model. */
-const AI_TYPES = new Set(["A", "B", "F"]);
+/** A: AI agent, F: planned agent. B is a predefined AI-assisted automation, not an agent. */
+const AI_TYPES = new Set(["A", "F"]);
 
 export function isAiAgent(a: Pick<Agent, "registry">) {
   const t = a.registry?.classification?.type;

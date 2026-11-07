@@ -1,3 +1,4 @@
+import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { StatusPill } from "../components/bits";
@@ -92,12 +93,12 @@ export function GridView() {
                 </div>
                 <div className="gt-name">{r.project?.name ?? r.name.split("/")[1]}</div>
                 <div className="mono muted gt-repo">{r.name}</div>
-                <div className="gt-agents" aria-label={`${r.agents.length} agents`}>
+                <div className="gt-agents" aria-label={residentsLabel(r.agents.filter(isAiAgent).length, r.agents.filter(a => !isAiAgent(a)).length)}>
                   {r.agents.slice(0, 14).map((a) => (
                     <i key={a.id} title={`${a.name} · ${a.framework}`} style={{ background: a.status === "attention" ? "var(--gold)" : frameworkColor(a.framework) }} />
                   ))}
                   <span className="muted small">
-                    {r.agents.length} {r.agents.length === 1 ? "agent" : "agents"}
+                    {residentsLabel(r.agents.filter(isAiAgent).length, r.agents.filter(a => !isAiAgent(a)).length)}
                   </span>
                 </div>
                 <div className="gt-foot muted small">

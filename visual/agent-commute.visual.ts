@@ -42,12 +42,12 @@ test('Agent commutes, phone',async({page})=>{
 // The Workday tab is in the desktop inspector; the phone's agent sheet (DetailPanel) does not show it yet.
 test('Workday tab, desktop',async({page})=>{
  await page.setViewportSize({width:1512,height:900});await openAtlas(page);await goTo(page,'Agents');
- await page.getByRole('textbox',{name:'Search agents',exact:true}).fill('github-opportunity-scout');await settle(page,1);
- await page.locator('.reg-row[data-id="github-opportunity-scout"]').click();await settle(page,1);
+ await page.getByRole('textbox',{name:'Search agents',exact:true}).fill('repo-intelligence');await settle(page,1);
+ await page.locator('.reg-row[data-id="repo-intelligence"]').click();await settle(page,1);
  await page.getByRole('tab',{name:'Workday',exact:true}).click();await settle(page,1);
  const panel=page.getByRole('tabpanel');
  await expect(panel).toContainText('Ellipse Residences');
- await expect(panel).toContainText('$1 a month');
+ await expect(panel).toContainText('Per-run and monthly limits');
  await expect(panel).toContainText('not a live run');
  if(out){mkdirSync(out,{recursive:true});await page.screenshot({path:`${out}/workday-tab-desktop.png`});}
 });
