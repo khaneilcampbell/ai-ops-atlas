@@ -216,7 +216,7 @@ export function stadiumPlaza(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>){
  const ring=(grow:number,n:number,phase:number,out:Pt[],pad:number)=>{
   for(let k=0;k<n;k++){const t=(k+phase)/n*Math.PI*2,p:Pt=[cx+(C.outer.rx*K+grow)*Math.cos(t),cz+(C.outer.rz*K+grow)*Math.sin(t)];if(!open(p,pad))out.push(p);}
  };
- ring(1.05,30,0,trees,.55);ring(1.05,30,.5,beds,.45);ring(.4,24,.25,bollards,.25);
+ ring(1.05,18,0,trees,.55);ring(1.05,18,.5,beds,.45);ring(.4,20,.25,bollards,.25);
  // Two lines of bollards lead from the main gate to the edge of the lot.
  for(let x=gate[0]+.2;x<a.x+a.w+1.8;x+=.45)for(const side of [-1,1])bollards.push([x,cz+side*(G.width*K/2+.35)]);
  return {trees,beds,bollards};

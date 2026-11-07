@@ -127,7 +127,7 @@ describe("Atlas Stadium realism",()=>{
   });
   for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`plants the plaza on the lot, off the concourse, gates and walks: ${grouping}`,()=>{
     const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),plaza=stadiumPlaza(a),K=STADIUM_SCALE,o=STADIUM.concourse.outer;
-    expect(plaza.trees.length).toBeGreaterThan(15);expect(plaza.bollards.length).toBeGreaterThan(10);
+    expect(plaza.trees.length).toBeGreaterThanOrEqual(12);expect(plaza.bollards.length).toBeGreaterThan(10);
     for(const p of [...plaza.trees,...plaza.beds,...plaza.bollards]){
       expect(p[0]).toBeGreaterThan(a.x-2);expect(p[0]).toBeLessThan(a.x+a.w+2);expect(p[1]).toBeGreaterThan(a.z-2);expect(p[1]).toBeLessThan(a.z+a.d+2);
       expect(((p[0]-cx)/(o.rx*K))**2+((p[1]-cz)/(o.rz*K))**2).toBeGreaterThan(1);
