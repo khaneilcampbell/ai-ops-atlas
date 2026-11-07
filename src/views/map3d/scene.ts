@@ -731,7 +731,10 @@ function buildCity(layout: Layout): Scene3D {
   }
   // The bigger stadium lot must also keep clear of the airport's public road and walk.
   const airportAccess=airport?(()=>{const f=airportPoint(airport,-1.5,6),x0=Math.min(airport.accessX,f[0])-.9,x1=Math.max(airport.accessX,f[0])+.9;return [{x:x0,z:airport.accessZ-.9,w:x1-x0,d:1.8+.6}];})():[];
-  const stadium=planStadium([...land,...airportAccess],paving,terraces.find(t=>t.id==="github-profile"));
+  const profile=terraces.find(t=>t.id==="github-profile"),blocks=()=>[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))];
+  // Centred in its open land when its roads and walks can still reach it; otherwise beside GitHub Profile.
+  let stadium=planStadium([...land,...airportAccess],paving,profile);
+  if(stadium&&districtConnections(airport,stadium,blocks()).some(l=>!l.road.length||!l.walk.length))stadium=planStadium([...land,...airportAccess],paving,profile,false);
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
@@ -837,15 +840,11 @@ function buildCity(layout: Layout): Scene3D {
     land:[...land.filter(r=>!meadowLand.includes(r)),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
       ...fountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))],
     paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
-      ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]])],
-    paving:paving.filter(p=>!(stadium&&p.x>=stadium.x-2&&p.z>=stadium.z-2&&p.x+p.w<=stadium.x+stadium.w+2&&p.z+p.d<=stadium.z+stadium.d+2))}):undefined;
+      ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]])]}):undefined;
   if(stadiumSite&&stadium){
     const r=stadiumSite.site,lot={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};
-    // The grounds replace the scattered meadow planting; the plaza inside the lot stays.
+    // The grounds are open lawn round the stadium: no scattered meadow planting; the plaza inside the lot stays.
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(inRect(r,items[i].x,items[i].z)&&!inRect(lot,items[i].x,items[i].z))items.splice(i,1);
-    trees.push(...stadiumSite.trees.map((t,i)=>({x:t.x,z:t.z,y:LAND_TOP,s:t.kind==='cone'?.3+(i%3)*.03:.27,kind:t.kind as TreeKind})));
-    bushes.push(...stadiumSite.beds.map(([x,z],i)=>({x,y:LAND_TOP,z,s:.14+(i%2)*.03})));
-    fountains.push(...stadiumSite.fountains);
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 

@@ -31,7 +31,6 @@ import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
 import {cityEnvelope} from "./citySpacing";
-import {airportFootprint} from "./airport";
 import {STADIUM,STADIUM_SCALE,stadiumPlaza,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
 import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
@@ -147,28 +146,14 @@ describe("Atlas Stadium realism",()=>{
     const walks=(s.communityRail?.loop?.stops??[]).map(st=>st.walk.map(([x,,z]):Pt=>[x,z]));
     for(const t of s.trees)for(const w of walks)expect(distanceToRoad([t.x,t.z],w)).toBeGreaterThanOrEqual(.45);
   });
-  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`builds grounds over the open land round the lot, clear of roads and walks: ${grouping}`,()=>{
+  for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`sits in the middle of open lawn grounds, ringed by pools: ${grouping}`,()=>{
     const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,g=s.stadiumSite!,lot={x:a.x-2,z:a.z-2,w:a.w+4,d:a.d+4},r=g.site,env=cityEnvelope(s.land)!;
-    // KC, 2026-11-07: use the whole space. The grounds hold the lot and reach well past it, on the island.
-    expect(r.x).toBeLessThanOrEqual(lot.x);expect(r.z).toBeLessThanOrEqual(lot.z);expect(r.x+r.w).toBeGreaterThanOrEqual(lot.x+lot.w);expect(r.z+r.d).toBeGreaterThanOrEqual(lot.z+lot.d);
-    expect(r.w*r.d).toBeGreaterThan(lot.w*lot.d*1.5);
+    // KC, 2026-11-07: use the whole space, with the stadium centred in it and the rest left as lawn.
+    const e=1e-6;expect(r.x).toBeLessThanOrEqual(lot.x+e);expect(r.z).toBeLessThanOrEqual(lot.z+e);expect(r.x+r.w).toBeGreaterThanOrEqual(lot.x+lot.w-e);expect(r.z+r.d).toBeGreaterThanOrEqual(lot.z+lot.d-e);
     expect(r.x).toBeGreaterThanOrEqual(env.x);expect(r.z).toBeGreaterThanOrEqual(env.z);expect(r.x+r.w).toBeLessThanOrEqual(env.x+env.w);expect(r.z+r.d).toBeLessThanOrEqual(env.z+env.d);
-    expect(g.pitches.length).toBe(2);expect(g.fountains.length).toBeGreaterThanOrEqual(2);expect(g.trees.length).toBeGreaterThanOrEqual(12);
-    const paths:Pt[][]=[...s.transportConnections.flatMap(c=>[c.road,c.walk]),...s.carBridges.flatMap(b=>b.roads),...(s.communityRail?.loop?.stops??[]).map(st=>st.walk.map(([x,,z]):Pt=>[x,z]))];
-    const pieces=[...g.pitches,...g.parking,...g.fountains.map(f=>({x:f.x-1.2,z:f.z-1.2,w:2.4,d:2.4}))];
-    for(const p of pieces){
-      // Off the lot, inside the grounds, and no road, walk or station stair runs through it.
-      expect(p.x>=lot.x+lot.w||p.x+p.w<=lot.x||p.z>=lot.z+lot.d||p.z+p.d<=lot.z).toBe(true);
-      expect(p.x).toBeGreaterThanOrEqual(r.x-1e-6);expect(p.x+p.w).toBeLessThanOrEqual(r.x+r.w+1e-6);
-      for(const path of paths)for(let i=1;i<path.length;i++)for(let k=0;k<=20;k++){
-        const x=path[i-1][0]+(path[i][0]-path[i-1][0])*k/20,z=path[i-1][1]+(path[i][1]-path[i-1][1])*k/20;
-        expect(x>p.x&&x<p.x+p.w&&z>p.z&&z<p.z+p.d).toBe(false);
-      }
-      // Never on a district, terrace or the airport.
-      for(const t of s.terraces)expect(p.x<t.x+t.w&&p.x+p.w>t.x&&p.z<t.z+t.d&&p.z+p.d>t.z).toBe(false);
-      if(s.airport){const f=airportFootprint(s.airport);expect(p.x<f.x+f.w&&p.x+p.w>f.x&&p.z<f.z+f.d&&p.z+p.d>f.z).toBe(false);}
-    }
-    for(const t of g.trees)for(const path of paths)expect(distanceToRoad([t.x,t.z],path)).toBeGreaterThan(.3);
+    expect(Math.abs((r.x+r.w/2)-(lot.x+lot.w/2))).toBeLessThan(1.5);
+    expect(g.boxes.every(b=>b.c==='#5aaac0'||b.c==='#d9d2c4')).toBe(true);
+    for(const t of s.trees)if(t.x>r.x&&t.x<r.x+r.w&&t.z>r.z&&t.z<r.z+r.d)expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
     // The pools ring the concourse but leave the main gate open.
     const [cx,cz]=stadiumCentre(a),water=g.boxes.filter(b=>b.c==='#5aaac0');
     expect(water.length).toBeGreaterThan(20);
