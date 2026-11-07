@@ -3,6 +3,7 @@ import {MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
 import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
+import {STADIUM_OFFICE_ID} from "../views/map3d/stadiumPlan";
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import { AgentOutput } from "./AgentOutput";
@@ -154,8 +155,8 @@ function ServiceDetail({id}:{id:string}) {
     <div className="panel-body selectable"><p>A four-story BMW-inspired glass showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>
   </>;
   if(id === "skyline-stadium") return <>
-    <Head eyebrow="Recreation district · Beside GitHub Profile" title="Stadium"><span className="chip">Planned</span></Head>
-    <div className="panel-body selectable"><p>A MetLife-inspired sports and events venue with a tiered seating bowl, field, entrance concourse, and connected city access.</p><div className="section-title">Current scope</div><p>Visual infrastructure only. Events, ticketing, and venue operations are planned; this building does not indicate live business activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
+    <Head eyebrow="Recreation district · Beside GitHub Profile" title="Atlas Stadium"><span className="chip">Planned · No live events</span><EnterBuildingButton id={STADIUM_OFFICE_ID}/></Head>
+    <div className="panel-body selectable"><p>A sports and events venue under twelve matching perforated shell petals over a glazed lobby, with a three-tier seating bowl, a field, a raised ring concourse, a tree-lined plaza ringed by pools, and gates that meet the city roads, walks and Stadium Station.</p><section><div className="section-title">Inside</div><ul><li>Concourse: three gates, stair cores, escalators, food kiosks, the stadium shop, first aid and restrooms</li><li>Seating bowl: the pitch with goals, three tiers with aisles, hospitality boxes and two scoreboards</li></ul><p>A schematic of a planned venue. Nobody is shown inside, and no events, tickets or scores exist.</p></section><div className="section-title">Current scope</div><p>Visual infrastructure only. Events, ticketing, and venue operations are planned; this building does not indicate live business activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
   </>;
   if(id === "logistics-airport") return <>
     <Head eyebrow="Business logistics · Skyline district" title="Atlas Airport"><span className="chip">Planned</span></Head>

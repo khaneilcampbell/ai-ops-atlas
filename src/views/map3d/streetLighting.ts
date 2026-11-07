@@ -5,6 +5,7 @@ import {distanceToRoad} from './highway';
 import {airportPoint,airportPublicPath,AIRPORT_LAYOUT} from './airport';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {HILLS} from './hillsPlan';
+import {STADIUM,STADIUM_SCALE,stadiumCentre} from './stadiumGeometry';
 export const STREET_LIGHT={spacing:3.6,highwaySpacing:6,minSeparation:1.2,junctionClearance:.8,height:.95,highwayHeight:1.35,poleRadius:.025,maxFixtures:420} as const;
 export interface StreetLamp {x:number;z:number;roadX:number;roadZ:number;yaw:number;height:number;highway:boolean}
 export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size+.25,d:b.size+.25}));
@@ -14,7 +15,7 @@ export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.tower
  if(s.dealership){const d=s.dealership;boxes.push({x:d.x+d.w/2,z:d.z+d.d/2,w:d.w,d:d.d});}
  // Benjaire Marketing Agency: no lamps in the building or its reflecting pools.
  if(s.agency){const a=s.agency;boxes.push({x:a.cx,z:a.cz,w:a.w+.4,d:a.d+.4},...a.pools.map(p=>({x:p.x+p.w/2,z:p.z+p.d/2,w:p.w+.3,d:p.d+.3})));}
- if(s.stadium)boxes.push({x:s.stadium.x+4,z:s.stadium.z+3.5,w:7.8,d:6.8});
+ if(s.stadium){const [x,z]=stadiumCentre(s.stadium),o=STADIUM.concourse.outer;boxes.push({x,z,w:o.rx*2*STADIUM_SCALE,d:o.rz*2*STADIUM_SCALE});}
  if(s.airport){const a=s.airport;boxes.push(...AIRPORT_BUILDINGS.map(b=>{const p=airportPoint(a,b.x,b.z);return {x:p[0],z:p[1],w:b.w+.3,d:b.d+.3};}));for(const localX of [AIRPORT_LAYOUT.runwayX,AIRPORT_LAYOUT.taxiX]){const p=airportPoint(a,localX,AIRPORT_LAYOUT.runwayZ);boxes.push({x:p[0],z:p[1],w:3.8,d:25});}}
 // No street lamps on the Marketplace lot or its plaza.
  if(s.mall)boxes.push({x:s.mall.x+s.mall.w/2,z:s.mall.z+s.mall.d/2,w:s.mall.w,d:s.mall.d});
@@ -48,4 +49,3 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  }carried=((carried-len)%(path.highway?STREET_LIGHT.highwaySpacing:STREET_LIGHT.spacing)+(path.highway?STREET_LIGHT.highwaySpacing:STREET_LIGHT.spacing))%(path.highway?STREET_LIGHT.highwaySpacing:STREET_LIGHT.spacing);}}
  return result;
 }
-export function stadiumFloodPositions(a:{x:number;z:number}):[number,number][]{return [-1,1].flatMap(side=>[-2.4,2.4].map(dx=>[a.x+4+dx,a.z+3.5+side*2.3] as [number,number]));}
