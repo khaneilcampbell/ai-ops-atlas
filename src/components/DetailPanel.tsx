@@ -150,11 +150,11 @@ function ServiceDetail({id}:{id:string}) {
     </div>
   </>;
   if(id === "bmw-dealership") return <>
-    <Head eyebrow="Automotive district · Visual infrastructure" title="BMW"><span className="chip">Planned</span></Head>
-    <div className="panel-body selectable"><p>A four-story BMW-inspired glass showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>
+    <Head eyebrow="Automotive district · Visual infrastructure" title="Vantor Motors"><span className="chip">Planned</span></Head>
+    <div className="panel-body selectable"><p>A four-story glass car showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>
   </>;
   if(id === "skyline-stadium") return <>
-    <Head eyebrow="Recreation district · Beside GitHub Profile" title="Stadium"><span className="chip">Planned</span></Head>
+    <Head eyebrow="Recreation district · Beside Profile Tower" title="Stadium"><span className="chip">Planned</span></Head>
     <div className="panel-body selectable"><p>A MetLife-inspired sports and events venue with a tiered seating bowl, field, entrance concourse, and connected city access.</p><div className="section-title">Current scope</div><p>Visual infrastructure only. Events, ticketing, and venue operations are planned; this building does not indicate live business activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
   </>;
   if(id === "logistics-airport") return <>
@@ -179,7 +179,7 @@ function ToolDetail({ id }: { id: string }) {
       <EnterBuildingButton id={`skyline-business:${service.name}`}/>
     </Head>
     <div className="panel-body selectable">
-      <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p></section>
+      <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p><p className="muted small" style={{ margin: "6px 0 0" }}>Uses: {service.vendor}</p></section>
       <section><div className="section-title">Supports this project</div><button className="ghost-btn" onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} />{project.name}</button></section>
       {route.length > 1 && <section><div className="section-title">Tool workflow · left to right around headquarters</div><div className="link-list">{route.map((tool, index) => <button key={tool.id} className="text-btn" aria-current={tool.id === service.id ? "step" : undefined} onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{index + 1}. {tool.name}{tool.id === service.id ? " · selected" : " →"}</button>)}</div><p className="muted small">Placement follows declared dependencies and documented workflow phases.</p></section>}
       <ToolWorkflow service={service} projectAgents={catalog.agents.filter(a => a.projectId === project.id)} />

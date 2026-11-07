@@ -96,10 +96,10 @@ describe('Circa twin towers',()=>{
   expect(flightClearance(s).altitude).toBeGreaterThanOrEqual(top(circa)+4);
  });
 
- it('has an unofficial planned identity, search, owning role and desk view, without a sign',()=>{
+ it('has an original planned identity, search, owning role and desk view, without a sign',()=>{
   const brand=financialBrand('circa')!;
-  expect(brand.name).toBe('Circa');expect(brand.noSign).toBe(true);expect(brand.purpose).toMatch(/unofficial/i);expect(brand.role).toBe('Residential Amenities Planning Coordinator');
-  expect(financialBuildingMatches('Circa').map(b=>b.id)).toEqual(['circa']);
+  expect(brand.name).toBe('Ellipse Residences');expect(brand.noSign).toBe(true);expect(brand.purpose).toMatch(/original Atlas landmark/i);expect(brand.formerNames).toEqual(['Circa']);expect(brand.role).toBe('Residential Amenities Planning Coordinator');
+  expect(financialBuildingMatches('Ellipse Residences').map(b=>b.id)).toEqual(['circa']);
   expect(BUILDING_INTERIORS['financial:circa'].rooms).toEqual(['Marble & walnut lobby','Pool deck lounge','Sky residence','Fitness club']);
  });
 });

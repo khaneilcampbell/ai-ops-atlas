@@ -1,7 +1,11 @@
 # Building names without trademarks
 
-Status: **proposal, awaiting KC's approval.** Nothing in the app has been renamed yet. Once KC
-approves the table (or edits it), an engineer applies it with the prompt at the end of this file.
+Status: **partly applied (2026-11-07, PR #257).** KC approved the names below, changing two of them
+(Robin Exchange, Camton Hotel). Rows marked **Done** are renamed in the app. Rows marked **Open** are
+still proposals awaiting KC (American Express, the four Skyline restaurants and shop, the airport
+names, vehicles and liveries). Atlas Stadium is handled by the stadium rebuild (PR #263).
+
+Screenshots: `docs/screenshots/building-names/` (before/after, day, night and phone).
 
 ## Why
 
@@ -40,13 +44,13 @@ trademark-searched; step 1 of the prompt screens them before anything ships.
    The vendor name ("Uses: Anthropic Messages API") appears only as plain text in the detail panel,
    where it describes a real integration the agents use.
 
-Fictional word bank (invented or generic, to be screened): Bayvale, Halden, Corvane, Merrow,
-Aldren, Wharfside, Ravelle, Ellery, Vantor, Ellipse.
+Fictional word bank (invented or generic, to be screened): Bayvale, Halden, Robin, Merrow,
+Aldren, Camton, Ravelle, Ellery, Vantor, Ellipse.
 
 ## Proposed names
 
-**Change** = a real-company or trademark name being replaced. **Keep** = already owned and
-consistent. **Tidy** = owned, renamed only to match the rule. Ids in `code` are stable and stay as
+**Done** = renamed in the app. **Open** = proposed, waiting for KC. **Keep** = already owned and
+consistent. Ids in `code` are stable and stay as
 they are.
 
 ### Repo buildings (project HQs, `project.name` in `catalog/*.yaml`)
@@ -59,7 +63,7 @@ they are.
 | Commerce Pipeline | Commerce Pipeline | Multi-agent commerce (`multi-agent-commerce-pipeline`) | Commerce | Keep |
 | Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Keep |
 | Portfolio Site | Portfolio Site | Personal website (`khaneilcampbell-com`) | Portfolio | Keep |
-| GitHub Profile | Profile Tower | GitHub profile README repo (`khaneilcampbell-profile`); drop the GitHub wordmark sign | Portfolio | Change |
+| GitHub Profile | Profile Tower | GitHub profile README repo (`khaneilcampbell-profile`); GitHub wordmark sign removed | Portfolio | Done |
 | Intelligence Hub | Intelligence Hub | Project intelligence (`project-intelligence-hub`) | Intelligence | Keep |
 | Service Desk | Service Desk | Service desk dashboard (`service-desk-dashboard`) | Operations | Keep |
 | SOC Lab | SOC Lab | Brute-force detection lab (`splunk-bruteforce-detection-lab`) | Security | Keep |
@@ -69,68 +73,68 @@ they are.
 
 | Current name | Proposed name | Role | Stable id | Action |
 |---|---|---|---|---|
-| Chase | Bayvale Bank | Banking records review | `banks` | Change |
-| Wells Fargo | Halden Trust | Bills and records bank tower | `records` | Change |
-| American Express | Ellery Budget Center | Spending and budget review | `budget` | Change |
-| Robinhood | Corvane Exchange | Investment records (no trading) | `investments` | Change |
-| Navy Federal Credit Union | Merrow Credit Union | Member services and records | `insurance` | Change |
-| Experian | Aldren Insights | Credit and data insights offices | `residence` | Change |
-| Vanguard | Ravelle Advisors | Financial planning headquarters | `financial-planning` | Change |
-| The Ritz-Carlton | Wharfside Hotel | Waterfront luxury hotel | `harbor-residence` | Change |
-| Circa | Ellipse Residences | Twin-tower residence and pool deck | `circa` | Change |
+| Chase | Bayvale Bank | Banking records review | `banks` | Done |
+| Wells Fargo | Halden Trust | Bills and records bank tower | `records` | Done |
+| American Express | Ellery Budget Center | Spending and budget review | `budget` | Open |
+| Robinhood | Robin Exchange (KC's pick) | Investment records (no trading) | `investments` | Done |
+| Navy Federal Credit Union | Merrow Credit Union | Member services and records | `insurance` | Done |
+| Experian | Aldren Insights | Credit and data insights offices | `residence` | Done |
+| Vanguard | Ravelle Advisors | Financial planning headquarters | `financial-planning` | Done |
+| The Ritz-Carlton | Camton Hotel (KC's pick) | Waterfront luxury hotel | `harbor-residence` | Done |
+| Circa | Ellipse Residences | Twin-tower residence and pool deck | `circa` | Done |
 | Benjaire Finance | Benjaire Finance | Business finance workspace | `business-finance` | Keep |
 | Financial District | Financial District | District nameplate | `FINANCIAL_KEY` | Keep |
 | Financial Park | Financial Park | Public park | `FINANCIAL_PARK_KEY` | Keep |
-| Financial District Station | Financial Station | Rail stop (26 characters today, clips) | `financial-station` | Tidy |
+| Financial District Station | Financial Station | Rail stop (26 characters today, clips) | `financial-station` | Open |
 
 ### Other districts and landmarks
 
 | Current name | Proposed name | Role | District | Action |
 |---|---|---|---|---|
-| BMW | Vantor Motors | Car showroom and service; remove roundel and BMW lettering | Financial District edge | Change |
+| BMW | Vantor Motors | Car showroom and service; roundel and BMW lettering replaced by a V badge | Financial District edge | Done |
 | Atlas Airport | Atlas Airport | Airport district nameplate | Airport | Keep |
-| Atlas · Terminal | Atlas Terminal | Check-in and gates | Airport | Tidy |
-| Atlas · Air Traffic | Atlas Control Tower | Airfield safety | Airport | Tidy |
-| Atlas · Maintenance | Atlas Service Hangar | Aircraft maintenance | Airport | Tidy |
-| Atlas · Cargo | Atlas Cargo Hangar | Cargo logistics | Airport | Tidy |
-| Atlas · Operations | Atlas Ops Center | Airport systems | Airport | Tidy |
-| Atlas · Passenger Services | Atlas Passenger Hall | Passenger services | Airport | Tidy |
-| Atlas · Logistics | Atlas Logistics Office | Freight planning | Airport | Tidy |
-| Atlas · Administration | Atlas Admin Office | Airport resources | Airport | Tidy |
+| Atlas · Terminal | Atlas Terminal | Check-in and gates | Airport | Open |
+| Atlas · Air Traffic | Atlas Control Tower | Airfield safety | Airport | Open |
+| Atlas · Maintenance | Atlas Service Hangar | Aircraft maintenance | Airport | Open |
+| Atlas · Cargo | Atlas Cargo Hangar | Cargo logistics | Airport | Open |
+| Atlas · Operations | Atlas Ops Center | Airport systems | Airport | Open |
+| Atlas · Passenger Services | Atlas Passenger Hall | Passenger services | Airport | Open |
+| Atlas · Logistics | Atlas Logistics Office | Freight planning | Airport | Open |
+| Atlas · Administration | Atlas Admin Office | Airport resources | Airport | Open |
 | Atlas Marketplace | Atlas Marketplace | Agent mall | Marketplace | Keep |
 | Benjaire Marketing Agency | Benjaire Marketing Agency | Marketing agency and Product Lab (24 characters; already shipped, allowed as the one exception) | Bay | Keep |
-| Stadium | Atlas Stadium | Venue | Stadium | Tidy |
+| Stadium | Atlas Stadium | Venue | Stadium | In PR #263 |
 | Atlas Hills | Atlas Hills | District nameplate | Atlas Hills | Keep |
 | Atlas Mansion (new, PR #181) | Atlas Mansion | Hills estate | Atlas Hills | Keep |
 | Atlas Hills Station | Atlas Hills Station | Rail stop | Atlas Hills | Keep |
-| Atlas Station (new, KC's local build) | Atlas Central Station | Main rail stop | Central | Tidy |
+| Atlas Station | Atlas Central Station | Main rail stop by the Marketplace | Central | Done |
 | Cypress, Palm, Laurel, Vista House; Village Shops; Hills Café; Community Clubhouse; Hills Fitness; Hills Social Club; Health & Wellness Spa; Three-Hole Golf; Golf Clubhouse | Unchanged | Community buildings | Atlas Hills | Keep |
 
 ### Skyline storefronts and offices (`tenants` in `scene.ts`, `BUILDING_INTERIORS`)
 
 | Current name | Proposed name | Role | Action |
 |---|---|---|---|
-| Wells Fargo (branch) | Halden Branch | Bank branch of Halden Trust | Change |
-| Starbucks | Corner Coffee | Coffeehouse | Change |
-| Smashburger | Skyline Grill | Burger restaurant | Change |
-| Chipotle | Fresh Cantina | Fast-casual restaurant | Change |
-| Zara | Thread Boutique | Fashion retail | Change |
-| Anthropic | Reasoning Lab | AI research office | Change |
-| OpenAI | Model Lab | Applied AI office | Change |
+| Wells Fargo (branch) | Halden Branch | Bank branch of Halden Trust | Done |
+| Starbucks | Corner Coffee | Coffeehouse | Open |
+| Smashburger | Skyline Grill | Burger restaurant | Open |
+| Chipotle | Fresh Cantina | Fast-casual restaurant | Open |
+| Zara | Thread Boutique | Fashion retail | Open |
+| Anthropic | Reasoning Lab | AI research office | Done |
+| OpenAI | Model Lab | Applied AI office | Done |
 
 ### Tool offices (one per external service an agent uses, `toolBrand.ts`)
 
 | Current name | Proposed name | What it does | Action |
 |---|---|---|---|
-| Anthropic | Reasoning Lab | Claude API calls | Change |
-| OpenAI | Model Lab | OpenAI API calls | Change |
-| Canva | Design Studio | Design production | Change |
-| Stripe | Payments Office | Payments and billing | Change |
-| Cloudflare | Edge Office | Hosting, Workers, email | Change |
-| Splunk | Log Analytics Lab | Security log search | Change |
-| n8n | Automation Works | Workflow automation | Change |
-| Serper | Search Desk | Web search API | Change |
-| Shopify | Storefront Office | Online store | Change |
+| Anthropic | Reasoning Lab | Claude API calls | Done |
+| OpenAI | Model Lab | OpenAI API calls | Done |
+| Canva | Design Studio | Design production | Done |
+| Stripe | Payments Office | Payments and billing | Done |
+| Cloudflare | Edge Office | Hosting, Workers, email | Done |
+| Splunk | Log Analytics Lab | Security log search | Done |
+| n8n | Automation Works | Workflow automation | Done |
+| Serper | Search Desk | Web search API | Done |
+| Shopify | Storefront Office | Online store | Done |
 | Any other service | `<What it does> Office` | Same rule | Rule |
 
 ### Not buildings, but the same risk (fix in the same pass)
@@ -142,9 +146,23 @@ they are.
 | MTA bus | Atlas Transit | `living.tsx` |
 | BMW cars, G-wagon | Unbadged sedan and SUV models | `vehicles.ts`, `vehicleModels.ts` |
 
+## How it was applied (PR #257)
+
+- Display names changed; stable ids, selection keys and interior routes did not. Each Financial
+  District brand keeps its old name in `formerNames` (financialBrands.ts), used only for search and
+  old interior routes, never shown.
+- Signs: the Chase octagon, Robinhood feather, Experian dot cluster, BMW roundel and lettering, the
+  GitHub wordmark, the Splunk `splunk>` mark and the Canva italic are gone. Wells Fargo red and gold,
+  Robinhood lime and Experian magenta are replaced on signs and interiors.
+- Tool offices: `SERVICES` in `src/catalog/roles.ts` now carries `name` (what it does, shown on the
+  map) and `vendor` (the real service, shown as "Uses: ..." in the panel).
+- Skyline tenants and agent workplaces: OpenAI, Anthropic and the Wells Fargo branch are now Model Lab,
+  Reasoning Lab and Halden Branch in `scene.ts`, `workplaces.ts`, the catalog schema and yaml.
+- Guard: `visual/building-names.visual.ts` fails if an old company name shows on a nameplate.
+
 ## Senior engineer prompt
 
-Paste this into a new engineering session once KC has approved the table.
+For the **Open** rows, paste this into a new engineering session once KC approves them.
 
 ```text
 You are a senior engineer on Atlas (Tauri Mac app + the same React app on Cloudflare Pages,

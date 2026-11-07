@@ -4,7 +4,7 @@ import {buildCatalog} from "./parse";
 import {projectOfficeAgents,workplaceAgent} from "./workplaces";
 
 it("places the Atlas improvement role only in OpenAI Suite 401 without changing repo ownership",()=>{
-  const agent=workplaceAgent(catalog.agents,"OpenAI",4,"401")!;
+  const agent=workplaceAgent(catalog.agents,"Model Lab",4,"401")!;
   expect(agent.id).toBe("atlas-system-improvements");
   expect(agent.repository).toBe("khaneilcampbell/ai-ops-atlas");
   expect(agent.projectId).toBe("ai-ops-atlas");
@@ -15,16 +15,16 @@ it("places the Atlas improvement role only in OpenAI Suite 401 without changing 
 
 const manifest=(workplace:string)=>`schema: atlas/v2\nproject: {id: demo, name: Demo, summary: s, status: idle, repository: me/demo}\nagents:\n  - {id: first, name: First, purpose: p, framework: f, status: idle, workplace: ${workplace}}\n`;
 it("rejects unsupported rooms, floor mismatches, and double-booked workplaces",()=>{
-  expect(buildCatalog({"a.yaml":manifest('{building: OpenAI, floor: 2, room: "401"}')}).issues[0].message).toContain("match");
-  expect(buildCatalog({"a.yaml":manifest('{building: OpenAI, floor: 5, room: "501"}')}).issues.length).toBeGreaterThan(0);
-  const valid=manifest('{building: OpenAI, floor: 4, room: "401"}');
+  expect(buildCatalog({"a.yaml":manifest('{building: Model Lab, floor: 2, room: "401"}')}).issues[0].message).toContain("match");
+  expect(buildCatalog({"a.yaml":manifest('{building: Model Lab, floor: 5, room: "501"}')}).issues.length).toBeGreaterThan(0);
+  const valid=manifest('{building: Model Lab, floor: 4, room: "401"}');
   expect(buildCatalog({"a.yaml":valid}).issues).toEqual([]);
-  const duplicate=valid+'  - {id: second, name: Second, purpose: p, framework: f, status: idle, workplace: {building: OpenAI, floor: 4, room: "401"}}\n';
+  const duplicate=valid+'  - {id: second, name: Second, purpose: p, framework: f, status: idle, workplace: {building: Model Lab, floor: 4, room: "401"}}\n';
   expect(buildCatalog({"a.yaml":duplicate}).issues[0].message).toContain("more than one worker");
 });
 
 it("keeps the UI designer manual-only in its own OpenAI suite",()=>{
- const agent=workplaceAgent(catalog.agents,"OpenAI",4,"402")!;
+ const agent=workplaceAgent(catalog.agents,"Model Lab",4,"402")!;
  expect(agent.id).toBe("atlas-ui-improvement-designer");
  expect(agent.repository).toBe("khaneilcampbell/ai-ops-atlas");
  expect(agent.trigger).toBe("Explicit maintainer request only; no schedule");
@@ -38,7 +38,7 @@ it("assigns the manual production team only to Atlas Floor 3 and rejects invalid
  expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&a.status==="idle")).toBe(true);
  expect(team.find(a=>a.id==="atlas-production-coordinator")?.observe?.githubWorkflow).toBe("benjaire-production.yml");
  for(const floor of [0,5,2.5,'"2"']) {
-  const yaml=manifest('{building: OpenAI, floor: 4, room: "401"}').replace('workplace: {building: OpenAI, floor: 4, room: "401"}',`office_floor: ${floor}`);
+  const yaml=manifest('{building: Model Lab, floor: 4, room: "401"}').replace('workplace: {building: Model Lab, floor: 4, room: "401"}',`office_floor: ${floor}`);
   expect(buildCatalog({"a.yaml":yaml}).issues.length).toBeGreaterThan(0);
  }
 });
@@ -58,7 +58,7 @@ it('assigns Marketplace workers once, preserving their Commerce ownership and ru
 });
 it('validates Marketplace rooms without allowing unsupported suites elsewhere',()=>{
  expect(buildCatalog({'a.yaml':manifest('{building: Atlas Marketplace, floor: 1, room: "108"}')}).issues).toEqual([]);
- for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: OpenAI, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
+ for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: Model Lab, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
 });
 
 it("keeps the Inquiry Assistant in Skyline with its original ownership",()=>{
@@ -78,6 +78,6 @@ it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the inter
   expect(projectOfficeAgents(catalog.agents,a.projectId)).not.toContain(a);
  }
  expect(buildCatalog({"a.yaml":manifest('{building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}')}).issues).toEqual([]);
- for(const w of ['{building: Benjaire Marketing Agency, floor: 1, room: "101"}','{building: Benjaire Marketing Agency, floor: 2, room: "1-strategy"}','{building: Benjaire Marketing Agency, floor: 1, room: "1-lobby"}','{building: OpenAI, floor: 1, room: "1-strategy"}'])
+ for(const w of ['{building: Benjaire Marketing Agency, floor: 1, room: "101"}','{building: Benjaire Marketing Agency, floor: 2, room: "1-strategy"}','{building: Benjaire Marketing Agency, floor: 1, room: "1-lobby"}','{building: Model Lab, floor: 1, room: "1-strategy"}'])
   expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
 });

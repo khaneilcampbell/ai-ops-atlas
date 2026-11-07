@@ -19,16 +19,19 @@ export function unclassified(agents: Pick<Agent, "id" | "registry">[]) {
 /** Outside services the map shows as a kiosk, when a manifest names one among an item's tools. */
 export interface Service {
   id: string;
+  /** What the building does (shown on the map). Never a vendor's brand. */
   name: string;
+  /** The real outside service the manifests name, shown only as plain text in the panel. */
+  vendor: string;
 }
 const SERVICES: (Service & { re: RegExp })[] = [
-  { id: "stripe", name: "Stripe", re: /\bstripe\b/i },
-  { id: "shopify", name: "Shopify", re: /\bshopify\b/i },
-  { id: "cloudflare", name: "Cloudflare", re: /\bcloudflare\b/i },
-  { id: "splunk", name: "Splunk", re: /\bsplunk\b/i },
-  { id: "canva", name: "Canva", re: /\bcanva\b/i },
-  { id: "serper", name: "Serper", re: /\bserper\b/i },
-  { id: "n8n", name: "n8n", re: /\bn8n\b/i },
+  { id: "stripe", name: "Payments Office", vendor: "Stripe", re: /\bstripe\b/i },
+  { id: "shopify", name: "Storefront Office", vendor: "Shopify", re: /\bshopify\b/i },
+  { id: "cloudflare", name: "Edge Office", vendor: "Cloudflare", re: /\bcloudflare\b/i },
+  { id: "splunk", name: "Log Analytics Lab", vendor: "Splunk", re: /\bsplunk\b/i },
+  { id: "canva", name: "Design Studio", vendor: "Canva", re: /\bcanva\b/i },
+  { id: "serper", name: "Search Desk", vendor: "Serper", re: /\bserper\b/i },
+  { id: "n8n", name: "Automation Works", vendor: "n8n", re: /\bn8n\b/i },
 ];
 
 export interface ServiceUse extends Service {

@@ -19,7 +19,7 @@ describe("agent jobs", () => {
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
     const suite = jobs.find((j) => j.agentId === "atlas-system-improvements")!;
-    expect(suite.work).toMatchObject({ kind: "workplace", building: "OpenAI" });
+    expect(suite.work).toMatchObject({ kind: "workplace", building: "Model Lab" });
     const hq = jobs.find((j) => j.agentId === "niche-scout")!;
     expect(hq.work).toMatchObject({ kind: "headquarters", projectId: "commerce-pipeline" });
   });

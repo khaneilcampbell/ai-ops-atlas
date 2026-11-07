@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-07 · Added a plan with new original names for every building that uses a real company name (banks, BMW, Circa, shops); nothing changes in the app yet (#257)
+- 2026-11-07 · Buildings that used real company names now have original names: Bayvale Bank, Robin Exchange, Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences, Vantor Motors and Profile Tower. Tool offices are named for what they do (Model Lab, Payments Office and so on), and company logos are off the signs. Old names still work in search (#257)
 - 2026-11-07 · Repair city browser checks for current building names, five-stop train service and reviewed screenshots (#262)
 - 2026-11-07 · Atlas Marketplace, its train and the Marketing Agency nameplate are back on the map. They had disappeared when a project left the map (an archived repository) (#259)
 - 2026-11-07 · Took out the truck road and parking lot cut through the Commerce district, and put all of Atlas's land, roads and stations on one level (#261)
