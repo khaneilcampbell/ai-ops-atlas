@@ -4,7 +4,7 @@ import * as THREE from "three";
 import {TERRACE_H} from "./scene";
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from "./models";
 import {focusable} from "./materials";
-import {STADIUM,pitchLines,stadiumCentre,stadiumColumns,stadiumGeometry} from "./stadiumGeometry";
+import {STADIUM,STADIUM_SCALE as K,pitchLines,stadiumCentre,stadiumColumns,stadiumGeometry} from "./stadiumGeometry";
 export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
 
@@ -42,18 +42,18 @@ export function Stadium({plan:a,g,m,pick,night=false}:{night?:boolean;plan?:Stad
   const parts=useMemo(()=>{
     if(!a)return {plain:[],pitch:[],screens:[]};
     const [cx,cz]=stadiumCentre(a),y=TERRACE_H,S=STADIUM;
-    const at=(it:{p:[number,number,number];s:[number,number,number]},c:string):Inst=>({p:[cx+it.p[0],y+it.p[1],cz+it.p[2]],s:it.s,c});
+    const at=(it:{p:[number,number,number];s:[number,number,number]},c:string):Inst=>({p:[cx+it.p[0]*K,y+it.p[1]*K,cz+it.p[2]*K],s:[it.s[0]*K,it.s[1]*K,it.s[2]*K],c});
     return {
       plain:[...stadiumColumns().map(c=>at(c,"#d6cfbf")),...pitchLines().map(l=>at(l,"#f3f1e6"))],
-      pitch:[{p:[cx,y+.04,cz],s:[S.pitch.w,.045,S.pitch.d],c:"#356c45"}] as Inst[],
-      screens:[-1,1].map(side=>({p:[cx+side*S.screens.x,y+S.screens.y,cz],s:[.08,S.screens.h,S.screens.w],c:"#52796a"})) as Inst[],
+      pitch:[{p:[cx,y+.04*K,cz],s:[S.pitch.w*K,.045*K,S.pitch.d*K],c:"#356c45"}] as Inst[],
+      screens:[-1,1].map(side=>({p:[cx+side*S.screens.x*K,y+S.screens.y*K,cz],s:[.08*K,S.screens.h*K,S.screens.w*K],c:"#52796a"})) as Inst[],
     };
   },[a]);
   if(!a||!geo)return null;
   const [cx,cz]=stadiumCentre(a);
   return <>
     <Instanced items={[{p:[cx,0,cz],s:[a.w+4,TERRACE_H,a.d+4]}]} geometry={g.box} material={m.terrace}/>
-    <group position={[cx,TERRACE_H,cz]}>
+    <group position={[cx,TERRACE_H,cz]} scale={K}>
       <mesh geometry={geo.shells} material={mats.shell} castShadow receiveShadow {...handlers}/>
       <mesh geometry={geo.undersides} material={mats.under} raycast={noRaycast}/>
       <mesh geometry={geo.seams} material={mats.seam} raycast={noRaycast}/>

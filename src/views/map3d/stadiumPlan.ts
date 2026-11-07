@@ -1,11 +1,17 @@
 import type {Rect,Slab} from "./scene";
+/**
+ * Size of Atlas Stadium's box, in map units: the 8 x 7 design grown by STADIUM_SCALE (KC, 2026-11-07:
+ * "expand district size to make the change more realistic"). About 1.3 times the Marketplace footprint.
+ */
+export const STADIUM_SCALE=1.4;
+export const STADIUM_BOX={w:8*STADIUM_SCALE,d:7*STADIUM_SCALE} as const;
 export const STADIUM_KEY="service:skyline-stadium";
 /** Display name on the nameplate and panel; the key and id stay as they were. */
 export const STADIUM_NAME="Atlas Stadium";
 export interface StadiumPlan extends Rect {accessX:number;accessZ:number}
 export function planStadium(land:Rect[],paving:Slab[],profile?:Rect):StadiumPlan|undefined {
   if(!profile||!paving.length)return;
-  const w=8,d=7,margin=2,gap=.35;
+  const w=STADIUM_BOX.w,d=STADIUM_BOX.d,margin=2,gap=.35;
   // Evaluate nearby parcel edges instead of repeatedly shifting a whole district north.
   const preferred={x:profile.x-w-margin*2-gap-.001,z:profile.z+profile.d/2-(d+margin*2)/2};
   const xs=[...new Set([preferred.x,...land.map(r=>r.x-w-margin*2-gap-.001)])];

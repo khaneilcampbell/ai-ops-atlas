@@ -40,7 +40,8 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
   {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt},
   {...LOOP_STATIONS[2],point:[clamp(sky.x+sky.w/2,left,right),bottom] as Pt,target:[sky.x+sky.w/2,sky.z+sky.d-.4] as Pt},
-  {...LOOP_STATIONS[3],point:[clamp(stadium.x+stadium.w/2,left,right),bottom] as Pt,target:stadiumGate(stadium)},
+  // Beside the main (east) gate, so the bigger stadium's walk to the platform stays short and clear of the bowl.
+  {...LOOP_STATIONS[3],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
   {...LOOP_STATIONS[4],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
  ];
  const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));

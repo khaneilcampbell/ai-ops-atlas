@@ -30,17 +30,22 @@ import {MALL} from "./mallPlan";
 import {distanceToRoad} from "./highway";
 import {lightingObstacles} from "./streetLighting";
 import type {Pt} from "./roads";
-import {STADIUM,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
-import {STADIUM_NAME} from "./stadiumPlan";
+import {STADIUM,STADIUM_SCALE,shellPoint,stadiumCentre,stadiumCrown,stadiumGate,stadiumGeometry,stadiumPieceCount,stadiumTriangles,sideGateFeet} from "./stadiumGeometry";
+import {STADIUM_BOX,STADIUM_NAME} from "./stadiumPlan";
 
 describe("Atlas Stadium",()=>{
   const S=STADIUM,box=8,depth=7;
+  it("grows the district by one factor, about 1.3 times the Marketplace footprint and lower than it",()=>{
+    expect(STADIUM_SCALE).toBeGreaterThanOrEqual(1.3);expect(STADIUM_SCALE).toBeLessThanOrEqual(1.5);
+    expect(STADIUM_BOX.w).toBeCloseTo(box*STADIUM_SCALE);expect(STADIUM_BOX.d).toBeCloseTo(depth*STADIUM_SCALE);
+    expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
+  });
   it("has an odd number of shells, seven to eleven, in Atlas's own rhythm",()=>{
     expect(S.shells%2).toBe(1);expect(S.shells).toBeGreaterThanOrEqual(7);expect(S.shells).toBeLessThanOrEqual(11);
     expect(new Set(S.rhythm).size).toBeGreaterThan(1);
     expect(S.twist).toBeLessThanOrEqual(20*Math.PI/180);
   });
-  it("keeps the shells inside the 8 x 7 box and the concourse and gates inside the 12 x 11 lot",()=>{
+  it("keeps the shells inside the 8 x 7 design box and the concourse and gates inside its lot",()=>{
     for(let i=0;i<S.shells;i++)for(let u=-1;u<=1;u+=.1)for(let v=0;v<=1;v+=.05){
       const [x,,z]=shellPoint(i,u,v);expect(Math.abs(x)).toBeLessThan(box/2);expect(Math.abs(z)).toBeLessThan(depth/2);
     }
@@ -55,7 +60,10 @@ describe("Atlas Stadium",()=>{
   });
   for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`stays below the Marketplace and every HQ, with every link at a gate: ${grouping}`,()=>{
     const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,[cx,cz]=stadiumCentre(a),gate=stadiumGate(a);
-    expect(stadiumCrown()).toBeGreaterThanOrEqual(2.8);expect(stadiumCrown()).toBeLessThanOrEqual(3.6);
+    // The bigger district: the box and the gate grow by one factor; the lot keeps its 2-unit margin.
+    expect(a.w).toBeCloseTo(STADIUM_BOX.w);expect(a.d).toBeCloseTo(STADIUM_BOX.d);
+    expect(gate[0]-cx).toBeCloseTo(S.gate.foot*STADIUM_SCALE);expect(gate[0]).toBeLessThan(a.x+a.w+2);
+    expect(stadiumCrown()).toBeCloseTo(Math.max(...S.rhythm)*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
     for(const t of s.towers)expect(TERRACE_H+stadiumCrown()).toBeLessThan(towerTop(t));
     // Roads and walks that serve the stadium end at the main gate, or on a road that does.
@@ -72,7 +80,7 @@ describe("Atlas Stadium",()=>{
     const stop=s.communityRail?.loop?.stops.find(x=>x.id==="service:stadium-station");
     if(stop){const [x,,z]=stop.walk[0];expect(atGate([x,z])).toBeLessThan(.05);}
     // Nothing that moves crosses the shells or the concourse.
-    const o=S.concourse.outer,inside=([x,z]:Pt)=>((x-cx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
+    const o={rx:S.concourse.outer.rx*STADIUM_SCALE,rz:S.concourse.outer.rz*STADIUM_SCALE},inside=([x,z]:Pt)=>((x-cx)/(o.rx+.05))**2+((z-cz)/(o.rz+.05))**2<1;
     const paths:Pt[][]=[...s.transportConnections.flatMap(l=>[l.road,l.walk])];
     if(s.freight)paths.push(s.freight.route,s.freight.highway,s.freight.cityAccess,...s.freight.access.flatMap(x=>[x.collector,...x.ramps]));
     if(s.communityRail?.loop)paths.push(s.communityRail.loop.route,...s.communityRail.loop.stops.map(st=>st.walk.map(([x,,z])=>[x,z] as Pt)));

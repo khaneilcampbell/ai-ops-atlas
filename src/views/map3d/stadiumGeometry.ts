@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {compactGeometry} from './atlasHqGeometry';
-import type {StadiumPlan} from './stadiumPlan';
+import {STADIUM_SCALE,type StadiumPlan} from './stadiumPlan';
+export {STADIUM_SCALE};
 import type {Pt} from './roads';
 
 /**
  * Atlas Stadium (KC, 2026-11-07): an elliptical bowl under a ring of curved shell petals, on a
- * raised ring concourse. Every size lives here, in world units, measured from the centre of the
- * 8 x 7 box planStadium() returns and from the terrace top. The lot (12 x 11) and the box stay as
- * they were, because the stadium lot sets the city layout around it.
+ * raised ring concourse. Every size lives here in design units: an 8 x 7 box, measured from its
+ * centre and from the terrace top. The map draws it STADIUM_SCALE times larger (stadiumPlan.ts), so
+ * one factor grows the whole stadium and its lot together.
  *
  * The roof is Atlas's own: nine shells in a repeating tall-short-middle rhythm of three, each
  * leaning a little, the leading edge of each lifting over the next so a thin seam shows between
@@ -55,11 +56,11 @@ export const STADIUM={
 } as const;
 
 /** Highest point of the roof above the terrace. */
-export const stadiumCrown=()=>Math.max(...STADIUM.rhythm);
+export const stadiumCrown=()=>Math.max(...STADIUM.rhythm)*STADIUM_SCALE;
 export const stadiumCentre=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>[a.x+a.w/2,a.z+a.d/2];
 /** Street-level point where the main gate's bottom step lands: every stadium road and walk ends here. */
-export const stadiumGate=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>{const [x,z]=stadiumCentre(a);return [x+STADIUM.gate.foot,z];};
-/** Where the two side gates' bottom steps land, as offsets from the centre. */
+export const stadiumGate=(a:Pick<StadiumPlan,'x'|'z'|'w'|'d'>):Pt=>{const [x,z]=stadiumCentre(a);return [x+STADIUM.gate.foot*STADIUM_SCALE,z];};
+/** Where the two side gates' bottom steps land, as offsets from the centre, in design units. */
 export function sideGateFeet():Pt[]{
  const {outer}=STADIUM.concourse,{angle,run}=STADIUM.gate.side;
  return [-angle,angle].map(a=>{const x=Math.cos(a),z=Math.sin(a);return [(outer.rx+run)*x,(outer.rz+run)*z] as Pt;});
