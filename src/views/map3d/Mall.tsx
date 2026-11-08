@@ -89,7 +89,7 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   <mesh position={[a.fountain.x,TERRACE_H+.105,a.fountain.z]} material={mats.water}><cylinderGeometry args={[a.fountain.r*.86,a.fountain.r*.86,.01,28]}/></mesh>
   <mesh position={[a.cx,TERRACE_H+.21,a.z+a.d-1.71]} geometry={sign.geometry} material={sign.material}/>
   <Instanced items={parts.fins} geometry={g.box} material={m.plain} pick={keys(parts.fins.length)}/>
-  <Instanced items={parts.plants} geometry={g.blob} material={m.plain} shadow={false}/>
+  <Instanced items={parts.plants} geometry={g.ball} material={m.plain} shadow={false}/>
   <Instanced items={parts.solid} geometry={g.box} material={m.plain}/>
  </group>;
 }
