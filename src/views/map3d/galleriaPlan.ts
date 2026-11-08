@@ -41,6 +41,8 @@ export const GALLERIA={
  /** Widest lot it takes: the building at full scale and its parking, so a wider green (a bigger
   *  neighbouring district) leaves open lawn instead of more trees the map has no triangles for. */
  maxW:10.8,
+ /** Deepest lot it takes (building, parking and a row of trees), and how far north of the Marketplace it looks. */
+ maxD:13.65,search:26,
  /** Depth of the outdoor parking band (two rows of bays and an aisle). */
  parking:2.5,
 } as const;
@@ -225,7 +227,48 @@ export interface GalleriaPlan {
 }
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
-const overlaps=(a:Rect,b:Rect)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.z<b.z+b.d&&a.z+a.d>b.z;
+
+/** Streets and footpaths the lot keeps clear of: half a road and its sidewalk, or half a walk and a margin. */
+export interface GalleriaPaths {roads:Pt[][];walks:Pt[][]}
+const ROAD_CLEAR=.95,WALK_CLEAR=.5,LOT_STEP=.1;
+const segDist=(x:number,z:number,a:Pt,b:Pt)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/l));return Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t);};
+/**
+ * The lot behind the Marketplace, centred on its axis. The green there is often several pieces of
+ * land side by side (the Skyline green, a district's spare land, the boulevard's causeway), and when
+ * a catalog change moves the Marketplace the boulevard can cut across it. So the lot is found row by
+ * row going north from the Marketplace's back wall: a row counts where it is on land, clear of every
+ * building, street and walk, and at least minW wide. The first run of such rows deep enough for the
+ * building is the lot (beyond a street if the strip in front of it is too shallow), at most maxD deep.
+ * `across` is true when a street, not the Marketplace's back wall, bounds the lot's south side.
+ */
+export function galleriaLot(mall:Pick<MallPlan,'cx'|'z'>,land:Rect[],blockers:Rect[],paths:GalleriaPaths):{rect:Rect;across:boolean}|undefined{
+ const G=GALLERIA,axis=mall.cx,far=G.maxW/2+G.edge+.2,zEnd=mall.z-G.back,zFar=zEnd-G.search;
+ const near=(r:Rect)=>r.x<axis+far&&r.x+r.w>axis-far&&r.z<zEnd+.5&&r.z+r.d>zFar-.5;
+ const ground=land.filter(near),blocks=blockers.filter(near);
+ const box=(pts:Pt[],pad:number):Rect=>{const xs=pts.map(p=>p[0]),zs=pts.map(p=>p[1]);return {x:Math.min(...xs)-pad,z:Math.min(...zs)-pad,w:Math.max(...xs)-Math.min(...xs)+pad*2,d:Math.max(...zs)-Math.min(...zs)+pad*2};};
+ const segs:[Pt,Pt,number][]=[];
+ for(const [lines,pad] of [[paths.roads,ROAD_CLEAR],[paths.walks,WALK_CLEAR]] as const)for(const l of lines)for(let i=1;i<l.length;i++)if(near(box([l[i-1],l[i]],pad)))segs.push([l[i-1],l[i],pad]);
+ const ok=(x:number,z:number)=>ground.some(r=>inRect(r,x,z))&&!blocks.some(b=>x>b.x&&x<b.x+b.w&&z>b.z&&z<b.z+b.d)&&segs.every(([a,b,pad])=>segDist(x,z,a,b)>=pad);
+ // Half-width open on both sides of the axis along row z (edge included), up to maxW/2.
+ const open=(z:number)=>{let h=0;while(h+.05<=G.maxW/2&&ok(axis-h-G.edge-.05,z)&&ok(axis+h+G.edge+.05,z))h+=.05;return h;};
+ let south:number|undefined,north:number|undefined,half=Infinity;
+ for(let z=zEnd;z>=zFar&&north===undefined;z-=LOT_STEP){
+  const h=open(z);
+  if(h*2>=G.minW){
+   if(south===undefined){south=z;half=h;}
+   else if(south-z>=G.maxD+G.edge)north=z;
+   else half=Math.min(half,h);
+  }else if(south!==undefined){
+   // Too shallow in front of a street: look again beyond it.
+   if(south-z-2*G.edge>=G.minD)north=z;else{south=undefined;half=Infinity;}
+  }
+ }
+ if(south===undefined)return;
+ north??=zFar;
+ const z0=north+G.edge,z1=south===zEnd?south:south-G.edge;
+ if(z1-z0<G.minD||half*2<G.minW)return;
+ return {rect:{x:axis-half,z:z0,w:half*2,d:z1-z0},across:south!==zEnd};
+}
 
 /** Height above y0 of the top of slab `level` (0 ground floor, 1 and 2, 3 roof). */
 export function slabTop(level:number){let h=0;for(let i=0;i<level;i++)h+=GALLERIA.storeys[i];return h;}
@@ -235,20 +278,18 @@ export function slabTop(level:number){let h=0;for(let i=0;i<level;i++)h+=GALLERI
  * supermarket lobe west, and the plan's north side (outdoor parking and the basement ramp) faces
  * the Marketplace. Returns nothing when the green is missing, too small, or has anything on it.
  */
-export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number):GalleriaPlan|undefined{
- const G=GALLERIA,axis=mall.cx;
- const green=land.find(r=>inRect(r,axis,mall.z-1)&&r.w>=6&&r.d>=6);
- if(!green)return;
- const half=Math.min(axis-(green.x+G.edge),green.x+green.w-G.edge-axis,G.maxW/2);
- const z0=green.z+G.edge,z1=mall.z-G.back;
- if(half*2<G.minW||z1-z0<G.minD)return;
- const rect={x:axis-half,z:z0,w:half*2,d:z1-z0};
- if(blockers.some(b=>overlaps(b,rect)))return;
+export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,paths:GalleriaPaths={roads:[],walks:[]}):GalleriaPlan|undefined{
+ const G=GALLERIA,lot=galleriaLot(mall,land,blockers,paths);
+ if(!lot)return;
+ const rect=lot.rect;
  // Every slab's extent, so overhangs stay on the lot too.
  const all=[0,1,2,3].flatMap(slabOutline);
  const minX=Math.min(...all.map(p=>p[0])),maxX=Math.max(...all.map(p=>p[0])),minY=Math.min(...all.map(p=>p[1])),maxY=Math.max(...all.map(p=>p[1]));
  const s=Math.min(G.maxScale,rect.w/(maxX-minX),rect.d/(maxY-minY));
  if(s<G.minScale)return;
+ // Across a street from the Marketplace, the building and its car park sit on the street side of the
+ // lot, so the car park opens onto the street; the rest stays open meadow, with no extra trees.
+ if(lot.across){const d=Math.min(rect.d,(maxY-minY)*s+.25+G.parking+.2);rect.z+=rect.d-d;rect.d=d;}
  // 180° turn: plan east is map west (-x), plan north is map south (+z).
  // The building takes the lot's north end; parking and trees fill the south toward the Marketplace.
  const ox=rect.x+rect.w/2+(maxX+minX)/2*s,oz=rect.z-minY*s;

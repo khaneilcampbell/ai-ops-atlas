@@ -1,6 +1,6 @@
 import type {Pt,Pt3} from './roads';
 import type {Scene3D} from './scene';
-import {GALLERIA_NOTCH} from './galleriaPlan';
+import {GALLERIA_NOTCH,insidePoly} from './galleriaPlan';
 import {along,commuterRoute,type CommuterRoute} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
@@ -15,7 +15,7 @@ export const GALLERIA_LIFE={
  walkWidth:.5,driveWidth:.95,lampStep:2.1,lampRing:.5,lampHeight:.95,
  pace:.32,drive:1.1,shoppers:8,strollers:5,
  /** A street farther than this from the lot's edge is too far to walk to; the walk stops at the lot. */
- maxStreet:4,
+ maxStreet:5,
  /** Where people go in and out at the notch's glass: how far out of the glass they stop, and how far apart the in and out points stand. */
  portal:{d:.12,door:.46,slide:.68},
  /** Clear distance kept between anyone walking and the fountain's rim. */
@@ -86,6 +86,14 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  const walk:Pt[]=[J,[east,e.z]];
  const street=nearestStreet(graph,[east,0,e.z]);
  if(street.d<L.maxStreet)walk.push([street.q[0],street.q[2]]);
+ else{
+  // Across a street from the Marketplace, the street runs past the lot's south end: the walk turns
+  // down just outside the lot's east edge, clear of the building and beside the car park, to the
+  // point nearest it.
+  const wx=east+L.walkWidth/2+.1;let best:{z:number;q:Pt3;d:number}|undefined;
+  for(let z=e.z;z<=rect.z+rect.d;z+=.1){const q=nearestStreet(graph,[wx,0,z]);if(!best||q.d<best.d)best={z,q:q.q,d:q.d};}
+  if(best&&best.d<L.maxStreet){walk[1]=[wx,e.z];walk.push([wx,best.z],[best.q[0],best.q[2]]);}
+ }
  // Lamps: a ring a little outside the ground floor, skipping the forecourt and the walk, then pairs along the walk.
  const ring=offset(g.slabs[0],L.lampRing),lamps:GalleriaLamp[]=[];
  const clearOfWalk=([x,z]:Pt)=>!(x>J[0]-1.4&&Math.abs(z-e.z)<1.1);
@@ -157,8 +165,8 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
    drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x:c.x,z:c.z,yaw:0,c:c.c},offset:i*23,wait:28+i*6,backOut:true});
   });
  }
- // Lamps step off the driveways.
- const lit=lamps.filter(l=>driveways.every(d=>toSegment([l.x,l.z],d.a,d.b)>L.driveWidth/2+.15));
+ // Lamps step off the driveways, and out of the car park and the building where the walk runs beside them.
+ const lit=lamps.filter(l=>driveways.every(d=>toSegment([l.x,l.z],d.a,d.b)>L.driveWidth/2+.15)&&!(g.parking&&inRect(g.parking.area,[l.x,l.z],.1))&&!insidePoly(g.slabs[0],[l.x,l.z]));
  const lots=[...(court?.pad??[]),...(g.parking?[g.parking.area]:[])];
  // Station and district walks run on the ground over roads; mark each driveway crossing the way the city marks its road crossings.
  const crossings:{x:number;z:number;yaw:number}[]=[];

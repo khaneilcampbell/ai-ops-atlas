@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · The Atlas Galleria stays on the map with the bigger Intelligence Hub district: when the Marketplace moves, the mall now finds its lot behind it even where the land is in several pieces or the boulevard runs between them, its car park opens onto that street, and the entrance walk still reaches the road (#273)
 - 2026-11-08 · Inside the Atlas Galleria, people can now leave their floor: each pair of shopping floors has an up and a down escalator (shown on every floor, not only in All floors), a stair runs from the basement car park up to the ground floor, shoppers ride up and down, drivers climb from their cars, and some walk out through the main entrance and back. On a single floor the funnel is now its real slim stem instead of the full roof canopy squashed into one storey (#273)
 - 2026-11-08 · Shoppers at the Atlas Galleria walk in round one side of the fountain and out round the other instead of through it, and the driveways are now two lanes with a centre line and a wider mouth at the road (#273)
 - 2026-11-08 · The Atlas Galleria's car parks now connect to the main road by proper driveways, with a zebra crossing where each one crosses the pavement, and the cars drive in and out along them (#273)

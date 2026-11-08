@@ -798,15 +798,17 @@ function buildCity(layout: Layout): Scene3D {
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
-  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
+  // Plain meadow filling the island out to a square; the stadium grounds may build on it. It is laid
+  // before the Galleria, whose lot behind the Marketplace can reach onto it when a smaller catalog
+  // moves the Marketplace toward the island's edge.
+  const meadowLand=compactSquareLand(land,cityLand);
+  land.push(...meadowLand);
+  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top,{roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk)}):undefined;
   if(galleria){
     const r=galleria.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
-  // Plain meadow filling the island out to a square; the stadium grounds may build on it.
-  const meadowLand=compactSquareLand(land,cityLand);
-  land.push(...meadowLand);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
   // Keep station walks clear of plaza trees, beds and bollards.
