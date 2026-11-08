@@ -132,6 +132,11 @@ export function followUpDraft(i: Inquiry, n: 1 | 2): { subject: string; body: st
   return { subject: `Re: your ${i.category_label} inquiry`, body: lines.join("\n") };
 }
 
+/** A Gmail compose link (opens in the browser, where KC's signature and logo are added) with the draft filled in. */
+export function gmailCompose(to: string, draft: { subject: string; body: string }): string {
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
+}
+
 /** A mailto: link that opens KC's mail app with the draft filled in. */
 export function mailto(to: string, draft: { subject: string; body: string }): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;

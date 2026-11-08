@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sample } from "./fixtures";
-import { firstName, followUpDraft, mailto, nextStep, replyDraft, validInquiry } from "./model";
+import { firstName, followUpDraft, gmailCompose, mailto, nextStep, replyDraft, validInquiry } from "./model";
 
 
 const T0 = Date.parse("2026-11-01T06:00:00.000Z");
@@ -53,6 +53,11 @@ describe("drafts", () => {
     expect(followUpDraft(sample(), 1).body).toContain("following up");
     expect(followUpDraft(sample(), 2).body).toContain("close out");
   });
+  it("builds an encoded Gmail compose link", () => {
+    const url = gmailCompose("a+b@x.example", { subject: "Re: hi & bye", body: "line 1\nline 2" });
+    expect(url).toBe("https://mail.google.com/mail/?view=cm&fs=1&to=a%2Bb%40x.example&su=Re%3A%20hi%20%26%20bye&body=line%201%0Aline%202");
+  });
+
   it("builds an encoded mailto link", () => {
     const url = mailto("a+b@x.example", { subject: "Re: hi & bye", body: "line 1\nline 2" });
     expect(url).toBe("mailto:a%2Bb%40x.example?subject=Re%3A%20hi%20%26%20bye&body=line%201%0Aline%202");

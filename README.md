@@ -36,12 +36,12 @@ street, a highway, a train with stations and commuters, cars, boats, planes and 
 Landmarks include Atlas HQ, Benjaire HQ, the GitHub tower, the Commerce Pipeline tower, the
 Financial District (Circa, Experian, BMW and others, with Financial Park), the Atlas Marketplace
 mall and gardens, the Benjaire Marketing Agency on the bay, Atlas Hills with the mansion and its
-community, the Skyline shops, a stadium and Atlas Airport with its terminal, ground crew and
+community, a stadium and Atlas Airport with its terminal, ground crew and
 jets taking off.
 
 **Enter building** in a building's panel opens its inside: a project's office with its agents at
-work, or a dedicated interior for Atlas HQ, the Marketplace, the Marketing Agency, the Circa lobby
-and the Skyline shops. If the 3D map ever fails to draw, the rest of the page stays and a
+work, or a dedicated interior for Atlas HQ, the Marketplace, the Marketing Agency and the Circa
+lobby. If the 3D map ever fails to draw, the rest of the page stays and a
 **Try again** button restarts it.
 
 **Settings → Performance and battery** lowers the map's cost on battery, and **Settings → Map

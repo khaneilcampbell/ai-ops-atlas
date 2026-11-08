@@ -41,7 +41,7 @@ test('static scenes sleep, wake for controls, and suspend when hidden', async ({
   await page.screenshot({path:'artifacts/render-efficiency/phone.png'});
 });
 
-test('night effect survives adaptive resolution and day/night switching', async ({page}) => {
+test('night rendering survives adaptive resolution and day/night switching', async ({page}) => {
   await openAtlas(page, {light:'night'}); await waitForScene(page);
   await page.evaluate(async () => {
     const path = '/src/lib/power.ts'; const power = await import(path); power.setPowerMode('saver');

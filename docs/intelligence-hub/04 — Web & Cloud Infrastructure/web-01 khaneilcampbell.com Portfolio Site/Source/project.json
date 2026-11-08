@@ -1,0 +1,11 @@
+{
+  "id": "web-01",
+  "name": "khaneilcampbell.com Portfolio Site",
+  "category": "04 — Web & Cloud Infrastructure",
+  "status": "Active Development",
+  "repo": "https://github.com/khaneilcampbell/khaneilcampbell.com",
+  "local_folder": "khaneilcampbell.com",
+  "last_verified": "2026-10-26",
+  "last_synced_commit": {"main": "b6283c4", "docs/portfolio-review": "a692e28"},
+  "tags": ["website", "html-css", "security-headers", "github-pages", "portfolio"]
+}

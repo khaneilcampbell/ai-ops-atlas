@@ -25,17 +25,27 @@ test('Circa on a phone',async({page})=>{
  await page.screenshot({path:'artifacts/circa/phone-default.png'});
 });
 
-// The lobby inside "Enter building" (SkylineInterior + CircaLobby).
-for(const light of ['day','night'] as const)test(`Circa lobby inside Enter building, ${light}`,async({page})=>{
- test.setTimeout(400_000);mkdirSync('artifacts/circa',{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
- await page.evaluate(async()=>{const m=await import('/src/views/office/store.ts' as string);m.enterBuilding('skyline-business:Circa',true);});
+// Inside "Enter building" (SkylineInterior + CircaLobby + CircaUpperFloors). CIRCA_SHOT_DIR picks the output folder.
+const shotDir=process.env.CIRCA_SHOT_DIR??'artifacts/circa';
+/** Each Circa floor inside "Enter building": Floor 1 lobby, Floor 2 pool deck, Floor 3 apartments, then the whole stack. */
+const FLOORS:[string,RegExp][]=[['lobby',/^(Floor 1 · )?Lobby$/],['pool',/^Floor 2( · Pool)?$/],['apartments',/^Floor 3( · Residences)?$/],['all',/^All floors$/]];
+async function shootFloors(page:import('@playwright/test').Page,suffix:string){
+ await page.evaluate(async()=>{const m=await import('/src/views/office/store.ts' as string);m.enterBuilding('skyline-business:Ellipse Residences',true);});
  await settle(page,4);
- await page.getByRole('button',{name:'Lobby',exact:true}).click();
- for(let i=0;i<6;i++){await page.waitForTimeout(300);await settle(page,2);}
- await page.screenshot({path:`artifacts/circa/interior-lobby-${light}.png`});
- await page.getByRole('button',{name:'All floors',exact:true}).click();
- for(let i=0;i<6;i++){await page.waitForTimeout(300);await settle(page,2);}
- await page.screenshot({path:`artifacts/circa/interior-all-${light}.png`});
+ for(const [name,label] of FLOORS){
+  await page.getByRole('button',{name:label}).click();
+  for(let i=0;i<6;i++){await page.waitForTimeout(300);await settle(page,2);}
+  await page.screenshot({path:`${shotDir}/interior-${name}-${suffix}.png`});
+ }
+}
+for(const light of ['day','night'] as const)test(`Circa floors inside Enter building, ${light}`,async({page})=>{
+ test.setTimeout(400_000);mkdirSync(shotDir,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
+ await shootFloors(page,light);
  if(errors.length)throw new Error(errors.join('\n'));
+});
+test('Circa floors inside Enter building on a phone',async({page})=>{
+ test.setTimeout(400_000);mkdirSync(shotDir,{recursive:true});await page.setViewportSize({width:390,height:844});
+ await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
+ await shootFloors(page,'phone');
 });

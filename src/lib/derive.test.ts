@@ -72,6 +72,16 @@ describe("attention", () => {
     expect(attentionItems(event as Catalog, state, [], now)).toEqual([]);
   });
 
+  it("doesn't call a manual agent stale when nobody has asked it to run", () => {
+    const s = snap({ workflowRuns: { "ci.yml": [run("CI", "success", "2026-10-01T00:00:00Z")] } });
+    const now = Date.parse("2026-10-28T00:00:00Z");
+    const state = { "me/demo": { kind: "ok" as const, data: s, stale: false } };
+    const manual = { ...catalog, agents: [{ ...catalog.agents[0], registry: { execution: { triggerType: "manual" as const, stages: [] } } }, catalog.agents[1]] };
+    expect(attentionItems(manual as Catalog, state, [], now)).toEqual([]);
+    const scheduled = { ...catalog, agents: [{ ...catalog.agents[0], registry: { execution: { triggerType: "scheduled" as const, stages: [] } } }, catalog.agents[1]] };
+    expect(attentionItems(scheduled as Catalog, state, [], now).map((i) => i.id)).toEqual(["agent:ci:stale"]);
+  });
+
   it("raises failed observed runs and failing CI as high severity", () => {
     const s = snap({ runs: [run("Security", "failure")], workflowRuns: { "ci.yml": [run("Security", "failure")] } });
     const items = attentionItems(catalog, { "me/demo": { kind: "ok", data: s, stale: false } }, []);

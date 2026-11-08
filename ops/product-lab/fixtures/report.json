@@ -1,0 +1,24 @@
+{
+  "agent": "benjaire-product-lab",
+  "at": "2026-12-01T14:05:00Z",
+  "month": "2026-12",
+  "topic": "Monthly next-product report",
+  "model": "claude-sonnet-5-5",
+  "status": "hypothesis",
+  "evidence": [],
+  "top": { "title": "Flow for dental clinics", "pillar": "digital", "offer": "Benjaire Flow set up for dental front desks, $129 a month", "risk": "Clinics already use practice software with built-in forms" },
+  "runners_up": [
+    { "title": "MagSafe desk stand", "pillar": "consumer_tech", "offer": "Walnut charging stand with cable channel, $49", "risk": "Crowded on Amazon" },
+    { "title": "Client onboarding kit", "pillar": "digital_product", "offer": "Notion and email templates for service firms, $39", "risk": "Free templates cap the price" }
+  ],
+  "scorecard": [
+    { "idea": "Flow for dental clinics", "demand": 4, "gap": 4, "fit": 5, "margin": 5, "validate": 5, "synergy": 5, "total": 4.55 },
+    { "idea": "Client onboarding kit", "demand": 3, "gap": 3, "fit": 4, "margin": 5, "validate": 5, "synergy": 4, "total": 3.85 },
+    { "idea": "MagSafe desk stand", "demand": 4, "gap": 2, "fit": 4, "margin": 3, "validate": 3, "synergy": 1, "total": 3.0 }
+  ],
+  "sources": [{ "label": "Example source", "url": "https://example.com/dental-inquiries" }],
+  "plan": ["Week 1: landing page and waitlist", "Week 2: $400 search ad test", "Week 3: ten clinic calls", "Week 4: go or no-go"],
+  "metrics": ["5 paid pilots", "3% landing page conversion"],
+  "change_since_last_month": "",
+  "notion_url": null
+}

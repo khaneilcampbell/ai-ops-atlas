@@ -80,6 +80,6 @@ describe("the inquiry inbox", () => {
     expect((await readInquiriesForApp(get("x".repeat(43)), env)).status).toBe(401);
     expect((await readInquiriesForApp(get(SYNC), env)).status).toBe(200);
     expect((await readInquiriesForApp(get(SYNC), { LIVE: d.db })).status).toBe(503);
-    expect(await (await readInquiries({})).json()).toEqual({ configured: false, inquiries: [] });
+    expect(await (await readInquiries({})).json()).toEqual({ configured: false, reply: { enabled: false }, inquiries: [] });
   });
 });

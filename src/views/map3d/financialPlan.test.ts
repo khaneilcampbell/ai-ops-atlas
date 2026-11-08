@@ -27,11 +27,10 @@ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans 
  for(const p of [...f.park.trees,...f.park.benches,...f.park.lights]){for(const path of f.park.paths)expect(distanceToRoad(p,path)).toBeGreaterThan(f.park.trees.includes(p)?F.parkTreeRadius+.3:.35);}
  for(const p of f.perimeterTrees){const world:[number,number]=[f.x+p[0],f.z+p[1]];for(const b of f.buildings)expect(distanceToRoad(world,b.approach)).toBeGreaterThanOrEqual(F.perimeterTreeRadius+.35);expect(pathClear([world,[world[0]+.001,world[1]]],boxes,F.perimeterTreeRadius+.09)).toBe(true);}
  const apron=airportFootprint(scene.airport!);expect(f.x<apron.x+apron.w&&f.x+f.w>apron.x&&f.z<apron.z+apron.d&&f.z+f.d>apron.z).toBe(false);
- expect(pathClear(scene.freight!.route,[park,...boxes],.55)).toBe(true);
- for(const access of scene.freight!.access)expect(pathClear(access.collector,[park,...boxes],.3)).toBe(true);
+ expect(scene.freight).toBeUndefined();
  expect(pathClear(f.road,boxes,.3)).toBe(true);expect(pathClear(f.walk,boxes,.3)).toBe(true);
  expect(distanceToRoad(f.road.at(-1)!,f.street)).toBeLessThan(.001);expect(distanceToRoad(f.walk.at(-1)!,f.sidewalk)).toBeLessThan(.001);
- expect(scene.freight?.access.some(a=>a.id==='financial-district')).toBe(true);
+ expect(scene.transportConnections.some(a=>a.id==='financial-district'&&a.road.length>1)).toBe(true);
 });
 
 describe('Financial Park central green',()=>{

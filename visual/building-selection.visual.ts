@@ -6,7 +6,7 @@ test.use({viewport:{width:1400,height:900},deviceScaleFactor:1});
 for(const light of ['day','night'] as const)test(`financial solid surfaces select the same building as their plaque, ${light}`,async({page})=>{
  test.setTimeout(600_000);
  await openAtlas(page,{light});await waitForScene(page);await selectBuilding(page,'Financial District');
- const buildings=[['records','Wells Fargo'],['budget','American Express'],['banks','Chase'],['investments','Robinhood'],['insurance','Navy Federal Credit Union'],['business-finance','Benjaire Finance'],['financial-planning','Vanguard'],['harbor-residence','The Ritz-Carlton']];
+ const buildings=[['records','Halden Trust'],['budget','American Express'],['banks','Bayvale Bank'],['investments','Robin Exchange'],['insurance','Merrow Credit Union'],['business-finance','Benjaire Finance'],['financial-planning','Ravelle Advisors'],['harbor-residence','Camton Hotel']];
  for(const [id,name] of (light==='day'?buildings:buildings.slice(0,2))){
   await selectBuilding(page,'Financial District');console.log('checking',name);
   // The plaque frames this tower; the second click is a real pointer click on its solid roof.
@@ -30,7 +30,9 @@ for(const light of ['day','night'] as const)test(`financial solid surfaces selec
      const hits=ray.intersectObjects(state.scene.children,true);
      const hit=hits.find((h:import('three').Intersection)=>h.object.userData.selectionKeys);
      if(!hit||hit.object.userData.selectionKeys[hit.instanceId!]!==key)return;
-     const r=canvas.getBoundingClientRect();candidates.push({x:r.left+(projected.x+1)*r.width/2,y:r.top+(1-projected.y)*r.height/2,area:scale.x*scale.z});
+     const r=canvas.getBoundingClientRect(),x=r.left+(projected.x+1)*r.width/2,y=r.top+(1-projected.y)*r.height/2;
+     if(document.elementFromPoint(x,y)!==canvas)return;
+     candidates.push({x,y,area:scale.x*scale.z});
     });
    });
    return candidates.sort((a,b)=>b.area-a.area)[0];
