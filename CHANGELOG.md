@@ -1,3 +1,4 @@
+- 2026-11-08 · Removed the Administration, Logistics and Passenger Services buildings from Atlas Airport; Operations stays as the airport office (#PR)
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
