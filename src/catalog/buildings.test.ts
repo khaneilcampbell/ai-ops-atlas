@@ -6,7 +6,7 @@ import {buildScene} from "../views/map3d/scene";
 
 it("gives every Skyline business a resolvable inspector identity and personalized interior",()=>{
   const scene=buildScene(layoutMap(catalog));
-  expect(scene.retail).toHaveLength(7);
+  expect(scene.retail).toHaveLength(4);
   for(const shop of scene.retail){
     expect(skylineBuildingName(skylineBuildingId(shop.name))).toBe(shop.name);
     expect(skylineBuildingKey(shop.name)).toBe(`service:skyline:building:${shop.name}`);

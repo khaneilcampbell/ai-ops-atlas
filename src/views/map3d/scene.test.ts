@@ -94,12 +94,24 @@ describe("buildScene", () => {
 
 
 describe("expanded Skyline layout", () => {
+  it("removes retired storefronts and their entrance routes in every grouping mode", () => {
+    for (const grouping of ["none", "status", "tag", "district"] as const) {
+      const scene = buildScene(layoutMap(catalog, [], grouping));
+      const park = scene.parks.find(p => p.label === "Skyline")!;
+      const cx = park.x + park.w / 2, cz = park.z + park.d / 2;
+      for (const dx of [-3.2, -0.8, 2.5]) {
+        expect(scene.retail.some(k => k.x === cx + dx && k.z === cz + 3)).toBe(false);
+        expect(scene.walks.some(w => w.shopEntrance && Math.abs(w.x1 - cx - dx) < 0.001 && Math.abs(w.z1 - cz - 3.12) < 0.001)).toBe(false);
+      }
+      expect(scene.retail.some(k => ["Chipotle", "Smashburger", "Starbucks"].includes(k.name))).toBe(false);
+    }
+  });
   it("keeps every branded building inside its district without overlapping another", () => {
     const scene=buildScene(layoutMap(catalog));
     const park=scene.parks.find(p=>p.label==="Skyline")!;
     expect(park).toBeDefined();
     const shops=scene.retail.filter(k=>k.projectId===park.id);
-    expect(shops.map(k=>k.name)).toEqual(expect.arrayContaining(["Reasoning Lab","Model Lab","Starbucks","Chipotle","Zara","Halden Branch","Smashburger"]));
+    expect(shops.map(k=>k.name)).toEqual(["Reasoning Lab","Model Lab","Zara","Halden Branch"]);
     for(const shop of shops) {
       expect(shop.x-shop.size/2).toBeGreaterThan(park.x);
       expect(shop.x+shop.size/2).toBeLessThan(park.x+park.w);

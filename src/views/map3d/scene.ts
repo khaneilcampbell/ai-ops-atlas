@@ -495,15 +495,12 @@ function buildCity(layout: Layout): Scene3D {
     const cx = p.ox + p.w / 2;
     const cz = p.oy + p.h / 2;
     parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
-    // Stagger the tall offices behind the low storefronts, with an open central lobby view.
+    // Keep the remaining Skyline tenants around an open central lobby and promenade.
     const tenants = [
       { name: "Reasoning Lab", dx: -4.3, dz: -2.7, size: 1.4 },
       { name: "Model Lab", dx: 4.3, dz: -2.7, size: 1.1 },
       { name: "Zara", dx: 4.4, dz: 0.5, size: 0.85 },
       { name: "Halden Branch", dx: -4.4, dz: 0.5, size: 1.2 },
-      { name: "Smashburger", dx: -3.2, dz: 3, size: 0.85 },
-      { name: "Starbucks", dx: -0.8, dz: 3, size: 0.85 },
-      { name: "Chipotle", dx: 2.5, dz: 3, size: 0.85 },
     ];
     for (const tenant of tenants) {
       const x = cx + tenant.dx, z = cz + tenant.dz;

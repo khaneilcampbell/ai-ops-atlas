@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Removed Chipotle, Smashburger and Starbucks from Skyline, including their visitor entrances.
 - 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
 - 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#270)
 - 2026-11-07 · The garden behind Atlas Marketplace is now the Atlas Galleria, a three-storey shopping mall with wavy white fins, rope lights, planted terraces and a funnel atrium. Enter it to see the car park and shop floors (#269)

@@ -23,7 +23,7 @@ import {toolOfficeHeight} from './toolBrand';
 export const CITY_SCALE={
  /** Project headquarters: height of one storey, and footprint, against the old 0.32 storey. */
  hq:{storey:1.5,footprint:1},
- /** Skyline tenants (Anthropic, OpenAI, Zara, Wells Fargo, Smashburger, Starbucks, Chipotle). */
+ /** Skyline tenant scale, shared by the remaining offices and storefronts. */
  shop:1.25,
  /** The Skyline residence in the middle of the park. */
  skyline:1.35,

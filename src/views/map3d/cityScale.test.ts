@@ -15,8 +15,8 @@ describe("city scale", () => {
   for(const t of s.towers)expect(t.height,t.name).toBeGreaterThan(MARKETPLACE_ROOF);
  });
  it("grows the Skyline shops, not the tool kiosks", () => {
-  const chipotle=s.retail.find(k=>k.name==="Chipotle")!,anthropic=s.retail.find(k=>k.name==="Reasoning Lab")!;
-  expect(chipotle.size).toBeCloseTo(.85*CITY_SCALE.shop);
+  const zara=s.retail.find(k=>k.name==="Zara")!,anthropic=s.retail.find(k=>k.name==="Reasoning Lab")!;
+  expect(zara.size).toBeCloseTo(.85*CITY_SCALE.shop);
   expect(shopHeight(anthropic)).toBeCloseTo(2.9*CITY_SCALE.shop);
   // Commerce's tool offices are teardrop siblings of its tower and take their whole lot (commerceAnnexPlan).
   for(const k of s.kiosks)if(k.projectId!=="commerce-pipeline")expect(k.size).toBeCloseTo(.9);
