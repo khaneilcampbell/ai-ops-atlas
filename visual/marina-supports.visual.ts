@@ -1,4 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
+// Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
+test.skip(!process.env.SHOT_DIR,'Set SHOT_DIR to a folder to take marina screenshots.');
 /** No rail viaduct support stands on the harbour marina's stair, pier or dock (KC, 2026-11-07). */
 const out=process.env.SHOT_DIR??'artifacts/marina-supports';
 type View=[string,[number,number,number],[number,number,number]];

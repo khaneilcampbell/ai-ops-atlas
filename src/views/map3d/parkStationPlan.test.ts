@@ -6,6 +6,7 @@ import {buildScene} from './scene';
 import {financialDimensions} from './financialArchitecture';
 import {airportPoint,AIRPORT_LAYOUT} from './airport';
 import {COMMUNITY as C} from './hillsCommunityPlan';
+import {PERIMETER_RAIL} from './perimeterRailPlan';
 
 describe('Financial Park station (Dubai-style shell and skybridge)',()=>{
  const stop:[number,number]=[10,-20],parts=parkStationParts(stop,0),all=[...parts.metal,...parts.glass,...parts.accents];
@@ -55,5 +56,27 @@ describe('every perimeter stop wears the shell (KC, 2026-11-07)',()=>{
   const all=mergeStationParts(loop.stops.map(stop=>placeParkStation(local,stop)));
   expect(all.accents.length).toBe(loop.stops.length*local.accents.length);
   for(const part of [...all.metal,...all.glass,...all.accents])for(const b of boxes)expect(Math.abs(part.p[0]-b.x)<b.w/2&&Math.abs(part.p[2]-b.z)<b.d/2).toBe(false);
+ });
+});
+
+describe('station shell structure', () => {
+ const s=PARK_STATION.shell,parts=parkStationParts([0,0],0),edge=(t:number)=>s.centreZ+s.across*Math.sin(t);
+ it('fits over the deck and platform instead of overhanging them', () => {
+  expect(s.length).toBeLessThanOrEqual(C.platformLength);
+  expect(Math.max(...PARK_STATION.ribs)).toBeLessThanOrEqual(C.platformLength/2);
+  expect(edge(-s.maxAngle)).toBeGreaterThanOrEqual(-PERIMETER_RAIL.deckWidth/2);
+  expect(edge(s.maxAngle)).toBeLessThanOrEqual(C.platformOffset+C.platformWidth/2);
+ });
+ it('stands every column on the deck or the platform, reaching the shell edge', () => {
+  const columns=parts.metal.filter(v=>v.c===PARK_STATION.colors.frame&&v.s[0]===.07&&v.s[2]===.07);
+  expect(columns).toHaveLength(PARK_STATION.ribs.length*2);
+  const top=C.platformRise+s.lift+s.up*Math.cos(s.maxAngle);
+  for(const c of columns){
+   expect([C.railRise,C.platformRise]).toContain(c.p[1]);
+   expect(c.p[1]+c.s[1]).toBeCloseTo(top,5);
+  }
+ });
+ it('keeps the lift tower outside the glass', () => {
+  expect(PARK_STATION.liftZ-.35).toBeGreaterThan(edge(s.maxAngle));
  });
 });
