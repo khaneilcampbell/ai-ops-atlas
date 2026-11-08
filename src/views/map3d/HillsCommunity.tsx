@@ -14,6 +14,7 @@ import {ATLAS_STATION_KEY,COMMUNITY as C,communityKey,serviceRailDeck,railPoint,
 import {TRANSPORT} from './transportScale';
 import {MANSION_COLORS} from './hillsMansion';
 import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
+import {openWalk} from './connectionGeometry';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
 import {blocksArea,supportPoint,type Area} from './marinaPlan';
 import {PARK_STATION,mergeStationParts,parkStationParts,placeParkStation} from './parkStationPlan';
@@ -72,7 +73,9 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
 const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
 /** Elevated track, platforms and stair approaches share the same sampled route as the train. */
-export function CommunityRail({plan:p,agents,community,financial,roads,keepClear=[],g,m,pick,moving,night}:{plan?:RailPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];keepClear?:Area[];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
+export function CommunityRail({plan:p,agents,community,financial,roads,clearRoads=[],keepClear=[],g,m,pick,moving,night}:{plan?:RailPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
+  /** Drives the walks must open for but that draw their own crossings (the Galleria's driveways). */
+  clearRoads?:[number,number][][];keepClear?:Area[];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
  const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0),service=useRef<THREE.Group>(null);
  const enabled=moving&&focused&&power.idleFps>15;
  const deck=useMemo(()=>p?.loop?{...p,route:p.loop.route,lengths:p.loop.lengths,length:p.loop.length}:p?serviceRailDeck(p):undefined,[p]);
@@ -123,9 +126,12 @@ export function CommunityRail({plan:p,agents,community,financial,roads,keepClear
   }
 
  }
- for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0)strip([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',paths);
- for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])])){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.109,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
- return {solid,lights,platforms,paths,stationKeys};},[p,roads,keepClear,night,palette,deck]);
+ // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (KC, 2026-11-08).
+ for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0){
+  paths.push(...openWalk([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',[...roads,...clearRoads],TRANSPORT.cityWidth/2+.06,TERRACE_H));
+ }
+ for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])])){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.061,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
+ return {solid,lights,platforms,paths,stationKeys};},[p,roads,clearRoads,keepClear,night,palette,deck]);
  // Simulated people, all drawn as two instanced meshes (bodies and heads): KC's twelve rail
  // commuters first, then the AI agents walking between their Circa apartments and workplaces
  // (agentCommutes.ts, always drawn), then Financial District people riding to Hills places and
