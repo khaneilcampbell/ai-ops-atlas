@@ -16,7 +16,7 @@ import {stadiumPlaza} from "./stadiumGeometry";
 import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
-import {planMallGarden,type MallGarden} from "./mallGarden";
+import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
@@ -172,8 +172,8 @@ export interface Scene3D {
   agency?:AgencyPlan;
   /** Atlas Marketplace mall on the open lot beside the Skyline park. */
   mall?:MallPlan;
-  /** Marketplace Gardens on the green behind the mall, and the beds on its plaza. */
-  mallGarden?:MallGarden;
+  /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
+  galleria?:GalleriaPlan;
   /**
    * Canva's freight route to the airport. Not built since KC's 2026-11-07 road review: the Commerce
    * district keeps its own streets and grass, without a trunk road or truck lot cut through it.
@@ -793,11 +793,11 @@ function buildCity(layout: Layout): Scene3D {
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
-  const mallGarden=mall?planMallGarden(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
-  if(mallGarden){
-    const r=mallGarden.rect;
+  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
+  if(galleria){
+    const r=galleria.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
-    trees.push(...mallGarden.trees);bushes.push(...mallGarden.bushes);bollards.push(...mallGarden.bollards);
+    trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
   // Plain meadow filling the island out to a square; the stadium grounds may build on it.
   const meadowLand=compactSquareLand(land,cityLand);
@@ -809,13 +809,13 @@ function buildCity(layout: Layout): Scene3D {
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
   if(communityRail){
     const areas=stationAccessAreas(communityRail.hills);
-    if(mallGarden)areas.push(...areas.map(a=>({...a,x:2*mallGarden.axis-a.x-a.w})));
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
-    // Keep paving and water features; planting must not stand in the station's stair or lift opening.
-    if(mallGarden){
-      mallGarden.boxes=mallGarden.boxes.filter(b=>b.h<=.03||!touches(b.x,b.z,b.w,b.d));
-      for(const items of [mallGarden.trees,mallGarden.bushes,mallGarden.bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
-    }
+    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
+    // (the by-tag layout), the green stays open instead.
+    if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
+    // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
+    if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
+    // Planting must not stand in the station's stair or lift opening.
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
   }
   // Trees, bushes and ponds planted on open land stand on the one ground plane, not 0.6 below it.
@@ -865,7 +865,7 @@ function buildCity(layout: Layout): Scene3D {
     neighborhoodLand:neighborhood.land,
     airportForecourt:forecourtLand[0],
     mall,
-    mallGarden,
+    galleria,
     raisedLand:neighborhood.raised,
     terraces,
     paving,

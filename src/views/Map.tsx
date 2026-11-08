@@ -55,6 +55,7 @@ const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 const MallInterior = lazy(() => import("./office/MallInterior"));
+const GalleriaInterior = lazy(() => import("./office/GalleriaInterior"));
 const StadiumInterior = lazy(() => import("./office/StadiumInterior"));
 
 type Pt = { x: number; y: number };
@@ -938,7 +939,7 @@ export function MapView({active=true}:{active?:boolean}) {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {active && office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
