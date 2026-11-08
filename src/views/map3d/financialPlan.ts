@@ -1,7 +1,7 @@
 import {financialDimensions,financialHeight} from './financialArchitecture';
 import {financialBrand} from "./financialBrands";
 import type {Rect,Scene3D} from './scene';
-import type {Pt} from './roads';
+import {pathClear,type Pt} from './roads';
 import {distanceToRoad} from './highway';
 import {airportFootprint} from './airport';
 import {routeAround} from './routing';
@@ -22,7 +22,7 @@ const BUILDING_LAYOUT=[
  {id:'financial-planning',name:'Financial Planning',x:-20,z:9,rise:1.1,style:'stepped',role:'Financial Planning Analyst',purpose:'Planned budgeting and scenario reviews. No transactions or investment execution.'},
  {id:'harbor-residence',name:'Harbor Residence',x:-12.5,z:9.2,rise:1.22,style:'balcony',role:'Harbor Residence Coordinator',purpose:'Planned residential and household organization spaces. No financial services connected.'},
  // West waterfront parcel by the highway; already district-local, so no expansion offset.
- {id:'circa',name:'Circa',x:CIRCA.x-FINANCIAL.expansion,z:CIRCA.z,rise:CIRCA.rise,style:'twin',role:'Residential Amenities Planning Coordinator',purpose:'Planned twin-tower residence.'},
+ {id:'circa',name:'Ellipse Residences',x:CIRCA.x-FINANCIAL.expansion,z:CIRCA.z,rise:CIRCA.rise,style:'twin',role:'Residential Amenities Planning Coordinator',purpose:'Planned twin-tower residence.'},
 ] as const;
 export const FINANCIAL_BUILDINGS=BUILDING_LAYOUT.map(b=>{const brand=financialBrand(b.id);return {...b,name:brand?.name??b.name,role:brand?.role??b.role,purpose:brand?.purpose??b.purpose};});
 export interface FinancialPark extends Rect {
@@ -63,7 +63,7 @@ export interface FinancialPlan extends Rect {circa?:CircaSite;perimeterTrees:Pt[
 export function headquartersEnvelope(towers:Scene3D['towers']){
  return Math.max(1,...towers.map(t=>t.height+.27+Math.max(2.1,.42+t.size*.5,t.size*.3+.45,1.4)));
 }
-export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|'retail'|'airport'|'terraces'|'carBridges'|'paving'>&{coreLand?:Rect[]}):FinancialPlan|undefined{
+export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|'airport'|'terraces'|'carBridges'|'paving'>&{coreLand?:Rect[]}):FinancialPlan|undefined{
  const stadium=s.stadium;if(!stadium)return;
  const core=cityEnvelope(s.coreLand??s.terraces);if(!core)return;
  const w=FINANCIAL.width,d=FINANCIAL.depth,x=core.x-CITY_SPACING.financialWestOffset,originalX=x+FINANCIAL.expansion;
@@ -74,7 +74,7 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.filter(b=>b.id!=='circa'||westFree).map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
  // Circa stays the district's tallest however tall the headquarters (and so the others) grow.
  const twin=buildings.find(b=>b.id==='circa');if(twin)twin.height=Math.max(twin.height,...buildings.filter(b=>b!==twin).map(b=>b.height+financialDimensions(b.id).top-financialDimensions(twin.id).top+CIRCA.lead));
- const blocks=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ const blocks=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  blocks.push({x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.airport){const r=airportFootprint(s.airport);blocks.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d});}
  const towerBoxes=buildings.map(b=>({x:x+b.x,z:z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
@@ -90,10 +90,16 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  }
  blocks.push(...towerBoxes);
  // Join the nearest original local street, rather than a long stadium-side detour.
+ // Of the northmost street points, prefer one where a north-south street ends, so the district road
+ // carries that avenue straight on instead of jogging over to a tower's driveway (KC, 2026-11-08).
  const streets=s.carBridges.flatMap(b=>b.roads).flat().sort((a,b)=>a[1]-b[1]);
- const access=streets[0];if(!access)return;
+ const avenueEnds=s.carBridges.flatMap(b=>b.roads).flatMap(r=>r.slice(1).flatMap((q,i)=>Math.abs(q[0]-r[i][0])<1e-6&&Math.abs(q[1]-r[i][1])>1e-6?[q[1]<r[i][1]?q:r[i]]:[]));
+ const north=streets[0]?.[1];
+ const access=avenueEnds.filter(p=>Math.abs(p[1]-north)<1e-6).sort((a,b)=>a[0]-b[0])[0]??streets[0];if(!access)return;
  const entry:Pt=[Math.max(x+.6,Math.min(x+w-.6,access[0])),z+FINANCIAL.streetZ],walkEntry:Pt=[entry[0]+.9,z+FINANCIAL.promenadeZ];
- const road=routeAround(access,entry,blocks,.4);
+ // Straight on when the avenue line clears every building by a street's own clearance (the same
+ // one the district streets keep); otherwise route round with the wider margin.
+ const road=Math.abs(access[0]-entry[0])<1e-6&&pathClear([access,entry],blocks,.3)?[access,entry]:routeAround(access,entry,blocks,.4);
  const paths=s.paving.map(p=>[p.x+p.w/2,p.z+p.d/2] as Pt).sort((a,b)=>Math.hypot(a[0]-walkEntry[0],a[1]-walkEntry[1])-Math.hypot(b[0]-walkEntry[0],b[1]-walkEntry[1]));
  const walk=paths.slice(0,8).map(p=>routeAround(p,walkEntry,blocks,.35)).find((p):p is Pt[]=>!!p);if(!road||!walk)return;
  const circa:CircaSite|undefined=westFree?{...site,street:[[x+.6,z+FINANCIAL.streetZ],[x-CIRCA.siteWidth+.5,z+FINANCIAL.streetZ]],sidewalk:[[x+.6,z+FINANCIAL.promenadeZ],[x-CIRCA.siteWidth+.4,z+FINANCIAL.promenadeZ]]}:undefined;

@@ -11,7 +11,7 @@ import {TOWER_FLOORS,towerDoorZ,towerRooms,roomPoint,type TowerSpec} from "./tow
 import {towerFloorParts,towerLobbyParts} from "./towerParts";
 import {towerDay,towerLift,type TowerDay} from "./towerNav";
 import {walkerAt} from "./walkNav";
-import {LAND_BOTTOM,type buildScene} from "../map3d/scene";
+import {LAND_BOTTOM,LAND_TOP,type buildScene} from "../map3d/scene";
 import type {useMaterials} from "../map3d/models";
 
 /**
@@ -82,11 +82,11 @@ export function TowerLevel({spec,level,stack,labels,night,reduced,people,onPick}
   </group>;
 }
 
-/** The ground around the building in the city outside (map units): land under the whole plate and a paved forecourt. */
+/** The ground around the building in the city outside (map units): land under the whole plate and a paved forecourt, on the map's ground plane (LAND_TOP). */
 export function TowerSite({spec,scene,m}:{spec:TowerSpec;scene:ReturnType<typeof buildScene>;m:ReturnType<typeof useMaterials>}) {
   const b=scene.financial?.buildings.find(x=>x.id===spec.id);if(!scene.financial||!b)return null;
   const S=4,x=scene.financial.x+b.x,z=scene.financial.z+b.z;
-  return <group position={[x,0,z]}>
+  return <group position={[x,LAND_TOP,z]}>
     <mesh position={[0,LAND_BOTTOM/2,0]} material={m.land} receiveShadow><boxGeometry args={[(spec.w+8)/S,-LAND_BOTTOM,(spec.d+8)/S]}/></mesh>
     <mesh position={[0,.006,0]} material={m.step} receiveShadow><boxGeometry args={[(spec.w+3)/S,.012,(spec.d+3)/S]}/></mesh>
   </group>;

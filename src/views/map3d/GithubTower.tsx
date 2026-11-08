@@ -135,7 +135,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
   <Instanced items={parts.crowns} geometry={g.blob} material={m.foliage} shadow={detailShadow}/>
   {quality<3&&<Instanced items={parts.trunks} geometry={g.trunk} material={m.plain} shadow={false}/>}
   <Instanced items={parts.soil} geometry={g.box} material={m.plain} shadow={false}/>
-  <Instanced items={parts.shrubs} geometry={g.blob} material={m.foliage} shadow={false}/>
+  <Instanced items={parts.shrubs} geometry={g.ball} material={m.foliage} shadow={false}/>
  </group>;
 }
 

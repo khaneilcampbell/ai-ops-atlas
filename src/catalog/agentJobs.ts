@@ -9,8 +9,8 @@ import type { TriggerType } from "../registry/types";
 // fixed rules below, and every field says which (see docs/agent-workdays.md). No model is involved,
 // and nothing here starts an agent: the workday on the map is a simulation of the job as written.
 
-/** Agents live in Circa, the twin-tower residence in the Financial District (KC, 2026-11-01). */
-export const AGENT_RESIDENCE = { id: "circa", name: "Circa", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
+/** Agents live in Ellipse Residences (stable id circa), the twin-tower residence in the Financial District (KC, 2026-11-01). */
+export const AGENT_RESIDENCE = { id: "circa", name: "Ellipse Residences", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
 
 /** A simulated day on the map, in seconds. Shift hours below are hours of this day. */
 export const SIM_DAY_SECONDS = 720;
