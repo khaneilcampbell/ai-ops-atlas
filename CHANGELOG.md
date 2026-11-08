@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#PR)
+- 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#270)
 - 2026-11-07 · The garden behind Atlas Marketplace is now the Atlas Galleria, a three-storey shopping mall with wavy white fins, rope lights, planted terraces and a funnel atrium. Enter it to see the car park and shop floors (#269)
 - 2026-11-07 · Atlas Airport now sends off one plane every 45 seconds instead of every 15. The water strip at the airport's edge is now a second runway: planes come back from their loop around the city, land there, park at the north stand, push back and taxi out again (#267)
 - 2026-11-07 · The stadium is now Atlas Stadium, rebuilt from your steel-truss reference: a glass hall on a white podium under a sloping dark roof with curled eaves, white zig-zag bracing, tree columns, a lower practice hall and a wide straight stair up from the gate, with the hall stretching toward the ocean, centred on its lawn and ringed by pools and palm trees. You can also go inside to see the concourse and an octagonal seating bowl round one empty court (#263)
