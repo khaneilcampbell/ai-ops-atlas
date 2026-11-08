@@ -68,7 +68,7 @@ function worldBox(w:number,h:number,d:number,x:number,y:number,z:number){
 const MATERIAL_KINDS=['white','trim','rail','dark','lobby'] as const;
 
 /**
- * The Portfolio Site as a slim G+8 apartment building (see portfolioSitePlan). Almost every part
+ * The Portfolio Site as a slim apartment tower (see portfolioSitePlan). Almost every part
  * is an instance of the shared unit box or plane, so the building adds no geometry beyond one
  * merged mesh for its brick and timber, and no lights.
  */

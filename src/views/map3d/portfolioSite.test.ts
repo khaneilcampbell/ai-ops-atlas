@@ -12,7 +12,8 @@ const tower=scene.towers.find(t=>t.projectId===PORTFOLIO_SITE.projectId)!;
 const plan=planPortfolioSite();
 
 describe('Portfolio Site',()=>{
- it('is a ground floor plus eight floors (G+8) of a believable height',()=>{
+ it('is a ground floor plus twelve floors of a believable height, near the old tower',()=>{
+  expect(plan.roof).toBeGreaterThan(tower.floors*FLOOR_H*.95);
   expect(plan.lines).toHaveLength(PORTFOLIO_SITE.floors+1);
   expect(PORTFOLIO_SITE.storey).toBeGreaterThan(FLOOR_H*.95);
   expect(PORTFOLIO_SITE.storey).toBeLessThan(FLOOR_H*1.15);
