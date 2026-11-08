@@ -472,7 +472,7 @@ function buildCity(layout: Layout): Scene3D {
       Math.hypot(x - cx, z - cz) < d.hq.size * 0.9;
     // The Intelligence Hub's widened district keeps the planting it had at 5 across, spread over the
     // bigger lawn: a tree costs over a thousand triangles a frame and the map is at its budget.
-    const planted = d.project.id === "intelligence-hub" ? Math.min(d.size, 5) : d.size;
+    const planted = d.project.id === "intelligence-hub" ? 2.5 : d.size;
     for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(planted * 3.4))) {
       if (blocked(s.gx, s.gy)) continue;
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
