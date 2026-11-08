@@ -9,7 +9,7 @@ const workflow = (name: string) => load(readFileSync(new URL(`../.github/workflo
 describe('release credential boundaries', () => {
   it('keeps signing secrets behind a main-only protected job after validation', () => {
     const { jobs } = workflow('ci');
-    expect(jobs.macos.needs).toEqual(['web', 'rust', 'audit', 'security']);
+    expect(jobs.macos.needs).toEqual(['web', 'career', 'rust', 'audit', 'security']);
     expect(jobs.sign.needs).toBe('macos');
     expect(jobs.sign.environment).toBe('macos-signing');
     expect(jobs.sign.if).toContain("github.event_name == 'push'");
