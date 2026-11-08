@@ -1,0 +1,18 @@
+.DS_Store
+# Kept local only
+10 — System Administration/Project Registry/
+10 — System Administration/Update Logs/
+10 — System Administration/Backups/
+10 — System Administration/Automation Scripts/Retired/
+**/Source/docx/
+.env
+*.pem
+*.key
+
+# Project docs kept local only (private or company-first repos)
+01 — AI Engineering/ai-04 */
+01 — AI Engineering/ai-05 */
+04 — Web & Cloud Infrastructure/web-02 */
+04 — Web & Cloud Infrastructure/web-03 */
+05 — Business & Digital Products/biz-01 */
+05 — Business & Digital Products/biz-02 */

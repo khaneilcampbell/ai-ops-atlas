@@ -16,7 +16,64 @@ export const FOCUS_MAX = 24;
 export const focusRects = { value: Array.from({ length: FOCUS_MAX }, () => new THREE.Vector4()) };
 export const focusCount = { value: 0 };
 
-/** Lets any material take part in focus mode. Keeps whatever patch the material already has. */
+/**
+ * Inside view: up to CUT_MAX building footprints (x0, z0, x1, z1) whose shell is cut away above
+ * `cutHeights[i]`, so the office drawn inside shows through an open top and open front. The cut
+ * is compiled in only while the Inside toggle is on (`setCutaway`), because a shader that can
+ * discard costs fill rate on tiled GPUs even when it never does.
+ */
+export const CUT_MAX = 16;
+export const cutRects = { value: Array.from({ length: CUT_MAX }, () => new THREE.Vector4()) };
+export const cutHeights = { value: new Array<number>(CUT_MAX).fill(0) };
+export const cutCount = { value: 0 };
+let cutOn = false;
+/** Turns the cut on or off in every material compiled from now on. Returns whether it changed. */
+export function setCutaway(on: boolean): boolean {
+  if (cutOn === on) return false;
+  cutOn = on;
+  return true;
+}
+export function cutawayOn() {
+  return cutOn;
+}
+const CUT_VARYING = /* glsl */ `
+      vec4 fw4 = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        fw4 = instanceMatrix * fw4;
+      #endif
+      vFocusW = (modelMatrix * fw4).xyz;`;
+const CUT_DISCARD = /* glsl */ `
+      #ifdef ATLAS_CUT
+      for (int i = 0; i < ${CUT_MAX}; i++) {
+        if (i >= uCutN) break;
+        vec4 r = uCutRects[i];
+        if (vFocusW.x > r.x && vFocusW.x < r.z && vFocusW.z > r.y && vFocusW.z < r.w && vFocusW.y > uCutY[i]) discard;
+      }
+      #endif`;
+const CUT_UNIFORMS = `uniform vec4 uCutRects[${CUT_MAX}];\nuniform float uCutY[${CUT_MAX}];\nuniform int uCutN;\n`;
+function cutUniforms(sh: THREE.WebGLProgramParametersWithUniforms) {
+  sh.uniforms.uCutRects = cutRects;
+  sh.uniforms.uCutY = cutHeights;
+  sh.uniforms.uCutN = cutCount;
+}
+
+/**
+ * The shadow of a cut building must go with it: meshes in the Inside view cast their shadow
+ * with this depth material, which applies the same cut. Shared, and only used while the cut is on.
+ */
+let cutDepth: THREE.MeshDepthMaterial | null = null;
+export function cutDepthMaterial(): THREE.MeshDepthMaterial {
+  if (cutDepth) return cutDepth;
+  const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  m.onBeforeCompile = (sh) => {
+    cutUniforms(sh);
+    sh.vertexShader = `varying vec3 vFocusW;\n${sh.vertexShader}`.replace("#include <project_vertex>", `#include <project_vertex>${CUT_VARYING}`);
+    sh.fragmentShader = `#define ATLAS_CUT\nvarying vec3 vFocusW;\n${CUT_UNIFORMS}${sh.fragmentShader}`.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${CUT_DISCARD}`);
+  };
+  m.customProgramCacheKey = () => "atlas-cut-depth";
+  return (cutDepth = m);
+}
+
 /** Foliage sways gently in the breeze, more at the top than the trunk end. Decorative only. */
 export function swaying(m: THREE.MeshStandardMaterial) {
   m.onBeforeCompile = (sh) => {
@@ -38,6 +95,7 @@ export function swaying(m: THREE.MeshStandardMaterial) {
   return m;
 }
 
+/** Lets any material take part in focus mode. Keeps whatever patch the material already has. */
 export function focusable<T extends THREE.Material>(m: T): T {
   if (m.userData.focusable) return m;
   m.userData.focusable = true;
@@ -48,16 +106,11 @@ export function focusable<T extends THREE.Material>(m: T): T {
     sh.uniforms.uFocus = focus;
     sh.uniforms.uFocusRects = focusRects;
     sh.uniforms.uFocusN = focusCount;
-    sh.vertexShader = `varying vec3 vFocusW;\n${sh.vertexShader}`.replace(
-      "#include <project_vertex>",
-      `#include <project_vertex>
-      vec4 fw4 = vec4(transformed, 1.0);
-      #ifdef USE_INSTANCING
-        fw4 = instanceMatrix * fw4;
-      #endif
-      vFocusW = (modelMatrix * fw4).xyz;`,
-    );
-    sh.fragmentShader = `varying vec3 vFocusW;\nuniform float uFocus;\nuniform vec4 uFocusRects[${FOCUS_MAX}];\nuniform int uFocusN;\n${sh.fragmentShader}`.replace(
+    cutUniforms(sh);
+    sh.vertexShader = `varying vec3 vFocusW;\n${sh.vertexShader}`.replace("#include <project_vertex>", `#include <project_vertex>${CUT_VARYING}`);
+    sh.fragmentShader = `${cutOn ? "#define ATLAS_CUT\n" : ""}varying vec3 vFocusW;\nuniform float uFocus;\nuniform vec4 uFocusRects[${FOCUS_MAX}];\nuniform int uFocusN;\n${CUT_UNIFORMS}${sh.fragmentShader}`
+      .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${CUT_DISCARD}`)
+      .replace(
       "#include <dithering_fragment>",
       `#include <dithering_fragment>
       if (uFocus > 0.001) {
@@ -72,7 +125,7 @@ export function focusable<T extends THREE.Material>(m: T): T {
       }`,
     );
   };
-  m.customProgramCacheKey = () => `${key()}|focus`;
+  m.customProgramCacheKey = () => `${key()}|focus${cutOn ? "|cut" : ""}`;
   return m;
 }
 

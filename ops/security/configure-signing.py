@@ -71,7 +71,7 @@ def configure(apply=False):
     }
     for name, value in secrets.items():
         run(['gh', 'secret', 'set', name, '--repo', REPO, '--env', 'macos-signing'], value)
-        print('Uploaded ' + name + ' (value withheld)')
+        print('Uploaded one signing secret (value withheld)')
     names = {item['name'] for item in api('GET', BASE + '/secrets').get('secrets', [])}
     if not set(secrets).issubset(names):
         raise RuntimeError('Secret metadata verification failed')

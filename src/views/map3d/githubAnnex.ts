@@ -139,7 +139,7 @@ export function addGithubAnnex(scene:Scene3D){
  const blocked:Rect[]=[
   ...scene.terraces.filter(t=>t.id!==GITHUB_TOWER.projectId),...scene.parks,...scene.bridges,
   ...scene.paving.filter(r=>!ownCentre(r)),
-  ...[...scene.towers,...scene.kiosks,...scene.retail,...scene.strays].filter(b=>b!==tower).map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),
+  ...[...scene.towers,...scene.kiosks,...scene.strays].filter(b=>b!==tower).map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),
   ...scene.houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
   // Neighbourhood ground keeps its own edges (neighborhoodLinks.test: it never overlaps other land).
   ...(scene.neighborhoodLand??[]),

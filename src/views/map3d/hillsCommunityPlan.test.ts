@@ -3,26 +3,19 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {COMMUNITY as C,COMMUNITY_BUILDINGS,railState,railDeck,railPoint,walkPoint} from './hillsCommunityPlan';
+import {COMMUNITY as C,railState,railDeck,railPoint,walkPoint} from './hillsCommunityPlan';
 import {distanceToRoad} from './highway';
 import {pathClear} from './roads';
 import {airportFootprint} from './airport';
-import {HILLS} from './hillsPlan';
 describe('Hills community and elevated service',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`preserves clear parcels and rail access in ${group}`,()=>{
- const s=buildScene(layoutMap(catalog,[],group)),c=s.community!,r=s.communityRail!,h=s.hills!,f=s.financial!;expect(c).toBeDefined();expect(r).toBeDefined();
- expect(COMMUNITY_BUILDINGS.filter(b=>b.kind==='house')).toHaveLength(4);expect(HILLS.mansion).toMatchObject({x:13,z:10,w:9,d:5});
- const boxes=COMMUNITY_BUILDINGS.filter(b=>!['station','golf'].includes(b.kind));
- for(const b of COMMUNITY_BUILDINGS){expect(b.x-b.w/2).toBeGreaterThan(0);expect(b.x+b.w/2).toBeLessThan(h.w);expect(b.z+b.d/2).toBeLessThan(h.d);}
- for(const [i,b]of boxes.entries())for(const other of boxes.slice(i+1))expect(Math.abs(b.x-other.x)<(b.w+other.w)/2+.2&&Math.abs(b.z-other.z)<(b.d+other.d)/2+.2).toBe(false);
- const world=boxes.map(b=>({x:c.x+b.x,z:c.z+b.z,w:b.w,d:b.d}));
- for(const route of c.streets)expect(pathClear(route,world,.32),'local streets clear all new buildings').toBe(true);
- for(const route of c.walks)expect(pathClear(route,world,.1),'pedestrian paths clear new building footprints').toBe(true);
+ const s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,f=s.financial!;expect(s.hills).toBeUndefined();expect(s.community).toBeUndefined();expect(r).toBeDefined();
+ expect(r.hillsWalk[0]).toEqual([s.mall!.cx,0,s.mall!.z+s.mall!.d]);
  const deck=railDeck(r);expect(deck.length-r.length).toBeGreaterThan(C.trainLength);
  for(let d=0;d<=r.length;d+=2)for(const offset of [-C.carriageSpacing,0,C.carriageSpacing]){const q=railPoint(deck,(deck.length-r.length)/2+d+offset);for(const end of [-1,1])for(const side of [-1,1]){const point:[number,number]=[q.x+Math.sin(q.yaw)*end*C.carriageLength/2+Math.cos(q.yaw)*side*.26,q.z+Math.cos(q.yaw)*end*C.carriageLength/2-Math.sin(q.yaw)*side*.26];expect(distanceToRoad(point,deck.route),'articulated carriages stay inside the curved deck').toBeLessThan(.54);}}
  const airport=airportFootprint(s.airport!);expect(pathClear(r.route,[{x:airport.x+airport.w/2,z:airport.z+airport.d/2,w:airport.w,d:airport.d}],1),'rail avoids the airport parcel').toBe(true);
- expect(pathClear(r.route,[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),.6)).toBe(true);
- expect(r.route[0]).toEqual(c.station);expect(r.route[r.route.length-1]).toEqual(r.financial);const park=f.park,stop=r.financial;
+ expect(pathClear(r.route,[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),.6)).toBe(true);
+ expect(r.route[0]).toEqual(r.hills);expect(r.route[r.route.length-1]).toEqual(r.financial);const park=f.park,stop=r.financial;
  // KC, 2026-10-31: the stop is in Financial Park, and the line reaches it behind (north of, on the
  // water side of) the BMW showroom and every district tower.
  expect(stop[0]-f.x).toBeGreaterThan(park.x+3.4);expect(stop[0]-f.x).toBeLessThan(park.x+park.w-1);expect(stop[1]).toBeLessThan(f.z);

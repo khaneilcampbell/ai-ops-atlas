@@ -1,4 +1,4 @@
-import { projectRepositories, LANDMARK_REPOSITORIES } from "../catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
 import { servicesOf, type ServiceUse } from "../catalog/roles";
@@ -134,9 +134,12 @@ export function districtSize(lotCount: number, projectId?: string) {
 /**
  * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
  * and its grounds. The Commerce district holds the teardrop tower and its garden podium
- * (KC, 2026-11-01: "expand district landscape to fit design"). Sizes stay on the 2.5 grid.
+ * (KC, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
+ * about twice its usual land (7.5 across, from 5: 2.25x the area, the nearest step on the grid),
+ * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
+ * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
-export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10 };
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5 };
 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
@@ -214,14 +217,15 @@ function groupOf(p: Project, by: GroupBy, agents: Agent[]): { key: string; label
 }
 
 export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy: GroupBy = "none"): Layout {
-  const registered = new Set([...LANDMARK_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
+  const registered = new Set([...LANDMARK_REPOSITORIES,...RETIRED_REPOSITORIES,...catalog.projects.flatMap(p => projectRepositories(p, catalog.agents))]);
   uncataloged = [...new Set(uncataloged)].filter(name => !registered.has(name));
   const agentsByProject = new Map<string, Agent[]>();
   for (const a of catalog.agents) agentsByProject.set(a.projectId, [...(agentsByProject.get(a.projectId) ?? []), a]);
 
   // Bucket projects into neighborhoods, then pack each neighborhood on its own.
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
-  // Skyline already has its custom residential district; do not add a duplicate office.
+  // Skyline has no building of its own: its district was removed to make space (KC, 2026-11-08)
+  // and its one agent works in the Atlas Marketplace.
   for (const p of catalog.projects.filter(p => p.id !== "skyline")) {
     const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
@@ -241,7 +245,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // Largest first packs tighter; ties keep catalog order. A widened district keeps the place its
       // houses and kiosks give it, so it grows where it stands and its neighbors step aside.
       .sort((a, c) => c.fit - a.fit);
-    // An empty park keeps the "room for the next project" corner of the original map.
+    // An empty park keeps the "room for the next project" corner of the original map (the open lot).
     if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };

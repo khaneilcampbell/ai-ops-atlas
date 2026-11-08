@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePowerProfile } from "../../lib/power";
+import { usePageVisible, usePowerProfile } from "../../lib/power";
 import { FramePacer } from "../map3d/pacer";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
@@ -10,12 +10,15 @@ import type { LightMode } from "../map3d/living";
 import { ElevatorLanding, MovingLift } from "./BuildingCirculation";
 import LobbyEntrance from "./LobbyEntrance";
 import {cutawayCameraRadius} from "./cameraFit";
+import { useInteriorTrackpad } from "./useInteriorTrackpad";
+import CutawayWall from "./CutawayWall";
 import CityOutside from "./CityOutside";
 import AtlasHqShell from "./AtlasHqShell";
 import { isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
+import { OFFICE_COLORS as C } from "./palette";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -53,8 +56,9 @@ export default function OfficeScene(props: Props) {
   const { desks, reduced } = props;
   // The lobby doors and the lift always move unless motion is reduced; the pacer sets their frame rate.
   const power = usePowerProfile();
+  const visible = usePageVisible();
   return (
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, power.maxDpr]} frameloop="demand" camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
@@ -98,18 +102,25 @@ function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:bool
     c.enablePan = false;
     c.rotateSpeed = 0.6;
     c.zoomSpeed = 0.9;
-    // Stay on the open side of the cutaway, above the floor.
-    c.minAzimuthAngle = 0.08;
-    c.maxAzimuthAngle = Math.PI / 2 - 0.08;
+    // All the way round: the walls between the camera and the room step aside (CutawayWall).
+    // Stay above the floor.
     c.minPolarAngle = 0.42;
     c.maxPolarAngle = 1.22;
     return c;
   }, [camera, gl]);
+  // Registered as the canvas's default controls, as drei's makeDefault does in the other interiors.
+  const setState = useThree((st) => st.set);
+  useEffect(() => {
+    setState({ controls: controls as unknown as THREE.EventDispatcher });
+    return () => setState({ controls: null });
+  }, [controls, setState]);
   useEffect(() => {
     controls.minDistance = 4;
     controls.maxDistance = home.r * 1.7;
   }, [controls, home]);
   const anim = useRef<{ t0: number; ms: number; from: Pose; to: Pose } | null>(null);
+  // Mac trackpad: look around through a full circle, pinch, twist, Option-scroll to move.
+  useInteriorTrackpad(() => controls, { x: plan.w / 2, z: plan.d / 2 + 1 }, () => (anim.current = null));
   const sph = useMemo(() => new THREE.Spherical(), []);
 
   const current = (): Pose => {
@@ -126,7 +137,12 @@ function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:bool
     if (reduced) {
       anim.current = null;
       apply(to);
-    } else anim.current = { t0: performance.now(), ms, from: current(), to };
+    } else {
+      // Turn the short way round: the view can now be anywhere on the circle.
+      const from = current();
+      const turn = THREE.MathUtils.euclideanModulo(to.theta - from.theta + Math.PI, Math.PI * 2) - Math.PI;
+      anim.current = { t0: performance.now(), ms, from, to: { ...to, theta: from.theta + turn } };
+    }
     invalidate();
   };
 
@@ -193,23 +209,23 @@ const RING = new THREE.RingGeometry(0.9, 0.98, 48);
 
 const std = (color: string, o: THREE.MeshStandardMaterialParameters = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o });
 const MAT = {
-  floor: patterned("#d8d2c3", "stone", { roughness: 0.75 }),
-  rug: std("#2f4535", { roughness: 1 }),
-  wall: std("#ece5d2"),
-  trim: std("#2f4535", { roughness: 0.6 }),
+  floor: patterned(C.floor, "stone", { roughness: 0.75 }),
+  rug: std(C.rug, { roughness: 1 }),
+  wall: std(C.wall),
+  trim: std(C.trim, { roughness: 0.6 }),
   frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
   grass: patterned("#8fae6a", "grass"),
-  oak: std("#c49a6c", { roughness: 0.55 }),
-  steel: std("#a8aea6", { roughness: 0.35, metalness: 0.6 }),
-  dark: std("#232a26", { roughness: 0.45, metalness: 0.3 }),
+  oak: std(C.oak, { roughness: 0.55 }),
+  steel: std(C.steel, { roughness: 0.35, metalness: 0.6 }),
+  dark: std(C.dark, { roughness: 0.45, metalness: 0.3 }),
   key: std("#e9e6dc", { roughness: 0.6 }),
-  chair: std("#36403a", { roughness: 0.7 }),
-  skin: [std("#f0c9a4"), std("#d9a27a"), std("#a8714d"), std("#7a4f33")],
-  hair: [std("#2b2420"), std("#5a3a22"), std("#b88a4a"), std("#d9d2c4")],
+  chair: std(C.chair, { roughness: 0.7 }),
+  skin: C.skin.map((c) => std(c)),
+  hair: C.hair.map((c) => std(c)),
   pot: std("#b8836a", { roughness: 0.9 }),
   leaf: std("#4f7f4a", { roughness: 0.9, flatShading: true }),
   leaf2: std("#6a9a52", { roughness: 0.9, flatShading: true }),
-  inactive: std("#8e938b"),
+  inactive: std(C.inactive),
   pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.02, transparent:true,opacity:0.14,depthWrite:false, roughness: 0.1, metalness: 0.1 }),
   led: new THREE.MeshBasicMaterial({ color: "#7fdc8e" }),
   ledOff: new THREE.MeshBasicMaterial({ color: "#3d4a41" }),
@@ -261,24 +277,12 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=fals
       {!shell&&<>
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
 
-      {/* Back and left walls stand full height; the front two are cut down to a sill. */}
-      {[0.45,2.45].map((y,i)=><group key={y}><Box p={[0,y,-d/2-T/2]} s={[w+T*2,i?0.5:0.9,T]} m={MAT.wall}/><Box p={[-w/2-T/2,y,0]} s={[T,i?0.5:0.9,d]} m={MAT.wall}/></group>)}
+      {/* Back and left walls stand full height; the front two are cut down to a sill. A full
+          wall steps aside while the camera looks in from its side, so the room turns all the way round. */}
+      <CutawayWall side="back">
+      {[0.45,2.45].map((y,i)=><Box key={y} p={[0,y,-d/2-T/2]} s={[w+T*2,i?0.5:0.9,T]} m={MAT.wall}/>)}
       {[-w/2-T,...backWins.map(x=>x+0.65)].map((start,i)=>{const end=i<backWins.length?backWins[i]-0.65:w/2+T;return end>start?<Box key={i} p={[(start+end)/2,1.55,-d/2-T/2]} s={[end-start,1.3,T]} m={MAT.wall}/>:null;})}
-      {[-d/2,...leftWins.map(z=>z+0.75)].map((start,i)=>{const end=i<leftWins.length?leftWins[i]-0.75:d/2;return end>start?<Box key={i} p={[-w/2-T/2,1.55,(start+end)/2]} s={[T,1.3,end-start]} m={MAT.wall}/>:null;})}
-      {[-1,1].map(side=><Box key={side} p={[side*(w/4+0.35),0.16,d/2+T/2]} s={[w/2-0.7+T*2,0.32,T]} m={MAT.wall}/>)}
-      <Box p={[w / 2 + T / 2, 0.16, 0]} s={[T, 0.32, d]} m={MAT.wall} />
       <Box p={[0, H + 0.03, -d / 2 - T / 2]} s={[w + T * 2 + 0.04, 0.06, T + 0.04]} m={MAT.trim} />
-      <Box p={[-w / 2 - T / 2, H + 0.03, 0]} s={[T + 0.04, 0.06, d]} m={MAT.trim} />
-      <Box p={[0, 0.34, d / 2 + T / 2]} s={[w + T * 2 + 0.04, 0.04, T + 0.04]} m={MAT.trim} />
-      <Box p={[w / 2 + T / 2, 0.34, 0]} s={[T + 0.04, 0.04, d]} m={MAT.trim} />
-
-      {leftWins.map((z) => (
-        <group key={`l${z}`} position={[-w / 2 + 0.005, 1.55, z]}>
-          {[-1,1].map(side=><group key={side}><Box p={[0,side*0.65,0]} s={[0.04,0.06,1.5]} m={MAT.frame}/><Box p={[0,0,side*0.75]} s={[0.04,1.3,0.06]} m={MAT.frame}/></group>)}
-          <Box p={[0.02, 0, 0]} s={[0.02, 1.18, 1.38]} m={MAT.pane} />
-          <Box p={[0.04, 0, 0]} s={[0.02, 1.18, 0.04]} m={MAT.frame} />
-        </group>
-      ))}
       {backWins.map((x) => (
         <group key={`b${x}`} position={[x, 1.55, -d / 2 + 0.005]}>
           {[-1,1].map(side=><group key={side}><Box p={[side*0.65,0,0]} s={[0.06,1.3,0.04]} m={MAT.frame}/><Box p={[0,side*0.65,0]} s={[1.3,0.06,0.04]} m={MAT.frame}/></group>)}
@@ -286,10 +290,28 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=fals
           <Box p={[0, 0, 0.04]} s={[0.04, 1.18, 0.02]} m={MAT.frame} />
         </group>
       ))}
+      </CutawayWall>
+      <CutawayWall side="left">
+      {[0.45,2.45].map((y,i)=><Box key={y} p={[-w/2-T/2,y,0]} s={[T,i?0.5:0.9,d]} m={MAT.wall}/>)}
+      {[-d/2,...leftWins.map(z=>z+0.75)].map((start,i)=>{const end=i<leftWins.length?leftWins[i]-0.75:d/2;return end>start?<Box key={i} p={[-w/2-T/2,1.55,(start+end)/2]} s={[T,1.3,end-start]} m={MAT.wall}/>:null;})}
+      <Box p={[-w / 2 - T / 2, H + 0.03, 0]} s={[T + 0.04, 0.06, d]} m={MAT.trim} />
+      {leftWins.map((z) => (
+        <group key={`l${z}`} position={[-w / 2 + 0.005, 1.55, z]}>
+          {[-1,1].map(side=><group key={side}><Box p={[0,side*0.65,0]} s={[0.04,0.06,1.5]} m={MAT.frame}/><Box p={[0,0,side*0.75]} s={[0.04,1.3,0.06]} m={MAT.frame}/></group>)}
+          <Box p={[0.02, 0, 0]} s={[0.02, 1.18, 1.38]} m={MAT.pane} />
+          <Box p={[0.04, 0, 0]} s={[0.02, 1.18, 0.04]} m={MAT.frame} />
+        </group>
+      ))}
+      </CutawayWall>
+      {[-1,1].map(side=><Box key={side} p={[side*(w/4+0.35),0.16,d/2+T/2]} s={[w/2-0.7+T*2,0.32,T]} m={MAT.wall}/>)}
+      <Box p={[w / 2 + T / 2, 0.16, 0]} s={[T, 0.32, d]} m={MAT.wall} />
+      <Box p={[0, 0.34, d / 2 + T / 2]} s={[w + T * 2 + 0.04, 0.04, T + 0.04]} m={MAT.trim} />
+      <Box p={[w / 2 + T / 2, 0.34, 0]} s={[T + 0.04, 0.04, d]} m={MAT.trim} />
 
       </>}
 
       {/* Wall display: the project and its verified CI line, the same facts as the map. */}
+      <CutawayWall side="back" always={shell}>
       <group position={[0, 1.6, -d / 2 + 0.03]}>
         <Box p={[0, 0, 0]} s={[2.5, 1.3, 0.06]} m={MAT.dark} />
         <mesh position={[0, 0, 0.035]}>
@@ -297,6 +319,7 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=fals
           <meshBasicMaterial map={display} toneMapped={false} />
         </mesh>
       </group>
+      </CutawayWall>
 
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
       <group position={shell ? [-w / 2 + 1.0, 0, -d / 2 + 1.0] : [-w / 2 + 0.55, 0, -d / 2 + 0.55]}>

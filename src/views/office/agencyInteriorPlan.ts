@@ -23,7 +23,7 @@ export const INTERIOR={
 
 export type RoomKind='reception'|'lounge'|'cafe'|'shop'|'studio'|'desk'|'meeting'|'gallery'|'archive'|'lab'|'hall'|'green-room'|'services';
 export interface AgencyRoom {id:string;level:number;name:string;kind:RoomKind;x:number;z:number;w:number;d:number;
- /** The planned agent role for the room. None of these run yet. */
+ /** The agent role for the room: a catalog agent where one is seated (purpose says so), otherwise planned. */
  role:string;purpose:string}
 
 /** Interior x of the slot's centre line at an interior z. */
@@ -49,15 +49,15 @@ export const AGENCY_ROOMS:AgencyRoom[]=[
  room(0,'cloak','Cloakroom & services','services',ex1-5,n0,ex1,-4.6,'Facilities Coordinator','Cloakroom, washrooms and deliveries.'),
  // Floor 1: studios.
  room(1,'content','Content studio','studio',wx0,n0,wx1,-1.2,'Content Producer','Photo, video and copy production.'),
- room(1,'social','Social & community desk','desk',wx0,1.2,wx1,s1,'Social Media Manager','Planned social calendar and community replies. No accounts connected.'),
- room(1,'strategy','Strategy room','meeting',ex1-6,n0,ex1,-4,'Brand Strategist','Positioning, briefs and campaign plans.'),
- room(1,'review','Client review room','meeting',ex1-6,3.8,ex1,s1,'Account Director','Presenting work to clients for sign-off.'),
+ room(1,'social','Social & community desk','desk',wx0,1.2,wx1,s1,'Customer Insight Researcher','Benjaire Product Lab (n8n): personas, buyer pains and the cheapest reach channels. Configured, not verified. No social accounts connected.'),
+ room(1,'strategy','Strategy room','meeting',ex1-6,n0,ex1,-4,'Product Lab Lead','Benjaire Product Lab (n8n): runs the monthly next-product research and emails KC the brief. Configured, not verified.'),
+ room(1,'review','Client review room','meeting',ex1-6,3.8,ex1,s1,'Product Brief Writer','Benjaire Product Lab (n8n): the decision-ready brief and 30-day validation plan for KC. Configured, not verified.'),
  room(1,'gallery','Campaign gallery','gallery',EAST_EDGE,4.4,ex1-6.6,s1,'Brand & Campaign Director','Current campaigns on show around the atrium.'),
  // Floor 2: galleries and research.
- room(2,'archive','Brand archive & library','archive',wx0,n0,wx1,-1.2,'Brand Librarian','Guidelines, past work and references.'),
- room(2,'insights','Insights lab','lab',wx0,1.2,wx1,s1,'Marketing Analyst','Planned reporting on campaign results. No ad accounts connected.'),
+ room(2,'archive','Brand archive & library','archive',wx0,n0,wx1,-1.2,'Competitor Analyst','Benjaire Product Lab (n8n): who already sells each idea, prices and review complaints. Configured, not verified.'),
+ room(2,'insights','Insights lab','lab',wx0,1.2,wx1,s1,'Market Research Analyst','Benjaire Product Lab (n8n): demand and trend signals for 6 to 10 product ideas. Configured, not verified. No ad accounts connected.'),
  room(2,'exhibition','Exhibition gallery','gallery',EAST_EDGE,4.4,ex1,s1,'Brand & Campaign Director','Permanent collection of Benjaire work.'),
- room(2,'workshop','Workshop room','meeting',ex1-6,n0,ex1,-4,'Creative Director','Ideas sessions and design critiques.'),
+ room(2,'workshop','Workshop room','meeting',ex1-6,n0,ex1,-4,'Product Scoring Analyst','Benjaire Product Lab (n8n): ranks ideas on the Benjaire scorecard. Configured, not verified.'),
  // Floor 3: the stair arrives in a foyer round the atrium; the hall fills the west block, seats
  // facing a stage on the north wall, reached through the slot's doors.
  room(3,'hall','Presentation hall','hall',wx0,n0,wx1,s1,'Events Producer','Launches, talks and client presentations, about 120 seats.'),

@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
-# AI Ops Atlas manifest. Format: catalog/README.md
+# Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
 project:
@@ -19,6 +19,7 @@ project:
 
 agents:
   - id: commerce-loop
+    workplace: {building: Atlas Marketplace, floor: 1, room: "102"}
     name: Autonomous Loop
     purpose: >-
       Orchestrates each cycle in build, design or maintain mode, running the phases below on a Linux VPS under the commerce-pipeline systemd service.
@@ -161,6 +162,7 @@ agents:
         last_review: 2026-10-28
 
   - id: market-analyst
+    workplace: {building: Atlas Marketplace, floor: 1, room: "103"}
     name: Market Research Analyst
     purpose: >-
       Synthesizes top-selling stores, visual styles, price points, buyer
@@ -220,6 +222,7 @@ agents:
         last_review: 2026-10-28
 
   - id: brand-strategist
+    workplace: {building: Atlas Marketplace, floor: 1, room: "104"}
     name: Brand Strategist
     purpose: >-
       Defines the store foundation: niche, store name, buyer persona,
@@ -334,6 +337,7 @@ agents:
         last_review: 2026-10-28
 
   - id: copy-strategist
+    workplace: {building: Atlas Marketplace, floor: 1, room: "105"}
     name: Copywriter and SEO Strategist
     purpose: >-
       Writes the brand voice system: tagline, title formula, listing template
@@ -449,6 +453,7 @@ agents:
         last_review: 2026-10-28
 
   - id: canva-mockups
+    workplace: {building: Atlas Marketplace, floor: 1, room: "106"}
     name: Canva Mockup Generator
     purpose: >-
       Generates six conversion-focused product images per listing through
@@ -901,6 +906,7 @@ agents:
         last_review: 2026-10-28
 
   - id: commerce-tests
+    workplace: {building: Atlas Marketplace, floor: 1, room: "107"}
     name: Pipeline Tests
     purpose: Compiles, lints and tests the pipeline scripts and checks the shell scripts parse.
     framework: GitHub Actions

@@ -1,11 +1,14 @@
-// Full reports from agents that run outside the app (today: Opportunity Scout on GitHub Actions).
+// Full reports from agents that run outside the app: Opportunity Scout on GitHub Actions and
+// Benjaire Product Lab in n8n (its own shape, src/reports/productLab.ts).
 // The live feed only carries a 300-character line per run; a report is the whole result, stored by
 // the site (server/reports.ts) behind Cloudflare Access and shown in the agent's inspector. The same
 // check runs on the site before storing and in the app before showing, so a malformed report is
 // dropped, never half drawn.
 
 /** Agents allowed to store reports. Anything else is refused by the site. */
-export const REPORT_AGENTS = ["github-opportunity-scout"] as const;
+import { validProductLabReport, type ProductLabReport } from "./productLab";
+
+export const REPORT_AGENTS = ["github-opportunity-scout", "benjaire-product-lab"] as const;
 export type ReportAgent = (typeof REPORT_AGENTS)[number];
 
 export const MECHANISMS = ["service", "product", "lead_generation", "client_automation", "other"] as const;
@@ -45,7 +48,7 @@ export interface AgentSpec {
 }
 
 export interface OpportunityReport {
-  agent: ReportAgent;
+  agent: "github-opportunity-scout";
   at: string;
   run_url: string | null;
   model: string;
@@ -56,11 +59,13 @@ export interface OpportunityReport {
   notes: string[];
 }
 
+export type AgentReport = OpportunityReport | ProductLabReport;
+
 /** A stored report as the site returns it. */
-export interface StoredReport {
+export interface StoredReport<B extends AgentReport = AgentReport> {
   id: number;
   at: string;
-  body: OpportunityReport;
+  body: B;
 }
 
 export const MAX_REPORT_BYTES = 16_000;
@@ -110,7 +115,7 @@ export function validOpportunityReport(value: unknown): value is OpportunityRepo
   if (!obj(value) || !only(value, REPORT_KEYS)) return false;
   const r = value;
   return (
-    (REPORT_AGENTS as readonly unknown[]).includes(r.agent) &&
+    r.agent === "github-opportunity-scout" &&
     typeof r.at === "string" && !Number.isNaN(Date.parse(r.at)) &&
     (r.run_url === null || (typeof r.run_url === "string" && RUN_URL.test(r.run_url))) &&
     text(r.model, 64) &&
@@ -120,6 +125,18 @@ export function validOpportunityReport(value: unknown): value is OpportunityRepo
     (r.spec === null || validSpec(r.spec)) &&
     list(r.notes, 12, 400)
   );
+}
+
+/** Any agent's report, checked against that agent's own shape. */
+export function validReport(value: unknown): value is AgentReport {
+  return validOpportunityReport(value) || validProductLabReport(value);
+}
+
+/** The one-line feed note for a stored report. */
+export function reportLine(r: AgentReport): string {
+  if (r.agent === "benjaire-product-lab") return `${r.month}: ${r.top.title} (score ${r.scorecard.find((x) => x.idea === r.top.title)?.total.toFixed(2)}, ${r.status}).`;
+  const top = r.ideas[0];
+  return top ? `${r.ideas.length} ideas. Top: ${top.title} (score ${top.score}).` : "No ideas this run.";
 }
 
 export function isReportAgent(id: string): id is ReportAgent {

@@ -1,0 +1,11 @@
+{
+  "id": "sec-01",
+  "name": "SOC Automation and Detection Engineering Lab",
+  "category": "03 — Cybersecurity Engineering",
+  "status": "Completed",
+  "repo": "https://github.com/khaneilcampbell/splunk-bruteforce-detection-lab",
+  "local_folder": "splunk-bruteforce-detection-lab",
+  "last_verified": "2026-10-26",
+  "last_synced_commit": {"main": "c11e44c", "docs/portfolio-review": "ba1347a"},
+  "tags": ["security", "splunk", "python", "portfolio"]
+}

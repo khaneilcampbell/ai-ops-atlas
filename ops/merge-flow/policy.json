@@ -5,14 +5,10 @@
   "repositories": [
     "khaneilcampbell/ai-ops-atlas",
     "khaneilcampbell/benjaire.com",
-    "khaneilcampbell/benjaire-dashboard",
     "khaneilcampbell/career-application-system",
     "khaneilcampbell/khaneilcampbell",
     "khaneilcampbell/khaneilcampbell.com",
     "khaneilcampbell/multi-agent-commerce-pipeline",
-    "khaneilcampbell/projects-intelligence-hub",
-    "khaneilcampbell/service-desk-intelligence",
-    "khaneilcampbell/skyline",
     "khaneilcampbell/splunk-bruteforce-detection-lab"
   ],
   "openPullRequestsPerRepository": 20,

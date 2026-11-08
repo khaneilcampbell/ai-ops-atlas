@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Benjaire Flow · Start Here</title>
+<style>
+@font-face { font-family: 'ArchivoP'; src: url(archivo-500.woff2) format('woff2'); font-weight: 500; }
+@font-face { font-family: 'ArchivoW'; src: url(archivo-330w.woff2) format('woff2'); font-weight: 330; }
+@font-face { font-family: 'Inter'; src: url(inter-400-s.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url(inter-500-s.woff2) format('woff2'); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url(inter-600-s.woff2) format('woff2'); font-weight: 600; }
+@font-face { font-family: 'Plex'; src: url(plex-s.woff2) format('woff2'); font-weight: 400; }
+@page { size: 8.5in 11in; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #ffffff; }
+body { font-family: Inter, sans-serif; color: #1f2124; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 8.5in; height: 11in; position: relative; overflow: hidden; page-break-after: always; break-after: page; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+.mono { font-family: Plex, monospace; letter-spacing: .12em; text-transform: uppercase; color: #5f646b; }
+.display { font-family: ArchivoP, sans-serif; font-weight: 500; letter-spacing: -.035em; }
+.muted { color: #565b62; }
+.foot { position: absolute; left: 64px; right: 64px; bottom: 30px; display: flex; justify-content: space-between; font-size: 10px; }
+
+/* page 1 */
+.p1 { background: #f3f3f1; }
+.p1 .hero { position: absolute; left: 0; top: 0; width: 100%; height: 470px; object-fit: cover; object-position: 60% 58%; }
+.p1 .fade { position: absolute; left: 0; top: 330px; width: 100%; height: 140px; background: linear-gradient(180deg, rgba(243,243,241,0), #f3f3f1); }
+.p1 .logo { position: absolute; left: 64px; top: 52px; height: 26px; }
+.p1 .title { position: absolute; left: 64px; right: 64px; top: 430px; display: flex; flex-direction: column; gap: 18px; }
+.p1 .name { font-size: 96px; line-height: .92; letter-spacing: -.045em; }
+.p1 .rule { width: 56px; height: 3px; background: #1f2124; }
+.p1 .tag { font-family: ArchivoW, sans-serif; font-weight: 330; font-size: 30px; line-height: 1.15; letter-spacing: -.02em; }
+.p1 .boxes { position: absolute; left: 64px; right: 64px; bottom: 64px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.box { background: #ffffff; border: 1px solid #dcdddb; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.box .mono { font-size: 10px; }
+.check { display: grid; grid-template-columns: 16px 1fr; gap: 8px; font-size: 13px; line-height: 1.5; }
+.tick { width: 13px; height: 13px; border: 1.4px solid #1f2124; border-radius: 3px; margin-top: 3px; }
+
+/* page 2 */
+.inner { padding: 56px 64px 40px; display: flex; flex-direction: column; gap: 22px; height: 100%; }
+.steps { border-top: 1px solid rgba(31,33,36,.22); display: flex; flex-direction: column; }
+.step { display: grid; grid-template-columns: 28px 48px 1fr 64px; gap: 12px; padding: 15px 0; border-bottom: 1px solid rgba(31,33,36,.12); }
+.step .tick { width: 18px; height: 18px; border-radius: 4px; margin-top: 3px; }
+.step .num { font-family: ArchivoP, sans-serif; font-weight: 500; font-size: 22px; }
+.step b { font-weight: 600; font-size: 15px; }
+.step .txt { display: flex; flex-direction: column; gap: 4px; }
+.step .txt span { font-size: 13px; line-height: 1.55; color: #565b62; }
+.step .time { font-size: 12px; color: #565b62; text-align: right; }
+code { font-family: Plex, monospace; font-size: 12.5px; color: #1f2124; }
+.fixes { margin-top: auto; background: #f3f3f1; border-radius: 14px; padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; line-height: 1.55; }
+.fixes b { font-weight: 600; display: block; margin-bottom: 4px; }
+.static-foot { display: flex; justify-content: space-between; font-size: 10px; }
+
+/* page 3 */
+.shot { width: 100%; height: 330px; object-fit: contain; background: #f7f6f3; border-radius: 14px; border: 1px solid #dcdddb; }
+.buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.btn { align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: #1f2124; color: #fff; font-size: 12px; font-weight: 500; }
+.btn.ghost { background: transparent; color: #1f2124; border: 1px solid rgba(31,33,36,.34); }
+.rhythm { display: grid; grid-template-columns: 130px 1fr; gap: 10px 16px; font-size: 13px; line-height: 1.5; border-top: 1px solid rgba(31,33,36,.22); padding-top: 16px; }
+.rhythm .mono { font-size: 10.5px; letter-spacing: .08em; padding-top: 2px; }
+.dark { margin-top: auto; background: #121315; color: #e9eaec; border-radius: 16px; padding: 22px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.dark .mono { font-size: 10px; color: #a9adb3; display: block; margin-bottom: 6px; }
+.dark p { font-size: 13px; line-height: 1.55; }
+</style>
+</head>
+<body>
+
+<section class="page p1">
+  <img class="hero" src="pavilion.jpg" alt="">
+  <div class="fade"></div>
+  <img class="logo" src="lockup.svg" alt="Benjaire">
+  <div class="title">
+    <span class="mono" style="font-size: 12px; letter-spacing: .14em">Start here · v1.0.1</span>
+    <span class="display name">Flow</span>
+    <span class="rule"></span>
+    <span class="tag">Every inquiry, answered on time.</span>
+    <p class="muted" style="font-size: 14px; line-height: 1.6; max-width: 560px">This guide gets your website inquiries flowing through your own n8n in about an hour. Page 2 is your setup checklist; page 3 explains the day to day and how to get help.</p>
+  </div>
+  <div class="boxes">
+    <div class="box">
+      <span class="mono">Have these ready</span>
+      <div class="check"><span class="tick"></span><span>n8n, Cloud or self hosted with Data tables</span></div>
+      <div class="check"><span class="tick"></span><span>An Anthropic API key</span></div>
+      <div class="check"><span class="tick"></span><span>A Resend account and API key</span></div>
+      <div class="check"><span class="tick"></span><span>Access to your domain’s DNS</span></div>
+      <div class="check"><span class="tick"></span><span>Optional: a Cloudflare account</span></div>
+    </div>
+    <div class="box">
+      <span class="mono">Your purchase</span>
+      <p style="font-size: 13px; line-height: 1.6">Your plan, order reference and the date your setup help ends are in your download email.</p>
+      <p style="font-size: 13px; line-height: 1.6"><b style="font-weight: 600">Need help?</b> Reply to that email with the step number from page 2 and what you see.</p>
+    </div>
+  </div>
+  <div class="foot mono"><span>Benjaire · New York</span><span>1 / 3</span></div>
+</section>
+
+<section class="page">
+  <div class="inner">
+    <div style="display: flex; justify-content: space-between"><span class="mono" style="font-size: 11px; letter-spacing: .14em">Benjaire Flow · setup checklist</span><span class="mono" style="font-size: 11px">About 80 minutes</span></div>
+    <h1 class="display" style="font-size: 40px; line-height: 1.05">Six steps, in folder order.</h1>
+    <div class="steps">
+      <div class="step"><span class="tick"></span><span class="num">01</span><div class="txt"><b>Add two credentials in n8n</b><span>Bearer Auth named <b style="font-size: 13px; color: #1f2124">Resend API</b> with your Resend key, and Anthropic named <b style="font-size: 13px; color: #1f2124">Anthropic</b> with your API key.</span></div><span class="time">5 min</span></div>
+      <div class="step"><span class="tick"></span><span class="num">02</span><div class="txt"><b>Create the tables · <code>1-tables</code></b><span>Create flow_settings, flow_inquiries and flow_events from the CSVs, then delete each sample row. Keep exactly one settings row.</span></div><span class="time">10 min</span></div>
+      <div class="step"><span class="tick"></span><span class="num">03</span><div class="txt"><b>Fill your settings · <code>2-presets</code></b><span>Start from the closest preset, replace every example value, and make an intake key with <code>openssl rand -hex 24</code>.</span></div><span class="time">15 min</span></div>
+      <div class="step"><span class="tick"></span><span class="num">04</span><div class="txt"><b>Import the workflows · <code>3-workflows</code></b><span>Import 0 to 5. Pick your credentials, set Error workflow to Flow · 0 Error alerts, and set your time zone. Publish 0, then 1 to 4.</span></div><span class="time">15 min</span></div>
+      <div class="step"><span class="tick"></span><span class="num">05</span><div class="txt"><b>Connect your form · <code>4-website</code></b><span>Use the Cloudflare Worker (guides/cloudflare.md) or a server forwarder. Never put the intake key in browser code.</span></div><span class="time">15 min</span></div>
+      <div class="step"><span class="tick"></span><span class="num">06</span><div class="txt"><b>Test before going live · <code>5-test</code></b><span>Run curl-test.sh: an owner alert should arrive within a minute. Then work through the 17 checks in test-checklist.md.</span></div><span class="time">20 min</span></div>
+    </div>
+    <div class="fixes">
+      <div><b>Form returns 401?</b><span class="muted">The intake key in your Worker or server does not match intake_key in your settings. Copy it again with no spaces.</span></div>
+      <div><b>No emails at all?</b><span class="muted">Select Resend API in each email node and verify your sending domain in Resend.</span></div>
+    </div>
+    <div class="static-foot mono"><span>More fixes · guides/troubleshooting.md</span><span>2 / 3</span></div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="inner">
+    <span class="mono" style="font-size: 11px; letter-spacing: .14em">Benjaire Flow · day to day</span>
+    <h1 class="display" style="font-size: 40px; line-height: 1.05">Once it is live, you only press buttons.</h1>
+    <img class="shot" src="alert.jpg" alt="Sample owner alert email with a summary, a suggested reply and three status buttons">
+    <div class="buttons">
+      <div class="box" style="padding: 16px; gap: 6px"><span class="btn">I replied to them</span><span class="muted" style="font-size: 13px; line-height: 1.5">Stops reminders. Nothing is sent to the client.</span></div>
+      <div class="box" style="padding: 16px; gap: 6px"><span class="btn">Became a client</span><span class="muted" style="font-size: 13px; line-height: 1.5">Sends your welcome and onboarding email the first time.</span></div>
+      <div class="box" style="padding: 16px; gap: 6px"><span class="btn ghost">Close: no deal</span><span class="muted" style="font-size: 13px; line-height: 1.5">No reply, went elsewhere, or a test. Nothing is sent.</span></div>
+    </div>
+    <div class="rhythm">
+      <span class="mono">Every inquiry</span><span>An alert with a summary, urgency, budget and a suggested reply for you to review. Flow never sends an AI written reply to a prospect.</span>
+      <span class="mono">Weekdays</span><span>9am, 1pm and 5pm: one reminder for anything past its reply target.</span>
+      <span class="mono">Mondays 8am</span><span>Your digest: new inquiries, wins, losses, time to handle and who is still waiting.</span>
+      <span class="mono">If anything fails</span><span>An error alert names the workflow and step, with no customer data.</span>
+    </div>
+    <div class="dark">
+      <div><span class="mono">Getting help</span><p>Reply to your download email with the step number and what you see. Starter: setup help by email for 14 days. Professional: email support for 60 days and your setup call.</p></div>
+      <div><span class="mono">Updates and your data</span><p>Bug fix updates to v1.x for 12 months; see CHANGELOG.md. All inquiry data stays in your own n8n. Benjaire never has access.</p></div>
+    </div>
+    <div class="static-foot mono"><span>Benjaire · New York · contact@benjaire.com</span><span>3 / 3</span></div>
+  </div>
+</section>
+
+</body>
+</html>

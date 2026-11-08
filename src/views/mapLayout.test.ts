@@ -52,7 +52,7 @@ describe("layoutMap", () => {
     const layout = layoutMap(catalog);
     const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
     const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
-    // Skyline has its own custom district instead of a generic office building.
+    // Skyline has no building: its one agent works in the Atlas Marketplace.
     const seated = catalog.agents.filter((a) => a.projectId !== "skyline");
     expect([...housed, ...inside].sort()).toEqual(seated.map((a) => a.id).sort());
     expect(housed).toEqual([]);
@@ -167,7 +167,7 @@ it("does not draw a second building for a registered repository left in discover
   expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(1);
 });
 
-it("keeps one accessible Skyline district in every map grouping",()=>{
+it("keeps one open lot in every map grouping",()=>{
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
     expect(layout.parks.filter(p=>!p.strays.length)).toHaveLength(1);
@@ -175,8 +175,8 @@ it("keeps one accessible Skyline district in every map grouping",()=>{
   }
 });
 
-it("registers Skyline without duplicating its existing residential district", () => {
-  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/skyline");
+it("registers Skyline without giving it a district", () => {
+  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
   const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
   expect(layout.parks.filter(p => !p.strays.length)).toHaveLength(1);

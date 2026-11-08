@@ -8,7 +8,7 @@
 set -euo pipefail
 umask 077
 dir=src-tauri/target/release/bundle/macos
-app="$dir/AI Ops Atlas.app"
+app="$dir/Atlas.app"
 tmp=$(mktemp -d)
 keychain="$tmp/signing.keychain-db"
 kc_pass=$(openssl rand -hex 16)
@@ -38,10 +38,10 @@ codesign --force --deep --options runtime --timestamp=none --keychain "$keychain
 codesign --verify --strict "$app"
 codesign -d -r- "$app" 2>&1 | grep designated
 
-archive="$dir/AI Ops Atlas.app.tar.gz"
+archive="$dir/Atlas.app.tar.gz"
 if [ -f "$archive" ]; then
   rm -f "$archive" "$archive.sig"
-  tar -czf "$archive" -C "$dir" "AI Ops Atlas.app"
+  tar -czf "$archive" -C "$dir" "Atlas.app"
   npx tauri signer sign "$archive" >/dev/null
   [ -f "$archive.sig" ]
 fi

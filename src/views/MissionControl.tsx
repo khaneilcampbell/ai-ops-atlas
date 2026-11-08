@@ -1,3 +1,4 @@
+import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
@@ -13,7 +14,9 @@ import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { rollup, usd } from "../intel/format";
 import { AgentAlerts } from "./AgentAlerts";
+import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
+import { WebsiteManagement } from "./WebsiteManagement";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
 const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
@@ -54,12 +57,16 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
 
       <AgentAlerts />
 
+      <ClientInquiries />
+
+      <WebsiteManagement />
+
       <div className="grid kpis">
         <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />
         <Tile
-          label="Configured agents"
+          label="Agents & automations"
           value={m.agents}
-          sub={`${m.agentsByStatus.active} active · ${m.frameworks} frameworks · ${m.observedAgents} watched via Actions`}
+          sub={residentsLabel(catalog.agents.filter(isAiAgent).length, catalog.agents.filter(a => !isAiAgent(a)).length)}
           source="Catalog manifests"
           onClick={() => toAgents()}
         />
