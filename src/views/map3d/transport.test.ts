@@ -13,7 +13,7 @@ describe('shared transportation plan',()=>{
   expect(s.land).toContainEqual(airportFootprint(a));
   const stadium=s.stadium!,parcel={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};
   for(const r of s.land)if(r.x!==parcel.x||r.z!==parcel.z)expect(parcel.x<r.x+r.w&&parcel.x+parcel.w>r.x&&parcel.z<r.z+r.d&&parcel.z+parcel.d>r.z,'stadium parcel overlap').toBe(false);
-  const boxes=[...s.towers,...s.kiosks,...s.retail];
+  const boxes=[...s.towers,...s.kiosks];
   const links=s.transportConnections;
   expect(links.every(l=>l.road.length>1&&l.walk.length>1)).toBe(true);
   for(const link of links){

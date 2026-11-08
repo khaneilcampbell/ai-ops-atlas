@@ -2,7 +2,7 @@ import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkd
 // Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
 test.skip(!process.env.SHOT_DIR,'Set SHOT_DIR to a folder to take station screenshots.');
 /** Every perimeter loop station has the Dubai-style shell and glazed skybridge from #158 (KC, 2026-11-07). */
-const STATIONS=['Financial District Station','Atlas Central Station','Skyline Station','Stadium Station','Airport Station'];
+const STATIONS=['Financial District Station','Atlas Central Station','Stadium Station','Airport Station'];
 const slug=(name:string)=>name.split(' ')[0].toLowerCase();
 const out=process.env.SHOT_DIR??'artifacts/financial-station';
 async function openStation(page:Page){

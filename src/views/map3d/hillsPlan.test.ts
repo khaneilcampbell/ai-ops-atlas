@@ -11,4 +11,4 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`removes t
  expect(scene.mall).toBeDefined();expect(scene.communityRail).toBeDefined();
 
 });
-it('does not add an estate with disconnected streets',()=>expect(planHills({land:[],paving:[],carBridges:[],towers:[],kiosks:[],retail:[]})).toBeUndefined());
+it('does not add an estate with disconnected streets',()=>expect(planHills({land:[],paving:[],carBridges:[],towers:[],kiosks:[]})).toBeUndefined());
