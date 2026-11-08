@@ -2,7 +2,7 @@ import {financialInteriorBrand} from "../map3d/financialBrands";
 import {HILLS} from "../map3d/hillsPlan";
 import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
 import {airportPoint} from "../map3d/airport";
-import {clearInteriorFootprint} from "./exteriorClearance";
+import {clearInteriorFootprint,interiorGroundY} from "./exteriorClearance";
 import {useMemo,useState} from "react";
 import {useFrame} from "@react-three/fiber";
 import {quarterOf} from "../map3d/trackpad";
@@ -10,7 +10,7 @@ import {useAtlas} from "../../state";
 import {useReducedMotion} from "../../lib/motion";
 import {load} from "../../lib/storage";
 import {layoutMap,type GroupBy} from "../mapLayout";
-import {buildScene,TERRACE_H} from "../map3d/scene";
+import {buildScene} from "../map3d/scene";
 import {Traffic,Vehicles} from "../map3d/living";
 import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
 export default function CityOutside({building="",projectId,span=16,clearSpan=span,elevation=0,allFloors=false,anchorAt,scaleOverride,extras}:{building?:string;projectId?:string;span?:number;
@@ -47,10 +47,8 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   useFrame(({camera})=>{if(!allFloors)return;const n=quarterOf(camera.position);if(n.x!==q.x||n.z!==q.z)setQ(n);});
   const visible=(p:{x:number;z:number})=>!allFloors||(p.x-cx)*q.x<0||(p.z-cz)*q.z<0||Math.hypot(p.x-cx,p.z-cz)>span/scale+5;
   if(!park&&!anchor)return null;
-  // Financial District buildings stand on plain district land (y 0), not a raised terrace, and the district's own plaza
-  // isn't drawn here, so the city drops only by the slab depth to put the lobby on the ground.
-  const groundY=financialInteriorBrand(building)?0:TERRACE_H;
-  return <group scale={scale} position={[-cx*scale,-groundY*scale-0.35-elevation,-cz*scale]}>
+  // The city drops by the ground height plus the lobby slab's depth, which puts every lobby on the ground.
+  return <group scale={scale} position={[-cx*scale,-interiorGroundY()*scale-0.35-elevation,-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}
     <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={[...scene.kiosks,...scene.retail].filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
   </group>;

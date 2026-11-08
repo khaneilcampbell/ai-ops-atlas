@@ -7,7 +7,7 @@ import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
 import {CircaWalkers,type CircaResident} from "./CircaWalkers";
 import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
 import {CIRCA_LIFT_OFFSET,CIRCA_LIFT_TOP} from "./circaNav";
-import {LAND_BOTTOM,type buildScene} from "../map3d/scene";
+import {LAND_BOTTOM,LAND_TOP,type buildScene} from "../map3d/scene";
 import type {useMaterials} from "../map3d/models";
 
 /**
@@ -38,7 +38,7 @@ const MAP_SCALE=4;
 export function CircaSite({scene,m}:{scene:ReturnType<typeof buildScene>;m:ReturnType<typeof useMaterials>}) {
   const b=scene.financial?.buildings.find(x=>x.id==="circa");if(!scene.financial||!b)return null;
   const x=scene.financial.x+b.x,z=scene.financial.z+b.z,w=(CIRCA_PODIUM.w+10)/MAP_SCALE,d=(CIRCA_PODIUM.d+10)/MAP_SCALE;
-  return <group position={[x,0,z]}>
+  return <group position={[x,LAND_TOP,z]}>
     <mesh position={[0,LAND_BOTTOM/2,0]} material={m.land} receiveShadow><boxGeometry args={[w,-LAND_BOTTOM,d]}/></mesh>
     <mesh position={[0,.006,0]} material={m.step} receiveShadow><boxGeometry args={[(CIRCA_PODIUM.w+3)/MAP_SCALE,.012,(CIRCA_PODIUM.d+3)/MAP_SCALE]}/></mesh>
   </group>;
