@@ -55,5 +55,5 @@ export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGe
   }
   return {solid,lamps};
  },[scene.transportConnections,scene.freight,scene.land]);
- return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.lamps} geometry={g.ball} material={m.lamp}/></>;
+ return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/></>;
 }

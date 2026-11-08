@@ -84,6 +84,6 @@ export function RibbonTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;bas
   <Instanced items={parts.steps} geometry={g.box} material={m.plain}/>
   <Instanced items={parts.posts} geometry={g.cyl} material={m.plain}/>
   <Instanced items={parts.tops} geometry={g.cone} material={mats.umbrella}/>
-  <Instanced items={parts.shrubs} geometry={g.blob} material={m.foliage}/>
+  <Instanced items={parts.shrubs} geometry={g.ball} material={m.foliage}/>
  </group>;
 }
