@@ -7,6 +7,7 @@ import {cityEnvelope} from './citySpacing';
 import {roundedRoad,distanceToRoad} from './highway';
 import {routeAround} from './routing';
 import {airportFootprint,airportPoint} from './airport';
+import {stadiumGate} from './stadiumGeometry';
 
 export const PERIMETER_RAIL={margin:2,radius:5,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6,passengersPerStop:2} as const;
 export const LOOP_STATIONS=[
@@ -39,7 +40,8 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
   {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt},
   {...LOOP_STATIONS[2],point:[clamp(sky.x+sky.w/2,left,right),bottom] as Pt,target:[sky.x+sky.w/2,sky.z+sky.d-.4] as Pt},
-  {...LOOP_STATIONS[3],point:[clamp(stadium.x+stadium.w/2,left,right),bottom] as Pt,target:[stadium.x+stadium.w+.5,stadium.z+stadium.d/2] as Pt},
+  // Beside the main (east) gate, so the bigger stadium's walk to the platform stays short and clear of the bowl.
+  {...LOOP_STATIONS[3],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
   {...LOOP_STATIONS[4],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
  ];
  const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
@@ -48,10 +50,17 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
  // Reserve the airside parcel as a whole; public walks approach the terminal along its eastern edge.
  const airsideRight=front[0]-.8;boxes.push({x:(airportLand.x+airsideRight)/2,z:airportLand.z+airportLand.d/2,w:airsideRight-airportLand.x,d:airportLand.d});
  const stops=seeds.map(seed=>{
-  const distance=distanceAt(route,lengths,seed.point),pose=loopPoint({route,lengths,length},distance),basis={point:seed.point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
-  const ground=routeAround(seed.target,landing,boxes,.3);if(!ground)throw new Error(`No protected public walk to ${seed.name}`);
-  const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
-  return {...seed,yaw:pose.yaw,distance,arrival:0,walk};
+  // When a district (such as the bigger stadium) covers the stairs' landing, slide the station
+  // along its straight edge, nearest first, until the walk to the platform is clear.
+  const alongX=seed.point[1]===top||seed.point[1]===bottom;
+  for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
+   const point:Pt=alongX?[clamp(seed.point[0]+shift,left,right),seed.point[1]]:[seed.point[0],clamp(seed.point[1]+shift,top,bottom)];
+   const distance=distanceAt(route,lengths,point),pose=loopPoint({route,lengths,length},distance),basis={point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
+   const ground=routeAround(seed.target,landing,boxes,.3);if(!ground)continue;
+   const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
+   return {...seed,point,yaw:pose.yaw,distance,arrival:0,walk};
+  }
+  throw new Error(`No protected public walk to ${seed.name}`);
  }).sort((a,b)=>a.distance-b.distance);
  stops.forEach((stop,i)=>stop.arrival=stop.distance/PERIMETER_RAIL.speed+i*PERIMETER_RAIL.dwell);
  return {route,lengths,length,stops,period:length/PERIMETER_RAIL.speed+stops.length*PERIMETER_RAIL.dwell};

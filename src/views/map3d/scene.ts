@@ -7,17 +7,20 @@ import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
+import {sizeIntelligenceHub} from "./intelligenceHubPlan";
 import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
+import {stadiumPlaza} from "./stadiumGeometry";
+import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
-import {planMallGarden,type MallGarden} from "./mallGarden";
+import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
 import {distanceToRoad} from "./highway";
 import {districtConnections,type DistrictConnection} from "./connections";
-import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
+import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
@@ -127,7 +130,8 @@ export interface StrayBuilding {
   size: number;
   height: number;
 }
-export type TreeKind = "round" | "cone" | "blossom";
+/** "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. */
+export type TreeKind = "round" | "cone" | "blossom" | "palm";
 export interface Tree {
   x: number;
   y: number;
@@ -162,13 +166,15 @@ export interface Scene3D {
   airport?: AirportPlan;
   transportConnections:DistrictConnection[];
   stadium?: StadiumPlan;
+  /** Atlas Stadium's grounds on the open land round its lot: pools, training pitches, car parks, plazas. */
+  stadiumSite?: StadiumSite;
   dealership?:DealershipPlan;
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
   /** Atlas Marketplace mall on the open lot beside the Skyline park. */
   mall?:MallPlan;
-  /** Marketplace Gardens on the green behind the mall, and the beds on its plaza. */
-  mallGarden?:MallGarden;
+  /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
+  galleria?:GalleriaPlan;
   /**
    * Canva's freight route to the airport. Not built since KC's 2026-11-07 road review: the Commerce
    * district keeps its own streets and grass, without a trunk road or truck lot cut through it.
@@ -464,18 +470,21 @@ function buildCity(layout: Layout): Scene3D {
       kiosks.some((k) => k.projectId === d.project.id && Math.abs(k.x - x) < k.size / 2 + 0.3 && Math.abs(k.z - z) < k.size / 2 + 0.3) ||
       pavedIn.get(d.project.id)!.some((p) => inRect(p, x, z, 0.22)) ||
       Math.hypot(x - cx, z - cz) < d.hq.size * 0.9;
-    for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(d.size * 3.4))) {
+    // The Intelligence Hub's widened district keeps the planting it had at 5 across, spread over the
+    // bigger lawn: a tree costs over a thousand triangles a frame and the map is at its budget.
+    const planted = d.project.id === "intelligence-hub" ? 2.5 : d.size;
+    for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(planted * 3.4))) {
       if (blocked(s.gx, s.gy)) continue;
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.24 + (s.r - 7) * 0.025, kind: pick < 0.2 ? "cone" : pick > 0.95 ? "blossom" : "round" });
     }
-    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(d.size * 2.2))) {
+    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 2.2))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
     }
     // A widened district's extra land becomes planted grounds: rows of trees over the open lawn,
     // clear of every road, path and plaza, like a tree-lined city block (see DISTRICT_MIN_SIZE).
-    if (DISTRICT_MIN_SIZE[d.project.id]) for (const [x, z] of districtGrove(d, cx, cz)) {
+    if (DISTRICT_MIN_SIZE[d.project.id] && d.project.id !== "intelligence-hub") for (const [x, z] of districtGrove(d, cx, cz)) {
       if (blocked(x, z) || paving.some((p) => inRect(p, x, z, 0.42)) || trees.some((t) => Math.hypot(t.x - x, t.z - z) < 0.5)) continue;
       trees.push({ x, y: top, z, s: 0.22 + hash(`${x.toFixed(2)}:${z.toFixed(2)}:g`) * 0.06, kind: hash(`${x.toFixed(2)}:${z.toFixed(2)}`) > 0.9 ? "blossom" : "round" });
     }
@@ -725,8 +734,20 @@ function buildCity(layout: Layout): Scene3D {
     land.push(airportFootprint(airport));
 
   }
-  const stadium=planStadium(land,paving,terraces.find(t=>t.id==="github-profile"));
+  // The bigger stadium lot must also keep clear of the airport's public road and walk.
+  const airportAccess=airport?(()=>{const f=airportPoint(airport,-1.5,6),x0=Math.min(airport.accessX,f[0])-.9,x1=Math.max(airport.accessX,f[0])+.9;return [{x:x0,z:airport.accessZ-.9,w:x1-x0,d:1.8+.6}];})():[];
+  const profile=terraces.find(t=>t.id==="github-profile"),blocks=()=>[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))];
+  // Centred in its open land when its roads and walks can still reach it; otherwise beside GitHub Profile.
+  let stadium=planStadium([...land,...airportAccess],paving,profile);
+  if(stadium&&districtConnections(airport,stadium,blocks()).some(l=>!l.road.length||!l.walk.length))stadium=planStadium([...land,...airportAccess],paving,profile,false);
   if(stadium)land.push({x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4});
+  if(stadium){
+    // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
+    const plaza=stadiumPlaza(stadium);
+    // Palms in a ring round the stadium (KC, 2026-11-07), drawn with the stadium's plain boxes.
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'palm' as TreeKind})));
+    bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
+  }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
   const core=cityEnvelope(cityLand)!;
   // The lot sits just south of the Skyline park, so it must follow the park, not the core's south
@@ -737,6 +758,7 @@ function buildCity(layout: Layout): Scene3D {
   const hills:HillsPlan|undefined=undefined;
   sizeCustomTowers(towers, kiosks);
   sizeGithubTower(towers);
+  sizeIntelligenceHub(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)alignOfficeScale(towers,financial.referenceHeight);
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
@@ -776,24 +798,29 @@ function buildCity(layout: Layout): Scene3D {
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
-  const mallGarden=mall?planMallGarden(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
-  if(mallGarden){
-    const r=mallGarden.rect;
+  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
+  if(galleria){
+    const r=galleria.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
-    trees.push(...mallGarden.trees);bushes.push(...mallGarden.bushes);bollards.push(...mallGarden.bollards);
+    trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
-  land.push(...compactSquareLand(land,cityLand));
+  // Plain meadow filling the island out to a square; the stadium grounds may build on it.
+  const meadowLand=compactSquareLand(land,cityLand);
+  land.push(...meadowLand);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
+  // Keep station walks clear of plaza trees, beds and bollards.
+  const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
+  for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
   if(communityRail){
     const areas=stationAccessAreas(communityRail.hills);
-    if(mallGarden)areas.push(...areas.map(a=>({...a,x:2*mallGarden.axis-a.x-a.w})));
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
-    // Keep paving and water features; planting must not stand in the station's stair or lift opening.
-    if(mallGarden){
-      mallGarden.boxes=mallGarden.boxes.filter(b=>b.h<=.03||!touches(b.x,b.z,b.w,b.d));
-      for(const items of [mallGarden.trees,mallGarden.bushes,mallGarden.bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
-    }
+    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
+    // (the by-tag layout), the green stays open instead.
+    if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
+    // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
+    if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
+    // Planting must not stand in the station's stair or lift opening.
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
   }
   // Trees, bushes and ponds planted on open land stand on the one ground plane, not 0.6 below it.
@@ -813,8 +840,21 @@ function buildCity(layout: Layout): Scene3D {
       for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(forecourt,items[i].x,items[i].z,.3))items.splice(i,1);
     }
   }
+  // Atlas Stadium takes the open land round its lot, last, so no other plan moves.
+  const env=cityEnvelope(land);
+  const stadiumSite=stadium&&env?planStadiumSite({stadium,envelope:env,
+    land:[...land.filter(r=>!meadowLand.includes(r)),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+      ...fountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))],
+    paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
+      ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]])]}):undefined;
+  if(stadiumSite&&stadium){
+    const r=stadiumSite.site,lot={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};
+    // The grounds are open lawn round the stadium: no scattered meadow planting; the plaza inside the lot stays.
+    for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(inRect(r,items[i].x,items[i].z)&&!inRect(lot,items[i].x,items[i].z))items.splice(i,1);
+  }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
+  if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     financial,
     community,
@@ -823,13 +863,14 @@ function buildCity(layout: Layout): Scene3D {
     airport,
     transportConnections:connections,
     stadium,
+    stadiumSite,
     dealership,
     agency,
     land,
     neighborhoodLand:neighborhood.land,
     airportForecourt:forecourtLand[0],
     mall,
-    mallGarden,
+    galleria,
     raisedLand:neighborhood.raised,
     terraces,
     paving,
