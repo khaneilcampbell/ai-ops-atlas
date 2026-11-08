@@ -25,7 +25,28 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
    court.push({p:[mx,y,mz],s:[w,CAR_SURFACE.driveway,len+.1],r:yaw,c:'#4a504d'});
    for(const side of [-1,1])court.push({p:[mx+Math.cos(yaw)*side*w/2,y,mz-Math.sin(yaw)*side*w/2],s:[.035,CAR_SURFACE.driveway+.01,len+.1],r:yaw,c:'#c9bfa6'});
    const k=Math.max(0,len-.55)/len;court.push({p:[ax+(bx-ax)*k,y+CAR_SURFACE.driveway,az+(bz-az)*k],s:[w*.9,.003,.03],r:yaw,c:'#f3efe4'});
+   // Two lanes: a dashed centre line from the car park to the stop line.
+   const ux=(bx-ax)/len,uz=(bz-az)/len;for(let d=.25;d<len-.75;d+=.36)court.push({p:[ax+ux*d,y+CAR_SURFACE.driveway,az+uz*d],s:[.025,.003,.18],r:yaw,c:'#f3efe4'});
+   // A wider apron over the last stretch to the road's edge, so turning cars have room.
+   const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:'#4a504d'});
   }
+  // The main entrance: a glazed vestibule out of the notch under a canopy, an entry pair of doors and an exit pair.
+  {const P=L.portal,pt=life.portal,front=P.d-.05,yaw=Math.atan2(pt.u[0],pt.u[1]);
+   const at=(k:number,j:number,h:number,s:[number,number,number],c:string)=>{const base=[pt.x-pt.u[0]*front/2,pt.z-pt.u[1]*front/2];court.push({p:[base[0]+pt.u[0]*k+pt.p[0]*j,y+h,base[1]+pt.u[1]*k+pt.p[1]*j],s,r:yaw,c});};
+   const FRAME='#3b4744',GLASS='#cfe6e2',LEAF='#a3cbc6',door=.85;
+   at(front/2,0,0,[P.w,P.h,front],GLASS);
+   at(front/2,0,P.h,[P.w+.04,.05,front+.04],FRAME);
+   at((front+.5)/2,0,P.h+.05,[P.w+.5,.045,front+.5],'#f7f7f0');at(front+.5,0,P.h+.04,[P.w+.5,.07,.03],FRAME);
+   for(const j of [-1,1])at(front+.45,j*(P.w/2+.2),0,[.05,P.h+.05,.05],FRAME);
+   for(const j of [-P.w/2,P.w/2,0])at(front+.012,j,0,[.045,P.h,.05],FRAME);
+   at(front+.012,0,door,[P.w,.045,.05],FRAME);
+   for(const [j0,sign] of [[P.w/4,'#4f7a52'],[-P.w/4,'#c9a35a']] as const){
+    // Sliding leaves parted to show the open doorway, a coloured sign over each pair (green in, amber out), and a mat.
+    for(const s of [-1,1])at(front+.03,j0+s*(P.door/4+.07),.01,[P.door/2-.12,door-.02,.025],LEAF);
+    for(const s of [-1,1])at(front+.012,j0+s*P.door/2,0,[.035,door,.05],FRAME);
+    at(front+.03,j0,door+.08,[P.door*.8,.09,.02],sign);
+    at(front+.17,j0,0,[P.door,.008,.26],FRAME);
+   }}
   // Zebra stripes on a station walk where a driveway passes under it, matching the city's road crossings.
   for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+.109,c.z-Math.sin(c.yaw)*d],s:[.065,.005,.48],r:c.yaw,c:'#f7f7f0'});
   for(let i=1;i<life.walk.length;i++){

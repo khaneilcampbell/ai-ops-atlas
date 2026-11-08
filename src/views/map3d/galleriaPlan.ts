@@ -40,7 +40,11 @@ export const GALLERIA={
  minW:8.5,minD:6.6,
  /** Depth of the outdoor parking band (two rows of bays and an aisle). */
  parking:2.5,
+ /** Map units round the entrance apex where the first fin band stops at its parapet. */
+ entranceClear:1.6,
 } as const;
+/** The main entrance: the apex of the V-notch on the ground floor outline, plan metres. */
+export const GALLERIA_NOTCH:Pt=[21,24.6];
 
 /**
  * Ground floor outline in plan metres, traced from the ground floor plan, clockwise from the main
@@ -311,11 +315,13 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
 
 export interface GalleriaFin {x:number;z:number;y:number;h:number;a:number;level:number}
 /** White fins on every band: from the parapet above a slab down to a wavy hem below it. */
-export function galleriaFins(p:Pick<GalleriaPlan,'slabs'|'levels'|'y0'>):GalleriaFin[]{
+export function galleriaFins(p:Pick<GalleriaPlan,'slabs'|'levels'|'y0'>&{toMap?:GalleriaPlan['toMap']}):GalleriaFin[]{
  const G=GALLERIA,fins:GalleriaFin[]=[];
+ // Over the main entrance (the notch's apex) the first band lifts to its parapet, so the doors stand clear (KC, 2026-11-08).
+ const apex=p.toMap?.(GALLERIA_NOTCH),clear=(x:number,z:number,l:number)=>l===1&&apex&&Math.hypot(x-apex[0],z-apex[1])<G.entranceClear;
  for(let l=1;l<=3;l++){
   const line=[...p.slabs[l],p.slabs[l][0]],top=p.y0+p.levels[l]+G.slab+G.rail,below=G.storeys[l-1];
-  for(const f of along(line,G.finStep)){const h=G.rail+G.slab+below*hem(f.u,l);fins.push({x:f.x,z:f.z,a:f.a,y:top-h,h,level:l});}
+  for(const f of along(line,G.finStep)){const h=G.rail+G.slab+(clear(f.x,f.z,l)?0:below*hem(f.u,l));fins.push({x:f.x,z:f.z,a:f.a,y:top-h,h,level:l});}
  }
  return fins;
 }

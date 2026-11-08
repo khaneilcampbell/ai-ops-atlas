@@ -3,7 +3,8 @@ import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {GALLERIA_LIFE,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
-import {insidePoly} from './galleriaPlan';
+import {GALLERIA,GALLERIA_NOTCH,galleriaFins,insidePoly} from './galleriaPlan';
+import {along} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 const scene=buildScene(layoutMap(catalog,[],'district'));
@@ -51,6 +52,22 @@ describe('life round Atlas Galleria',()=>{
    expect(life.driveways.some(d=>[d.a,d.b].every(e=>pts.some(p=>Math.hypot(p[0]-e[0],p[1]-e[1])<1e-6)))).toBe(true);}
   for(const l of life.lamps)for(const d of life.driveways){const dx=d.b[0]-d.a[0],dz=d.b[1]-d.a[1],t=Math.max(0,Math.min(1,((l.x-d.a[0])*dx+(l.z-d.a[1])*dz)/(dx*dx+dz*dz)));
    expect(Math.hypot(l.x-d.a[0]-dx*t,l.z-d.a[1]-dz*t)).toBeGreaterThan(GALLERIA_LIFE.driveWidth/2);}
+ });
+ for(const [name,s] of [['sample',scene],['app',app]] as const)it(`walks everyone round the fountain, in by the entry doors and out by the exit doors (${name} layout)`,()=>{
+  const life=planGalleriaLife(s)!,g=s.galleria!,F=g.fountain,keep=F.r+GALLERIA_LIFE.fountainClear-.05;
+  // Sample every route finely: no one on foot comes within the clear distance of the fountain's rim.
+  const routes=[...life.walkers.filter(w=>!w.loop).flatMap(w=>[w.route,w.back!]),...life.drivers.map(d=>d.walk)];
+  for(const r of routes)for(let d=0;d<=r.length;d+=.05){const p=along(r,d,0);expect(Math.hypot(p.x-F.x,p.z-F.z)).toBeGreaterThan(keep);}
+  const shopper=life.walkers.find(w=>!w.loop)!,end=shopper.route.points.at(-1)!,start=shopper.back!.points[0];
+  expect(Math.hypot(end[0]-life.portal.entry[0],end[2]-life.portal.entry[1])).toBeLessThan(1e-6);
+  expect(Math.hypot(start[0]-life.portal.exit[0],start[2]-life.portal.exit[1])).toBeLessThan(1e-6);
+  // The doors face the forecourt and stand a full door width apart.
+  expect(Math.hypot(life.portal.entry[0]-life.portal.exit[0],life.portal.entry[1]-life.portal.exit[1])).toBeGreaterThan(GALLERIA_LIFE.portal.door);
+  expect(life.portal.u[0]*(g.entrance.x-life.portal.x)+life.portal.u[1]*(g.entrance.z-life.portal.z)).toBeGreaterThan(0);
+ });
+ it('lifts the first fin band clear of the entrance',()=>{
+  const g=scene.galleria!,apex=g.toMap(GALLERIA_NOTCH),near=galleriaFins(g).filter(f=>f.level===1&&Math.hypot(f.x-apex[0],f.z-apex[1])<GALLERIA.entranceClear);
+  expect(near.length).toBeGreaterThan(0);for(const f of near)expect(f.h).toBeCloseTo(GALLERIA.rail+GALLERIA.slab,6);
  });
  it('takes driven cars out of the static car park so none is drawn twice',()=>{
   const g=scene.galleria!,driven=g.parking!.driven;
