@@ -6,6 +6,7 @@ import {TERRACE_H} from './scene';
 import {bridgeParts,Instanced,STREET_LINE,type Inst,type useGeometries,type useMaterials} from './models';
 import {distanceToRoad,roadIntersections} from './highway';
 import {ROAD_W,type Pt,type CarBridge} from './roads';
+import {streetPavement} from './streetPavement';
 /** Original stone bridge parts and green railings, driven by the same paths as pedestrians. */
 export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>}){
  const parts=useMemo(()=>{
@@ -53,7 +54,9 @@ export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGe
     for(let t=.5;t<len;t+=1.5){const px=a[0]+(b[0]-a[0])*t/len,pz=a[1]+(b[1]-a[1])*t/len;if(scene.land.some(l=>px>=l.x&&px<=l.x+l.w&&pz>=l.z&&pz<=l.z+l.d))continue;solid.push({p:[a[0]+(b[0]-a[0])*t/len,-1.2,a[1]+(b[1]-a[1])*t/len],s:[.16,TERRACE_H+1.23,.22],c:'#bdb59e'});}
    }
   }
-  return {solid,lamps};
- },[scene.transportConnections,scene.freight,scene.land]);
- return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.lamps} geometry={g.ball} material={m.lamp}/></>;
+  // Sidewalks, paved corners, zebras and building-matched plazas: flat, so they cast no shadow.
+  const street=streetPavement(scene);
+  return {solid,lamps,flat:[...street.pavement,...street.markings]};
+ },[scene]);
+ return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.flat} geometry={g.box} material={m.plain} shadow={false}/><Instanced items={parts.lamps} geometry={g.ball} material={m.lamp}/></>;
 }
