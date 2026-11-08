@@ -811,12 +811,15 @@ function buildCity(layout: Layout): Scene3D {
     const areas=stationAccessAreas(communityRail.hills);
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
     // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
-    // (the by-tag layout), the green stays open instead.
-    if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
+    // (the by-tag layout), the green stays open instead. With the perimeter loop the old
+    // Marketplace stop is not built (no platform, stairs or lift), so it does not block the lot.
+    const marketplaceStopBuilt=!communityRail.loop;
+    if(galleria&&marketplaceStopBuilt){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
     // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
-    if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
+    if(galleria&&marketplaceStopBuilt){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
     // Planting must not stand in the station's stair or lift opening.
-    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
+    const galleriaOwn=new Set<object>(galleria&&!marketplaceStopBuilt?[...galleria.trees,...galleria.bushes]:[]);
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(!galleriaOwn.has(items[i])&&touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);
   }
   // Trees, bushes and ponds planted on open land stand on the one ground plane, not 0.6 below it.
   for(const items of [trees,bushes,ponds])for(const item of items)if(Math.abs(item.y)<.05)item.y=LAND_TOP;

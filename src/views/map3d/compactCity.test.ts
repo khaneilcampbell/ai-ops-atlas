@@ -19,7 +19,8 @@ describe('compact city and Marketplace passenger service',()=>{
   const ground=r.hillsWalk.filter(p=>p[1]===0).map(p=>[p[0],p[2]] as [number,number]);
   expect(pathClear(ground,[{x:m.cx,z:m.cz,w:m.w,d:m.d-2.3}],.1)).toBe(true);
   expect(pathClear(r.route,[{x:m.cx,z:m.cz,w:m.w,d:m.d-2.3}],.6)).toBe(true);
-  for(const area of stationAccessAreas(r.hills)){
+  // The old Marketplace stop is only built without the perimeter loop; its stair and lift areas only matter then.
+  if(!r.loop)for(const area of stationAccessAreas(r.hills)){
    for(const p of [...s.trees,...s.bushes,...s.bollards])expect(p.x+.25>area.x&&p.x-.25<area.x+area.w&&p.z+.25>area.z&&p.z-.25<area.z+area.d).toBe(false);
    if(s.galleria){const f=s.galleria.footprint;expect(f.x<area.x+area.w&&f.x+f.w>area.x&&f.z<area.z+area.d&&f.z+f.d>area.z).toBe(false);}
   }

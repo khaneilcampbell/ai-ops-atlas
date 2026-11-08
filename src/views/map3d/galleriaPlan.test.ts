@@ -53,8 +53,17 @@ describe('Atlas Galleria on the map',()=>{
    for(const c of sc.transportConnections)for(const q of [...c.road,...c.walk])expect(inRect(f,q,.3),`${g} ${c.id}`).toBe(false);
    const loop=sc.communityRail?.loop;
    if(loop){for(const q of loop.route)expect(inRect(f,q,.4),g).toBe(false);for(const stop of loop.stops)expect(inRect(f,stop.point,1.5),`${g} ${stop.name}`).toBe(false);}
-   if(sc.communityRail)for(const a of stationAccessAreas(sc.communityRail.hills))expect(hit(f,a),g).toBe(false);
+   if(sc.communityRail&&!sc.communityRail.loop)for(const a of stationAccessAreas(sc.communityRail.hills))expect(hit(f,a),g).toBe(false);
   }
+ });
+ it('still stands behind the Marketplace when a project is removed (KC\'s live 10-project map)',()=>{
+  // career-optimizer is the career-application-system repo KC removed on Nov 3. The old Marketplace
+  // stop is not built under the perimeter loop, so its stairs must not clear the lot.
+  const without=(id:string)=>buildScene(layoutMap({...catalog,projects:catalog.projects.filter(p=>p.id!==id)},[],'district'));
+  const live=without('career-optimizer');
+  expect(live.communityRail?.loop).toBeDefined();
+  expect(live.galleria).toBeDefined();
+  for(const drop of catalog.projects.map(p=>p.id)){const sc=without(drop);if(sc.communityRail?.loop)expect(sc.galleria,drop).toBeDefined();}
  });
  it('keeps the reference proportions and three storeys under the canopy',()=>{
   expect(gl.footprint.w/gl.footprint.d).toBeGreaterThan(1.2);expect(gl.footprint.w/gl.footprint.d).toBeLessThan(1.5);
