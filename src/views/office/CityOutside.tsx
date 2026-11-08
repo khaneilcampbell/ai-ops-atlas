@@ -1,3 +1,4 @@
+import {openLot} from "../map3d/openLot";
 import {financialInteriorBrand} from "../map3d/financialBrands";
 import {HILLS} from "../map3d/hillsPlan";
 import {AIRPORT_BUILDINGS} from "../map3d/airportBuildings";
@@ -28,7 +29,7 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   const grouping=load<GroupBy>("mapProjectGrouping","district");
   const source=useMemo(()=>buildScene(layoutMap(catalog,uncataloged,grouping)),[catalog,uncataloged,grouping]);
   const g=useGeometries(),m=useMaterials();
-  const park=source.parks.find(p=>p.label==="Skyline");
+  const park=openLot(source.parks);
   const pick=useMemo<PickHandlerSet>(()=>({of:keys=>({keys,over:()=>{},out:()=>{},click:()=>{}})}),[]);
   const airportBuilding=AIRPORT_BUILDINGS.find(b=>b.name===building);
   const airportAnchor=airportBuilding&&source.airport?{x:airportPoint(source.airport,airportBuilding.x,airportBuilding.z)[0],z:source.airport.z+airportBuilding.z}:undefined;
@@ -36,7 +37,7 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   const financialBuilding=source.financial?.buildings.find(b=>b.id===financialInteriorBrand(building)?.id);
   const financialAnchor=financialBuilding&&source.financial?{x:source.financial.x+financialBuilding.x,z:source.financial.z+financialBuilding.z}:undefined;
   const mallAnchor=building==="Atlas Marketplace"&&source.mall?{x:source.mall.cx,z:source.mall.cz}:undefined;
-  const anchor=mallAnchor??anchorAt?.(source)??financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):[...source.retail,...source.kiosks].find(k=>k.name===building));
+  const anchor=mallAnchor??anchorAt?.(source)??financialAnchor??hillsAnchor??airportAnchor??(projectId?source.towers.find(t=>t.projectId===projectId):source.kiosks.find(k=>k.name===building));
   // The mall interior is drawn to its map footprint, so the city around it lines up with the lot.
   const scale=scaleOverride?.(source)??(mallAnchor&&source.mall?span/(source.mall.rx*2):Math.max(4,span/4)),cx=anchor?.x??(park?park.x+park.w/2:0),cz=anchor?.z??(park?park.z+park.d/2:0);
   const scene=useMemo(()=>clearInteriorFootprint(source,cx,cz,(clearSpan/2+2)/scale),[source,cx,cz,clearSpan,scale]);
@@ -50,6 +51,6 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   // The city drops by the ground height plus the lobby slab's depth, which puts every lobby on the ground.
   return <group scale={scale} position={[-cx*scale,-interiorGroundY()*scale-0.35-elevation,-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}
-    <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={[...scene.kiosks,...scene.retail].filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
+    <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={scene.kiosks.filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
   </group>;
 }
