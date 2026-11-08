@@ -193,7 +193,7 @@ def report_markdown(r, d, publish_details=True, in_atlas=False):
     if in_atlas:
         # This page is public; the full report is in Atlas behind Cloudflare Access.
         what = f'{len(r["ideas"])} ideas' + (" and an agent spec" if r["spec"] else "")
-        return "\n".join(lines + [f"{what} are in Atlas: GitHub Profile building, Opportunity Scout, Reports.", ""])
+        return "\n".join(lines + [f"{what} are in Atlas: Profile Tower building, Opportunity Scout, Reports.", ""])
     if not r["ideas"]:
         return "\n".join(lines + ["No ideas this run.", ""])
     lines += ["| # | Idea | How it earns | Customer | First $ | Cost/mo | Rev | Effort | Cost | Risk | Score |",

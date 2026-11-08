@@ -114,6 +114,18 @@ describe("site incidents", () => {
     expect(siteIncidents(BENJAIRE, tls(1.5), NOW)[0]).toMatchObject({ severity: "critical", title: "Certificate expires in 1 day" });
   });
 
+  it("doesn't flag a short-lived certificate that is on its normal renewal schedule", () => {
+    // A 45-day certificate is renewed with about 15 days left, so 12 days left is normal for it.
+    const short = (lifeDays: number, leftDays: number) => {
+      const end = NOW + leftDays * 86_400_000;
+      return site({ tls: ok({ issuer: "Let's Encrypt", notBefore: new Date(end - lifeDays * 86_400_000).toISOString(), notAfter: new Date(end).toISOString(), names: [], current: 1 }) });
+    };
+    expect(siteIncidents(BENJAIRE, short(45, 12), NOW)).toEqual([]);
+    expect(siteIncidents(BENJAIRE, short(45, 5), NOW)[0]).toMatchObject({ kind: "tls-expiring", severity: "warning" });
+    expect(siteIncidents(BENJAIRE, short(45, 1), NOW)[0]).toMatchObject({ severity: "critical" });
+    expect(siteIncidents(BENJAIRE, short(6, 2), NOW)).toEqual([]);
+  });
+
   it("warns a month before the domain registration ends", () => {
     const dom = (days: number) => site({ domain: ok({ registrar: "Cloudflare, Inc.", registeredAt: null, expiresAt: new Date(NOW + days * 86_400_000).toISOString(), updatedAt: null, status: [], nameservers: [], dnssec: null }) });
     expect(siteIncidents(BENJAIRE, dom(45), NOW)).toEqual([]);

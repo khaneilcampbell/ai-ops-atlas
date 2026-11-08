@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import { ExternalLink } from "./bits";
 import { useAtlas } from "../state";
@@ -7,6 +7,9 @@ import { intelApi } from "../intel/api";
 import { AI_STATE_LABEL, RUN_LABEL, isActive, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
 import type { AiAnalysis, CostEstimate, Depth, Facts, Observation, Rating, Report, Severity } from "../intel/types";
+import { alertsListUrl, evidenceLinks, recFixRequest, repoRefTarget, type AlertKind, type RefTarget } from "../intel/links";
+import { RecActions, RefLinks, TrackingNote } from "./IntelLinks";
+import { useRecTracking } from "../intel/useTracking";
 
 const SEV_CLASS: Record<Severity, string> = { critical: "high", high: "high", medium: "medium", low: "low", info: "low" };
 const RATING_CLASS: Record<Rating, string> = { good: "h-good", fair: "h-warn", poor: "h-bad", unknown: "h-unknown" };
@@ -191,7 +194,8 @@ function Verified({ report }: { report: Report }) {
   const [ciLabel, ciClass] = CI_LABEL[f.ci.state];
   const issues = f.issues.state === "assessed" ? `${f.issues.data.open}` : "not assessed";
   const release = f.releases.state === "assessed" ? (f.releases.data[0] ? `${f.releases.data[0].tag} (${formatDate(f.releases.data[0].published_at)})` : "none") : "not assessed";
-  const sec = (s: Facts["security"]["dependabot"]) => (s.state === "assessed" ? `${s.data.open} open` : `not assessed: ${s.reason}`);
+  const sec = (s: Facts["security"]["dependabot"], kind: AlertKind) =>
+    s.state === "assessed" ? <ExternalLink href={alertsListUrl(f.url, kind)}>{s.data.open} open</ExternalLink> : <span className="muted">unknown ({s.reason})</span>;
   return (
     <div className="verified-box">
       <div className="box-label">
@@ -241,8 +245,8 @@ function Verified({ report }: { report: Report }) {
         </dd>
         <dt>Security alerts</dt>
         <dd>
-          Dependabot {sec(f.security.dependabot)}
-          <div className="muted small">Code scanning {sec(f.security.code_scanning)}</div>
+          Dependabot {sec(f.security.dependabot, "dependabot")}
+          <div className="small">Code scanning {sec(f.security.code_scanning, "code_scanning")}</div>
         </dd>
       </dl>
       {report.findings.length > 0 && (
@@ -262,20 +266,9 @@ function Verified({ report }: { report: Report }) {
   );
 }
 
-export function Refs({ refs, grounded }: { refs: string[]; grounded: boolean }) {
-  if (!grounded) return <span className="ref ungrounded">no supporting reference</span>;
-  return (
-    <>
-      {refs.map((r) => (
-        <span key={r} className="ref">
-          {r}
-        </span>
-      ))}
-    </>
-  );
-}
+const UNKNOWN_AI = "Unknown: Claude couldn't tell from the data";
 
-function ObsList({ title, items, note }: { title: string; items: Observation[]; note?: string }) {
+function ObsList({ title, items, note, resolve }: { title: string; items: Observation[]; note?: string; resolve: (ref: string) => RefTarget }) {
   if (!items.length) return null;
   return (
     <div>
@@ -284,7 +277,7 @@ function ObsList({ title, items, note }: { title: string; items: Observation[]; 
       <ul className="obs">
         {items.map((o, i) => (
           <li key={i}>
-            {o.text} <Refs refs={o.evidence} grounded={o.grounded} />
+            {o.text} <RefLinks refs={o.evidence} grounded={o.grounded} resolve={resolve} />
           </li>
         ))}
       </ul>
@@ -292,7 +285,13 @@ function ObsList({ title, items, note }: { title: string; items: Observation[]; 
   );
 }
 
-function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
+export function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
+  const resolve = (ref: string) => repoRefTarget(ref, report);
+  const requests = useMemo(
+    () => ai.recommendations.map((r) => recFixRequest({ title: r.title, rationale: r.rationale, evidence: r.evidence }, report.repo, "Repository Intelligence", evidenceLinks(r.evidence, (ref) => repoRefTarget(ref, report)))),
+    [ai, report],
+  );
+  const tracking = useRecTracking(requests);
   return (
     <div className="ai-box">
       <div className="box-label">
@@ -302,19 +301,15 @@ function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
       <p style={{ margin: 0 }}>{ai.summary}</p>
       <dl className="kv">
         <dt>Purpose</dt>
-        <dd>{ai.purpose || <span className="muted">Unclear from the data</span>}</dd>
+        <dd>{ai.purpose.trim() || <span className="muted">{UNKNOWN_AI}</span>}</dd>
         <dt>Architecture</dt>
-        <dd>{ai.architecture}</dd>
+        <dd>{ai.architecture.trim() || <span className="muted">{UNKNOWN_AI}</span>}</dd>
         <dt>Maturity</dt>
         <dd>
-          <span className="chip">{ai.maturity.replace(/_/g, " ")}</span> {ai.implementation_status}
+          <span className="chip">{ai.maturity.replace(/_/g, " ")}</span> {ai.implementation_status.trim() || (ai.maturity === "unknown" ? <span className="muted">{UNKNOWN_AI}</span> : null)}
         </dd>
-        {ai.agent_integrations.length > 0 && (
-          <>
-            <dt>Agent integrations</dt>
-            <dd>{ai.agent_integrations.join(", ")}</dd>
-          </>
-        )}
+        <dt>Agent integrations</dt>
+        <dd>{ai.agent_integrations.length > 0 ? ai.agent_integrations.join(", ") : <span className="muted">{UNKNOWN_AI}</span>}</dd>
       </dl>
       {ai.health.length > 0 && (
         <div>
@@ -325,7 +320,7 @@ function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
                 <span className="health">
                   <i className={RATING_CLASS[h.rating]} /> <b>{h.area.replace(/_/g, " ")}</b>
                 </span>{" "}
-                {h.rationale} <Refs refs={h.evidence} grounded={h.grounded} />
+                {h.rationale} <RefLinks refs={h.evidence} grounded={h.grounded} resolve={resolve} />
               </li>
             ))}
           </ul>
@@ -334,22 +329,27 @@ function Assessment({ report, ai }: { report: Report; ai: AiAnalysis }) {
       {ai.recommendations.length > 0 && (
         <div>
           <div className="section-title">Recommended next tasks</div>
+          <TrackingNote error={tracking?.error} />
           <ol className="recs">
             {ai.recommendations.map((r, i) => (
               <li key={i}>
-                <span className={`prio p-${r.priority}`}>{r.priority}</span> <b>{r.title}</b>
-                <div className="small">
-                  {r.rationale} <Refs refs={r.evidence} grounded={r.grounded} />
+                <div className="rec-head">
+                  <span className={`prio p-${r.priority}`}>{r.priority}</span>
+                  <b className="grow">{r.title}</b>
                 </div>
+                <div className="small">
+                  {r.rationale} <RefLinks refs={r.evidence} grounded={r.grounded} resolve={resolve} />
+                </div>
+                <RecActions requests={[requests[i]]} tracked={tracking?.byKey} />
               </li>
             ))}
           </ol>
         </div>
       )}
-      <ObsList title="Maintenance issues" items={ai.maintenance_issues} />
-      <ObsList title="Documentation gaps" items={ai.documentation_gaps} />
-      <ObsList title="Technical debt indicators" items={ai.technical_debt} />
-      <ObsList title="Security observations" items={ai.security_observations} note="Hypotheses for you to check. These are not confirmed vulnerabilities; confirmed alerts appear under Verified." />
+      <ObsList title="Maintenance issues" items={ai.maintenance_issues} resolve={resolve} />
+      <ObsList title="Documentation gaps" items={ai.documentation_gaps} resolve={resolve} />
+      <ObsList title="Technical debt indicators" items={ai.technical_debt} resolve={resolve} />
+      <ObsList title="Security observations" items={ai.security_observations} note="Hypotheses for you to check. These are not confirmed vulnerabilities; confirmed alerts appear under Verified." resolve={resolve} />
       {ai.data_gaps.length > 0 && (
         <div className="muted small">
           <b>Couldn't assess:</b> {ai.data_gaps.join("; ")}

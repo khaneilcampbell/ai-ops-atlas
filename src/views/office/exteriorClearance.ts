@@ -1,4 +1,10 @@
-import type {Scene3D} from "../map3d/scene";
+import {TERRACE_H,type Scene3D} from "../map3d/scene";
+/**
+ * Map height that an interior's lobby floor stands on: the map's one ground plane (land tops out at LAND_TOP,
+ * a hair under TERRACE_H). The same for every building, Financial District included, so no lobby floats above
+ * or sinks below the city drawn outside it.
+ */
+export function interiorGroundY():number{return TERRACE_H;}
 /** Exterior pedestrians and landscaping must never occupy the cutaway's room footprint. */
 export function clearInteriorFootprint(scene:Scene3D,x:number,z:number,r:number):Scene3D {
   const outside=(p:{x:number;z:number},margin=0)=>Math.abs(p.x-x)>r+margin||Math.abs(p.z-z)>r+margin;

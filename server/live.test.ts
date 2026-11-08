@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { agentRun, compactGithub, readEvents, readFeed, receiveAgents, receiveAtlas, receiveGithub, validSignature, type D1, type D1Statement } from "./live";
+import { agentRun, bearerOk, cleanKey, compactGithub, readEvents, readFeed, receiveAgents, receiveAtlas, receiveGithub, validSignature, type D1, type D1Statement } from "./live";
 
 const SECRET = "w".repeat(64);
 const SYNC = "s".repeat(43);
@@ -160,5 +160,30 @@ describe('production reporting', () => {
     expect(d.rows).toHaveLength(1);
     expect(d.rows[0].body).not.toContain('secret');
     expect(d.rows[0].repo).toBe('owner/commerce');
+  });
+});
+
+describe("pasted keys", () => {
+  const KEY = "a".repeat(32) + "b".repeat(32);
+  const req = (auth: string) => new Request("https://x/api/hooks/reports", { method: "POST", headers: { authorization: auth } });
+
+  it("matches a key saved with a trailing line break, quotes or an extra Bearer", () => {
+    expect(bearerOk(req(`Bearer ${KEY}`), `${KEY}\n`)).toBe(true);
+    expect(bearerOk(req(`Bearer ${KEY}`), ` "${KEY}" `)).toBe(true);
+    expect(bearerOk(req(`Bearer Bearer ${KEY}`), KEY)).toBe(true);
+    expect(bearerOk(req(`Bearer '${KEY}'`), `Bearer ${KEY}`)).toBe(true);
+  });
+
+  it("still refuses a wrong, missing or short key", () => {
+    expect(bearerOk(req(`Bearer ${KEY}x`), KEY)).toBe(false);
+    expect(bearerOk(req(KEY), KEY)).toBe(false);
+    expect(bearerOk(req("Bearer "), KEY)).toBe(false);
+    expect(bearerOk(req("Bearer short"), "short")).toBe(false);
+    expect(bearerOk(req(`Bearer ${KEY}`), undefined)).toBe(false);
+  });
+
+  it("never changes the key itself", () => {
+    expect(cleanKey(`  "${KEY}"\n`)).toBe(KEY);
+    expect(cleanKey("ab cd")).toBe("ab cd");
   });
 });
