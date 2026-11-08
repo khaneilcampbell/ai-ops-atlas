@@ -1,3 +1,4 @@
+import {projectOfficeAgents} from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -6,27 +7,24 @@ import { useIntel } from "../../intel/state";
 import { repoData, verifiedState } from "../../lib/derive";
 import { useReducedMotion } from "../../lib/motion";
 import { formatDate, relative } from "../../lib/time";
-import { buildRegistry, type RegistryEntry } from "../../registry/registry";
 import type { ExecutionRecord } from "../../registry/types";
 import { useAtlas } from "../../state";
 import { CATEGORY_LABEL } from "../../registry/types";
 import type { LightMode } from "../map3d/living";
 import { AutonomyMeter, ListField, NA, OperationalPill } from "../agents/parts";
+import { AgentReportSummary } from "../../components/AgentReports";
 import { ApprovalQueue } from "../../components/ApprovalQueue";
+import { isReportAgent } from "../../reports/model";
 import { useProposals } from "../../approvals/state";
 import type { Proposal } from "../../approvals/proposals";
-import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
+import { ACTION_AGENTS, accentFor, planOffice, RUNTIME_LABEL, toolIcon } from "./model";
 import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
+import { officeRows, type OfficeRow } from "./officeRows";
 import { leaveBuilding, useOffice } from "./store";
-import { isAiAgent } from "../../catalog/roles";
 import { STATE_COLOR } from "./textures";
 import "../../styles/office.css";
 
-interface Row {
-  entry: RegistryEntry;
-  runtime: Runtime;
-  history: ExecutionRecord[];
-}
+type Row = OfficeRow;
 
 /** The office for the building that was entered, over the map, with its controls and inspector. */
 export default function OfficeLayer({ light }: { light: LightMode }) {
@@ -36,24 +34,18 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const actions = useActions();
   const pending = useProposals();
   const reduced = useReducedMotion();
+  const [floor,setFloor]=useState(-1);
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
-  // Only AI agents have desks; automations have their own houses outside.
-  const agents = useMemo(() => catalog.agents.filter((a) => a.projectId === projectId && isAiAgent(a)), [catalog, projectId]);
+  // Every registered worker belongs at a desk inside its project building.
+  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
 
-  const rows = useMemo(() => {
-    const entries = buildRegistry({ projects: catalog.projects, agents }, repos, intel);
-    const data = { available: actions.available, status: actions.status, audit: actions.audit };
-    return new Map<string, Row>(
-      entries.map((entry) => {
-        const a = agents.find((x) => x.id === entry.profile.id)!;
-        const action = ACTION_AGENTS[a.id];
-        return [a.id, { entry, runtime: runtimeFor(a, entry.telemetry, data, pending.filter((p) => p.agentId === a.id).length), history: action ? actionExecutions(action, actions.audit) : entry.telemetry.executions }];
-      }),
-    );
-  }, [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending]);
+  const rows = useMemo(
+    () => officeRows(catalog.projects, agents, repos, intel, { available: actions.available, status: actions.status, audit: actions.audit }, pending),
+    [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending],
+  );
 
   const desks = useMemo<DeskData[]>(
     () =>
@@ -63,6 +55,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const b = r.runtime.basis;
         return {
           ws,
+          floor: a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
@@ -90,6 +83,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   }, [picked, exit]);
 
   if (!project || !plan) return null;
+  const visibleDesks=desks.filter(d=>floor===-1||(d.floor??4)===floor);
+  const topFloor=visibleDesks.length>0;
   const row = picked ? rows.get(picked) : undefined;
   const states = [...new Set(desks.map((d) => d.runtime.state))];
 
@@ -98,6 +93,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
       <div className="office-stage">
         <OfficeScene
           plan={plan}
+          floor={floor}
           desks={desks}
           wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
           light={light}
@@ -106,16 +102,18 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           onSelect={setPicked}
           api={api}
         />
+        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":n===3&&projectId==="ai-ops-atlas"?"Floor 3 · Production":n===4?"Floor 4 · Agents":`Floor ${n}`}</button>)}</nav>
         <div className="office-head">
           <button className="office-back" onClick={exit}>
-            <span aria-hidden>‹</span> Back to map
+            <span aria-hidden>‹</span> Exit building
           </button>
           <div>
             <div className="eyebrow">Headquarters · {project.repository}</div>
             <h2>{project.name}</h2>
+            <div className="muted small">{`${floor===-1?"All floors · Lobby, hallways & elevator":floor===0?"Lobby":`Floor ${floor}`} · ${floor===4||floor===-1?"Agents by assigned floor":floor===3&&projectId==="ai-ops-atlas"?"Atlas system production":"Shared spaces"}`}</div>
           </div>
           {pending.some((p) => agents.some((a) => a.id === p.agentId)) && (
-            <button className="office-awaiting" onClick={() => setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId)}>
+            <button className="office-awaiting" onClick={() => {setFloor(4);setPicked(pending.find((p) => agents.some((a) => a.id === p.agentId))!.agentId);}}>
               <i /> {pending.filter((p) => agents.some((a) => a.id === p.agentId)).length} awaiting approval
             </button>
           )}
@@ -123,20 +121,23 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length === 0 && (
           <div className="office-empty">
-            <h3>No AI agents work here yet</h3>
-            <p>This project's manifest registers no AI agents, so the office has no desks. Its automations have houses outside.</p>
+            <h3>No workers are registered here yet</h3>
+            <p>This project has no registered agents or automations, so the office has no desks.</p>
           </div>
         )}
 
-        {desks.length > 0 && (
-          <div className="office-roster" aria-label="Select an agent">
-            {desks.map((d) => (
+        {desks.length > 0 && topFloor && (
+          <details className="office-roster" aria-label="Select an agent">
+            <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
+            <div className="office-roster-list">
+            {visibleDesks.map((d) => (
               <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
                 <i style={{ background: STATE_COLOR[d.runtime.state] }} />
                 {d.name}
               </button>
             ))}
-          </div>
+            </div>
+          </details>
         )}
 
         <div className="office-legend" aria-label="Workstation states">
@@ -220,6 +221,12 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
           <p style={{ margin: 0, fontSize: 13.5 }}>{runtime.reason}</p>
           <div className="muted small">Source: {runtime.source ?? <NA kind="connected" />}</div>
         </section>
+        {isReportAgent(p.id) && (
+          <section>
+            <div className="section-title">Latest report</div>
+            <AgentReportSummary agent={p.id} onOpen={onProfile} />
+          </section>
+        )}
         {ACTION_AGENTS[p.id] && (
           <section>
             <div className="section-title">Awaiting your approval</div>

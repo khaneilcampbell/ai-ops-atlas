@@ -1,3 +1,4 @@
+import { projectRepositories } from "../catalog/projects";
 import type { Catalog } from "../catalog/types";
 import type { RepoState, WorkflowRun } from "../github/types";
 import { repoData } from "./derive";
@@ -45,7 +46,7 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
   const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
-  const names = [...new Set(catalog.projects.map((p) => p.repository).concat(catalog.agents.map((a) => a.repository), uncataloged))];
+  const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   const label = (repo: string) => projectByRepo.get(repo)?.name ?? repo;
 
   // Agent-attributed runs first, so a run that is also in the repository list keeps the agent.

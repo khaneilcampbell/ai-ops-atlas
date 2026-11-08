@@ -4,8 +4,10 @@ import App from "./App";
 import { AtlasProvider } from "./state";
 import { IntelProvider } from "./intel/state";
 import { ActionsProvider } from "./actions/state";
+import "./styles/tokens.css";
 import "./styles/app.css";
 import "./styles/mobile.css";
+import "./styles/polished.css";
 import { isTauri } from "./lib/env";
 import { VaultGate } from "./components/VaultGate";
 

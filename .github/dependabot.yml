@@ -11,15 +11,22 @@ updates:
     directory: /src-tauri
     schedule:
       interval: weekly
-    ignore:
-      # Tauri's Linux webview (gtk/webkit2gtk 0.18) pins glib to 0.18, so the 0.20 fix
-      # cannot resolve and every update attempt fails. glib is not built into the macOS
-      # app. Remove this once Tauri moves to gtk-rs 0.20 or later.
-      - dependency-name: glib
     groups:
       cargo-minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /apps/benjaire-dashboard
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /apps/service-desk
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /apps/service-desk
     schedule:
       interval: weekly

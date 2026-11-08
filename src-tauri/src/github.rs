@@ -22,18 +22,18 @@ impl Client {
 #[derive(Serialize)]
 pub struct RateLimit {
     limit: u32,
-    remaining: u32,
+    pub(crate) remaining: u32,
     reset: u64,
 }
 
 #[derive(Serialize)]
 pub struct GithubResponse {
-    status: u16,
-    body: serde_json::Value,
+    pub(crate) status: u16,
+    pub(crate) body: serde_json::Value,
     etag: Option<String>,
     /// Whether a token was attached; GitHub only waives 304s for authenticated requests.
     authed: bool,
-    rate: Option<RateLimit>,
+    pub(crate) rate: Option<RateLimit>,
 }
 
 fn rate_limit(headers: &reqwest::header::HeaderMap) -> Option<RateLimit> {
@@ -70,7 +70,11 @@ pub fn allowed_path(path: &str) -> bool {
 
 /// One read-only GET. Every caller (the web view's proxy and the intelligence agent) goes
 /// through here, so the path allowlist and the GET-only rule apply to both.
-async fn get(client: &Client, path: &str, etag: Option<String>) -> Result<GithubResponse, String> {
+pub(crate) async fn get(
+    client: &Client,
+    path: &str,
+    etag: Option<String>,
+) -> Result<GithubResponse, String> {
     if !allowed_path(path) {
         return Err("Blocked: only read-only repository requests are allowed".into());
     }

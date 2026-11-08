@@ -11,7 +11,11 @@ describe("refusal", () => {
       "/repos/khaneilcampbell/ai-ops-atlas/commits",
       "/repos/khaneilcampbell/ai-ops-atlas/pulls",
       "/repos/khaneilcampbell/ai-ops-atlas/actions/runs",
+      "/repos/khaneilcampbell/ai-ops-atlas/actions/workflows",
       "/repos/khaneilcampbell/ai-ops-atlas/actions/workflows/ci.yml/runs",
+      "/repos/khaneilcampbell/benjaire.com/commits/0123456789abcdef0123456789abcdef01234567/check-runs",
+      "/repos/khaneilcampbell/khaneilcampbell.com/deployments",
+      "/repos/khaneilcampbell/khaneilcampbell.com/deployments/123/statuses",
       "/users/khaneilcampbell/repos",
       "/user/repos",
     ])
@@ -23,7 +27,11 @@ describe("refusal", () => {
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/contents/secrets.txt", env)).toBe("Path not allowed.");
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/../../user", env)).toBe("Path not allowed.");
     expect(refusal("/user", env)).toBe("Path not allowed.");
+    expect(refusal("/repos/khaneilcampbell/benjaire.com/commits/main/check-runs", env)).toBe("Path not allowed.");
+    expect(refusal("/repos/khaneilcampbell/benjaire.com/deployments/abc/statuses", env)).toBe("Path not allowed.");
     expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/pulls/7/merge", env)).toBe("Path not allowed.");
+    expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/actions/workflows/ci.yml/dispatches", env)).toBe("Path not allowed.");
+    expect(refusal("/repos/khaneilcampbell/ai-ops-atlas/actions/workflows/ci.yml/disable", env)).toBe("Path not allowed.");
     expect(refusal("/user/repos", {})).toBe("No token configured.");
   });
 });

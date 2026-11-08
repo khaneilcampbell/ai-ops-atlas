@@ -1,6 +1,6 @@
 # Security
 
-AI Ops Atlas is a read-only desktop app with two opt-in exceptions, both off by default, only on repositories you enable, after a native confirmation each time, and written to an audit log ([docs/actions.md](docs/actions.md)): it can re-run the failed jobs of a failed GitHub Actions run, with a separate fine-grained token (Actions: write), and it can squash-merge a pull request GitHub reports ready (mergeable, clean, every required check green, no changes requested, not a draft), with one fine-grained token per repository (Pull requests and Contents: write) and a Touch ID check per merge. There is no override for any check. The website and iPhone build cannot write. It never otherwise changes repositories or starts external agents. Its built-in Repository Intelligence Agent only reads GitHub and sends a summary of the selected repository to Anthropic.
+Atlas is a read-only desktop app with two opt-in exceptions, both off by default, only on repositories you enable, after a native confirmation each time, and written to an audit log ([docs/actions.md](docs/actions.md)): it can re-run the failed jobs of a failed GitHub Actions run, with a separate fine-grained token (Actions: write), and it can squash-merge a pull request GitHub reports ready (mergeable, clean, every required check green, no changes requested, not a draft), with one fine-grained token per repository (Pull requests and Contents: write) and a Touch ID check per merge. There is no override for any check. The website and iPhone build cannot write. It never otherwise changes repositories or starts external agents. Its built-in Repository Intelligence Agent only reads GitHub and sends a summary of the selected repository to Anthropic.
 
 ## How secrets are handled
 
@@ -14,3 +14,10 @@ AI Ops Atlas is a read-only desktop app with two opt-in exceptions, both off by 
 ## Reporting a problem
 
 Please report vulnerabilities privately through [GitHub's private vulnerability reporting](https://github.com/khaneilcampbell/ai-ops-atlas/security/advisories/new) rather than in a public issue.
+
+## Signing and operational hardening
+
+Desktop builds run without signing keys; a separate main-only signing job uses
+the macos-signing environment, and only an artifact publishing job has write
+permissions. See [CI signing](docs/ci-signing-security.md) and the
+[security rollout guide](ops/security/README.md) for configuration and VPS isolation.

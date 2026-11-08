@@ -1,0 +1,6 @@
+/** Benjaire Pavilion identity from benjaire.com main, reviewed 2026-10-31.
+ * Colors: site/src/styles/global.css; original vector paths: site/public/brand.
+ * Local canvas paths keep signs offline and avoid runtime image/font requests. */
+export const BENJAIRE_IDENTITY={pearl:'#f3f3f1',silver:'#8e939a',charcoal:'#1f2124',black:'#121315',glass:'#b7c9cd',website:'https://benjaire.com',designSource:'https://github.com/khaneilcampbell/benjaire.com/blob/main/site/src/styles/global.css'} as const;
+export const BENJAIRE_MONOGRAM="M3 3\nH405\nC478 3 518 45 518 122\nC518 178 510 224 490 258\nC548 286 580 335 580 410\nV462\nC580 556 540 605 482 605\nH88\nV265\nL168 335\nV530\nH432\nC474 530 495 508 495 466\nV405\nC495 355 470 315 430 315\nH323\nV450\nH243\nV235\nH378\nC415 235 438 212 438 175\nV140\nC438 105 418 80 395 80\nH88\nV245\nL8 180\nV3\nZ";
+export const BENJAIRE_WORDMARK="M9 9\nV87\nH67\nQ87 87 87 67\nV67\nQ87 48 67 48\nH9\nM9 9\nH65\nQ83 9 83 27\nV30\nQ83 48 65 48 M239 9\nH161\nV87\nH239\nM161 48\nH231 M313 87\nV9\nL391 87\nV9 M543 9\nV67\nQ543 87 523 87\nH485\nQ465 87 465 67\nV61 M617 87\nL656 9\nL695 87 M769 9\nV87 M843 87\nV9\nH901\nQ921 9 921 29\nV31\nQ921 51 901 51\nH843\nM891 51\nL921 87 M1073 9\nH995\nV87\nH1073\nM995 48\nH1065";

@@ -1,6 +1,6 @@
 # Runbooks: Project Intelligence Hub
 
-Repository: [khaneilcampbell/project-intelligence-hub](https://github.com/khaneilcampbell/project-intelligence-hub).
+Repository: [Atlas Intelligence Hub](https://github.com/khaneilcampbell/ai-ops-atlas/tree/main/docs/intelligence-hub). Run commands below from `docs/intelligence-hub`.
 
 ## Docs Builder
 

@@ -1,12 +1,25 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
-import type { ThreeEvent } from "@react-three/fiber";
+import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
+import {distanceToRoad} from "./highway";
+import {TRANSPORT} from "./transportScale";
+import { doorOpenness, entranceOccupied } from "./doorTraffic";
+import { useReducedMotion } from "../../lib/motion";
+import { TOOL_OFFICE_HEIGHT, toolBrand, toolSignTexture } from "./toolBrand";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { HQ, hqTop } from "./atlasHqPlan";
+import { SIDEWALK } from "./streetPavement";
+import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
+import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
+import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
+import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
+import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
+import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -61,6 +74,9 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
       args={[geometry, material, items.length]}
       castShadow={shadow}
       receiveShadow
+      // Each box's place lives in the instance matrices; the mesh itself never moves, so skip
+      // recomposing its own matrix every frame (a parent group can still move it).
+      matrixAutoUpdate={false}
       raycast={pick ? undefined : noRaycast}
       onPointerOver={
         pick
@@ -127,6 +143,8 @@ export function useGeometries() {
       dish: lifted(new THREE.CylinderGeometry(0.5, 0.14, 1, 14)),
       rock: new THREE.DodecahedronGeometry(1, 0),
       ball: new THREE.SphereGeometry(1, 10, 8),
+      // Tiny spheres (heads, lamp globes) a few pixels across: same look, fewer than 60% of the triangles.
+      bead: new THREE.SphereGeometry(1, 8, 6),
       plane: new THREE.PlaneGeometry(1, 1),
     }),
     [],
@@ -189,6 +207,11 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 // ── Road bridges ────────────────────────────────────
 
 const RAIL = "#2f4a3a";
+/** District street paint, shared by the roads and the bridge decks so a street reads as one road. */
+const STREET_ASPHALT = "#424b50";
+export const STREET_LINE = "#e1ce8e";
+const STREET_DASH = 0.3;
+const RISE_OF = (len: number) => deckRise(len, len / 2);
 const DECK_T = 0.07;
 
 /**
@@ -196,7 +219,7 @@ const DECK_T = 0.07;
  * green, pairs of pillars standing in the meadow or the brook below, and a lantern at each corner
  * that lights with the rest of the map at night.
  */
-function bridgeParts(br: CarBridge, brooks: Rect[]) {
+export function bridgeParts(br: CarBridge, brooks: Rect[], width: number = DECK_W, groundLevel = 0, raised = true) {
   const len = dist(br.a, br.b);
   const r = rampOf(len);
   const x = br.axis === "x";
@@ -207,13 +230,13 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const pz = br.a[1] + (x ? v : s);
     return [px, y, pz];
   };
-  const top = (s: number) => TERRACE_H + 0.03 + deckRise(len, s);
+  const top = (s: number) => TERRACE_H + (raised ? 0.03 + deckRise(len, s) : 0.055);
   const deck: Inst[] = [];
   const rails: Inst[] = [];
   const piers: Inst[] = [];
   const lamps: Inst[] = [];
   const pools: Inst[] = [];
-  const edge = DECK_W / 2 - 0.016;
+  const edge = width / 2 - 0.016;
   // Ramps and the level span, each a tilted slab, with a rail along each side.
   const spans: [number, number][] = [
     [-0.04, r],
@@ -228,7 +251,9 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const l = Math.hypot(run, y1 - y0);
     const m = (s0 + s1) / 2;
     const ym = (y0 + y1) / 2;
-    deck.push({ p: at(m, 0, ym - DECK_T), s: [DECK_W, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
+    deck.push({ p: at(m, 0, ym - DECK_T), s: [width, DECK_T + 0.004, l], r: yaw, rx: tilt, c: "#ddd2b8" });
+    // The street carries on over the bridge: the same asphalt as the road that leads onto it.
+    deck.push({ p: at(m, 0, ym), s: [width - 0.07, 0.006, l], r: yaw, rx: tilt, c: STREET_ASPHALT });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym + 0.085), s: [0.024, 0.016, l], r: yaw, rx: tilt, c: RAIL });
     for (const v of [-edge, edge]) rails.push({ p: at(m, v, ym), s: [0.03, 0.03, l], r: yaw, rx: tilt, c: "#cfc4ab" });
   }
@@ -238,17 +263,20 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
     const s = (len * i) / posts;
     for (const v of [-edge, edge]) rails.push({ p: at(s, v, top(s)), s: [0.016, 0.09, 0.016], c: RAIL });
   }
-  // A dashed center line on the level span.
-  for (let s = r + 0.06; s < len - r - 0.06; s += 0.17) deck.push({ p: at(s + 0.04, 0, top(s)), s: [0.018, 0.003, 0.08], r: yaw, c: "#c9a35a" });
+  // The street's dashed center line, end to end, ramps included, at the street's spacing.
+  for (let s = 0.16; s < len - 0.1; s += STREET_DASH) {
+    const ramp = s < r ? 1 : s > len - r ? -1 : 0;
+    deck.push({ p: at(s, 0, top(s) + 0.0065), s: [0.018, 0.004, 0.12], r: yaw, rx: -ramp * Math.atan2(RISE_OF(len), r), c: STREET_LINE });
+  }
   // Pillars, in pairs, down to the meadow or into the brook.
   const n = Math.max(2, Math.round(len / 0.75));
   for (let i = 1; i <= n; i++) {
     const s = (len * i) / (n + 1);
     const [px, , pz] = at(s, 0, 0);
-    const ground = brooks.some((b) => px >= b.x && px <= b.x + b.w && pz >= b.z && pz <= b.z + b.d) ? -0.03 : 0;
+    const ground = brooks.some((b) => px >= b.x && px <= b.x + b.w && pz >= b.z && pz <= b.z + b.d) ? -0.03 : groundLevel;
     const under = top(s) - DECK_T;
     for (const v of [-0.13, 0.13]) piers.push({ p: at(s, v, ground), s: [0.1, under - ground, 0.1] });
-    rails.push({ p: at(s, 0, under - 0.05), s: [DECK_W + 0.02, 0.05, 0.1], r: yaw, c: "#cfc4ab" });
+    rails.push({ p: at(s, 0, under - 0.05), s: [width + 0.02, 0.05, 0.1], r: yaw, c: "#cfc4ab" });
   }
   // Lanterns at the four corners, with a pool of light on the deck at night.
   for (const s of [0.06, len - 0.06])
@@ -263,10 +291,84 @@ function bridgeParts(br: CarBridge, brooks: Rect[]) {
 export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     const all = scene.carBridges.map((br) => bridgeParts(br, scene.brooks));
+    const footDeck: Inst[] = [], footRails: Inst[] = [], footPiers: Inst[] = [];
+    const streets: Inst[] = [], sidewalks: Inst[] = [], markings: Inst[] = [];
+    const street = (a: [number,number], b: [number,number], width: number, curb: boolean) => {
+      const dx=b[0]-a[0], dz=b[1]-a[1], length=Math.hypot(dx,dz);
+      if(length<0.01) return;
+      const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
+      streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
+      if(curb) for(const side of [-1,1]) {
+        const o=width/2+SIDEWALK.width/2;sidewalks.push({p:[x+(alongX?0:side*o),SIDEWALK.y,z+(alongX?side*o:0)],s:alongX?[length,SIDEWALK.h,SIDEWALK.width]:[SIDEWALK.width,SIDEWALK.h,length],c:SIDEWALK.color});
+      }
+      for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
+    };
+    // Bridge roads share their driveways and through streets, so union the collinear pieces and
+    // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
+    const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
+    for(const t of scene.towers) {
+      const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
+      const ring=plaza&&towerRing(t,plaza.w);
+      if(!ring) continue;
+      // Draw only the plaza streets that connect actual bridge exits; no decorative dead ends.
+      const exits=scene.carBridges.flatMap(br=>{const end=br.ends.indexOf(t.projectId);return end<0?[]:[br.roads[end][0]];});
+      const drawn=new Set<string>();
+      for(let a=0;a<exits.length;a++) for(let b=a+1;b<exits.length;b++) {
+        const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
+        for(let i=1;i<path.length;i++) {
+          const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
+          if(drawn.has(key))continue;drawn.add(key);district.push([path[i-1],path[i]]);
+        }
+      }
+    }
+    const spans=connectionSpans(district);
+    for(const sp of spans) street(sp.a,sp.b,ROAD_W,true);
+    const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
+    const squares=new Set<string>();
+    spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});
+
+    for (const w of scene.walks.filter(w => w.bridge)) {
+      const alongX = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
+      const length = Math.hypot(w.x1 - w.x0, w.z1 - w.z0), y = w.y ?? TERRACE_H;
+      const x = (w.x0 + w.x1) / 2, z = (w.z0 + w.z1) / 2;
+      footDeck.push({ p: [x, y - 0.05, z], s: alongX ? [length, 0.08, TRANSPORT.walkWidth] : [TRANSPORT.walkWidth, 0.08, length], c: "#b68c60" });
+      for(const end of [[w.x0,w.z0],[w.x1,w.z1]]) footDeck.push({p:[end[0],y-0.01,end[1]],s:alongX?[0.24,0.04,0.5]:[0.5,0.04,0.24],c:"#d4cfb9"});
+      for (const side of [-1, 1]) {
+        footRails.push({ p: [x + (alongX ? 0 : side * 0.24), y + 0.22, z + (alongX ? side * 0.24 : 0)], s: alongX ? [length, 0.035, 0.035] : [0.035, 0.035, length], c: "#76b5ae" });
+        for (let d = 0; d <= length; d += 0.25) {
+          const point=bridgePoint([w.x0,w.z0],[w.x1,w.z1],d,side*.24);
+          footRails.push({ p: [point[0], y, point[1]], s: [0.025, 0.24, 0.025], c: "#335b58" });
+        }
+      }
+      // Paired piles and crossbeams support the span rather than leaving a floating walkway.
+      const supports=Math.max(1,Math.ceil(length/0.8));
+      for(let i=0;i<=supports;i++) {
+        const t=(0.08+(length-0.16)*i/supports)/length;
+        const px=w.x0+(w.x1-w.x0)*t,pz=w.z0+(w.z1-w.z0)*t;
+        for(const side of [-1,1]) footPiers.push({p:[px+(alongX?0:side*0.18),WATER_Y-0.05,pz+(alongX?side*0.18:0)],s:[0.07,y-WATER_Y-0.01,0.07]});
+        footDeck.push({p:[px,y-0.13,pz],s:alongX?[0.09,0.08,0.5]:[0.5,0.08,0.09],c:"#675440"});
+      }
+      // Visible timber planks distinguish the promenade from the stone vehicle deck.
+      for (let d = 0.04; d < length; d += 0.13) {const point=bridgePoint([w.x0,w.z0],[w.x1,w.z1],d);footDeck.push({ p: [point[0], y, point[1]], s: alongX ? [0.018, 0.008, 0.46] : [0.46, 0.008, 0.018], c: "#775e46" });}
+    }
+    // Trim every sidewalk against the complete street network, including intersecting roads.
+    // Independent curb strips otherwise project across junctions and cover the asphalt.
+    const clearOfStreets = (item: Inst): Inst[] => {
+      let rects=[{x:item.p[0]-item.s[0]/2,z:item.p[2]-item.s[2]/2,w:item.s[0],d:item.s[2]}];
+      for(const road of streets) {
+        const rx=road.p[0]-road.s[0]/2,rz=road.p[2]-road.s[2]/2,rw=road.s[0],rd=road.s[2];
+        rects=rects.flatMap(r=>{
+          const x0=Math.max(r.x,rx),x1=Math.min(r.x+r.w,rx+rw),z0=Math.max(r.z,rz),z1=Math.min(r.z+r.d,rz+rd);
+          if(x1-x0<1e-6||z1-z0<1e-6)return [r];
+          return [{x:r.x,z:r.z,w:x0-r.x,d:r.d},{x:x1,z:r.z,w:r.x+r.w-x1,d:r.d},{x:x0,z:r.z,w:x1-x0,d:z0-r.z},{x:x0,z:z1,w:x1-x0,d:r.z+r.d-z1}].filter(p=>p.w>0.005&&p.d>0.005);
+        });
+      }
+      return rects.map(r=>({...item,p:[r.x+r.w/2,item.p[1],r.z+r.d/2],s:[r.w,item.s[1],r.d]}));
+    };
     return {
-      deck: all.flatMap((b) => b.deck),
-      rails: all.flatMap((b) => b.rails),
-      piers: all.flatMap((b) => b.piers),
+      deck: [...all.flatMap((b) => b.deck), ...streets, ...sidewalks.flatMap(clearOfStreets), ...markings, ...footDeck.flatMap(p=>p.c==="#d4cfb9"?clearOfStreets(p):[p])],
+      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails],scene.freight?.localJunctions??[],.95),
+      piers: [...all.flatMap((b) => b.piers), ...footPiers],
       lamps: all.flatMap((b) => b.lamps),
       pools: all.flatMap((b) => b.pools),
     };
@@ -276,11 +378,14 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.deck} geometry={g.box} material={m.plain} />
       <Instanced items={items.rails} geometry={g.box} material={m.plain} />
       <Instanced items={items.piers} geometry={g.cyl} material={m.step} />
-      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
+      <Instanced items={items.lamps} geometry={g.bead} material={m.lamp} shadow={false} />
       <Instanced items={items.pools} geometry={g.cyl} material={m.pool} shadow={false} />
     </group>
   );
 }
+
+// The sea must extend beyond the camera's far range, so zoom/orbit never exposes its hard edge.
+const OCEAN_SPAN = 2000;
 
 // ── Terrain ─────────────────────────────────────────
 
@@ -288,24 +393,25 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
   const items = useMemo(() => {
     const top = TERRACE_H;
     return {
-      land: scene.land.map((r) => slab(r, LAND_BOTTOM, 0)),
+      land: scene.land.map((r) => slab(r, LAND_BOTTOM, LAND_TOP)),
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
+      neighborhood: [...(scene.neighborhoodLand??[]),...(scene.raisedLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
-      steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
-      brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
-      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, 0, 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, 0, 0.035)]),
+      steps: scene.steps.map((s) => slab(s, LAND_TOP, Math.max(LAND_TOP, s.y) + 0.01)),
+      brooks: scene.brooks.map((b) => slab(b, LAND_TOP - 0.03, LAND_TOP + 0.016)),
+      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035)]),
       ponds: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.03, p.z], s: [p.r * 2, 0.058, p.r * 2] }) as Inst),
       pondRims: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.02, p.z], s: [p.r * 2 + 0.16, 0.035, p.r * 2 + 0.16] }) as Inst),
       bridges: scene.bridges.flatMap((b) => [
-        slab(b, 0.05, 0.13),
-        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
-        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
+        slab(b, LAND_TOP + 0.05, LAND_TOP + 0.13),
+        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
+        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
       ]),
       falls: scene.falls.map((f) => {
         const x = f.axis === "x";
-        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, -WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
+        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02 + LAND_TOP) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, LAND_TOP - WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
       }),
       splash: scene.falls.flatMap((f) =>
         [0, 1, 2, 3, 4].map((i) => {
@@ -328,12 +434,13 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
   return (
     <group>
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
-        <planeGeometry args={[400, 400]} />
+        <planeGeometry args={[OCEAN_SPAN, OCEAN_SPAN]} />
       </mesh>
       <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
       <Instanced items={items.terraces} geometry={g.box} material={m.terrace} pick={onTerrace} />
+      <Instanced items={items.neighborhood} geometry={g.box} material={m.terrace} />
       <Instanced items={items.paving} geometry={g.box} material={m.stone} shadow={false} />
       <Instanced items={items.steps} geometry={g.box} material={m.step} />
       <Instanced items={items.brooks} geometry={g.box} material={m.brook} shadow={false} />
@@ -358,9 +465,11 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     const trunks: Inst[] = [];
     const blobs: Inst[] = [];
+    const puffs: Inst[] = [];
     const cones: Inst[] = [];
     scene.trees.forEach((t, i) => {
       const s = t.s;
+      if (t.kind === "palm") return;
       if (t.kind === "cone") {
         trunks.push({ p: [t.x, t.y, t.z], s: [0.07, s * 0.6, 0.07], c: "#6b5038" });
         cones.push({ p: [t.x, t.y + s * 0.4, t.z], s: [s * 1.8, s * 2.2, s * 1.8], c: "#3f7342" });
@@ -373,7 +482,8 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       blobs.push({ p: [t.x, t.y + s * 1.9, t.z], s: [s, s * 0.95, s], c: col(0) });
       blobs.push({ p: [t.x - s * 0.45, t.y + s * 1.55, t.z + s * 0.3], s: [s * 0.72, s * 0.66, s * 0.72], c: col(1) });
       blobs.push({ p: [t.x + s * 0.4, t.y + s * 1.6, t.z - s * 0.25], s: [s * 0.7, s * 0.66, s * 0.7], c: col(2) });
-      blobs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
+      // The small top puff's shadow falls inside the main canopy's, so it skips the shadow pass.
+      puffs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
     });
     const bushes: Inst[] = scene.bushes.map((b, i) => ({ p: [b.x, b.y + b.s * 0.5, b.z], s: [b.s * 1.4, b.s, b.s * 1.4], c: LEAVES[i % 3] }));
     const flowers: Inst[] = scene.bushes
@@ -384,14 +494,15 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, blobs, cones, bushes, flowers, rocks, bollards, caps, pools };
+    return { trunks, blobs, puffs, cones, bushes, flowers, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
       <Instanced items={items.trunks} geometry={g.trunk} material={m.plain} />
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
-      <Instanced items={items.bushes} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.bushes} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
@@ -404,6 +515,8 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
 // ── Buildings ───────────────────────────────────────
 
 export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pick: PickHandlerSet }) {
+  const automationSign = useMemo(() => signMaterial(signTexture({ symbol: "automation", style: "tech", accent: "#a5afa5" }, "Automation")), []);
+  useEffect(() => () => automationSign.dispose(), [automationSign]);
   const items = useMemo(() => {
     const y0 = TERRACE_H + 0.03;
     const gable = houses.filter((h) => !h.hip);
@@ -432,58 +545,124 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
       <Instanced items={items.ends} geometry={g.gableEnds} material={m.plain} />
       <Instanced items={items.gable} geometry={g.gable} material={m.roof} pick={pick.of(items.gableKeys)} />
       <Instanced items={items.hip} geometry={g.hip} material={m.roof} pick={pick.of(items.hipKeys)} />
-      <Instanced items={items.doors} geometry={g.box} material={m.plain} />
+      <EntranceDoors doors={items.doors} g={g} m={m} />
       <Instanced items={items.stoops} geometry={g.box} material={m.plain} shadow={false} />
       <Instanced items={items.chimneys} geometry={g.box} material={m.plain} />
       <Instanced items={items.solar} geometry={g.box} material={m.solar} />
+      {houses.map(h => <mesh key={h.key} geometry={g.plane} material={automationSign} position={[h.x, TERRACE_H + h.h + h.roofH + 0.19, h.z + h.d * 0.18]} rotation={[0, Math.PI / 4, 0]} scale={[0.38, 0.38, 1]} raycast={noRaycast} />)}
     </group>
   );
 }
 
-/** Market kiosks for outside services: a booth with a counter, a striped canopy and a sign. */
+/** Shared double sliding entrance; panels respond to actual pedestrians, not a timer. */
+function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
+  const mesh=useRef<THREE.InstancedMesh>(null),handles=useRef<THREE.InstancedMesh>(null);
+  const openings=useRef<number[]>([]);
+  const object=useMemo(()=>new THREE.Object3D(),[]);
+  const glass=useMemo(()=>focusable(new THREE.MeshPhysicalMaterial({color:"#b7d4cc",transparent:true,opacity:0.28,roughness:0.12,metalness:0.15,depthWrite:false})),[]);
+  useEffect(()=>()=>glass.dispose(),[glass]);
+  const foyer=useMemo<Inst[]>(()=>doors.flatMap(door=>{
+    const [x,y,z]=door.p,[w,h]=door.s,depth=Math.max(0.13,h*0.48);
+    return [
+      {p:[x,y,z+depth/2],s:[w*1.12,0.025,depth],c:"#d9cfb8"},
+      {p:[x,y,z+0.018],s:[w,h,0.025],c:"#ece5d2"},
+      {p:[x,y+h*0.16,z+depth*0.4],s:[w*0.56,h*0.24,depth*0.24],c:"#254936"},
+      {p:[x,y+h*0.4,z+0.035],s:[w*0.32,h*0.23,0.015],c:"#244c3d"},
+      {p:[x,y+h,z+depth/2],s:[w*1.12,0.025,depth],c:"#c3ad78"},
+      {p:[x,y+0.025,z+depth*0.75],s:[w*0.65,0.01,depth*0.4],c:"#315c49"},
+      ...[-1,1].map(side=>({p:[x+side*w*0.54,y,z+depth/2],s:[w*0.05,h,depth],c:"#c6a766"} as Inst)),
+      {p:[x,y,z+depth],s:[w*1.1,0.02,0.08],c:"#c6a766"},
+    ] as Inst[];
+  }),[doors]);
+  const reduced=useReducedMotion();
+  useFrame((_,dt)=>{
+    if(!mesh.current)return;
+    doors.forEach((door,i)=>{
+      const [x,y,z]=door.p,[w,h,d]=door.s,depth=Math.max(0.13,h*0.48);
+      const open=reduced?(entranceOccupied(x,z)?1:0):doorOpenness(openings.current[i]??0,entranceOccupied(x,z),dt);
+      openings.current[i]=open;
+      for(let side=0;side<2;side++){
+        const panelX=x+(side?1:-1)*w*(0.25+open*0.48);
+        object.position.set(panelX,y,z+depth+0.012);
+        object.scale.set(w*0.48,h,d);object.updateMatrix();mesh.current!.setMatrixAt(i*2+side,object.matrix);
+        object.position.set(panelX+(side?-1:1)*w*0.16,y+h*0.3,z+depth+0.035);
+        object.scale.set(0.012,h*0.3,0.012);object.updateMatrix();handles.current?.setMatrixAt(i*2+side,object.matrix);
+      }
+    });
+    mesh.current.instanceMatrix.needsUpdate=true;
+    if(handles.current)handles.current.instanceMatrix.needsUpdate=true;
+  });
+  return <group><Instanced items={foyer} geometry={g.box} material={m.plain}/><instancedMesh ref={mesh} args={[g.box,glass,doors.length*2]} frustumCulled={false}/><instancedMesh ref={handles} args={[g.box,m.metal,doors.length*2]} frustumCulled={false}/></group>;
+}
+
+/** Small branded business offices, kept below the project headquarters skyline. */
 export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
   const items = useMemo(() => {
-    const y0 = TERRACE_H + 0.03;
-    const H = 0.5;
-    const plain: Inst[] = [];
-    const body: Inst[] = [];
-    const bodyKeys: string[] = [];
-    const lamps: Inst[] = [];
-    for (const k of kiosks) {
-      const w = k.size;
-      const d = k.size * 0.8;
-      const front = k.z + d / 2;
-      // Booth: back wall and sides in cream, a counter across the open front.
-      body.push({ p: [k.x, y0, k.z - d * 0.4], s: [w, H, d * 0.2], c: "#efe6d2" });
-      for (const sx of [-1, 1]) body.push({ p: [k.x + sx * w * 0.45, y0, k.z], s: [w * 0.1, H, d], c: "#efe6d2" });
-      body.push({ p: [k.x, y0, front - d * 0.1], s: [w * 0.8, 0.24, d * 0.2], c: k.canopy });
-      bodyKeys.push(k.key, k.key, k.key, k.key);
-      plain.push({ p: [k.x, y0 + 0.24, front - d * 0.1], s: [w * 0.86, 0.025, d * 0.26], c: "#f6f1e6" });
-      // Canopy reaching past the counter, in alternating stripes, tilted down toward the front.
-      const n = 5;
-      for (let i = 0; i < n; i++)
-        plain.push({ p: [k.x - w * 0.55 + (w * 1.1 * (i + 0.5)) / n, y0 + H, k.z + d * 0.08], s: [(w * 1.1) / n, 0.04, d * 1.2], rx: 0.22, c: i % 2 ? "#f6f1e6" : k.canopy });
-      // Sign on the roof.
-      plain.push({ p: [k.x, y0 + H + 0.06, k.z - d * 0.38], s: [w * 0.9, 0.2, 0.04], c: k.canopy });
-      plain.push({ p: [k.x, y0 + H + 0.1, k.z - d * 0.38 + 0.025], s: [w * 0.74, 0.11, 0.012], c: "#f6f1e6" });
-      lamps.push({ p: [k.x, y0 + H - 0.08, k.z + d * 0.05], s: [0.045, 0.045, 0.045] });
-    }
-    return { plain, body, bodyKeys, lamps };
+    const y = TERRACE_H + 0.03;
+    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
+    const one = (k: Kiosk) => {
+      const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
+      const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
+      walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
+      slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
+      slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
+      // Six office floors with a regular curtain-wall grid and branded cornices.
+      const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
+      const floorSpacing=Math.min(0.36,(OFFICE_H-0.68)/floorCount);
+      for (let floor = 0; floor < floorCount; floor++) {
+        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
+        for (let col = 0; col < 3; col++) {
+          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
+          windows.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
+          windows.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+        }
+      }
+      // Slim corner columns and a recessed rooftop plant room give the offices a corporate silhouette.
+      for (const side of [-1, 1]) {
+        accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
+      }
+      slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
+      accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
+      accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
+      doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
+      slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
+      if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
+      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+    };
+    for (const k of kiosks) one(k);
+    return { walls, slabs, accents, windows, domes, pediments, doors };
   }, [kiosks]);
-  return (
-    <group>
-      <Instanced items={items.body} geometry={g.box} material={m.plain} pick={pick.of(items.bodyKeys)} />
-      <Instanced items={items.plain} geometry={g.box} material={m.plain} />
-      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
-    </group>
-  );
+  return <group>
+    <Instanced items={items.walls} geometry={g.box} material={m.plain} pick={pick.of(kiosks.map(k => k.key))} />
+    <Instanced items={items.slabs} geometry={g.box} material={m.plain} />
+    <Instanced items={items.accents} geometry={g.box} material={m.plain} />
+    <Instanced items={items.windows} geometry={g.box} material={m.glass} />
+    <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
+    <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
+    <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />
+    <EntranceDoors doors={items.doors} g={g} m={m} />
+    {kiosks.map(k => <ToolSign key={k.key} tool={k} geometry={g.plane} />)}
+  </group>;
+}
+
+function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeometry }) {
+  const texture = useMemo(() => toolSignTexture(tool.name), [tool.name]);
+  const material = useMemo(() => signMaterial(texture), [texture]);
+  useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
+  const w = tool.size, y = TERRACE_H + (tool.height ?? TOOL_OFFICE_HEIGHT) - 0.08;
+  return <group>
+    <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
+    <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />
+  </group>;
 }
 
 export interface PickHandlerSet {
   of: (keys: string[]) => Pick;
 }
 
-const FLOOR_BASE = TERRACE_H + 0.15;
+/** Headquarters stand on a plinth; their floors start here. */
+export const FLOOR_BASE = TERRACE_H + 0.15;
 /** Rooftop name boards and billboards stand this high above the roof. */
 const BOARD_LIFT = 0.42;
 
@@ -498,7 +677,25 @@ const boardShift = (t: Tower) => (t.identity.landmark ? t.size * 0.2 : 0);
 const LANTERN_H = 1.0;
 const SPIRE_H = 1.1;
 
+/** Commerce's lobby doors: Financial District size, in the gold glass under the canopy's middle. */
+function commerceDoor(t: Tower): Inst {
+  const k = t.size / COMMERCE.refSize, f = commerceFront(k);
+  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.wall - 0.01 * k], s: [0.7 * k, 0.36 * k, 0.025] };
+}
+
 export function towerTop(t: Tower) {
+  // Atlas HQ is drawn by AtlasHq: a sloped glass roof, no lantern or board.
+  if (t.identity.landmark) return FLOOR_BASE + (t.customHeight ?? hqTop(t.size / HQ.refSize)) + 0.04;
+  // Benjaire HQ is drawn by RibbonTower: a hollow crown, no hip roof or finial.
+  if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize, t.customHeight) + 0.04;
+  // Commerce Pipeline is drawn by CommerceTower: the fin screen above its sloped roof is the top.
+  if (isCommerceTower(t.projectId)) return FLOOR_BASE + commerceTop(t.size / COMMERCE.refSize, t.customHeight) + COMMERCE.screen * t.size / COMMERCE.refSize + 0.04;
+  // The GitHub HQ is drawn by GithubTower: a roof garden and the core's crown, no board.
+  if (isGithubTower(t.projectId)) return FLOOR_BASE + githubTowerTop(t.customHeight ?? t.height) + 0.04;
+  // The Intelligence Hub is drawn by IntelligenceHub: a parapet and a roof garden, no board.
+  if (isIntelligenceHub(t.projectId)) return FLOOR_BASE + intelligenceHubTop(t.customHeight ?? t.height) + 0.04;
+  // The Portfolio Site is drawn by PortfolioSite: its roof canopy is the top.
+  if (isPortfolioSite(t.projectId)) return FLOOR_BASE + portfolioSiteTop() + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }
@@ -555,7 +752,9 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const top = FLOOR_BASE + t.height;
     const r = (k: string) => hash(`${t.key}:${k}`);
 
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: style === "tech" ? "#5d666e" : "#8d8a80" });
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) ? "#d8d1c1" : (isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId)) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    // Atlas HQ, Benjaire HQ, Commerce and the GitHub HQ keep their plinths; the buildings are AtlasHq, RibbonTower, CommerceTower and GithubTower.
+    if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
@@ -569,7 +768,7 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
 
     // Entrance: lit lobby on both visible faces, a canopy, stairs down to the plaza and
     // flowerbeds either side.
-    P.glass.push({ p: [t.x, FLOOR_BASE, front + 0.005], s: [s * 0.38, 0.24, 0.02] });
+    // Front entrance panels are animated separately from the fixed facade glass.
     P.glass.push({ p: [side + 0.005, FLOOR_BASE, t.z], s: [0.02, 0.24, s * 0.3] });
     P.plain.push({ p: [t.x, FLOOR_BASE + 0.26, front + 0.08], s: [s * 0.5, 0.03, 0.18], c: style === "timber" ? "#8f6640" : style === "secure" ? "#2a3d66" : "#2f4535" });
     P.steps.push({ p: [t.x, TERRACE_H, front + 0.1], s: [s * 0.44, 0.1, 0.2] });
@@ -741,7 +940,16 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
     () =>
       towers.flatMap((t) => {
         const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
-        return c ? [{ p: [t.x, TERRACE_H + 0.15, t.z], s: [t.size * 1.16, 0.022, t.size * 1.16], c } as Inst] : [];
+        if (!c) return [];
+        // Atlas HQ leaves most of its plinth open, so its health is a thin edge ring, not a slab.
+        if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId)) {
+          const w = t.size * 1.16, e = 0.05;
+          return [-1, 1].flatMap((k) => [
+            { p: [t.x, TERRACE_H + 0.15, t.z + (k * (w - e)) / 2], s: [w, 0.022, e], c } as Inst,
+            { p: [t.x + (k * (w - e)) / 2, TERRACE_H + 0.15, t.z], s: [e, 0.022, w - 2 * e], c } as Inst,
+          ]);
+        }
+        return [{ p: [t.x, TERRACE_H + 0.15, t.z], s: [t.size * 1.16, 0.022, t.size * 1.16], c } as Inst];
       }),
     [towers, health],
   );
@@ -757,16 +965,17 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
+      <EntranceDoors doors={towers.map(t=>isCommerceTower(t.projectId)?commerceDoor(t):isPortfolioSite(t.projectId)?{p:[t.x+t.size*0.04,FLOOR_BASE,t.z+t.size*(PORTFOLIO_SITE.core.z1-0.06)+0.005],s:[t.size*0.24,0.3,0.025]}:isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
       <Instanced items={status} geometry={g.box} material={m.glow} shadow={false} />
-      <Instanced items={P.shrubs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={P.shrubs} geometry={g.ball} material={m.foliage} />
       <Instanced items={P.flowers} geometry={g.ball} material={m.foliage} shadow={false} />
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
       <Instanced items={P.dishes} geometry={g.dish} material={m.plain} />
-      {towers.map((t) => (
+      {towers.filter((t) => !t.identity.landmark && !isRibbonTower(t.projectId) && !isCommerceTower(t.projectId) && !isGithubTower(t.projectId) && !isIntelligenceHub(t.projectId) && !isPortfolioSite(t.projectId)).map((t) => (
         <BuildingIdentitySigns key={t.key} t={t} g={g} />
       ))}
     </group>
@@ -792,8 +1001,9 @@ function BuildingIdentitySigns({ t, g }: { t: Tower; g: G }) {
         : id.symbol === "github"
           ? signMaterial(billboardTexture(t.name, owner, id.accent), { emissiveIntensity: 0.7 })
           : null;
-    return { sign, frame, board };
-  }, [id, t.name, t.repository]);
+    const worker = t.agents + t.automations > 0 ? signMaterial(signTexture({ symbol: t.agents > 0 ? "agent" : "automation", style: "tech", accent: "#a5afa5" }, "Project workers")) : null;
+    return { sign, frame, board, worker };
+  }, [id, t.name, t.repository, t.agents, t.automations]);
 
   const s = t.size;
   const top = FLOOR_BASE + t.height;
@@ -815,6 +1025,7 @@ function BuildingIdentitySigns({ t, g }: { t: Tower; g: G }) {
   const boardY = top + (id.style === "timber" ? 0.12 : 0.07) + BOARD_LIFT + boardH / 2;
   return (
     <group>
+      {mats.worker && <mesh geometry={g.plane} material={mats.worker} position={[t.x - s * 0.27, TERRACE_H + 0.55, t.z + s / 2 + 0.065]} scale={[s * 0.28, s * 0.28, 1]} raycast={noRaycast} />}
       {face(t.x - (secure ? 0 : s * 0.14), yFront, t.z + s / 2 + d, big, 0, !secure)}
       {face(t.x + s / 2 + d, ySide, t.z + s * 0.14, small, Math.PI / 2, !secure)}
       {mats.board && (
@@ -829,3 +1040,4 @@ function BuildingIdentitySigns({ t, g }: { t: Tower; g: G }) {
 
 const woodMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#8f6640", roughness: 0.8 }));
 const darkMaterial = focusable(new THREE.MeshStandardMaterial({ color: "#2a3138", roughness: 0.6 }));
+

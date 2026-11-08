@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "mode": "observe",
+  "enabled": true,
+  "repositories": ["khaneilcampbell/ai-ops-atlas"],
+  "maxRepositoriesPerRun": 5,
+  "maxRequestsPerRun": 25,
+  "requestTimeoutSeconds": 20,
+  "maxRunSeconds": 180,
+  "maxPaidSpendUsd": 0,
+  "maxConcurrentRuns": 1,
+  "maxDraftPullRequestsPerRun": 0,
+  "maxRetries": 0,
+  "stopFile": "STOP",
+  "approvalRequired": ["repository-write", "merge", "deploy", "release", "permissions", "secrets", "billing", "paid-work", "external-message"]
+}

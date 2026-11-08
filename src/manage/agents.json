@@ -1,0 +1,23 @@
+{
+  "_comment": "The allow-list of agents Atlas can manage. Only these agents, these workflow files and these policy keys can ever be touched. src/manage/manifest.test.ts checks every entry against the workflow and policy files in this repository. Format: docs/manage-agents.md",
+  "version": 1,
+  "repository": "khaneilcampbell/ai-ops-atlas",
+  "agents": [
+    {
+      "id": "github-merge-flow",
+      "workflow": "merge-flow.yml",
+      "schedule": "23 */4 * * *",
+      "alsoRuns": "after a pull request's CI finishes",
+      "paid": true,
+      "cap": { "file": "ops/merge-flow/policy.json", "key": "brief.monthlyBudgetUsd", "usd": 1, "maxUsd": 5 }
+    },
+    {
+      "id": "github-opportunity-scout",
+      "workflow": "opportunity-scout.yml",
+      "schedule": "41 13 * * 1,4",
+      "alsoRuns": "when the catalog changes on main",
+      "paid": true,
+      "cap": { "file": "ops/opportunity-scout/policy.json", "key": "model.monthlyBudgetUsd", "usd": 1, "maxUsd": 5 }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RepoSnapshot } from "../github/types";
-import { applyGithubEvent, describe as describeEvent, upsertRun, type LiveEvent } from "./apply";
+import { applyGithubEvent, describe as describeEvent, mergeAgentRuns, toAgentRun, upsertRun, type LiveEvent } from "./apply";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "o/r", description: null, url: "", homepage: null, language: null, languages: {}, visibility: "public", defaultBranch: "main",
@@ -41,6 +41,15 @@ describe("live events", () => {
     expect(applyGithubEvent(snap(), e).commits.map((c) => c.sha)).toEqual(["b", "a", "old"]);
   });
 
+  it("keeps the newest default-branch run when pull request runs fill the list", () => {
+    const pr = (id: number) => ({ id, attempt: 1, name: "CI", status: "completed", conclusion: "success", branch: "feature", event: "pull_request", createdAt: `2026-10-27T0${id}:00:00Z`, url: `https://g/${id}` });
+    const main = { ...snap().runs[0], createdAt: "2026-10-26T00:00:00Z" };
+    const s = snap({ workflowRuns: { "ci.yml": [5, 4, 3, 2].map(pr).concat(main) } });
+    const next = applyGithubEvent(s, runEvent("completed", { id: 9, head_branch: "other", event: "pull_request", html_url: "https://g/9" }));
+    expect(next.workflowRuns["ci.yml"]).toHaveLength(6);
+    expect(next.workflowRuns["ci.yml"].at(-1)).toBe(main);
+  });
+
   it("drops runs older than a full list", () => {
     const list = [{ id: 9, name: "x", status: "completed", conclusion: "success", branch: "main", event: "push", createdAt: "2026-10-28T00:00:00Z", url: "u9" }];
     expect(upsertRun(list, { ...list[0], id: 8, url: "u8", createdAt: "2026-10-01T00:00:00Z" }, 1)).toBeNull();
@@ -49,5 +58,18 @@ describe("live events", () => {
   it("describes what happened in a few words", () => {
     expect(describeEvent(runEvent("completed"))).toBe("CI failed · r");
     expect(describeEvent(runEvent("in_progress"))).toBe("CI running · r");
+  });
+
+  it("keeps each pipeline run once, newest first", () => {
+    const ev = (id: number, at: string, body: Record<string, unknown> = {}): LiveEvent => ({ id, at, source: "agent", kind: "agent_run", repo: null, body: { project: "commerce-pipeline", agents: ["sales-sync"], phase: "Sales sync", status: "ok", detail: "", at, ...body } });
+    expect(describeEvent(ev(1, "2026-10-28T01:00:00Z", { status: "failed" }))).toBe("Sales sync failed · commerce-pipeline");
+    expect(toAgentRun(ev(1, "t", { status: "deleted" }))).toBeNull();
+    expect(toAgentRun({ ...ev(1, "t"), kind: "push" })).toBeNull();
+    const a = toAgentRun(ev(1, "2026-10-28T01:00:00Z"))!;
+    const b = toAgentRun(ev(2, "2026-10-28T02:00:00Z"))!;
+    const list = mergeAgentRuns([a], [b, a]);
+    expect(list.map((r) => r.id)).toEqual([2, 1]);
+    expect(mergeAgentRuns(list, [a])).toBe(list);
+    expect(mergeAgentRuns([], [a, b], 1).map((r) => r.id)).toEqual([2]);
   });
 });

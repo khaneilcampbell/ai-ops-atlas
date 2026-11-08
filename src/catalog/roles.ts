@@ -3,8 +3,8 @@ import type { Agent } from "./types";
 // How the map places each registered item, read from its manifest's registry classification:
 // AI agents work at desks inside their project's building, automations get a house beside it.
 
-/** A: AI agent, B: AI-assisted workflow, F: planned agent. C, D and E run without an AI model. */
-const AI_TYPES = new Set(["A", "B", "F"]);
+/** A: AI agent, F: planned agent. B is a predefined AI-assisted automation, not an agent. */
+const AI_TYPES = new Set(["A", "F"]);
 
 export function isAiAgent(a: Pick<Agent, "registry">) {
   const t = a.registry?.classification?.type;
@@ -19,16 +19,19 @@ export function unclassified(agents: Pick<Agent, "id" | "registry">[]) {
 /** Outside services the map shows as a kiosk, when a manifest names one among an item's tools. */
 export interface Service {
   id: string;
+  /** What the building does (shown on the map). Never a vendor's brand. */
   name: string;
+  /** The real outside service the manifests name, shown only as plain text in the panel. */
+  vendor: string;
 }
 const SERVICES: (Service & { re: RegExp })[] = [
-  { id: "stripe", name: "Stripe", re: /\bstripe\b/i },
-  { id: "shopify", name: "Shopify", re: /\bshopify\b/i },
-  { id: "cloudflare", name: "Cloudflare", re: /\bcloudflare\b/i },
-  { id: "splunk", name: "Splunk", re: /\bsplunk\b/i },
-  { id: "canva", name: "Canva", re: /\bcanva\b/i },
-  { id: "serper", name: "Serper", re: /\bserper\b/i },
-  { id: "n8n", name: "n8n", re: /\bn8n\b/i },
+  { id: "stripe", name: "Payments Office", vendor: "Stripe", re: /\bstripe\b/i },
+  { id: "shopify", name: "Storefront Office", vendor: "Shopify", re: /\bshopify\b/i },
+  { id: "cloudflare", name: "Edge Office", vendor: "Cloudflare", re: /\bcloudflare\b/i },
+  { id: "splunk", name: "Log Analytics Lab", vendor: "Splunk", re: /\bsplunk\b/i },
+  { id: "canva", name: "Design Studio", vendor: "Canva", re: /\bcanva\b/i },
+  { id: "serper", name: "Search Desk", vendor: "Serper", re: /\bserper\b/i },
+  { id: "n8n", name: "Automation Works", vendor: "n8n", re: /\bn8n\b/i },
 ];
 
 export interface ServiceUse extends Service {
@@ -46,3 +49,14 @@ export function residentsLabel(ai: number, automations: number) {
   const parts = [ai && `${ai} AI ${ai === 1 ? "agent" : "agents"}`, automations && `${automations} ${automations === 1 ? "automation" : "automations"}`].filter(Boolean);
   return parts.length ? parts.join(" · ") : "Nothing registered yet";
 }
+
+/** Role of each declared infrastructure tool in a project, separate from its live status. */
+export const SERVICE_PURPOSE: Record<string, string> = {
+  canva: "Creates visual assets and product mockups used by the project.",
+  stripe: "Supports the project's payment and checkout workflows.",
+  shopify: "Supports storefront, product catalog, and commerce operations.",
+  cloudflare: "Provides hosting and request handling for the project's connected services.",
+  splunk: "Supports log analysis, security detection, and operational investigation.",
+  serper: "Provides web search inputs for research and discovery workflows.",
+  n8n: "Connects services and coordinates automated workflows.",
+};

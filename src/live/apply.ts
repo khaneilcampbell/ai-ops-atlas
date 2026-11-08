@@ -6,7 +6,7 @@ import type { Run } from "../intel/types";
 export interface LiveEvent {
   id: number;
   at: string;
-  source: "github" | "atlas";
+  source: "github" | "atlas" | "agent";
   kind: string;
   repo: string | null;
   body: any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -41,6 +41,16 @@ export function upsertRun(list: WorkflowRun[], run: WorkflowRun, limit: number):
   return [run, ...list].sort((x, y) => y.createdAt.localeCompare(x.createdAt)).slice(0, limit);
 }
 
+/**
+ * A pull request run must not push the workflow's newest default-branch run out of the list:
+ * that run decides the agent's status, as in fetchRepo's withMainline.
+ */
+function keepMainline(list: WorkflowRun[], prev: WorkflowRun[], branch: string | undefined): WorkflowRun[] {
+  if (!branch || list.some((r) => r.branch === branch)) return list;
+  const main = prev.find((r) => r.branch === branch);
+  return main ? [...list, main] : list;
+}
+
 const fileOf = (path: unknown) => String(path ?? "").split("/").pop() ?? "";
 
 /**
@@ -59,8 +69,9 @@ export function applyGithubEvent(snap: RepoSnapshot, e: LiveEvent): RepoSnapshot
     }
     const file = fileOf(raw.path);
     if (file && file in snap.workflowRuns) {
-      const list = upsertRun(snap.workflowRuns[file], run, 5);
-      if (list) next = { ...next, workflowRuns: { ...next.workflowRuns, [file]: list } };
+      const prev = snap.workflowRuns[file];
+      const list = upsertRun(prev, run, 5);
+      if (list) next = { ...next, workflowRuns: { ...next.workflowRuns, [file]: keepMainline(list, prev, snap.defaultBranch) } };
     }
     return next;
   }
@@ -90,11 +101,47 @@ export function describe(e: LiveEvent): string | null {
     const n = e.body?.commits?.length ?? 0;
     return n ? `${n} commit${n === 1 ? "" : "s"} pushed · ${repo}` : null;
   }
+  if (e.kind === "agent_run") {
+    const r = e.body as Partial<AgentRun>;
+    return `${r.phase ?? "Pipeline phase"} ${RUN_WORD[r.status ?? ""] ?? "reported"} · ${r.project ?? "pipeline"}`;
+  }
+  if (e.kind === "inquiry") return typeof e.body?.detail === "string" ? e.body.detail.slice(0, 120) : "New website inquiry";
+  if (e.kind === "agent_report") return `New report · ${typeof e.body?.agent === "string" ? e.body.agent : "agent"}`;
   if (e.kind === "intel_run") {
     const r = e.body as Partial<Run>;
     return `Repository Intelligence ${r.status ?? "updated"} · ${(r.repo ?? repo).split("/").pop()}`;
   }
   return null;
+}
+
+/** One phase result a pipeline outside Atlas reported (server/live.ts agentRun). */
+export interface AgentRun {
+  /** The feed's event id, so a run seen twice is kept once. */
+  id: number;
+  project: string;
+  agents: string[];
+  phase: string;
+  status: "ok" | "failed" | "skipped" | "paused";
+  detail: string;
+  at: string;
+}
+
+const RUN_WORD: Record<string, string> = { ok: "finished", failed: "failed", skipped: "skipped", paused: "paused" };
+
+/** The run an agent_run event carries, or null when it isn't one. */
+export function toAgentRun(e: LiveEvent): AgentRun | null {
+  const b = e.body;
+  if (e.kind !== "agent_run" || !b || typeof b.phase !== "string" || !Array.isArray(b.agents) || !RUN_WORD[b.status]) return null;
+  return { id: e.id, project: String(b.project ?? ""), agents: b.agents.filter((a: unknown) => typeof a === "string"), phase: b.phase, status: b.status, detail: typeof b.detail === "string" ? b.detail : "", at: typeof b.at === "string" ? b.at : e.at };
+}
+
+/** Adds new pipeline runs to a newest-first list, dropping ones already there. */
+export function mergeAgentRuns(list: AgentRun[], runs: AgentRun[], limit = 200): AgentRun[] {
+  if (!runs.length) return list;
+  const seen = new Set(list.map((r) => r.id));
+  const fresh = runs.filter((r) => !seen.has(r.id));
+  if (!fresh.length) return list;
+  return [...fresh, ...list].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 
 /** Folds a Mac-reported agent run into the web's list of them, newest first. */

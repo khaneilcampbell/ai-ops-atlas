@@ -221,6 +221,7 @@ impl Rerunner {
             repo: repo.to_string(),
             run_id,
             pull_number: None,
+            agent: None,
             title: None,
             base: None,
             workflow: p.map(|p| p.workflow.clone()),

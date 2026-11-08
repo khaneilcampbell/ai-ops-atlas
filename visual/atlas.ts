@@ -1,4 +1,6 @@
-import { expect, type Page } from "@playwright/test";
+import { existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { PNG } from "pngjs";
 import { answer, NOW } from "./github";
 
@@ -61,7 +63,9 @@ export async function goTo(page: Page, label: string) {
 
 /** Selects a building on the 3D map by its nameplate text. */
 export async function selectBuilding(page: Page, name: string) {
-  await page.locator(".m3-plaque", { hasText: name }).first().dispatchEvent("click");
+  // Match the name boundary: a building name must never select a station named after it.
+  const plaque = page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`);
+  await plaque.first().dispatchEvent("click");
   await settle(page, 4);
 }
 
@@ -94,4 +98,50 @@ function spread(d: Buffer): number {
   }
   const mean = sum / n;
   return Math.sqrt(Math.max(0, sq / n - mean * mean));
+}
+
+/**
+ * Waits for the office canvas to be sized and drawn. The office holds its first frame until its
+ * models have loaded, which takes real time (network and image decoding), not fake-clock time.
+ */
+export async function waitForOffice(page: Page, tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const w = await page.evaluate(() => document.querySelector<HTMLCanvasElement>(".office-stage canvas")?.width ?? 0);
+    if (w > 300) {
+      await settle(page, 3);
+      return waitForScene(page);
+    }
+    await page.waitForTimeout(500);
+    await settle(page, 1);
+  }
+  throw new Error("The office never drew: its canvas was never sized.");
+}
+
+// SHOTS=1 skips the comparison and writes the screenshots to visual/out/ instead, for looking at.
+// BASELINE=1 writes them straight over the baselines. One capture of a frozen frame is enough;
+// Playwright's own update mode retakes each until two match, which is slow with software WebGL.
+const SHOTS = !!process.env.SHOTS;
+const BASELINE = !!process.env.BASELINE;
+const OUT = join(import.meta.dirname, "out");
+
+/** Compares the page, or one part of it, with visual/baselines/<local|ci>/<name>.png. */
+export async function check(target: Page | Locator, name: string) {
+  const opts = { animations: "disabled", caret: "hide" } as const;
+  if (BASELINE) {
+    await target.screenshot({ path: test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }), ...opts });
+    return;
+  }
+  if (SHOTS) {
+    mkdirSync(OUT, { recursive: true });
+    await target.screenshot({ path: join(OUT, `${name}.png`), ...opts });
+    return;
+  }
+  // A view added since the last baseline update has nothing to compare with yet: keep the
+  // screenshot as a result instead of failing, until the next update run records it.
+  if (!existsSync(test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }))) {
+    test.info().annotations.push({ type: "no baseline", description: `${name}.png is new; run the visual workflow with 'update' to record it.` });
+    await target.screenshot({ path: test.info().outputPath(`${name}.png`), ...opts });
+    return;
+  }
+  await expect(target).toHaveScreenshot(`${name}.png`);
 }

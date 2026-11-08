@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ConnectionType } from "../../catalog/types";
+import { wake } from "../../lib/power";
 import { LINK_COLORS, type ConnectionStatus } from "../../lib/connections";
 import { night } from "./materials";
 
@@ -24,8 +25,8 @@ export interface NetLink {
 type Hue = keyof typeof LINK_COLORS;
 /** "glow" is the soft sleeve around the selected or hovered link. */
 type Shade = LinkLevel | "glow";
-const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.95, weak: 0.55, dim: 0.06, glow: 0.16 };
-const RADIUS = 0.06;
+const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.7, weak: 0.22, dim: 0.04, glow: 0.16 };
+const RADIUS = 0.035;
 const MAX_PARTICLES = 160;
 const SPEED = 2.2; // world units per second
 
@@ -135,6 +136,8 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
       }
     }
     mesh.count = n;
+    // Particles travel fast enough that 30 frames a second would show; keep full rate while they flow.
+    if (n && moving) wake(100);
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });

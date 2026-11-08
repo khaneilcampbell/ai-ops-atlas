@@ -1,16 +1,17 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
-# AI Ops Atlas manifest. Format: catalog/README.md
+# Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
 project:
   id: benjaire-ops
-  name: Benjaire Ops Dashboard
+  name: Benjaire Dashboard
   summary: >-
     Private business dashboard for Benjaire: traffic, sales, inquiries, n8n
     automation health, Cloudflare infrastructure and a manual finance ledger.
   status: active
-  repository: khaneilcampbell/benjaire-dashboard
+  repository: khaneilcampbell/ai-ops-atlas
   tags: [benjaire, cloudflare, d1, dashboard]
+  district: business-operations
 
 agents:
   - id: benjaire-ops-ci
@@ -20,21 +21,21 @@ agents:
     runtime: GitHub-hosted runner
     status: active
     trigger: Push or pull request
-    source: .github/workflows/ci.yml
+    source: .github/workflows/dashboard-ci.yml
     observe:
-      github_workflow: ci.yml
+      github_workflow: dashboard-ci.yml
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Benjaire Dashboard Continuous Integration
+      title: Dashboard Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:
         type: D
         confidence: verified
-        evidence: .github/workflows/ci.yml runs npm run ci, local D1 migrations and Playwright accessibility tests; no AI model
+        evidence: .github/workflows/dashboard-ci.yml runs npm run ci, local D1 migrations and Playwright accessibility tests; no AI model
       mission:
         problem: Stops dashboard changes that break types, tests, the build or accessibility, or that commit a secret.
         outcomes:
@@ -67,12 +68,11 @@ agents:
         risk: low
         audit_log: GitHub Actions run history
       docs:
-        technical: docs/SETUP.md
+        technical: apps/benjaire-dashboard/docs/SETUP.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-dashboard.md#dashboard-ci
         known_issues:
-          - setup-node has no check-latest, which Benjaire Site CI needed when the cached Node 22 was older than its dependencies required
-          - Actions are pinned by major version tag, not commit
+          - Shared Atlas repository health does not verify this project's live business operations
+          - Live Cloudflare deployment linkage must be verified before retiring the source repository
         improvements:
-          - 'Add check-latest: true to setup-node'
-          - Pin actions to commit SHAs
+          - Verify Cloudflare build root after repository consolidation
         last_review: 2026-10-28

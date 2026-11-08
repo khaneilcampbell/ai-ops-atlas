@@ -74,6 +74,40 @@ function commits(fullName: string, i: number) {
   }));
 }
 
+// The agents the Manage view lists: each gets its own few runs, so the view shows schedule,
+// manual and failed runs rather than generic CI.
+const AGENT_WORKFLOWS: Record<string, { name: string; events: string[]; failed?: number }> = {
+  "merge-flow.yml": { name: "Merge flow", events: ["schedule", "workflow_run", "schedule", "workflow_dispatch"] },
+  "opportunity-scout.yml": { name: "Opportunity scout", events: ["push", "workflow_dispatch", "schedule"], failed: 1 },
+};
+
+function agentRuns(fullName: string, file: string) {
+  const w = AGENT_WORKFLOWS[file];
+  return {
+    total_count: w.events.length,
+    workflow_runs: w.events.map((event, k) => ({
+      id: 9000 + k,
+      run_attempt: 1,
+      name: w.name,
+      path: `.github/workflows/${file}`,
+      status: "completed",
+      conclusion: w.failed === k ? "failure" : "success",
+      head_branch: "main",
+      event,
+      created_at: iso(50 + k * 300),
+      html_url: `https://github.com/${fullName}/actions/runs/${9000 + k}`,
+    })),
+  };
+}
+
+function workflows(fullName: string) {
+  const files = ["ci.yml", ...Object.keys(AGENT_WORKFLOWS)];
+  return {
+    total_count: files.length,
+    workflows: files.map((f, i) => ({ id: 500 + i, path: `.github/workflows/${f}`, state: "active", html_url: `https://github.com/${fullName}/actions/workflows/${f}` })),
+  };
+}
+
 /** The JSON GitHub would answer for an API path, or null for a 404. */
 export function answer(path: string): unknown {
   const url = new URL(path, "https://api.github.com");
@@ -88,7 +122,10 @@ export function answer(path: string): unknown {
   if (rest === "") return meta(full, i);
   if (rest === "/languages") return { TypeScript: 8000, CSS: 1500, HTML: 300 };
   if (rest === "/commits") return commits(full, i);
-  if (rest === "/actions/runs" || /^\/actions\/workflows\/[^/]+\/runs$/.test(rest)) return runs(full, i);
+  if (rest === "/actions/workflows") return workflows(full);
+  const agent = /^\/actions\/workflows\/([^/]+)\/runs$/.exec(rest);
+  if (agent && AGENT_WORKFLOWS[agent[1]]) return agentRuns(full, agent[1]);
+  if (rest === "/actions/runs" || agent) return runs(full, i);
   if (rest === "/pulls") return [];
   return null;
 }

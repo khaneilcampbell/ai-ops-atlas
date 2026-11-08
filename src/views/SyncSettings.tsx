@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon } from "../components/Icon";
+import { copyText } from "../lib/clipboard";
 import { useIntel } from "../intel/state";
 import { relative } from "../lib/time";
 import { syncConfigured, usageSync, type SyncStatus } from "../usage/sync";
@@ -111,7 +112,7 @@ export function SyncSettings() {
           <button
             className="btn"
             onClick={() =>
-              void navigator.clipboard.writeText(key).then(
+              void copyText(key).then(
                 () => setCopied(true),
                 () => setError("Couldn't copy. Select the key and copy it instead."),
               )

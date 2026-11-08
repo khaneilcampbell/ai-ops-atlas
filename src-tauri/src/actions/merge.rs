@@ -659,6 +659,7 @@ impl Merger {
             repo: repo.to_string(),
             run_id: 0,
             pull_number: Some(number),
+            agent: None,
             title: p.map(|p| p.title.clone()),
             base: p.map(|p| p.base.clone()),
             workflow: None,

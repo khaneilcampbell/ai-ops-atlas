@@ -1,0 +1,11 @@
+* text=auto eol=lf
+
+# Binary assets: no diffs, no line-ending changes
+*.pdf binary
+*.zip binary
+*.jpg binary
+*.png binary
+*.woff2 binary
+
+# Generated; collapsed in pull request diffs
+package-lock.json linguist-generated=true -diff

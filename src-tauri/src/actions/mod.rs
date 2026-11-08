@@ -7,16 +7,19 @@
 //! - `store`: the off switches (`actions.json`) and the audit log (`audit.jsonl`)
 //! - `rerun`: pre-flight checks, approval, audit and the single re-run request
 //! - `merge`: readiness checks, approval, Touch ID, audit and the single merge request
+//! - `agents`: Manage agents (enable, disable, run now) for the allow-listed agent workflows
 //! - `client`: the write-scoped HTTP client; the only code that sends a GitHub write
 //!
 //! Reads, including the pre-flight check of the run, still go through the read-only
 //! client in `github.rs` and its GET allowlist, which this module leaves untouched.
 
+pub mod agents;
 pub mod client;
 pub mod merge;
 pub mod rerun;
 pub mod store;
 
+use agents::{AgentApprover, AgentManager, AgentOp, AgentOutcome, AgentPreview};
 use merge::{MergeApprover, MergeCheck, MergeOutcome, MergePreview, Merger};
 use rerun::{Approver, Outcome, Preview, Rerunner};
 use serde::Serialize;
@@ -30,6 +33,7 @@ pub struct Actions {
     client: Arc<client::WriteClient>,
     rerunner: Rerunner,
     merger: Merger,
+    agents: AgentManager,
 }
 
 /// Native confirmation, drawn by macOS rather than the web view, so nothing running in the
@@ -96,6 +100,51 @@ impl MergeApprover for NativeApprover {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentApprover for NativeApprover {
+    async fn approve(&self, p: &AgentPreview) -> bool {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let title = match p.op {
+            AgentOp::Enable => format!("Enable {}?", p.workflow),
+            AgentOp::Disable => format!("Disable {}?", p.workflow),
+            AgentOp::RunNow => format!("Run {} now?", p.workflow),
+        };
+        let button = match p.op {
+            AgentOp::Enable => "Enable",
+            AgentOp::Disable => "Disable",
+            AgentOp::RunNow => "Run now",
+        };
+        let mut dialog = self
+            .app
+            .dialog()
+            .message(agents::dialog_text(p))
+            .title(title)
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                button.into(),
+                "Cancel".into(),
+            ));
+        if let Some(w) = self.app.get_webview_window("main") {
+            dialog = dialog.parent(&w);
+        }
+        dialog.show(move |ok| {
+            let _ = tx.send(ok);
+        });
+        rx.await.unwrap_or(false)
+    }
+
+    async fn confirm_owner(&self, p: &AgentPreview) -> Result<(), String> {
+        let reason = match p.op {
+            AgentOp::Enable => format!("enable the agent workflow {}", p.workflow),
+            AgentOp::Disable => format!("disable the agent workflow {}", p.workflow),
+            AgentOp::RunNow => format!("start a run of {}", p.workflow),
+        };
+        tauri::async_runtime::spawn_blocking(move || crate::secrets::confirm_owner(&reason))
+            .await
+            .map_err(|e| e.to_string())?
+    }
+}
+
 fn actor() -> String {
     let user = std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
@@ -121,15 +170,25 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store.clone(),
         Arc::new(crate::github::Client::new()),
         client.clone(),
+        approver.clone(),
+        actor(),
+        Box::new(chrono::Utc::now),
+    );
+    let agents = AgentManager::new(
+        store.clone(),
+        Arc::new(crate::github::Client::new()),
+        client.clone(),
         approver,
         actor(),
         Box::new(chrono::Utc::now),
+        agents::manifest(),
     );
     app.manage(Actions {
         store,
         client,
         rerunner,
         merger,
+        agents,
     });
     Ok(())
 }
@@ -140,6 +199,8 @@ pub struct ActionsStatus {
     token: bool,
     /// Repositories (lowercase owner/name) with a merge token saved. Never the tokens.
     merge_tokens: Vec<String>,
+    /// Whether a Manage agents token is saved. Never the token.
+    agents_token: bool,
 }
 
 fn status(a: &Actions) -> ActionsStatus {
@@ -147,6 +208,7 @@ fn status(a: &Actions) -> ActionsStatus {
         config: a.store.load_config(),
         token: crate::secrets::read_actions_token().is_some(),
         merge_tokens: crate::secrets::merge_token_repos(),
+        agents_token: crate::secrets::agents_token_present(),
     }
 }
 
@@ -318,6 +380,57 @@ pub async fn action_merge_pr(
     Ok(outcome)
 }
 
+/// Saves the Manage agents token after checking it belongs to an account and can see the
+/// allow-listed repository. Saving it is what turns Manage agents on.
+#[tauri::command]
+pub async fn agents_token_set(
+    token: String,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    let token = token.trim();
+    crate::secrets::check_agents_token(token, &[])?;
+    let login = actions.client.token_login(token).await?;
+    actions
+        .client
+        .token_sees_repo(token, &actions.agents.manifest.repository)
+        .await?;
+    crate::secrets::set_agents_token(token)?;
+    let mut c = actions.store.load_config();
+    c.agents_token_login = Some(login);
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+/// Removing the token turns Manage agents off.
+#[tauri::command]
+pub fn agents_token_clear(
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ActionsStatus, String> {
+    crate::secrets::clear_agents_token()?;
+    let mut c = actions.store.load_config();
+    c.agents_token_login = None;
+    actions.store.save_config(&c)?;
+    app.emit("actions-changed", ()).ok();
+    Ok(status(&actions))
+}
+
+/// One press of Enable, Disable or Run now in Manage agents.
+#[tauri::command]
+pub async fn agent_action(
+    agent: String,
+    op: AgentOp,
+    seen_state: Option<String>,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<AgentOutcome, String> {
+    let outcome = actions.agents.run(&agent, op, seen_state.as_deref()).await;
+    app.emit("actions-changed", ()).ok();
+    Ok(outcome)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -389,6 +502,12 @@ mod tests {
                 assert!(
                     matches!(rel.as_str(), "actions/client.rs" | "secrets.rs"),
                     "{rel} reads a merge token"
+                );
+            }
+            if code.contains("read_agents_token") {
+                assert!(
+                    matches!(rel.as_str(), "actions/client.rs" | "secrets.rs"),
+                    "{rel} reads the Manage agents token"
                 );
             }
             if code.contains("read_actions_token") {

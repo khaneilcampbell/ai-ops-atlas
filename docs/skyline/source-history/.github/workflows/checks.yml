@@ -1,0 +1,39 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-checks:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Required files
+        run: |
+          set -euo pipefail
+          for f in README.md LICENSE SECURITY.md; do
+            test -s "$f" || { echo "Missing $f"; exit 1; }
+          done
+
+      # Skips the workflow directory, since this file contains the pattern itself.
+      - name: Block private key material
+        run: |
+          set -euo pipefail
+          if git grep -nI "BEGIN .*PRIVATE KEY" -- . ':!.github/workflows/'; then
+            echo "Private key material detected in repository contents."
+            exit 1
+          fi

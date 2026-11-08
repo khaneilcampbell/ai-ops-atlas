@@ -1,7 +1,9 @@
-//! The only GitHub client that can write. It has no path parameter: the two requests it can
-//! send are built here from a validated repository and a number. A re-run uses the separate
-//! Actions token; a merge uses that repository's own merge token. Never the read-only one.
+//! The only GitHub client that can write. It has no path parameter: the requests it can send
+//! are built here from a validated repository and a number or an allow-listed workflow. A
+//! re-run uses the separate Actions token; a merge uses that repository's own merge token;
+//! Manage agents uses its own agents token. Never the read-only one.
 
+use super::agents::{AgentOp, AgentWriteApi};
 use super::merge::{MergeApi, MERGE_METHOD};
 use super::rerun::{SendError, WriteApi, WriteResponse};
 use crate::intel::collect::valid_repo;
@@ -28,6 +30,25 @@ pub fn rerun_url(repo: &str, run_id: u64) -> Option<String> {
 /// The merge endpoint for one pull request. `None` for anything that isn't a plain owner/name.
 pub fn merge_url(repo: &str, number: u64) -> Option<String> {
     valid_repo(repo).then(|| format!("https://api.github.com/repos/{repo}/pulls/{number}/merge"))
+}
+
+/// The enable, disable or dispatch endpoint for one workflow file. `None` unless the
+/// repository is a plain owner/name and the file a plain `name.yml`.
+pub fn workflow_url(repo: &str, workflow: &str, op: AgentOp) -> Option<String> {
+    let file_ok = (workflow.ends_with(".yml") || workflow.ends_with(".yaml"))
+        && workflow.len() <= 80
+        && workflow
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.')
+        && !workflow.starts_with('.')
+        && !workflow.contains("..");
+    let tail = match op {
+        AgentOp::Enable => "enable",
+        AgentOp::Disable => "disable",
+        AgentOp::RunNow => "dispatches",
+    };
+    (valid_repo(repo) && file_ok)
+        .then(|| format!("https://api.github.com/repos/{repo}/actions/workflows/{workflow}/{tail}"))
 }
 
 /// Maps a send error to text without the request, which would carry the auth header.
@@ -187,9 +208,75 @@ impl MergeApi for WriteClient {
     }
 }
 
+#[async_trait::async_trait]
+impl AgentWriteApi for WriteClient {
+    async fn has_token(&self) -> bool {
+        crate::secrets::read_agents_token().is_some()
+    }
+
+    async fn workflow_op(
+        &self,
+        repo: &str,
+        workflow: &str,
+        op: AgentOp,
+        branch: &str,
+    ) -> Result<WriteResponse, SendError> {
+        let url = workflow_url(repo, workflow, op)
+            .ok_or_else(|| SendError::NotSent("Invalid repository or workflow".into()))?;
+        let token = crate::secrets::read_agents_token()
+            .ok_or_else(|| SendError::NotSent("No Manage agents token is saved".into()))?;
+        let req = match op {
+            AgentOp::Enable | AgentOp::Disable => self.http.put(url),
+            // Default inputs only: nothing from the web view reaches the workflow.
+            AgentOp::RunNow => self
+                .http
+                .post(url)
+                .json(&serde_json::json!({ "ref": branch })),
+        };
+        let res = req
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .bearer_auth(token)
+            .send()
+            .await
+            .map_err(send_error)?;
+        Ok(write_response(res).await)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{merge_url, rerun_url};
+    use super::{merge_url, rerun_url, workflow_url};
+    use crate::actions::agents::AgentOp;
+
+    #[test]
+    fn builds_only_the_workflow_endpoints() {
+        let repo = "khaneilcampbell/ai-ops-atlas";
+        assert_eq!(
+            workflow_url(repo, "merge-flow.yml", AgentOp::Disable).as_deref(),
+            Some("https://api.github.com/repos/khaneilcampbell/ai-ops-atlas/actions/workflows/merge-flow.yml/disable")
+        );
+        assert_eq!(
+            workflow_url(repo, "merge-flow.yml", AgentOp::RunNow).as_deref(),
+            Some("https://api.github.com/repos/khaneilcampbell/ai-ops-atlas/actions/workflows/merge-flow.yml/dispatches")
+        );
+        for bad in [
+            "",
+            "ci",
+            "../ci.yml",
+            "a/ci.yml",
+            "CI.yml",
+            "x.yml?a=1",
+            ".yml",
+            "a b.yml",
+        ] {
+            assert!(
+                workflow_url(repo, bad, AgentOp::Enable).is_none(),
+                "{bad:?}"
+            );
+        }
+        assert!(workflow_url("a/b/c", "x.yml", AgentOp::Enable).is_none());
+    }
 
     #[test]
     fn builds_only_the_merge_endpoint() {

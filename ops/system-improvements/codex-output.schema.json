@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "summary": {"type": "string"},
+    "recommendations": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "basis": {"type": "string", "enum": ["verified", "hypothesis"]},
+          "evidence": {"type": "string"},
+          "next_validation": {"type": "string"}
+        },
+        "required": ["title", "basis", "evidence", "next_validation"],
+        "additionalProperties": false
+      }
+    },
+    "unavailable": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["summary", "recommendations", "unavailable"],
+  "additionalProperties": false
+}

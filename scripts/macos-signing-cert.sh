@@ -5,8 +5,9 @@
 #   scripts/macos-signing-cert.sh <out-dir>
 set -euo pipefail
 out=${1:?usage: macos-signing-cert.sh <out-dir>}
-mkdir -p "$out"
 umask 077
+mkdir -p "$out"
+chmod 700 "$out"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 cat > "$tmp/cert.cnf" <<'CNF'

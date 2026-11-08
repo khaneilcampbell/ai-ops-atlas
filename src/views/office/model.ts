@@ -36,7 +36,10 @@ export interface Workstation {
   /** Stable across reloads: the project and agent ids, never a list position alone. */
   id: string;
   agentId: string;
-  /** Desk slot, in manifest order. */
+  tier: "central" | "coordinator" | "specialized";
+  workflowStep: number;
+  zone: "coordination" | "research" | "production" | "quality";
+  /** Desk slot, ordered by role level and workflow. */
   slot: number;
   x: number;
   z: number;
@@ -58,27 +61,43 @@ const DESK_DX = 2.35;
 const DESK_DZ = 2.5;
 const PER_ROW = 3;
 
+/** Work areas describe responsibilities, independently of live status or seniority. */
+export function officeZone(agent: Pick<Agent,"id"> & Partial<Agent>, level: Workstation["tier"]): Workstation["zone"] {
+  if(level==="coordinator")return "coordination";
+  const text=[agent.name,agent.registry?.title,agent.registry?.subcategory,...(agent.registry?.responsibilities?.tasks??[])].filter(Boolean).join(" ");
+  if(/review|quality|validation|validator|audit|security|detection|health|test|ci\/cd/i.test(text))return "quality";
+  if(/research|analyst|scout|intelligence|requirements|strategist/i.test(text))return "research";
+  if(/coordinat|orchestrat|oversight/i.test(text))return "coordination";
+  return "production";
+}
+
 /** Desks in rows of three, centered, in manifest order so each agent keeps its desk. */
-export function planOffice(project: Pick<Project, "id" | "repository">, agents: Pick<Agent, "id">[]): OfficePlan {
-  const n = agents.length;
-  const cols = Math.min(PER_ROW, Math.max(1, n));
-  const rows = Math.max(1, Math.ceil(n / PER_ROW));
-  const w = Math.max(8.5, cols * DESK_DX + 3.6);
-  const d = Math.max(7, rows * DESK_DZ + 4.2);
-  const workstations = agents.map((a, i) => {
-    const row = Math.floor(i / PER_ROW);
-    const inRow = Math.min(PER_ROW, n - row * PER_ROW);
-    const col = i % PER_ROW;
-    return {
-      id: `${project.id}/${a.id}`,
-      agentId: a.id,
-      slot: i,
-      x: (col - (inRow - 1) / 2) * DESK_DX,
-      z: (row - (rows - 1) / 2) * DESK_DZ + 0.3,
-      ry: 0,
-    };
+export function planOffice(project: Pick<Project, "id" | "repository">, agents: (Pick<Agent, "id"> & Partial<Agent>)[]): OfficePlan {
+  const ids = new Set(agents.map(a=>a.id));
+  const tier = (a: (typeof agents)[number]) => a.registry?.tier ?? (project.id==="ai-ops-atlas" && a.registry?.classification?.type!=="D" ? "central" : (a.registry?.responsibilities?.dependencies??[]).filter(id=>ids.has(id)&&id!==a.id).length>=2 ? "coordinator" : "specialized");
+  const phase = (a:(typeof agents)[number]) => Number(/phase\s*(\d+)/i.exec(`${a.trigger??""} ${a.registry?.execution?.schedule??""}`)?.[1]??999);
+  const groups = (["central","coordinator","specialized"] as const).map(level=>{
+    const remaining=new Map(agents.filter(a=>tier(a)===level).map(a=>[a.id,a]));
+    const ordered:typeof agents=[];
+    while(remaining.size) {
+      const ready=[...remaining.values()].filter(a=>!(a.registry?.responsibilities?.dependencies??[]).some(id=>id!==a.id&&remaining.has(id)));
+      const next=(ready.length?ready:[...remaining.values()]).sort((a,b)=>phase(a)-phase(b)||a.id.localeCompare(b.id))[0];
+      ordered.push(next);remaining.delete(next.id);
+    }
+    return {level,ordered};
+  }).filter(g=>g.ordered.length);
+  const rows=Math.max(1,groups.reduce((n,g)=>n+Math.ceil(g.ordered.length/PER_ROW),0));
+  const cols=Math.min(PER_ROW,Math.max(1,agents.length));
+  const w=Math.max(8.5,cols*DESK_DX+3.6),d=Math.max(7,rows*DESK_DZ+4.2);
+  let rowOffset=0,slot=0;
+  const workstations:Workstation[]=groups.flatMap(g=>{
+    const desks=g.ordered.map((a,i)=>{
+      const row=Math.floor(i/PER_ROW),inRow=Math.min(PER_ROW,g.ordered.length-row*PER_ROW),col=i%PER_ROW;
+      return {id:`${project.id}/${a.id}`,agentId:a.id,tier:g.level,zone:officeZone(a,g.level),workflowStep:i+1,slot:slot++,x:(col-(inRow-1)/2)*DESK_DX,z:(rowOffset+row-(rows-1)/2)*DESK_DZ+0.3,ry:0};
+    });
+    rowOffset+=Math.ceil(g.ordered.length/PER_ROW);return desks;
   });
-  return { projectId: project.id, buildingId: `repo:${project.repository}`, w, d, workstations };
+  return { projectId: project.id, buildingId: `project:${project.id}`, w, d, workstations };
 }
 
 /**
@@ -121,10 +140,17 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
+  if (t.source === "production") {
+    const basis = t.executions[0] ?? null;
+    if (!t.productionFresh) return { state: "unknown", reason: "Production reporting is stale (no report in 15 minutes).", basis, source: "Production reporting" };
+    if (basis?.result === "running" && now - Date.parse(basis.at) >= 15 * 60_000) return { state: "unknown", reason: "Run progress report is stale; heartbeat alone does not establish progress.", basis, source: "Production reporting" };
+    const state = basis?.result === "running" ? "working" : basis?.result === "failure" ? "failed" : "idle";
+    return { state, reason: "Recent authenticated production report.", basis, source: "Production reporting" };
+  }
   // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
   let executions = mainline(t.executions);
   let loaded = t.loaded;
-  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : null;
+  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : null;
   const action = ACTION_AGENTS[agent.id];
   if (action && actions) {
     source = "Atlas action audit log";

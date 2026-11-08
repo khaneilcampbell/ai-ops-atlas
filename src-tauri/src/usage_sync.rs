@@ -7,7 +7,6 @@
 
 use crate::secrets;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -112,7 +111,7 @@ pub fn normalize_url(input: &str) -> Result<String, String> {
 /// 32 random bytes, URL-safe base64 (43 characters).
 pub fn new_key() -> String {
     let mut bytes = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::fill(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
 }
 

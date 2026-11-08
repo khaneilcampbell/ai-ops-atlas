@@ -24,12 +24,13 @@ async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
-sha2 = "0.10"
-rand = "0.8"
+sha2 = "0.11"
+rand = "0.10"
 tauri-plugin-dialog = "2"
 # Without the default `zip` feature: macOS updates are .tar.gz, and zip 4.x has open advisories.
 tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
+tauri-plugin-notification = "2"
 
 # Touch ID for unlocking the saved keys once per launch.
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -37,6 +38,8 @@ objc2 = "0.6"
 block2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSError"] }
 objc2-local-authentication = { version = "0.3", default-features = false, features = ["std", "block2", "LAContext"] }
+# Already used by keyring; needed directly to add the vault without overwriting an existing one.
+security-framework = "3"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["sync", "time", "macros", "rt", "rt-multi-thread", "test-util"] }
@@ -47,3 +50,7 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+# Backport the upstream VariantStrIter soundness fix while Tauri pins GTK/glib 0.18.
+[patch.crates-io]
+glib = { path = "vendor/glib" }

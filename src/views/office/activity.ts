@@ -18,8 +18,8 @@ export const COMPLETE_MS = 2600;
 
 const RANK: Record<Illumination, number> = { idle: 0, completed: 1, error: 2, running: 3 };
 
-/** Map keys: an agent's house is `agent:<id>`, a project's headquarters is `repo:<repository>`. */
-export function buildingStates(agents: Pick<Agent, "id" | "repository">[], runtimes: Map<string, Runtime>, completed: ReadonlySet<string> = new Set()): Map<string, Illumination> {
+/** Map keys: an agent's house is `agent:<id>`, a project's headquarters is `project:<id>`. */
+export function buildingStates(agents: Pick<Agent, "id" | "repository" | "projectId">[], runtimes: Map<string, Runtime>, completed: ReadonlySet<string> = new Set()): Map<string, Illumination> {
   const out = new Map<string, Illumination>();
   for (const a of agents) {
     const r = runtimes.get(a.id);
@@ -27,7 +27,7 @@ export function buildingStates(agents: Pick<Agent, "id" | "repository">[], runti
     if (s === "idle") continue;
     out.set(`agent:${a.id}`, s);
     // A headquarters shows the most pressing state among its agents.
-    const hq = `repo:${a.repository}`;
+    const hq = `project:${a.projectId}`;
     if (RANK[s] > RANK[out.get(hq) ?? "idle"]) out.set(hq, s);
   }
   return out;

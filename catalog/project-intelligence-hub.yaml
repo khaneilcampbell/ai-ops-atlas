@@ -1,16 +1,17 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
-# AI Ops Atlas manifest. Format: catalog/README.md
+# Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
 project:
   id: intelligence-hub
-  name: Project Intelligence Hub
+  name: Intelligence Hub
   summary: >-
     Documentation for each engineering project: overview, deep dive, learning
     guide, development journal and roadmap, rendered to DOCX.
   status: active
-  repository: khaneilcampbell/project-intelligence-hub
+  repository: khaneilcampbell/ai-ops-atlas
   tags: [documentation, claude]
+  district: ai-engineering
 
 agents:
   - id: docs-builder
@@ -20,12 +21,12 @@ agents:
     runtime: Local
     status: idle
     trigger: Manual
-    source: "10 — System Administration/Automation Scripts/build_docs.py"
+    source: "docs/intelligence-hub/10 — System Administration/Automation Scripts/build_docs.py"
     last_run: null
     permissions:
       - Reads Source/ and writes DOCX files in the project folder; no network
     registry:
-      title: Project Documentation Builder
+      title: Technical Documentation Specialist
       category: engineering
       subcategory: Documentation
       classification:
@@ -50,9 +51,10 @@ agents:
         credential_owner: None needed (local files only)
         risk: low
       docs:
-        technical: README.md
+        technical: docs/intelligence-hub/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#docs-builder
         known_issues:
+          - Shared Atlas repository health does not verify this project's live business operations
           - Styles use macOS fonts (Helvetica Neue, Avenir Next, Menlo); other systems substitute them
           - Nothing checks that the committed DOCX files match their sources
           - No KPI is defined yet
@@ -67,21 +69,21 @@ agents:
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
-    source: .github/workflows/ci.yml
+    source: .github/workflows/hub-ci.yml
     observe:
-      github_workflow: ci.yml
+      github_workflow: hub-ci.yml
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Project Intelligence Hub Continuous Integration
+      title: Documentation Quality Engineer
       category: engineering
       subcategory: CI/CD
       classification:
         type: D
         confidence: verified
-        evidence: .github/workflows/ci.yml validates project.json and the five sources per project, then runs build_docs.py with pandoc; no AI model
+        evidence: .github/workflows/hub-ci.yml validates project.json and the five sources per project, then runs build_docs.py with pandoc; no AI model
       mission:
         problem: Proves every project's Markdown still renders to DOCX before it is merged.
         outcomes: ["Every pull request renders all documents before merge"]
@@ -108,12 +110,11 @@ agents:
         audit_log: GitHub Actions run history
         credential_owner: KC (GitHub repository settings)
       docs:
-        technical: README.md
+        technical: docs/intelligence-hub/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#hub-ci
         known_issues:
+          - Shared Atlas repository health does not verify this project's live business operations
           - It proves the sources render but not that the committed DOCX are current
-          - Actions are pinned by major version tag, not commit
         improvements:
           - Compare rendered documents with the committed ones
-          - Pin actions to commit SHAs
         last_review: 2026-10-28

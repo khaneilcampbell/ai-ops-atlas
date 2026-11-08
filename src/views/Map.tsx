@@ -1,22 +1,30 @@
+import {districtHeadings} from "./mapPresentation";
+import { toolWorkflowRoads } from "./toolWorkflowLayout";
+import { toolBrand } from "./map3d/toolBrand";
+import { SYMBOLS } from "./map3d/symbols";
+import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAiAgent, residentsLabel } from "../catalog/roles";
+import { agentJobs } from "../catalog/agentJobs";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
 import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
+import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
+import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
+import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
+import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
 import {
-  FRAMEWORK_COLORS,
   hash,
   TH,
-  frameworkColor,
   iso,
   layoutMap,
   placeLabels,
@@ -36,9 +44,19 @@ import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
-const Map3D = lazy(() => import("./map3d/Map3D"));
+// Begin loading the default view while the app initializes, rather than after React mounts it.
+const cityModule = import("./map3d/Map3D");
+const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
+import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
+import { STADIUM_OFFICE_ID } from "./map3d/stadiumPlan";
+import { interiorFloors } from "./office/circaFloors";
+const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
+const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
+const MallInterior = lazy(() => import("./office/MallInterior"));
+const GalleriaInterior = lazy(() => import("./office/GalleriaInterior"));
+const StadiumInterior = lazy(() => import("./office/StadiumInterior"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -57,8 +75,8 @@ type Kind = "house" | "tower" | "plain";
 const onFace = (a: Pt, b: Pt, u: number, v: number) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u - v });
 const quad = (a: Pt, b: Pt, u0: number, u1: number, v0: number, v1: number) => pts([onFace(a, b, u0, v0), onFace(a, b, u1, v0), onFace(a, b, u1, v1), onFace(a, b, u0, v1)]);
 
-function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, onLeave, selected, hovered, windows }: {
-  id: string; gx: number; gy: number; w: number; h: number; wall: string; roof: string; kind?: Kind; selected?: boolean; hovered?: boolean; windows?: boolean;
+function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, onLeave, selected, hovered, windows, worker }: {
+  id: string; gx: number; gy: number; w: number; h: number; wall: string; roof: string; worker?: "agent" | "automation"; kind?: Kind; selected?: boolean; hovered?: boolean; windows?: boolean;
   onClick?: () => void; onEnter?: (e: React.MouseEvent) => void; onLeave?: () => void;
 }) {
   const A = iso(gx, gy + w), B = iso(gx + w, gy + w), C = iso(gx + w, gy), D = iso(gx, gy);
@@ -185,6 +203,7 @@ function Box({ id, gx, gy, w, h, wall, roof, kind = "plain", onClick, onEnter, o
       {(selected || hovered) && <ellipse className={selected ? "sel-glow" : "hover-glow"} cx={base.x} cy={base.y} rx={w * 62 + 18} ry={w * 31 + 9} />}
       {selected && <ellipse className="sel-ring" cx={base.x} cy={base.y} rx={w * 48 + 10} ry={w * 24 + 5} />}
       <g className={`bldg ${hovered ? "hover" : ""} ${selected ? "selected" : ""}`}>{body}</g>
+      {worker && <g transform={`translate(${base.x - 9},${base.y - h - 21})`} pointerEvents="none"><rect width={18} height={18} rx={worker === "agent" ? 4 : 9} fill="#263c32" stroke="#c7d0bd"/><g transform="translate(2,2) scale(.58)" fill="none" stroke="#eff0df" strokeWidth={1.7}>{SYMBOLS[worker].stroke.map(d => <path key={d} d={d}/>)}</g></g>}
     </g>
   );
 }
@@ -370,7 +389,7 @@ function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scal
 const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", paused: "pause", attention: "alert", retired: "close" };
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const repoShort = (name: string) => name.split("/")[1] ?? name;
-const GROUP_LABEL: Record<GroupBy, string> = { none: "No grouping", status: "By status", tag: "By tag" };
+const GROUP_LABEL: Record<GroupBy, string> = { district: "By district", none: "No grouping", status: "By status", tag: "By tag" };
 
 /** Where things sit in world space, for camera moves, hit lookups and keyboard navigation. */
 function anchors(districts: District[], parks: Park[]) {
@@ -378,8 +397,13 @@ function anchors(districts: District[], parks: Park[]) {
   for (const d of districts) {
     const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
     const hq = { x: c.x, y: c.y - d.hq.height / 2, district: d.project.id };
-    m.set(`repo:${d.project.repository}`, hq);
-    // AI agents work inside the headquarters.
+    m.set(`project:${d.project.id}`, hq);
+    for (const name of projectRepositories(d.project)) m.set(`repo:${name}`, hq);
+    for (const k of d.kiosks) {
+      const point = iso(k.gx + k.size / 2, k.gy + k.size / 2);
+      m.set(`service:${d.project.id}:${k.service.id}`, { ...point, district: d.project.id });
+    }
+    // All workers are inside the project building.
     for (const a of d.crew) m.set(`agent:${a.id}`, hq);
     for (const l of d.lots) {
       const p = iso(l.gx + l.size / 2, l.gy + l.size / 2);
@@ -390,8 +414,9 @@ function anchors(districts: District[], parks: Park[]) {
   return m;
 }
 
-export function MapView() {
-  const { catalog, repos, uncataloged, select, selection, settings, setSettings, setView } = useAtlas();
+export function MapView({active=true}:{active?:boolean}) {
+  const { catalog, repos, uncataloged, select, selection: appSelection, setView } = useAtlas();
+  const selection = active ? appSelection : null;
   const infrastructureMetrics = useMemo(() => {
     const aiAgents = catalog.agents.filter(isAiAgent).length;
     return [
@@ -400,8 +425,11 @@ export function MapView() {
       { label: "Automations", count: catalog.agents.length - aiAgents },
     ];
   }, [catalog]);
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => load<GroupBy>("mapGroupBy", "none"));
-  const layout = useMemo(() => layoutMap(catalog, uncataloged, groupBy), [catalog, uncataloged, groupBy]);
+  // Districts are the default layout; a new key so earlier saved groupings don't hide them.
+  const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
+  const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
+  const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
   // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
@@ -413,6 +441,12 @@ export function MapView() {
   };
   // Decorative vehicles on the 3D map; on unless switched off.
   const [traffic, setTrafficState] = useState(() => load<boolean>("mapTraffic", true));
+  // Inside: nearby headquarters open as cutaways showing their offices, without entering.
+  const [inside, setInsideState] = useState(loadInside);
+  const setInside = (on: boolean) => {
+    setInsideState(on);
+    saveInside(on);
+  };
   const setTraffic = (on: boolean) => {
     setTrafficState(on);
     save("mapTraffic", on);
@@ -420,7 +454,10 @@ export function MapView() {
   const is3d = mode === "3d";
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
+  useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
+  const displayNeighborhoods = useMemo(() => districtHeadings(layout, groupBy), [layout, groupBy]);
   const map3d = useRef<Map3DApi>(null);
+  const phone = useMedia(PHONE_QUERY);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
   const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
@@ -436,36 +473,50 @@ export function MapView() {
   const [linksMenu, setLinksMenu] = useState(false);
   const [linkSel, setLinkSel] = useState<string | null>(null);
   const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
-  const linkCounts = useMemo(() => Object.fromEntries(CONNECTION_TYPES.map((t) => [t, connections.filter((c) => c.type === t).length])) as Record<ConnectionType, number>, [connections]);
-  const mapLinks = useMemo<MapLink[]>(
+
+  // Every connection placed on the map; the view (lens) below decides which are drawn.
+  const allLinks = useMemo<MapLink[]>(
     () =>
-      !linkPrefs.on
-        ? []
-        : connections.flatMap((c) => {
-            const a = endpointKey(catalog, c.source);
-            const b = endpointKey(catalog, c.target);
-            if (!a || !b || !linkPrefs.types[c.type]) return [];
-            return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
-          }),
-    [connections, catalog, linkPrefs],
+      connections.flatMap((c) => {
+        const a = endpointKey(catalog, c.source);
+        const b = endpointKey(catalog, c.target);
+        if (!a || !b) return [];
+        return [{ id: c.id, type: c.type, status: c.status, directed: c.directed, a, b, pa: projectOfEndpoint(catalog, c.source)?.id, pb: projectOfEndpoint(catalog, c.target)?.id }];
+      }),
+    [connections, catalog],
   );
-  const pickedLink = linkSel && is3d && mapLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
+  const [lens, setLensState] = useState<MapLens>(() => {
+    const saved = load<MapLens>("mapLens", "infrastructure");
+    return MAP_LENSES.includes(saved) ? saved : "infrastructure";
+  });
+  const setLens = (l: MapLens) => {
+    setLensState(l);
+    save("mapLens", l);
+    setLinkSel(null);
+    setLinksMenu(false);
+    setLinkPrefs({on:l!=="infrastructure"});
+  };
+  const automationIds = useMemo(() => new Set(catalog.agents.filter((a) => !isAiAgent(a)).map((a) => a.id)), [catalog]);
+  const linkCounts=useMemo(()=>{const eligible=lensLinks(allLinks,lens,{showAll:true,types:LINK_DEFAULTS.types,selKey:null,automations:automationIds});return Object.fromEntries(CONNECTION_TYPES.map(t=>[t,eligible.filter(l=>l.type===t).length])) as Record<ConnectionType,number>;},[allLinks,lens,automationIds]);
+  const pickedLink = linkSel && is3d && allLinks.some((l) => l.id === linkSel) ? connections.find((c) => c.id === linkSel) : undefined;
   // A building selection replaces a connection selection, wherever it was made.
   useEffect(() => {
     if (selection) setLinkSel(null);
   }, [selection]);
   useEffect(() => {
-    if (!pickedLink) return;
+    if (!active || !pickedLink) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setLinkSel(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pickedLink]);
+  }, [active, pickedLink]);
   const linkTip = (id: string) => {
     const c = connections.find((x) => x.id === id);
     return c ? { title: c.relation, sub: `${CONNECTION_LABEL[c.type]} · ${CONNECTION_STATUS_LABEL[c.status]} · click to inspect` } : null;
   };
   const setMode = (m: "3d" | "2d") => {
     setModeState(m);
+    setLinksMenu(false);
+    setLinkSel(null);
     save("mapMode", m);
   };
 
@@ -491,10 +542,11 @@ export function MapView() {
     camRef.current = cam;
   }, [cam]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     if (anim.current !== null) cancelAnimationFrame(anim.current);
     anim.current = null;
-  };
+  }, []);
+  useEffect(() => { if (!active) stop(); }, [active, stop]);
 
   const animateTo = useCallback(
     (to: Cam) => {
@@ -513,7 +565,7 @@ export function MapView() {
       };
       anim.current = requestAnimationFrame(step);
     },
-    [reduced],
+    [reduced, stop],
   );
 
   const fitCam = useCallback(
@@ -562,9 +614,9 @@ export function MapView() {
     const ro = new ResizeObserver(onResize);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [fitCam]);
+  }, [fitCam, stop]);
 
-  useEffect(() => () => stop(), []);
+  useEffect(() => () => stop(), [stop]);
 
   const kMin = () => Math.min(0.3, fitK.current * 0.8);
 
@@ -581,7 +633,7 @@ export function MapView() {
       const f = k / v.k;
       return { k, x: px - (px - v.x) * f, y: py - (py - v.y) * f };
     });
-  }, []);
+  }, [stop]);
 
   const endPointer = (id: number) => {
     fingers.current.delete(id);
@@ -636,16 +688,17 @@ export function MapView() {
   }, [zoomAt, is3d]);
 
   // Follow selections made elsewhere (search, inspector links) so the building stays in view.
-  const selKey = selection ? `${selection.kind}:${selection.id}` : null;
+  const selectedProject = selection?.kind === "repo" ? catalog.projects.find(p => projectRepositories(p, catalog.agents).includes(selection.id)) : undefined;
+  const selKey = selectedProject ? `project:${selectedProject.id}` : selection ? `${selection.kind}:${selection.id}` : null;
   useEffect(() => {
-    if (!selKey) return;
+    if (!active || !selKey) return;
     const p = where.get(selKey);
     if (!p) return;
     if (p.district) setFocus(p.district);
     // Wait a frame so the docked inspector has taken its width before measuring.
     const id = requestAnimationFrame(() => reveal(p, 0.55));
     return () => cancelAnimationFrame(id);
-  }, [selKey, where, reveal]);
+  }, [active, selKey, where, reveal]);
 
   const showTip = (e: React.MouseEvent, title: string, sub: string) => {
     const r = stage.current!.getBoundingClientRect();
@@ -662,14 +715,22 @@ export function MapView() {
 
   const k = cam.k;
   // Agent labels need room: show them once zoomed in far enough, earlier if "always show" is on.
-  const agentsShown = k >= (settings.showMapLabels ? 0.5 : 0.9);
+  const agentsShown = showNamesOnZoom && k >= 0.9;
   // Repository and district names grow as you zoom out so they stay readable.
   const nameScale = Math.min(2, Math.max(1, 0.85 / k));
   // Level of detail: windows, trees and footpaths only once there is room to see them.
   const detail = k >= 0.5 || layout.districts.length < 30;
   const focused = layout.districts.find((d) => d.project.id === focus) ?? layout.districts[0];
-  const isSelected = (kind: "agent" | "repo", id: string) => selection?.kind === kind && selection.id === id;
+  const barProject = catalog.projects.find(p => p.id === (selection?.kind === "project" ? selection.id : focus)) ?? focused?.project;
+  const isSelected = (kind: "agent" | "repo" | "project", id: string) => selection?.kind === kind && selection.id === id;
   const selectedDistrict = selKey ? where.get(selKey)?.district : undefined;
+  const selProject = selection?.kind === "project" ? selection.id : selectedProject?.id;
+  const mapLinks = useMemo(
+    () => lensLinks(allLinks, lens, { showAll: linkPrefs.on, types: linkPrefs.types, selKey, selProject, automations: automationIds }),
+    [allLinks, lens, linkPrefs.on, linkPrefs.types, selKey, selProject, automationIds],
+  );
+  // Lines that appear only because a building is selected stay with it, without fading the rest of the map.
+  const selectionOnly = lens === "infrastructure" && !linkPrefs.on;
 
   // Visible world rectangle, padded so tall buildings and labels do not pop at the edges.
   const vis = useMemo(() => {
@@ -721,8 +782,8 @@ export function MapView() {
       key === selKey || key === hover || (district && hover === `district:${district}`) ? 0 : district && (district === selectedDistrict || district === focus) ? 2 : null;
     for (const d of layout.districts) {
       const c = iso(d.hq.gx + d.hq.size / 2, d.hq.gy + d.hq.size / 2);
-      const key = `repo:${d.project.repository}`;
-      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${residentsLabel(d.crew.length, d.lots.length)}`);
+      const key = `project:${d.project.id}`;
+      const p = plaque(d.project.name, `${statusLabel(d.project.status)} · ${residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}`);
       // Pointer tip just above the tower's roof and mast.
       const y = c.y - d.hq.height - TH * d.hq.size * 0.5 - 14;
       const u = urgent(key, d.project.id);
@@ -746,7 +807,7 @@ export function MapView() {
               p={p}
               status={d.project.status}
               state={state}
-              onClick={() => select({ kind: "repo", id: d.project.repository })}
+              onClick={() => select({ kind: "project", id: d.project.id })}
               onEnter={() => setHover(key)}
               onLeave={() => setHover(null)}
             />
@@ -777,7 +838,7 @@ export function MapView() {
       const a = l.agent;
       const key = `agent:${a.id}`;
       const u = urgent(key, l.d.project.id);
-      if (!agentsShown && u !== 0) continue;
+      if (!agentsShown && l.d.project.id !== selectedDistrict && key !== selKey && key !== hover) continue;
       const c = iso(l.gx + l.size / 2, l.gy + l.size / 2);
       const text = a.status === "attention" ? `${short(a.name, 22)} · needs attention` : short(a.name, 32);
       const y = c.y - l.height - TH * l.size * 0.5 - 16;
@@ -800,11 +861,10 @@ export function MapView() {
       .sort((a, b) => b.priority - a.priority);
   }, [layout, lots, strays, k, nameScale, agentsShown, selKey, hover, selectedDistrict, focus, select]);
 
-  const usedFrameworks = FRAMEWORK_COLORS.filter(([re]) => catalog.agents.some((a) => re.test(a.framework)));
 
   const setGroupBy = (g: GroupBy) => {
     setGroupByState(g);
-    save("mapGroupBy", g);
+    save("mapProjectGrouping", g);
   };
 
   /** Arrow keys move between districts in the direction pressed, measured on screen. */
@@ -828,7 +888,7 @@ export function MapView() {
     if (!best) return;
     const d = best.d;
     setFocus(d.project.id);
-    setAnnounce(`${d.project.name}. ${residentsLabel(d.crew.length, d.lots.length)}. Press Enter to inspect.`);
+    setAnnounce(`${d.project.name}. ${residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}. Press Enter to inspect.`);
     if (is3d) map3d.current?.reveal(d.ox + d.size / 2, d.oy + d.size / 2);
     else reveal(center(d));
   };
@@ -847,6 +907,10 @@ export function MapView() {
       const a = catalog.agents.find((x) => x.id === key.slice(6));
       return a ? { title: a.name, sub: `${a.framework} · ${statusLabel(a.status)} · last run ${relative(effectiveLastRun(a, repoData(repos[a.repository]))).toLowerCase()}` } : null;
     }
+    if (key.startsWith("project:")) {
+      const project = catalog.projects.find(p => p.id === key.slice(8));
+      return project ? { title: project.name, sub: `Project · ${projectRepositories(project, catalog.agents).length} linked repositories` } : null;
+    }
     const name = key.slice(5);
     const snap = repoData(repos[name]);
     if (!catalog.projects.some((p) => p.repository === name)) return { title: name, sub: snap?.pushedAt ? `Not in the catalog yet · pushed ${relative(snap.pushedAt)}` : "Not in the catalog yet" };
@@ -863,18 +927,19 @@ export function MapView() {
       else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      if (focused) select({ kind: "repo", id: focused.project.repository });
+      if (focused) select({ kind: "project", id: focused.project.id });
     } else if (e.key === "+" || e.key === "=") zoomBy(1.25);
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
+    else if (is3d && e.key === "i") setInside(!inside);
   };
 
   return (
-    <div className={`map-wrap ${selection || pickedLink ? "inspecting" : ""}`}>
-      {office.projectId && (
+    <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
+      {active && office.projectId && (
         <Suspense fallback={null}>
-          <OfficeLayer light={light} />
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
@@ -884,7 +949,7 @@ export function MapView() {
           tabIndex={0}
           role="application"
           aria-roledescription="map"
-          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan."
+          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan, I shows inside the buildings."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
             if (e.button !== 0 || is3d) return;
@@ -941,12 +1006,17 @@ export function MapView() {
           {is3d ? (
             <Suspense fallback={null}>
             <Map3D
+              active={active}
               ref={map3d}
               layout={layout}
+              jobs={jobs}
+              displayNeighborhoods={displayNeighborhoods}
+              // On a phone the inspector is a sheet over the lower half of the map (mobile.css).
+              cover={phone && (selection || pickedLink) ? 0.4 : 0}
               selKey={selKey}
               selectedDistrict={selectedDistrict}
               focus={focus}
-              showAgentLabels={settings.showMapLabels}
+              showAgentLabels={showNamesOnZoom}
               reduced={reduced}
               tipFor={tipFor}
               healthFor={healthFor}
@@ -963,8 +1033,10 @@ export function MapView() {
                 setLinkSel(id);
               }}
               linkTip={linkTip}
-              linkFocus={linkPrefs.focus}
+              linkFocus={linkPrefs.focus && !selectionOnly}
+              showLocal={lens !== "infrastructure"}
               traffic={traffic}
+              inside={inside}
               linksMoving={!linkPrefs.paused}
             />
             </Suspense>
@@ -972,7 +1044,7 @@ export function MapView() {
           <svg aria-hidden="true">
             <MapDefs />
             <g transform={`translate(${cam.x},${cam.y}) scale(${k})`}>
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodPlate key={n.key} n={n} />)}
               <Meadows meadows={layout.meadows} walks={layout.walks} visible={rectVisible} texture={detail} />
               {islands.map((it) => {
                 if (!rectVisible(it.ox, it.oy, it.w, it.w)) return null;
@@ -984,7 +1056,7 @@ export function MapView() {
                     d={d}
                     ramps={ramps.get(d.project.id)}
                     focused={d === focused}
-                    selected={isSelected("repo", d.project.repository) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
+                    selected={isSelected("project", d.project.id) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
                     hovered={!!hover && (hover === `district:${d.project.id}` || where.get(hover)?.district === d.project.id)}
                     detail={detail}
                     onFocus={() => setFocus(d.project.id)}
@@ -1029,13 +1101,13 @@ export function MapView() {
                 if (it.kind === "hq") {
                   const d = it.d;
                   if (!rectVisible(d.ox, d.oy, d.size, d.size)) return null;
-                  const snap = repoData(repos[d.project.repository]);
-                  const key = `repo:${d.project.repository}`;
+                  const key = `project:${d.project.id}`;
                   return (
                     <Box
                       key={`hq:${d.project.id}`}
                       id={d.project.id}
                       kind="tower"
+                      worker={d.crew.length > 0 ? "agent" : undefined}
                       gx={d.hq.gx}
                       gy={d.hq.gy}
                       w={d.hq.size}
@@ -1043,13 +1115,13 @@ export function MapView() {
                       wall="#ece5d2"
                       roof="#2f4535"
                       windows={detail}
-                      selected={isSelected("repo", d.project.repository)}
+                      selected={isSelected("project", d.project.id)}
                       hovered={hover === key}
                       onClick={() => {
                         setFocus(d.project.id);
-                        select({ kind: "repo", id: d.project.repository });
+                        select({ kind: "project", id: d.project.id });
                       }}
-                      onEnter={enter(key, d.project.repository, snap?.commits[0] ? `Latest commit ${relative(snap.commits[0].date)}: ${short(snap.commits[0].message, 40)}` : "Repository")}
+                      onEnter={enter(key, d.project.name, "Project building")}
                       onLeave={leave}
                     />
                   );
@@ -1063,13 +1135,14 @@ export function MapView() {
                     key={a.id}
                     id={a.id}
                     kind="house"
+                    worker="automation"
                     windows={detail}
                     gx={l.gx}
                     gy={l.gy}
                     w={l.size}
                     h={l.height}
                     wall={a.status === "retired" ? "#d4d6cc" : "#f2ecdc"}
-                    roof={a.status === "attention" ? "#c9a35a" : frameworkColor(a.framework)}
+                    roof="#58665f"
                     selected={isSelected("agent", a.id)}
                     hovered={hover === key}
                     onClick={() => {
@@ -1082,12 +1155,13 @@ export function MapView() {
                 );
               })}
               {labels.filter((b) => ptVisible({ x: b.x, y: b.top + b.dy })).map((b) => b.draw(b.dy))}
-              {groupBy !== "none" && layout.neighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
+              {groupBy !== "none" && displayNeighborhoods.filter((n) => n.key !== "uncataloged").map((n) => <NeighborhoodLabel key={`nl:${n.key}`} n={n} scale={nameScale} />)}
             </g>
+            {layout.districts.flatMap(d => d.kiosks.map(k => <Box key={`tool:${d.project.id}:${k.service.id}`} id={`tool:${d.project.id}:${k.service.id}`} kind="tower" gx={k.gx} gy={k.gy} w={k.size} h={88} wall={toolBrand(k.service.name).wall} roof={toolBrand(k.service.name).primary} windows={detail} onClick={() => { setFocus(d.project.id); select({ kind: "service", id: `${d.project.id}:${k.service.id}` }); }} selected={selection?.kind === "service" && selection.id === `${d.project.id}:${k.service.id}`} onEnter={() => { setHover(`service:${d.project.id}:${k.service.id}`); setTip(null); }} onLeave={leave} />))}
           </svg>
           )}
 
-          <section className="map-intro" aria-labelledby="workspace-map-title">
+          <section className="map-intro selectable" aria-labelledby="workspace-map-title">
             <div className="eyebrow">WORKSPACE / INFRASTRUCTURE</div>
             <h1 id="workspace-map-title">Your Digital Infrastructure.</h1>
             <p className="map-intro-subheading">One connected ecosystem.</p>
@@ -1109,34 +1183,27 @@ export function MapView() {
             </div>
           )}
 
-          <div className="map-legend" aria-label="Roof colors by framework">
-            {usedFrameworks.map(([re, color, label]) => (
-              <span key={String(re)} className="health">
-                <i style={{ background: color, borderRadius: 2 }} />
-                {label}
-              </span>
-            ))}
-            <span className="health">
-              <i style={{ background: "#c9a35a", borderRadius: 2, outline: "1px solid #7d5f25" }} />
-              Needs attention
-            </span>
-          </div>
-
           <div className="map-controls">
-            <label className="map-group" title="Group projects into neighborhoods">
-              <span className="sr-only">Group projects</span>
-              <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
-                {(Object.keys(GROUP_LABEL) as GroupBy[]).map((g) => (
-                  <option key={g} value={g}>
-                    {GROUP_LABEL[g]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
+              title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
+            <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
+              title="Keep district locations and clean district names; no grouping hides district headings" />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
                 3D
+              </button>
+            )}
+            {is3d && (
+              <button
+                className={`icon-btn ${inside ? "on" : ""}`}
+                onClick={() => setInside(!inside)}
+                aria-pressed={inside}
+                aria-label="Inside"
+                aria-keyshortcuts="I"
+                title={inside ? "Close the buildings (I)" : "See inside the buildings near you (I). Select one and Enter it for the full office."}
+              >
+                <Icon name="cutaway" size={17} />
               </button>
             )}
             {is3d && (
@@ -1151,14 +1218,14 @@ export function MapView() {
               </button>
             )}
             {is3d && (
-              <button className={`icon-btn ${traffic ? "on" : ""}`} onClick={() => setTraffic(!traffic)} aria-pressed={traffic} aria-label="Traffic" title={traffic ? "Hide the little vehicles" : "Show the little vehicles"}>
+              <button className={`icon-btn ${traffic ? "on" : ""}`} onClick={() => setTraffic(!traffic)} aria-pressed={traffic} aria-label="Traffic" title={traffic ? "Hide road traffic" : "Show road traffic"}>
                 <Icon name="car" size={17} />
               </button>
             )}
             {is3d && (
               <div className="map-menu-wrap">
                 <button
-                  className={`icon-btn ${linkPrefs.on ? "on" : ""}`}
+                  className={`icon-btn ${linkPrefs.on || lens!=="infrastructure" ? "on" : ""}`}
                   onClick={() => setLinksMenu(!linksMenu)}
                   aria-expanded={linksMenu}
                   aria-haspopup="dialog"
@@ -1169,10 +1236,10 @@ export function MapView() {
                 </button>
                 {linksMenu && (
                   <ConnectionsMenu
-                    prefs={linkPrefs}
+                    prefs={{...linkPrefs,on:linkPrefs.on||lens!=="infrastructure"}}
                     counts={linkCounts}
                     picked={!!pickedLink}
-                    onChange={setLinkPrefs}
+                    onChange={p=>{setLinkPrefs(p);if(p.on===false){setLensState("infrastructure");save("mapLens","infrastructure");}setLinkSel(null);}}
                     onClear={() => setLinkSel(null)}
                     onClose={() => setLinksMenu(false)}
                   />
@@ -1187,7 +1254,7 @@ export function MapView() {
             <button className="icon-btn" onClick={fitAny} aria-label="Fit map" title="Fit map (0)">
               <Icon name="focus" size={17} />
             </button>
-            <button className={`icon-btn ${settings.showMapLabels ? "on" : ""}`} onClick={() => setSettings({ showMapLabels: !settings.showMapLabels })} aria-label="Toggle agent labels" aria-pressed={settings.showMapLabels} title="Agent labels">
+            <button className={`icon-btn ${showNamesOnZoom ? "on" : ""}`} onClick={() => { setShowNamesOnZoom(!showNamesOnZoom); save("mapNamesOnZoom", !showNamesOnZoom); }} aria-label="Show agent names when zoomed in" aria-pressed={showNamesOnZoom} title="Show agent and automation names when zoomed in. Selecting a project always reveals its names.">
               <Icon name="labels" size={17} />
             </button>
             <button className="icon-btn" onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in (+)">
@@ -1207,13 +1274,16 @@ export function MapView() {
         <ul className="sr-only" aria-label="Projects on the map">
           {layout.districts.map((d) => (
             <li key={d.project.id}>
-              <button tabIndex={-1} onClick={() => select({ kind: "repo", id: d.project.repository })}>
-                {d.project.name}, {residentsLabel(d.crew.length, d.lots.length)}
+              <button tabIndex={-1} onClick={() => select({ kind: "project", id: d.project.id })}>
+                {d.project.name}, {residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}
               </button>
             </li>
           ))}
         </ul>
 
+        <ul className="sr-only" aria-label="Infrastructure tools">
+          {layout.districts.flatMap(d => d.kiosks.map(k => <li key={`${d.project.id}:${k.service.id}`}><button onClick={() => select({ kind: "service", id: `${d.project.id}:${k.service.id}` })}>{k.service.name} · {d.project.name}</button></li>))}
+        </ul>
         {is3d && mapLinks.length > 0 && (
           <ul className="sr-only" aria-label="Connections on the map">
             {mapLinks.map((l) => (
@@ -1232,10 +1302,10 @@ export function MapView() {
           </ul>
         )}
 
-        {focused && <ProjectBar d={focused} onOpenList={() => setView("agents")} />}
+        {!office.projectId && barProject && selection && <ProjectBar d={{project:barProject,crew:catalog.agents.filter(a=>a.projectId===barProject.id),lots:[]}} onOpenList={() => setView("agents")} />}
       </div>
 
-      {pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />}
+      {!office.projectId && (pickedLink ? <ConnectionPanel c={pickedLink} onClose={() => setLinkSel(null)} /> : selection && <DetailPanel docked />)}
     </div>
   );
 }
@@ -1274,24 +1344,24 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
     <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
       <label className="row strong">
         <input type="checkbox" checked={prefs.on} onChange={(e) => onChange({ on: e.target.checked })} />
-        Show connections
+        Show all connections in this view
       </label>
       <div className="group">
         {CONNECTION_TYPES.map((t) => (
-          <label key={t} className={`row ${prefs.on ? "" : "off"}`}>
-            <input type="checkbox" disabled={!prefs.on} checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
+          <label key={t} className="row">
+            <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
             <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
             {CONNECTION_LABEL[t]}
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
         ))}
       </div>
-      <label className={`row ${prefs.on ? "" : "off"}`}>
-        <input type="checkbox" disabled={!prefs.on} checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
+      <label className="row">
+        <input type="checkbox" checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />
         Selected building only
       </label>
-      <label className={`row ${prefs.on ? "" : "off"}`}>
-        <input type="checkbox" disabled={!prefs.on} checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
+      <label className="row">
+        <input type="checkbox" checked={prefs.paused} onChange={(e) => onChange({ paused: e.target.checked })} />
         Pause animation
       </label>
       <button className="text-btn" disabled={!picked} onClick={onClear}>
@@ -1430,6 +1500,8 @@ function Connections({ d, exits }: { d: District; exits?: { gx: number; gy: numb
     const lc = { gx: l.gx + l.size / 2, gy: l.gy + l.size / 2 };
     return { id: l.agent.id, p: pts([iso(hc.gx, hc.gy), iso(lc.gx, hc.gy), iso(lc.gx, lc.gy)]) };
   });
+  toolWorkflowRoads(d.hq, d.kiosks).forEach((path, i) => lines.push({ id: `tool-flow:${i}`, p: pts(path.map(p => iso(p.gx, p.gy))) }));
+  d.kiosks.forEach((k, i) => lines.push({ id: `tool-door:${i}`, p: pts([iso(k.gx+k.size/2,k.gy+k.size), iso(k.gx+k.size/2,k.gy+k.size+0.25)]) }));
   // Clamp to the island top (which overhangs the lot by its margin) so paths meet the steps.
   const m = 0.45;
   const clamp = (v: number, lo: number) => Math.min(lo + d.size + m, Math.max(lo - m, v));
@@ -1489,7 +1561,7 @@ function NeighborhoodLabel({ n, scale }: { n: Neighborhood; scale: number }) {
   );
 }
 
-function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) {
+function ProjectBar({ d, onOpenList }: { d: Pick<District,"project"|"crew"|"lots">; onOpenList: () => void }) {
   const { repos, select, setFilters, clearFilters } = useAtlas();
   const agents: Agent[] = [...d.crew, ...d.lots.map((l) => l.agent)];
   const snap = repoData(repos[d.project.repository]);
@@ -1502,7 +1574,7 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
         </span>
         <div>
           <div className="eyebrow">
-            {d.project.repository} · {residentsLabel(d.crew.length, d.lots.length)}
+            {d.project.repository} · {residentsLabel(d.crew.filter(isAiAgent).length, d.crew.filter(a => !isAiAgent(a)).length + d.lots.length)}
           </div>
           <h3>{d.project.name}</h3>
         </div>
@@ -1511,7 +1583,7 @@ function ProjectBar({ d, onOpenList }: { d: District; onOpenList: () => void }) 
         <span className="health" style={{ color: "var(--on-dark-2)" }}>
           <i className={`h-${health}`} /> Repo {health === "good" ? "healthy" : health === "unknown" ? "not synced" : health === "warn" ? "needs a look" : "failing"}
         </span>
-        <button className="ghost-btn" onClick={() => select({ kind: "repo", id: d.project.repository })}>
+        <button className="ghost-btn" onClick={() => select({ kind: "project", id: d.project.id })}>
           <Icon name="repos" size={15} /> Inspect
         </button>
         <button
