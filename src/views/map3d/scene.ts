@@ -498,6 +498,7 @@ function buildCity(layout: Layout): Scene3D {
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
     const cx = p.ox + p.w / 2;
     const cz = p.oy + p.h / 2;
+    const retiredShopSpots = [[-3.2, 3], [-0.8, 3], [2.5, 3], [4.4, 0.5]] as const;
     parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
     // Keep the remaining Skyline tenants around an open central lobby and promenade.
     const tenants = [
@@ -522,6 +523,7 @@ function buildCity(layout: Layout): Scene3D {
     ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
       if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
+      if (retiredShopSpots.some(([dx, dz]) => Math.abs(s.gx - cx - dx) < 0.825 && Math.abs(s.gy - cz - dz) < 0.925)) continue;
       if (retail.some(k => k.projectId === p.id && Math.abs(k.x-s.gx) < k.size/2+0.4 && Math.abs(k.z-s.gy) < k.size/2+0.5)) continue;
       if (paving.some(q => inRect(q, s.gx, s.gy, 0.2))) continue;
       if (ponds.some((q) => Math.hypot(q.x - s.gx, q.z - s.gy) < q.r + 0.3)) continue;

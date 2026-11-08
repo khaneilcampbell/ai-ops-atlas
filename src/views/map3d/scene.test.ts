@@ -99,6 +99,9 @@ describe("expanded Skyline layout", () => {
       const scene = buildScene(layoutMap(catalog, [], grouping));
       const park = scene.parks.find(p => p.label === "Skyline")!;
       const cx = park.x + park.w / 2, cz = park.z + park.d / 2;
+      for (const [dx,dz] of [[-3.2,3],[-0.8,3],[2.5,3],[4.4,0.5]] as const) {
+        expect(scene.trees.some(t => Math.abs(t.x-cx-dx)<0.825 && Math.abs(t.z-cz-dz)<0.925)).toBe(false);
+      }
       for (const dx of [-3.2, -0.8, 2.5]) {
         expect(scene.retail.some(k => k.x === cx + dx && k.z === cz + 3)).toBe(false);
         expect(scene.walks.some(w => w.shopEntrance && Math.abs(w.x1 - cx - dx) < 0.001 && Math.abs(w.z1 - cz - 3.12) < 0.001)).toBe(false);
