@@ -103,7 +103,7 @@ describe("expanded Skyline layout", () => {
         expect(scene.retail.some(k => k.x === cx + dx && k.z === cz + 3)).toBe(false);
         expect(scene.walks.some(w => w.shopEntrance && Math.abs(w.x1 - cx - dx) < 0.001 && Math.abs(w.z1 - cz - 3.12) < 0.001)).toBe(false);
       }
-      expect(scene.retail.some(k => ["Chipotle", "Smashburger", "Starbucks"].includes(k.name))).toBe(false);
+      expect(scene.retail.some(k => ["Chipotle", "Smashburger", "Starbucks", "Zara"].includes(k.name))).toBe(false);
     }
   });
   it("keeps every branded building inside its district without overlapping another", () => {
@@ -111,7 +111,7 @@ describe("expanded Skyline layout", () => {
     const park=scene.parks.find(p=>p.label==="Skyline")!;
     expect(park).toBeDefined();
     const shops=scene.retail.filter(k=>k.projectId===park.id);
-    expect(shops.map(k=>k.name)).toEqual(["Reasoning Lab","Model Lab","Zara","Halden Branch"]);
+    expect(shops.map(k=>k.name)).toEqual(["Reasoning Lab","Model Lab","Halden Branch"]);
     for(const shop of shops) {
       expect(shop.x-shop.size/2).toBeGreaterThan(park.x);
       expect(shop.x+shop.size/2).toBeLessThan(park.x+park.w);
