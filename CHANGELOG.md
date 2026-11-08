@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-08 · The two hot air balloons are gone from the sky over Atlas. The Atlas airship still flies (#281)
+- 2026-11-08 · Train stations look properly built: the roof posts now stand on the platform and track deck instead of hanging in the air, the curved roof fits the platform, and the lift tower no longer pokes through the glass roof (#268)
 - 2026-11-08 · The Intelligence Hub district has about twice the land it had, and the building is widened to match (#278)
 - 2026-11-08 · The Intelligence Hub is rebuilt from your corner-building reference: white ribbed fins, thin black lines at every floor that swell round the cut corner (they glow gold at night), a planted loggia on the corner of every floor, rounded black-framed windows, a glass shopfront ground floor under a rounded overhang, and a rear wing that steps down to a planted roof. It now has 20 floors instead of 14 (#276)
 - 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
