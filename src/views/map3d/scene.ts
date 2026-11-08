@@ -1,4 +1,5 @@
-import { SKYLINE_WHEEL, skylineWheelPosition } from "./skylineWheelPlan";
+import {uncoveredLand} from "./neighborhoodLinks";
+import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
@@ -159,6 +160,7 @@ export interface Park extends Rect {
 
 export interface Scene3D {
   coreLand?:Rect[];
+  stationPlaza?:StationPlaza;
   financial?:FinancialPlan;
   hills?: HillsPlan;
   community?:CommunityPlan;
@@ -513,15 +515,11 @@ function buildCity(layout: Layout): Scene3D {
       paving.push(strip(x, cz - 1.2, x, cz + 3.9, 0.4, top));
     }
     paving.push(strip(cx-5.4,cz-1.2,cx+5.4,cz-1.2,0.4,top),strip(cx-5.4,cz+3.9,cx+5.4,cz+3.9,0.4,top));
-    // Connect the front-left wheel plaza to the promenade, clear of the central lobby.
-    const wheel = skylineWheelPosition({ x: p.ox, z: p.oy, w: p.w, d: p.h });
-    paving.push(strip(wheel.x, wheel.z + SKYLINE_WHEEL.depth / 2, wheel.x, cz + 3.9, 0.4, top));
     // A small paved square with a fountain, and a pond beside it.
     paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
     fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
     ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
     for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
-      if (Math.abs(s.gx-wheel.x) < SKYLINE_WHEEL.width / 2 + 0.4 && Math.abs(s.gy-wheel.z) < SKYLINE_WHEEL.depth / 2 + 0.4) continue;
       if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
       if (retail.some(k => k.projectId === p.id && Math.abs(k.x-s.gx) < k.size/2+0.4 && Math.abs(k.z-s.gy) < k.size/2+0.5)) continue;
       if (paving.some(q => inRect(q, s.gx, s.gy, 0.2))) continue;
@@ -846,9 +844,16 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
 
+  const stationPlaza=planStationPlaza({stadium,communityRail});
+  if(stationPlaza){
+    land.push(...uncoveredLand(stationPlaza.bounds,land));
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
+    for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+  }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     financial,
+    stationPlaza,
     community,
     coreLand:cityLand,communityRail,
     hills,

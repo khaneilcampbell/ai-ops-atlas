@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Moved the Ferris wheel beside Stadium Station and added a white-and-red station pavilion with a connected plaza.
 - 2026-11-08 · Removed Chipotle, Smashburger, Starbucks and Zara from Skyline, and moved its Ferris wheel to the front plaza (#275).
 - 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
 - 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#270)

@@ -1,3 +1,4 @@
+import {StationPlaza} from "./StationPlaza";
 import {marinaFootprint,marinaSite} from './marinaPlan';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
@@ -1149,7 +1150,7 @@ function World({
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
-      {detailsReady && <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />}
+      {detailsReady && <><SkylineFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
       <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
       <VenueBridge scene={scene} g={g} m={m}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}

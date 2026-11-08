@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { TERRACE_H, type Scene3D } from "./scene";
+import { TERRACE_H } from "./scene";
 
-import { SKYLINE_WHEEL, skylineWheelPosition } from "./skylineWheelPlan";
+import { PLAZA_WHEEL, type StationPlaza } from "./stationPlazaPlan";
 
 const RADIUS = 1.65;
 const CABINS = 12;
@@ -22,7 +22,7 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
     for (const cabin of cabins.current) if (cabin) cabin.rotation.z = -angle.current;
   });
   return <group position={[x, TERRACE_H + 0.04, z]}>
-    <mesh position={[0, 0.05, 0]} receiveShadow><boxGeometry args={[SKYLINE_WHEEL.width, 0.1, SKYLINE_WHEEL.depth]} /><meshStandardMaterial color="#d5c9ae" roughness={0.85} /></mesh>
+    <mesh position={[0, 0.05, 0]} receiveShadow><boxGeometry args={[PLAZA_WHEEL.width, 0.1, PLAZA_WHEEL.depth]} /><meshStandardMaterial color="#d5c9ae" roughness={0.85} /></mesh>
     {[-1, 1].map(side => <group key={side}>
       <mesh position={[side * 0.65, 1.15, 0.28]} rotation={[0, 0, side * 0.29]} castShadow><boxGeometry args={[0.13, 2.45, 0.15]} /><meshStandardMaterial color={GREEN} metalness={0.35} roughness={0.5} /></mesh>
       <mesh position={[side * 0.85, 0.14, 0.28]}><boxGeometry args={[0.65, 0.18, 0.55]} /><meshStandardMaterial color={GOLD} /></mesh>
@@ -47,6 +47,6 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
   </group>;
 }
 
-export function SkylineFerrisWheel({ parks, reduced }: { parks: Scene3D["parks"]; reduced: boolean }) {
-  return <group>{parks.map(park => <Wheel key={park.id} {...skylineWheelPosition(park)} reduced={reduced} />)}</group>;
+export function SkylineFerrisWheel({ plaza, reduced }: { plaza?: StationPlaza; reduced: boolean }) {
+  return plaza ? <Wheel {...plaza.wheel} reduced={reduced}/> : null;
 }
