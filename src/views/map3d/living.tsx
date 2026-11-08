@@ -26,7 +26,7 @@ const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
  * Day and night: eases the sky, fog, lights and every night-aware material between the two
  * moods. Shaders read the shared `night` uniform, so most of the work is one number.
  */
-export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: boolean; m: M; sun: React.RefObject<THREE.DirectionalLight>; fog: THREE.Fog }) {
+export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: boolean; m: M; sun: React.RefObject<THREE.DirectionalLight | null>; fog: THREE.Fog }) {
   const hemi = useRef<THREE.HemisphereLight>(null);
   const moon = useRef<THREE.DirectionalLight>(null);
   const amb = useRef<THREE.AmbientLight>(null);

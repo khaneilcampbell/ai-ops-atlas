@@ -625,7 +625,7 @@ function World({
   phone: boolean;
   cover: number;
   /** The map's whole area, labels included, for trackpad gestures. */
-  surface: React.RefObject<HTMLDivElement>;
+  surface: React.RefObject<HTMLDivElement | null>;
 }) {
   const { camera, gl, size, scene: three, invalidate } = useThree();
   // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.

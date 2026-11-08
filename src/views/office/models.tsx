@@ -1,6 +1,6 @@
 import { Component, Suspense, useEffect, useMemo, type ReactNode } from "react";
 import { useGLTF } from "@react-three/drei";
-import { useThree } from "@react-three/fiber";
+import { useThree, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { Runtime } from "./model";
@@ -44,7 +44,7 @@ function shadows(obj: THREE.Object3D) {
 }
 
 /** Prop: one static model, fitted to a height and turned to face the room. */
-export function Prop({ name, height, width, ry = 0, ...rest }: { name: Exclude<Name, "agent">; height: number; width?: number; ry?: number } & JSX.IntrinsicElements["group"]) {
+export function Prop({ name, height, width, ry = 0, ...rest }: { name: Exclude<Name, "agent">; height: number; width?: number; ry?: number } & ThreeElements["group"]) {
   const { scene } = useModel(name);
   const invalidate = useThree((t) => t.invalidate);
   const obj = useMemo(() => {
