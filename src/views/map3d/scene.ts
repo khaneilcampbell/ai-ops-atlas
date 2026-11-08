@@ -8,6 +8,7 @@ import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {sizeIntelligenceHub} from "./intelligenceHubPlan";
+import {sizePortfolioSite} from "./portfolioSitePlan";
 import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
@@ -697,6 +698,7 @@ function buildCity(layout: Layout): Scene3D {
   sizeCustomTowers(towers, kiosks);
   sizeGithubTower(towers);
   sizeIntelligenceHub(towers);
+  sizePortfolioSite(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)alignOfficeScale(towers,financial.referenceHeight);
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
