@@ -52,7 +52,7 @@ describe('Atlas Galleria on the map',()=>{
  it('never stands on a building, road, rail or station opening, in any grouping',()=>{
   for(const [g,sc] of scenes){
    const p=sc.galleria;if(!p)continue;const f=p.footprint;
-   for(const b of [...sc.towers,...sc.kiosks,...sc.retail])expect(hit(f,{x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}),`${g} ${b.key}`).toBe(false);
+   for(const b of [...sc.towers,...sc.kiosks])expect(hit(f,{x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}),`${g} ${b.key}`).toBe(false);
    if(sc.mall)expect(hit(f,sc.mall),g).toBe(false);
    for(const c of sc.transportConnections)for(const q of [...c.road,...c.walk])expect(inRect(f,q,.3),`${g} ${c.id}`).toBe(false);
    const loop=sc.communityRail?.loop;

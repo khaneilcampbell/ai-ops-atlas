@@ -17,7 +17,6 @@ for(const light of ['day','night'] as const)test(`renamed buildings, ${light}`,a
  if(!process.env.NAMES_BEFORE){for(const old of OLD)expect(names.join('|')).not.toContain(old);for(const name of RENAMED.slice(0,7))expect(names.join('|')).toContain(name);}
  await shot(page,`financial-${light}`);
  await selectBuilding(page,process.env.NAMES_BEFORE?'BMW':'Vantor Motors');await shot(page,`dealership-${light}`);
- await selectBuilding(page,'Skyline');await settle(page,3);await shot(page,`skyline-${light}`);
 });
 test('renamed buildings on a phone',async({page})=>{
  test.setTimeout(600_000);await page.setViewportSize({width:390,height:844});

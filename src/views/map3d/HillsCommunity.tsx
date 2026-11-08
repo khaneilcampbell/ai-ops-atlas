@@ -68,7 +68,7 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  for(const [x,z]of [[23,3],[32,11],[24,14],[31.8,16],[2,29],[7,29],[13,29],[18.5,29],[2,37.7],[18,36.6],[32,44.8],[23,45],[1,45.4],[7,45.4],[13,45.4]]){solid.push(box(x,.03,z,.1,.7,.1,'#827a60'));plants.push(box(x,.63,z,.85,1.1,.85,'#64875d'));}
  for(const z of [6,13,30,36,44]){solid.push(box(19.55,.04,z,.045,.65,.045,palette.green));lights.push(box(19.55,.69,z,.12,.1,.12,night?'#ffe6af':'#d5cfb6'));}
  return {solid,glass,plants,lights,keys};},[p,night,palette]);
- return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={night?m.lamp:m.plain}/></>;
+ return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/></>;
 }
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
 const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
@@ -109,11 +109,13 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
   const shell=!!p.loop||index===1;
   if(!shell)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
   for(const dx of [-3.5,3.5])solid.push(box(x+dx,C.platformRise,z+1.25,.07,1.15,.07,palette.green));
-  solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+1.5,.7,.2,.5,'#ded8c7'));
-  strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+1.8],.48,.075,.03,'#e3dfd2',paths);
+  // Under a shell the lift stands just outside the glass, joined to the platform by a short landing.
+  const liftZ=shell?PARK_STATION.liftZ:1.3,liftFace=liftZ+.35;
+  solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+(shell?1.38:1.5),.7,.2,shell?.06:.5,'#ded8c7'));
+  strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+liftFace+.13],.48,.075,.03,'#e3dfd2',paths);
   for(let i=0;i<15;i++)solid.push(box(x+1,C.platformRise*(1-(i+1)/15),z+1.7+i*.28,1,C.platformRise/15,.29,'#d6d0bd'));
   // Separate protected lift and stairs make the raised platform reachable from ground paths.
-  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,shell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
+  solid.push(box(x-3.4,.02,z+liftZ,.65,C.platformRise+1,.7,shell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+liftFace+.02,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+(shell?liftZ-.37:liftFace+.02),.35,.8,.035,'#435e58'));
   for(const dx of [-.58,.58]){solid.push({...box(x+1+dx,C.platformRise/2+.6,z+3.8,.035,.035,Math.hypot(C.platformRise,4.2),palette.green),rx:Math.atan2(C.platformRise,4.2)});}
   for(const dx of [-.58,.58])for(let i=0;i<15;i++)solid.push(box(x+1+dx,C.platformRise*(1-i/15),z+1.7+i*.28,.035,.6,.035,palette.green));
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
@@ -167,9 +169,9 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
   <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'}]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.256,.2,0],s:[.015,.24,.9],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
   {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.26,.16,.24]} rotation={[0,0,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
-  <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.ball} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
+  <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.bead} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
   {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
  </group>;})}</group>
- {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.ball,m.plain,count]} frustumCulled={false}/></>}
+ {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/></>}
  </>;
 }

@@ -43,16 +43,18 @@ export function airportFlightPose(seconds:number,moving=true,circuit?:FlightCirc
  const p=departurePose(Math.min(t-24,179),true,circuit);
  return {...p,yaw:t<27?0:p.yaw,x:15+p.x,y:p.y-.28,z:16.5+p.z-10.4};
 }
-/** Reserve new land outside the city; connect to the outermost existing paved edge. */
-export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): AirportPlan | undefined {
+/**
+ * Where the airport road meets the open lot: just inside its west edge, about two thirds of the way
+ * down. This is the spot the road reached when the lot was the Skyline park (its west promenade),
+ * so the airport and its road did not move when Skyline was removed.
+ */
+export const AIRPORT_LOT_ACCESS={inset:.5,depth:.65} as const;
+/** Reserve new land outside the city; connect to the open lot, or else the outermost paved edge. */
+export function planAirport(land: Rect[], paving: Slab[], lot?: Rect): AirportPlan | undefined {
   if (!land.length || !paving.length) return undefined;
-  if(skyline) {
-    const paths=paving.filter(p=>p.x>=skyline.x-.1&&p.x<=skyline.x+skyline.w&&p.z>=skyline.z&&p.z+p.d<=skyline.z+skyline.d);
-    if(paths.length) {
-      const access=paths.reduce((a,b)=>b.x<a.x?b:a);
-      const accessZ=access.z+access.d/2;
-      return {x:Math.min(...land.map(r=>r.x))-11.2,z:accessZ-6,accessX:access.x+.1,accessZ,west:true,publicViaZ:skyline.x>Math.min(...land.map(r=>r.x))+3?skyline.z+skyline.d+1.5:undefined};
-    }
+  if(lot) {
+    const accessZ=lot.z+lot.d*AIRPORT_LOT_ACCESS.depth,west=Math.min(...land.map(r=>r.x));
+    return {x:west-11.2,z:accessZ-6,accessX:lot.x+AIRPORT_LOT_ACCESS.inset,accessZ,west:true,publicViaZ:lot.x>west+3?lot.z+lot.d+1.5:undefined};
   }
   const edge = Math.max(...land.map(r => r.x + r.w));
   const access = paving.reduce((a,b) => b.x+b.w>a.x+a.w ? b : a);

@@ -98,7 +98,7 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  const ring=offset(g.slabs[0],L.lampRing),lamps:GalleriaLamp[]=[];
  const clearOfWalk=([x,z]:Pt)=>!(x>J[0]-1.4&&Math.abs(z-e.z)<1.1);
  // A lamp may stand at the lot's edge, but never in a street, on another building or in the car park.
- const blocks=[...scene.towers,...scene.kiosks,...scene.retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}));
+ const blocks=[...scene.towers,...scene.kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}));
  if(scene.mall)blocks.push(scene.mall);
  const offStreet=(p:Pt)=>nearestStreet(graph,[p[0],0,p[1]]).d>.45;
  for(const {p,a} of every(ring,L.lampStep))if(clearOfWalk(p)&&inRect(rect,p,.3)&&offStreet(p)&&!blocks.some(b=>inRect(b,p,.2))&&!(g.parking&&inRect(g.parking.area,p,.2)))lamps.push({x:p[0],z:p[1],yaw:-a});

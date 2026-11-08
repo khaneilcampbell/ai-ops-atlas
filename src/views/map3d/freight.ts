@@ -114,10 +114,10 @@ export interface FreightPlan {lot:{x:number;z:number};route:Pt[];
  /** District streets the truck shares; route segments on them are not drawn a second time. */
  streets?:Pt[][];highway:Pt[];cityAccess:Pt[];exits:Pt[];truck:VehiclePlan;localJunctions:Pt[];land:{x:number;z:number;w:number;d:number}[];access:HighwayAccess[]}
 /** Plan once, routing around building footprints; the rendered road shares these exact points. */
-export function planFreight(scene:Pick<Scene3D,"airport"|"towers"|"kiosks"|"retail"|"stadium"> & {compactParcels?:CompactParcels;reserved?:Box[];connections?:{id?:string;road:Pt[];frontage?:Pt[]}[];carBridges?:CarBridge[];streets?:Pt[][];land?:{x:number;z:number;w:number;d:number}[];fountains?:{x:number;z:number;k?:number}[]}):FreightPlan|undefined {
+export function planFreight(scene:Pick<Scene3D,"airport"|"towers"|"kiosks"|"stadium"> & {compactParcels?:CompactParcels;reserved?:Box[];connections?:{id?:string;road:Pt[];frontage?:Pt[]}[];carBridges?:CarBridge[];streets?:Pt[][];land?:{x:number;z:number;w:number;d:number}[];fountains?:{x:number;z:number;k?:number}[]}):FreightPlan|undefined {
  const a=scene.airport,canva=scene.kiosks.find(k=>k.name.toLowerCase()==="canva");
  if(!a||!canva)return;
- const obstacles=[...scene.towers.map(t=>({x:t.x,z:t.z,w:t.size,d:t.size})),...scene.kiosks.map(k=>({x:k.x,z:k.z,w:k.size,d:k.size})),...scene.retail.map(k=>({x:k.x,z:k.z,w:k.size,d:k.size}))];
+ const obstacles=[...scene.towers.map(t=>({x:t.x,z:t.z,w:t.size,d:t.size})),...scene.kiosks.map(k=>({x:k.x,z:k.z,w:k.size,d:k.size}))];
  obstacles.push(...(scene.reserved??[]));
  obstacles.push(...(scene.fountains??[]).map(f=>({x:f.x,z:f.z,w:.8*(f.k??1),d:.8*(f.k??1)})));
  const clear=(x:number,z:number,margin=.45)=>!obstacles.some(o=>Math.abs(x-o.x)<o.w/2+margin&&Math.abs(z-o.z)<o.d/2+margin);
