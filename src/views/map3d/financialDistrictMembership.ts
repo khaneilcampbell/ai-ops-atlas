@@ -4,10 +4,10 @@ import { DEALERSHIP_KEY, type DealershipPlan } from "./dealershipPlan";
 /** Existing buildings retain their selection IDs and routes inside one district. */
 export const FINANCIAL_MEMBERS = [
   ...FINANCIAL_BUILDINGS.map(b => ({ key: financialKey(b.id), name: b.name, role: b.role })),
-  { key: DEALERSHIP_KEY, name: "BMW", role: "Automotive showroom · Visual infrastructure" },
+  { key: DEALERSHIP_KEY, name: "Vantor Motors", role: "Automotive showroom · Visual infrastructure" },
 ];
 
-/** District framing includes the west Circa and east BMW parcels without moving them. */
+/** District framing includes the west residence and east showroom parcels without moving them. */
 export function financialDistrictBounds(f: FinancialPlan, dealership?: DealershipPlan) {
   const parcels = [f, ...(f.circa ? [f.circa] : []), ...(dealership ? [dealership.lot] : [])];
   const x = Math.min(...parcels.map(p => p.x)), z = Math.min(...parcels.map(p => p.z));

@@ -3,7 +3,7 @@ import {headquartersEnvelope} from './financialPlan';
 import {financialDimensions} from './financialArchitecture';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {AIRPORT_LAYOUT,type AirportPlan,type FlightCircuit,type FlightObstacle} from './airport';
-import {shopHeight} from './cityScale';
+import {TOOL_OFFICE_HEIGHT} from './toolBrand';
 import {DEALERSHIP} from './dealershipPlan';
 import {COMMUNITY_BUILDINGS} from './hillsCommunityPlan';
 import {HILLS} from './hillsPlan';
@@ -11,14 +11,14 @@ import {HILLS} from './hillsPlan';
 export const FLIGHT_CLEARANCE={roofGap:4,minimumCruise:14,aircraftRadius:1.95} as const;
 /** Conservative roof envelope, including crowns and the new Financial District skyline.
  * Computed once per scene, not by testing every building on every animation frame. */
-export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'|'retail'>&Partial<Pick<Scene3D,'dealership'>>){
- const roof=Math.max(8,headquartersEnvelope(scene.towers),(scene.dealership?.showroom.height??DEALERSHIP.height)+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...[...scene.kiosks,...scene.retail].map(b=>('height' in b&&b.height?b.height:shopHeight(b))+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
+export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'>&Partial<Pick<Scene3D,'dealership'>>){
+ const roof=Math.max(8,headquartersEnvelope(scene.towers),(scene.dealership?.showroom.height??DEALERSHIP.height)+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...scene.kiosks.map(b=>('height' in b&&b.height?b.height:TOOL_OFFICE_HEIGHT)+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
  // Footprints of the tall buildings, so departures can climb clear of whatever sits off the runway.
  const obstacles:WorldObstacle[]=[
   ...scene.towers.map(t=>({x:t.x,z:t.z,w:t.size+.7,d:t.size+.7,h:headquartersEnvelope([t])})),
   ...(scene.financial?.buildings.map(b=>({x:scene.financial!.x+b.x,z:scene.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d,h:b.height+financialDimensions(b.id).top}))??[]),
   ...scene.strays.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:b.height+1})),
-  ...[...scene.kiosks,...scene.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:('height' in b&&b.height?b.height:shopHeight(b))+1})),
+  ...scene.kiosks.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:('height' in b&&b.height?b.height:TOOL_OFFICE_HEIGHT)+1})),
  ];
  return {roof,altitude:Math.max(FLIGHT_CLEARANCE.minimumCruise,roof+FLIGHT_CLEARANCE.roofGap),obstacles};
 }
@@ -35,5 +35,5 @@ export function privateJetPose(b:Scene3D['bounds'],altitude:number,seconds:numbe
  const cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,rx=(b.x1-b.x0)/2+3,rz=(b.z1-b.z0)/2+3,t=seconds*.085;
  return {x:cx+Math.cos(t)*rx,y:altitude+Math.sin(t*2)*.2,z:cz+Math.sin(t)*rz,yaw:Math.atan2(-Math.cos(t)*rz,-Math.sin(t)*rx),roll:Math.sin(t)*.035};
 }
-/** Leave room below the airship gondola and balloon baskets, above the aircraft corridor. */
-export const decorativeAerialHeights=(altitude:number)=>({airship:altitude+3,balloons:altitude+7});
+/** Leave room below the airship gondola, above the aircraft corridor. */
+export const decorativeAerialHeights=(altitude:number)=>({airship:altitude+3});

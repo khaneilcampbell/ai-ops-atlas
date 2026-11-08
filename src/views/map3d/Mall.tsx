@@ -5,7 +5,6 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {TERRACE_H} from './scene';
 import {MALL,MALL_KEY,along,mallFins,mallFloor,type MallPlan} from './mallPlan';
 import {inset,ribbon} from './mallShapes';
-import type {MallGarden} from './mallGarden';
 
 function signage(){
  const c=document.createElement('canvas');c.width=1024;c.height=160;const ctx=c.getContext('2d')!;
@@ -19,7 +18,7 @@ function signage(){
  * Atlas Marketplace. Static, no lights of its own: a handful of merged meshes plus instanced fins
  * and planters. Night only raises the glass glow, the same way the other buildings light up.
  */
-export function Mall({plan:a,garden,g,m,pick,night=false}:{plan?:MallPlan;garden?:MallGarden;night?:boolean;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
+export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolean;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}){
  const mats=useMemo(()=>({
   slab:new THREE.MeshStandardMaterial({color:'#f7f7f0',roughness:.7}),
   roof:new THREE.MeshStandardMaterial({color:'#4f7a52',roughness:.95}),
@@ -72,13 +71,9 @@ export function Mall({plan:a,garden,g,m,pick,night=false}:{plan?:MallPlan;garden
   solid.push({p:[a.cx,y0+.006,a.cz+a.rz*.45],s:[a.rx*.9,.02,a.rz*1.1],c:'#e6d6b4'});
   // Monument sign at the head of the plaza, facing the boulevard.
   solid.push({p:[a.cx,y0,a.z+a.d-1.75],s:[2.05,.42,.07],c:'#294237'});
-  // Basement car park ramp off the boulevard side.
-  solid.push({p:[a.x+a.w-.35,y0+.01,a.z+1.6],s:[.5,.03,1.4],c:'#2b3833'},{p:[a.x+a.w-.35,y0+.03,a.z+.9],s:[.55,.12,.05],c:'#d0ad69'});
   for(const dx of [-.9,.9])solid.push({p:[a.cx+dx,y0,a.z+a.d-.2],s:[.05,.55,.05],c:'#294237'},{p:[a.cx+dx,y0+.55,a.z+a.d-.2],s:[.1,.06,.1],c:'#f6e7c4'});
   return {fins,plants,solid};
  },[a]);
- // Marketplace Gardens: hedges, beds, gravel and coping in one instanced mesh, no shadows.
- const beds=useMemo(()=>(garden?.boxes??[]).map((b):Inst=>({p:[b.x,TERRACE_H+b.y,b.z],s:[b.w,b.h,b.d],c:b.c})),[garden]);
 
  if(!a||!geo)return null;
  const keys=(n:number)=>({...pick,keys:Array.from({length:n},()=>MALL_KEY)});
@@ -94,13 +89,7 @@ export function Mall({plan:a,garden,g,m,pick,night=false}:{plan?:MallPlan;garden
   <mesh position={[a.fountain.x,TERRACE_H+.105,a.fountain.z]} material={mats.water}><cylinderGeometry args={[a.fountain.r*.86,a.fountain.r*.86,.01,28]}/></mesh>
   <mesh position={[a.cx,TERRACE_H+.21,a.z+a.d-1.71]} geometry={sign.geometry} material={sign.material}/>
   <Instanced items={parts.fins} geometry={g.box} material={m.plain} pick={keys(parts.fins.length)}/>
-  <Instanced items={parts.plants} geometry={g.blob} material={m.plain} shadow={false}/>
+  <Instanced items={parts.plants} geometry={g.ball} material={m.plain} shadow={false}/>
   <Instanced items={parts.solid} geometry={g.box} material={m.plain}/>
-  {garden&&<>
-   <Instanced items={beds} geometry={g.box} material={m.plain} shadow={false}/>
-   <mesh position={[garden.canal.x+garden.canal.w/2,TERRACE_H+.052,garden.canal.z+garden.canal.d/2]} rotation={[-Math.PI/2,0,0]} material={mats.water}><planeGeometry args={[garden.canal.w,garden.canal.d]}/></mesh>
-   <mesh position={[garden.basin.x,TERRACE_H+.04,garden.basin.z]} material={mats.slab}><cylinderGeometry args={[garden.basin.r,garden.basin.r*1.04,.08,28]}/></mesh>
-   <mesh position={[garden.basin.x,TERRACE_H+.082,garden.basin.z]} material={mats.water}><cylinderGeometry args={[garden.basin.r*.86,garden.basin.r*.86,.005,28]}/></mesh>
-  </>}
  </group>;
 }

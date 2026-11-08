@@ -7,7 +7,6 @@ import { useIntel } from "../../intel/state";
 import { repoData, verifiedState } from "../../lib/derive";
 import { useReducedMotion } from "../../lib/motion";
 import { formatDate, relative } from "../../lib/time";
-import { buildRegistry, type RegistryEntry } from "../../registry/registry";
 import type { ExecutionRecord } from "../../registry/types";
 import { useAtlas } from "../../state";
 import { CATEGORY_LABEL } from "../../registry/types";
@@ -18,17 +17,14 @@ import { ApprovalQueue } from "../../components/ApprovalQueue";
 import { isReportAgent } from "../../reports/model";
 import { useProposals } from "../../approvals/state";
 import type { Proposal } from "../../approvals/proposals";
-import { ACTION_AGENTS, accentFor, actionExecutions, planOffice, RUNTIME_LABEL, runtimeFor, toolIcon, type Runtime } from "./model";
+import { ACTION_AGENTS, accentFor, planOffice, RUNTIME_LABEL, toolIcon } from "./model";
 import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
+import { officeRows, type OfficeRow } from "./officeRows";
 import { leaveBuilding, useOffice } from "./store";
 import { STATE_COLOR } from "./textures";
 import "../../styles/office.css";
 
-interface Row {
-  entry: RegistryEntry;
-  runtime: Runtime;
-  history: ExecutionRecord[];
-}
+type Row = OfficeRow;
 
 /** The office for the building that was entered, over the map, with its controls and inspector. */
 export default function OfficeLayer({ light }: { light: LightMode }) {
@@ -46,17 +42,10 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
 
-  const rows = useMemo(() => {
-    const entries = buildRegistry({ projects: catalog.projects, agents }, repos, intel);
-    const data = { available: actions.available, status: actions.status, audit: actions.audit };
-    return new Map<string, Row>(
-      entries.map((entry) => {
-        const a = agents.find((x) => x.id === entry.profile.id)!;
-        const action = ACTION_AGENTS[a.id];
-        return [a.id, { entry, runtime: runtimeFor(a, entry.telemetry, data, pending.filter((p) => p.agentId === a.id).length), history: action ? actionExecutions(action, actions.audit) : entry.telemetry.executions }];
-      }),
-    );
-  }, [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending]);
+  const rows = useMemo(
+    () => officeRows(catalog.projects, agents, repos, intel, { available: actions.available, status: actions.status, audit: actions.audit }, pending),
+    [catalog.projects, agents, repos, intel, actions.available, actions.status, actions.audit, pending],
+  );
 
   const desks = useMemo<DeskData[]>(
     () =>

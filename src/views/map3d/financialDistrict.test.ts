@@ -4,9 +4,9 @@ import {layoutMap} from "../mapLayout";
 import {buildScene} from "./scene";
 import {FINANCIAL_MEMBERS,financialDistrictBounds} from "./financialDistrictMembership";
 
-it("includes Circa and BMW once with unchanged selection identities",()=>{
-  expect(FINANCIAL_MEMBERS.filter(b=>b.name==="Circa")).toEqual([expect.objectContaining({key:"service:financial:circa"})]);
-  expect(FINANCIAL_MEMBERS.filter(b=>b.name==="BMW")).toEqual([expect.objectContaining({key:"service:bmw-dealership"})]);
+it("includes Ellipse Residences and Vantor Motors once with unchanged selection identities",()=>{
+  expect(FINANCIAL_MEMBERS.filter(b=>b.name==="Ellipse Residences")).toEqual([expect.objectContaining({key:"service:financial:circa"})]);
+  expect(FINANCIAL_MEMBERS.filter(b=>b.name==="Vantor Motors")).toEqual([expect.objectContaining({key:"service:bmw-dealership"})]);
   expect(new Set(FINANCIAL_MEMBERS.map(b=>b.key)).size).toBe(FINANCIAL_MEMBERS.length);
 });
 for(const grouping of ["none","district","status","tag"] as const)it(`frames both outer parcels in ${grouping}`,()=>{

@@ -1,5 +1,5 @@
 import type { Catalog } from "../catalog/types";
-import type { EcoContext, EcoReport, Run } from "./types";
+import type { EcoContext, EcoReport, EcoReview, Rating, ReviewArea, Run } from "./types";
 
 /**
  * The catalog as the Senior Engineering Reviewer sees it: every project and agent with the
@@ -49,6 +49,17 @@ export const AREA_LABEL: Record<string, string> = {
   documentation: "Documentation",
   tooling: "Tooling",
 };
+
+/**
+ * All nine review areas, in a fixed order. An area Claude left out shows as unknown rather than
+ * disappearing, so a short scorecard can't read as "nothing to worry about".
+ */
+export function scorecardRows(review: Pick<EcoReview, "scorecard">): { area: ReviewArea; rating: Rating; rationale: string; evidence: string[]; grounded: boolean; rated: boolean }[] {
+  return (Object.keys(AREA_LABEL) as ReviewArea[]).map((area) => {
+    const s = review.scorecard.find((x) => x.area === area);
+    return s ? { ...s, rated: true } : { area, rating: "unknown", rationale: "Not rated in this review.", evidence: [], grounded: false, rated: false };
+  });
+}
 
 export const EFFORT_LABEL = { hours: "Hours", a_day: "About a day", a_week: "About a week" } as const;
 export const WHEN_LABEL = { now: "Do now", next: "Next", later: "Later" } as const;

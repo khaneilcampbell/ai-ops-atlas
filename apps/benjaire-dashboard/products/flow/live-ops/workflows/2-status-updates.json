@@ -1,0 +1,646 @@
+{
+  "name": "Flow · 2 Status updates",
+  "nodes": [
+    {
+      "id": "f1879dae-c3f2-483e-a8ba-bc15d08cb3c2",
+      "name": "Status Link Opened",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "flow-status",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "ac099e86-2985-4a16-a543-3d14b00192fa"
+    },
+    {
+      "id": "5cec1966-99b8-4260-9d29-72fa277268ac",
+      "name": "Render Confirm Page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const q = $json.query || {};\nconst ref = String(q.ref || '');\nconst t = String(q.t || '');\nconst s = String(q.s || '');\nconst labels = { replied: 'Mark as replied', won: 'Mark as won', lost: 'Mark as lost' };\nconst ok = /^INQ-[0-9]{6}-[A-F0-9]{6}$/.test(ref) && /^[a-f0-9]{48}$/.test(t) && Object.prototype.hasOwnProperty.call(labels, s);\nconst body = ok\n  ? '<h1>' + labels[s] + '?</h1><p>Inquiry ' + ref + '</p>' + (s === 'won' ? '<p>The client will receive your welcome and onboarding email.</p>' : '') + '<form method=\"post\" action=\"/webhook/flow-status-confirm\"><input type=\"hidden\" name=\"ref\" value=\"' + ref + '\"><input type=\"hidden\" name=\"t\" value=\"' + t + '\"><input type=\"hidden\" name=\"s\" value=\"' + s + '\"><button type=\"submit\">Confirm</button></form>'\n  : '<h1>This link is not valid</h1><p>Open the latest alert email for this inquiry and try again.</p>';\nreturn { json: { html: body } };"
+      }
+    },
+    {
+      "id": "236b466a-caae-4099-a3ce-4cbe5d920759",
+      "name": "Show Confirm Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Benjaire Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main>{{ $json.html }}<p><small>Benjaire Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              },
+              {
+                "name": "X-Frame-Options",
+                "value": "DENY"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "67ac7f5a-2114-47b1-b38c-dc5b469afabc",
+      "name": "Status Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        360
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flow-status-confirm",
+        "authentication": "none",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "4e84f79c-fd59-4531-8dd7-220c7fdae591"
+    },
+    {
+      "id": "4470e69a-cd82-44ee-b9ff-d5aa26d3cf47",
+      "name": "Read Status Form",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        360
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-ref",
+              "name": "ref",
+              "value": "={{ /^INQ-[0-9]{6}-[A-F0-9]{6}$/.test(String($json.body?.ref ?? '')) ? $json.body.ref : 'invalid' }}",
+              "type": "string"
+            },
+            {
+              "id": "f-t",
+              "name": "t",
+              "value": "={{ /^[a-f0-9]{48}$/.test(String($json.body?.t ?? '')) ? $json.body.t : 'invalid' }}",
+              "type": "string"
+            },
+            {
+              "id": "f-s",
+              "name": "s",
+              "value": "={{ ['replied', 'won', 'lost'].includes(String($json.body?.s ?? '')) ? $json.body.s : 'invalid' }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bf9440dd-877e-4566-9100-4e4ee7d49ca7",
+      "name": "Find Inquiry",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        360
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_ref",
+              "condition": "eq",
+              "keyValue": "={{ $json.ref }}"
+            },
+            {
+              "keyName": "action_token",
+              "condition": "eq",
+              "keyValue": "={{ $json.t }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "d5275cd3-3dd2-4d9c-bd03-9e2608395816",
+      "name": "Link Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.inquiry_ref ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "={{ $(\"Read Status Form\").item.json.ref }}"
+            },
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.s }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "invalid"
+            },
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.t }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "invalid"
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8588c9f5-0385-4fdf-bd74-86fd86c2bae4",
+      "name": "Update Status",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "inquiry_ref",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Read Status Form\").item.json.ref }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $(\"Read Status Form\").item.json.s }}",
+            "status_changed_at": "={{ $now.toISO() }}",
+            "reminded": true
+          }
+        }
+      }
+    },
+    {
+      "id": "538de84e-b898-4381-9ba6-85055bd5487b",
+      "name": "Log Status Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "inquiry_ref": "={{ $(\"Read Status Form\").item.json.ref }}",
+            "event": "=status_{{ $(\"Read Status Form\").item.json.s }}",
+            "detail": "=from {{ $(\"Find Inquiry\").item.json.status }} to {{ $(\"Read Status Form\").item.json.s }}",
+            "at": "={{ $now.toISO() }}"
+          }
+        }
+      }
+    },
+    {
+      "id": "61a504a6-70af-465a-ac89-dd220c929b61",
+      "name": "Newly Won?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Read Status Form\").item.json.s }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "won"
+            },
+            {
+              "leftValue": "={{ $(\"Find Inquiry\").item.json.status }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "rightValue": "won"
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "32f8ba20-25b3-4135-bea5-b1aa84237c23",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "02aabd84-9aa9-413a-b706-3bab58927884",
+      "name": "Compose Welcome Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const inq = $('Find Inquiry').item.json;\nconst s = $json;\nconst esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); };\nconst IMG = 'https://benjaire.com/brand/email/';\nconst FONT = \"Inter,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif\";\nconst MONO = \"'IBM Plex Mono',Menlo,Consolas,monospace\";\nconst P = function (t) { return '<p style=\"margin:0 0 14px\">' + t + '</p>'; };\nconst button = function (url, label) { return '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0 10px\"><tr><td style=\"background:#1f2124;border-radius:999px\"><a href=\"' + esc(url) + '\" style=\"display:inline-block;padding:12px 22px;font:500 14px/1 ' + FONT + ';color:#ffffff;text-decoration:none;border-radius:999px\">' + label + '</a></td></tr></table>'; };\nconst shell = function (inner, footExtra) {\n  return '<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light\"></head><body style=\"margin:0;padding:0;background:#f3f3f1\">' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f3f1\"><tr><td align=\"center\" style=\"padding:24px 12px\">' +\n  '<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;background:#ffffff;border:1px solid #dcdddb;border-radius:12px;border-collapse:separate;overflow:hidden\">' +\n  '<tr><td style=\"background:#121315;padding:22px 28px;border-radius:12px 12px 0 0\"><img src=\"' + IMG + 'email-header-lockup.png\" width=\"152\" height=\"24\" alt=\"BENJAIRE\" style=\"display:block;border:0;outline:none;color:#f3f3f1;font:600 14px/24px Arial,sans-serif;letter-spacing:3px\"></td></tr>' +\n  '<tr><td style=\"padding:28px;font:15px/1.6 ' + FONT + ';color:#1f2124\">' + inner + '</td></tr>' +\n  '<tr><td style=\"background:#f3f3f1;border-top:1px solid #dcdddb;padding:20px 28px;font:12px/1.7 ' + FONT + ';color:#565b62;border-radius:0 0 12px 12px\">' +\n  '<div style=\"font-family:' + MONO + ';font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#6f747b\">Benjaire &middot; New York, NY</div>' +\n  '<div><a href=\"https://benjaire.com\" style=\"color:#565b62\">benjaire.com</a> &middot; contact@benjaire.com</div>' +\n  (footExtra ? '<div>' + footExtra + '</div>' : '') +\n  '</td></tr></table></td></tr></table></body></html>';\n};\nconst first = String(inq.name || '').trim().split(/\\s+/)[0] || 'there';\nconst docs = String(s.onboarding_docs || '').split(';').map(function (d) { return d.trim(); }).filter(Boolean);\nconst step = function (n, title, body) { return '<tr><td width=\"36\" valign=\"top\" style=\"padding:0 0 14px\"><div style=\"width:24px;height:24px;border:1px solid #dcdddb;border-radius:50%;text-align:center;font:12px/24px ' + MONO + ';color:#565b62\">' + n + '</div></td><td valign=\"top\" style=\"padding:0 0 14px\"><div style=\"font-weight:600;color:#1f2124\">' + title + '</div><div style=\"font-size:14px;color:#565b62\">' + body + '</div></td></tr>'; };\nconst docsBody = docs.length ? 'Please send us: ' + docs.map(esc).join('; ') + '.' : 'Anything that shows how you handle inquiries and onboarding today.';\nlet n = 1;\nconst steps = step(n++, 'Send us a few things', docsBody) +\n  (s.booking_link ? step(n++, 'Book the kickoff call', 'Choose a time to map your process and agree on what we automate first.') : '') +\n  step(n++, 'Review your first workflow', 'We&rsquo;ll send it to you for testing before anything goes live.');\nconst html = shell(\n  P('Hi ' + esc(first) + ',') +\n  P('Welcome to ' + esc(s.firm_name) + '. We&rsquo;re glad to be working with ' + esc(inq.company || 'you') + '. Here&rsquo;s how we&rsquo;ll get started.') +\n  '<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:6px 0 6px\">' + steps + '</table>' +\n  (s.booking_link ? button(s.booking_link, 'Choose a kickoff time') : '') +\n  P('Reply to this email with any questions.') +\n  '<p style=\"margin:0\"><b style=\"font-weight:600\">The ' + esc(s.firm_name) + ' team</b><br><span style=\"font-size:14px;color:#565b62\">contact@benjaire.com</span></p>'\n);\nreturn { json: { to: inq.email, subject: 'Welcome to ' + s.firm_name + ': your next steps', html: html, firm_name: s.firm_name, owner_email: s.owner_email } };\n"
+      }
+    },
+    {
+      "id": "292f579d-54c2-443f-8a99-b12273e43a4c",
+      "name": "Show Won Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2200,
+        200
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Benjaire Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>Marked as won</h1><p>{{ $json.id ? \"The welcome and onboarding email is on its way to the client.\" : \"The status is saved, but the welcome email could not be sent. Please send it yourself.\" }}</p><p><small>Benjaire Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "ac80e2fe-d42a-4139-bdd4-4c07eb89f891",
+      "name": "Show Updated Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1540,
+        420
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Benjaire Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>Status saved</h1><p>Inquiry {{ $(\"Read Status Form\").item.json.ref }} is now marked {{ $(\"Read Status Form\").item.json.s }}.</p><p><small>Benjaire Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "562d6dcb-2556-4d1e-bb27-a12c34b9fcaf",
+      "name": "Show Invalid Link",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        560
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><title>Benjaire Flow</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;background:#f3f3f1;color:#1f2124;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}h1{font-weight:400;font-size:26px;margin:0 0 8px}p{color:#565b62;line-height:1.6}button{background:#1f2124;color:#fff;border:0;border-radius:999px;padding:12px 24px;font-size:15px;cursor:pointer}small{color:#8e939a;font-family:ui-monospace,Menlo,monospace}</style></head><body><main><h1>This link is not valid</h1><p>Open the latest alert email for this inquiry and try again.</p><p><small>Benjaire Flow</small></p></main></body></html>",
+        "options": {
+          "responseCode": 404,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "bd67d382-d0bb-4edf-a870-595c569b5743",
+      "name": "Sticky Note f505ac3e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -300
+      ],
+      "parameters": {
+        "content": "## Benjaire Flow · Status updates\nThe owner alert links to GET /webhook/flow-status. That only shows a confirm page, so email link scanners cannot change anything. The Confirm button POSTs to /webhook/flow-status-confirm, which checks the reference and its one time token, updates the status, logs it, and on a first win sends the client the welcome and onboarding email.",
+        "color": 7,
+        "width": 560,
+        "height": 240
+      }
+    },
+    {
+      "id": "3b9f478c-061d-4272-b334-de8c86bccecc",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "contentType": "json",
+        "genericAuthType": "httpBearerAuth",
+        "jsonBody": "={{ JSON.stringify({ from: $('Load Client Settings').first().json.from_address, to: [$json.to], reply_to: $('Load Client Settings').first().json.reply_to_email, subject: $json.subject, html: $json.html }) }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://api.resend.com/emails"
+      },
+      "notes": "Welcome and onboarding email from contact@ through Resend.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "AC12xxRxpzZMqWxw",
+          "name": "Resend API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Status Link Opened": {
+      "main": [
+        [
+          {
+            "node": "Render Confirm Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Confirm Page": {
+      "main": [
+        [
+          {
+            "node": "Show Confirm Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Read Status Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Status Form": {
+      "main": [
+        [
+          {
+            "node": "Find Inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Inquiry": {
+      "main": [
+        [
+          {
+            "node": "Link Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Valid?": {
+      "main": [
+        [
+          {
+            "node": "Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Invalid Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status": {
+      "main": [
+        [
+          {
+            "node": "Log Status Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Status Event": {
+      "main": [
+        [
+          {
+            "node": "Newly Won?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Newly Won?": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Updated Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Compose Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Show Won Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "F4A9rMTqPZunNoqb",
+    "timezone": "America/New_York"
+  },
+  "description": "Benjaire Flow status links: confirm page on GET, verified status change on POST, audit event, and a welcome and onboarding email to the client on a first win.",
+  "meta": {
+    "source": "n8n Cloud export",
+    "workflowId": "7ccL2o9ta9CNY3gj",
+    "versionId": "187b57c7-2c32-4012-8c5a-fb2f0846e11f"
+  }
+}

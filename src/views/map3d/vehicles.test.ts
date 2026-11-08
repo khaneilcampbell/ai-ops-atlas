@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../../catalog";
 import { layoutMap } from "../mapLayout";
 import { buildScene, FOUNTAIN_R, TERRACE_H } from "./scene";
-import { DECK_W, RISE } from "./roads";
+import { DECK_W, RISE, ROAD_W } from "./roads";
+import { distanceToRoad } from "./highway";
+import { streetLines } from "./streetGraph";
 import { MAX_VEHICLES, planVehicles, vehicleAt } from "./vehicles";
 
 const scene = buildScene(layoutMap(catalog));
@@ -48,6 +50,8 @@ describe("decorative vehicles", () => {
 
   it("stays on the paved paths and bridges, clear of every building and kiosk", () => {
     const paths = scene.paving.filter((p) => p.y === TERRACE_H);
+    // Every street drawn on the map, ring road and Financial District streets included.
+    const streets = streetLines(scene, { drive: true }).flatMap((l) => l.slice(1).map((b, i) => [l[i], b] as const));
     const checked = new Set<string>();
     for (const v of plans) for (const leg of v.legs) {
       const samples = Math.max(1, Math.ceil(Math.hypot(leg.b[0]-leg.a[0],leg.b[1]-leg.a[1])/0.02));
@@ -57,13 +61,14 @@ describe("decorative vehicles", () => {
         const key=[x,y,z].map(n=>n.toFixed(6)).join(":");
         if(checked.has(key))continue;checked.add(key);
         const onDeck = decks.some((d) => inside(d, x, z, 0.01));
-        expect(onDeck || paths.some((p) => inside(p, x, z, 0.01)), `${v.id} off the path at ${x},${z}`).toBe(true);
+        const onStreet = streets.some(([a, b]) => distanceToRoad([x, z], [[a[0], a[2]], [b[0], b[2]]]) < ROAD_W / 2 + 0.01);
+        expect(onDeck || onStreet || paths.some((p) => inside(p, x, z, 0.01)), `${v.id} off the path at ${x},${z}`).toBe(true);
         // Off a bridge, vehicles keep to the paving; on one, to the deck's rise.
         if (!onDeck) expect(y, `${v.id} in the air at ${x},${z}`).toBeLessThan(1e-6);
         expect(y).toBeLessThanOrEqual(RISE + 1e-6);
         for (const h of scene.houses) expect(inside({ x: h.x - h.w / 2, z: h.z - h.d / 2, w: h.w, d: h.d }, x, z, 0.08), `${v.id} inside ${h.key} at ${x},${z}`).toBe(false);
         // Towers, with their entrance stairs out front.
-        for (const w of scene.towers) expect(inside({ x: w.x - w.size / 2, z: w.z - w.size / 2, w: w.size, d: w.size + 0.24 }, x, z, 0.08), `${v.id} inside a tower`).toBe(false);
+        for (const w of scene.towers) expect(inside({ x: w.x - w.size / 2, z: w.z - w.size / 2, w: w.size, d: w.size + 0.24 }, x, z, 0.08), `${v.id} inside ${w.projectId} at ${x},${z}`).toBe(false);
         for (const k of scene.kiosks) expect(inside({ x: k.x - k.size / 2, z: k.z - k.size / 2, w: k.size, d: k.size }, x, z, 0.08), `${v.id} inside ${k.key}`).toBe(false);
         for (const f of scene.fountains) expect(Math.hypot(x - f.x, z - f.z), `${v.id} in a fountain`).toBeGreaterThan(FOUNTAIN_R * (f.k ?? 1) + 0.08);
       }
