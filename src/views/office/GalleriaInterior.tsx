@@ -113,6 +113,34 @@ function Floor({floor,y,labels,cutaway,night,picked,onPick}:{floor:number;y:numb
  </group>;
 }
 
+type P3=[number,number,number];
+/** One flight between floors: up and down escalators in a pair across the atrium, and a stair from the basement. */
+export interface GalleriaRun {from:number;kind:'up'|'down'|'stair';foot:P3;top:P3}
+/**
+ * The flights that start on `floor` (KC, 2026-11-08): each shopping floor pair has an up and a down escalator side by
+ * side, crossing the atrium at 30°, and the basement has a stair beside the lift core up to the ground floor.
+ */
+export function galleriaRuns(floor:number):GalleriaRun[]{
+ const [x,z]=COLUMN_IN,y=BASE[floor];
+ if(floor===0){const [lx]=toIn([50,52]),rise=GALLERIA_IN.heights[0],run=rise/Math.tan(Math.PI*.2);// Halfway between two rows of the 10 m column grid, so no column stands in the flight.
+  const sz=toIn([0,45])[1];return [{from:0,kind:'stair',foot:[lx+1.2,y,sz],top:[lx+1.2+run,y+rise,sz]}];}
+ if(floor>2)return [];
+ const rise=GALLERIA_IN.heights[floor],run=rise/Math.tan(Math.PI/6),dir=floor%2?1:-1,side=floor%2?1:-1,ez=z+side*2.6,dz=ez-side*1.25;
+ return [{from:floor,kind:'up',foot:[x-dir*run/2,y,ez],top:[x+dir*run/2,y+rise,ez]},{from:floor,kind:'down',foot:[x-dir*run/2,y,dz],top:[x+dir*run/2,y+rise,dz]}];
+}
+/** A flight as boxes: treads climbing from foot to top, glass sides and warm handrails on escalators, solid stringers on the stair. */
+function runBoxes(r:GalleriaRun):B[]{
+ const out:B[]=[],n=r.kind==='stair'?16:12,[fx,fy,fz]=r.foot,[tx,ty,tz]=r.top,run=Math.hypot(tx-fx,tz-fz),yaw=-Math.atan2(tz-fz,tx-fx);
+ for(let i=0;i<n;i++){const t=(i+.5)/n,sx=fx+(tx-fx)*t,sz=fz+(tz-fz)*t,sy=fy+(ty-fy)*t;
+  out.push({p:[sx,sy-.25,sz],s:[run/n+.02,.25,1],c:r.kind==='stair'?(i%2?'#cfc8b8':'#d9d3c4'):(i%2?'#4a4f4c':'#555b57'),r:yaw});
+  for(const k of [-.55,.55]){const ox=Math.sin(yaw)*k,oz=Math.cos(yaw)*k;
+   if(r.kind==='stair')out.push({p:[sx+ox,sy-.3,sz+oz],s:[run/n+.02,.4,.06],c:'#8e958f',r:yaw},{p:[sx+ox,sy+.85,sz+oz],s:[run/n+.02,.05,.05],c:'#3b4744',r:yaw});
+   else out.push({p:[sx+ox,sy,sz+oz],s:[run/n+.02,.9,.04],c:'#cfe3e0',r:yaw},{p:[sx+ox,sy+.9,sz+oz],s:[run/n+.02,.06,.08],c:r.kind==='up'?'#c9a35a':'#8c6a52',r:yaw});}
+ }
+ return out;
+}
+function Runs({floor}:{floor:number}){const items=useMemo(()=>galleriaRuns(floor).flatMap(runBoxes),[floor]);return <Boxes items={items}/>;}
+
 const SHIRTS=['#4f6b5d','#7a4b3a','#5d7a8c','#a1674a','#2f4a3a','#8c6a52','#3f5f86','#8c3b52'];
 /** The atrium line pushed `k` plan metres outward: the gallery walk between the balustrade and the shopfronts. */
 function gallery(k:number):Pt[]{
@@ -130,10 +158,26 @@ export function galleriaCrowd(floor:number,y:number):CrowdPerson[]{
  if(floor===0){
   const [lx,lz]=toIn([50,52]);
   units.filter(u=>u.kind==='parking').slice(0,2).forEach((u,i)=>{const [x,z]=centroid(u.poly.map(toIn));for(const k of [0,1])out.push(person(`b${i}${k}`,[[lx,y,lz+1.2],[x+k*2-1,y,z]],[3,4],1.1,i*5+k*9,i*2+k));});
+  // Drivers who parked climb the stair to the ground floor and come back down to their cars.
+  const [st]=galleriaRuns(0),top=st.top;
+  units.filter(u=>u.kind==='parking').slice(0,2).forEach((u,i)=>{const [x,z]=centroid(u.poly.map(toIn));
+   out.push(person(`st${i}`,[[x,y,z+1],[st.foot[0]-.6,y,st.foot[2]],st.foot,top,[top[0]+1.2,top[1],top[2]],top,st.foot,[st.foot[0]-.6,y,st.foot[2]]],[3,0,0,0,6,0,0,0],.9,i*11,i+5));});
   return out;
  }
  const walk=gallery(floor===1?2.5:3.5),ring:[number,number,number][]=walk.filter((_,i)=>i%2===0).map(([x,z])=>[x,y,z]);
  for(let i=0;i<6;i++)out.push(person(`s${i}`,ring,ring.map((_,k)=>k===i%ring.length?2.5:0),.9+.1*(i%3),i*6.5,i));
+ // Riders leave the floor: up one escalator, a turn on the floor above, and back down the other (from Floor 2, the reverse).
+ const pairs=[...galleriaRuns(floor).map(r=>({r,below:false})),...(floor>1?galleriaRuns(floor-1):[]).map(r=>({r,below:true}))];
+ const up=pairs.find(p=>p.r.kind==='up'&&!p.below)??pairs.find(p=>p.r.kind==='up'),down=pairs.find(p=>p.r.kind==='down'&&p.below===up?.below);
+ if(up&&down){
+  const [a,b]=up.below?[down.r.top,down.r.foot]:[up.r.foot,up.r.top],[c,d]=up.below?[up.r.foot,up.r.top]:[down.r.top,down.r.foot];
+  const away=(q:P3,k:number):P3=>[q[0]+Math.sign(q[0]-COLUMN_IN[0])*k,q[1],q[2]];
+  for(let i=0;i<3;i++){const start=ring[(i*3+1)%ring.length];
+   out.push(person(`e${i}`,[start,away(a,.8),a,b,away(b,1.4),c,d,away(d,.8)],[3,0,0,0,5,0,0,0],1,i*9,i+11));}
+ }
+ // On the ground floor some shoppers walk out through the main entrance and back in later.
+ if(floor===1){const door=toIn([23,25]),outside=toIn([12,25.6]);
+  for(let i=0;i<3;i++){const start=ring[(i*4)%ring.length];out.push(person(`x${i}`,[start,[door[0],y,door[1]],[outside[0]+i*.6,y,outside[1]+(i-1)*.8],[door[0],y,door[1]]],[2,0,9,0],1.1,i*7,i+15));}}
  units.filter(u=>u.kind!=='service').forEach((u,i)=>{
   const [x,z]=centroid(u.poly.map(toIn));
   out.push(person(`t${u.id}`,[[x+.6,y,z+.4]],[0],1,i,i+3));
@@ -144,27 +188,22 @@ export function galleriaCrowd(floor:number,y:number):CrowdPerson[]{
 }
 
 /** The steel funnel rising through the atrium into the polycarbonate canopy, and the zig-zag escalators. */
-function Atrium({top,night,floors}:{top:number;night:boolean;floors:number[]}){
+/**
+ * The funnel at full building height. On a single floor the building is drawn with that floor at y 0, so the funnel
+ * drops by the floor's base and is cut at its ceiling: a slim stem low down, flaring only near the roof, as it really is.
+ */
+function Atrium({top,night,shift=0,ceiling}:{top:number;night:boolean;shift?:number;ceiling?:number}){
  const [x,z]=COLUMN_IN,R=GALLERIA.canopyR*GALLERIA_IN.k;
  const geo=useMemo(()=>new THREE.LatheGeometry(Array.from({length:16},(_,i)=>{const t=i/15;return new THREE.Vector2(.25+(R-.25)*t**2.6,t*top);}),28),[top,R]);
  useEffect(()=>()=>geo.dispose(),[geo]);
- const escalators=useMemo(()=>{
-  const out:B[]=[];
-  for(const f of floors.filter(f=>f>=1&&f<3)){
-   const y=BASE[f],rise=GALLERIA_IN.heights[f],run=rise/Math.tan(Math.PI/6),dir=f%2?1:-1,ez=z+(f%2?2.6:-2.6),n=12;
-   // Steps climbing at 30°, with a glass side and a warm handrail each side.
-   for(let i=0;i<n;i++){const t=(i+.5)/n,sx=x-dir*run/2+dir*run*t,sy=y+rise*t;out.push({p:[sx,sy-.25,ez],s:[run/n+.02,.25,1],c:i%2?'#4a4f4c':'#555b57'});for(const k of [-.55,.55])out.push({p:[sx,sy,ez+k],s:[run/n+.02,.9,.04],c:'#cfe3e0'},{p:[sx,sy+.9,ez+k],s:[run/n+.02,.06,.08],c:'#c9a35a'});}
-  }
-  return out;
- },[floors,x,z]);
+ const clip=useMemo(()=>ceiling===undefined?[]:[new THREE.Plane(new THREE.Vector3(0,-1,0),ceiling)],[ceiling]);
  return <group>
-  <group position={[x,BASE[1],z]}>
+  <group position={[x,BASE[1]-shift,z]}>
    {/* A solid steel funnel (KC, 2026-11-08); the gridshell ribs sit just proud of its skin. */}
-   <mesh geometry={geo} castShadow><meshStandardMaterial color="#f1f2ec" roughness={.4} metalness={.15} side={THREE.DoubleSide}/></mesh>
-   <mesh geometry={geo} scale={[1.012,1,1.012]}><meshBasicMaterial color="#b9c1b5" wireframe/></mesh>
-   <mesh position={[0,top,0]}><cylinderGeometry args={[R+.1,R+.1,.08,40]}/><meshStandardMaterial color="#dce2d5" transparent opacity={.55} emissive="#d0ad69" emissiveIntensity={night?.8:0} depthWrite={false}/></mesh>
+   <mesh geometry={geo} castShadow><meshStandardMaterial color="#f1f2ec" roughness={.4} metalness={.15} side={THREE.DoubleSide} clippingPlanes={clip}/></mesh>
+   <mesh geometry={geo} scale={[1.012,1,1.012]}><meshBasicMaterial color="#b9c1b5" wireframe clippingPlanes={clip}/></mesh>
+   {!clip.length&&<mesh position={[0,top,0]}><cylinderGeometry args={[R+.1,R+.1,.08,40]}/><meshStandardMaterial color="#dce2d5" transparent opacity={.55} emissive="#d0ad69" emissiveIntensity={night?.8:0} depthWrite={false}/></mesh>}
   </group>
-  <Boxes items={escalators}/>
  </group>;
 }
 
@@ -207,7 +246,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
  return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${GALLERIA_NAME} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
@@ -218,9 +257,10 @@ export default function GalleriaInterior({light}:{light:LightMode}){
    {floors.map(f=><group key={f} position={[0,offset(f)-BASE[f],0]}>
     <Floor floor={f} y={BASE[f]} labels={mode!==ALL} cutaway night={isNight} picked={picked?.id} onPick={setPicked}/>
     <FloorCrowd floor={f} animate={!reduced}/>
+    <Runs floor={f}/>
     {mode===ALL&&<Html position={[-18,BASE[f]+.3,0]} center><span className="skyline-room-label building-floor-label">{GALLERIA_FLOORS[f].label}</span></Html>}
    </group>)}
-   {mode!==0&&<Atrium top={(mode===ALL?BASE[3]+GALLERIA_IN.heights[3]:GALLERIA_IN.heights[mode])+.6} night={isNight} floors={mode===ALL?[1,2,3]:[]}/>}
+   {mode!==0&&<Atrium top={BASE[3]+GALLERIA_IN.heights[3]+.6} night={isNight} shift={mode===ALL?0:BASE[mode]} ceiling={mode===ALL?undefined:GALLERIA_IN.heights[mode]-.05}/>}
    <Fins floors={floors} stacked={mode===ALL}/>
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${GALLERIA_NAME} and return to city`}>← Exit building</button><div><small>ATLAS GALLERIA · SHOPPING MALL</small><h2>{title}</h2></div><span/></header>
