@@ -100,8 +100,8 @@ export function planNeighborhoodLinks(s:Input){
   }
  }
  if(s.financial&&s.stadium){
-  if(s.airport)s={...s,obstacles:[...s.obstacles,airportTrafficKeepOut(s.airport)]};
   const f=s.financial,stadium=s.stadium,outside=stadium.x+stadium.w+1;
+  if(s.airport)s={...s,obstacles:[...s.obstacles,airportTrafficKeepOut(s.airport)]};
   const road=route([f.street[f.street.length-1],[outside,stadium.z+stadium.d/2]],.4),walk=route([f.sidewalk[0],[outside+.6,stadium.z+stadium.d/2+.6]],.3);
   if(road&&walk)links.push({id:'financial-stadium-local',road,walk});
  }
