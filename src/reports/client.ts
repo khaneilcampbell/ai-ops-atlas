@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { isHostedWeb, isTauri } from "../lib/env";
 import { onLiveEvents } from "../live/feed";
-import { validOpportunityReport, type ReportAgent, type StoredReport } from "./model";
+import { validReport, type ReportAgent, type StoredReport } from "./model";
 
 // Reads an agent's stored reports from the site (server/reports.ts): the signed-in page through
 // /api/reports, the Mac app through its sync key. Refreshes when the live feed says a new one landed.
@@ -34,7 +34,7 @@ async function fetchReports(agent: ReportAgent): Promise<Page | null> {
 /** Only well-formed reports survive; the site checks too, this guards against an older site. */
 export function cleanReports(page: Page): StoredReport[] {
   return (Array.isArray(page.reports) ? page.reports : []).filter(
-    (r): r is StoredReport => !!r && typeof r === "object" && typeof (r as StoredReport).id === "number" && validOpportunityReport((r as StoredReport).body),
+    (r): r is StoredReport => !!r && typeof r === "object" && typeof (r as StoredReport).id === "number" && validReport((r as StoredReport).body),
   );
 }
 

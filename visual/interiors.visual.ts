@@ -62,17 +62,17 @@ test("branded business interior opens with its own workspace navigation",async({
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
   for(let i=0;i<6;i++){await page.getByRole("button",{name:"Zoom in",exact:true}).click();await settle(page,1);}
-  await page.locator('.m3-plaque[title^="Anthropic ·"]').dispatchEvent("click");await settle(page,4);
-  await expect(page.getByRole("region",{name:"Anthropic interior"})).toHaveCount(0);
-  await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Anthropic",exact:true})).toBeVisible();
+  await page.locator('.m3-plaque[title^="Reasoning Lab ·"]').dispatchEvent("click");await settle(page,4);
+  await expect(page.getByRole("region",{name:"Reasoning Lab interior"})).toHaveCount(0);
+  await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Reasoning Lab",exact:true})).toBeVisible();
   await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/ai-ops-atlas",exact:true})).toBeVisible();
   await shot(page,"anthropic-building-details");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
-  await expect(page.getByRole("region",{name:"Anthropic interior"})).toBeVisible();
-  const nav=page.getByRole("navigation",{name:"Choose Anthropic floor"});
+  await expect(page.getByRole("region",{name:"Reasoning Lab interior"})).toBeVisible();
+  const nav=page.getByRole("navigation",{name:"Choose Reasoning Lab floor"});
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
   await shot(page,"interior-anthropic-lobby");
-  await page.getByRole("button",{name:"Exit Anthropic and return to city"}).click();await settle(page,2);
+  await page.getByRole("button",{name:"Exit Reasoning Lab and return to city"}).click();await settle(page,2);
   await expect(page.locator(".skyline-interior")).toHaveCount(0);expect(errors).toEqual([]);
 });
 
@@ -145,14 +145,14 @@ test("Skyline project panel links its repository before entering the district",a
 test("tool buildings show their purpose and workers before explicit entry",async({page})=>{
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
   await selectBuilding(page,"Commerce Pipeline");
-  const tool=page.locator(".m3-pill",{hasText:"Canva"}).first();
+  const tool=page.locator(".m3-pill",{hasText:"Design Studio"}).first();
   await tool.dispatchEvent("click");await settle(page,2);
   const inspector=page.getByRole("complementary",{name:"Inspector"});
-  await expect(inspector.getByRole("heading",{name:"Canva",exact:true})).toBeVisible();
+  await expect(inspector.getByRole("heading",{name:"Design Studio",exact:true})).toBeVisible();
   await expect(inspector).toContainText("Purpose");
-  await expect(page.getByRole("region",{name:"Canva interior"})).toHaveCount(0);
+  await expect(page.getByRole("region",{name:"Design Studio interior"})).toHaveCount(0);
   await inspector.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
-  await expect(page.getByRole("region",{name:"Canva interior"})).toBeVisible();
+  await expect(page.getByRole("region",{name:"Design Studio interior"})).toBeVisible();
   await page.getByRole("button",{name:"Exit Canva and return to city"}).click();await settle(page,2);
-  await expect(inspector.getByRole("heading",{name:"Canva",exact:true})).toBeVisible();
+  await expect(inspector.getByRole("heading",{name:"Design Studio",exact:true})).toBeVisible();
 });

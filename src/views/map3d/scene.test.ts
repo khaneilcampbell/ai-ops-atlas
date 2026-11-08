@@ -99,7 +99,7 @@ describe("expanded Skyline layout", () => {
     const park=scene.parks.find(p=>p.label==="Skyline")!;
     expect(park).toBeDefined();
     const shops=scene.retail.filter(k=>k.projectId===park.id);
-    expect(shops.map(k=>k.name)).toEqual(expect.arrayContaining(["Anthropic","OpenAI","Starbucks","Chipotle","Zara","Wells Fargo","Smashburger"]));
+    expect(shops.map(k=>k.name)).toEqual(expect.arrayContaining(["Reasoning Lab","Model Lab","Starbucks","Chipotle","Zara","Halden Branch","Smashburger"]));
     for(const shop of shops) {
       expect(shop.x-shop.size/2).toBeGreaterThan(park.x);
       expect(shop.x+shop.size/2).toBeLessThan(park.x+park.w);

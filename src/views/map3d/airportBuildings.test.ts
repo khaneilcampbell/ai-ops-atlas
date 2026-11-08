@@ -14,3 +14,14 @@ it('pauses airport motion for saver, hidden maps, traffic off and reduced motion
 it('keeps every front entrance approach outside neighboring buildings',()=>{
  for(const a of buildings){const z=a.z+a.d/2+.8;for(const b of buildings.filter(b=>b.id!==a.id))expect(Math.abs(a.x-b.x)>(.48+b.w)/2||Math.abs(z-b.z)>(1.6+b.d)/2,`${a.id} entrance/${b.id}`).toBe(true)}
 });
+it('keeps every building clear of the landing runway and the arrivals taxi lane, wing tips included',async()=>{
+ const {AIRPORT_LANDING_RUNWAY:r,AIRCRAFT_LAYOUT:p}=await import('./airport');
+ expect(r.x+r.width/2+.4).toBeLessThan(l.landX+l.landWidth);
+ expect(r.x-p.halfSpan).toBeGreaterThan(l.runwayX+l.runwayWidth/2+p.halfSpan);
+ expect(r.laneZ+p.halfSpan).toBeLessThan(l.runwayZ-l.runwayLength/2);
+ for(const b of buildings){
+  expect(b.x+b.w/2<r.x-p.halfSpan,`${b.id} vs landing runway`).toBe(true);
+  const laneClear=b.z-b.d/2>r.laneZ+p.halfSpan||b.z+b.d/2<r.laneZ-p.halfSpan||b.x+b.w/2<11.5-p.halfSpan;
+  expect(laneClear,`${b.id} vs taxi lane`).toBe(true);
+ }
+});

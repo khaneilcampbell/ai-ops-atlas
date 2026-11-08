@@ -2,7 +2,11 @@ import {roundedRoad} from "./highway";
 import type { Rect, Slab } from "./scene";
 export const AIRPORT_KEY = "service:logistics-airport";
 export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landDepth:43,terminalX:1.5,terminalZ:6,taxiX:11.5,runwayX:15,runwayZ:7.5,runwayWidth:2.2,runwayLength:21,gateX:7,gateZ:[0,4.5,9,13.5],cargoZ:18,departureZ:16.5} as const;
-export const AIRPORT_REMOTE_STANDS=[{x:7,z:-6},{x:7,z:23}] as const;
+/** The north stand is the arrivals turnaround stand: landed jets park there nose-in, then push back. */
+export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
+/** Second runway for landings (KC, 2026-11-07), on the old river strip past the service road.
+ * Jets touch down near the south end and leave by a taxi lane north of runway 1, so they never cross it. */
+export const AIRPORT_LANDING_RUNWAY={x:24.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6} as const;
 export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,roof:2.61,arrivalsX:-1.5,parkingZ:-6.4} as const;
 export function airportParkingBays(){return Array.from({length:5},(_,i)=>({x:-.35+i*.7,z:AIRPORT_TERMINAL.parkingZ+.7}));}
 export const AIRCRAFT_LAYOUT={doorX:-.2,doorZ:-.8,doorY:.19,doorHeight:.29,halfSpan:1.35,halfLength:1.4} as const;
@@ -99,7 +103,7 @@ export function climbFraction(t:number,top:number=T.climbTop){
 }
 /** Landing gear: 1 = down, 0 = stowed. Retracts shortly after a positive climb. */
 export const gearDown=(t:number)=>1-smooth((t-T.liftoff-T.gearUp)/T.gearTime);
-const DEFAULT_CIRCUIT:FlightCircuit={x:-18,z:-4,rx:22,rz:18};
+export const DEFAULT_CIRCUIT:FlightCircuit={x:-18,z:-4,rx:22,rz:18};
 /** Circuit angular speed: one lap every 60 seconds. */
 const ORBIT=Math.PI/30,STRAIGHT=18;
 /** The climb-out joins the circuit at JOIN; two laps later the aircraft leaves at EXIT and is hidden at HIDE. */
@@ -171,6 +175,8 @@ export function circuitJoin(c:FlightCircuit):JoinTurn{
   joinCache.set(c,chosen);return chosen;
 }
 export const circuitJoinAngle=(c:FlightCircuit)=>circuitJoin(c).angle;
+/** Where an aircraft is on the circuit at departure time `time` (after JOIN), and its velocity per departure second. */
+export function circuitState(c:FlightCircuit,time:number){const angle=circuitJoin(c).angle+SPIN*(time-JOIN)*ORBIT;return {at:orbitPoint(c,angle),velocity:orbitVelocity(c,angle)};}
 /** Decorative three-minute cycle: takeoff, a smooth turn onto two city circuits, departure, then reset offscreen. */
 export function departurePose(seconds:number,moving=true,circuit:FlightCircuit=DEFAULT_CIRCUIT) {
   const t=moving?seconds%180:0,cruise=circuit.altitude??14,turnPlan=circuitJoin(circuit),join=turnPlan.angle;

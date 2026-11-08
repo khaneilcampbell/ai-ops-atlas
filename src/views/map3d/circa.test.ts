@@ -6,11 +6,10 @@ import {CIRCA,circaEntrance,circaParts,circaPieceCount,circaScreenPath} from './
 import {financialDimensions} from './financialArchitecture';
 import {financialBrand} from './financialBrands';
 import {FINANCIAL} from './financialPlan';
-import {distanceToRoad} from './highway';
 import {flightClearance} from './flightClearance';
 import {BUILDING_INTERIORS} from '../../catalog/buildings';
 import {financialBuildingMatches} from '../../lib/financialSearch';
-import type {Pt} from './roads';
+
 
 const palette={white:'#f7f7f0',stone:'#e3ddcf',trim:'#c9cfcc',core:'#5f6b72',green:'#5f8f5d',turquoise:'#3fb7b2',wood:'#8e6f4e'};
 const overlaps=(a:{x:number;z:number;w:number;d:number},b:{x:number;z:number;w:number;d:number})=>a.x<b.x+b.w-1e-6&&a.x+a.w>b.x+1e-6&&a.z<b.z+b.d-1e-6&&a.z+a.d>b.z+1e-6;
@@ -25,12 +24,8 @@ describe('Circa twin towers',()=>{
   expect(c.x+c.w).toBeCloseTo(f.x);expect(c.z).toBeCloseTo(f.z);expect(c.d).toBeCloseTo(f.d);
   // The only land under the parcel is the parcel itself.
   expect(s.land.filter(r=>overlaps(r,c))).toEqual([{x:c.x,z:c.z,w:c.w,d:c.d}]);
-  // Every corner and edge midpoint keeps clear of the highway centreline, including its bend.
-  const highway=s.freight!.highway,edge:Pt[]=[];
-  for(let t=0;t<=1;t+=.05)edge.push([c.x,c.z+t*c.d],[c.x+t*c.w,c.z],[c.x+t*c.w,c.z+c.d]);
-  expect(Math.min(...edge.map(p=>distanceToRoad(p,highway)))).toBeGreaterThanOrEqual(CIRCA.highwayClearance);
-  // Highway ramps and other freight access stay off the lot.
-  for(const a of s.freight!.access)for(const p of [...a.collector,...a.ramps.flat()])expect(p[0]>c.x&&p[0]<c.x+c.w&&p[1]>c.z&&p[1]<c.z+c.d).toBe(false);
+  // No highway or freight road is built (KC, 2026-11-07), so nothing runs across the lot.
+  expect(s.freight).toBeUndefined();
   // The front walk reaches the shared north walk, and the street continues to the district street.
   expect(circa.approach.at(-1)).toEqual([f.x+circa.x,f.z+FINANCIAL.northWalkZ]);
   expect(c.street[0]).toEqual(f.street.at(-1));expect(c.sidewalk[0]).toEqual(f.sidewalk[0]);
@@ -101,10 +96,10 @@ describe('Circa twin towers',()=>{
   expect(flightClearance(s).altitude).toBeGreaterThanOrEqual(top(circa)+4);
  });
 
- it('has an unofficial planned identity, search, owning role and desk view, without a sign',()=>{
+ it('has an original planned identity, search, owning role and desk view, without a sign',()=>{
   const brand=financialBrand('circa')!;
-  expect(brand.name).toBe('Circa');expect(brand.noSign).toBe(true);expect(brand.purpose).toMatch(/unofficial/i);expect(brand.role).toBe('Residential Amenities Planning Coordinator');
-  expect(financialBuildingMatches('Circa').map(b=>b.id)).toEqual(['circa']);
+  expect(brand.name).toBe('Ellipse Residences');expect(brand.noSign).toBe(true);expect(brand.purpose).toMatch(/original Atlas landmark/i);expect(brand.formerNames).toEqual(['Circa']);expect(brand.role).toBe('Residential Amenities Planning Coordinator');
+  expect(financialBuildingMatches('Ellipse Residences').map(b=>b.id)).toEqual(['circa']);
   expect(BUILDING_INTERIORS['financial:circa'].rooms).toEqual(['Marble & walnut lobby','Pool deck lounge','Sky residence','Fitness club']);
  });
 });
