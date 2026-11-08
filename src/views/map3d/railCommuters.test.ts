@@ -2,9 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
-import {COMMUNITY as C,COMMUNITY_BUILDINGS,railState} from './hillsCommunityPlan';
+import {COMMUNITY as C,railState,railServiceState} from './hillsCommunityPlan';
 import {financialDimensions} from './financialArchitecture';
-import {HILLS} from './hillsPlan';
 import {pathClear,type Pt} from './roads';
 import {COMMUTER_TOWERS,RAIL_COMMUTERS,RAIL_COMMUTER_COUNT,commuterAt,commuterTimes,planRailCommuters} from './railCommuters';
 const ground=(points:[number,number,number][])=>points.filter(p=>p[1]===0).map(p=>[p[0],p[2]] as Pt);
@@ -18,27 +17,22 @@ describe('rail commuters',()=>{
    expect(new Set(people.map(p=>p.offset)).size).toBe(1);
    const boards=people.map(p=>commuterTimes(plan,p).board);expect(Math.max(...boards)-Math.min(...boards),'arrivals spread across the stop').toBeGreaterThan(6);
    expect(new Set(people.map(p=>p.pace)).size,'different paces').toBeGreaterThanOrEqual(4);
-   expect(new Set(people.map(p=>p.home)).size,'different starting places').toBeGreaterThanOrEqual(5);
+   expect(new Set(people.map(p=>p.home))).toEqual(new Set(['marketplace']));
    expect(people.filter(p=>p.work===COMMUTER_TOWERS.ritz)).toHaveLength(2);
   }
   expect(plan.commuters[0].offset).not.toBe(plan.commuters[6].offset);
   // KC, 2026-10-31: Financial District people ride out to every Hills business and the mansion.
   const visitors=plan.commuters.slice(12),places=new Set(visitors.map(p=>p.home));
-  for(const id of ['cafe','shops','gym','spa','social','clubhouse','golf-club','mansion'])expect(places.has(id),id).toBe(true);
+  expect(places).toEqual(new Set(['marketplace']));
   expect(new Set(visitors.map(p=>p.work)).size,'from many towers').toBeGreaterThanOrEqual(6);
   expect(new Set(plan.commuters.map(p=>p.offset)).size,'spread over several trains').toBeGreaterThanOrEqual(3);
-  const towers=new Set(f.buildings.map(b=>b.id));
-  for(const p of kc){expect([COMMUTER_TOWERS.circa,COMMUTER_TOWERS.amex,COMMUTER_TOWERS.ritz]).toContain(p.work);if(towers.has('circa')&&p.home!=='mansion'&&p.home!=='home-4'&&p.home!=='shops'&&p.home!=='spa'&&p.home!=='home-2')expect(p.work).toBe(COMMUTER_TOWERS.circa);}
-  // KC, 2026-10-31: Ritz-Carlton guests go home to the mansion; one American Express guest to Vista House.
-  for(const p of kc.filter(p=>p.work===COMMUTER_TOWERS.ritz))expect(p.home).toBe('mansion');
-  const vista=kc.filter(p=>p.home==='home-4');expect(vista).toHaveLength(1);expect(vista[0].work).toBe(COMMUTER_TOWERS.amex);
-  const mansion=[c.x+HILLS.mansion.x,c.z+HILLS.mansion.z+HILLS.mansion.d/2+.15];for(const p of plan.commuters.filter(p=>p.home==='mansion'))expect([p.hills.points[0][0],p.hills.points[0][2]]).toEqual(mansion);
-  const homes=COMMUNITY_BUILDINGS.filter(b=>!['station','golf'].includes(b.kind)).map(b=>({x:c.x+b.x,z:c.z+b.z,w:b.w,d:b.d})),offices=f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
+  for(const p of kc)expect([COMMUTER_TOWERS.circa,COMMUTER_TOWERS.amex,COMMUTER_TOWERS.ritz]).toContain(p.work);
+  const homes=[{x:s.mall!.cx,z:s.mall!.cz,w:s.mall!.w,d:s.mall!.d-2.3}],offices=f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
   for(const p of plan.commuters){
    const k=commuterTimes(plan,p),dwell=C.dwell;
    // Everyone boards and alights only while the train stands at that station with its doors open.
-   expect(railState(k.board,s.communityRail!.length)).toMatchObject({phase:'hills',doors:1});expect(railState(k.alightFinancial,s.communityRail!.length)).toMatchObject({phase:'financial',doors:1});
-   expect(railState(k.returnBoard,s.communityRail!.length)).toMatchObject({phase:'financial',doors:1});expect(railState(k.alightHills,s.communityRail!.length)).toMatchObject({phase:'hills',doors:1});
+   expect(railServiceState(k.board,s.communityRail!)).toMatchObject({phase:'hills',doors:1});expect(railServiceState(k.alightFinancial,s.communityRail!)).toMatchObject({phase:'financial',doors:1});
+   expect(railServiceState(k.returnBoard,s.communityRail!)).toMatchObject({phase:'financial',doors:1});expect(railServiceState(k.alightHills,s.communityRail!)).toMatchObject({phase:'hills',doors:1});
    expect(k.board).toBeLessThan(dwell);expect(k.board).toBeGreaterThan(0);
    // No one needs to be in two places: a full stop at work and at home between walks.
    expect(k.leaveWork-k.atWork).toBeGreaterThanOrEqual(RAIL_COMMUTERS.rest);expect(k.leaveHome+k.period-k.atHome).toBeGreaterThanOrEqual(RAIL_COMMUTERS.rest);

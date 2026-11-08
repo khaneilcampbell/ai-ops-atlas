@@ -17,7 +17,7 @@ async function desktopChrome(page: Page, mac = true) {
     live.innerHTML = '<span class="dot"></span>Live<span class="live-last">Merge flow failed · ai-ops-atlas</span>';
     (platform ?? header.querySelector(".pill-mode"))!.after(live);
     const mode = header.querySelector(".pill-mode");
-    if (mode) mode.lastChild!.textContent = "CI 10/11 passing";
+    if (mode) { for (const node of mode.childNodes) if (node.nodeType === Node.TEXT_NODE) node.textContent = "CI 10/11 passing"; }
   }, mac);
   await settle(page, 1);
 }

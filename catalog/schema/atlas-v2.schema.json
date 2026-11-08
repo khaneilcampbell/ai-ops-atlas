@@ -659,15 +659,7 @@
             "properties": {
               "building": {
                 "enum": [
-                  "Skyline",
                   "Atlas Marketplace",
-                  "OpenAI",
-                  "Anthropic",
-                  "Wells Fargo",
-                  "Starbucks",
-                  "Smashburger",
-                  "Chipotle",
-                  "Zara",
                   "Benjaire Marketing Agency"
                 ]
               },

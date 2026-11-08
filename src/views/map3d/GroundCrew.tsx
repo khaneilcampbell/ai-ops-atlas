@@ -128,7 +128,7 @@ export function GroundCrew({a,g,m,clock}:{a:AirportPlan;g:Geometry;m:Materials;c
   <Instanced items={equipment.cones} geometry={g.cone} material={m.plain} shadow={false}/>
   <Instanced items={equipment.lights} geometry={g.box} material={m.lamp} shadow={false}/>
   <instancedMesh name="airport-ground-crew" ref={boxes} args={[g.box,m.plain,boxCount]} castShadow frustumCulled={false} raycast={()=>null}/>
-  <instancedMesh ref={heads} args={[g.ball,m.plain,crew.length]} frustumCulled={false} raycast={()=>null}/>
+  <instancedMesh ref={heads} args={[g.bead,m.plain,crew.length]} frustumCulled={false} raycast={()=>null}/>
   <instancedMesh ref={lamps} args={[g.box,m.lamp,lampCount]} frustumCulled={false} raycast={()=>null}/>
  </>;
 }
