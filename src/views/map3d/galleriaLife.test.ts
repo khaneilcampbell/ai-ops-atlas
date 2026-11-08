@@ -4,6 +4,7 @@ import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {GALLERIA_LIFE,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
 import {insidePoly} from './galleriaPlan';
+import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 const scene=buildScene(layoutMap(catalog,[],'district'));
 // The installed app hides the deleted career-application-system repository.
@@ -40,6 +41,16 @@ describe('life round Atlas Galleria',()=>{
   const life=planGalleriaLife(app)!,[,,end]=life.walk;
   expect(app.galleria!.parking).toBeUndefined();expect(life.court!.cars.length).toBeGreaterThan(0);
   for(const c of [...life.court!.cars,...life.drivers.map(d=>d.car)]){expect(Math.abs(c.z-end[1])).toBeGreaterThan(.4);expect(c.x).toBeLessThan(end[0]-.3);}
+ });
+ for(const [name,s] of [['sample',scene],['app',app]] as const)it(`joins each car park to the street by a driveway the cars use (${name} layout)`,()=>{
+  const life=planGalleriaLife(s)!,graph=buildStreetGraph(streetLines(s));
+  expect(life.driveways.length).toBeGreaterThan(0);
+  for(const d of life.driveways)expect(nearestStreet(graph,[d.b[0],0,d.b[1]]).d).toBeLessThan(1e-6);
+  // Every car leaves along a driveway: its route passes through both ends of one.
+  for(const dr of life.drivers){const pts=dr.drive.points.map(p=>[p[0],p[2]] as const);
+   expect(life.driveways.some(d=>[d.a,d.b].every(e=>pts.some(p=>Math.hypot(p[0]-e[0],p[1]-e[1])<1e-6)))).toBe(true);}
+  for(const l of life.lamps)for(const d of life.driveways){const dx=d.b[0]-d.a[0],dz=d.b[1]-d.a[1],t=Math.max(0,Math.min(1,((l.x-d.a[0])*dx+(l.z-d.a[1])*dz)/(dx*dx+dz*dz)));
+   expect(Math.hypot(l.x-d.a[0]-dx*t,l.z-d.a[1]-dz*t)).toBeGreaterThan(GALLERIA_LIFE.driveWidth/2);}
  });
  it('takes driven cars out of the static car park so none is drawn twice',()=>{
   const g=scene.galleria!,driven=g.parking!.driven;

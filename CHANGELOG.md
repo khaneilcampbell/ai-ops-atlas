@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · The Atlas Galleria's car parks now connect to the main road by proper driveways, with a zebra crossing where each one crosses the pavement, and the cars drive in and out along them (#273)
 - 2026-11-08 · Inside the Atlas Galleria, every shop, food court, play area and office now has a framed glass double door standing open onto the gallery, back-of-house rooms have solid doors, and the lift has steel doors (#273)
 - 2026-11-08 · Atlas Galleria comes to life: a paved walk from the entrance out to the street, lamp posts round the building and along the walk, a solid steel funnel in the atrium, shoppers coming and going and strolling round it, people inside on every floor, and drivers who walk to their car and drive off the lot, then come back later. Where the lot is too shallow for the car park behind the building, cars park in a small court either side of the walk (#273)
 - 2026-11-08 · The Atlas Galleria now shows in the Mac app too. With one repository removed, the app had left the lot behind Atlas Marketplace empty because of train-station stairs that are no longer drawn there (#273)

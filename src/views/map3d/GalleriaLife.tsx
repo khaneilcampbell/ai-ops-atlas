@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
 import type {Scene3D} from './scene';
 import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
-import {GALLERIA_LIFE,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
+import {CAR_SURFACE,GALLERIA_LIFE,carHeight,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
 
 const COATS=['#346583','#a18455','#6d875e','#846798','#ab6355','#2f3a45'];
 /**
@@ -19,6 +19,15 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
  useEffect(()=>()=>glow.dispose(),[glow]);
  const fixed=useMemo(()=>{
   const paths:Inst[]=[],kerbs:Inst[]=[],poles:Inst[]=[],heads:Inst[]=[],pools:Inst[]=[],court:Inst[]=[];if(!life)return {paths,kerbs,poles,heads,pools,court};
+  // Driveways: asphalt a touch above the pavement they cross, with pale kerb edges and a stop line at the street.
+  for(const {a:[ax,az],b:[bx,bz]} of life.driveways){
+   const len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az),mx=(ax+bx)/2,mz=(az+bz)/2,w=L.driveWidth;
+   court.push({p:[mx,y,mz],s:[w,CAR_SURFACE.driveway,len+.1],r:yaw,c:'#4a504d'});
+   for(const side of [-1,1])court.push({p:[mx+Math.cos(yaw)*side*w/2,y,mz-Math.sin(yaw)*side*w/2],s:[.035,CAR_SURFACE.driveway+.01,len+.1],r:yaw,c:'#c9bfa6'});
+   const k=Math.max(0,len-.55)/len;court.push({p:[ax+(bx-ax)*k,y+CAR_SURFACE.driveway,az+(bz-az)*k],s:[w*.9,.003,.03],r:yaw,c:'#f3efe4'});
+  }
+  // Zebra stripes on a station walk where a driveway passes under it, matching the city's road crossings.
+  for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+.109,c.z-Math.sin(c.yaw)*d],s:[.065,.005,.48],r:c.yaw,c:'#f7f7f0'});
   for(let i=1;i<life.walk.length;i++){
    const [ax,az]=life.walk[i-1],[bx,bz]=life.walk[i],len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az);
    paths.push({p:[(ax+bx)/2,y,(az+bz)/2],s:[L.walkWidth,.02,len+L.walkWidth],r:yaw,c:'#e3dac4'});
@@ -52,9 +61,10 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
   life.walkers.forEach((w,k)=>person(walkerAt(w,t),Math.abs(Math.sin(t*6+k))*.008));
   life.drivers.forEach((d,k)=>{
    const {person:p,car}=driverAt(d,t);person(p,Math.abs(Math.sin(t*6+k))*.008);
-   if(car.visible){o.position.set(car.x,y+.012,car.z);o.rotation.set(0,car.yaw,0);o.scale.set(.2,.1,.38);}else o.scale.setScalar(0);
+   const lift=car.visible?carHeight(life,car.x,car.z):0;
+   if(car.visible){o.position.set(car.x,y+lift,car.z);o.rotation.set(0,car.yaw,0);o.scale.set(.2,.1,.38);}else o.scale.setScalar(0);
    o.updateMatrix();cars.current?.setMatrixAt(k,o.matrix);
-   if(car.visible){o.position.y=y+.112;o.scale.set(.17,.07,.2);}o.updateMatrix();cabins.current?.setMatrixAt(k,o.matrix);
+   if(car.visible){o.position.y=y+lift+.1;o.scale.set(.17,.07,.2);}o.updateMatrix();cabins.current?.setMatrixAt(k,o.matrix);
   });
   for(const r of [bodies,faces,cars,cabins])if(r.current)r.current.instanceMatrix.needsUpdate=true;
  };

@@ -11,7 +11,7 @@ import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
  * the same clock always gives the same picture, and nothing here is a real agent or a real car.
  */
 export const GALLERIA_LIFE={
- walkWidth:.5,lampStep:2.1,lampRing:.5,lampHeight:.95,
+ walkWidth:.5,driveWidth:.62,lampStep:2.1,lampRing:.5,lampHeight:.95,
  pace:.32,drive:1.1,shoppers:8,strollers:5,
  /** A street farther than this from the lot's edge is too far to walk to; the walk stops at the lot. */
  maxStreet:4,
@@ -26,7 +26,15 @@ export interface GalleriaDriver {walk:CommuterRoute;drive:CommuterRoute;car:{x:n
  backOut:boolean}
 /** Where the lot is too shallow for the car park behind the building: a row of bays each side of the walk, facing the street. */
 export interface GalleriaCourt {pad:{x:number;z:number;w:number;d:number}[];stripes:Pt[];cars:{x:number;z:number;c:string}[]}
-export interface GalleriaLife {walk:Pt[];lamps:GalleriaLamp[];walkers:GalleriaWalker[];drivers:GalleriaDriver[];court?:GalleriaCourt}
+/** An asphalt drive from a car park to the street (KC, 2026-11-08), centre line a→b; b is on the street's centre line. */
+export interface GalleriaDriveway {a:Pt;b:Pt}
+export interface GalleriaLife {walk:Pt[];lamps:GalleriaLamp[];walkers:GalleriaWalker[];drivers:GalleriaDriver[];court?:GalleriaCourt;driveways:GalleriaDriveway[];
+ /** Car park surfaces (the lot behind the building, or the street court), for carHeight. */
+ lots:{x:number;z:number;w:number;d:number}[];
+ /** Where a driveway passes under a station or district walk: a zebra crossing is painted on the walk, as at the city's roads. */
+ crossings:{x:number;z:number;yaw:number}[]}
+/** Surface heights above the ground a car sits on: car park asphalt, a driveway (over the pavement it crosses), and the street. */
+export const CAR_SURFACE={lot:.012,driveway:.04,street:.03} as const;
 export type LifePose={visible:false}|{visible:true;x:number;z:number;yaw:number};
 
 const flat=(p:Pt):Pt3=>[p[0],0,p[1]];
@@ -41,6 +49,14 @@ function every(line:Pt[],step:number):{p:Pt;a:number}[]{
  const out:{p:Pt;a:number}[]=[],ring=[...line,line[0]];let carry=0;
  for(let i=1;i<ring.length;i++){const a=ring[i-1],b=ring[i],len=dist(a,b);let t=carry;while(t<len){out.push({p:[a[0]+(b[0]-a[0])*t/len,a[1]+(b[1]-a[1])*t/len],a:Math.atan2(b[1]-a[1],b[0]-a[0])});t+=step;}carry=t-len;}
  return out;
+}
+/** Distance in plan from p to segment ab. */
+const toSegment=(p:Pt,a:Pt,b:Pt)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/l));return dist(p,[a[0]+dx*t,a[1]+dz*t]);};
+/** Where segments ab and cd cross, if they do. */
+function intersect(a:Pt,b:Pt,c:Pt,d:Pt):Pt|undefined{
+ const r=[b[0]-a[0],b[1]-a[1]],q=[d[0]-c[0],d[1]-c[1]],den=r[0]*q[1]-r[1]*q[0];if(Math.abs(den)<1e-9)return;
+ const t=((c[0]-a[0])*q[1]-(c[1]-a[1])*q[0])/den,u=((c[0]-a[0])*r[1]-(c[1]-a[1])*r[0])/den;
+ return t>=0&&t<=1&&u>=0&&u<=1?[a[0]+r[0]*t,a[1]+r[1]*t]:undefined;
 }
 const inRect=(r:{x:number;z:number;w:number;d:number},[x,z]:Pt,m=0)=>x>r.x-m&&x<r.x+r.w+m&&z>r.z-m&&z<r.z+r.d+m;
 
@@ -69,18 +85,23 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  const stroll=commuterRoute([...offset(g.slabs[0],L.lampRing-.3),offset(g.slabs[0],L.lampRing-.3)[0]].map(flat));
  for(let i=0;i<L.strollers;i++)walkers.push({route:stroll,phase:i*stroll.length/L.strollers/(L.pace*.8),pace:L.pace*.8,lane:i%2?.08:-.08,loop:true,rest:0});
  // Drivers: out of the entrance, down to their car, then the car backs into the aisle and drives east off the lot.
- const drivers:GalleriaDriver[]=[];let court:GalleriaCourt|undefined;
+ const drivers:GalleriaDriver[]=[],driveways:GalleriaDriveway[]=[];let court:GalleriaCourt|undefined;
  const COLORS=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'];
  const farEnd=(q:Pt3,seg:number):Pt3|undefined=>{const sg=graph.segments[seg];if(!sg)return;const [a,b]=sg.map(n=>graph.nodes[n]);return dist([a[0],a[2]],[q[0],q[2]])>dist([b[0],b[2]],[q[0],q[2]])?[a[0],0,a[2]]:[b[0],0,b[2]];};
  if(!g.parking&&walk.length===3){
   // Bays across the strip between the lot and the street, nose to the street, clear of the walk, trees and lamps.
   // x1 stops short of the street's pavement, which runs about a unit either side of its centre line.
-  const sx=walk[2][0],x0=east+.25,x1=sx-1.05,cx=(x0+x1)/2;
-  if(x1-x0>=.45){
+  // A lane runs along the court's street side; bays sit west of it, nose to the lane, and each half leaves by its own driveway.
+  const sx=walk[2][0],x0=east+.25,x1=sx-1.05,lane=x1-.25,cx=(x0+lane-.25)/2;
+  if(lane-.25-x0>=.4){
    const trees=[...scene.trees,...scene.bushes],busy=(x:number,z:number)=>trees.some(t=>Math.abs(t.x-x)<.32&&Math.abs(t.z-z)<.3)||lamps.some(l=>Math.abs(l.x-x)<.32&&Math.abs(l.z-z)<.25);
    court={pad:[],stripes:[],cars:[]};const bays:Pt[]=[];
+   const exits:{z0:number;z1:number;z:number}[]=[];
    for(const [z0,z1] of [[rect.z+.3,e.z-.55],[e.z+.55,rect.z+rect.d-.3]] as const){
-    if(z1-z0<.34)continue;court.pad.push({x:x0,z:z0-.05,w:x1-x0,d:z1-z0+.1});
+    if(z1-z0<1)continue;court.pad.push({x:x0,z:z0-.05,w:x1-x0,d:z1-z0+.1});
+    // The driveway leaves from the middle of the half; no bay stands in front of it.
+    const dz=(z0+z1)/2,q=nearestStreet(graph,[sx,0,dz]);exits.push({z0,z1,z:dz});
+    driveways.push({a:[lane,dz],b:[q.q[0],q.q[2]]});
     for(let z=z0+.17;z<=z1-.17;z+=.34){court.stripes.push([cx,z-.17]);if(!busy(cx,z))bays.push([cx,z]);}
     court.stripes.push([cx,z1]);
    }
@@ -88,15 +109,18 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
     if(k%2)return;const c=COLORS[k%4];
     if(drivers.length<3&&k%4===0){
      const door:Pt=[x,z+(z<e.z?.2:-.2)],walkPts:Pt[]=[[e.x,e.z],[east,e.z],[east+.1,door[1]],door];
-     const ex=nearestStreet(graph,[sx,0,z]),drivePts:Pt3[]=[[x,0,z],[sx-.25,0,z]];
-     if(ex.d<1){drivePts.push(ex.q);const far=farEnd(ex.q,ex.seg);if(far)drivePts.push(far);}
+     // Forward into the lane, along it to this half's driveway, out along the driveway and onto the street.
+     const half=exits.find(h=>z>=h.z0-.01&&z<=h.z1+.01)??exits[0],ex=nearestStreet(graph,[sx,0,half.z]);
+     const drivePts:Pt3[]=[[x,0,z],[lane,0,z],[lane,0,half.z],ex.q];const far=farEnd(ex.q,ex.seg);if(far)drivePts.push(far);
      drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x,z,yaw:Math.PI/2,c},offset:drivers.length*23,wait:28+drivers.length*6,backOut:false});
     }else court!.cars.push({x,z,c});
    });
   }
  }
  if(g.parking){
-  const pk=g.parking,exitStreet=nearestStreet(graph,[east,0,pk.aisle]),out:Pt=[east+.2,pk.aisle];
+  // One driveway from the east end of the aisle to the nearest street.
+  const pk=g.parking,out:Pt=[pk.area.x+pk.area.w,pk.aisle],exitStreet=nearestStreet(graph,[out[0],0,out[1]]);
+  if(exitStreet.d<L.maxStreet)driveways.push({a:out,b:[exitStreet.q[0],exitStreet.q[2]]});
   pk.driven.forEach((c,i)=>{
    const side=c.z<pk.aisle?-1:1,door:Pt=[c.x-.18,c.z-side*.05];
    const walkPts:Pt[]=[[e.x,e.z],[e.x,f.z+f.d+.15],[door[0],f.z+f.d+.15],door];
@@ -105,7 +129,14 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
    drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x:c.x,z:c.z,yaw:0,c:c.c},offset:i*23,wait:28+i*6,backOut:true});
   });
  }
- return {walk,lamps,walkers,drivers,court};
+ // Lamps step off the driveways.
+ const lit=lamps.filter(l=>driveways.every(d=>toSegment([l.x,l.z],d.a,d.b)>L.driveWidth/2+.15));
+ const lots=[...(court?.pad??[]),...(g.parking?[g.parking.area]:[])];
+ // Station and district walks run on the ground over roads; mark each driveway crossing the way the city marks its road crossings.
+ const crossings:{x:number;z:number;yaw:number}[]=[];
+ const paths=[...(scene.communityRail?.loop?.stops??[]).map(st=>st.walk.filter(p=>p[1]===0).map((p):Pt=>[p[0],p[2]])),...scene.transportConnections.map(c=>c.walk)];
+ for(const d of driveways)for(const path of paths)for(let i=1;i<path.length;i++){const x=intersect(d.a,d.b,path[i-1],path[i]);if(x)crossings.push({x:x[0],z:x[1],yaw:Math.atan2(d.b[0]-d.a[0],d.b[1]-d.a[1])});}
+ return {walk,lamps:lit,walkers,drivers,court,driveways,lots,crossings};
 }
 
 /** A shopper or stroller at time t. Shoppers walk in, stay inside a while, then walk back out. */
@@ -133,4 +164,10 @@ export function driverAt(d:GalleriaDriver,t:number):{person:LifePose;car:LifePos
  if(s<drive){const dd=d.drive.length-s*L.drive,first=d.drive.lengths[1]??0;return {person:{visible:false},car:{...at(d.drive,dd,dd>first),moving:true}};}s-=drive;
  if(s<walk)return {person:at(d.walk,d.walk.length-s*L.pace,true),car:parked};
  return {person:{visible:false},car:parked};
+}
+
+/** Height of the surface under a car at (x, z): driveway first (it runs over the pavement), then car park, otherwise the street. */
+export function carHeight(life:Pick<GalleriaLife,'driveways'|'lots'>,x:number,z:number){
+ if(life.driveways.some(d=>toSegment([x,z],d.a,d.b)<=GALLERIA_LIFE.driveWidth/2))return CAR_SURFACE.driveway;
+ return life.lots.some(r=>inRect(r,[x,z],.05))?CAR_SURFACE.lot:CAR_SURFACE.street;
 }
