@@ -1,13 +1,13 @@
 import {TRANSPORT} from "./transportScale";
 import {lanePath} from "./highway";
 import { hash } from "../mapLayout";
-import { crossing, ringPath, towerRing, type Pt, type Pt3 } from "./roads";
+import { LANE_OFF, ROAD_W, type Pt, type Pt3, type Ring } from "./roads";
+import { buildStreetGraph, plazaRings, streetLines } from "./streetGraph";
 import type { Scene3D } from "./scene";
 
-// Routes for the decorative vehicles: each one tours a district's stone paths, out from the plaza
-// around its headquarters to each agent's house and back, stopping at the door, and over the road
-// bridges to its neighbors' plazas and back. Pure data, so the routes can be checked against the map
-// without rendering anything.
+// Routes for the decorative vehicles: closed loops on the city's streets (see planVehicles), driven
+// in the right-hand lane with a stop before every junction. Pure data, so the routes can be checked
+// against the map without rendering anything.
 
 export type VehicleKind = "sedan" | "van" | "service" | "sports" | "amazon" | "ups" | "bus" | "taxi" | "pickup" | "semi" | "gwagon" | "bmw" | "convertible";
 
@@ -61,44 +61,199 @@ const FLEET: { kind: VehicleKind; color: string }[] = [
   { kind: "ups", color: "#553722" },
 ];
 
-/** Connected city tours: cross into a district, continue through it, and return in the opposite lane. */
+/** Seconds a vehicle waits at the stop line before driving into a junction. */
+export const JUNCTION_STOP = 0.8;
+/** How far before the centre of a junction the stop line sits. */
+const STOP_BACK = 0.48;
+
+/**
+ * City traffic as a street system (KC, 2026-11-08): every vehicle drives a closed loop on the street
+ * network, so none ever turns round in the road. Dead-end spurs are left out of the network first
+ * (a car would have to U-turn at the end), so every remaining street leads on to another. Each loop
+ * keeps to the lane on the right of the centre line all the way round, stops at the stop line
+ * before every junction, and has a twin driving the same streets the other way. Round a
+ * headquarters plaza the car on the tower side keeps to the plaza line and the other passes outside
+ * it; streets that would bring a car against a tower or its entrance stairs are left to pedestrians.
+ */
 export function planVehicles(scene: Scene3D): VehiclePlan[] {
-  const rings = new Map(scene.towers.flatMap(t => {
-    const plaza = scene.paving.filter(p => p.w > t.size && Math.abs(p.x+p.w/2-t.x)<1e-6 && Math.abs(p.z+p.d/2-t.z)<1e-6 && Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
-    const ring = plaza && towerRing(t,plaza.w);
-    return ring ? [[t.projectId,ring] as const] : [];
-  }));
-  const origins=scene.towers.filter(t => rings.has(t.projectId) && scene.carBridges.some(b=>b.ends.includes(t.projectId)));
-  const city = Array.from({length:origins.length ? MAX_VEHICLES : 0},(_,i)=>origins[i%origins.length]).map((t,i) => {
-    const points: Pt3[] = [], visited = new Set<string>();
-    const append = (path: Pt3[]) => { for (const p of path) if (!points.length || Math.hypot(p[0]-points[points.length-1][0],p[2]-points[points.length-1][2],p[1]-points[points.length-1][1])>1e-7) points.push(p); };
-    const tour = (id:string, arrival?:Pt) => {
-      let at=arrival;
-      for (const bridge of scene.carBridges) {
-        const end=bridge.ends.indexOf(id);
-        if(end<0 || visited.has(bridge.key) || !rings.has(bridge.ends[1-end])) continue;
-        visited.add(bridge.key);
-        const out=crossing(bridge,end as 0|1), exit:Pt=[out[0][0],out[0][2]];
-        if(at) append([at,...ringPath(rings.get(id)!,at,exit)].map(p=>[p[0],0,p[1]]));
-        append(out);
-        const last=out[out.length-1];
-        tour(bridge.ends[1-end],[last[0],last[2]]);
-        const back=crossing(bridge,(1-end) as 0|1);
-        append(back); at=[back[back.length-1][0],back[back.length-1][2]];
-      }
-      if(at && arrival) append([at,...ringPath(rings.get(id)!,at,arrival)].map(p=>[p[0],0,p[1]]));
-    };
-    tour(t.projectId);
-    if(points.length) append([points[0]]);
-    const speed=SPEED*(0.85+0.3*hash(`${t.key}:speed`)), legs:Leg[]=[];
-    for(let k=1;k<points.length;k++) {
-      const a=points[k-1],b=points[k],length=Math.hypot(b[0]-a[0],b[2]-a[2]);
-      if(length>1e-7) legs.push({a:[a[0],a[2]],b:[b[0],b[2]],ya:a[1],yb:b[1],dur:length/(speed*(a[1]!==b[1]?0.7:1)),hold:false});
-    }
-    const period=legs.reduce((n,l)=>n+l.dur,0);
-    return {id:`${t.key}:traffic:${i}`,...FLEET[i%FLEET.length],legs,period,offset:hash(`${t.key}:${i}:offset`)*period};
+  const graph = drivingGraph(scene);
+  if (!graph) return [];
+  const { nodes, next, lane } = graph;
+  const inDistrict = (p: Pt3) => scene.terraces.find(t => p[0] >= t.x && p[0] <= t.x + t.w && p[2] >= t.z && p[2] <= t.z + t.d)?.id;
+  const canDrive = (loop: number[]) => loop.every((a, i) => next[a].includes(loop[(i + 1) % loop.length]));
+  const keyOf = (loop: number[]) => [...loop].sort((a, b) => a - b).join(",");
+  // Each loop together with its reverse.
+  const loops: number[][] = [];
+  const starts = nodes.map((_, i) => i).filter(i => next[i].length >= 1);
+  for (let seed = 0; loops.length < MAX_VEHICLES - 1 && seed < 600; seed++) {
+    const loop = driveLoop(nodes, next, starts[Math.floor(hash(`loop:${seed}`) * starts.length)], seed);
+    if (!loop) continue;
+    const length = loop.reduce((n, a, i) => n + flatLen(nodes[a], nodes[loop[(i + 1) % loop.length]]), 0);
+    const districts = new Set(loop.map(i => inDistrict(nodes[i])).filter(Boolean));
+    if (length < 18 || districts.size < 3 || loops.some(l => keyOf(l) === keyOf(loop) && l[0] === loop[0] && l[1] === loop[1])) continue;
+    // Only loops a twin can drive the other way, so every street carries traffic both ways.
+    const back = [...loop].reverse();
+    if (canDrive(back)) loops.push(loop, back);
+  }
+  // Fewer distinct loops than vehicles (a small city): more cars share them, spaced round the loop.
+  return Array.from({ length: loops.length ? MAX_VEHICLES : 0 }, (_, k) => {
+    const order = loops[k % loops.length], share = Math.floor(k / loops.length);
+    const legs = loopLegs(order.map(n => nodes[n]), order.map(n => next[n].length >= 3), order.map((n, i) => lane(n, order[(i + 1) % order.length])), SPEED);
+    const period = legs.reduce((n, l) => n + l.dur, 0);
+    return { id: `city:traffic:${k}`, ...FLEET[k % FLEET.length], legs, period, offset: ((hash(`city:${k % loops.length}:offset`) + share * 0.37) % 1) * period };
   });
-  return city;
+}
+
+const flatLen = (a: Pt3, b: Pt3) => Math.hypot(b[0] - a[0], b[2] - a[2]);
+
+/**
+ * The street graph with every dead-end spur trimmed away, so each street leads on to another.
+ * `lane(a, b)` is how far right of the centre line a car drives from node a to node b: half a lane
+ * on a street; on a headquarters plaza lane, which is drawn hugging the tower, the car on the
+ * tower side keeps to the plaza line and the other passes outside it.
+ */
+export function drivingGraph(scene: Scene3D): { nodes: Pt3[]; next: number[][]; lane: (a: number, b: number) => number } | undefined {
+  const g = buildStreetGraph(withCrossings(streetLines(scene, { drive: true })));
+  const rings = [...plazaRings(scene).values()];
+  const on = (p: Pt3, x: number | null, z: number | null) => (x === null || Math.abs(p[0] - x) < 1e-6) && (z === null || Math.abs(p[2] - z) < 1e-6);
+  const within = (p: Pt3, r: Ring) => p[0] > r.x0 - 1e-6 && p[0] < r.x1 + 1e-6 && p[2] > r.z0 - 1e-6 && p[2] < r.z1 + 1e-6;
+  const ringOf = (a: Pt3, b: Pt3) => rings.find(r => within(a, r) && within(b, r) && ([r.x0, r.x1].some(x => on(a, x, null) && on(b, x, null)) || [r.z0, r.z1].some(z => on(a, null, z) && on(b, null, z))));
+  const lane = (i: number, j: number) => {
+    const a = g.nodes[i], b = g.nodes[j], r = ringOf(a, b);
+    if (!r) return LANE_OFF;
+    const dx = b[0] - a[0], dz = b[2] - a[2], cx = (r.x0 + r.x1) / 2 - (a[0] + b[0]) / 2, cz = (r.z0 + r.z1) / 2 - (a[2] + b[2]) / 2;
+    return -dz * cx + dx * cz > 0 ? 0 : 2 * LANE_OFF;
+  };
+  // A street whose lanes would brush a tower or its entrance stairs is left to pedestrians.
+  const towerHit = (x: number, z: number) => scene.towers.some(w => Math.abs(x - w.x) < w.size / 2 + 0.1 && z > w.z - w.size / 2 - 0.1 && z < w.z + w.size / 2 + 0.24 + 0.1);
+  const brushes = (i: number, j: number) => {
+    const a = g.nodes[i], b = g.nodes[j], l = flatLen(a, b) || 1, nx = -(b[2] - a[2]) / l, nz = (b[0] - a[0]) / l;
+    const off = lane(i, j), steps = Math.ceil(l / 0.05);
+    for (let s = 0; s <= steps; s++) { const f = s / steps; if (towerHit(a[0] + (b[0] - a[0]) * f + nx * off, a[2] + (b[2] - a[2]) * f + nz * off)) return true; }
+    return false;
+  };
+  const next = g.edges.map((list, i) => [...new Set(list.map(e => e.to))].filter(j => !brushes(i, j) && !brushes(j, i)));
+  const alive = next.map(list => list.length > 0);
+  // Peel off ends until every street that is left joins something at both ends.
+  for (let changed = true; changed; ) {
+    changed = false;
+    next.forEach((list, i) => { if (alive[i] && list.filter(j => alive[j]).length < 2) { alive[i] = false; changed = true; } });
+  }
+  const kept = next.map((list, i) => (alive[i] ? list.filter(j => alive[j]) : []));
+  return kept.some(l => l.length) ? { nodes: g.nodes, next: kept, lane } : undefined;
+}
+
+/** Adds a point wherever two streets cross mid-way, so the crossing is a junction in the graph. */
+function withCrossings(lines: Pt3[][]): Pt3[][] {
+  const segs = lines.flatMap((l, li) => l.slice(1).map((b, i) => ({ li, i, a: l[i], b })));
+  const extra = new Map<string, Pt3[]>();
+  for (let u = 0; u < segs.length; u++) for (let v = u + 1; v < segs.length; v++) {
+    const p = segs[u], q = segs[v];
+    if (p.li === q.li) continue;
+    const rx = p.b[0] - p.a[0], rz = p.b[2] - p.a[2], sx = q.b[0] - q.a[0], sz = q.b[2] - q.a[2], den = rx * sz - rz * sx;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((q.a[0] - p.a[0]) * sz - (q.a[2] - p.a[2]) * sx) / den, w = ((q.a[0] - p.a[0]) * rz - (q.a[2] - p.a[2]) * rx) / den;
+    if (t <= 1e-6 || t >= 1 - 1e-6 || w <= 1e-6 || w >= 1 - 1e-6) continue;
+    // Only at street level: a bridge deck passes over what it crosses.
+    const y1 = p.a[1] + (p.b[1] - p.a[1]) * t, y2 = q.a[1] + (q.b[1] - q.a[1]) * w;
+    if (y1 > 1e-6 || y2 > 1e-6) continue;
+    const at: Pt3 = [p.a[0] + rx * t, 0, p.a[2] + rz * t];
+    for (const s of [p, q]) { const k = `${s.li}:${s.i}`; extra.set(k, [...(extra.get(k) ?? []), at]); }
+  }
+  return lines.map((l, li) => l.flatMap((b, i) => {
+    if (!i) return [b];
+    const a = l[i - 1], cuts = (extra.get(`${li}:${i - 1}`) ?? []).sort((x, y) => flatLen(a, x) - flatLen(a, y));
+    return [...cuts, b];
+  }));
+}
+
+/**
+ * A closed drive from a start node: at each junction take any street but the one just driven
+ * (preferring straight on), until the drive comes back to a street it already drove in the same
+ * direction. The repeating part is the loop.
+ */
+function driveLoop(nodes: Pt3[], next: number[][], start: number, seed: number): number[] | undefined {
+  const path = [start, next[start][Math.floor(hash(`first:${seed}`) * next[start].length)]];
+  const seen = new Map<string, number>([[`${path[0]}>${path[1]}`, 0]]);
+  for (let step = 0; step < 600; step++) {
+    const [p, c] = [path[path.length - 2], path[path.length - 1]];
+    const dx = nodes[c][0] - nodes[p][0], dz = nodes[c][2] - nodes[p][2], l = Math.hypot(dx, dz) || 1;
+    const straightness = (n: number) => { const ex = nodes[n][0] - nodes[c][0], ez = nodes[n][2] - nodes[c][2]; return (dx * ex + dz * ez) / (l * (Math.hypot(ex, ez) || 1)); };
+    // Never back the way it came, not even by a short link between two road ends.
+    const options = next[c].filter(n => n !== p && straightness(n) > -0.5);
+    if (!options.length) return;
+    // Straight on twice as often as a turn: through traffic, with some turning off.
+    const weights = options.map(n => (straightness(n) > 0.9 ? 2 : 1));
+    let pick = hash(`turn:${seed}:${step}`) * weights.reduce((a, b) => a + b, 0), n = options[0];
+    for (let i = 0; i < options.length; i++) { pick -= weights[i]; if (pick <= 0) { n = options[i]; break; } }
+    const key = `${c}>${n}`;
+    const at = seen.get(key);
+    if (at !== undefined) return path.slice(at, path.length - 1);
+    seen.set(key, path.length - 1);
+    path.push(n);
+  }
+}
+
+/**
+ * Legs for one closed loop of street points: shifted into the right-hand lane all the way round,
+ * with a stop at the stop line before each junction.
+ */
+function loopLegs(points: Pt3[], junction: boolean[], laneOf: number[], speed: number): Leg[] {
+  // Stop lines: a point just short of each junction, where the vehicle waits. `lanes` is the
+  // offset of the stretch leaving each point.
+  const pts: Pt3[] = [], stops: boolean[] = [], lanes: number[] = [];
+  points.forEach((p, i) => {
+    const prev = points[(i - 1 + points.length) % points.length], len = flatLen(prev, p);
+    if (junction[i] && len > STOP_BACK + 0.12) {
+      const f = 1 - STOP_BACK / len;
+      pts.push([prev[0] + (p[0] - prev[0]) * f, prev[1] + (p[1] - prev[1]) * f, prev[2] + (p[2] - prev[2]) * f]);
+      stops.push(true); lanes.push(laneOf[(i - 1 + points.length) % points.length]);
+    }
+    pts.push(p); stops.push(false); lanes.push(laneOf[i]);
+  });
+  let lane = keepRightLoop(pts, lanes);
+  // Where two bends sit closer together than the lane is wide, the shifted points can step back on
+  // themselves; drop such a point so the drive never reverses, even for a moment.
+  for (let changed = true; changed && lane.length > 3; ) {
+    changed = false;
+    for (let k = 0; k < lane.length; k++) {
+      const a = lane[(k - 1 + lane.length) % lane.length], b = lane[k], c = lane[(k + 1) % lane.length];
+      const ux = b[0] - a[0], uz = b[2] - a[2], wx = c[0] - b[0], wz = c[2] - b[2], lu = Math.hypot(ux, uz), lw = Math.hypot(wx, wz);
+      if (lu > 1e-7 && lw > 1e-7 && (ux * wx + uz * wz) / (lu * lw) < -0.5) { lane.splice(k, 1); stops.splice(k, 1); lanes.splice(k, 1); changed = true; break; }
+    }
+  }
+  lane = lane.slice();
+  const legs: Leg[] = [];
+  for (let k = 0; k < lane.length; k++) {
+    const a = lane[k], b = lane[(k + 1) % lane.length], length = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    if (stops[k]) legs.push({ a: [a[0], a[2]], b: [b[0], b[2]], ya: a[1], yb: a[1], dur: JUNCTION_STOP, hold: true });
+    if (length > 1e-7) legs.push({ a: [a[0], a[2]], b: [b[0], b[2]], ya: a[1], yb: b[1], dur: length / (speed * (a[1] !== b[1] ? 0.7 : 1)), hold: false });
+  }
+  return legs;
+}
+
+/**
+ * Every point of a closed loop moved into the lane on its right, mitred at the bends. off[i] is the
+ * offset of the stretch leaving point i; where it changes, the point takes the offset stretch's shift.
+ */
+function keepRightLoop(pts: Pt3[], offs: number[]): Pt3[] {
+  const right = (p: Pt3, q: Pt3) => { const dx = q[0] - p[0], dz = q[2] - p[2], l = Math.hypot(dx, dz) || 1; return [-dz / l, dx / l] as const; };
+  const n = pts.length;
+  return pts.map((p, i) => {
+    let a = (i - 1 + n) % n, b = (i + 1) % n;
+    // Skip repeated points so a stop line never makes a zero-length direction.
+    while (flatLen(pts[a], p) < 1e-7 && a !== i) a = (a - 1 + n) % n;
+    while (flatLen(p, pts[b]) < 1e-7 && b !== i) b = (b + 1) % n;
+    const n1 = right(pts[a], p), n2 = right(p, pts[b]), o1 = offs[a], o2 = offs[i];
+    // At a corner between two lane widths (onto or off a plaza lane): where the two offset lines meet.
+    const det = n1[0] * n2[1] - n1[1] * n2[0];
+    if (Math.abs(o1 - o2) > 1e-9 && Math.abs(det) > 0.3) return [p[0] + (o1 * n2[1] - o2 * n1[1]) / det, p[1], p[2] + (n1[0] * o2 - n2[0] * o1) / det];
+    if (Math.abs(o1 - o2) > 1e-9) { const [n, o] = o1 > o2 ? [n1, o1] : [n2, o2]; return [p[0] + n[0] * o, p[1], p[2] + n[1] * o]; }
+    const k = o1 / Math.max(0.2, 1 + n1[0] * n2[0] + n1[1] * n2[1]);
+    // On the outside of a corner, the car cuts the corner a little rather than leave the road.
+    const mx = (n1[0] + n2[0]) * k, mz = (n1[1] + n2[1]) * k, m = Math.hypot(mx, mz), cap = ROAD_W / 2 / Math.max(m, ROAD_W / 2);
+    return [p[0] + mx * cap, p[1], p[2] + mz * cap];
+  });
 }
 
 /**

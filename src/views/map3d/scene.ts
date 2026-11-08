@@ -1,3 +1,4 @@
+import {planRingRoad} from './ringRoad';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
@@ -805,6 +806,16 @@ function buildCity(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
+  // Close the ring road round the city, clear of every building, the Marketplace and its Galleria.
+  const ring=planRingRoad(connections,financial?.street,[
+    ...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...houses.map(h=>({x:h.x,z:h.z,w:h.w,d:h.d})),
+    ...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),
+    ...(mall?[{x:mall.x+mall.w/2,z:mall.z+mall.d/2,w:mall.w,d:mall.d}]:[]),...(galleria?[{x:galleria.rect.x+galleria.rect.w/2,z:galleria.rect.z+galleria.rect.d/2,w:galleria.rect.w,d:galleria.rect.d}]:[]),
+    ...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),
+    // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
+    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
+  connections.push(...ring);
+  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   // Plain meadow filling the island out to a square; the stadium grounds may build on it.
   const meadowLand=compactSquareLand(land,cityLand);
   land.push(...meadowLand);

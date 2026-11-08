@@ -17,6 +17,10 @@ for(const light of ['day','night'] as const)test(`Street pavement, ${light}`,asy
   const hq=s.towers.find((x:{projectId:string})=>x.projectId==='benjaire-site');
   if(hq)views.push(['avenue',[hq.x+3,0,hq.z-3],[hq.x+3.5,6,hq.z+5]],['street',[hq.x+3.2,.6,hq.z-8],[hq.x+3.6,1.6,hq.z+3]]);
   // Looking up the avenue past Benjaire HQ to the Financial District's street side.
+  // The ring road round the whole city, from high above, and its south side at street level.
+  views.push(['ring',[cx,0,cz],[cx,r*3.4,cz+.01]]);
+  const south=s.transportConnections.find((c:{id:string})=>c.id==='ring-road:south')?.road as [number,number][]|undefined;
+  if(south){const z=south[0][1],x=(south[0][0]+south[1][0])/2;views.push(['ring-south',[x,0,z],[x-5,2.4,z-4]]);}
   if(hq)views.push(['approach',[hq.x+2.6,.4,hq.z-10],[hq.x+5.6,2.2,hq.z+9]]);
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,state=fiber._roots.get(canvas)?.store.getState();if(!state)throw new Error('Map renderer not found');
