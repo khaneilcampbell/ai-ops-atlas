@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Removed the Administration, Logistics and Passenger Services buildings from Atlas Airport; Operations stays as the airport office (#285)
 - 2026-11-08 · Atlas uses the architectural Orbit logo on the dashboard and app icons (#284).
 - 2026-11-08 · The Skyline district is gone to make space: its residence, shops, observation wheel and train stop are removed and the land is an empty lot for the next building. The Inquiry Assistant now works in the Marketplace and the two Model Lab agents in Atlas HQ (#282)
 - 2026-11-08 · Every plane now has cockpit windows. At night the cockpits glow, planes show red and green wingtip lights, blinking red beacons on the top, belly and tail, white strobes, and landing lights with a beam ahead of the nose while taxiing, taking off and landing (#277)
