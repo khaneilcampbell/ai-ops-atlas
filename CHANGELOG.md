@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · The Skyline district is gone to make space: its residence, shops, observation wheel and train stop are removed and the land is an empty lot for the next building. The Inquiry Assistant now works in the Marketplace and the two Model Lab agents in Atlas HQ (#282)
 - 2026-11-08 · The Intelligence Hub district has about twice the land it had, and the building is widened to match (#278)
 - 2026-11-08 · The Intelligence Hub is rebuilt from your corner-building reference: white ribbed fins, thin black lines at every floor that swell round the cut corner (they glow gold at night), a planted loggia on the corner of every floor, rounded black-framed windows, a glass shopfront ground floor under a rounded overhang, and a rear wing that steps down to a planted roof. It now has 20 floors instead of 14 (#276)
 - 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
