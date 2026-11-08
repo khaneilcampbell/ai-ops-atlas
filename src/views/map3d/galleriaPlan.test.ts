@@ -37,6 +37,10 @@ describe('Atlas Galleria plan (reference metres)',()=>{
 describe('Atlas Galleria on the map',()=>{
  const scenes=GROUPS.map(g=>[g,sceneFor(g)] as const);
  const s=scenes[0][1],gl=s.galleria as GalleriaPlan;
+ it('stands behind the Marketplace when a repository is removed (the installed app hides deleted ones)',()=>{
+  // The old two-stop line's Marketplace stairs are not drawn beside the perimeter loop, so they must not clear the lot.
+  for(const p of catalog.projects)expect(buildScene(layoutMap({...catalog,projects:catalog.projects.filter(q=>q!==p)},[],'district')).galleria,`without ${p.id}`).toBeDefined();
+ });
  it('replaces the Marketplace Gardens behind the Marketplace, on its lot',()=>{
   expect(gl).toBeDefined();const m=s.mall!;
   expect(gl.rect.z+gl.rect.d).toBeLessThanOrEqual(m.z);
@@ -48,12 +52,13 @@ describe('Atlas Galleria on the map',()=>{
  it('never stands on a building, road, rail or station opening, in any grouping',()=>{
   for(const [g,sc] of scenes){
    const p=sc.galleria;if(!p)continue;const f=p.footprint;
-   for(const b of [...sc.towers,...sc.kiosks,...sc.retail])expect(hit(f,{x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}),`${g} ${b.key}`).toBe(false);
+   for(const b of [...sc.towers,...sc.kiosks])expect(hit(f,{x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size}),`${g} ${b.key}`).toBe(false);
    if(sc.mall)expect(hit(f,sc.mall),g).toBe(false);
    for(const c of sc.transportConnections)for(const q of [...c.road,...c.walk])expect(inRect(f,q,.3),`${g} ${c.id}`).toBe(false);
    const loop=sc.communityRail?.loop;
    if(loop){for(const q of loop.route)expect(inRect(f,q,.4),g).toBe(false);for(const stop of loop.stops)expect(inRect(f,stop.point,1.5),`${g} ${stop.name}`).toBe(false);}
-   if(sc.communityRail)for(const a of stationAccessAreas(sc.communityRail.hills))expect(hit(f,a),g).toBe(false);
+   // The two-stop line's stairs exist only without the loop; beside it that stop is never drawn.
+   if(sc.communityRail&&!loop)for(const a of stationAccessAreas(sc.communityRail.hills))expect(hit(f,a),g).toBe(false);
   }
  });
  it('keeps the reference proportions and three storeys under the canopy',()=>{

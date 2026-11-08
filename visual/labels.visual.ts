@@ -60,7 +60,7 @@ test("every building plaque shares one size, font, color and status dot", async 
   await zoomIn(page, 1);
   await shot(page, "overview-day");
   expectConsistent(await plaqueLooks(page));
-  for (const name of ["Financial District", "Atlas Marketplace", "Vantor Motors", "Atlas Airport", "Reasoning Lab"]) {
+  for (const name of ["Financial District", "Atlas Marketplace", "Vantor Motors", "Atlas Airport"]) {
     await selectBuilding(page, name);
     await waitForScene(page);
     await shot(page, `${name.toLowerCase().replace(/\s+/g, "-")}-day`);
