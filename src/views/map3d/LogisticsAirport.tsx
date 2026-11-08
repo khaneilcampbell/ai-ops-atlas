@@ -6,6 +6,7 @@ import {GroundCrew} from "./GroundCrew";
 import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
+import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
 import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
 import {usePowerProfile} from "../../lib/power";
@@ -25,8 +26,11 @@ const GEAR_TOP=.2;
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
 const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
-function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery}) {
+function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material}) {
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
+  const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
+  const phase=lightPhase(slot+(parked?3:0));
+  const cockpit=useMemo(()=>COCKPIT_PANES.map(p=>({...p,c:night?'#ffe2a8':livery.cockpit})) as Inst[],[livery,night]);
   const parts=useMemo(()=>{
     const l=livery;
     // Long-haul twinjet proportions (777/787 family): a slender tube with a rounded nose and an upswept
@@ -48,7 +52,6 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
     body:[
       {p:[0,y0,tube],s:[R,R,.42],c:l.fuselage},
       {p:[0,y0+.02,tubeTo],s:[R*.92,R*.8,.5],c:l.fuselage},
-      {p:[0,y0+.1,tube-.2],s:[R*.62,.045,.07],c:l.cockpit},
       ...(parked?WHEELS:[]),
     ] as Inst[],
     gear:WHEELS.map(w=>({...w,p:[w.p[0],w.p[1]-GEAR_TOP,w.p[2]]})) as Inst[],
@@ -71,8 +74,15 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
     ] as Inst[],
   };},[livery,parked]);
   useFrame(()=>{
+    if(night){
+      const blink=blinkState(clock.current,phase);
+      if(beaconRef.current)beaconRef.current.visible=blink.beacon;
+      if(strobeRef.current)strobeRef.current.visible=blink.strobe;
+    }
     if(!ref.current||parked)return;
     const pose=fleetPose(clock.current,slot,circuit);
+    // Landing lights ("headlights") burn while the gear is down: taxi, takeoff roll and final approach.
+    if(landingRef.current)landingRef.current.visible=pose.gear>.02;
     ref.current.position.set(pose.x,pose.y,pose.z);
     // Heading first, then nose pitch, then bank about the fuselage.
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
@@ -84,6 +94,19 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery}:{parked?:{x:number;z:nu
     <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
     {!parked&&<group ref={gearRef} position={[0,GEAR_TOP,0]}><Instanced items={parts.gear} geometry={g.ball} material={m.plain} shadow={false}/></group>}
+    <Instanced items={cockpit} geometry={g.box} material={night?m.glow:m.plain} shadow={false}/>
+    {/* Night lights: red/green/white position lights stay on; a parked jet with engines off shows only those. */}
+    {night&&<>
+      <Instanced items={AIRCRAFT_LIGHTS.nav} geometry={g.box} material={m.glow} shadow={false}/>
+      {!parked&&<>
+        <group ref={beaconRef}><Instanced items={AIRCRAFT_LIGHTS.beacon} geometry={g.box} material={m.glow} shadow={false}/></group>
+        <group ref={strobeRef}><Instanced items={AIRCRAFT_LIGHTS.strobe} geometry={g.box} material={m.glow} shadow={false}/></group>
+        <group ref={landingRef}>
+          <Instanced items={AIRCRAFT_LIGHTS.landing} geometry={g.box} material={m.glow} shadow={false}/>
+          {beam&&<mesh geometry={g.cone} material={beam} position={[0,LANDING_BEAM.y,LANDING_BEAM.z-LANDING_BEAM.length]} rotation={[Math.PI/2,0,0]} scale={[LANDING_BEAM.radius*2,LANDING_BEAM.length,LANDING_BEAM.radius*2]} renderOrder={2}/>}
+        </group>
+      </>}
+    </>}
   </group>;
 }
 
@@ -97,6 +120,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
   const glazing=useMemo(()=>new THREE.MeshPhysicalMaterial({color:HQ.glassLight,transparent:true,opacity:.2,roughness:.14,metalness:.04,depthWrite:false}),[]);
   useEffect(()=>{glazing.color.set(night?'#f5e4be':HQ.glassLight);glazing.emissive.set('#f4d496');glazing.emissiveIntensity=night?1.1:0;glazing.opacity=night?.58:.2;},[glazing,night]);
   useEffect(()=>()=>glazing.dispose(),[glazing]);
+  const beam=useMemo(()=>new THREE.MeshBasicMaterial({color:'#fff1cc',transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
+  useEffect(()=>()=>beam.dispose(),[beam]);
   useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);});
   const parts=useMemo(()=>{
     if(!a)return null;
@@ -180,13 +205,13 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
     {/* The north remote stand is kept free for arrivals; the south one keeps its parked jet. */}
-    {[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)}/></group>)}
+    {[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     <GroundCrew a={a} g={g} m={m} clock={clock}/>
-    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)}/></group>)}
+    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)} night={night} beam={beam}/></group>)}
   </group>;
 }
 

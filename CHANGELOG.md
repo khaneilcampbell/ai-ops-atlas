@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Every plane now has cockpit windows. At night the cockpits glow, planes show red and green wingtip lights, blinking red beacons on the top, belly and tail, white strobes, and landing lights with a beam ahead of the nose while taxiing, taking off and landing (#277)
 - 2026-11-08 · Raised footpaths no longer stand across roads and pavements like walls: where a station walk meets a road or a Galleria driveway, it now stops at the kerb and a zebra crossing is painted on the road itself (#273)
 - 2026-11-08 · The road past the Intelligence Hub no longer zigzags round its tower: it now runs straight up to the Hub's plaza from each side, clear of the footpath beside it (#273)
 - 2026-11-08 · The Atlas Galleria stays on the map with the bigger Intelligence Hub district: when the Marketplace moves, the mall now finds its lot behind it even where the land is in several pieces or the boulevard runs between them, its car park opens onto that street, and the entrance walk still reaches the road (#273)
