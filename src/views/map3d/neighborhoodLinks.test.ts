@@ -25,3 +25,12 @@ it('keeps bridge guardrails over water and opens the joined land sections',()=>{
 it('routes freight along an indented highway rather than cutting across its removed corner',()=>{
  const loop:Pt[]=[[0,0],[10,0],[10,10],[5,10],[5,5],[0,5],[0,0]],arc=closedRoadArc(loop,[2,0],[5,8]);expect(arc[0]).toEqual([2,0]);expect(arc[arc.length-1]).toEqual([5,8]);expect(arc).toContainEqual([5,5]);for(let i=1;i<arc.length;i++)for(let t=0;t<=1;t+=.1)expect(distanceToRoad([arc[i-1][0]+(arc[i][0]-arc[i-1][0])*t,arc[i-1][1]+(arc[i][1]-arc[i-1][1])*t],loop)).toBeLessThan(.001);expect(closedRoadArc(loop,[2,2],[5,8])).toEqual([]);
 });
+for(const g of ['none','district','status','tag'] as GroupBy[])it(`runs the Marketplace boulevard without stepping back and forth round a building: ${g}`,()=>{
+ // KC, 2026-11-08: the wider Intelligence Hub district put its tower across the boulevard's end, and the road jogged round it.
+ const road=buildScene(layoutMap(catalog,[],g)).transportConnections.find(c=>c.id==='marketplace-city-boulevard')!.road;
+ const pts=road.filter((p,i)=>!i||Math.hypot(p[0]-road[i-1][0],p[1]-road[i-1][1])>1e-9),zs:number[]=[];
+ for(let i=1;i<pts.length;i++)if(Math.abs(pts[i][0]-pts[i-1][0])<1e-9)zs.push(pts[i][1]);
+ // No north-south leg returns to a line an earlier one left: one turn each way, not a zigzag.
+ for(let i=2;i<zs.length;i++)expect(Math.abs(zs[i]-zs[i-2])).toBeGreaterThan(1e-6);
+ expect(pts.length).toBeLessThanOrEqual(5);
+});
