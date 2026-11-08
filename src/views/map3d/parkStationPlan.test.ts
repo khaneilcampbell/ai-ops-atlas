@@ -44,9 +44,9 @@ describe('Shell stations on the perimeter loop',()=>{
 });
 
 describe('every perimeter stop wears the shell (KC, 2026-11-07)',()=>{
- for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps all five shells clear of buildings and the runway: ${grouping}`,()=>{
+ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps every station shell clear of buildings and the runway: ${grouping}`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),loop=s.communityRail!.loop!,local=parkStationParts([0,0],0);
-  const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+  const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
   boxes.push(...s.financial!.buildings.map(b=>({x:s.financial!.x+b.x,z:s.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})));
   if(s.mall)boxes.push({x:s.mall.cx,z:s.mall.cz-.8,w:s.mall.w,d:s.mall.d-2.5});
   if(s.stadium)boxes.push({x:s.stadium.x+s.stadium.w/2,z:s.stadium.z+s.stadium.d/2,w:s.stadium.w,d:s.stadium.d});

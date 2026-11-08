@@ -51,7 +51,8 @@ describe("bundled registry", () => {
     expect(agent.registry?.classification?.type).toBe("B");
     expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
     expect(agent.model).toContain("no model");
-    expect(agent.workplace).toEqual({building:"Model Lab",floor:4,room:"401"});
+    // Works from Atlas HQ since its Model Lab suite left with the Skyline district (2026-11-08).
+    expect(agent.workplace).toBeUndefined();
     expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 

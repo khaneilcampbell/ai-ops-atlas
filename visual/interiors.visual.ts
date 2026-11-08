@@ -37,43 +37,31 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
   expect(errors).toEqual([]);
 });
 
-test("Skyline night interior: shared navigation and exterior clearance",async({page})=>{
+// The shared business interior (airport offices and other planned workspaces). It was shown on
+// Skyline until that district was removed (KC, 2026-11-08).
+const BUSINESS="Atlas · Operations";
+async function enterBusiness(page:import("@playwright/test").Page){
+  await page.evaluate(async(b)=>{const m=await import("/src/views/office/store.ts" as string);m.enterBuilding(`skyline-business:${b}`,true);},BUSINESS);
+}
+
+test("business night interior: shared navigation and exterior clearance",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page,{light:"night"});
-  await selectBuilding(page,"Skyline");await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,4);
+  await enterBusiness(page);await settle(page,4);
   await expect(page.locator(".skyline-interior.night")).toBeVisible();
-  const nav=page.getByRole("navigation",{name:"Choose Skyline floor"});
+  const nav=page.getByRole("navigation",{name:`Choose ${BUSINESS} floor`});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
   await waitForFloorMarkers(page,5);
-  await shot(page,"interior-skyline-night-all");
+  await shot(page,"interior-business-night-all");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
-  await shot(page,"interior-skyline-night-lobby");
+  await shot(page,"interior-business-night-lobby");
   await nav.getByRole("button",{name:"Floor 2",exact:true}).click();await settle(page,3);
-  for(let i=0;i<12&&!(await page.getByRole("button",{name:/Apartment 201/}).count());i++){await page.waitForTimeout(150);await settle(page,2);}
-  await shot(page,"interior-skyline-night-floor2");
-  expect(errors).toEqual([]);
-  await expect(page.getByRole("button",{name:/Apartment 201/})).toBeVisible();
-  await page.getByRole("button",{name:"Exit Skyline and return to city"}).click();await settle(page,2);
+  for(let i=0;i<12&&!(await page.getByRole("button",{name:/Suite 201/}).count());i++){await page.waitForTimeout(150);await settle(page,2);}
+  await shot(page,"interior-business-night-floor2");
+  await expect(page.getByRole("button",{name:/Suite 201/})).toBeVisible();
+  await page.getByRole("button",{name:`Exit ${BUSINESS} and return to city`}).click();await settle(page,2);
   await expect(page.locator(".skyline-interior")).toHaveCount(0);
   expect(errors).toEqual([]);
-});
-
-test("branded business interior opens with its own workspace navigation",async({page})=>{
-  const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
-  await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
-  for(let i=0;i<6;i++){await page.getByRole("button",{name:"Zoom in",exact:true}).click();await settle(page,1);}
-  await page.locator('.m3-plaque[title^="Reasoning Lab ·"]').dispatchEvent("click");await settle(page,4);
-  await expect(page.getByRole("region",{name:"Reasoning Lab interior"})).toHaveCount(0);
-  await expect(page.getByRole("complementary",{name:"Inspector"}).getByRole("heading",{name:"Reasoning Lab",exact:true})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/ai-ops-atlas",exact:true})).toBeVisible();
-  await shot(page,"anthropic-building-details");
-  await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
-  await expect(page.getByRole("region",{name:"Reasoning Lab interior"})).toBeVisible();
-  const nav=page.getByRole("navigation",{name:"Choose Reasoning Lab floor"});
-  await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);
-  await shot(page,"interior-anthropic-lobby");
-  await page.getByRole("button",{name:"Exit Reasoning Lab and return to city"}).click();await settle(page,2);
-  await expect(page.locator(".skyline-interior")).toHaveCount(0);expect(errors).toEqual([]);
 });
 
 test("phone: floor navigation and exit stay accessible",async({page})=>{
@@ -102,13 +90,13 @@ test("deep commerce building: full night cutaway stays framed and lit",async({pa
 });
 
 
-test("floor switching preserves the renderer in project and Skyline buildings",async({page})=>{
+test("floor switching preserves the renderer in project and business buildings",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
   await selectBuilding(page, "Atlas HQ");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();
   await settle(page,2);await waitForOffice(page);
-  for(const kind of ["office","skyline"] as const){
+  for(const kind of ["office","business"] as const){
     const region=page.locator(kind==="office"?".office-layer":".skyline-interior");
     const canvas=await region.locator("canvas").elementHandle();
     expect(canvas).not.toBeNull();
@@ -120,25 +108,11 @@ test("floor switching preserves the renderer in project and Skyline buildings",a
       expect(await canvas!.evaluate((original,current)=>original===current,current)).toBe(true);
       expect(await canvas!.evaluate(node=>(node as HTMLCanvasElement).getContext("webgl2")?.isContextLost())).toBe(false);
     }
-    await region.getByRole("button",{name:kind==="office"?"Exit building":"Exit Skyline and return to city",exact:true}).click();await settle(page,3);
+    await region.getByRole("button",{name:kind==="office"?"Exit building":`Exit ${BUSINESS} and return to city`,exact:true}).click();await settle(page,3);
     await expect(region).toHaveCount(0);
-    if(kind==="office"){await selectBuilding(page,"Skyline");await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,2);}
+    if(kind==="office"){await enterBusiness(page);await settle(page,2);}
   }
   expect(errors).toEqual([]);
-});
-
-
-test("Skyline project panel links its repository before entering the district",async({page})=>{
-  await openAtlas(page);
-  await selectBuilding(page,"Skyline");
-  await expect(page.getByRole("region",{name:"Linked repositories"})).toBeVisible();
-  await expect(page.getByRole("button",{name:"Inspect repository khaneilcampbell/ai-ops-atlas",exact:true})).toBeVisible();
-  await expect(page.locator(".map-bar h3")).toHaveText("Skyline");
-  await expect(page.locator(".map-bar")).toContainText("1 AI agent");
-  await expect(page.locator(".map-bar").getByRole("button",{name:/^Benjaire Inquiry/})).toBeVisible();
-  await shot(page,"skyline-project-repository");
-  await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
-  await expect(page.getByRole("region",{name:"Skyline interior"})).toBeVisible();
 });
 
 

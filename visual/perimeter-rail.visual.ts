@@ -8,7 +8,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
  await page.screenshot({path:`docs/perimeter-rail/after-${width}-${light}.png`});
  if(width===1512){
   await selectBuilding(page,'Financial District');await page.getByRole('button',{name:'Financial District Station →',exact:true}).click();await settle(page,2);
-  for(const name of ['Financial District Station','Atlas Central Station','Skyline Station','Stadium Station','Airport Station']){
+  for(const name of ['Financial District Station','Atlas Central Station','Stadium Station','Airport Station']){
    if(name!=='Financial District Station'){await page.getByRole('button',{name:`${name} →`,exact:true}).click();await settle(page,2);}
    await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
    await page.screenshot({path:`docs/perimeter-rail/${name.split(' ')[0].toLowerCase()}-${light}.png`});
