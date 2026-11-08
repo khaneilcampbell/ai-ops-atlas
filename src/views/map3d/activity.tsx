@@ -4,6 +4,7 @@ import { isCommerceTower } from "./commerceTowerPlan";
 import { useFrame } from "@react-three/fiber";
 import { isGithubTower } from "./githubTowerPlan";
 import { isIntelligenceHub } from "./intelligenceHubPlan";
+import { isPortfolioSite } from "./portfolioSitePlan";
 import * as THREE from "three";
 import type { Illumination } from "../office/activity";
 import type { useGeometries, useMaterials } from "./models";
@@ -108,7 +109,7 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
       const t = b as Tower;
       // Atlas HQ, Benjaire HQ, Commerce Pipeline and the GitHub tower are not boxes: a box-shaped glow
       // would hide them, so they light their plinth's edges and the ground halo instead.
-      if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
+      if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
       const s = t.size * 1.006;
       return { floors: Array.from({ length: t.floors }, (_, i) => [t.x, FLOOR_BASE + i * FLOOR_H, t.z, s, s] as const), box: [t.x, FLOOR_BASE, t.z, t.size + 0.06, t.floors * FLOOR_H, t.size + 0.06] as const };
     }

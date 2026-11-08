@@ -2,6 +2,7 @@ import {describe,expect,it} from "vitest";
 import {catalog} from "../../catalog";
 import {layoutMap,type GroupBy} from "../mapLayout";
 import {buildScene} from "./scene";
+import {openLot} from "./openLot";
 import {MALL,MALL_SHOPS,mallFloor,mallPieceCount,planMall} from "./mallPlan";
 import {distanceToRoad} from "./highway";
 
@@ -11,14 +12,14 @@ const sceneFor=(g:GroupBy="district")=>buildScene(layoutMap(catalog,[],g));
 
 describe("Atlas Marketplace mall", () => {
  const s=sceneFor(),m=s.mall!;
- it("sits on the open lot between the Skyline park and the Hills boulevard", () => {
+ it("sits between the open lot (once the Skyline park) and the Hills boulevard", () => {
   expect(m).toBeDefined();
-  const park=s.parks.find(p=>p.label==="Skyline")!;
+  const park=openLot(s.parks)!;
   expect(m.x).toBeGreaterThan(park.x+park.w);
   expect(m.z+m.d).toBeCloseTo(s.transportConnections.find(c=>c.id==="marketplace-city-boulevard")!.road[0][1]-1.95);
  });
  it("keeps clear of every building", () => {
-  for(const b of [...s.towers,...s.kiosks,...s.retail])
+  for(const b of [...s.towers,...s.kiosks])
    expect(b.x+b.size/2<=m.x||b.x-b.size/2>=m.x+m.w||b.z+b.size/2<=m.z||b.z-b.size/2>=m.z+m.d).toBe(true);
  });
  it("keeps clear of every road, including the highway's local road", () => {
@@ -45,7 +46,7 @@ describe("Atlas Marketplace mall", () => {
   expect(n).toBeLessThan(BUDGET);
  });
  it("draws nothing when the lot is missing", () => {
-  expect(planMall({parks:[],land:[],towers:[],kiosks:[],retail:[],links:[]})).toBeUndefined();
+  expect(planMall({parks:[],land:[],towers:[],kiosks:[],links:[]})).toBeUndefined();
  });
 });
 
@@ -67,13 +68,13 @@ describe("Atlas Marketplace scale", () => {
 
 describe("Atlas Marketplace when a project leaves the map", () => {
  // An archived or deleted repository drops its project from the live catalog, which moves the
- // Skyline park. The Marketplace and the railway must follow it (the garden behind it only when there is room), not vanish.
+ // open lot. The Marketplace and the railway must follow it (the garden behind it only when there is room), not vanish.
  const without=(id:string)=>({...catalog,projects:catalog.projects.filter(p=>p.id!==id),agents:catalog.agents.filter(a=>a.projectId!==id)});
  for(const id of ["soc-lab","ai-ops-atlas","career-optimizer","portfolio-site","intelligence-hub","service-desk","commerce-pipeline"])
   for(const g of ["district","tag"] as GroupBy[])it(`keeps the Marketplace and railway without ${id} (${g})`,()=>{
    const s=buildScene(layoutMap(without(id),[],g)),m=s.mall;
    expect(m).toBeDefined();expect(s.communityRail?.loop).toBeDefined();
-   for(const b of [...s.towers,...s.kiosks,...s.retail])
+   for(const b of [...s.towers,...s.kiosks])
     expect(b.x+b.size/2<=m!.x||b.x-b.size/2>=m!.x+m!.w||b.z+b.size/2<=m!.z||b.z-b.size/2>=m!.z+m!.d).toBe(true);
    if(s.agency)expect(m!.x+m!.w<=s.agency.cx-s.agency.w/2||m!.x>=s.agency.cx+s.agency.w/2||m!.z+m!.d<=s.agency.cz-s.agency.d/2||m!.z>=s.agency.cz+s.agency.d/2).toBe(true);
   });

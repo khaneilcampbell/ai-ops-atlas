@@ -1,10 +1,11 @@
+import {openLot} from './openLot';
 import type {Rect,Scene3D} from './scene';
 import type {Pt} from './roads';
 
 export const MALL_KEY='service:atlas-marketplace';
 /**
  * Atlas Marketplace: a low wave-style mall (stacked curving floors wrapped in white fins) on the
- * open lot between the Skyline park and the Hills boulevard. Sizes are in map units.
+ * land between the open lot (once the Skyline park) and the Hills boulevard. Sizes are in map units.
  * KC, 2026-11-08: "reduce down 1x". The building is one step (0.8) smaller in every direction than
  * before: floors 1.6 -> 1.28 and the footprint `size` 0.8 of the lot. The lot itself, its plaza and
  * everything planned around it (Galleria, rail, roads) stay where they were.
@@ -26,7 +27,7 @@ export interface MallPlan extends Rect {
  plaza:Rect;fountain:{x:number;z:number;r:number};
 }
 
-type Input=Pick<Scene3D,'parks'|'land'|'towers'|'kiosks'|'retail'>&{hills?:Rect;marketplace?:Rect;links:{id?:string;road:Pt[]}[];
+type Input=Pick<Scene3D,'parks'|'land'|'towers'|'kiosks'>&{hills?:Rect;marketplace?:Rect;links:{id?:string;road:Pt[]}[];
  /** Every drivable road, so the lot stops short of any that crosses it. */
  roads?:Pt[][]};
 /** Half a road plus its sidewalk: how far the lot stays back from a road's centre line. */
@@ -35,12 +36,12 @@ const ROAD_CLEAR=.95;
 const inside=(r:Rect,x:number,z:number)=>x>=r.x-1e-6&&x<=r.x+r.w+1e-6&&z>=r.z-1e-6&&z<=r.z+r.d+1e-6;
 
 /**
- * The open lot east of the Skyline park, west of the Hills boulevard and north of Atlas Hills.
+ * The land east of the open lot, west of the Hills boulevard and north of Atlas Hills.
  * Returns nothing if that lot is not there or not clear, so the map never draws a mall on top of
  * something else.
  */
 export function planMall(s:Input):MallPlan|undefined{
- const park=s.parks.find(p=>p.label==='Skyline');
+ const park=openLot(s.parks);
  const boulevard=s.links.find(l=>l.id==='marketplace-city-boulevard'||l.id==='hills-city-boulevard'),site=s.marketplace??s.hills;
  if(!park||!boulevard||!site)return;
  // The boulevard's long north-south run is the lot's east edge.
@@ -72,7 +73,7 @@ export function planMall(s:Input):MallPlan|undefined{
  if(!onLand(d))return;
  const lot={x,z:south-d,w,d};
  // No building may stand in the lot.
- if([...s.towers,...s.kiosks,...s.retail].some(b=>b.x+b.size/2>lot.x&&b.x-b.size/2<lot.x+w&&b.z+b.size/2>lot.z&&b.z-b.size/2<lot.z+d))return;
+ if([...s.towers,...s.kiosks].some(b=>b.x+b.size/2>lot.x&&b.x-b.size/2<lot.x+w&&b.z+b.size/2>lot.z&&b.z-b.size/2<lot.z+d))return;
  const plazaD=2.3,bd=d-plazaD;
  const rx=(w/2-.1)*MALL.size,rz=(bd/2-.05)*MALL.size;
  const plaza={x:lot.x+.3,z:lot.z+bd,w:w-.6,d:plazaD};

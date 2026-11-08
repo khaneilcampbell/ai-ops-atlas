@@ -659,15 +659,7 @@
             "properties": {
               "building": {
                 "enum": [
-                  "Skyline",
                   "Atlas Marketplace",
-                  "Model Lab",
-                  "Reasoning Lab",
-                  "Halden Branch",
-                  "Starbucks",
-                  "Smashburger",
-                  "Chipotle",
-                  "Zara",
                   "Benjaire Marketing Agency"
                 ]
               },
