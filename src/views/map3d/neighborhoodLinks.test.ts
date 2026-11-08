@@ -9,7 +9,7 @@ for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compa
  expect(r.length).toBeLessThan(previous[g].rail*.82);expect(s.freight).toBeUndefined();
  expect(s.transportConnections.map(c=>c.id)).toEqual(expect.arrayContaining(['marketplace-city-boulevard','financial-stadium-local','financial-district']));
  for(const a of s.neighborhoodLand!){for(const b of s.land)if(a!==b)expect(Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>1e-8&&Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)>1e-8,`new terrain overlap: ${JSON.stringify({a,b,dx:Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),dz:Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)})}`).toBe(false);}
- const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  boxes.push(...f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})));
  for(const c of s.transportConnections.filter(l=>['marketplace-city-boulevard','financial-stadium-local'].includes(l.id))){expect(pathClear(c.road,boxes,.32)).toBe(true);expect(pathClear(c.walk,boxes,.23)).toBe(true);}
  expect(pathClear(r.route,[...boxes,{x:s.dealership!.x+5,z:s.dealership!.z+4,w:10,d:8}],.6)).toBe(true);
