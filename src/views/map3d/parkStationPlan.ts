@@ -12,14 +12,18 @@ import {stationPoint,type RailStop} from './perimeterRailPlan';
  */
 export const PARK_STATION={
  /** Shell vault: half-axes across the track (z) and up (y), length along the track, slat count. */
- shell:{across:1,up:1.55,length:8.4,slats:13,maxAngle:72*Math.PI/180,centreZ:.45,lift:.15,glassBelow:40*Math.PI/180},
- ribs:[-4.2,-2.1,0,2.1,4.2],
+ shell:{across:.92,up:1.55,length:7.6,slats:13,maxAngle:72*Math.PI/180,centreZ:.4,lift:.15,glassBelow:40*Math.PI/180},
+ ribs:[-3.8,-1.9,0,1.9,3.8],
+ /** The lift tower stands just outside the shell's platform-side edge, so the glass never cuts through it. */
+ liftZ:1.75,
  /** Glazed stair tube: stair centre line offset, half width, wall height, arch rise above the tube. */
  bridge:{dx:1,halfWidth:.6,wall:.78,archRise:.85,archSegments:12,foot:6.1},
  colors:{shell:'#e2dccd',rib:'#f4f2ec',accent:'#c9a35a',lift:'#d8d1c1',frame:'#8f9c9c'},
 } as const;
 
 export interface ParkStationParts {metal:Inst[];glass:Inst[];accents:Inst[]}
+
+const END_RIB=Math.max(...PARK_STATION.ribs);
 
 /** Rotation about x that lays a box's local z along the direction (dz, dy). */
 const tilt=(dz:number,dy:number)=>Math.atan2(-dy,dz);
@@ -40,10 +44,10 @@ export function parkStationParts([x,z]:Pt,base:number):ParkStationParts{
  for(const dx of PARK_STATION.ribs)for(let i=0;i<s.slats;i++){
   const t=-s.maxAngle+i*step,[pz,py]=at(t),[qz,qy]=at(t+step*.5),[oz,oy]=at(t-step*.5);
   const out=.05,nz=Math.sin(t)*out,ny=Math.cos(t)*out;
-  (Math.abs(dx)===4.2?accents:metal).push({p:[x+dx,py+ny,pz+nz],s:[.1,.06,Math.hypot(qz-oz,qy-oy)+.03],rx:tilt(qz-oz,qy-oy),c:Math.abs(dx)===4.2?PARK_STATION.colors.accent:PARK_STATION.colors.rib});
+  (Math.abs(dx)===END_RIB?accents:metal).push({p:[x+dx,py+ny,pz+nz],s:[.1,.06,Math.hypot(qz-oz,qy-oy)+.03],rx:tilt(qz-oz,qy-oy),c:Math.abs(dx)===END_RIB?PARK_STATION.colors.accent:PARK_STATION.colors.rib});
  }
- // Columns carry the shell's lower edge on the platform side and the viaduct side.
- for(const dx of PARK_STATION.ribs)for(const t of [-s.maxAngle,s.maxAngle]){const [pz,py]=at(t);metal.push({p:[x+dx,base+C.railRise-.2,pz],s:[.07,py-(base+C.railRise-.2),.07],c:PARK_STATION.colors.frame});}
+ // Columns carry the shell's lower edge: on the viaduct deck on the track side and on the platform on the park side.
+ for(const dx of PARK_STATION.ribs)for(const t of [-s.maxAngle,s.maxAngle]){const [pz,py]=at(t),floor=base+(t<0?C.railRise:C.platformRise);metal.push({p:[x+dx,floor,pz],s:[.07,py-floor,.07],c:PARK_STATION.colors.frame});}
  // Glazed skybridge over the park stairs: glass walls and roof follow the stair slope.
  const b=PARK_STATION.bridge,sx=x+b.dx,top=z+1.7,run=4.2,len=Math.hypot(C.platformRise,run),slope=tilt(run,-C.platformRise),midZ=top+run/2,midY=base+C.platformRise/2;
  for(const side of [-1,1])glass.push({p:[sx+side*b.halfWidth,midY+.02,midZ],s:[.03,b.wall,len],rx:slope,c:'#a9cfd2'});

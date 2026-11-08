@@ -106,11 +106,13 @@ export function CommunityRail({plan:p,agents,community,financial,roads,keepClear
   const shell=!!p.loop||index===1;
   if(!shell)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
   for(const dx of [-3.5,3.5])solid.push(box(x+dx,C.platformRise,z+1.25,.07,1.15,.07,palette.green));
-  solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+1.5,.7,.2,.5,'#ded8c7'));
-  strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+1.8],.48,.075,.03,'#e3dfd2',paths);
+  // Under a shell the lift stands just outside the glass, joined to the platform by a short landing.
+  const liftZ=shell?PARK_STATION.liftZ:1.3,liftFace=liftZ+.35;
+  solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+(shell?1.38:1.5),.7,.2,shell?.06:.5,'#ded8c7'));
+  strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+liftFace+.13],.48,.075,.03,'#e3dfd2',paths);
   for(let i=0;i<15;i++)solid.push(box(x+1,C.platformRise*(1-(i+1)/15),z+1.7+i*.28,1,C.platformRise/15,.29,'#d6d0bd'));
   // Separate protected lift and stairs make the raised platform reachable from ground paths.
-  solid.push(box(x-3.4,.02,z+1.3,.65,C.platformRise+1,.7,shell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+1.67,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+1.67,.35,.8,.035,'#435e58'));
+  solid.push(box(x-3.4,.02,z+liftZ,.65,C.platformRise+1,.7,shell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+liftFace+.02,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+(shell?liftZ-.37:liftFace+.02),.35,.8,.035,'#435e58'));
   for(const dx of [-.58,.58]){solid.push({...box(x+1+dx,C.platformRise/2+.6,z+3.8,.035,.035,Math.hypot(C.platformRise,4.2),palette.green),rx:Math.atan2(C.platformRise,4.2)});}
   for(const dx of [-.58,.58])for(let i=0;i<15;i++)solid.push(box(x+1+dx,C.platformRise*(1-i/15),z+1.7+i*.28,.035,.6,.035,palette.green));
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
