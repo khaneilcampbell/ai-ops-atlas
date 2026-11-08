@@ -8,7 +8,9 @@ import {distanceToRoad,roadIntersections} from './highway';
 import {ROAD_W,type Pt,type CarBridge} from './roads';
 import {streetPavement} from './streetPavement';
 /** Original stone bridge parts and green railings, driven by the same paths as pedestrians. */
-export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>}){
+export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;
+ /** Drives the walks must open for but that draw their own crossings (the Galleria's driveways). */
+ clearRoads?:Pt[][]}){
  const parts=useMemo(()=>{
   const solid:Inst[]=[],lamps:Inst[]=[];
 
@@ -38,8 +40,8 @@ export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGe
    for(let i=1;i<link.walk.length;i++){
     const a=link.walk[i-1],b=link.walk[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.02)continue;
     const r=Math.atan2(b[0]-a[0],b[1]-a[1]),x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;
-    const crossings=paths.flatMap(l=>roadIntersections([a,b],l.road));
-    solid.push(...clipConnectionRails([{p:[x,TERRACE_H+.035,z],s:[TRANSPORT.walkWidth,.045,len+TRANSPORT.landingOverlap],r,c:'#e6d6b4'}],crossings,TRANSPORT.cityWidth/2+.04));
+    const crossings=paths.flatMap(l=>roadIntersections([a,b],l.road)),drives=clearRoads.flatMap(road=>roadIntersections([a,b],road));
+    solid.push(...clipConnectionRails([{p:[x,TERRACE_H+.035,z],s:[TRANSPORT.walkWidth,.045,len+TRANSPORT.landingOverlap],r,c:'#e6d6b4'}],[...crossings,...drives],TRANSPORT.cityWidth/2+.04));
     for(const crossing of crossings){const road=segments.find(s=>distanceToRoad(crossing,[s.a,s.b])<.01);if(!road)continue;
      const rotation=road.a[0]===road.b[0]?0:Math.PI/2;
      for(let band=-2;band<=2;band++)solid.push({p:[crossing[0]+Math.sin(rotation)*band*.09,TERRACE_H+.061,crossing[1]+Math.cos(rotation)*band*.09],s:[TRANSPORT.bridgeWidth,.006,.045],r:rotation,c:'#f7f2df'});
@@ -61,6 +63,6 @@ export function VenueBridge({scene,g,m}:{scene:Scene3D;g:ReturnType<typeof useGe
   // Sidewalks, paved corners, zebras and building-matched plazas: flat, so they cast no shadow.
   const street=streetPavement(scene);
   return {solid,lamps,flat:[...street.pavement,...street.markings]};
- },[scene]);
+ },[scene,clearRoads]);
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.flat} geometry={g.box} material={m.plain} shadow={false}/><Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/></>;
 }

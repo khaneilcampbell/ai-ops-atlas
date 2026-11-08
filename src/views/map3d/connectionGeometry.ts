@@ -1,3 +1,4 @@
+import {roadIntersections} from './highway';
 import type {Inst} from './models';
 import type {Pt} from './roads';
 import type {Rect} from './scene';
@@ -45,4 +46,14 @@ export function clipConnectionRails(items:Inst[],openings:Pt[],radius:number):In
   }
   return spans.map(([a,b])=>{const shift=(a+b-len)/2;return {...p,p:[p.p[0]+dx*shift,p.p[1]+dy*shift,p.p[2]+dz*shift] as [number,number,number],s:[p.s[0],p.s[1],b-a] as [number,number,number]};});
  });
+}
+
+/**
+ * One straight stretch of raised walk from a to b, opened wherever a road or drive crosses it, so a raised path never
+ * stands across a carriageway like a wall (KC, 2026-11-08). `y` is the slab's base above the terrace and `h` its depth.
+ */
+export function openWalk(a:Pt,b:Pt,width:number,y:number,h:number,c:string,roads:Pt[][],radius:number,base:number):Inst[]{
+ const len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+ const slab:Inst={p:[(a[0]+b[0])/2,base+y,(a[1]+b[1])/2],s:[width,h,len+.015],r:Math.atan2(b[0]-a[0],b[1]-a[1]),c};
+ return clipConnectionRails([slab],roads.flatMap(road=>roadIntersections(road,[a,b])),radius);
 }

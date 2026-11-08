@@ -1,6 +1,6 @@
 import {openLot} from './openLot';
 import type {Rect,Scene3D} from './scene';
-import type {Box,Pt} from './roads';
+import {pathClear,type Box,type Pt} from './roads';
 import type {DistrictConnection} from './connections';
 import {CITY_SPACING,cityEnvelope,overlapsParcel} from './citySpacing';
 import {routeAround} from './routing';
@@ -47,6 +47,21 @@ export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:B
   .sort((a,b)=>Math.hypot(a[0]-target[0],a[1]-target[1])-Math.hypot(b[0]-target[0],b[1]-target[1]))[0];
  return walk&&{road,walk};
 }
+/**
+ * Where a building stands across the boulevard's last stretch (the wider Intelligence Hub district puts its tower at the
+ * city street's end), routeAround steps round it in two short jogs beside the plaza, under the pedestrian walk. End the
+ * boulevard at that building's edge instead, straight on (KC, 2026-11-08): the plaza lane round the headquarters, which
+ * the street graph already joins, carries traffic the last few metres to the city street.
+ */
+export function straighten(road:Pt[]|undefined,start:Pt,east:number,target:Pt,obstacles:Box[],margin:number):Pt[]|undefined{
+ if(!road||road.length<=5)return road;
+ const [lo,hi]=[Math.min(east,target[0]),Math.max(east,target[0])];
+ const across=obstacles.filter(b=>Math.abs(b.z-target[1])<b.d/2+margin&&b.x+b.w/2>lo&&b.x-b.w/2<hi);
+ if(!across.length)return road;
+ const edge=east>target[0]?Math.max(...across.map(b=>b.x+b.w/2+margin)):Math.min(...across.map(b=>b.x-b.w/2-margin));
+ const pts:Pt[]=[start,[east,start[1]],[east,target[1]],[edge,target[1]]];
+ return pathClear(pts,obstacles,margin)?pts.filter((p,k)=>!k||Math.hypot(p[0]-pts[k-1][0],p[1]-pts[k-1][1])>1e-9):road;
+}
 /** Adjacent neighborhood streets and public green space use the same routes as the meshes. */
 export function planNeighborhoodLinks(s:Input){
  const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],raised:Rect[]=[],core=cityEnvelope(s.coreLand),h=s.marketplace??s.hills,d=cityEastAccess(s,s.obstacles);
@@ -58,7 +73,7 @@ export function planNeighborhoodLinks(s:Input){
  if(core&&h&&d){
   const sky=openLot(s.parks),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
   const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road,east=Math.max(core.x+core.w+.9,start[0],mallRoom?sky.x+sky.w+MALL_LOT.minWidth-MALL_LOT.east:-Infinity)+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
-  const road=route([start,[east,start[1]],[east,target[1]],target],.4);
+  const road=straighten(route([start,[east,start[1]],[east,target[1]],target],.4),start,east,target,s.obstacles,.4);
   const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[1]],d.walk],.3);
   if(road&&walk){
    links.push({id:s.marketplace?'marketplace-city-boulevard':'hills-city-boulevard',road,walk});

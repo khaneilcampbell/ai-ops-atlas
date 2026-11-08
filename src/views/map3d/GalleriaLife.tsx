@@ -12,8 +12,8 @@ const COATS=['#346583','#a18455','#6d875e','#846798','#ab6355','#2f3a45'];
  * and go. Static parts are instanced once; the moving ones are four instanced meshes posed on the
  * map's own frames (no render loop of their own), and hold still when motion is off.
  */
-export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;night:boolean;moving:boolean}){
- const life=useMemo(()=>planGalleriaLife(scene),[scene]),power=usePowerProfile(),focused=useWindowFocused();
+export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:ReturnType<typeof planGalleriaLife>;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;night:boolean;moving:boolean}){
+ const life=useMemo(()=>plan??planGalleriaLife(scene),[plan,scene]),power=usePowerProfile(),focused=useWindowFocused();
  const y=scene.galleria?.y0??0,L=GALLERIA_LIFE;
  const glow=useMemo(()=>new THREE.MeshBasicMaterial({color:'#ffd18a',transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
  useEffect(()=>()=>glow.dispose(),[glow]);
@@ -30,8 +30,8 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
    // A wider apron over the last stretch to the road's edge, so turning cars have room.
    const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:'#4a504d'});
   }
-  // Zebra stripes on a station walk where a driveway passes under it, matching the city's road crossings.
-  for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+.109,c.z-Math.sin(c.yaw)*d],s:[.065,.005,.48],r:c.yaw,c:'#f7f7f0'});
+  // Zebra stripes painted on the drive where it crosses a walk; the walk itself opens for the drive (CommunityRail, VenueBridge).
+  for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+CAR_SURFACE.driveway,c.z-Math.sin(c.yaw)*d],s:[.065,.004,.48],r:c.yaw,c:'#f7f7f0'});
   for(let i=1;i<life.walk.length;i++){
    const [ax,az]=life.walk[i-1],[bx,bz]=life.walk[i],len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az);
    paths.push({p:[(ax+bx)/2,y,(az+bz)/2],s:[L.walkWidth,.02,len+L.walkWidth],r:yaw,c:'#e3dac4'});
