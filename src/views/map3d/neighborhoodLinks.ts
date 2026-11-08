@@ -1,3 +1,4 @@
+import {airportTrafficKeepOut} from './airport';
 import {openLot} from './openLot';
 import type {Rect,Scene3D} from './scene';
 import {pathClear,type Box,type Pt} from './roads';
@@ -38,7 +39,7 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
  */
 /** minWidth: park edge to boulevard centre when the catalog shrinks, room for the full-size mall (MALL.maxW) plus its gaps. */
 export const MALL_LOT={east:4,north:3,minWidth:14} as const;
-type Input=Pick<Scene3D,'hills'|'financial'|'stadium'|'parks'|'land'|'carBridges'|'paving'> & {marketplace?:Rect;coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
+type Input=Pick<Scene3D,'airport'|'hills'|'financial'|'stadium'|'parks'|'land'|'carBridges'|'paving'> & {marketplace?:Rect;coreLand:Rect[];links:DistrictConnection[];obstacles:Box[]};
 /** The original grid's easternmost street end and the nearest open plaza, where the Hills boulevard joins the city. */
 export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:Box[]):{road:Pt;walk:Pt}|undefined{
  const streets=s.carBridges.flatMap(b=>b.roads).flat();if(!streets.length)return;
@@ -99,6 +100,7 @@ export function planNeighborhoodLinks(s:Input){
   }
  }
  if(s.financial&&s.stadium){
+  if(s.airport)s={...s,obstacles:[...s.obstacles,airportTrafficKeepOut(s.airport)]};
   const f=s.financial,stadium=s.stadium,outside=stadium.x+stadium.w+1;
   const road=route([f.street[f.street.length-1],[outside,stadium.z+stadium.d/2]],.4),walk=route([f.sidewalk[0],[outside+.6,stadium.z+stadium.d/2+.6]],.3);
   if(road&&walk)links.push({id:'financial-stadium-local',road,walk});
