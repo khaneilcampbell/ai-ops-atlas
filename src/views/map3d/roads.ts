@@ -24,6 +24,10 @@ export const RISE = 0.07;
 const RAMP = 0.42;
 /** A bridge keeps at least this far to the side of the footpath it runs beside. */
 const PATH_GAP = 0.75;
+/** Preference for a bridge on a line another bridge already uses (a through street), and for one on a plaza lane's line. */
+const THROUGH_BONUS = 1.5;
+const LANE_BONUS = 0.5;
+
 
 export const dist = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 
@@ -220,6 +224,14 @@ function roadTo(d: DistrictRoads, axis: "x" | "z", sign: 1 | -1, e: number, q: n
  * follow the same network, so the map stays one street grid in every grouping.
  */
 export function planBridges(sites: BridgeSite[], districts: Map<string, DistrictRoads>): CarBridge[] {
+  // Plan once, then again with every other bridge's line known, so bridges planned early can line
+  // up with ones planned after them too. One more pass settles the grid.
+  let plan = planBridgesOnce(sites, districts, []);
+  for (let pass = 0; pass < 1; pass++) plan = planBridgesOnce(sites, districts, plan);
+  return plan;
+}
+
+function planBridgesOnce(sites: BridgeSite[], districts: Map<string, DistrictRoads>, known: CarBridge[]): CarBridge[] {
   const out: CarBridge[] = [];
   for (const s of sites) {
     const A = districts.get(s.from);
@@ -228,16 +240,23 @@ export function planBridges(sites: BridgeSite[], districts: Map<string, District
     let best: { q: number; ra: Pt[]; rb: Pt[]; cost: number } | null = null;
     // Offsets from the footpath, and the lines of either plaza lane, which give the straightest roads.
     const lanes = [A.ring, B.ring].flatMap((g) => (!g ? [] : s.axis === "x" ? [g.z0, g.z1] : [g.x0, g.x1]));
-    for (const q of [...[0.8, 1.0, 1.2, 1.45, 1.7, 2.0, 2.4, 2.8].flatMap((k) => [s.mid - k, s.mid + k]), ...lanes]) {
+    // Lines already carrying a bridge on this axis: a bridge on the same line makes one straight
+    // through street across the districts, the way a real street grid runs, instead of a jog at each tower.
+    const key = `bridge:${s.from}:${s.to}`;
+    const through = [...out, ...known.filter((b) => b.key !== key && !out.some((o) => o.key === b.key))].filter((b) => b.axis === s.axis).map((b) => (s.axis === "x" ? b.a[1] : b.a[0]));
+    const aligned = (q: number) => through.some((t) => Math.abs(t - q) < 1e-6);
+    for (const q of [...through, ...lanes, ...[0.8, 1.0, 1.2, 1.45, 1.7, 2.0, 2.4, 2.8].flatMap((k) => [s.mid - k, s.mid + k])]) {
       const k = Math.abs(q - s.mid);
       if (q < s.lo + DECK_W / 2 + 0.05 || q > s.hi - DECK_W / 2 - 0.05 || Math.abs(q - s.mid) < PATH_GAP) continue;
       const ra = roadTo(A, s.axis, 1, s.a, q);
       const rb = ra && roadTo(B, s.axis, -1, s.b, q);
       if (!ra || !rb) continue;
-      const cost = ra.cost + rb.cost + k * 0.2;
+      // Every bend costs a full unit, so a straight road wins over a shorter one with a dog-leg.
+      const bends = ra.pts.length + rb.pts.length - 4;
+      const cost = ra.cost + rb.cost + k * 0.2 + bends - (aligned(q) ? THROUGH_BONUS : 0) - (lanes.includes(q) ? LANE_BONUS : 0);
       if (!best || cost < best.cost) best = { q, ra: ra.pts, rb: rb.pts, cost };
-      // Straight roads at both ends are as good as it gets.
-      if (ra.pts.length === 2 && rb.pts.length === 2) break;
+      // Straight at both ends on a through line is as good as it gets.
+      if (bends === 0 && (aligned(q) || !through.length)) break;
     }
     if (!best) continue;
     const W = (u: number): Pt => (s.axis === "x" ? [u, best.q] : [best.q, u]);
