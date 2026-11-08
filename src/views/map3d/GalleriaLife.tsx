@@ -18,7 +18,7 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
  const glow=useMemo(()=>new THREE.MeshBasicMaterial({color:'#ffd18a',transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
  useEffect(()=>()=>glow.dispose(),[glow]);
  const fixed=useMemo(()=>{
-  const paths:Inst[]=[],kerbs:Inst[]=[],poles:Inst[]=[],heads:Inst[]=[],pools:Inst[]=[],court:Inst[]=[];if(!life)return {paths,kerbs,poles,heads,pools,court};
+  const paths:Inst[]=[],kerbs:Inst[]=[],poles:Inst[]=[],heads:Inst[]=[],pools:Inst[]=[],court:Inst[]=[],drums:Inst[]=[];if(!life)return {paths,kerbs,poles,heads,pools,court,drums};
   // Driveways: asphalt a touch above the pavement they cross, with pale kerb edges and a stop line at the street.
   for(const {a:[ax,az],b:[bx,bz]} of life.driveways){
    const len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az),mx=(ax+bx)/2,mz=(az+bz)/2,w=L.driveWidth;
@@ -30,22 +30,39 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
    // A wider apron over the last stretch to the road's edge, so turning cars have room.
    const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:'#4a504d'});
   }
-  // The main entrance: a glazed vestibule out of the notch under a canopy, an entry pair of doors and an exit pair.
-  {const P=L.portal,pt=life.portal,front=P.d-.05,yaw=Math.atan2(pt.u[0],pt.u[1]);
-   const at=(k:number,j:number,h:number,s:[number,number,number],c:string)=>{const base=[pt.x-pt.u[0]*front/2,pt.z-pt.u[1]*front/2];court.push({p:[base[0]+pt.u[0]*k+pt.p[0]*j,y+h,base[1]+pt.u[1]*k+pt.p[1]*j],s,r:yaw,c});};
-   const FRAME='#3b4744',GLASS='#cfe6e2',LEAF='#a3cbc6',door=.85;
-   at(front/2,0,0,[P.w,P.h,front],GLASS);
-   at(front/2,0,P.h,[P.w+.04,.05,front+.04],FRAME);
-   at((front+.5)/2,0,P.h+.05,[P.w+.5,.045,front+.5],'#f7f7f0');at(front+.5,0,P.h+.04,[P.w+.5,.07,.03],FRAME);
-   for(const j of [-1,1])at(front+.45,j*(P.w/2+.2),0,[.05,P.h+.05,.05],FRAME);
-   for(const j of [-P.w/2,P.w/2,0])at(front+.012,j,0,[.045,P.h,.05],FRAME);
-   at(front+.012,0,door,[P.w,.045,.05],FRAME);
-   for(const [j0,sign] of [[P.w/4,'#4f7a52'],[-P.w/4,'#c9a35a']] as const){
-    // Sliding leaves parted to show the open doorway, a coloured sign over each pair (green in, amber out), and a mat.
-    for(const s of [-1,1])at(front+.03,j0+s*(P.door/4+.07),.01,[P.door/2-.12,door-.02,.025],LEAF);
-    for(const s of [-1,1])at(front+.012,j0+s*P.door/2,0,[.035,door,.05],FRAME);
-    at(front+.03,j0,door+.08,[P.door*.8,.09,.02],sign);
-    at(front+.17,j0,0,[P.door,.008,.26],FRAME);
+  // The main entrance, in the building's own language (KC, 2026-11-08): the same teal glass with slim mullions and a
+  // warm-lit band, under a gently bowed canopy whose edge is a band of white fins with a wavy hem and rope lights, like
+  // every floor above it. A glass revolving door in the middle, an entry pair of sliding doors on one side and an exit
+  // pair on the other, a brass header, and pale chevrons on the mats pointing in and out.
+  {const P=L.portal,pt=life.portal,front=P.d-.05,yaw=Math.atan2(pt.u[0],pt.u[1]),hw=P.w/2+.3,door=.85;
+   const at=(k:number,j:number,h:number,s:[number,number,number],c:string,list:Inst[]=court,turn=0)=>list.push({p:[pt.x-pt.u[0]*front/2+pt.u[0]*k+pt.p[0]*j,y+h,pt.z-pt.u[1]*front/2+pt.u[1]*k+pt.p[1]*j],s,r:yaw+turn,c});
+   const GLASS='#9fb8bd',WARM='#e9d3a6',MULLION='#3b4744',WHITE='#f7f7f0',BRASS='#c9a35a',LEAF='#b9d2d0';
+   // The vestibule: glass sides and transom, warm band, mullions every pane, a white cornice.
+   at(front/2,0,0,[P.w,P.h,front-.02],GLASS);at(front/2,0,door+.12,[P.w+.01,.16,front],WARM,heads);
+   for(let j=-P.w/2;j<=P.w/2+1e-6;j+=P.w/6)at(front+.012,j,0,[.03,P.h,.04],MULLION);
+   at(front+.012,0,door,[P.w,.035,.045],BRASS);at(front/2,0,P.h,[P.w+.06,.06,front+.06],WHITE);
+   // Canopy: a bowed slab built from slices, deepest in the middle.
+   const bow=(j:number)=>front+.25+.28*(1-(j/hw)**2),N=10;
+   for(let i=0;i<N;i++){const j0=-hw+2*hw*i/N,j1=j0+2*hw/N,jm=(j0+j1)/2,k=bow(jm);at(k/2,jm,P.h+.07,[j1-j0+.005,.05,k],WHITE);
+    // Soffit downlights under the canopy.
+    if(i%2)at(k*.6,jm,P.h+.06,[.06,.012,.06],'#f6dfac',heads);}
+   // The canopy's fin band: white fins round the bowed edge with a wavy hem, and rope lights along top and hem.
+   for(let j=-hw+.02;j<=hw-.02;j+=.09){const k=bow(j),slope=-.56*j/(hw*hw),turn=Math.atan(slope),hang=.12+.1*(.5+.5*Math.sin(j*5.2+1));
+    at(k,j,P.h+.12-hang,[.018,hang+.06,.07],WHITE,court,turn);
+    at(k+.04,j,P.h+.13,[.034,.026,.026],'#fff3d6',heads,turn);at(k+.04,j,P.h+.11-hang,[.034,.026,.026],'#fff3d6',heads,turn);}
+   // Slender white columns at the canopy's outer corners.
+   for(const j of [-1,1])at(bow(j*(hw-.12))-.06,j*(hw-.12),0,[.06,P.h+.08,.06],WHITE);
+   // Revolving door: a glass drum, four wings and a brass post, in the middle.
+   drums.push({p:[pt.x+pt.u[0]*(front/2+.05),y,pt.z+pt.u[1]*(front/2+.05)],s:[.56,door,.56],c:LEAF});
+   for(const t of [0,Math.PI/2])at(front+.05,0,.02,[.52,door-.04,.02],GLASS,court,t+Math.PI/4);
+   at(front+.05,0,0,[.035,door,.035],BRASS);
+   for(const [j0,sign] of [[P.slide,1],[-P.slide,-1]] as const){
+    // Sliding leaves parted to show the open doorway, slim frames, a mat with a chevron pointing in (entry) or out (exit).
+    // The leaves glow warm at night, as if the lobby behind them is lit.
+    for(const s of [-1,1])at(front+.03,j0+s*(P.door/4+.06),.01,[P.door/2-.1,door-.02,.02],LEAF,heads);
+    for(const s of [-1,1])at(front+.014,j0+s*P.door/2,0,[.03,door,.045],MULLION);
+    at(front+.18,j0,0,[P.door,.008,.28],'#4a504d');
+    for(const s of [-1,1])at(front+.18,j0+s*.05,.008,[.015,.004,.13],'#e9e2cf',court,s*sign*.7);
    }}
   // Zebra stripes on a station walk where a driveway passes under it, matching the city's road crossings.
   for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+.109,c.z-Math.sin(c.yaw)*d],s:[.065,.005,.48],r:c.yaw,c:'#f7f7f0'});
@@ -65,7 +82,7 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
    for(const [x,z] of life.court.stripes)court.push({p:[x,y+.012,z],s:[.38,.004,.025],c:'#f3efe4'});
    for(const c of life.court.cars)court.push({p:[c.x,y+.012,c.z],s:[.38,.1,.2],c:c.c},{p:[c.x,y+.112,c.z],s:[.2,.07,.17],c:'#26323a'});
   }
-  return {paths,kerbs,poles,heads,pools,court};
+  return {paths,kerbs,poles,heads,pools,court,drums};
  },[life,y,L]);
 
  const enabled=moving&&focused&&power.idleFps>15,elapsed=useRef(0);
@@ -104,6 +121,7 @@ export function GalleriaLife({scene,g,m,night,moving}:{scene:Scene3D;g:ReturnTyp
   <Instanced items={fixed.paths} geometry={g.box} material={m.plain} shadow={false}/>
   <Instanced items={fixed.kerbs} geometry={g.box} material={m.plain} shadow={false}/>
   <Instanced items={fixed.court} geometry={g.box} material={m.plain} shadow={false}/>
+  <Instanced items={fixed.drums} geometry={g.cyl} material={m.plain} shadow={false}/>
   <Instanced items={fixed.poles} geometry={g.box} material={m.plain}/>
   <Instanced items={fixed.heads} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/>
   {night&&<Instanced items={fixed.pools} geometry={g.cyl} material={glow} shadow={false}/>}

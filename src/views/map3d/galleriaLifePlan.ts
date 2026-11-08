@@ -16,8 +16,8 @@ export const GALLERIA_LIFE={
  pace:.32,drive:1.1,shoppers:8,strollers:5,
  /** A street farther than this from the lot's edge is too far to walk to; the walk stops at the lot. */
  maxStreet:4,
- /** The main entrance vestibule in the V-notch: width across, depth out from the glass, height, and each door pair's width. */
- portal:{w:1.7,d:.6,h:1.15,door:.56},
+ /** The main entrance vestibule in the V-notch: width across, depth out from the glass, height, each sliding pair's width, and how far each pair stands from the revolving door in the middle. */
+ portal:{w:1.9,d:.6,h:1.15,door:.46,slide:.68},
  /** Clear distance kept between anyone walking and the fountain's rim. */
  fountainClear:.4,
  /** Offset of a car from the drive's centre line, so traffic keeps right. */
@@ -100,12 +100,12 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  const apex=g.toMap(GALLERIA_NOTCH),A=g.glass[0].reduce((b,q)=>dist(q,apex)<dist(b,apex)?q:b,g.glass[0][0]);
  const ul=dist(A,J)||1,u:Pt=[(J[0]-A[0])/ul,(J[1]-A[1])/ul],pp:Pt=[-u[1],u[0]],P=L.portal;
  const at=(k:number,j:number):Pt=>[A[0]+u[0]*k+pp[0]*j,A[1]+u[1]*k+pp[1]*j];
- const front=P.d-.05,entry=at(front,P.w/4),exit=at(front,-P.w/4),[cx,cz]=at(front/2,0);
+ const front=P.d-.05,entry=at(front,P.slide),exit=at(front,-P.slide),[cx,cz]=at(front/2,0);
  const portal:GalleriaPortal={x:cx,z:cz,u,p:pp,entry,exit};
  // In by the entry doors round one side of the fountain, out by the exit doors round the other; never through it.
  const side=(j:number)=>{const fe=[J[0]-F[0],J[1]-F[1]],k=Math.max(clear,fe[0]*u[0]+fe[1]*u[1]);
   return [[F[0]+u[0]*k+pp[0]*j*clear,F[1]+u[1]*k+pp[1]*j*clear],[F[0]+pp[0]*j*clear*1.05,F[1]+pp[1]*j*clear*1.05],[F[0]-u[0]*clear*.6+pp[0]*j*clear,F[1]-u[1]*clear*.6+pp[1]*j*clear]] as Pt[];};
- const inPath:Pt[]=[J,...side(1),at(front+.3,P.w/4),entry],outPath:Pt[]=[exit,at(front+.3,-P.w/4),...side(-1).reverse(),J];
+ const inPath:Pt[]=[J,...side(1),at(front+.3,P.slide),entry],outPath:Pt[]=[exit,at(front+.3,-P.slide),...side(-1).reverse(),J];
  // Shoppers walk the entrance walk in and out; strollers circle the building on the lamp ring.
  const walkers:GalleriaWalker[]=[];
  const inbound=commuterRoute([...[...walk].reverse(),...inPath.slice(1)].map(flat)),outbound=commuterRoute([...outPath,...walk.slice(1)].map(flat));
