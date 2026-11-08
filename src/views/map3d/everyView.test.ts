@@ -24,8 +24,8 @@ it('shows the same buildings in every grouping',()=>{
  expect(all).toContain(AGENCY_KEY);
  expect(all).toContain(GALLERIA_KEY);
  // The Atlas Galleria stands on the green behind the Marketplace. Only the district layout (the
- // default) leaves that lot; the other layouts butt the Marketplace against other land or put a
- // station stair there, so the Galleria is left out rather than squeezed onto it.
+ // default) and the by-tag layout leave that lot; the others butt the Marketplace against other
+ // land, so the Galleria is left out rather than squeezed onto it.
  const rest=all.filter(k=>k!==GALLERIA_KEY);
  for(const g of GROUPINGS.slice(1))expect(buildingsIn(g).filter(k=>k!==GALLERIA_KEY),`missing or extra in ${g} grouping`).toEqual(rest);
 });

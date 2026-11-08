@@ -231,18 +231,38 @@ export function slabTop(level:number){let h=0;for(let i=0;i<level;i++)h+=GALLERI
  * supermarket lobe west, and the plan's north side (outdoor parking and the basement ramp) faces
  * the Marketplace. Returns nothing when the green is missing, too small, or has anything on it.
  */
+/** How far north open land runs unbroken across x a..b from z, stopping at limit; land pieces may only touch. */
+export function landTop(land:Rect[],a:number,b:number,z:number,limit:number):number{
+ const eps=1e-3;
+ while(z>limit+eps){
+  const row=land.filter(r=>r.z<z-eps&&r.z+r.d>=z-eps&&r.x<b&&r.x+r.w>a).sort((p,q)=>p.x-q.x);
+  let reach=a;
+  for(const r of row){if(r.x>reach+eps)break;reach=Math.max(reach,r.x+r.w);}
+  if(reach<b-eps)break;
+  z=Math.max(limit,...row.map(r=>r.z));
+ }
+ return z;
+}
+
 export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number):GalleriaPlan|undefined{
  const G=GALLERIA,axis=mall.cx;
  const green=land.find(r=>inRect(r,axis,mall.z-1)&&r.w>=6&&r.d>=6);
  if(!green)return;
  const half=Math.min(axis-(green.x+G.edge),green.x+green.w-G.edge-axis,G.maxW/2);
- const z0=green.z+G.edge,z1=mall.z-G.back;
- if(half*2<G.minW||z1-z0<G.minD)return;
- const rect={x:axis-half,z:z0,w:half*2,d:z1-z0};
- if(blockers.some(b=>overlaps(b,rect)))return;
+ const z1=mall.z-G.back;
  // Every slab's extent, so overhangs stay on the lot too.
  const all=[0,1,2,3].flatMap(slabOutline);
  const minX=Math.min(...all.map(p=>p[0])),maxX=Math.max(...all.map(p=>p[0])),minY=Math.min(...all.map(p=>p[1])),maxY=Math.max(...all.map(p=>p[1]));
+ // The green can reach the Marketplace as several land pieces laid end to end. Where the piece
+ // behind it is too shallow, the lot runs on north over the land that continues it, only as far as
+ // the building at full size and its parking need (the 10-project live map after the Intelligence
+ // Hub district grew, KC 2026-11-08).
+ let top=green.z;
+ if(z1-(top+G.edge)<G.minD)top=landTop(land,axis-half-G.edge,axis+half+G.edge,top,z1-G.edge-((maxY-minY)*G.maxScale+G.parking+.5));
+ const z0=top+G.edge;
+ if(half*2<G.minW||z1-z0<G.minD)return;
+ const rect={x:axis-half,z:z0,w:half*2,d:z1-z0};
+ if(blockers.some(b=>overlaps(b,rect)))return;
  const s=Math.min(G.maxScale,rect.w/(maxX-minX),rect.d/(maxY-minY));
  if(s<G.minScale)return;
  // 180° turn: plan east is map west (-x), plan north is map south (+z).

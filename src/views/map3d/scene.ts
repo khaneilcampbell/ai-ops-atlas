@@ -798,15 +798,16 @@ function buildCity(layout: Layout): Scene3D {
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
+  // Plain meadow filling the island out to a square; the stadium grounds may build on it,
+  // and a Galleria lot too shallow behind the Marketplace runs on over it.
+  const meadowLand=compactSquareLand(land,cityLand);
+  land.push(...meadowLand);
   let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
   if(galleria){
     const r=galleria.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
-  // Plain meadow filling the island out to a square; the stadium grounds may build on it.
-  const meadowLand=compactSquareLand(land,cityLand);
-  land.push(...meadowLand);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
   // Keep station walks clear of plaza trees, beds and bollards.
@@ -817,7 +818,9 @@ function buildCity(layout: Layout): Scene3D {
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
     // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
     // (the by-tag layout), the green stays open instead.
-    if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
+    // Only the old two-stop line has those stairs drawn; beside the perimeter loop that stop is never
+    // built, so it does not turn the Galleria away (the planting below still keeps its spot clear).
+    if(galleria&&!communityRail.loop){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
     // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
     if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
     // Planting must not stand in the station's stair or lift opening.
@@ -843,7 +846,7 @@ function buildCity(layout: Layout): Scene3D {
   // Atlas Stadium takes the open land round its lot, last, so no other plan moves.
   const env=cityEnvelope(land);
   const stadiumSite=stadium&&env?planStadiumSite({stadium,envelope:env,
-    land:[...land.filter(r=>!meadowLand.includes(r)),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+    land:[...land.filter(r=>!meadowLand.includes(r)),...(galleria?[galleria.rect]:[]),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
       ...fountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))],
     paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
       ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]])]}):undefined;
