@@ -23,10 +23,13 @@ async function locate(page: Page, clock: number) {
     if (!airport) throw new Error("Airport not found");
     (airport.memoizedState!.memoizedState as { current: number }).current = clock;
     const group = (f: F) => (f.memoizedState!.memoizedState as { current: import("three").Group }).current;
-    const parked = found.filter((f) => f.type?.name === "Aircraft" && f.memoizedProps?.parked);
+    // The two served-gate jets (gates 0 and 3) are the last parked aircraft drawn; any remote-stand
+    // jets come first. Since #267 there is one remote stand instead of two, so index from the end.
+    const parked = found.filter((f) => f.type?.name === "Aircraft" && f.memoizedProps?.parked).slice(-2);
+    if (parked.length < 2) throw new Error(`Expected two gate jets, found ${parked.length}`);
     // West-facing airports are drawn mirrored, so the runway side is -x in world space.
     const east = (airport.memoizedProps?.plan as { west?: boolean } | undefined)?.west ? -1 : 1;
-    (window as unknown as { __crew: () => number[][] }).__crew = () => [...[parked[2], parked[3]].map((f) => { const g = group(f); const v = g.getWorldPosition(new (g.position.constructor as typeof import("three").Vector3)()); return [v.x, v.y, v.z]; }), [east]];
+    (window as unknown as { __crew: () => number[][] }).__crew = () => [...[parked[0], parked[1]].map((f) => { const g = group(f); const v = g.getWorldPosition(new (g.position.constructor as typeof import("three").Vector3)()); return [v.x, v.y, v.z]; }), [east]];
   }, clock);
   await page.clock.runFor(50);
   return page.evaluate(() => (window as unknown as { __crew: () => number[][] }).__crew());
