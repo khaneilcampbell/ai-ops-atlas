@@ -16,7 +16,7 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`places an
  expect(a.road[0]).toEqual(f.street[0]);expect(a.walk[0]).toEqual(f.sidewalk[f.sidewalk.length-1]);
  expect(a.service[0]).toEqual(f.road[0]);expect(a.service[a.service.length-1]).toEqual(a.drive[0]);
  const roads=s.carBridges.flatMap(b=>b.roads).flat();expect(roads).toContainEqual(a.service[0]);
- const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  const towers=f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
  expect(pathClear(a.road,towers,.3)).toBe(true);expect(pathClear(a.walk,towers,.3)).toBe(true);
  expect(pathClear(a.road,boxes,.3)).toBe(true);expect(pathClear(a.walk,boxes,.3)).toBe(true);

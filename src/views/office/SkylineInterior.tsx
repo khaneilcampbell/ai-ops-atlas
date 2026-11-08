@@ -101,14 +101,14 @@ function SkylineCamera({allFloors,floor,maxFloor,spread=1}:{allFloors:boolean;fl
   useInteriorTrackpad(()=>controls.current,spread>1?{x:8*spread*1.6,z:6*spread}:{x:8,z:6});
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60*spread} maxPolarAngle={Math.PI/2.3}/>;
 }
-export default function SkylineInterior({building="Skyline",light,maxFloor=4}:{building?:string;light:LightMode;maxFloor?:number}) {
+export default function SkylineInterior({building,light,maxFloor=4}:{building:string;light:LightMode;maxFloor?:number}) {
   const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   // The Financial District interiors (Circa and the others) have walking residents and staff, so they animate.
   const tower=towerSpec(building),spread=circa?1.75:tower?1.25:1;
   const reduced=useReducedMotion()||building==="Atlas Hills"||(!circa&&!tower&&(!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building)));
   const power=usePowerProfile(),visible=usePageVisible();
-  const business=building==="Skyline"?undefined:BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
+  const business:{accent:string;subtitle:string;rooms:string[]}|undefined=BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};
   const brandedFinancial=!!identity;
   const isNight=light==="night";
   const circaStack=circa&&floor===-1;

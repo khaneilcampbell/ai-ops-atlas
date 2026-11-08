@@ -23,15 +23,13 @@ import {MarketingAgency} from "./MarketingAgency";
 import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import {Mall} from "./Mall";
 import {MALL,MALL_KEY} from "./mallPlan";
+import {GalleriaLife} from './GalleriaLife';
+import {planGalleriaLife} from './galleriaLifePlan';
 import {Galleria} from "./Galleria";
 import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
-import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
-import {skylineBuildingKey} from "../../catalog/buildings";
-import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { CITY_SCALE, shopHeight } from "./cityScale";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -60,7 +58,7 @@ import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
 import { IntelligenceHub } from "./IntelligenceHub";
 import { isIntelligenceHub } from "./intelligenceHubPlan";
-import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
@@ -163,10 +161,6 @@ const selOf = (key: string): Sel => {
 export function anchorsOf(scene: Scene3D, layout: Layout) {
   const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
-  for(const shop of scene.retail){
-    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+shopHeight(shop)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
-    m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
-  }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.financial){const f=scene.financial;m.set(FINANCIAL_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:f.w,d:f.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
   if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
@@ -177,16 +171,10 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+scene.stadium.w/2,z:scene.stadium.z+scene.stadium.d/2,y0:TERRACE_H,y1:TERRACE_H+stadiumCrown(),w:scene.stadium.w,d:scene.stadium.d});
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
-  const skyline=skylineProjectAnchor(scene);
-  if(skyline)m.set("project:skyline",skyline);
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
     const hq = m.get(`project:${d.project.id}`);
-    for(const a of d.crew){
-      const workplace=a.workplace&&scene.retail.find(k=>k.name===a.workplace!.building);
-      const anchor=workplace?m.get(skylineBuildingKey(workplace.name)):hq;
-      if(anchor)m.set(`agent:${a.id}`,anchor);
-    }
+    if(hq)for(const a of d.crew)m.set(`agent:${a.id}`,hq);
   }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + (k.height ?? TOOL_OFFICE_TOP - 0.4) + 0.4, w: k.size, d: k.size * 0.8, project: k.projectId });
@@ -357,7 +345,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // Group names when the map is grouped, at the back corner of each landmass, one style for every
     // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
     // groups give way to the project plaques.
-    const byDistrict = (props.displayNeighborhoods ?? layout.neighborhoods).some((n) => n.key.startsWith("d:"));
     const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
     for (const g of groupLabels(props.displayNeighborhoods ?? layout.neighborhoods)) {
       const n = hoods.get(g.key)!;
@@ -380,12 +367,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
-    const skylineHealth=healthFor("khaneilcampbell/ai-ops-atlas"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name)))plaque({id:shop.key,key:shop.key,select:skylineBuildingKey(shop.name),name:shop.name,x:shop.x,roof:TERRACE_H+shopHeight(shop)+0.4,z:shop.z,priority:7,mark:skylineMark,title:`${shop.name} · khaneilcampbell/ai-ops-atlas`});
-    for (const p of scene.parks) {
-      if(near!=="near"&&byDistrict) out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
-      plaque({id:p.id,key:p.id,select:"project:skyline",name:p.label,x:p.x+p.w/2,roof:TERRACE_H+4.95*CITY_SCALE.skyline,z:p.z+p.d/2,priority:3,mark:skylineMark,title:`skyline · ${skylineHealth.label}`});
-    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
   }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
@@ -414,7 +395,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     of: (keys) => ({
       ...pick.of(keys),
       over: (key) => { setHover(key); setTip(null); },
-      click:(key,e)=>{if(e.delta>4)return;const shop=scene.retail.find(k=>k.key===key);select(shop?skylineBuildingKey(shop.name):key);},
+      click:(key,e)=>{if(e.delta>4)return;select(key);},
     }),
   };
   const terracePick: Pick = {
@@ -509,7 +490,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
-          landmarkSelect={()=>select("project:skyline")}
           kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}
@@ -599,7 +579,6 @@ function World({
   api,
   pick,
   kioskPick,
-  landmarkSelect,
   terracePick,
   reduced,
   activity,
@@ -636,7 +615,6 @@ function World({
   api: React.MutableRefObject<Map3DApi | null>;
   pick: PickHandlerSet;
   kioskPick: PickHandlerSet;
-  landmarkSelect: ()=>void;
   terracePick: Pick;
   reduced: boolean;
   activity: Map<string, Illumination>;
@@ -663,6 +641,7 @@ function World({
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
   // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
   const railKeepClear=useMemo(()=>[marinaFootprint(marinaSite(scene,TERRACE_H))],[scene]);
+  const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.map(c=>c.road)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -1150,13 +1129,10 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
-      {detailsReady && <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />}
-      <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
-      <VenueBridge scene={scene} g={g} m={m}/>
+      <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
@@ -1164,6 +1140,7 @@ function World({
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
+      {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
