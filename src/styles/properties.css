@@ -29,3 +29,27 @@
 .website-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 18px; }
 .website-grid .property { min-width: 0; }
 .website-grid .property-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+/* Compact presentation is opt-in for Website management, not other insight cards. */
+.website-management .website-grid { padding: 0 var(--space-8) var(--space-8); gap: var(--space-6); }
+.website-management .property-compact .section-head { flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.website-management .property-compact .section-title { min-width: 0; overflow-wrap: anywhere; }
+.website-management .property-compact .property-chip { flex-shrink: 0; }
+.website-management .property-compact .property-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--space-5) * .7); }
+.website-management .property-compact .property-tile { padding: var(--space-4) var(--space-5); }
+.website-management .property-compact .property-tile .label { line-height: 1.3; padding-right: var(--space-4); overflow-wrap: anywhere; }
+.website-management .property-compact .property-tile .value { line-height: 1.15; overflow-wrap: anywhere; }
+.website-management .property-compact .property-tile.unchecked .value { font-family: var(--sans); font-size: var(--text-lg); }
+.website-management .property-compact .property-tile::before { top: var(--space-4); right: var(--space-4); }
+.website-management .property-coverage { margin: 0 0 var(--space-4); }
+.website-management .property-sources { min-width: 0; flex-basis: 100%; overflow-wrap: anywhere; }
+.website-management .property-sources summary { cursor: pointer; color: var(--ink-2); }
+.website-management .property-sources p, .website-management .property-sources ul { margin: var(--space-3) 0; }
+@media (max-width: 600px) {
+  .website-management .property-compact .property-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.website-management .property-compact .property-tile .note { line-height: 1.3; }
+@media (max-width: 1200px) {
+  .website-management .website-grid { grid-template-columns: minmax(0, 1fr); }
+}
