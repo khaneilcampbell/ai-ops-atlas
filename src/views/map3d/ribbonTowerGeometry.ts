@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {compactGeometry} from './atlasHqGeometry';
 import type {Pt} from './roads';
 import {compact,lid,skin} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
@@ -10,7 +11,8 @@ import {RIBBON,podiumDetails,podiumRing,podiumTop,ribbonHeights,ringsAt} from '.
 const at=(pts:Pt[],y:number):Pt3[]=>pts.map(([x,z])=>[x,y,z]);
 const quad=(o:number[],a:Pt3,b:Pt3,c:Pt3,d:Pt3)=>o.push(...a,...b,...c,...a,...c,...d);
 function geo(pos:number[]){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(new Array(pos.length/3*2).fill(0),2));g.computeVertexNormals();return g;}
-const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs):geo([]);if(!m)throw new Error("Benjaire HQ: parts could not be merged");return m;};
+// Indexed, with shared corners merged and all-zero uvs dropped: same look, about half the memory.
+const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs):geo([]);if(!m)throw new Error("Benjaire HQ: parts could not be merged");return compactGeometry(m);};
 
 /** A horizontal ring band between an inner and outer outline (same point count), thick t. */
 export function annulus(inner:Pt[],outer:Pt[],y:number,t:number){

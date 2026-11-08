@@ -4,6 +4,27 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-04 · Added a local campaign-readiness viewer in Coordinator Output and an inactive n8n test export; review blockers remain explicit and no external actions run (#251).
+- 2026-11-08 · The map draws about 5% fewer triangles with no visible change, so map updates pass the performance check again (#283)
+- 2026-11-08 · Atlas uses the architectural Orbit logo on the dashboard and app icons (#284).
+- 2026-11-08 · The two hot air balloons are gone from the sky over Atlas. The Atlas airship still flies (#281)
+- 2026-11-08 · Train stations look properly built: the roof posts now stand on the platform and track deck instead of hanging in the air, the curved roof fits the platform, and the lift tower no longer pokes through the glass roof (#268)
+- 2026-11-08 · The Intelligence Hub district has about twice the land it had, and the building is widened to match (#278)
+- 2026-11-08 · The Intelligence Hub is rebuilt from your corner-building reference: white ribbed fins, thin black lines at every floor that swell round the cut corner (they glow gold at night), a planted loggia on the corner of every floor, rounded black-framed windows, a glass shopfront ground floor under a rounded overhang, and a rear wing that steps down to a planted roof. It now has 20 floors instead of 14 (#276)
+- 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
+- 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#270)
+- 2026-11-07 · The garden behind Atlas Marketplace is now the Atlas Galleria, a three-storey shopping mall with wavy white fins, rope lights, planted terraces and a funnel atrium. Enter it to see the car park and shop floors (#269)
+- 2026-11-07 · Atlas Airport now sends off one plane every 45 seconds instead of every 15. The water strip at the airport's edge is now a second runway: planes come back from their loop around the city, land there, park at the north stand, push back and taxi out again (#267)
+- 2026-11-07 · The stadium is now Atlas Stadium, rebuilt from your steel-truss reference: a glass hall on a white podium under a sloping dark roof with curled eaves, white zig-zag bracing, tree columns, a lower practice hall and a wide straight stair up from the gate, with the hall stretching toward the ocean, centred on its lawn and ringed by pools and palm trees. You can also go inside to see the concourse and an octagonal seating bowl round one empty court (#263)
+- 2026-11-07 · The train bridge no longer has a pillar standing on the harbour boardwalk dock. Pillars near the marina now step aside so the stairs, pier and dock stay clear (#266)
+- 2026-11-07 · All five train stations now have the curved shell roof, gold-edged arches and glass stair bridge that the Financial District station had before the new perimeter railway replaced it with a plain flat platform (#265)
+- 2026-11-07 · Buildings that used real company names now have original names: Bayvale Bank, Robin Exchange, Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences, Vantor Motors and Profile Tower. Tool offices are named for what they do (Model Lab, Payments Office and so on), and company logos are off the signs. Old names still work in search (#257)
+- 2026-11-07 · Separate AI agents from fixed automations, including AI-assisted workflows, consistently in directories and map counts (#264)
+- 2026-11-07 · Repair city browser checks for current building names, five-stop train service and reviewed screenshots (#262)
+- 2026-11-07 · Atlas Marketplace, its train and the Marketing Agency nameplate are back on the map. They had disappeared when a project left the map (an archived repository) (#259)
+- 2026-11-07 · Took out the truck road and parking lot cut through the Commerce district, and put all of Atlas's land, roads and stations on one level (#261)
+- 2026-11-07 · Remove Atlas Hills and the highway, compact the city and connect five stations with one perimeter train (#256)
+- 2026-11-07 · Closed a security alert in a developer tool (minimatch); nothing changes in the app (#254)
+- 2026-11-05 · Agent keys pasted with a stray space, line break, quotes or an extra "Bearer" are no longer refused, so the Product Lab brief and other agent reports can reach Atlas (#253)
 - 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#249)
 - 2026-11-04 · Inside the Benjaire Marketing Agency, the six Product Lab agents now sit at desks in gold. Tap one, or its room label, to open the agent. The building panel lists them too (#248)
 - 2026-11-04 · Your n8n Benjaire Product Lab is now in the Agents list: the lead plus its five research roles, each assigned a room in the Benjaire Marketing Agency. They show as "Configured, not verified" until Atlas sees a real run (#247)

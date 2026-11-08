@@ -51,7 +51,7 @@ describe("bundled registry", () => {
     expect(agent.registry?.classification?.type).toBe("B");
     expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
     expect(agent.model).toContain("no model");
-    expect(agent.workplace).toEqual({building:"OpenAI",floor:4,room:"401"});
+    expect(agent.workplace).toEqual({building:"Model Lab",floor:4,room:"401"});
     expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 

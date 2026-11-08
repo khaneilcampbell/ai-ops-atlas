@@ -42,3 +42,8 @@ export function scaleParts(items:Inst[],from:number,x:number,y:number,z:number,k
 export const shopScale=(b:{key:string})=>b.key.startsWith('retail:')?CITY_SCALE.shop:1;
 /** A shop's or kiosk's roof height above the terrace, after scaling. */
 export const shopHeight=(b:{key:string;name:string})=>toolOfficeHeight(b.name)*shopScale(b);
+
+/** Mid-rise offices share the frozen Financial reference; footprints and human-scale doors stay clear. */
+export function alignOfficeScale(towers:import('./scene').Tower[],reference:number){
+ for(const t of towers)if(t.customHeight===undefined)t.height=Math.max(t.height,reference*.7);
+}

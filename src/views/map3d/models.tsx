@@ -16,7 +16,8 @@ import { HQ, hqTop } from "./atlasHqPlan";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
-import { FLOOR_H, LAND_BOTTOM, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
+import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -140,6 +141,8 @@ export function useGeometries() {
       dish: lifted(new THREE.CylinderGeometry(0.5, 0.14, 1, 14)),
       rock: new THREE.DodecahedronGeometry(1, 0),
       ball: new THREE.SphereGeometry(1, 10, 8),
+      // Tiny spheres (heads, lamp globes) a few pixels across: same look, fewer than 60% of the triangles.
+      bead: new THREE.SphereGeometry(1, 8, 6),
       plane: new THREE.PlaneGeometry(1, 1),
     }),
     [],
@@ -369,7 +372,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.deck} geometry={g.box} material={m.plain} />
       <Instanced items={items.rails} geometry={g.box} material={m.plain} />
       <Instanced items={items.piers} geometry={g.cyl} material={m.step} />
-      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
+      <Instanced items={items.lamps} geometry={g.bead} material={m.lamp} shadow={false} />
       <Instanced items={items.pools} geometry={g.cyl} material={m.pool} shadow={false} />
     </group>
   );
@@ -384,25 +387,25 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
   const items = useMemo(() => {
     const top = TERRACE_H;
     return {
-      land: scene.land.map((r) => slab(r, LAND_BOTTOM, 0)),
+      land: scene.land.map((r) => slab(r, LAND_BOTTOM, LAND_TOP)),
       sand: scene.land.map((r) => slab(grow(r, 0.42), LAND_BOTTOM, WATER_Y + 0.07)),
       foam: scene.land.map((r) => slab(grow(r, 0.72), WATER_Y - 0.02, WATER_Y + 0.006)),
       terraces: scene.terraces.map((t) => slab(t, 0, top)),
       neighborhood: [...(scene.neighborhoodLand??[]),...(scene.raisedLand??[]),...(scene.airportForecourt?[scene.airportForecourt]:[])].map(t=>slab(t,0,top)),
       paving: scene.paving.map((p) => slab(p, p.y, p.y + p.h)),
-      steps: scene.steps.map((s) => slab(s, 0, s.y + 0.01)),
-      brooks: scene.brooks.map((b) => slab(b, -0.03, 0.016)),
-      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, 0, 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, 0, 0.035)]),
+      steps: scene.steps.map((s) => slab(s, LAND_TOP, Math.max(LAND_TOP, s.y) + 0.01)),
+      brooks: scene.brooks.map((b) => slab(b, LAND_TOP - 0.03, LAND_TOP + 0.016)),
+      banks: scene.brooks.flatMap((b) => [slab({ x: b.x, z: b.z - 0.07, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035), slab({ x: b.x, z: b.z + b.d - 0.02, w: b.w, d: 0.09 }, LAND_TOP, LAND_TOP + 0.035)]),
       ponds: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.03, p.z], s: [p.r * 2, 0.058, p.r * 2] }) as Inst),
       pondRims: scene.ponds.map((p) => ({ p: [p.x, p.y - 0.02, p.z], s: [p.r * 2 + 0.16, 0.035, p.r * 2 + 0.16] }) as Inst),
       bridges: scene.bridges.flatMap((b) => [
-        slab(b, 0.05, 0.13),
-        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
-        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, 0.13, 0.25),
+        slab(b, LAND_TOP + 0.05, LAND_TOP + 0.13),
+        slab({ x: b.x, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
+        slab({ x: b.x + b.w - 0.05, z: b.z, w: 0.05, d: b.d }, LAND_TOP + 0.13, LAND_TOP + 0.25),
       ]),
       falls: scene.falls.map((f) => {
         const x = f.axis === "x";
-        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, -WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
+        return { p: [f.x + (x ? f.dir * 0.03 : 0), (WATER_Y + 0.02 + LAND_TOP) / 2, f.z + (x ? 0 : f.dir * 0.03)], s: [0.5, LAND_TOP - WATER_Y, 1], r: x ? (f.dir * Math.PI) / 2 : f.dir > 0 ? 0 : Math.PI } as Inst;
       }),
       splash: scene.falls.flatMap((f) =>
         [0, 1, 2, 3, 4].map((i) => {
@@ -456,9 +459,11 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     const trunks: Inst[] = [];
     const blobs: Inst[] = [];
+    const puffs: Inst[] = [];
     const cones: Inst[] = [];
     scene.trees.forEach((t, i) => {
       const s = t.s;
+      if (t.kind === "palm") return;
       if (t.kind === "cone") {
         trunks.push({ p: [t.x, t.y, t.z], s: [0.07, s * 0.6, 0.07], c: "#6b5038" });
         cones.push({ p: [t.x, t.y + s * 0.4, t.z], s: [s * 1.8, s * 2.2, s * 1.8], c: "#3f7342" });
@@ -471,7 +476,8 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       blobs.push({ p: [t.x, t.y + s * 1.9, t.z], s: [s, s * 0.95, s], c: col(0) });
       blobs.push({ p: [t.x - s * 0.45, t.y + s * 1.55, t.z + s * 0.3], s: [s * 0.72, s * 0.66, s * 0.72], c: col(1) });
       blobs.push({ p: [t.x + s * 0.4, t.y + s * 1.6, t.z - s * 0.25], s: [s * 0.7, s * 0.66, s * 0.7], c: col(2) });
-      blobs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
+      // The small top puff's shadow falls inside the main canopy's, so it skips the shadow pass.
+      puffs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
     });
     const bushes: Inst[] = scene.bushes.map((b, i) => ({ p: [b.x, b.y + b.s * 0.5, b.z], s: [b.s * 1.4, b.s, b.s * 1.4], c: LEAVES[i % 3] }));
     const flowers: Inst[] = scene.bushes
@@ -482,14 +488,15 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, blobs, cones, bushes, flowers, rocks, bollards, caps, pools };
+    return { trunks, blobs, puffs, cones, bushes, flowers, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
       <Instanced items={items.trunks} geometry={g.trunk} material={m.plain} />
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
-      <Instanced items={items.bushes} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.bushes} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
@@ -591,7 +598,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       const OFFICE_H = k.height ?? toolOfficeHeight(k.name);
       // Skyline shops are drawn at their base size, then grown evenly (CITY_SCALE.shop).
       const brand = toolBrand(k.name), w = k.size / shopScale(k), d = w * 0.8;
-      if (["Starbucks","Zara","Smashburger","Chipotle","Wells Fargo"].includes(k.name)) {
+      if (["Starbucks","Zara","Smashburger","Chipotle","Halden Branch"].includes(k.name)) {
         const zara=k.name==="Zara",cafe=k.name==="Starbucks",chipotle=k.name==="Chipotle";
         walls.push({p:[k.x,y,k.z],s:[w,OFFICE_H,d],c:chipotle?"#845544":brand.wall});
         slabs.push({p:[k.x,y,k.z],s:[w*1.12,0.06,d*1.12],c:"#c2b7a4"});
@@ -615,7 +622,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
           for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.46,y+0.98,k.z+d/2+0.04],s:[0.045,1.72,0.08],c:"#181818"});
           for(let floor=0;floor<3;floor++) for(const side of [-1,1]) windows.push({p:[k.x+side*w*0.25,y+1.05+floor*0.4,k.z+d/2+0.014],s:[w*0.33,0.3,0.025],c:"#ffeed1"});
           slabs.push({p:[k.x,y+0.94,k.z+d/2+0.07],s:[w*1.05,0.04,0.22],c:"#171717"});
-        } else if(k.name==="Wells Fargo") {
+        } else if(k.name==="Halden Branch") {
           // Classical branch portico: paired columns, broad steps and a triangular pediment.
           for(const side of [-1,1]) {
             accents.push({p:[k.x+side*w*0.36,y+0.12,k.z+d/2+0.17],s:[w*0.09,0.81,0.09],c:"#e9ddbc"});
@@ -641,7 +648,7 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
         }
         // Upper-floor windows on every side, so shops show lit rooms at night like the offices
         // around them instead of blank walls (KC, 2026-10-31). Zara and Wells Fargo keep their fronts.
-        const front=!zara&&k.name!=="Wells Fargo";
+        const front=!zara&&k.name!=="Halden Branch";
         for(let yy=1.08;yy<OFFICE_H-0.3;yy+=0.42)for(let col=-1;col<=1;col++){
           windows.push({p:[k.x+col*w*0.27,y+yy,k.z-d/2-0.012],s:[w*0.17,0.24,0.025],c:"#fff5d9"});
           for(const side of [-1,1])windows.push({p:[k.x+side*(w/2+0.012),y+yy,k.z+col*d*0.27],s:[0.025,0.24,d*0.17],c:"#fff5d9"});
@@ -652,19 +659,19 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
-      if(k.name==="Anthropic") {
+      if(k.name==="Reasoning Lab") {
         // Keep facade ribs between the lobby and the dedicated sign band.
         for(let rib=0;rib<5;rib++) accents.push({p:[k.x+(rib-2)*w*0.21,y+0.72,k.z+d/2+0.025],s:[w*0.025,OFFICE_H-1.38,0.025],c:brand.primary});
         slabs.push({p:[k.x,y+OFFICE_H+0.1,k.z-d*0.08],s:[w*0.62,0.14,d*0.6],c:brand.primary});
       }
-      if(k.name==="OpenAI") {
+      if(k.name==="Model Lab") {
         // A layered glass pavilion with a floating green roof and an entrance portal.
         for(let tier=0;tier<3;tier++) slabs.push({p:[k.x,y+OFFICE_H+0.1+tier*0.12,k.z],s:[w*(1.14-tier*0.16),0.06,d*(1.14-tier*0.16)],c:tier%2?"#e8eeeb":brand.primary});
         for(const side of [-1,1]) accents.push({p:[k.x+side*w*0.22,y+0.04,k.z+d/2+0.08],s:[0.045,0.53,0.1],c:brand.primary});
       }
       // Six office floors with a regular curtain-wall grid and branded cornices.
       const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
-      const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Anthropic"?1.1:0.68))/floorCount);
+      const floorSpacing=Math.min(0.36,(OFFICE_H-(k.name==="Reasoning Lab"?1.1:0.68))/floorCount);
       for (let floor = 0; floor < floorCount; floor++) {
         slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
@@ -678,13 +685,13 @@ export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pi
       for (const side of [-1, 1]) {
         accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
       }
-      if(k.name!=="Anthropic") slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
+      if(k.name!=="Reasoning Lab") slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
       accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
       accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
       doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
       slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
-      if (brand.stepped && k.name!=="Anthropic") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+      if (brand.stepped && k.name!=="Reasoning Lab") slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
     };
     const all = [walls, slabs, accents, windows, domes, pediments, doors];
     for (const k of kiosks) {
@@ -711,7 +718,7 @@ function ToolSign({ tool, geometry }: { tool: Kiosk; geometry: THREE.PlaneGeomet
   const texture = useMemo(() => toolSignTexture(tool.name), [tool.name]);
   const material = useMemo(() => signMaterial(texture), [texture]);
   useEffect(() => () => { material.dispose(); texture.dispose(); }, [material, texture]);
-  const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Anthropic"?0.32:0.08)) * shopScale(tool);
+  const w = tool.size, y = TERRACE_H + ((tool.height ?? toolOfficeHeight(tool.name)) - (tool.name==="Reasoning Lab"?0.32:0.08)) * shopScale(tool);
   return <group>
     <mesh geometry={geometry} material={material} position={[tool.x, y, tool.z + w * 0.4 + 0.035]} scale={[w * 0.94, w * 0.35, 1]} raycast={noRaycast} />
     <mesh geometry={geometry} material={material} position={[tool.x + w * 0.5 + 0.035, y, tool.z]} rotation={[0, Math.PI / 2, 0]} scale={[w * 0.73, w * 0.28, 1]} raycast={noRaycast} />
@@ -753,6 +760,8 @@ export function towerTop(t: Tower) {
   if (isCommerceTower(t.projectId)) return FLOOR_BASE + commerceTop(t.size / COMMERCE.refSize, t.customHeight) + COMMERCE.screen * t.size / COMMERCE.refSize + 0.04;
   // The GitHub HQ is drawn by GithubTower: a roof garden and the core's crown, no board.
   if (isGithubTower(t.projectId)) return FLOOR_BASE + githubTowerTop(t.customHeight ?? t.height) + 0.04;
+  // The Intelligence Hub is drawn by IntelligenceHub: a parapet and a roof garden, no board.
+  if (isIntelligenceHub(t.projectId)) return FLOOR_BASE + intelligenceHubTop(t.customHeight ?? t.height) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
   return FLOOR_BASE + t.height + 0.12 + crown;
 }
@@ -809,9 +818,9 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const top = FLOOR_BASE + t.height;
     const r = (k: string) => hash(`${t.key}:${k}`);
 
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) ? "#d8d1c1" : isGithubTower(t.projectId) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [s * 1.14, 0.15, s * 1.14], c: t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) ? "#d8d1c1" : (isGithubTower(t.projectId) || isIntelligenceHub(t.projectId)) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
     // Atlas HQ, Benjaire HQ, Commerce and the GitHub HQ keep their plinths; the buildings are AtlasHq, RibbonTower, CommerceTower and GithubTower.
-    if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId)) continue;
+    if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {
       P.floors[style].push({ p: [t.x, FLOOR_BASE + i * FLOOR_H, t.z], s: [s, FLOOR_H, s] });
       P.floorKeys[style].push(t.key);
@@ -1022,17 +1031,17 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>isCommerceTower(t.projectId)?commerceDoor(t):isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(t=>isCommerceTower(t.projectId)?commerceDoor(t):isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
       <Instanced items={status} geometry={g.box} material={m.glow} shadow={false} />
-      <Instanced items={P.shrubs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={P.shrubs} geometry={g.ball} material={m.foliage} />
       <Instanced items={P.flowers} geometry={g.ball} material={m.foliage} shadow={false} />
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
       <Instanced items={P.dishes} geometry={g.dish} material={m.plain} />
-      {towers.filter((t) => !t.identity.landmark && !isRibbonTower(t.projectId) && !isCommerceTower(t.projectId) && !isGithubTower(t.projectId)).map((t) => (
+      {towers.filter((t) => !t.identity.landmark && !isRibbonTower(t.projectId) && !isCommerceTower(t.projectId) && !isGithubTower(t.projectId) && !isIntelligenceHub(t.projectId)).map((t) => (
         <BuildingIdentitySigns key={t.key} t={t} g={g} />
       ))}
     </group>

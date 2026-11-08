@@ -15,7 +15,7 @@ describe("Atlas Marketplace mall", () => {
   expect(m).toBeDefined();
   const park=s.parks.find(p=>p.label==="Skyline")!;
   expect(m.x).toBeGreaterThan(park.x+park.w);
-  expect(m.z+m.d).toBeLessThanOrEqual(s.hills!.z);
+  expect(m.z+m.d).toBeCloseTo(s.transportConnections.find(c=>c.id==="marketplace-city-boulevard")!.road[0][1]-1.95);
  });
  it("keeps clear of every building", () => {
   for(const b of [...s.towers,...s.kiosks,...s.retail])
@@ -58,4 +58,18 @@ describe("Atlas Marketplace scale", () => {
   // Bounding volume at least twice the mansion's.
   expect(m.rx*2*m.rz*2*MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.w*HILLS.mansion.d*HILLS.mansion.h*2);
  });
+});
+
+describe("Atlas Marketplace when a project leaves the map", () => {
+ // An archived or deleted repository drops its project from the live catalog, which moves the
+ // Skyline park. The Marketplace and the railway must follow it (the garden behind it only when there is room), not vanish.
+ const without=(id:string)=>({...catalog,projects:catalog.projects.filter(p=>p.id!==id),agents:catalog.agents.filter(a=>a.projectId!==id)});
+ for(const id of ["soc-lab","ai-ops-atlas","career-optimizer","portfolio-site","intelligence-hub","service-desk","commerce-pipeline"])
+  for(const g of ["district","tag"] as GroupBy[])it(`keeps the Marketplace and railway without ${id} (${g})`,()=>{
+   const s=buildScene(layoutMap(without(id),[],g)),m=s.mall;
+   expect(m).toBeDefined();expect(s.communityRail?.loop).toBeDefined();
+   for(const b of [...s.towers,...s.kiosks,...s.retail])
+    expect(b.x+b.size/2<=m!.x||b.x-b.size/2>=m!.x+m!.w||b.z+b.size/2<=m!.z||b.z-b.size/2>=m!.z+m!.d).toBe(true);
+   if(s.agency)expect(m!.x+m!.w<=s.agency.cx-s.agency.w/2||m!.x>=s.agency.cx+s.agency.w/2||m!.z+m!.d<=s.agency.cz-s.agency.d/2||m!.z>=s.agency.cz+s.agency.d/2).toBe(true);
+  });
 });

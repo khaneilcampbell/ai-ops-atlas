@@ -53,7 +53,7 @@ for (const { light, phone } of cases)
     await openAtlas(page, { light });
     await waitForScene(page);
     await selectBuilding(page, "Financial District");
-    await selectBuilding(page, "Circa");
+    await selectBuilding(page, "Ellipse Residences");
     const canvas = page.locator("canvas").first();
     for (let i = 0; i < 8; i++) {
       // Phones have no zoom buttons: scroll over Circa, in the strip of map above the details sheet.

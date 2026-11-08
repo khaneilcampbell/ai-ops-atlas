@@ -41,9 +41,9 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Website Quality Auditor (`site-audit`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Security Analyst (`security-check`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Portfolio Quality Engineer (`site-ci`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Merge Flow Coordinator (`github-merge-flow`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Opportunity Scout (`github-opportunity-scout`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Design Consistency (`github-design-consistency`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Merge Flow Coordinator (`github-merge-flow`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Opportunity Scout (`github-opportunity-scout`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Design Consistency (`github-design-consistency`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Commerce Operations Coordinator (`commerce-loop`) | commerce-pipeline | Atlas Marketplace | 1 / 102 | Assigned | Building workflow planned |
 | Product Opportunity Analyst (`niche-scout`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Market Research Analyst (`market-analyst`) | commerce-pipeline | Atlas Marketplace | 1 / 103 | Assigned | Building workflow planned |
