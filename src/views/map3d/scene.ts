@@ -808,10 +808,12 @@ function buildCity(layout: Layout): Scene3D {
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
   if(communityRail){
-    const areas=stationAccessAreas(communityRail.hills);
+    // Only the old two-stop line has stairs behind the Marketplace; the perimeter loop's stations
+    // stand on the rail ring and keep their own walks clear (above), so its unused stop clears nothing.
+    const areas=communityRail.loop?[]:stationAccessAreas(communityRail.hills);
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
-    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
-    // (the by-tag layout), the green stays open instead.
+    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot,
+    // the green stays open instead.
     if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
     // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
     if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
