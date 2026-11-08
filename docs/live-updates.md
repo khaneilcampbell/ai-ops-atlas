@@ -10,6 +10,7 @@ what it last reported.
 GitHub App "KC Atlas Live" ──webhook──▶ POST /api/hooks/github  (HMAC, GITHUB_WEBHOOK_SECRET)
 Mac app (Repository Intelligence) ────▶ POST /api/hooks/atlas   (Bearer USAGE_SYNC_TOKEN)
 Commerce pipeline (VPS loop.sh) ──────▶ POST /api/hooks/agents  (Bearer AGENT_FEED_TOKEN)
+Opportunity Scout (GitHub Actions) ───▶ POST /api/hooks/reports (Bearer AGENT_FEED_TOKEN)
                                               │
                                      D1 database atlas-live (binding LIVE)
                                               │
@@ -79,6 +80,21 @@ Setup:
 3. On the VPS, add to the pipeline's `.env`:
    `ATLAS_FEED_URL=https://ai-ops-atlas.pages.dev/api/hooks/agents` and
    `ATLAS_FEED_TOKEN=<the same key>`. The existing `/api/hooks/*` login exception covers it.
+
+## Agent reports
+
+Some agents produce a whole report, not a status line. Opportunity Scout posts its full result
+(ideas, scores, agent spec, checks) to `POST /api/hooks/reports` with the same add-only
+`AGENT_FEED_TOKEN`. The site checks it against `src/reports/model.ts` (closed schema, 16 KB max,
+only agents in `REPORT_AGENTS`), stores it in its own `agent_reports` table, keeps the newest 20
+per agent, and drops an `agent_report` line into the feed so an open inspector refreshes.
+
+- Website: `GET /api/reports?agent=<id>` (behind Access) returns the newest 10.
+- Mac app: `GET /api/hooks/reports?agent=<id>` with `USAGE_SYNC_TOKEN`.
+- Atlas shows them in the agent's profile (Reports tab) and the latest top idea in the office
+  panel. Download PDF builds the file on the device from the stored report.
+
+No new secret is needed: the table is created on first use.
 
 ## Checking it
 

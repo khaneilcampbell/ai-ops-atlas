@@ -1,5 +1,5 @@
 # Merge Flow (ops/merge-flow): sorts open pull requests into lanes so ready work merges sooner.
-# Read-only. One GraphQL read per run; Claude only when the triage changed and something needs action.
+# Read-only. A few small GraphQL reads per run; Claude only when the triage changed and something needs action.
 name: Merge flow
 
 on:
@@ -31,7 +31,7 @@ jobs:
   triage:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     env:
       DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
     steps:

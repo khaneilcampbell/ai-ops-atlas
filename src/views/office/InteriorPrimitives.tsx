@@ -7,3 +7,12 @@ export function Person({x,z,color}:{x:number;z:number;color:string}) {
 export function Sofa({x,z}:{x:number;z:number}) {
   return <group><Box p={[x,0.32,z]} s={[1.8,0.45,0.72]} color="#bcb19b"/><Box p={[x,0.67,z-0.32]} s={[1.8,0.65,0.14]} color="#d6cab3"/>{[-1,1].map(side=><Box key={side} p={[x+side*0.85,0.53,z]} s={[0.14,0.5,0.85]} color="#d6cab3"/>)}</group>;
 }
+
+/** Static seated figure: faces the desk at negative z; no execution or movement implied. */
+export function SeatedPerson({x,z,color}:{x:number;z:number;color:string}){
+ return <group position={[x,0,z]}>
+  <mesh position={[0,.82,0]} castShadow><cylinderGeometry args={[.16,.19,.5,12]}/><meshStandardMaterial color={color}/></mesh>
+  <mesh position={[0,1.18,0]} castShadow><sphereGeometry args={[.18,16,12]}/><meshStandardMaterial color="#c79875"/></mesh>
+  {[-1,1].map(k=><group key={k}><Box p={[k*.1,.48,-.12]} s={[.14,.14,.4]} color="#294237"/><Box p={[k*.1,.25,-.28]} s={[.13,.4,.13]} color="#294237"/></group>)}
+ </group>;
+}

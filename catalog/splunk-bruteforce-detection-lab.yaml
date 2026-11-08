@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=./schema/atlas-v2.schema.json
-# AI Ops Atlas manifest. Format: catalog/README.md
+# Atlas manifest. Format: catalog/README.md
 schema: atlas/v2
 
 project:
@@ -16,7 +16,7 @@ project:
     - label: Case study
       url: https://khaneilcampbell.com/soc-automation-lab.html
     - label: Project docs
-      url: https://github.com/khaneilcampbell/projects-intelligence-hub
+      url: https://github.com/khaneilcampbell/ai-ops-atlas/tree/main/docs/intelligence-hub
 
 agents:
   - id: soc-case-notes

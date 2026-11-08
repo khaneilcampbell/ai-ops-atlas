@@ -1,16 +1,17 @@
+import {flightClearance,privateJetPose} from './flightClearance';
+import {MODELS,SCALE} from "./vehicleModels";
+import {SkyBalloons} from "./SkyBalloons";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { renderMapFrame } from "./mapViewport";
 import { wake } from "../../lib/power";
 import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
-import { planVehicles, vehicleAt, type VehicleKind } from "./vehicles";
+import { marinaSite } from "./marinaPlan";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -44,8 +45,10 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     const target = mode === "night" ? 1 : 0;
     // Open in the saved mood without a transition; ease over about two seconds after that.
     if (first.current || reduced) night.value = target;
-    else if (night.value !== target) wake(100);
-    else night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+    else if (night.value !== target) {
+      night.value += (target - night.value) * (1 - Math.exp(-Math.min(dt, 0.1) * 2.2));
+      wake(100);
+    }
     first.current = false;
     if (Math.abs(night.value - target) < 0.002) night.value = target;
     const k = night.value;
@@ -123,14 +126,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   const loop = useMemo(() => {
     const b = scene.bounds;
     const pad = 4.6;
-    const shore=scene.terraces.reduce((best,p)=>p.z+p.d>best.z+best.d?p:best,scene.terraces[0]);
-    const harborX=shore ? shore.x+shore.w/2 : (b.x0+b.x1)/2;
-    const shoreZ=shore ? shore.z+shore.d : b.z1;
-    const coastZ=Math.max(shoreZ,...scene.land.filter(r=>harborX>=r.x && harborX<=r.x+r.w).map(r=>r.z+r.d));
-    const pierZ=coastZ+1.8;
-    // Join the actual district promenade, rather than stopping at the cliff edge.
-    const sidewalks=scene.paving.filter(r=>harborX>=r.x && harborX<=r.x+r.w && r.z<shoreZ && r.z+r.d>shoreZ-2 && r.y>=TERRACE_H);
-    const cityWalkZ=sidewalks.length ? Math.max(...sidewalks.map(r=>Math.min(shoreZ-0.2,r.z+r.d/2))) : shoreZ-0.8;
+    const {x:harborX,pierZ,shoreZ,cityWalkZ}=marinaSite(scene,TERRACE_H);
     const curve = new THREE.CatmullRomCurve3(
       [
         [b.x0 - pad, b.z0 - pad],
@@ -270,6 +266,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   return (
     <group>
       <CityFlyover scene={scene} g={g} m={m} moving={moving} />
+      <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
       <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
       <instancedMesh ref={passengers} args={[g.cyl,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
@@ -289,103 +286,15 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   );
 }
 
-/**
- * A light bloom at night, only on what is brighter than the scene: lit windows, path lights and
- * connections. By day, and while the bloom is off, the map renders directly.
- */
-export function Bloom() {
-  const { gl, scene, camera, size } = useThree();
-  const composer = useMemo(() => {
-    const c = new EffectComposer(gl);
-    c.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0, 0.35, 0.9);
-    c.addPass(bloom);
-    c.addPass(new OutputPass());
-    return { c, bloom };
-  }, [gl, scene, camera]);
-  useEffect(() => {
-    const dpr = gl.getPixelRatio();
-    composer.c.setPixelRatio(dpr);
-    composer.c.setSize(size.width, size.height);
-    // Half resolution is plenty for a soft glow and keeps it cheap.
-    composer.bloom.resolution.set((size.width * dpr) / 2, (size.height * dpr) / 2);
-  }, [composer, gl, size]);
-  useEffect(() => () => composer.c.dispose(), [composer]);
-  // Priority 1 takes over rendering from the default loop.
-  useFrame(() => {
-    const k = night.value;
-    if (k < 0.02) return gl.render(scene, camera);
-    composer.bloom.strength = k * 0.32;
-    composer.c.render();
-  }, 1);
+/** Day and night share one framebuffer path; emissive surfaces provide night lighting. */
+export function MapRenderer() {
+  const { gl, scene, camera } = useThree();
+  const frameSize = useMemo(() => new THREE.Vector2(), []);
+  // Priority 1 owns rendering, with no offscreen compositor or night-only render targets.
+  useFrame(() => renderMapFrame(gl, scene, camera, frameSize), 1);
   return null;
 }
 
-/** One box of a vehicle, in its own frame: forward is +x, up is +y, bottom-anchored. */
-type Part = { at: [number, number, number]; size: [number, number, number]; color: string | null };
-
-/** Models are drawn at this size; the path lanes leave room for it. */
-const SCALE = 1.35;
-const TIRE = "#262b2e";
-const GLASS = "#3d4d55";
-const TRIM = "#ece3cc";
-const wheels = (dx: number): Part[] =>
-  [-1, 1].flatMap((f) => [-1, 1].map((sd) => ({ at: [f * dx, 0, sd * 0.045], size: [0.044, 0.04, 0.022], color: TIRE }) as Part));
-
-/** Low-poly models; null color means the vehicle's own paint. */
-const MODELS: Record<VehicleKind, { parts: Part[]; nose: number; lightY: number }> = {
-  sports: {
-    parts:[...wheels(0.074),
-      {at:[0,0.012,0],size:[0.235,0.028,0.105],color:null},
-      {at:[0.064,0.04,0],size:[0.105,0.012,0.1],color:null},
-      {at:[-0.025,0.042,0],size:[0.098,0.025,0.083],color:GLASS},
-      {at:[-0.03,0.067,0],size:[0.065,0.008,0.078],color:null},
-      {at:[-0.096,0.062,0],size:[0.022,0.008,0.119],color:TIRE},
-      {at:[-0.096,0.04,-0.035],size:[0.01,0.022,0.008],color:TIRE},
-      {at:[-0.096,0.04,0.035],size:[0.01,0.022,0.008],color:TIRE},
-      {at:[0.118,0.019,-0.018],size:[0.006,0.018,0.022],color:TIRE},
-      {at:[0.118,0.019,0.018],size:[0.006,0.018,0.022],color:TIRE},
-      {at:[0,0.012,-0.055],size:[0.2,0.008,0.008],color:TIRE},
-      {at:[0,0.012,0.055],size:[0.2,0.008,0.008],color:TIRE}],
-    nose:0.118,lightY:0.03
-  },
-  amazon: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.11,0.106],color:null},{at:[0.097,0.07,0],size:[0.055,0.043,0.11],color:GLASS},{at:[-0.035,0.054,0],size:[0.13,0.012,0.11],color:"#55bde7"}],nose:0.125,lightY:0.04},
-  ups: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.12,0.106],color:null},{at:[0.1,0.075,0],size:[0.052,0.045,0.11],color:GLASS},{at:[-0.03,0.068,0],size:[0.14,0.014,0.11],color:"#dcaf4d"}],nose:0.125,lightY:0.04},
-  bus: {parts:[...wheels(0.13),{at:[0,0.014,0],size:[0.35,0.12,0.108],color:null},{at:[0,0.07,0],size:[0.32,0.045,0.112],color:GLASS},{at:[0,0.052,0],size:[0.35,0.014,0.113],color:"#2473b9"},...[-0.1,-0.04,0.02,0.08,0.14].map(x=>({at:[x,0.07,0] as [number,number,number],size:[0.009,0.045,0.114] as [number,number,number],color:TRIM}))],nose:0.175,lightY:0.04},
-  sedan: {
-    parts: [
-      ...wheels(0.06),
-      { at: [0, 0.014, 0], size: [0.2, 0.044, 0.1], color: null },
-      { at: [-0.012, 0.058, 0], size: [0.11, 0.038, 0.088], color: GLASS },
-      { at: [-0.012, 0.096, 0], size: [0.096, 0.008, 0.078], color: null },
-    ],
-    nose: 0.1,
-    lightY: 0.036,
-  },
-  van: {
-    parts: [
-      ...wheels(0.075),
-      { at: [0, 0.014, 0], size: [0.24, 0.098, 0.106], color: null },
-      { at: [0.106, 0.064, 0], size: [0.03, 0.036, 0.098], color: GLASS },
-      { at: [0.065, 0.068, 0], size: [0.05, 0.03, 0.109], color: GLASS },
-      { at: [-0.04, 0.05, 0], size: [0.12, 0.012, 0.109], color: TRIM },
-    ],
-    nose: 0.12,
-    lightY: 0.04,
-  },
-  service: {
-    parts: [
-      ...wheels(0.08),
-      { at: [0.07, 0.014, 0], size: [0.1, 0.088, 0.106], color: null },
-      { at: [0.098, 0.064, 0], size: [0.046, 0.03, 0.109], color: GLASS },
-      { at: [-0.056, 0.014, 0], size: [0.15, 0.05, 0.106], color: TRIM },
-      { at: [-0.056, 0.064, 0], size: [0.11, 0.03, 0.08], color: "#7f8a83" },
-      { at: [0.07, 0.102, 0], size: [0.026, 0.014, 0.05], color: "#c9a35a" },
-    ],
-    nose: 0.12,
-    lightY: 0.04,
-  },
-};
 
 /**
  * Miniature sedans, vans and service vehicles touring the districts' stone paths, with headlights
@@ -393,7 +302,7 @@ const MODELS: Record<VehicleKind, { parts: Part[]; nose: number; lightY: number 
  * project data or agent activity. Frozen in place when motion is off.
  */
 export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
-  const plans = useMemo(() => planVehicles(scene), [scene]);
+  const plans = useMemo(() => [...planVehicles(scene),...planDealershipTraffic(scene),...planHighwayTraffic(scene)], [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
   const mats = useMemo(
     () => ({
@@ -430,7 +339,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
-      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)?1:0));
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,clock.current)?1:0));
     });
     // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
@@ -474,7 +383,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 
   if (!plans.length) return null;
   return (
-    <group>
+    <group name="atlas-road-traffic">
       {plans.map(v=><VehicleBadge key={v.id} plan={v} moving={moving} />)}
       <instancedMesh ref={body} args={[g.box, m.plain, parts.length]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={heads} args={[g.ball, mats.head, plans.length * 2]} frustumCulled={false} raycast={() => null} />
@@ -561,39 +470,40 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
   return <group><Instanced items={parts.deck} geometry={g.box} material={m.plain}/><Instanced items={parts.posts} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={m.lamp}/></group>;
 }
 
-/** A light aircraft towing a Benjaire banner on a slow circuit above the waterfront. */
+/** Executive jet; shared geometry and the existing decorative waterfront circuit. */
 function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) {
   const group=useRef<THREE.Group>(null), time=useRef(0);
-  const banner=useMemo(()=>{
-    const canvas=document.createElement("canvas");canvas.width=768;canvas.height=192;
-    const ctx=canvas.getContext("2d")!;
-    ctx.fillStyle="#f4ead1";ctx.fillRect(0,0,768,192);
-    ctx.strokeStyle="#b8893b";ctx.lineWidth=12;ctx.strokeRect(8,8,752,176);
-    ctx.fillStyle="#203b32";ctx.font="600 116px Georgia, serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("Benjaire",384,101);
-    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-    const material=new THREE.SpriteMaterial({map:texture,depthTest:true,depthWrite:false});
-    return {texture,material};
-  },[]);
-  useEffect(()=>()=>{banner.texture.dispose();banner.material.dispose();},[banner]);
-  const parts:Inst[]= [
-    {p:[0,0,0],s:[1.1,0.16,0.16],c:"#f1eee4"},
-    {p:[0.1,0.07,0],s:[0.3,0.11,0.15],c:"#34586a"},
-    {p:[0,0.04,0],s:[0.3,0.045,1.35],c:"#eee5ce"},
-    {p:[-0.43,0.09,0],s:[0.22,0.035,0.55],c:"#b8893b"},
-    {p:[-0.43,0.1,0],s:[0.17,0.25,0.035],c:"#b8893b"},
-    {p:[0.57,0.01,0],s:[0.025,0.36,0.035],c:"#374a44"},
-    {p:[-1.05,0.03,0],s:[1.1,0.012,0.012],c:"#cbbd9e"},
-  ];
+  const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
+  const jet=useMemo(()=>({
+    body:[
+      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
+      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
+      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
+      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
+      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
+    ] as Inst[],
+    trim:[
+      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
+      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
+      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
+      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
+      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
+      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
+    ] as Inst[],
+  }),[]);
   useFrame((_,dt)=>{
     if(moving)time.current+=Math.min(dt,0.1);
     if(!group.current)return;
-    const b=scene.bounds,cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2;
+    const pose=privateJetPose(scene.bounds,safeFlight.altitude,time.current);
     group.current.visible=true;
-    const rx=(b.x1-b.x0)/2+3,rz=(b.z1-b.z0)/2+3,t=time.current*0.045;
-    group.current.position.set(cx+Math.cos(t)*rx,8.5+Math.sin(t*2)*0.2,cz+Math.sin(t)*rz);
-    group.current.rotation.set(0,Math.atan2(-Math.cos(t)*rz,-Math.sin(t)*rx),Math.sin(t)*0.035);
+    group.current.position.set(pose.x,TERRACE_H+pose.y,pose.z);
+    group.current.rotation.set(0,pose.yaw,pose.roll);
   });
-  return <group ref={group}><Instanced items={parts} geometry={g.box} material={m.plain}/><sprite material={banner.material} position={[-2.25,-0.05,0]} scale={[1.6,0.4,1]} raycast={()=>null}/></group>;
+  return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
 }
 
 function VehicleBadge({plan,moving}:{plan:ReturnType<typeof planVehicles>[number];moving:boolean}) {

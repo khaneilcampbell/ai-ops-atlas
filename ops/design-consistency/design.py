@@ -25,6 +25,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 from collections import Counter
 from datetime import datetime, timezone
@@ -641,8 +642,39 @@ def gh(method, path, body=None):
         headers["Authorization"] = f"Bearer {token}"
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(API + path, data=data, method=method, headers=headers)
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read() or b"null")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        raise GitHubError(e.code, error_message(e.read())) from None
+
+
+class GitHubError(OSError):
+    """A GitHub API error with its status and GitHub's own message, so logs say why."""
+
+    def __init__(self, status, message):
+        super().__init__(f"GitHub API {status}: {message}")
+        self.status, self.message = status, message
+
+
+def error_message(raw):
+    try:
+        return str(json.loads(raw or b"{}").get("message") or "no message")[:300]
+    except (ValueError, AttributeError):
+        return (raw or b"").decode("utf-8", "replace")[:300] or "no message"
+
+
+SETTINGS_URL = "https://github.com/{repo}/settings/actions"
+
+
+def pr_refused_help(err, repo):
+    """Plain steps for KC when GitHub refuses to let the workflow open the fix PR."""
+    if err.status == 403 and "not permitted to create" in err.message.lower():
+        return ("GitHub does not let this workflow open pull requests. Turn on "
+                "\"Allow GitHub Actions to create and approve pull requests\" under Workflow permissions at "
+                f"{SETTINGS_URL.format(repo=repo)} and press Save, or add a DESIGN_FIX_TOKEN secret "
+                "(fine-grained, this repo only, Contents and Pull requests: read and write).")
+    return f"GitHub refused to open the fix pull request ({err})."
 
 
 def open_fix_pr(repo):
@@ -768,8 +800,20 @@ def cmd_pr(args, now=None):
     n = len(result["applied"]) + len(result["kept"])
     title = (f"Design: swap {n} literals for the tokens they equal" if result["mode"] == "code"
              else f'Design: bring {n} {RULE_LABELS[(result["applied"] + result["kept"])[0]["rule"]].lower()} findings onto the tokens')
-    pr = gh("POST", f"/repos/{repo}/pulls", {"title": title, "head": args.branch, "base": args.base,
-                                             "body": pr_body(result, shots, run_url), "maintainer_can_modify": True})
+    try:
+        pr = gh("POST", f"/repos/{repo}/pulls", {"title": title, "head": args.branch, "base": args.base,
+                                                 "body": pr_body(result, shots, run_url), "maintainer_can_modify": True})
+    except GitHubError as e:
+        help_text = pr_refused_help(e, repo)
+        # The branch was pushed for this PR only; remove it so failed runs do not pile up branches.
+        try:
+            gh("DELETE", f"/repos/{repo}/git/refs/heads/{args.branch}")
+        except OSError as d:
+            print(f"Could not remove {args.branch}: {d}", file=sys.stderr)
+        print(f"::error::{help_text}" if os.environ.get("GITHUB_ACTIONS") else help_text)
+        write_summary(f"\n**No fix pull request.** {help_text}\n")
+        post_feed(f"Fix PR not opened. {help_text}", "warning", now)
+        raise SystemExit(1)
     result["pr"] = pr["number"]
     print(f'Opened {pr["html_url"]}')
     write_summary(f'\nOpened fix pull request #{pr["number"]}: {pr["html_url"]}\n')

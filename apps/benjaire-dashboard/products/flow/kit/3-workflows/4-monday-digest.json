@@ -1,0 +1,179 @@
+{
+  "name": "Flow · 4 Monday digest",
+  "nodes": [
+    {
+      "id": "8ee9cc5b-20cd-48d1-aa46-128c846ce453",
+      "name": "Mondays 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a55741e5-dd79-452a-8688-07b7b5224771",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "f86523b0-fac3-4fe7-aab1-d1798ecd28af",
+      "name": "Get All Inquiries",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "f0058db8-cd97-4dce-9839-805c1209b5e8",
+      "name": "Build Weekly Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const s = $('Load Client Settings').first().json;\nconst rows = $input.all().map(function (i) { return i.json; }).filter(function (r) { return r && r.inquiry_ref; });\nconst real = rows.filter(function (r) { return !r.is_spam && r.source !== 'test'; });\nconst since = $now.minus({ days: 7 });\nconst d = function (v) { return v ? DateTime.fromISO(String(v)) : null; };\nconst week = real.filter(function (r) { const t = d(r.received_at); return t && t >= since; });\nconst count = function (list, st) { return list.filter(function (r) { return r.status === st; }).length; };\nconst open = real.filter(function (r) { return r.status === 'new'; });\nconst overdue = open.filter(function (r) { const t = d(r.reply_due_at); return t && t < $now; });\nconst handled = week.filter(function (r) { return r.status !== 'new' && r.status !== 'spam'; });\nconst hrs = handled.map(function (r) { return d(r.status_changed_at).diff(d(r.received_at), 'hours').hours; }).filter(function (h) { return h >= 0; }).sort(function (a, b) { return a - b; });\nconst median = hrs.length ? hrs[Math.floor((hrs.length - 1) / 2)] : null;\nconst fmtH = function (h) { return h == null ? 'n/a' : (h < 1 ? Math.round(h * 60) + ' min' : (Math.round(h * 10) / 10) + ' h'); };\nconst esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };\nconst topics = {};\nweek.forEach(function (r) { topics[r.topic || 'General inquiry'] = (topics[r.topic || 'General inquiry'] || 0) + 1; });\nconst topicRows = Object.keys(topics).sort(function (a, b) { return topics[b] - topics[a]; }).map(function (t) { return '<tr><td>' + esc(t) + '</td><td align=\"right\">' + topics[t] + '</td></tr>'; }).join('');\nconst cell = function (label, value) { return '<td style=\"padding:10px 16px;border:1px solid #e4e5e3;border-radius:8px\"><div style=\"font-size:12px;color:#5f646b;text-transform:uppercase;letter-spacing:.08em\">' + label + '</div><div style=\"font-size:24px;color:#1f2124\">' + value + '</div></td>'; };\nconst list = function (items) { return items.length ? '<ul>' + items.map(function (r) { return '<li>' + esc(r.name) + (r.company ? ', ' + esc(r.company) : '') + ' (' + esc(r.inquiry_ref) + ')</li>'; }).join('') + '</ul>' : '<p style=\"color:#5f646b\">None.</p>'; };\nconst html = '<p>Here is your Flow summary for the week ending ' + $now.toFormat('cccc d LLLL') + '.</p>' +\n  '<table cellspacing=\"8\"><tr>' + cell('New inquiries', week.length) + cell('Won', count(week, 'won')) + cell('Lost', count(week, 'lost')) + cell('Median time to handle', fmtH(median)) + '</tr></table>' +\n  '<p><b>Waiting for a reply (' + open.length + ')</b>' + (overdue.length ? ', ' + overdue.length + ' past target' : '') + '</p>' + list(open) +\n  (topicRows ? '<p><b>What people asked about</b></p><table cellpadding=\"4\">' + topicRows + '</table>' : '') +\n  '<p style=\"color:#5f646b\">Sent by Flow. Spam and test inquiries are excluded.</p>';\nreturn [{ json: { to: s.owner_email, from: s.from_address, subject: 'Your week in Flow: ' + week.length + ' new, ' + count(week, 'won') + ' won, ' + open.length + ' waiting', html: html } }];"
+      }
+    },
+    {
+      "id": "bb334936-501f-4ed0-b6d2-32149f5cd2e6",
+      "name": "Send Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $json.from, to: [$json.to], subject: $json.subject, html: $json.html }) }}"
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "cc30c620-0282-4627-812c-4824ab352b89",
+      "name": "Sticky Note b49b764f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -20
+      ],
+      "parameters": {
+        "content": "## Flow · Monday digest\nEvery Monday at 8am in the workflow's time zone: new inquiries, wins, losses, median time to handle, who is still waiting and what people asked about. Spam and test inquiries are excluded. About 4 runs a month.",
+        "color": 7,
+        "width": 520,
+        "height": 180
+      }
+    }
+  ],
+  "connections": {
+    "Mondays 8am": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Get All Inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Inquiries": {
+      "main": [
+        [
+          {
+            "node": "Build Weekly Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Weekly Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

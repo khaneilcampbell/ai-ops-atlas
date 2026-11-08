@@ -1,0 +1,11 @@
+{
+  "id": "car-01",
+  "name": "GitHub Profile README",
+  "category": "08 — Career Portfolio & Interview Preparation",
+  "status": "Active",
+  "repo": "https://github.com/khaneilcampbell/khancam15",
+  "local_folder": null,
+  "last_verified": "2026-10-26",
+  "last_synced_commit": {"main": "e59d20c", "docs/portfolio-review": "05970be"},
+  "tags": ["career", "profile", "portfolio", "benjaire"]
+}

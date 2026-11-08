@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 894 894"><title>Benjaire</title><rect width="894" height="894" rx="161" fill="#f3f3f1"/><g transform="translate(155.6 143.1)"><defs><linearGradient id="bj-monogram" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="583" y2="608"><stop offset="0" stop-color="#18191c"/><stop offset="0.3" stop-color="#34373c"/><stop offset="0.52" stop-color="#6e737a"/><stop offset="0.74" stop-color="#34373c"/><stop offset="1" stop-color="#18191c"/></linearGradient></defs><path fill="url(#bj-monogram)" d="M3 3
+H405
+C478 3 518 45 518 122
+C518 178 510 224 490 258
+C548 286 580 335 580 410
+V462
+C580 556 540 605 482 605
+H88
+V265
+L168 335
+V530
+H432
+C474 530 495 508 495 466
+V405
+C495 355 470 315 430 315
+H323
+V450
+H243
+V235
+H378
+C415 235 438 212 438 175
+V140
+C438 105 418 80 395 80
+H88
+V245
+L8 180
+V3
+Z"/></g></svg>

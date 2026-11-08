@@ -41,6 +41,15 @@ describe("live events", () => {
     expect(applyGithubEvent(snap(), e).commits.map((c) => c.sha)).toEqual(["b", "a", "old"]);
   });
 
+  it("keeps the newest default-branch run when pull request runs fill the list", () => {
+    const pr = (id: number) => ({ id, attempt: 1, name: "CI", status: "completed", conclusion: "success", branch: "feature", event: "pull_request", createdAt: `2026-10-27T0${id}:00:00Z`, url: `https://g/${id}` });
+    const main = { ...snap().runs[0], createdAt: "2026-10-26T00:00:00Z" };
+    const s = snap({ workflowRuns: { "ci.yml": [5, 4, 3, 2].map(pr).concat(main) } });
+    const next = applyGithubEvent(s, runEvent("completed", { id: 9, head_branch: "other", event: "pull_request", html_url: "https://g/9" }));
+    expect(next.workflowRuns["ci.yml"]).toHaveLength(6);
+    expect(next.workflowRuns["ci.yml"].at(-1)).toBe(main);
+  });
+
   it("drops runs older than a full list", () => {
     const list = [{ id: 9, name: "x", status: "completed", conclusion: "success", branch: "main", event: "push", createdAt: "2026-10-28T00:00:00Z", url: "u9" }];
     expect(upsertRun(list, { ...list[0], id: 8, url: "u8", createdAt: "2026-10-01T00:00:00Z" }, 1)).toBeNull();

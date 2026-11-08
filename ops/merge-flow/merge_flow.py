@@ -1,6 +1,6 @@
 """Merge Flow: sort KC's open pull requests into lanes so ready work reaches production sooner.
 
-One small GraphQL read per run covers every allowlisted repository. Nothing else happens when the
+A few small GraphQL reads per run (a handful of repositories each) cover every allowlisted repository. Nothing else happens when the
 triage is unchanged: no Claude call, no report, no writes. Claude writes a short brief only when the
 triage changed and something needs action, within a daily and monthly cap. It never writes to GitHub.
 
@@ -44,10 +44,10 @@ def load_policy(path):
     return policy
 
 
-def build_query(repos, open_limit, merged_limit):
-    """One aliased query for every repository; only the fields the lanes need."""
+def build_query(repos, open_limit, merged_limit, start=0):
+    """One aliased query for these repositories; only the fields the lanes need. Aliases count from start."""
     parts = []
-    for i, repo in enumerate(repos):
+    for i, repo in enumerate(repos, start):
         owner, name = repo.split("/")
         parts.append(
             f'r{i}: repository(owner: {json.dumps(owner)}, name: {json.dumps(name)}) {{ nameWithOwner isPrivate'
@@ -60,8 +60,12 @@ def build_query(repos, open_limit, merged_limit):
     return "query { rateLimit { cost remaining } " + " ".join(parts) + " }"
 
 
-def fetch(query, token, timeout, attempts=2):
-    """One request; GitHub's GraphQL gateway sometimes answers 502/503/504, so that gets one retry."""
+RETRYABLE = {502, 503, 504}
+BACKOFF = [5, 15]
+
+
+def fetch(query, token, timeout, attempts=3):
+    """One request. GitHub's GraphQL gateway sometimes answers 502/503/504 or stalls, so those get retried."""
     req = urllib.request.Request(
         GRAPHQL, data=json.dumps({"query": query}).encode(), method="POST",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "atlas-merge-flow"},
@@ -72,9 +76,37 @@ def fetch(query, token, timeout, attempts=2):
                 body = res.read()
             return json.loads(body), len(body)
         except urllib.error.HTTPError as e:
-            if e.code not in {502, 503, 504} or attempt == attempts - 1:
+            if e.code not in RETRYABLE or attempt == attempts - 1:
                 raise
-            time.sleep(5)
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == attempts - 1:
+                raise
+        time.sleep(BACKOFF[min(attempt, len(BACKOFF) - 1)])
+
+
+def fetch_all(repos, policy, token):
+    """Several small queries instead of one large one: the large one made GitHub's gateway time out.
+    Returns the merged data (aliases r0..rN as before), total bytes and request count."""
+    per = policy.get("repositoriesPerRequest", 4)
+    data, size, cost, remaining, requests = {}, 0, 0, None, 0
+    for start in range(0, len(repos), per):
+        q = build_query(repos[start:start + per], policy["openPullRequestsPerRepository"], policy["mergedPullRequestsPerRepository"], start)
+        result, n = fetch(q, token, policy["requestTimeoutSeconds"])
+        requests += 1
+        size += n
+        if not result.get("data"):
+            return result, size, requests
+        rate = result["data"].pop("rateLimit", None) or {}
+        cost += rate.get("cost") or 0
+        remaining = rate.get("remaining", remaining)
+        data.update(result["data"])
+    data["rateLimit"] = {"cost": cost, "remaining": remaining}
+    return {"data": data}, size, requests
+
+
+def gateway_down(e):
+    return isinstance(e, (TimeoutError, urllib.error.URLError)) and (
+        not isinstance(e, urllib.error.HTTPError) or e.code in RETRYABLE)
 
 
 def parse_time(s):
@@ -306,7 +338,17 @@ def cmd_triage(args, now=None):
     if not token:
         raise SystemExit("Set MERGE_FLOW_TOKEN or GITHUB_TOKEN")
     repos = policy["repositories"]
-    result, size = fetch(build_query(repos, policy["openPullRequestsPerRepository"], policy["mergedPullRequestsPerRepository"]), token, policy["requestTimeoutSeconds"])
+    try:
+        result, size, requests = fetch_all(repos, policy, token)
+    except (urllib.error.URLError, TimeoutError) as e:
+        if not gateway_down(e):
+            raise
+        # GitHub's own gateway, not this agent: skip quietly and let the next run triage. Failing here
+        # only sent KC a failure email for something nobody can fix.
+        print(f"::warning::GitHub's GraphQL gateway did not answer after retries ({e}). Skipping this run; the next one will triage.")
+        write_summary("Skipped: GitHub's GraphQL gateway did not answer after retries. The next run will triage.\n")
+        set_output("brief", "false")
+        return None, None
     if not result.get("data"):
         post_feed("GitHub returned no data for the triage query.", "failed", now)
         raise SystemExit("GitHub returned no data: " + "; ".join(e.get("type", "error") for e in result.get("errors", [])))
@@ -315,7 +357,7 @@ def cmd_triage(args, now=None):
     d = decide(state, report, policy, now, bool(os.environ.get("ANTHROPIC_API_KEY")) and not args.dry_run)
     rate = result["data"].get("rateLimit") or {}
     # Counts only: this log is public. Titles of private repositories never reach it.
-    print(f'1 request, {size} bytes, cost {rate.get("cost")}, {rate.get("remaining")} left. {report["repositories"]} repositories, '
+    print(f'{requests} requests, {size} bytes, cost {rate.get("cost")}, {rate.get("remaining")} left. {report["repositories"]} repositories, '
           f'{report["open"]} open PRs, {report["counts"]["ready"]} ready. Changed: {d["changed"]}. Brief: {d["brief"] or d["brief_skipped"]}.')
     Path(args.work).write_text(json.dumps({"report": report, "decision": d}))
     if not d["brief"] and not args.dry_run:

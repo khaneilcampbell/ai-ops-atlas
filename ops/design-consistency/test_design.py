@@ -1,3 +1,4 @@
+import argparse
 import json
 import sys
 import tempfile
@@ -248,6 +249,45 @@ class Reporting(unittest.TestCase):
             self.assertNotIn(forbidden, source)
         self.assertEqual(POLICY["mode"], "propose")
 
+
+    def test_pr_refused_by_actions_setting_explains_the_fix_and_removes_the_branch(self):
+        calls = []
+
+        def fake_gh(method, path, body=None):
+            calls.append((method, path))
+            if method == "POST":
+                raise design.GitHubError(403, "GitHub Actions is not permitted to create or approve pull requests.")
+            return None
+
+        with tempfile.TemporaryDirectory() as d:
+            result = Path(d) / "result.json"
+            result.write_text(json.dumps({"mode": "code", "cost": 0.0, "applied": [
+                {"file": "src/a.css", "line": 1, "rule": "color", "value": "#fff", "new": "var(--white)",
+                 "reason": "equals --white"}],
+                "kept": [], "refused": [], "summary": ""}))
+            args = argparse.Namespace(
+                result=result, shots=None, work=Path(d) / "none.json", branch="design-consistency/run-1", base="main")
+            old_gh, old_env = design.gh, dict(design.os.environ)
+            design.gh = fake_gh
+            design.os.environ["GITHUB_REPOSITORY"] = "kc/atlas"
+            design.os.environ.pop("GITHUB_STEP_SUMMARY", None)
+            try:
+                with self.assertRaises(SystemExit):
+                    design.cmd_pr(args, NOW)
+            finally:
+                design.gh = old_gh
+                design.os.environ.clear()
+                design.os.environ.update(old_env)
+        self.assertEqual(calls[-1], ("DELETE", "/repos/kc/atlas/git/refs/heads/design-consistency/run-1"))
+        help_text = design.pr_refused_help(
+            design.GitHubError(403, "GitHub Actions is not permitted to create or approve pull requests."), "kc/atlas")
+        self.assertIn("https://github.com/kc/atlas/settings/actions", help_text)
+        self.assertIn("Allow GitHub Actions to create and approve pull requests", help_text)
+
+    def test_github_errors_keep_githubs_message(self):
+        self.assertEqual(design.error_message(b'{"message": "Not Found"}'), "Not Found")
+        self.assertEqual(design.error_message(b"<html>"), "<html>")
+        self.assertIsInstance(design.GitHubError(502, "x"), OSError)
 
 if __name__ == "__main__":
     unittest.main()

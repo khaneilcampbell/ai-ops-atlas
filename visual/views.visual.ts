@@ -1,35 +1,7 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForScene } from "./atlas";
+import { check, goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForScene } from "./atlas";
 
-// Each key view, compared against visual/baselines/<local|ci>/<name>.png.
-// SHOTS=1 skips the comparison and writes the screenshots to visual/out/ instead, for looking at.
-// BASELINE=1 writes them straight over the baselines. One capture of a frozen frame is enough;
-// Playwright's own update mode retakes each until two match, which is slow with software WebGL.
-const SHOTS = !!process.env.SHOTS;
-const BASELINE = !!process.env.BASELINE;
-const OUT = join(import.meta.dirname, "out");
-
-async function check(page: Page, name: string) {
-  if (BASELINE) {
-    await page.screenshot({ path: test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }), animations: "disabled", caret: "hide" });
-    return;
-  }
-  if (SHOTS) {
-    mkdirSync(OUT, { recursive: true });
-    await page.screenshot({ path: join(OUT, `${name}.png`), animations: "disabled", caret: "hide" });
-    return;
-  }
-  // A view added since the last baseline update has nothing to compare with yet: keep the
-  // screenshot as a result instead of failing, until the next update run records it.
-  if (!existsSync(test.info().snapshotPath(`${name}.png`, { kind: "screenshot" }))) {
-    test.info().annotations.push({ type: "no baseline", description: `${name}.png is new; run the visual workflow with 'update' to record it.` });
-    await page.screenshot({ path: test.info().outputPath(`${name}.png`), animations: "disabled", caret: "hide" });
-    return;
-  }
-  await expect(page).toHaveScreenshot(`${name}.png`);
-}
+// Each key view, compared against visual/baselines/<local|ci>/<name>.png (see check in atlas.ts).
 
 /** Agents → Manage agents, with one agent's details open. */
 async function openManage(page: Page) {
@@ -93,10 +65,10 @@ test("agents, manage", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.
-  await page.getByRole("button", { name: "Show GitHub Profile on the map" }).first().click();
+  await page.getByRole("button", { name: "Show Profile Tower on the map" }).first().click();
   await settle(page);
   await expect(page.locator(".map-stage")).toBeVisible();
-  await expect(page.getByText("GitHub Profile").first()).toBeVisible();
+  await expect(page.getByText("Profile Tower").first()).toBeVisible();
 });
 
 // iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.

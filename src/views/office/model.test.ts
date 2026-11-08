@@ -39,10 +39,10 @@ describe("office plan", () => {
     }
   });
 
-  it("gives the AI Ops Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
+  it("gives the Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = projectOfficeAgents(catalog.agents,project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer"]);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-system-improvements", "atlas-ui-improvement-designer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());

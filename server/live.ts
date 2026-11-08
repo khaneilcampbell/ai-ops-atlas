@@ -66,7 +66,7 @@ const SCHEMA = [
 ];
 
 const ready = new WeakSet<D1>();
-async function ensureSchema(db: D1) {
+export async function ensureSchema(db: D1) {
   if (ready.has(db)) return;
   await db.batch(SCHEMA.map((s) => db.prepare(s)));
   ready.add(db);
@@ -143,10 +143,26 @@ export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()
   return reply(202, { stored: c.kind });
 }
 
-function bearerOk(req: Request, secret: string | undefined): boolean {
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  return !!token && !!secret && secret.length >= 32 && sameSecret(token, secret);
+/**
+ * A pasted key, cleaned of the copy-paste extras that made it look wrong: spaces and line breaks
+ * (openssl and pbcopy add a newline), wrapping quotes, and a "Bearer " typed into a field that
+ * already adds one. The key itself is never changed.
+ */
+export function cleanKey(value: string | undefined): string {
+  let key = (value ?? "").trim();
+  for (;;) {
+    const next = key.replace(/^bearer\s+/i, "").replace(/^(["'])(.*)\1$/s, "$2").trim();
+    if (next === key) return key;
+    key = next;
+  }
+}
+
+export function bearerOk(req: Request, secret: string | undefined): boolean {
+  const auth = (req.headers.get("authorization") ?? "").trim();
+  if (!/^bearer\s/i.test(auth)) return false;
+  const token = cleanKey(auth);
+  const site = cleanKey(secret);
+  return !!token && site.length >= 32 && sameSecret(token, site);
 }
 
 const KINDS = new Set(["intel_run"]);
