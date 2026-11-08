@@ -23,6 +23,7 @@ import {MarketingAgency} from "./MarketingAgency";
 import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import {Mall} from "./Mall";
 import {MALL,MALL_KEY} from "./mallPlan";
+import {GalleriaLife} from './GalleriaLife';
 import {Galleria} from "./Galleria";
 import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
@@ -1137,6 +1138,7 @@ function World({
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
+      {detailsReady && <GalleriaLife scene={scene} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
