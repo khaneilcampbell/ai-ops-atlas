@@ -215,7 +215,14 @@ export interface GalleriaPlan {
  entrance:{x:number;z:number};fountain:{x:number;z:number;r:number};
  boxes:GalleriaBox[];rounds:GalleriaBox[];
  trees:Tree[];bushes:Point[];
+ /** Street lamps round the building and along the entrance promenade, facing the ground they light. */
+ lamps:GalleriaLamp[];
+ /** The entrance promenade's centre line, from the forecourt out to the lot edge and along the front. */
+ promenade:Pt[];
+ /** Outdoor parking, when the lot is deep enough for it, and the bays kept free for drivers. */
+ parking?:{x0:number;x1:number;z0:number;z1:number;aisleZ:number;slots:{x:number;z:number}[]};
 }
+export interface GalleriaLamp {x:number;z:number;yaw:number}
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
 const overlaps=(a:Rect,b:Rect)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.z<b.z+b.d&&a.z+a.d>b.z;
@@ -262,8 +269,10 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
  boxes.push({x:(rect.x+rect.w+ex)/2+.2,z:ez,w:rect.x+rect.w-ex+.7,d:.55,h:.015,y:0,c:'#dcd3bd'});
  // Outdoor parking between the building and the Marketplace, with the basement ramp at its head.
  const pz0=footprint.z+footprint.d+.25,pz1=Math.min(rect.z+rect.d-.15,pz0+G.parking);
+ let parking:GalleriaPlan['parking'];
  if(pz1-pz0>=1.4){
   const px0=rect.x+.3,px1=rect.x+rect.w-.3;
+  const lot={x0:px0,x1:px1,z0:pz0,z1:pz1,aisleZ:(pz0+pz1)/2,slots:[] as {x:number;z:number}[]};parking=lot;
   boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:'#5d6360'});
   const rows=pz1-pz0>=2.6?2:1,rowD=.62,bay=.34;
   for(let r=0;r<rows;r++){
@@ -271,6 +280,8 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
    for(let x=px0+.15,k=0;x<=px1-.1;x+=bay,k++){
     boxes.push({x,z:zr,w:.025,d:rowD,h:.004,y:.012,c:'#f3efe4'});
     // A few parked cars, deterministic.
+    // Two bays in the row by the building stay empty for the drivers' own cars (galleriaLife).
+    if(r===0&&k%3===0&&x+bay<px1&&(k===3||k===12))lot.slots.push({x:x+bay/2,z:zr});
     if(k%3===1&&x+bay<px1){const c=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'][k%4];boxes.push({x:x+bay/2,z:zr,w:.2,d:.38,h:.1,y:.012,c},{x:x+bay/2,z:zr,w:.17,d:.2,h:.07,y:.11,c:'#26323a'});}
    }
   }
@@ -298,7 +309,27 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
  for(let x=rect.x+1.2;x<rect.x+rect.w-1;x+=1.15)if(clear(x,rect.z+.3))trees.push({x,y,z:rect.z+.3,s:.24,kind:'round'});
  // A row of blossom trees between the parking and the Marketplace, where there is room.
  if(rect.z+rect.d-pz1>.8)for(let x=rect.x+.9;x<rect.x+rect.w-.6;x+=1.05)trees.push({x,y,z:(pz1+rect.z+rect.d)/2,s:.22,kind:'blossom'});
- return {rect,footprint,s,toMap,y0:y,slabs,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes};
+ // Entrance promenade: the forecourt path runs out to a paved walk along the lot's front edge.
+ const fx1=Math.max(fa[0],fb[0]),pxw=Math.min(rect.x+rect.w-.45,fx1+.55),zTop=rect.z+.45,zEnd=Math.min(rect.z+rect.d-.45,parking?parking.z1:rect.z+rect.d-.45);
+ boxes.push({x:pxw,z:(zTop+zEnd)/2,w:.5,d:zEnd-zTop,h:.016,y:0,c:'#e3dccb'});
+ for(let z=zTop+.3;z<zEnd;z+=.5)boxes.push({x:pxw,z,w:.5,d:.02,h:.004,y:.016,c:'#cbbf9f'});
+ const promenade:Pt[]=[[ex,ez],[pxw,ez],[pxw,zTop],[pxw,zEnd]];
+ for(let i=trees.length-1;i>=0;i--)if(trees[i].y===y&&Math.abs(trees[i].x-pxw)<.5&&trees[i].z>zTop-.4&&trees[i].z<zEnd+.4)trees.splice(i,1);
+ // Street lamps: along the promenade's outer side, and round the lot just inside its tree line.
+ const lamps:GalleriaLamp[]=[];
+ // Clear of the real (curved) building outline on every floor, not its bounding box: the lot's corners are open ground.
+ const nearSlab=(x:number,z:number)=>slabs.some(sl=>insidePoly(sl,[x,z])||sl.some((a,i)=>{const b=sl[(i+1)%sl.length],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(a[0]+dx*t-x,a[1]+dz*t-z)<.3;}));
+ const free=(x:number,z:number)=>!nearSlab(x,z)&&!(parking&&inRect({x:parking.x0,z:parking.z0,w:parking.x1-parking.x0,d:parking.z1-parking.z0},x,z,-.05))&&!lamps.some(l=>Math.hypot(l.x-x,l.z-z)<1.25)&&Math.hypot(x-fx,z-fz)>fr+.4;
+ for(let z=zTop+.2;z<=zEnd;z+=1.6){const x=pxw+.42;if(free(x,z))lamps.push({x,z,yaw:-Math.PI/2});}
+ for(let x=rect.x+.35;x<pxw-.4;x+=1.3)if(free(x,rect.z+.2))lamps.push({x,z:rect.z+.2,yaw:0});
+ for(let z=rect.z+.6;z<(parking?parking.z0:rect.z+rect.d-.4);z+=1.3)if(free(rect.x+.2,z))lamps.push({x:rect.x+.2,z,yaw:Math.PI/2});
+ // Round the building's own curves too: one lamp a little out from the ground floor every so often.
+ {const g0=slabs[0],cxm=g0.reduce((a,p)=>a+p[0],0)/g0.length,czm=g0.reduce((a,p)=>a+p[1],0)/g0.length;
+  for(let i=0;i<g0.length;i+=Math.max(1,Math.round(g0.length/14))){const [px,pz]=g0[i],dx=px-cxm,dz=pz-czm,l=Math.hypot(dx,dz)||1,x=px+dx/l*.45,z=pz+dz/l*.45;if(inRect(rect,x,z,-.15)&&free(x,z))lamps.push({x,z,yaw:Math.atan2(-dx,-dz)});}}
+ if(parking)for(const x of [parking.x0+.6,(parking.x0+parking.x1)/2,parking.x1-.9])if(!lamps.some(l=>Math.hypot(l.x-x,l.z-parking.z1-.12)<1.25))lamps.push({x,z:parking.z1+.12,yaw:Math.PI});
+ // A lamp takes the place of any lot tree it would stand in.
+ for(let i=trees.length-1;i>=0;i--)if(trees[i].y===y&&lamps.some(l=>Math.hypot(l.x-trees[i].x,l.z-trees[i].z)<.35))trees.splice(i,1);
+ return {rect,footprint,s,toMap,y0:y,slabs,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes,lamps,promenade,parking};
 }
 
 export interface GalleriaFin {x:number;z:number;y:number;h:number;a:number;level:number}

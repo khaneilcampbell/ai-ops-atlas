@@ -4,6 +4,7 @@ import {Canvas,useThree} from '@react-three/fiber';
 import {Html,OrbitControls} from '@react-three/drei';
 import type {OrbitControls as OrbitControlsImpl} from 'three-stdlib';
 import {usePageVisible,usePowerProfile,wake} from '../../lib/power';
+import {useReducedMotion} from '../../lib/motion';
 import {FramePacer} from '../map3d/pacer';
 import {type LightMode} from '../map3d/living';
 import {night as cityNight} from '../map3d/materials';
@@ -11,6 +12,8 @@ import type {Pt} from '../map3d/roads';
 import {slabGeometry,wallGeometry} from '../map3d/Galleria';
 import {GALLERIA_ATRIUM_LINE,GALLERIA_BASEMENT,GALLERIA_FLOORS,GALLERIA_NAME,GALLERIA_UNITS,GALLERIA,glassOutline,insidePoly,slabOutline,type GalleriaKind,type GalleriaUnit} from '../map3d/galleriaPlan';
 import CityOutside from './CityOutside';
+import AgencyCrowd from './AgencyCrowd';
+import {planGalleriaCrowd} from './galleriaCrowdPlan';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
 import '../../styles/skyline.css';
@@ -126,8 +129,9 @@ function Atrium({top,night,floors}:{top:number;night:boolean;floors:number[]}){
  },[floors,x,z]);
  return <group>
   <group position={[x,BASE[1],z]}>
-   <mesh geometry={geo}><meshStandardMaterial color="#f3f1ea" transparent opacity={.4} side={THREE.DoubleSide} depthWrite={false}/></mesh>
-   <mesh geometry={geo}><meshBasicMaterial color="#c3ccc0" wireframe/></mesh>
+   {/* Solid white steel funnel (KC, 2026-11-08), with its panel seams drawn over it. */}
+   <mesh geometry={geo} castShadow><meshStandardMaterial color="#eef0ea" roughness={.4} metalness={.15} side={THREE.DoubleSide}/></mesh>
+   <mesh geometry={geo} scale={[1.002,1,1.002]}><meshBasicMaterial color="#c9cfc6" wireframe/></mesh>
    <mesh position={[0,top,0]}><cylinderGeometry args={[R+.1,R+.1,.08,40]}/><meshStandardMaterial color="#dce2d5" transparent opacity={.55} emissive="#d0ad69" emissiveIntensity={night?.8:0} depthWrite={false}/></mesh>
   </group>
   <Boxes items={escalators}/>
@@ -159,7 +163,8 @@ function GalleriaCamera({mode}:{mode:number}){
 export default function GalleriaInterior({light}:{light:LightMode}){
  const [mode,setMode]=useState(ALL);
  const [picked,setPicked]=useState<GalleriaUnit|null>(null);
- const power=usePowerProfile(),visible=usePageVisible(),isNight=light==='night';
+ const power=usePowerProfile(),visible=usePageVisible(),reduced=useReducedMotion(),isNight=light==='night';
+ const crowds=useMemo(()=>[0,1,2,3].map(f=>planGalleriaCrowd(f,BASE[f],toIn)),[]);
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const floors=mode===ALL?[0,1,2,3]:[mode];
@@ -168,7 +173,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
  return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${GALLERIA_NAME} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
-   <FramePacer profile={power} running={false}/>
+   <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
    <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-22} shadow-camera-right={22} shadow-camera-top={22} shadow-camera-bottom={-22}/>
@@ -177,6 +182,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
    <CityOutside building={GALLERIA_NAME} span={34} clearSpan={44} scaleOverride={(s)=>s.galleria?GALLERIA_IN.k/s.galleria.s:undefined} anchorAt={s=>{if(!s.galleria)return;const [x,z]=s.galleria.toMap([40,30]);return {x,z};}} allFloors={mode===ALL} elevation={mode>=2&&mode!==ALL?BASE[mode]:0}/>
    {floors.map(f=><group key={f} position={[0,offset(f)-BASE[f],0]}>
     <Floor floor={f} y={BASE[f]} labels={mode!==ALL} cutaway night={isNight} picked={picked?.id} onPick={setPicked}/>
+    <AgencyCrowd people={crowds[f]} animate={!reduced} size={.56}/>
     {mode===ALL&&<Html position={[-18,BASE[f]+.3,0]} center><span className="skyline-room-label building-floor-label">{GALLERIA_FLOORS[f].label}</span></Html>}
    </group>)}
    {mode!==0&&<Atrium top={(mode===ALL?BASE[3]+GALLERIA_IN.heights[3]:GALLERIA_IN.heights[mode])+.6} night={isNight} floors={mode===ALL?[1,2,3]:[]}/>}

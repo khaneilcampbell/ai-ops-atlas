@@ -19,6 +19,7 @@ export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.tower
  if(s.airport){const a=s.airport;boxes.push(...AIRPORT_BUILDINGS.map(b=>{const p=airportPoint(a,b.x,b.z);return {x:p[0],z:p[1],w:b.w+.3,d:b.d+.3};}));for(const localX of [AIRPORT_LAYOUT.runwayX,AIRPORT_LAYOUT.taxiX]){const p=airportPoint(a,localX,AIRPORT_LAYOUT.runwayZ);boxes.push({x:p[0],z:p[1],w:3.8,d:25});}}
 // No street lamps on the Marketplace lot or its plaza.
  if(s.mall)boxes.push({x:s.mall.x+s.mall.w/2,z:s.mall.z+s.mall.d/2,w:s.mall.w,d:s.mall.d});
+ if(s.galleria){const r=s.galleria.footprint,k=.45;boxes.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w-2*k,d:r.d-2*k});}
  boxes.push(...s.fountains.map(f=>({x:f.x,z:f.z,w:1.2*(f.k??1),d:1.2*(f.k??1)})));return boxes;
 }
 /** Static route-derived fixtures. No per-lamp lights, animation, timers or network activity. */
@@ -36,6 +37,8 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[])];
  const junctions:Pt[]=[...s.transportConnections.flatMap(c=>[c.road[0],c.road[c.road.length-1]]),...(s.freight?.localJunctions??[]),...(s.freight?.exits??[]),...(s.community?.streets.flatMap(p=>[p[0],p[p.length-1]])??[])];
  const result:StreetLamp[]=[],cells=new Map<string,StreetLamp[]>(),cell=STREET_LIGHT.minSeparation;
+ // Atlas Galleria plans its own lamps round the building and along its entrance promenade.
+ for(const l of s.galleria?.lamps??[]){const lamp:StreetLamp={x:l.x,z:l.z,roadX:l.x+Math.sin(l.yaw)*.45,roadZ:l.z+Math.cos(l.yaw)*.45,yaw:l.yaw,height:STREET_LIGHT.height,highway:false};result.push(lamp);const key=`${Math.floor(l.x/cell)}:${Math.floor(l.z/cell)}`;cells.set(key,[...(cells.get(key)??[]),lamp]);}
  const near=(x:number,z:number)=>{const cx=Math.floor(x/cell),cz=Math.floor(z/cell);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)if(cells.get(`${cx+dx}:${cz+dz}`)?.some(p=>Math.hypot(x-p.x,z-p.z)<cell))return true;return false;};
  for(const path of paths){let carried=1.2,index=0;for(let i=1;i<path.points.length;i++){const a=path.points[i-1],b=path.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const nx=(b[1]-a[1])/len,nz=-(b[0]-a[0])/len;
  for(let d=carried;d<len;d+=path.highway?STREET_LIGHT.highwaySpacing:STREET_LIGHT.spacing){const rx=a[0]+(b[0]-a[0])*d/len,rz=a[1]+(b[1]-a[1])*d/len;if(junctions.some(p=>Math.hypot(rx-p[0],rz-p[1])<STREET_LIGHT.junctionClearance))continue;

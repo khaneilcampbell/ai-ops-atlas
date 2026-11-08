@@ -71,7 +71,8 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   // Curtain wall: blue-grey panes, slim dark mullions, a transom, and a warm-lit interior band.
   pane:canvasTexture(64,128,x=>{const g=x.createLinearGradient(0,0,0,128);g.addColorStop(0,'#9fb8bd');g.addColorStop(.55,'#6f8f96');g.addColorStop(1,'#d8b98a');x.fillStyle=g;x.fillRect(0,0,64,128);x.fillStyle='#e9d3a6';x.fillRect(8,74,48,30);x.fillStyle='#3b4744';x.fillRect(0,0,4,128);x.fillRect(0,24,64,3);x.fillRect(0,124,64,4);}),
   paneGlow:canvasTexture(64,128,x=>{x.fillStyle='#ffd796';x.fillRect(0,0,64,128);x.fillStyle='#fff0c8';x.fillRect(8,74,48,30);x.fillStyle='#000';x.fillRect(0,0,4,128);x.fillRect(0,24,64,3);x.fillRect(0,124,64,4);}),
-  lattice:canvasTexture(64,64,x=>{x.fillStyle='rgba(236,241,236,.38)';x.fillRect(0,0,64,64);x.strokeStyle='rgba(255,255,255,.95)';x.lineWidth=5;x.strokeRect(0,0,64,64);x.beginPath();x.moveTo(0,0);x.lineTo(64,64);x.stroke();}),
+  // Solid white steel funnel (KC, 2026-11-08): opaque panels with a faint diagonal seam grid.
+  lattice:canvasTexture(64,64,x=>{x.fillStyle='#eef0ea';x.fillRect(0,0,64,64);x.strokeStyle='#cfd4cc';x.lineWidth=3;x.strokeRect(0,0,64,64);x.beginPath();x.moveTo(0,0);x.lineTo(64,64);x.stroke();}),
  }),[]);
  tex.lattice.repeat.set(18,6);
  const mats=useMemo(()=>({
@@ -80,11 +81,11 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   glass:new THREE.MeshStandardMaterial({color:'#ffffff',map:tex.pane,emissiveMap:tex.paneGlow,roughness:.2,metalness:.2,emissive:'#ffffff',emissiveIntensity:.06,side:THREE.DoubleSide}),
   planter:new THREE.MeshStandardMaterial({color:'#4f7a52',roughness:.95,side:THREE.DoubleSide}),
   lights:new THREE.MeshStandardMaterial({color:'#fff3d6',map:tex.dots,alphaTest:.5,emissive:'#ffd58a',emissiveMap:tex.dots,emissiveIntensity:0,side:THREE.DoubleSide}),
-  funnel:new THREE.MeshStandardMaterial({color:'#ffffff',map:tex.lattice,transparent:true,roughness:.35,emissive:'#ffe3a8',emissiveIntensity:0,side:THREE.DoubleSide,depthWrite:false}),
+  funnel:new THREE.MeshStandardMaterial({color:'#ffffff',map:tex.lattice,roughness:.4,metalness:.15,emissive:'#ffe3a8',emissiveIntensity:0,side:THREE.DoubleSide}),
  }),[tex]);
  useEffect(()=>{
   mats.glass.emissiveIntensity=night?.55:.06;mats.glass.color.set(night?'#3a3226':'#ffffff');
-  mats.lights.emissiveIntensity=night?2.2:0;mats.funnel.emissiveIntensity=night?.6:0;
+  mats.lights.emissiveIntensity=night?2.2:0;mats.funnel.emissiveIntensity=night?.25:0;
  },[mats,night]);
  useEffect(()=>()=>{for(const x of Object.values(mats))x.dispose();for(const t of Object.values(tex))t.dispose();},[mats,tex]);
  const sign=useMemo(signage,[]);
@@ -145,7 +146,7 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   <mesh geometry={geo.glass} material={mats.glass} {...click}/>
   <mesh geometry={geo.planters} material={mats.planter} receiveShadow/>
   <mesh geometry={geo.lights} material={mats.lights}/>
-  <mesh geometry={geo.funnel} material={mats.funnel}/>
+  <mesh geometry={geo.funnel} material={mats.funnel} castShadow {...click}/>
   {/* Freestanding name at the forecourt, where the reference stands its big letters. */}
   <mesh position={[sx-.05,a.y0+.24,sz]} rotation={[0,Math.PI/2,0]} geometry={sign.geometry} material={sign.material}/>
   <Instanced items={parts.fins} geometry={g.box} material={m.plain} pick={keys(parts.fins.length)}/>

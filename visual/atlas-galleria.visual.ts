@@ -8,7 +8,7 @@ import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkd
 const out=process.env.SHOT_DIR??'artifacts/atlas-galleria';
 test.skip(!process.env.GALLERIA_SHOTS,'Screenshots on request only (GALLERIA_SHOTS=1).');
 const VIEWS:[string,number[],number[]][]=[
- ['east',[46,12,33],[27,1,27]],['top',[29.3,27,29],[29.3,0,27.6]],['entrance',[38.5,4.2,31],[29.5,2,26]],['north-west',[18,9,15],[29,2,26]],
+ ['east',[46,12,33],[27,1,27]],['top',[29.3,27,29],[29.3,0,27.6]],['entrance',[38.5,4.2,31],[29.5,2,26]],['north-west',[18,9,15],[29,2,26]],['parking',[37,3.2,35.5],[29.5,.3,30.5]],
 ];
 async function shoot(page:Page,prefix:string){
  const shots=await page.evaluate(async(views)=>{
