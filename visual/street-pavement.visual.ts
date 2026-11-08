@@ -13,6 +13,11 @@ for(const light of ['day','night'] as const)test(`Street pavement, ${light}`,asy
   const s=buildScene(layoutMap(catalog,[],'district')),t=s.towers.find((x:{projectId:string})=>x.projectId==='soc-lab')??s.towers[0],b=s.bounds;
   const cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,r=Math.max(b.x1-b.x0,b.z1-b.z0)/2;
   const views:View[]=[['district',[t.x+1,0,t.z+1],[t.x+5,7,t.z+9]],['overview',[cx,0,cz],[cx+r*.45,r*1.5,cz+r*1.35]],['top',[cx,0,cz],[cx,r*2.2,cz+.01]]];
+  // The avenue north from Benjaire HQ into the Financial District: from above, and at street level.
+  const hq=s.towers.find((x:{projectId:string})=>x.projectId==='benjaire-site');
+  if(hq)views.push(['avenue',[hq.x+3,0,hq.z-3],[hq.x+3.5,6,hq.z+5]],['street',[hq.x+3.2,.6,hq.z-8],[hq.x+3.6,1.6,hq.z+3]]);
+  // Looking up the avenue past Benjaire HQ to the Financial District's street side.
+  if(hq)views.push(['approach',[hq.x+2.6,.4,hq.z-10],[hq.x+5.6,2.2,hq.z+9]]);
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,state=fiber._roots.get(canvas)?.store.getState();if(!state)throw new Error('Map renderer not found');
   return views.map(([name,target,eye])=>{state.camera.position.set(...eye);state.camera.lookAt(...target);state.camera.updateMatrixWorld();state.gl.shadowMap.needsUpdate=true;state.gl.render(state.scene,state.camera);return {name,png:canvas.toDataURL('image/png')};});

@@ -6,6 +6,15 @@ import {SIDEWALK,streetPavement} from './streetPavement';
 import {TRANSPORT} from './transportScale';
 
 describe('street pavement',()=>{
+ it('carries a north-south avenue straight on into the Financial District',()=>{
+  const s=buildScene(layoutMap(catalog,[],'district'));
+  const road=s.transportConnections.find(c=>c.id==='financial-district')?.road;
+  expect(road).toHaveLength(2);
+  const [a,b]=road!;expect(a[0]).toBeCloseTo(b[0],6);
+  // It starts where a district street running north-south ends, not on a tower's driveway.
+  expect(s.carBridges.some(br=>br.roads.some(r=>r.slice(1).some((q,i)=>Math.abs(q[0]-r[i][0])<1e-6&&Math.abs(q[1]-r[i][1])>1e-6&&[q,r[i]].some(p=>Math.abs(p[0]-a[0])<1e-6&&Math.abs(p[1]-a[1])<1e-6))))).toBe(true);
+ });
+
  const scene=buildScene(layoutMap(catalog,[],'district'));
  const {pavement,markings}=streetPavement(scene);
  const walks=pavement.filter(p=>p.c===SIDEWALK.color);
