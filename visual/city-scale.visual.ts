@@ -13,7 +13,7 @@ async function views(page:import('@playwright/test').Page,list:View[]){
   return shots;
  },list);
 }
-// The "By district" layout, seen from the south-east over the Skyline park and the mall, like KC's screenshot.
+// The "By district" layout, seen from the south-east over the open lot (once the Skyline park) and the mall, like KC's screenshot.
 const VIEWS:View[]=[['overview',[10,2,26],[34,30,62]],['skyline',[16,2,36],[30,11,56]],['towers',[6,3,18],[24,12,40]]];
 for(const light of ['day','night'] as const)test(`City scale, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out!,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

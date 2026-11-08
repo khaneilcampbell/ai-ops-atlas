@@ -13,7 +13,6 @@ export const PERIMETER_RAIL={margin:2,radius:5,speed:COMMUNITY.speed,dwell:15,do
 export const LOOP_STATIONS=[
  {id:'service:financial-station',name:'Financial District Station',district:'Financial District'},
  {id:'service:atlas-station',name:'Atlas Central Station',district:'Atlas Marketplace'},
- {id:'service:skyline-station',name:'Skyline Station',district:'Skyline'},
  {id:'service:stadium-station',name:'Stadium Station',district:'Stadium'},
  {id:'service:airport-station',name:'Airport Station',district:'Atlas Airport'},
 ] as const;
@@ -26,8 +25,8 @@ export function loopPoint(p:Pick<PerimeterRailPlan,'route'|'lengths'|'length'>,d
 function distanceAt(route:Pt[],lengths:number[],point:Pt){for(let i=1;i<route.length;i++)if(distanceToRoad(point,[route[i-1],route[i]])<1e-5)return lengths[i-1]+Math.hypot(point[0]-route[i-1][0],point[1]-route[i-1][1]);throw new Error('Station is not on perimeter track');}
 /** All stations share this exact boarding path, platform and stair opening. */
 export function stationBoardingPath(s:Pick<RailStop,'point'|'yaw'>):Point3[]{return [[1,0,5.9],[1,COMMUNITY.platformRise,1.7],[1,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,.27]].map(([x,y,z])=>{const p=stationPoint(s,x,z);return [p[0],y,p[1]];});}
-export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'parks'|'towers'|'kiosks'|'retail'|'dealership'>):PerimeterRailPlan|undefined{
- const e=cityEnvelope(s.land),f=s.financial,m=s.mall,a=s.airport,stadium=s.stadium,sky=s.parks.find(p=>p.label==='Skyline');if(!e||!f||!m||!a||!stadium||!sky)return;
+export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>):PerimeterRailPlan|undefined{
+ const e=cityEnvelope(s.land),f=s.financial,m=s.mall,a=s.airport,stadium=s.stadium;if(!e||!f||!m||!a||!stadium)return;
  const gap=PERIMETER_RAIL.margin,left=e.x-gap,right=e.x+e.w+gap,top=e.z-gap,bottom=e.z+e.d+gap,r=PERIMETER_RAIL.radius;
  const clamp=(v:number,lo:number,hi:number)=>Math.max(lo+r+5,Math.min(hi-r-5,v));
  const financialX=clamp(f.x+20.8,left,right),start:Pt=[financialX,top];
@@ -39,12 +38,11 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
  const seeds=[
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
   {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt},
-  {...LOOP_STATIONS[2],point:[clamp(sky.x+sky.w/2,left,right),bottom] as Pt,target:[sky.x+sky.w/2,sky.z+sky.d-.4] as Pt},
   // Beside the main (east) gate, so the bigger stadium's walk to the platform stays short and clear of the bowl.
-  {...LOOP_STATIONS[3],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
-  {...LOOP_STATIONS[4],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
+  {...LOOP_STATIONS[2],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
+  {...LOOP_STATIONS[3],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
  ];
- const boxes:Box[]=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ const boxes:Box[]=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  boxes.push(...f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})),{x:m.cx,z:m.cz-.8,w:m.w,d:m.d-2.5},{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.dealership){const b=s.dealership.lot;boxes.push({x:b.x+b.w/2,z:b.z+b.d/2,w:b.w,d:b.d});}
  // Reserve the airside parcel as a whole; public walks approach the terminal along its eastern edge.

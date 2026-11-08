@@ -63,7 +63,7 @@ export interface FinancialPlan extends Rect {circa?:CircaSite;perimeterTrees:Pt[
 export function headquartersEnvelope(towers:Scene3D['towers']){
  return Math.max(1,...towers.map(t=>t.height+.27+Math.max(2.1,.42+t.size*.5,t.size*.3+.45,1.4)));
 }
-export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|'retail'|'airport'|'terraces'|'carBridges'|'paving'>&{coreLand?:Rect[]}):FinancialPlan|undefined{
+export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|'airport'|'terraces'|'carBridges'|'paving'>&{coreLand?:Rect[]}):FinancialPlan|undefined{
  const stadium=s.stadium;if(!stadium)return;
  const core=cityEnvelope(s.coreLand??s.terraces);if(!core)return;
  const w=FINANCIAL.width,d=FINANCIAL.depth,x=core.x-CITY_SPACING.financialWestOffset,originalX=x+FINANCIAL.expansion;
@@ -74,7 +74,7 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const referenceHeight=headquartersEnvelope(s.towers),buildings=FINANCIAL_BUILDINGS.filter(b=>b.id!=='circa'||westFree).map(b=>({...b,x:b.x+FINANCIAL.expansion,height:financialHeight(b.id,referenceHeight,b.rise),approach:[] as Pt[]}));
  // Circa stays the district's tallest however tall the headquarters (and so the others) grow.
  const twin=buildings.find(b=>b.id==='circa');if(twin)twin.height=Math.max(twin.height,...buildings.filter(b=>b!==twin).map(b=>b.height+financialDimensions(b.id).top-financialDimensions(twin.id).top+CIRCA.lead));
- const blocks=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+ const blocks=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
  blocks.push({x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d});
  if(s.airport){const r=airportFootprint(s.airport);blocks.push({x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d});}
  const towerBoxes=buildings.map(b=>({x:x+b.x,z:z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));

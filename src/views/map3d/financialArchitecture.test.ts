@@ -35,9 +35,9 @@ it('Aldren Insights has floor-to-ceiling clear glass on every office floor with 
  }
  expect(financialBrand('residence')).toMatchObject({name:'Aldren Insights',symbol:'wordmark',body:'#1d4f91',accent:'#2f8f83',signLines:['Aldren Insights']});
 });
-it('keeps the Financial District bank distinct from the Skyline branch',()=>{
+it('opens Halden Trust in its Financial District tower (the Skyline branch is gone)',()=>{
  expect(financialInteriorBrand('Halden Branch')).toBeUndefined();expect(financialInteriorBrand('financial:records')?.name).toBe('Halden Trust');expect(financialInteriorBrand('Wells Fargo')?.id).toBe('records');
- expect(BUILDING_INTERIORS['Halden Branch'].subtitle).toBe('BANKING & FINANCIAL OPERATIONS');expect(BUILDING_INTERIORS['financial:records'].subtitle).toContain('FINANCIAL DISTRICT');
+ expect(BUILDING_INTERIORS['Halden Branch']).toBeUndefined();expect(BUILDING_INTERIORS['financial:records'].subtitle).toContain('FINANCIAL DISTRICT');
 });
 it('scales the 235-metre architectural reference without breaking HQ-relative heights',()=>{
  expect(financialHeight('records',8,1.12)).toBe(WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT);
