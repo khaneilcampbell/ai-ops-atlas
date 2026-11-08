@@ -6,6 +6,6 @@ export async function transportPlan(page:Page):Promise<{rail:RailPlan;highway:Pt
   const [data,layout,planner]=await Promise.all(urls.map(url=>import(url)));
   const grouping=JSON.parse(localStorage.getItem('atlas:mapProjectGrouping')??'"district"');
   const scene=planner.buildScene(layout.layoutMap(data.catalog,[],grouping));
-  return {rail:scene.communityRail,highway:scene.freight.highway};
+  return {rail:scene.communityRail,highway:scene.freight?.highway??[]};
  });
 }

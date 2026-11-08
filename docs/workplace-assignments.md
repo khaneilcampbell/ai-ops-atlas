@@ -22,8 +22,8 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | CI Recovery Specialist (`atlas-rerun-failed`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Pull Request Integration Coordinator (`atlas-merge-pr`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Repository Maintenance Analyst (`atlas-github-steward`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| AI Production Improvement Analyst (`atlas-system-improvements`) | ai-ops-atlas | OpenAI | 4 / 401 | Assigned | Existing configuration preserved; see recorded Output |
-| AI UI Improvement Designer (`atlas-ui-improvement-designer`) | ai-ops-atlas | OpenAI | 4 / 402 | Assigned | Existing configuration preserved; see recorded Output |
+| AI Production Improvement Analyst (`atlas-system-improvements`) | ai-ops-atlas | Atlas HQ | Project office | Moved from Model Lab 401 when Skyline was removed (2026-11-08) | Existing configuration preserved; see recorded Output |
+| AI UI Improvement Designer (`atlas-ui-improvement-designer`) | ai-ops-atlas | Atlas HQ | Project office | Moved from Model Lab 402 when Skyline was removed (2026-11-08) | Existing configuration preserved; see recorded Output |
 | Atlas Production Coordinator (`atlas-production-coordinator`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Atlas Reliability Reviewer (`atlas-reliability-reviewer`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Atlas Performance Reviewer (`atlas-performance-reviewer`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
@@ -41,9 +41,9 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Website Quality Auditor (`site-audit`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Security Analyst (`security-check`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Portfolio Quality Engineer (`site-ci`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Merge Flow Coordinator (`github-merge-flow`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Opportunity Scout (`github-opportunity-scout`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Design Consistency (`github-design-consistency`) | github-profile | GitHub Profile | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Merge Flow Coordinator (`github-merge-flow`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Opportunity Scout (`github-opportunity-scout`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Design Consistency (`github-design-consistency`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Commerce Operations Coordinator (`commerce-loop`) | commerce-pipeline | Atlas Marketplace | 1 / 102 | Assigned | Building workflow planned |
 | Product Opportunity Analyst (`niche-scout`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Market Research Analyst (`market-analyst`) | commerce-pipeline | Atlas Marketplace | 1 / 103 | Assigned | Building workflow planned |
@@ -63,7 +63,7 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Technical Documentation Specialist (`docs-builder`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Documentation Quality Engineer (`hub-ci`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Application Security Analyst (`service-desk-codeql`) | service-desk | Service Desk | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Benjaire Inquiry Assistant (`skyline-inquiry-assistant`) | skyline | Skyline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Benjaire Inquiry Assistant (`skyline-inquiry-assistant`) | skyline | Atlas Marketplace | 1 / 101 | Moved from Skyline when the district was removed (2026-11-08) | Existing configuration preserved; see recorded Output |
 | Security Case Documentation Specialist (`soc-case-notes`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Threat Detection Analyst (`bruteforce-detection`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Detection Quality Engineer (`soc-lab-ci`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |

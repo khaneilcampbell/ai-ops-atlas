@@ -40,7 +40,12 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   const title = kind === "automations" ? "Automations" : "Agents";
   const catalog = useMemo(() => ({ ...allCatalog, agents: allCatalog.agents.filter(a => kind === "agents" ? isAiAgent(a) : !isAiAgent(a)) }), [allCatalog, kind]);
   const { telemetry: intel } = useIntel();
-  const [prefs, setPrefs] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) }));
+  const [prefs, setPrefs] = useState<Prefs>(() => {
+    const saved = { ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) };
+    // A saved filter from the former mixed directory must not hide the newly separated list.
+    const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
+    return { ...saved, classification: types.includes(saved.classification) ? saved.classification : "" };
+  });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
   useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
   const list = useRef<HTMLDivElement>(null);
@@ -79,8 +84,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           <div className="eyebrow">{title} registry{prefs.sub === "manage" ? "" : " · read-only"}</div>
           <h1>{title}</h1>
           <p className="lede">
-            {summary.total} {kind === "automations" ? "automations, pipelines, and integrations" : "AI agents and assisted workflows"} supporting your projects. {summary.operational.verified} verified running from live data.
+            {summary.total} {kind === "automations" ? "automations, AI-assisted workflows, pipelines, and integrations" : "AI agents and planned agents"} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
+          <p className="muted">{kind === "agents" ? "Agents use model-driven reasoning; planned agents are labeled separately. Fixed workflows are listed under Automations." : "Predefined workflows, including those with AI steps. Listed here does not mean enabled or running."}</p>
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
           {SUBS.filter((s) => s.id !== "manage" || kind === "agents").map((s) => (
