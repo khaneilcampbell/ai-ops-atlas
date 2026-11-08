@@ -98,9 +98,6 @@ they are.
 | Atlas · Maintenance | Atlas Service Hangar | Aircraft maintenance | Airport | Open |
 | Atlas · Cargo | Atlas Cargo Hangar | Cargo logistics | Airport | Open |
 | Atlas · Operations | Atlas Ops Center | Airport systems | Airport | Open |
-| Atlas · Passenger Services | Atlas Passenger Hall | Passenger services | Airport | Open |
-| Atlas · Logistics | Atlas Logistics Office | Freight planning | Airport | Open |
-| Atlas · Administration | Atlas Admin Office | Airport resources | Airport | Open |
 | Atlas Marketplace | Atlas Marketplace | Agent mall | Marketplace | Keep |
 | Benjaire Marketing Agency | Benjaire Marketing Agency | Marketing agency and Product Lab (24 characters; already shipped, allowed as the one exception) | Bay | Keep |
 | Stadium | Atlas Stadium | Venue | Stadium | In PR #263 |
