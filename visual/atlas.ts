@@ -63,7 +63,7 @@ export async function goTo(page: Page, label: string) {
 
 /** Selects a building on the 3D map by its nameplate text. */
 export async function selectBuilding(page: Page, name: string) {
-  // Match the name boundary: “Skyline” must never select “Skyline Station”.
+  // Match the name boundary: a building name must never select a station named after it.
   const plaque = page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`);
   await plaque.first().dispatchEvent("click");
   await settle(page, 4);

@@ -15,12 +15,13 @@ it("does not invent a disconnected airport for an empty city",()=>{
  expect(planAirport([{x:0,z:0,w:3,d:3}],[])).toBeUndefined();
 });
 
-it("places planned logistics west of Skyline with a local access point",()=>{
+it("places planned logistics west of the open lot, its road meeting the lot's west side",()=>{
  const land=[{x:0,z:0,w:10,d:10}];
  const a=planAirport(land,[{x:1,z:3,w:4,d:.4,y:.6,h:.03}],land[0])!;
  expect(a.west).toBe(true);
  expect(airportFootprint(a).x+airportFootprint(a).w).toBeLessThan(0);
- expect(a.accessX).toBe(1.1);
+ expect(a.accessX).toBe(.5);
+ expect(a.accessZ).toBe(6.5);
 });
 it("rolls along the runway before climbing and pauses between departures",async()=>{
  const {departurePose}=await import('./airport');
