@@ -8,6 +8,7 @@ import { useAtlas, type View } from "./state";
 import { attentionItems, ciSummary } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
+import { syncStatus } from "./lib/syncStatus";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
@@ -26,6 +27,7 @@ import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 import { useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
+import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 
@@ -48,19 +50,18 @@ export default function App() {
   useLiveFeed();
   const alerts = useAlerts().open;
   useAlertNotifications(alerts);
+  usePropertyPolling();
+  usePropertyNotifications(usePropertyIncidents().open);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
-  const lastFetched = useMemo(() => {
-    const times = Object.values(repos).flatMap((r) => (r.kind === "ok" ? [r.data.fetchedAt] : r.kind === "error" && r.data ? [r.data.fetchedAt] : []));
-    times.sort();
-    return times[times.length - 1];
-  }, [repos]);
-
   const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
-  const loadedRepositories = [...trackedRepositories].filter(name => {
-    const state = repos[name];
-    return state?.kind === "ok" || (state?.kind === "error" && state.data);
-  }).length;
+  const sync = syncStatus(trackedRepositories, repos);
+  const { lastFetched, loaded: loadedRepositories } = sync;
+  const syncFailing = !refreshing && sync.failing.length > 0;
+  const syncTitle = [
+    lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
+    syncFailing ? `\n${sync.failing.length} of ${trackedRepositories.size} repositories failed their last sync, so they show saved data:\n${sync.reasons.map((r) => `• ${r}`).join("\n")}\nOpen Repositories for details, or check the GitHub token in Settings.` : "",
+  ].join("");
   const ci = ciSummary([...trackedRepositories], repos);
   const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
 
@@ -81,11 +82,11 @@ export default function App() {
         <div className="spacer" />
         <ViewSwitch />
         <GlobalSearch />
-        <div className="refresh" title={lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet"}>
+        <div className={`refresh${syncFailing ? " sync-failing" : ""}`} title={syncTitle}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
             <Icon name="refresh" size={16} className={refreshing ? "spin" : undefined} />
           </button>
-          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{loadedRepositories}/{trackedRepositories.size} repositories loaded</small></span>
+          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{syncFailing ? `${sync.failing.length}/${trackedRepositories.size} failed to sync` : `${loadedRepositories}/${trackedRepositories.size} repositories loaded`}</small></span>
         </div>
         <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
         <LivePill />
@@ -169,7 +170,7 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, projects: [p], agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
     const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
     return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);

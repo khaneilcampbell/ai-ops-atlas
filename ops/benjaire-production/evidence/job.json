@@ -1,0 +1,55 @@
+{
+  "job_id": "product-b051e4ff9709f5ed4e2c3d43",
+  "input_hash": "94e1ab88421134cb2b39d54874e8af6c08441076728ae176848a4703137f7e42",
+  "fixture": true,
+  "model_calls": 0,
+  "agents": {
+    "validate": "atlas-production-coordinator",
+    "draft": "canva-mockups",
+    "quality": "commerce-tests",
+    "release": "atlas-production-coordinator"
+  },
+  "creator_generation": "not_invoked",
+  "execution_source": "local deterministic handoff",
+  "commerce_source_commit": "230605fdbde89585a96f35ded61cc17562f39135",
+  "stages": {
+    "validate": "completed",
+    "draft": "completed",
+    "quality": "completed"
+  },
+  "history": [
+    {
+      "stage": "validate",
+      "status": "queued",
+      "at": "2026-11-04T07:46:18.669303+00:00"
+    },
+    {
+      "stage": "draft",
+      "status": "running",
+      "at": "2026-11-04T07:46:18.670281+00:00"
+    },
+    {
+      "stage": "quality",
+      "status": "running",
+      "at": "2026-11-04T07:46:18.671161+00:00"
+    },
+    {
+      "stage": "approval",
+      "status": "awaiting approval",
+      "at": "2026-11-04T07:46:18.679071+00:00"
+    }
+  ],
+  "status": "awaiting approval",
+  "stage": "approval",
+  "responsible_agent": "human-review-required",
+  "observed_at": "2026-11-04T07:46:18.679071+00:00",
+  "reason": "Quality passed; approval is still required.",
+  "review_hash": "87e0c153d51566765bea9a3596655079361c2baba27b58396ccfbaa3e808a7f0",
+  "artifacts": {
+    "listing.json": "3b92425a38a37ef31b26f821976f25b8f58c5ecb948394e50bff93d0df5d366f",
+    "mockup-0.jpg": "be145367d82dab297434cd5f8f99a3f3fac90123533b6ac2eca36fd28ce0b20f"
+  },
+  "quality_checked_at": "2026-11-04T07:46:18.679055+00:00",
+  "quality_failed_checks": 0,
+  "next_action": "Review the local draft and quality result; approval must name the exact review hash. Do not publish."
+}

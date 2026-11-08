@@ -1,0 +1,6 @@
+# Default owner for everything in the repository
+* @khancam15
+
+# Security-sensitive paths
+/.github/ @khancam15
+/SECURITY.md @khancam15

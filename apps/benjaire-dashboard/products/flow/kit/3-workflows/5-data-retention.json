@@ -1,0 +1,252 @@
+{
+  "name": "Flow · 5 Data retention",
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "id": "e2b871bb-ebfa-446d-916a-2ea84d86b97b",
+      "name": "Daily at 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b87b7bee-5df6-4419-af69-86fcd162682a",
+      "name": "Load Client Settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_settings"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      }
+    },
+    {
+      "id": "53ea39fc-d05d-4cdb-99d3-217b3c0ced0e",
+      "name": "Retention On?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "3cf17a9c-72b1-4b94-bc85-86751f0c158c",
+              "leftValue": "={{ Number($json.retention_days || 0) }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "rightValue": 0
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c6d49a45-a92d-4883-9265-cebeee3a1f11",
+      "name": "Set Cutoff",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        -16
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59a8e410-e836-4e1e-9830-d855360b0a79",
+              "name": "cutoff",
+              "value": "={{ $now.minus({ days: Math.max(1, Number($json.retention_days)) }).toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b7799b1b-661d-497a-9203-03485451c380",
+      "name": "Delete Old Inquiries",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        -16
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_inquiries"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "received_at",
+              "condition": "lt",
+              "keyValue": "={{ $(\"Set Cutoff\").first().json.cutoff }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "467b7290-b4bb-4f2c-8db7-bb1586b9b3dc",
+      "name": "Delete Old Events",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        -16
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "flow_events"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "at",
+              "condition": "lt",
+              "keyValue": "={{ $(\"Set Cutoff\").first().json.cutoff }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "178fd833-2e8d-4ba8-86b8-39e9c4cf0268",
+      "name": "Sticky Note Retention",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -288
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 560,
+        "height": 240,
+        "content": "## Flow · 5 Data retention\nOptional. Every day at 3am in the workflow's time zone, deletes inquiries received more than retention_days ago and activity log entries older than that.\n\nOff until you set retention_days in flow_settings to a number above 0. Leave it at 0 or blank to keep everything. Deleted rows cannot be recovered."
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 3am": {
+      "main": [
+        [
+          {
+            "node": "Load Client Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Client Settings": {
+      "main": [
+        [
+          {
+            "node": "Retention On?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retention On?": {
+      "main": [
+        [
+          {
+            "node": "Set Cutoff",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Set Cutoff": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Inquiries": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -10,6 +10,7 @@ import { wake } from "../../lib/power";
 import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { marinaSite } from "./marinaPlan";
 import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
@@ -125,14 +126,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   const loop = useMemo(() => {
     const b = scene.bounds;
     const pad = 4.6;
-    const shore=scene.terraces.reduce((best,p)=>p.z+p.d>best.z+best.d?p:best,scene.terraces[0]);
-    const harborX=shore ? shore.x+shore.w/2 : (b.x0+b.x1)/2;
-    const shoreZ=shore ? shore.z+shore.d : b.z1;
-    const coastZ=Math.max(shoreZ,...scene.land.filter(r=>harborX>=r.x && harborX<=r.x+r.w).map(r=>r.z+r.d));
-    const pierZ=coastZ+1.8;
-    // Join the actual district promenade, rather than stopping at the cliff edge.
-    const sidewalks=scene.paving.filter(r=>harborX>=r.x && harborX<=r.x+r.w && r.z<shoreZ && r.z+r.d>shoreZ-2 && r.y>=TERRACE_H);
-    const cityWalkZ=sidewalks.length ? Math.max(...sidewalks.map(r=>Math.min(shoreZ-0.2,r.z+r.d/2))) : shoreZ-0.8;
+    const {x:harborX,pierZ,shoreZ,cityWalkZ}=marinaSite(scene,TERRACE_H);
     const curve = new THREE.CatmullRomCurve3(
       [
         [b.x0 - pad, b.z0 - pad],

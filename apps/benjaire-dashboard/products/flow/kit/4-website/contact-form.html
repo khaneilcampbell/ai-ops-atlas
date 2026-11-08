@@ -1,0 +1,46 @@
+<!--
+  Benjaire Flow example contact form.
+  Posts to the Cloudflare Worker (4-website/worker.js) routed at /api/contact.
+  Style it to match your site. Remove the two Turnstile lines if you do not use bot protection.
+-->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<form id="contact" action="/api/contact" method="post">
+  <label>Name <input name="name" required maxlength="120" autocomplete="name"></label>
+  <label>Email <input name="email" type="email" required maxlength="200" autocomplete="email"></label>
+  <label>Company <input name="company" maxlength="160" autocomplete="organization"></label>
+  <label>Phone <input name="phone" type="tel" maxlength="40" autocomplete="tel"></label>
+  <label>How can we help? <textarea name="message" required minlength="10" maxlength="5000" rows="6"></textarea></label>
+  <input type="hidden" name="source" value="website">
+
+  <!-- Spam trap: hidden from people, filled in by bots. Keep it empty and hidden. -->
+  <div style="position:absolute;left:-10000px" aria-hidden="true">
+    <label>Website <input name="website" tabindex="-1" autocomplete="off"></label>
+  </div>
+
+  <div class="cf-turnstile" data-sitekey="YOUR-TURNSTILE-SITE-KEY"></div>
+
+  <button type="submit">Send</button>
+  <p id="contact-status" role="status"></p>
+</form>
+
+<script>
+  // Optional: send without leaving the page. Without this script the form still
+  // works and the Worker redirects to THANK_YOU_URL.
+  document.getElementById("contact").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var form = e.currentTarget, status = document.getElementById("contact-status"), button = form.querySelector("button");
+    button.disabled = true;
+    status.textContent = "Sending...";
+    try {
+      var res = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { Accept: "application/json" } });
+      var data = await res.json();
+      if (data.ok) { form.reset(); status.textContent = "Thank you. We received your message and will reply soon."; }
+      else { status.textContent = data.error || "Something went wrong. Please try again."; }
+    } catch (err) {
+      status.textContent = "Something went wrong. Please try again.";
+    }
+    button.disabled = false;
+    if (window.turnstile) window.turnstile.reset();
+  });
+</script>
