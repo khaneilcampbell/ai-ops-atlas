@@ -390,9 +390,8 @@ function buildCity(layout: Layout): Scene3D {
         stairsOf(t),
         ...own(houses),
         ...own(kiosks).map((k) => ({ x: k.x, z: k.z, w: k.size, d: k.size })),
-        ...fountains
-          .filter((f) => inRect({ x: d.ox, z: d.oy, w: d.size, d: d.size }, f.x, f.z))
-          .map((f) => ({ x: f.x, z: f.z, w: FOUNTAIN_R * 2 * (f.k ?? 1), d: FOUNTAIN_R * 2 * (f.k ?? 1) })),
+        // Fountains are not obstacles: the street grid is laid first, and a fountain in a street's way
+        // moves to a lawn pocket below, the way a real city lays its streets before the decoration.
       ],
     });
   }
@@ -683,12 +682,14 @@ function buildCity(layout: Layout): Scene3D {
     const t=Math.max(0,Math.min(1,((x-a.gx)*dx+(z-a.gy)*dz)/(dx*dx+dz*dz||1)));
     return Math.hypot(x-a.gx-t*dx,z-a.gy-t*dz);
   };
+  // Within this distance of a district street's centre line a basin would sit on the road or its sidewalk.
+  const onBridgeRoad=(x:number,z:number,r:number)=>carBridges.some(br=>br.roads.some(road=>road.slice(1).some((b,i)=>segmentDistance(x,z,{gx:road[i][0],gy:road[i][1]},{gx:b[0],gy:b[1]})<r+ROAD_W/2+0.18)));
   for(const fountain of fountains) {
     const radius=FOUNTAIN_R*(fountain.k??1)+0.3;
     const blocked=(x:number,z:number)=>walks.some(w=>{
       const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
       return route.slice(1).some((b,i)=>segmentDistance(x,z,route[i],b)<radius);
-    });
+    })||onBridgeRoad(x,z,radius);
     if(!blocked(fountain.x,fountain.z))continue;
     const terrace=terraces.find(t=>inRect(t,fountain.x,fountain.z));
     if(!terrace)continue;
@@ -704,7 +705,7 @@ function buildCity(layout: Layout): Scene3D {
   const safeFountains=fountains.filter(f=>walks.every(w=>{
     const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
     return route.slice(1).every((b,i)=>segmentDistance(f.x,f.z,route[i],b)>=FOUNTAIN_R*(f.k??1)+0.16);
-  }));
+  })&&!onBridgeRoad(f.x,f.z,FOUNTAIN_R*(f.k??1)+0.08));
 
   // Keep the marina stair corridor free, including trees on the lower coastal shelf.
   const harborTerrace=terraces.reduce<(typeof terraces)[number] | undefined>((best,t)=>!best || t.z+t.d>best.z+best.d?t:best,undefined);
