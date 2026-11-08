@@ -99,3 +99,25 @@ test.describe("phone", () => {
     await check(page, "phone-agents-manage");
   });
 });
+
+// The phone tab bar: four tabs and More, nothing off-screen; More reaches every other section.
+test.describe("phone tab bar", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("fits, and More opens the rest", async ({ page }) => {
+    await openAtlas(page);
+    const bar = await page.locator(".sidebar").evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth }));
+    expect(bar.sw).toBeLessThanOrEqual(bar.cw);
+    await expect(page.locator(".sidebar .nav-item")).toHaveCount(5);
+    const ci = await page.locator(".header .ci-pill").boundingBox();
+    expect(ci && ci.x + ci.width).toBeLessThanOrEqual(390);
+    await page.getByRole("button", { name: "More sections" }).click();
+    await settle(page, 1);
+    await expect(page.locator(".more-status")).toContainText("repositories loaded");
+    await check(page, "phone-more");
+    await page.locator(".more-list button", { hasText: "Settings" }).click();
+    await settle(page, 1);
+    await expect(page.locator(".more-sheet")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "More sections" })).toContainText("Settings");
+  });
+});
