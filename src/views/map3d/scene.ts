@@ -469,18 +469,21 @@ function buildCity(layout: Layout): Scene3D {
       kiosks.some((k) => k.projectId === d.project.id && Math.abs(k.x - x) < k.size / 2 + 0.3 && Math.abs(k.z - z) < k.size / 2 + 0.3) ||
       pavedIn.get(d.project.id)!.some((p) => inRect(p, x, z, 0.22)) ||
       Math.hypot(x - cx, z - cz) < d.hq.size * 0.9;
-    for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(d.size * 3.4))) {
+    // The Intelligence Hub's widened district keeps the planting it had at 5 across, spread over the
+    // bigger lawn: a tree costs over a thousand triangles a frame and the map is at its budget.
+    const planted = d.project.id === "intelligence-hub" ? 2.5 : d.size;
+    for (const s of treeSpots(d.project.id, d.ox - 0.15, d.oy - 0.15, d.size + 0.3, Math.round(planted * 3.4))) {
       if (blocked(s.gx, s.gy)) continue;
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.24 + (s.r - 7) * 0.025, kind: pick < 0.2 ? "cone" : pick > 0.95 ? "blossom" : "round" });
     }
-    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(d.size * 2.2))) {
+    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 2.2))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
     }
     // A widened district's extra land becomes planted grounds: rows of trees over the open lawn,
     // clear of every road, path and plaza, like a tree-lined city block (see DISTRICT_MIN_SIZE).
-    if (DISTRICT_MIN_SIZE[d.project.id]) for (const [x, z] of districtGrove(d, cx, cz)) {
+    if (DISTRICT_MIN_SIZE[d.project.id] && d.project.id !== "intelligence-hub") for (const [x, z] of districtGrove(d, cx, cz)) {
       if (blocked(x, z) || paving.some((p) => inRect(p, x, z, 0.42)) || trees.some((t) => Math.hypot(t.x - x, t.z - z) < 0.5)) continue;
       trees.push({ x, y: top, z, s: 0.22 + hash(`${x.toFixed(2)}:${z.toFixed(2)}:g`) * 0.06, kind: hash(`${x.toFixed(2)}:${z.toFixed(2)}`) > 0.9 ? "blossom" : "round" });
     }

@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
-import {layoutMap} from '../mapLayout';
+import {DISTRICT_MIN_SIZE,districtSize,layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,FLOOR_H} from './scene';
 import {headquartersEnvelope} from './financialPlan';
 import {INTELLIGENCE_HUB,faces,hubOutline,intelligenceHubHeight,intelligenceHubTop,offsetPolygon,planIntelligenceHub} from './intelligenceHubPlan';
@@ -13,6 +13,22 @@ const tower=scene.towers.find(t=>t.projectId===INTELLIGENCE_HUB.projectId)!;
 const plan=planIntelligenceHub(tower.size,tower.customHeight!);
 
 describe('Intelligence Hub',()=>{
+ it('has about twice the land of a usual district, and a building widened to match, in every grouping',()=>{
+  expect(DISTRICT_MIN_SIZE[INTELLIGENCE_HUB.projectId]).toBe(7.5);
+  const usual=districtSize(0);
+  for(const grouping of ['none','district','status','tag'] as GroupBy[]){
+   const L=layoutMap(catalog,[],grouping),d=L.districts.find(d=>d.project.id===INTELLIGENCE_HUB.projectId)!;
+   expect((d.size*d.size)/(usual*usual)).toBeGreaterThanOrEqual(2);
+   // Same rule as every district without kiosks: the headquarters is a third of the district's width.
+   expect(d.hq.size).toBeCloseTo(d.size*.34);
+   const t=buildScene(L).towers.find(t=>t.projectId===INTELLIGENCE_HUB.projectId)!;
+   expect(t.size/d.size).toBeCloseTo(tower.size/7.5,5);
+   for(const e of L.districts)if(e!==d){
+    const apart=d.ox+d.size<=e.ox||e.ox+e.size<=d.ox||d.oy+d.size<=e.oy||e.oy+e.size<=d.oy;expect(apart,`${e.project.id}`).toBe(true);
+   }
+  }
+ });
+
  it('stands with the Financial District, under its shortest tower and under Atlas HQ',()=>{
   const reference=scene.financial!.referenceHeight;
   expect(tower.customHeight).toBeCloseTo(intelligenceHubHeight(reference));

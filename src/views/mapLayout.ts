@@ -134,9 +134,12 @@ export function districtSize(lotCount: number, projectId?: string) {
 /**
  * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
  * and its grounds. The Commerce district holds the teardrop tower and its garden podium
- * (KC, 2026-11-01: "expand district landscape to fit design"). Sizes stay on the 2.5 grid.
+ * (KC, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
+ * about twice its usual land (7.5 across, from 5: 2.25x the area, the nearest step on the grid),
+ * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
+ * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
-export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10 };
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5 };
 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
