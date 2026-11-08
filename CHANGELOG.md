@@ -1,3 +1,4 @@
+- 2026-11-08 · When Atlas can't reach GitHub, the header now says how many repositories failed to sync, and hovering it shows why, instead of quietly showing old data as loaded (#PR)
 # Changelog
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
