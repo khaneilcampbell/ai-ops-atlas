@@ -35,4 +35,4 @@ tzdata==2026.5
 urllib3==2.8.0
 uvicorn==0.54.0
 watchdog==7.0.0
-websockets==17.3
+websockets==17.4
