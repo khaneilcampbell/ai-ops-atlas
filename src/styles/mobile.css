@@ -212,3 +212,7 @@
   .more-list button span:not(.more-go) { flex: 1; }
   .more-go { font-size: 20px; opacity: 0.5; }
 }
+
+/* Phone browser only: the Add to Home Screen tip (InstallHint). */
+.install-hint { display: flex; align-items: center; gap: 10px; margin: 10px 14px 0; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 12px; background: var(--gold-soft); color: var(--ink); font-size: 13.5px; line-height: 1.4; }
+.main:has(.projects-host:not(.inactive)) .install-hint { position: absolute; top: 64px; left: 0; right: 0; z-index: 5; }

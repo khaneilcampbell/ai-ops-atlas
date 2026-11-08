@@ -17,7 +17,7 @@ export interface Prep {
  * skips Tauri (Keychain, updater, vault) and reads GitHub anonymously, which we intercept.
  */
 export async function openAtlas(page: Page, prep: Prep = {}) {
-  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, ...prep.storage };
+  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, installHintDismissed: true, ...prep.storage };
   await page.addInitScript((entries) => {
     if (sessionStorage.getItem("atlas:visual-seeded")) return;
     localStorage.clear();

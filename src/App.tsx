@@ -30,6 +30,7 @@ import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
+import { InstallHint } from "./components/InstallHint";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -138,6 +139,7 @@ export default function App() {
 
       <main className="main">
         <StewardNotice />
+        <InstallHint />
         {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
         <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>
           <ErrorBoundary><MapView active={view === "map"}/></ErrorBoundary>

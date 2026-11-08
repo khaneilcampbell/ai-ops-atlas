@@ -121,3 +121,21 @@ test.describe("phone tab bar", () => {
     await expect(page.getByRole("button", { name: "More sections" })).toContainText("Settings");
   });
 });
+
+// A phone browser (not the Home Screen app) gets the Add to Home Screen tip once.
+test.describe("phone install tip", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("shows, and stays hidden after dismissing", async ({ page }) => {
+    await openAtlas(page, { storage: { installHintDismissed: false } });
+    await goTo(page, "Mission");
+    await expect(page.locator(".install-hint")).toContainText("Add to Home Screen");
+    await expect(page.getByRole("link", { name: /Re-run on GitHub/ }).first()).toBeVisible();
+    await check(page, "phone-install-tip");
+    await page.getByRole("button", { name: "Hide this tip" }).click();
+    await expect(page.locator(".install-hint")).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator(".nav-item").first()).toBeVisible();
+    await expect(page.locator(".install-hint")).toHaveCount(0);
+  });
+});
