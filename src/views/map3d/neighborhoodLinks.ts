@@ -1,5 +1,6 @@
+import {openLot} from './openLot';
 import type {Rect,Scene3D} from './scene';
-import type {Box,Pt} from './roads';
+import {pathClear,type Box,type Pt} from './roads';
 import type {DistrictConnection} from './connections';
 import {CITY_SPACING,cityEnvelope,overlapsParcel} from './citySpacing';
 import {routeAround} from './routing';
@@ -32,7 +33,7 @@ function shortLandGaps(paths:Pt[][],land:Rect[]):Rect[]{
 }
 /**
  * Room for the Atlas Marketplace: the boulevard runs this much further east of the city, and the
- * green between it and the Skyline park reaches north to the city's terraces (or this far, if none),
+ * green between it and the open lot reaches north to the city's terraces (or this far, if none),
  * so the mall's lot is about twice the Atlas Hills mansion's footprint and joins the city.
  */
 /** minWidth: park edge to boulevard centre when the catalog shrinks, room for the full-size mall (MALL.maxW) plus its gaps. */
@@ -46,6 +47,21 @@ export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:B
   .sort((a,b)=>Math.hypot(a[0]-target[0],a[1]-target[1])-Math.hypot(b[0]-target[0],b[1]-target[1]))[0];
  return walk&&{road,walk};
 }
+/**
+ * Where a building stands across the boulevard's last stretch (the wider Intelligence Hub district puts its tower at the
+ * city street's end), routeAround steps round it in two short jogs beside the plaza, under the pedestrian walk. End the
+ * boulevard at that building's edge instead, straight on (KC, 2026-11-08): the plaza lane round the headquarters, which
+ * the street graph already joins, carries traffic the last few metres to the city street.
+ */
+export function straighten(road:Pt[]|undefined,start:Pt,east:number,target:Pt,obstacles:Box[],margin:number):Pt[]|undefined{
+ if(!road||road.length<=5)return road;
+ const [lo,hi]=[Math.min(east,target[0]),Math.max(east,target[0])];
+ const across=obstacles.filter(b=>Math.abs(b.z-target[1])<b.d/2+margin&&b.x+b.w/2>lo&&b.x-b.w/2<hi);
+ if(!across.length)return road;
+ const edge=east>target[0]?Math.max(...across.map(b=>b.x+b.w/2+margin)):Math.min(...across.map(b=>b.x-b.w/2-margin));
+ const pts:Pt[]=[start,[east,start[1]],[east,target[1]],[edge,target[1]]];
+ return pathClear(pts,obstacles,margin)?pts.filter((p,k)=>!k||Math.hypot(p[0]-pts[k-1][0],p[1]-pts[k-1][1])>1e-9):road;
+}
 /** Adjacent neighborhood streets and public green space use the same routes as the meshes. */
 export function planNeighborhoodLinks(s:Input){
  const links:DistrictConnection[]=[],walks:Pt[][]=[],candidates:Rect[]=[],trees:Pt[]=[],raised:Rect[]=[],core=cityEnvelope(s.coreLand),h=s.marketplace??s.hills,d=cityEastAccess(s,s.obstacles);
@@ -55,27 +71,28 @@ export function planNeighborhoodLinks(s:Input){
   return out;
  };
  if(core&&h&&d){
-  const sky=s.parks.find(p=>p.label==='Skyline'),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
+  const sky=openLot(s.parks),mallRoom=!!sky&&h.z>=sky.z+sky.d&&h.z-sky.z-sky.d<2;
   const start:Pt=[h.x+COMMUNITY.streetX,h.z+1.5],target=d.road,east=Math.max(core.x+core.w+.9,start[0],mallRoom?sky.x+sky.w+MALL_LOT.minWidth-MALL_LOT.east:-Infinity)+(mallRoom?MALL_LOT.east:0),walkX=east-.9;
-  const road=route([start,[east,start[1]],[east,target[1]],target],.4);
+  const road=straighten(route([start,[east,start[1]],[east,target[1]],target],.4),start,east,target,s.obstacles,.4);
   const walk=route([[h.x+HILLS.walkGateX,h.z+.5],[walkX,h.z+.5],[walkX,d.walk[1]],d.walk],.3);
   if(road&&walk){
    links.push({id:s.marketplace?'marketplace-city-boulevard':'hills-city-boulevard',road,walk});
    // A narrow land-backed local boulevard, not another elevated highway.
    candidates.push({x:east-CITY_SPACING.causewayWidth/2,z:Math.min(start[1],target[1]),w:CITY_SPACING.causewayWidth,d:Math.abs(start[1]-target[1])});
-   const skyline=s.parks.find(p=>p.label==='Skyline');
-   if(skyline&&h.z>=skyline.z+skyline.d&&h.z-skyline.z-skyline.d<2&&walkX>skyline.x+skyline.w+2){
-    const x0=skyline.x+skyline.w,x1=east+CITY_SPACING.causewayWidth/2;
-    // The green runs north until it meets the city's own terraces, so the Marketplace lot, the Skyline
-    // park and the city are one landmass with no channel between them.
-    const above=s.coreLand.filter(r=>r.x<x1&&r.x+r.w>x0+1.5&&r.z+r.d<=skyline.z+.01).map(r=>r.z+r.d);
-    const top=mallRoom?(above.length?Math.max(...above):skyline.z-MALL_LOT.north):skyline.z;
+   const lot=sky;
+   if(lot&&h.z>=lot.z+lot.d&&h.z-lot.z-lot.d<2&&walkX>lot.x+lot.w+2){
+    const x0=lot.x+lot.w,x1=east+CITY_SPACING.causewayWidth/2;
+    // The green runs north until it meets the city's own terraces, so the Marketplace lot, the open
+    // lot and the city are one landmass with no channel between them.
+    const above=s.coreLand.filter(r=>r.x<x1&&r.x+r.w>x0+1.5&&r.z+r.d<=lot.z+.01).map(r=>r.z+r.d);
+    const top=mallRoom?(above.length?Math.max(...above):lot.z-MALL_LOT.north):lot.z;
     const green={x:x0,z:top,w:x1-x0,d:h.z-top};
     candidates.push(green);
     // Low city land inside the green (old channel edges) is lifted to the green's height, so the
-    // Skyline park, the Marketplace lot and the city meet level, with no walls or gaps between them.
+    // open lot, the Marketplace lot and the city meet level, with no walls or gaps between them.
     for(const r of s.land){const x0=Math.max(r.x,green.x),x1=Math.min(r.x+r.w,green.x+green.w),z0=Math.max(r.z,green.z),z1=Math.min(r.z+r.d,green.z+green.d);if(x1-x0>.001&&z1-z0>.001)raised.push({x:x0,z:z0,w:x1-x0,d:z1-z0});}
-    const promenade:Pt=[skyline.x+skyline.w/2+5.4,skyline.z+skyline.d/2+3.9],gate:Pt=[h.x+HILLS.walkGateX,h.z+.5];
+    // The walk starts near the open lot's south-east corner, where Skyline's promenade ended.
+    const promenade:Pt=[lot.x+lot.w/2+5.4,lot.z+lot.d/2+3.9],gate:Pt=[h.x+HILLS.walkGateX,h.z+.5];
     walks.push([promenade,[walkX,promenade[1]]],[[gate[0],promenade[1]],gate]);
     for(let x=green.x+2.2;x<walkX-1;x+=4)for(let z=green.z+2;z<green.z+green.d-1;z+=4){const p:Pt=[x,z];if([...walks,walk,road].every(path=>distanceToRoad(p,path)>1)&&!s.obstacles.some(b=>Math.abs(x-b.x)<b.w/2+1&&Math.abs(z-b.z)<b.d/2+1))trees.push(p);}
    }

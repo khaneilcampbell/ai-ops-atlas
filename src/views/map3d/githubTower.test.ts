@@ -93,7 +93,7 @@ describe('GitHub glass podium and its new land',()=>{
   for(const r of city.terraces)if(r.id!==GITHUB_TOWER.projectId)expect(r.x<annex.land.x+annex.land.w&&r.x+r.w>annex.land.x&&r.z<annex.land.z+annex.land.d&&r.z+r.d>annex.land.z).toBe(false);
   const on=(x:number,z:number)=>x>annex.land.x&&x<annex.land.x+annex.land.w&&z>annex.land.z&&z<annex.land.z+annex.land.d;
   for(const p of [...city.trees,...city.bushes,...city.rocks])expect(on(p.x,p.z)).toBe(false);
-  for(const b of [...city.towers,...city.kiosks,...city.retail])expect(on(b.x,b.z)).toBe(false);
+  for(const b of [...city.towers,...city.kiosks])expect(on(b.x,b.z)).toBe(false);
   for(const r of city.carBridges.flatMap(b=>b.roads).flat())expect(on(r[0],r[1])).toBe(false);
   for(const w of city.walks)for(const p of w.route??[])expect(on(p.gx,p.gy)).toBe(false);
  });

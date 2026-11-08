@@ -42,7 +42,7 @@ export function DistrictLife({scene,g,m,moving}:{scene:Scene3D;g:ReturnType<type
  useFrame((_,dt)=>{if(!enabled||document.visibilityState==='hidden')return;elapsed.current+=Math.min(dt,.1);place(elapsed.current,dt);});
  return <group name="district-life-simulation">
   <instancedMesh name="district-visitors" ref={bodies} args={[g.cyl,m.plain,plan.visitors.length]} castShadow frustumCulled={false} raycast={()=>null}/>
-  <instancedMesh ref={heads} args={[g.ball,m.plain,plan.visitors.length]} frustumCulled={false} raycast={()=>null}/>
+  <instancedMesh ref={heads} args={[g.bead,m.plain,plan.visitors.length]} frustumCulled={false} raycast={()=>null}/>
   <instancedMesh ref={clubs} args={[g.box,m.plain,plan.visitors.length]} frustumCulled={false} raycast={()=>null}/>
   <instancedMesh name="visitor-entrance-doors" ref={doors} args={[g.box,glass,plan.doors.length*2]} frustumCulled={false} raycast={()=>null}/>
   <instancedMesh ref={handles} args={[g.box,m.metal,plan.doors.length*2]} frustumCulled={false} raycast={()=>null}/>
