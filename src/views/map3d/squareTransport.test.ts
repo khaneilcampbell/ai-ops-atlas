@@ -27,7 +27,7 @@ describe('square city with three-stop passenger rail',()=>{
   expect(airport.route[airport.route.length-2][1]).toBeCloseTo(airport.financial[1]);
   const runway=airportPoint(a,AIRPORT_LAYOUT.runwayX,0)[0];
   for(const p of airport.route)expect(Math.abs(p[0]-runway)).toBeGreaterThan(AIRPORT_LAYOUT.runwayWidth/2+1);
-  const boxes=[...s.towers,...s.kiosks,...s.retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
+  const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
   expect(pathClear(airport.route,boxes,.5)).toBe(true);expect(pathClear(r.airportWalk!.filter(p=>p[1]===0).map(p=>[p[0],p[2]]),boxes,.15)).toBe(true);
  });
  it('runs a continuous round trip with a 15-second dwell and closed doors while moving',()=>{

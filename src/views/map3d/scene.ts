@@ -1,3 +1,4 @@
+import {planRingRoad} from './ringRoad';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
@@ -8,6 +9,7 @@ import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {sizeIntelligenceHub} from "./intelligenceHubPlan";
+import {sizePortfolioSite} from "./portfolioSitePlan";
 import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
@@ -28,6 +30,7 @@ import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
+import { OPEN_LOT_LABEL, openLot } from "./openLot";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -51,7 +54,7 @@ const BROOK_W = 0.55;
 export const FLOOR_H = 0.32 * CITY_SCALE.hq.storey;
 /** A fountain's basin radius at full size. */
 export const FOUNTAIN_R = 0.475;
-/** Most the Marketplace site may sit below the Skyline park (map units); keeps the lot beside the park. */
+/** Most the Marketplace site may sit below the open lot (map units); keeps the two side by side. */
 const MARKETPLACE_PARK_GAP = 1.125;
 
 export interface Rect {
@@ -171,7 +174,7 @@ export interface Scene3D {
   dealership?:DealershipPlan;
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
-  /** Atlas Marketplace mall on the open lot beside the Skyline park. */
+  /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -210,7 +213,6 @@ export interface Scene3D {
   parks: Park[];
   houses: House[];
   kiosks: Kiosk[];
-  retail: Kiosk[];
   towers: Tower[];
   strays: StrayBuilding[];
   trees: Tree[];
@@ -269,7 +271,6 @@ function buildCity(layout: Layout): Scene3D {
   const fountains: Scene3D["fountains"] = [];
   const bollards: Point[] = [];
   const parks: Park[] = [];
-  const retail: Kiosk[] = [];
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
@@ -390,9 +391,8 @@ function buildCity(layout: Layout): Scene3D {
         stairsOf(t),
         ...own(houses),
         ...own(kiosks).map((k) => ({ x: k.x, z: k.z, w: k.size, d: k.size })),
-        ...fountains
-          .filter((f) => inRect({ x: d.ox, z: d.oy, w: d.size, d: d.size }, f.x, f.z))
-          .map((f) => ({ x: f.x, z: f.z, w: FOUNTAIN_R * 2 * (f.k ?? 1), d: FOUNTAIN_R * 2 * (f.k ?? 1) })),
+        // Fountains are not obstacles: the street grid is laid first, and a fountain in a street's way
+        // moves to a lawn pocket below, the way a real city lays its streets before the decoration.
       ],
     });
   }
@@ -495,46 +495,11 @@ function buildCity(layout: Layout): Scene3D {
       for (const s of p.strays) strays.push({ key: `repo:${s.name}`, name: s.name, x: s.gx + s.size / 2, z: s.gy + s.size / 2, size: s.size * 1.2, height: 0.9 + hash(s.name) * 0.7 });
       continue;
     }
+    // The open lot is plain level lawn, ready for the next build (KC, 2026-11-08: the Skyline
+    // residences, shops and wheel that stood here were removed to make space). The Marketplace, the
+    // airport road and the railway still take their places from it.
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
-    const cx = p.ox + p.w / 2;
-    const cz = p.oy + p.h / 2;
-    parks.push({ id: p.id, label: "Skyline", x: p.ox, z: p.oy, w: p.w, d: p.h });
-    // Stagger the tall offices behind the low storefronts, with an open central lobby view.
-    const tenants = [
-      { name: "Reasoning Lab", dx: -4.3, dz: -2.7, size: 1.4 },
-      { name: "Model Lab", dx: 4.3, dz: -2.7, size: 1.1 },
-      { name: "Zara", dx: 4.4, dz: 0.5, size: 0.85 },
-      { name: "Halden Branch", dx: -4.4, dz: 0.5, size: 1.2 },
-      { name: "Smashburger", dx: -3.2, dz: 3, size: 0.85 },
-      { name: "Starbucks", dx: -0.8, dz: 3, size: 0.85 },
-      { name: "Chipotle", dx: 2.5, dz: 3, size: 0.85 },
-    ];
-    for (const tenant of tenants) {
-      const x = cx + tenant.dx, z = cz + tenant.dz;
-      retail.push({ key: `retail:${p.id}:${tenant.name}`, projectId: p.id, name: tenant.name, users: [], x, z, size: tenant.size * CITY_SCALE.shop, canopy: "#c9a35a" });
-      const promenadeZ = tenant.dz < 0 ? cz - 1.2 : cz + 3.9;
-      paving.push(strip(x, z + tenant.size * CITY_SCALE.shop * 0.4, x, promenadeZ, 0.32, top));
-    }
-    for (const side of [-1, 1]) {
-      const x = cx + side * 5.4;
-      paving.push(strip(x, cz - 1.2, x, cz + 3.9, 0.4, top));
-    }
-    paving.push(strip(cx-5.4,cz-1.2,cx+5.4,cz-1.2,0.4,top),strip(cx-5.4,cz+3.9,cx+5.4,cz+3.9,0.4,top));
-    // Rear observation-wheel plaza connects to the promenade without crossing the lobby.
-    paving.push(strip(cx + 2.15, cz - 3.5, cx + 2.15, cz - 1.2, 0.4, top));
-    paving.push(strip(cx, cz - 3.5, cx + 2.15, cz - 3.5, 0.4, top));
-    // A small paved square with a fountain, and a pond beside it.
-    paving.push({ x: cx - 1.1, z: cz - 1.1, w: 2.2, d: 2.2, y: top, h: 0.03 });
-    fountains.push({ x: cx - 1.5, z: cz + 1.5, k: 0.45 });
-    ponds.push({ x: cx + 1.05, y: top, z: cz + 2.05, r: 0.28 });
-    for (const s of treeSpots(p.id, p.ox + 0.2, p.oy + 0.2, p.w - 0.4, Math.round(p.w * 3), p.h - 0.4)) {
-      if (Math.abs(s.gx-cx) < 2.3 && Math.abs(s.gy-(cz-3.5)) < 1.05) continue;
-      if (Math.abs(s.gx - cx) < 1.95 && Math.abs(s.gy - cz) < 1.4) continue;
-      if (retail.some(k => k.projectId === p.id && Math.abs(k.x-s.gx) < k.size/2+0.4 && Math.abs(k.z-s.gy) < k.size/2+0.5)) continue;
-      if (paving.some(q => inRect(q, s.gx, s.gy, 0.2))) continue;
-      if (ponds.some((q) => Math.hypot(q.x - s.gx, q.z - s.gy) < q.r + 0.3)) continue;
-      trees.push({ x: s.gx, y: top, z: s.gy, s: 0.26, kind: hash(`${s.gx}:${s.gy}`) > 0.9 ? "blossom" : "round" });
-    }
+    parks.push({ id: p.id, label: OPEN_LOT_LABEL, x: p.ox, z: p.oy, w: p.w, d: p.h });
   }
 
   // Level pedestrian bridges between terraces.
@@ -545,18 +510,6 @@ function buildCity(layout: Layout): Scene3D {
     const a = x ? w.a.gx + TERRACE_M : w.a.gy + TERRACE_M;
     const b = x ? w.b.gx - TERRACE_M : w.b.gy - TERRACE_M;
     const c = x ? w.a.gy : w.a.gx;
-    // Extend park-side bridge landings into Skyline's front promenade, around its wings.
-    for (const [id,endpoint] of [[w.from,x?{gx:a,gy:c}:{gx:c,gy:a}],[w.to,x?{gx:b,gy:c}:{gx:c,gy:b}]] as const) {
-      const park=parks.find(p=>p.id===id);
-      if(!park) continue;
-      const cx=park.x+park.w/2,cz=park.z+park.d/2;
-
-      // Keep each bridge approach straight on arrival; turn only at the front promenade.
-      const S=CITY_SCALE.skyline,buildings=[{gx:cx-0.75*S,gy:cz-0.475*S,size:1.5*S},{gx:cx-1.695*S,gy:cz-0.475*S,size:0.95*S},{gx:cx+0.745*S,gy:cz-0.475*S,size:0.95*S},...retail.filter(k=>k.projectId===id).map(k=>({gx:k.x-k.size/2,gy:k.z-k.size/2,size:k.size}))];
-      const path=toolWorkflowRoads(buildings[0],buildings.slice(1),[endpoint,{gx:cx,gy:cz+1.35}])[0]??[];
-      for(let j=1;j<path.length;j++) paving.push(strip(path[j-1].gx,path[j-1].gy,path[j].gx,path[j].gy,0.4,top));
-      if(path.length>1) walks.push({x0:endpoint.gx,z0:endpoint.gy,x1:cx,z1:cz+1.35,y:top,route:path});
-    }
     // A level pedestrian boardwalk joins the terraces independently of the road bridge.
     walks.push(x ? { x0: a, z0: c, x1: b, z1: c, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) } : { x0: c, z0: a, x1: c, z1: b, y: top, bridge: true, route: pedestrianJourneys.get(`${w.from}:${w.to}`) });
   }
@@ -565,20 +518,6 @@ function buildCity(layout: Layout): Scene3D {
   for (const path of paving) {
     if (Math.min(path.w, path.d) > 0.4 || Math.max(path.w, path.d) < 0.55 || path.y < top - 0.05) continue;
     walks.push({ x0: path.x + (path.w > path.d ? 0.08 : path.w / 2), z0: path.z + (path.d > path.w ? 0.08 : path.d / 2), x1: path.x + (path.w > path.d ? path.w - 0.08 : path.w / 2), z1: path.z + (path.d > path.w ? path.d - 0.08 : path.d / 2), y: top });
-  }
-
-  // Shop visitors leave the promenade, enter through the center door, and return after a visit.
-  for(const shop of retail) {
-    const park=parks.find(p=>p.id===shop.projectId)!;
-    const startZ=shop.z<park.z+park.d/2 ? park.z+park.d/2-1.2 : park.z+park.d/2+3.9;
-    walks.push({x0:shop.x,z0:startZ,x1:shop.x,z1:shop.z+0.12,y:top,shopEntrance:true});
-  }
-
-  // Residents approach the lobby, disappear inside, then return to the promenade.
-  for (const park of parks) {
-    const x=park.x+park.w/2,z=park.z+park.d/2;
-    paving.push(strip(x,z+0.25,x,z+1.2,0.5,top),strip(x,z+1.2,x+0.95,z+1.2,0.4,top),strip(x+0.95,z+1.2,x+0.95,park.z+park.d,0.4,top));
-    walks.push({x0:x+0.95,z0:park.z+park.d-0.15,x1:x,z1:z+0.25,y:top,shopEntrance:true,route:[{gx:x+0.95,gy:park.z+park.d-0.15},{gx:x+0.95,gy:z+1.2},{gx:x,gy:z+1.2},{gx:x,gy:z+0.25}]});
   }
 
   // Brooks run along the gaps between shelf rows, under small bridges, and fall into the sea at the shore.
@@ -686,18 +625,20 @@ function buildCity(layout: Layout): Scene3D {
     const t=Math.max(0,Math.min(1,((x-a.gx)*dx+(z-a.gy)*dz)/(dx*dx+dz*dz||1)));
     return Math.hypot(x-a.gx-t*dx,z-a.gy-t*dz);
   };
+  // Within this distance of a district street's centre line a basin would sit on the road or its sidewalk.
+  const onBridgeRoad=(x:number,z:number,r:number)=>carBridges.some(br=>br.roads.some(road=>road.slice(1).some((b,i)=>segmentDistance(x,z,{gx:road[i][0],gy:road[i][1]},{gx:b[0],gy:b[1]})<r+ROAD_W/2+0.18)));
   for(const fountain of fountains) {
     const radius=FOUNTAIN_R*(fountain.k??1)+0.3;
     const blocked=(x:number,z:number)=>walks.some(w=>{
       const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
       return route.slice(1).some((b,i)=>segmentDistance(x,z,route[i],b)<radius);
-    });
+    })||onBridgeRoad(x,z,radius);
     if(!blocked(fountain.x,fountain.z))continue;
     const terrace=terraces.find(t=>inRect(t,fountain.x,fountain.z));
     if(!terrace)continue;
     let moved=false;
     for(let z=terrace.z+0.7;z<terrace.z+terrace.d-0.7&&!moved;z+=0.4)for(let x=terrace.x+0.7;x<terrace.x+terrace.w-0.7;x+=0.4){
-      if(blocked(x,z)||paving.some(p=>inRect(p,x,z,radius))||houses.some(h=>Math.abs(h.x-x)<h.w/2+radius&&Math.abs(h.z-z)<h.d/2+radius)||kiosks.some(k=>Math.abs(k.x-x)<k.size/2+radius&&Math.abs(k.z-z)<k.size/2+radius)||towers.some(t=>Math.abs(t.x-x)<t.size/2+radius&&Math.abs(t.z-z)<t.size/2+radius)||retail.some(k=>Math.abs(k.x-x)<k.size/2+radius&&Math.abs(k.z-z)<k.size/2+radius)||trees.some(t=>Math.hypot(t.x-x,t.z-z)<radius+0.3))continue;
+      if(blocked(x,z)||paving.some(p=>inRect(p,x,z,radius))||houses.some(h=>Math.abs(h.x-x)<h.w/2+radius&&Math.abs(h.z-z)<h.d/2+radius)||kiosks.some(k=>Math.abs(k.x-x)<k.size/2+radius&&Math.abs(k.z-z)<k.size/2+radius)||towers.some(t=>Math.abs(t.x-x)<t.size/2+radius&&Math.abs(t.z-z)<t.size/2+radius)||trees.some(t=>Math.hypot(t.x-x,t.z-z)<radius+0.3))continue;
       fountain.x=x;fountain.z=z;moved=true;break;
     }
   }
@@ -707,7 +648,7 @@ function buildCity(layout: Layout): Scene3D {
   const safeFountains=fountains.filter(f=>walks.every(w=>{
     const route=w.route??[{gx:w.x0,gy:w.z0},{gx:w.x1,gy:w.z1}];
     return route.slice(1).every((b,i)=>segmentDistance(f.x,f.z,route[i],b)>=FOUNTAIN_R*(f.k??1)+0.16);
-  }));
+  })&&!onBridgeRoad(f.x,f.z,FOUNTAIN_R*(f.k??1)+0.08));
 
   // Keep the marina stair corridor free, including trees on the lower coastal shelf.
   const harborTerrace=terraces.reduce<(typeof terraces)[number] | undefined>((best,t)=>!best || t.z+t.d>best.z+best.d?t:best,undefined);
@@ -717,7 +658,7 @@ function buildCity(layout: Layout): Scene3D {
       if(Math.abs(tree.x-dockX)>0.9 || tree.z<edgeZ-1 || tree.z>edgeZ+3) continue;
       for(const offset of [-1.4,1.4,-2,2,-2.6,2.6,-3.2,3.2]) {
         const x=dockX+offset,z=edgeZ-0.9;
-        if(x<h.x+0.5 || x>h.x+h.w-0.5 || paving.some(p=>inRect(p,x,z,0.5)) || retail.some(k=>Math.hypot(k.x-x,k.z-z)<1) || trees.some(t=>t!==tree&&Math.hypot(t.x-x,t.z-z)<0.7)) continue;
+        if(x<h.x+0.5 || x>h.x+h.w-0.5 || paving.some(p=>inRect(p,x,z,0.5)) || trees.some(t=>t!==tree&&Math.hypot(t.x-x,t.z-z)<0.7)) continue;
         tree.x=x;tree.z=z;tree.y=top;
         break;
       }
@@ -725,7 +666,7 @@ function buildCity(layout: Layout): Scene3D {
   }
 
   const cityLand=land.slice();
-  const airport = planAirport(land, paving, parks.find(p=>p.label==="Skyline"));
+  const airport = planAirport(land, paving, openLot(parks));
   // Align the airport north edge with the future Financial waterfront, before planning neighbors.
   if(airport){airport.publicViaZ=undefined;airport.z=Math.min(...cityLand.map(r=>r.z))-AIRPORT_LAYOUT.landZ;}
   if (airport) {
@@ -736,7 +677,7 @@ function buildCity(layout: Layout): Scene3D {
   }
   // The bigger stadium lot must also keep clear of the airport's public road and walk.
   const airportAccess=airport?(()=>{const f=airportPoint(airport,-1.5,6),x0=Math.min(airport.accessX,f[0])-.9,x1=Math.max(airport.accessX,f[0])+.9;return [{x:x0,z:airport.accessZ-.9,w:x1-x0,d:1.8+.6}];})():[];
-  const profile=terraces.find(t=>t.id==="github-profile"),blocks=()=>[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))];
+  const profile=terraces.find(t=>t.id==="github-profile"),blocks=()=>[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))];
   // Centred in its open land when its roads and walks can still reach it; otherwise beside GitHub Profile.
   let stadium=planStadium([...land,...airportAccess],paving,profile);
   if(stadium&&districtConnections(airport,stadium,blocks()).some(l=>!l.road.length||!l.walk.length))stadium=planStadium([...land,...airportAccess],paving,profile,false);
@@ -750,16 +691,17 @@ function buildCity(layout: Layout): Scene3D {
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
   const core=cityEnvelope(cityLand)!;
-  // The lot sits just south of the Skyline park, so it must follow the park, not the core's south
-  // edge: a project dropping out of the catalog (an archived repository) moves the two apart and
-  // the whole Marketplace, its garden and the railway used to disappear.
-  const sky=parks.find(p=>p.label==="Skyline");
+  // The lot sits just south of the open lot, so it must follow that, not the core's south edge: a
+  // project dropping out of the catalog (an archived repository) moves the two apart and the whole
+  // Marketplace, its garden and the railway used to disappear.
+  const sky=openLot(parks);
   const marketplaceSite={x:core.x+core.w-27,z:sky?Math.min(core.z+core.d,sky.z+sky.d+MARKETPLACE_PARK_GAP)+.6:core.z+core.d+.6,w:0,d:0};
   const hills:HillsPlan|undefined=undefined;
   sizeCustomTowers(towers, kiosks);
   sizeGithubTower(towers);
   sizeIntelligenceHub(towers);
-  const financial=planFinancial({stadium,land,towers,kiosks,retail,airport,terraces,carBridges,paving,coreLand:cityLand});
+  sizePortfolioSite(towers);
+  const financial=planFinancial({stadium,land,towers,kiosks,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)alignOfficeScale(towers,financial.referenceHeight);
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
@@ -767,10 +709,10 @@ function buildCity(layout: Layout): Scene3D {
   // BMW takes the waterfront parcel east of the district; the train now stops in Financial Park.
   const dealership=planDealership({financial});
   if(dealership)land.push(dealership.lot);
-  const connections=districtConnections(airport,stadium,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
+  const connections=districtConnections(airport,stadium,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
-  const neighborhood=planNeighborhoodLinks({marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
+  const neighborhood=planNeighborhoodLinks({marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
   for(const path of neighborhood.walks){
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
@@ -781,7 +723,7 @@ function buildCity(layout: Layout): Scene3D {
     const route=link.walk.map(([gx,gy])=>({gx,gy}));
     walks.push({x0:route[0].gx,z0:route[0].gy,x1:route[route.length-1].gx,z1:route[route.length-1].gy,y:top+.08,route});
   }
-  const agency=planAgency({city:cityLand,land,top,paving,terraces,roads:[...carBridges.flatMap(b=>b.roads),...connections.flatMap(c=>[c.road,c.walk])],obstacles:[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}))});
+  const agency=planAgency({city:cityLand,land,top,paving,terraces,roads:[...carBridges.flatMap(b=>b.roads),...connections.flatMap(c=>[c.road,c.walk])],obstacles:[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}))});
   if(agency){
     const inLot=(x:number,z:number,pad:number)=>agency.land.some(r=>inRect(r,x,z,pad));
     for(let i=rocks.length-1;i>=0;i--)if(inLot(rocks[i].x,rocks[i].z,.5))rocks.splice(i,1);
@@ -790,7 +732,7 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of agency.walks)walks.push({x0:path[0][0],z0:path[0][1],x1:path[path.length-1][0],z1:path[path.length-1][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
-  const mall=planMall({parks,land,towers,kiosks,retail,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road)]});
+  const mall=planMall({parks,land,towers,kiosks,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road)]});
   if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
   if(mall){
     const edge=mall.plaza.z+mall.plaza.d+.3,side=mall.x+mall.w+.4;
@@ -798,25 +740,39 @@ function buildCity(layout: Layout): Scene3D {
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
   }
-  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks,...retail].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top):undefined;
+  // Plain meadow filling the island out to a square; the stadium grounds may build on it. It is laid
+  // before the Galleria, whose lot behind the Marketplace can reach onto it when a smaller catalog
+  // moves the Marketplace toward the island's edge.
+  const meadowLand=compactSquareLand(land,cityLand);
+  land.push(...meadowLand);
+  let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top,{roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk)}):undefined;
   if(galleria){
     const r=galleria.rect;
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>r.x-.2&&items[i].x<r.x+r.w+.2&&items[i].z>r.z-.2&&items[i].z<r.z+r.d+.2)items.splice(i,1);
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
-  // Plain meadow filling the island out to a square; the stadium grounds may build on it.
-  const meadowLand=compactSquareLand(land,cityLand);
-  land.push(...meadowLand);
-  const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks,...retail].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
-  if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,parks,towers,kiosks,retail,dealership});
+  // Close the ring road round the city, clear of every building, the Marketplace and its Galleria.
+  const ring=planRingRoad(connections,financial?.street,[
+    ...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...houses.map(h=>({x:h.x,z:h.z,w:h.w,d:h.d})),
+    ...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),
+    ...(mall?[{x:mall.x+mall.w/2,z:mall.z+mall.d/2,w:mall.w,d:mall.d}]:[]),...(galleria?[{x:galleria.rect.x+galleria.rect.w/2,z:galleria.rect.z+galleria.rect.d/2,w:galleria.rect.w,d:galleria.rect.d}]:[]),
+    ...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),
+    // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
+    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
+  connections.push(...ring);
+  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
+  const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
+  if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership});
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
   if(communityRail){
-    const areas=stationAccessAreas(communityRail.hills);
+    // Only the old two-stop line has stairs behind the Marketplace; the perimeter loop's stations
+    // stand on the rail ring and keep their own walks clear (above), so its unused stop clears nothing.
+    const areas=communityRail.loop?[]:stationAccessAreas(communityRail.hills);
     const touches=(x:number,z:number,w:number,d:number)=>areas.some(a=>x+w/2>a.x&&x-w/2<a.x+a.w&&z+d/2>a.z&&z-d/2<a.z+a.d);
-    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot
-    // (the by-tag layout), the green stays open instead.
+    // The Galleria never stands in a station's stair or lift opening; where one falls on its lot,
+    // the green stays open instead.
     if(galleria){const f=galleria.footprint;if(touches(f.x+f.w/2,f.z+f.d/2,f.w,f.d)){const own=new Set<object>([...galleria.trees,...galleria.bushes]);for(const items of [trees,bushes])for(let i=items.length-1;i>=0;i--)if(own.has(items[i]))items.splice(i,1);galleria=undefined;}}
     // Parking and ramp stay flat where a station's stair or lift lands; cars and walls step aside.
     if(galleria){galleria.boxes=galleria.boxes.filter(b=>b.h+b.y<=.03||!touches(b.x,b.z,b.w,b.d));for(const items of [galleria.trees,galleria.bushes])for(let i=items.length-1;i>=0;i--)if(touches(items[i].x,items[i].z,.5,.5))items.splice(i,1);}
@@ -852,7 +808,7 @@ function buildCity(layout: Layout): Scene3D {
     // The grounds are open lawn round the stadium: no scattered meadow planting; the plaza inside the lot stays.
     for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(inRect(r,items[i].x,items[i].z)&&!inRect(lot,items[i].x,items[i].z))items.splice(i,1);
   }
-  for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4)) || retail.some(k=>Math.abs(k.x-trees[i].x)<0.75&&Math.abs(k.z-trees[i].z)<0.75)) trees.splice(i,1);
+  for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
 
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
@@ -886,7 +842,6 @@ function buildCity(layout: Layout): Scene3D {
     parks,
     houses,
     kiosks,
-    retail,
     towers,
     strays,
     trees,
