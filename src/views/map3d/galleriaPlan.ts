@@ -215,6 +215,8 @@ export interface GalleriaPlan {
  entrance:{x:number;z:number};fountain:{x:number;z:number;r:number};
  boxes:GalleriaBox[];rounds:GalleriaBox[];
  trees:Tree[];bushes:Point[];
+ /** The outdoor car park, its drive aisle, and the parked cars that drivers take out (drawn by galleriaLife, not as boxes). */
+ parking?:{area:Rect;aisle:number;driven:{x:number;z:number;c:string}[]};
 }
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
@@ -262,16 +264,22 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
  boxes.push({x:(rect.x+rect.w+ex)/2+.2,z:ez,w:rect.x+rect.w-ex+.7,d:.55,h:.015,y:0,c:'#dcd3bd'});
  // Outdoor parking between the building and the Marketplace, with the basement ramp at its head.
  const pz0=footprint.z+footprint.d+.25,pz1=Math.min(rect.z+rect.d-.15,pz0+G.parking);
+ let parking:GalleriaPlan['parking'];
  if(pz1-pz0>=1.4){
   const px0=rect.x+.3,px1=rect.x+rect.w-.3;
   boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:'#5d6360'});
   const rows=pz1-pz0>=2.6?2:1,rowD=.62,bay=.34;
+  // One row backs onto the aisle beside the other; with a single row the aisle runs along its open side.
+  parking={area:{x:px0,z:pz0,w:px1-px0,d:pz1-pz0},aisle:rows===2?(pz0+pz1)/2:pz1-.25,driven:[]};let cars=0;
   for(let r=0;r<rows;r++){
    const zr=r===0?pz0+.1+rowD/2:pz1-.1-rowD/2;
    for(let x=px0+.15,k=0;x<=px1-.1;x+=bay,k++){
     boxes.push({x,z:zr,w:.025,d:rowD,h:.004,y:.012,c:'#f3efe4'});
     // A few parked cars, deterministic.
-    if(k%3===1&&x+bay<px1){const c=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'][k%4];boxes.push({x:x+bay/2,z:zr,w:.2,d:.38,h:.1,y:.012,c},{x:x+bay/2,z:zr,w:.17,d:.2,h:.07,y:.11,c:'#26323a'});}
+    if(k%3===1&&x+bay<px1){const c=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'][k%4];
+     // Every third car in the first row belongs to a driver who comes and goes (up to three).
+     if(r===0&&cars++%3===0&&parking.driven.length<3)parking.driven.push({x:x+bay/2,z:zr,c});
+     else boxes.push({x:x+bay/2,z:zr,w:.2,d:.38,h:.1,y:.012,c},{x:x+bay/2,z:zr,w:.17,d:.2,h:.07,y:.11,c:'#26323a'});}
    }
   }
   // Ramp down to the basement, as the basement plan draws it, from the plan's north side.
@@ -298,7 +306,7 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
  for(let x=rect.x+1.2;x<rect.x+rect.w-1;x+=1.15)if(clear(x,rect.z+.3))trees.push({x,y,z:rect.z+.3,s:.24,kind:'round'});
  // A row of blossom trees between the parking and the Marketplace, where there is room.
  if(rect.z+rect.d-pz1>.8)for(let x=rect.x+.9;x<rect.x+rect.w-.6;x+=1.05)trees.push({x,y,z:(pz1+rect.z+rect.d)/2,s:.22,kind:'blossom'});
- return {rect,footprint,s,toMap,y0:y,slabs,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes};
+ return {parking,rect,footprint,s,toMap,y0:y,slabs,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes};
 }
 
 export interface GalleriaFin {x:number;z:number;y:number;h:number;a:number;level:number}

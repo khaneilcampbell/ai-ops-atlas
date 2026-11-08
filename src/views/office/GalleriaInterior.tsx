@@ -11,6 +11,9 @@ import type {Pt} from '../map3d/roads';
 import {slabGeometry,wallGeometry} from '../map3d/Galleria';
 import {GALLERIA_ATRIUM_LINE,GALLERIA_BASEMENT,GALLERIA_FLOORS,GALLERIA_NAME,GALLERIA_UNITS,GALLERIA,glassOutline,insidePoly,slabOutline,type GalleriaKind,type GalleriaUnit} from '../map3d/galleriaPlan';
 import CityOutside from './CityOutside';
+import AgencyCrowd from './AgencyCrowd';
+import type {CrowdPerson} from './agencyCrowdPlan';
+import {useReducedMotion} from '../../lib/motion';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
 import '../../styles/skyline.css';
@@ -110,6 +113,36 @@ function Floor({floor,y,labels,cutaway,night,picked,onPick}:{floor:number;y:numb
  </group>;
 }
 
+const SHIRTS=['#4f6b5d','#7a4b3a','#5d7a8c','#a1674a','#2f4a3a','#8c6a52','#3f5f86','#8c3b52'];
+/** The atrium line pushed `k` plan metres outward: the gallery walk between the balustrade and the shopfronts. */
+function gallery(k:number):Pt[]{
+ const l=GALLERIA_ATRIUM_LINE,[cx,cy]=centroid(l);
+ return l.map(([x,y])=>{const d=Math.hypot(x-cx,y-cy)||1;return toIn([x+(x-cx)/d*k,y+(y-cy)/d*k]);});
+}
+/**
+ * Shoppers, staff and drivers on one floor (KC, 2026-11-08), as AgencyCrowd paths at the floor's
+ * own height: strollers circle the gallery walk, shoppers step from it into a shop and back, one
+ * member of staff stands in each unit, and in the basement drivers walk from the lift to the cars.
+ */
+export function galleriaCrowd(floor:number,y:number):CrowdPerson[]{
+ const out:CrowdPerson[]=[],person=(id:string,path:[number,number,number][],dwell:number[],speed:number,phase:number,i:number):CrowdPerson=>({id,level:floor,color:SHIRTS[(i*5+floor)%SHIRTS.length],pose:path.length===1?'stand':'walk',path,dwell,speed,phase});
+ const units=GALLERIA_UNITS.filter(u=>u.floor===floor);
+ if(floor===0){
+  const [lx,lz]=toIn([50,52]);
+  units.filter(u=>u.kind==='parking').slice(0,2).forEach((u,i)=>{const [x,z]=centroid(u.poly.map(toIn));for(const k of [0,1])out.push(person(`b${i}${k}`,[[lx,y,lz+1.2],[x+k*2-1,y,z]],[3,4],1.1,i*5+k*9,i*2+k));});
+  return out;
+ }
+ const walk=gallery(floor===1?2.5:3.5),ring:[number,number,number][]=walk.filter((_,i)=>i%2===0).map(([x,z])=>[x,y,z]);
+ for(let i=0;i<6;i++)out.push(person(`s${i}`,ring,ring.map((_,k)=>k===i%ring.length?2.5:0),.9+.1*(i%3),i*6.5,i));
+ units.filter(u=>u.kind!=='service').forEach((u,i)=>{
+  const [x,z]=centroid(u.poly.map(toIn));
+  out.push(person(`t${u.id}`,[[x+.6,y,z+.4]],[0],1,i,i+3));
+  const [wx,wz]=walk.reduce((b,p)=>Math.hypot(p[0]-x,p[1]-z)<Math.hypot(b[0]-x,b[1]-z)?p:b,walk[0]);
+  out.push(person(`v${u.id}`,[[wx,y,wz],[x-.5,y,z-.3]],[1.5,5+i%3*2],1,i*4.1,i+7));
+ });
+ return out;
+}
+
 /** The steel funnel rising through the atrium into the polycarbonate canopy, and the zig-zag escalators. */
 function Atrium({top,night,floors}:{top:number;night:boolean;floors:number[]}){
  const [x,z]=COLUMN_IN,R=GALLERIA.canopyR*GALLERIA_IN.k;
@@ -126,8 +159,9 @@ function Atrium({top,night,floors}:{top:number;night:boolean;floors:number[]}){
  },[floors,x,z]);
  return <group>
   <group position={[x,BASE[1],z]}>
-   <mesh geometry={geo}><meshStandardMaterial color="#f3f1ea" transparent opacity={.4} side={THREE.DoubleSide} depthWrite={false}/></mesh>
-   <mesh geometry={geo}><meshBasicMaterial color="#c3ccc0" wireframe/></mesh>
+   {/* A solid steel funnel (KC, 2026-11-08); the gridshell ribs sit just proud of its skin. */}
+   <mesh geometry={geo} castShadow><meshStandardMaterial color="#f1f2ec" roughness={.4} metalness={.15} side={THREE.DoubleSide}/></mesh>
+   <mesh geometry={geo} scale={[1.012,1,1.012]}><meshBasicMaterial color="#b9c1b5" wireframe/></mesh>
    <mesh position={[0,top,0]}><cylinderGeometry args={[R+.1,R+.1,.08,40]}/><meshStandardMaterial color="#dce2d5" transparent opacity={.55} emissive="#d0ad69" emissiveIntensity={night?.8:0} depthWrite={false}/></mesh>
   </group>
   <Boxes items={escalators}/>
@@ -141,6 +175,11 @@ function Fins({floors,stacked}:{floors:number[];stacked:boolean}){
   return edge.flatMap((a,i)=>{const b=edge[(i+1)%edge.length];if((a[1]+b[1])/2>1)return [];const h=H*(.35+.5*(.5+.5*Math.sin(i*.35+f*1.9)));return [{p:[a[0],y+H-h+.3,a[1]] as [number,number,number],s:[.06,h,.32] as [number,number,number],c:'#f7f7f0',r:-Math.atan2(b[1]-a[1],b[0]-a[0])}];});
  }),[floors,stacked]);
  return <Boxes items={items}/>;
+}
+
+function FloorCrowd({floor,animate}:{floor:number;animate:boolean}){
+ const people=useMemo(()=>galleriaCrowd(floor,BASE[floor]),[floor]);
+ return <AgencyCrowd people={people} animate={animate}/>;
 }
 
 function GalleriaCamera({mode}:{mode:number}){
@@ -157,6 +196,7 @@ function GalleriaCamera({mode}:{mode:number}){
 
 /** Atlas Galleria inside: the basement car park, the ground floor shops, and two floors above, round the funnel atrium. */
 export default function GalleriaInterior({light}:{light:LightMode}){
+ const reduced=useReducedMotion();
  const [mode,setMode]=useState(ALL);
  const [picked,setPicked]=useState<GalleriaUnit|null>(null);
  const power=usePowerProfile(),visible=usePageVisible(),isNight=light==='night';
@@ -168,7 +208,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
  return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${GALLERIA_NAME} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
-   <FramePacer profile={power} running={false}/>
+   <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
    <directionalLight position={[-14,30,18]} intensity={isNight?.5:1.6} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-22} shadow-camera-right={22} shadow-camera-top={22} shadow-camera-bottom={-22}/>
@@ -177,6 +217,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
    <CityOutside building={GALLERIA_NAME} span={34} clearSpan={44} scaleOverride={(s)=>s.galleria?GALLERIA_IN.k/s.galleria.s:undefined} anchorAt={s=>{if(!s.galleria)return;const [x,z]=s.galleria.toMap([40,30]);return {x,z};}} allFloors={mode===ALL} elevation={mode>=2&&mode!==ALL?BASE[mode]:0}/>
    {floors.map(f=><group key={f} position={[0,offset(f)-BASE[f],0]}>
     <Floor floor={f} y={BASE[f]} labels={mode!==ALL} cutaway night={isNight} picked={picked?.id} onPick={setPicked}/>
+    <FloorCrowd floor={f} animate={!reduced}/>
     {mode===ALL&&<Html position={[-18,BASE[f]+.3,0]} center><span className="skyline-room-label building-floor-label">{GALLERIA_FLOORS[f].label}</span></Html>}
    </group>)}
    {mode!==0&&<Atrium top={(mode===ALL?BASE[3]+GALLERIA_IN.heights[3]:GALLERIA_IN.heights[mode])+.6} night={isNight} floors={mode===ALL?[1,2,3]:[]}/>}

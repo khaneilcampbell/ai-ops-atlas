@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Atlas Galleria comes to life: a paved walk from the entrance out to the street, lamp posts round the building and along the walk, a solid steel funnel in the atrium, shoppers coming and going and strolling round it, people inside on every floor, and drivers who walk to their car and drive off the lot, then come back later. Where the lot is too shallow for the car park behind the building, cars park in a small court either side of the walk (#273)
 - 2026-11-08 · The Atlas Galleria now shows in the Mac app too. With one repository removed, the app had left the lot behind Atlas Marketplace empty because of train-station stairs that are no longer drawn there (#273)
 - 2026-11-08 · Atlas no longer says an on-request agent, like Portfolio Web Developer, needs attention just because you haven't asked it to do anything for a week (#271)
 - 2026-11-07 · Inside Ellipse Residences and every other Financial District building, the lobby is back on the ground. The grass outside had been drawn a storey too high, hiding the lobby and making the building look like it stood on stilts (#270)
