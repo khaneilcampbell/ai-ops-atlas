@@ -1,4 +1,5 @@
-import {bridgePoint,clipConnectionRails} from "./connectionGeometry";
+import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
+import {distanceToRoad} from "./highway";
 import {TRANSPORT} from "./transportScale";
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
@@ -12,6 +13,7 @@ import { hash } from "../mapLayout";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
+import { SIDEWALK } from "./streetPavement";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
@@ -297,14 +299,13 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
       streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
       if(curb) for(const side of [-1,1]) {
-        sidewalks.push({p:[x+(alongX?0:side*(width/2+0.065)),TERRACE_H+0.035,z+(alongX?side*(width/2+0.065):0)],s:alongX?[length,0.035,0.13]:[0.13,0.035,length],c:"#d4cfb9"});
+        const o=width/2+SIDEWALK.width/2;sidewalks.push({p:[x+(alongX?0:side*o),SIDEWALK.y,z+(alongX?side*o:0)],s:alongX?[length,SIDEWALK.h,SIDEWALK.width]:[SIDEWALK.width,SIDEWALK.h,length],c:SIDEWALK.color});
       }
       for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
     };
-    for(const br of scene.carBridges) for(const road of br.roads) {
-      for(let i=1;i<road.length;i++) street(road[i-1],road[i],ROAD_W,true);
-      for(const p of road.slice(1,-1)) streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});
-    }
+    // Bridge roads share their driveways and through streets, so union the collinear pieces and
+    // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
+    const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
     for(const t of scene.towers) {
       const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
       const ring=plaza&&towerRing(t,plaza.w);
@@ -316,10 +317,15 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
         const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
         for(let i=1;i<path.length;i++) {
           const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
-          if(drawn.has(key))continue;drawn.add(key);street(path[i-1],path[i],ROAD_W,true);
+          if(drawn.has(key))continue;drawn.add(key);district.push([path[i-1],path[i]]);
         }
       }
     }
+    const spans=connectionSpans(district);
+    for(const sp of spans) street(sp.a,sp.b,ROAD_W,true);
+    const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
+    const squares=new Set<string>();
+    spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});
 
     for (const w of scene.walks.filter(w => w.bridge)) {
       const alongX = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
