@@ -81,9 +81,9 @@ export function planPortfolioSite():PortfolioSitePlan{
  panels.push({kind:'gate',x:.04,y:(G-P.slab)/2,z:C.z1-.06+.004,w:.26,h:G-P.slab-.04,face:'front'});
  panels.push({kind:'sign',x:-.27,y:(G-P.slab)*.48,z:C.z1-.05+.004,w:.17,h:.17,face:'front'});
  panels.push({kind:'ceiling',x:(C.x0+P.pier.x0)/2,y:G-P.slab-.003,z:(C.z1+.52)/2,w:P.pier.x0-C.x0,h:.52-C.z1,face:'down'});
- for(let x=C.x0+.02;x<P.pier.x0-.02;x+=.06){
-  plants.push({kind:'shrub',x,y:G+.08,z:.505,s:.045});
-  plants.push({kind:'trail',x:x+.03,y:G-P.slab-.1,z:.525,s:.11});
+ for(let x=C.x0+.03;x<P.pier.x0-.02;x+=.09){
+  plants.push({kind:'shrub',x,y:G+.08,z:.505,s:.05});
+  plants.push({kind:'trail',x:x+.045,y:G-P.slab-.1,z:.525,s:.11});
  }
 
  // Upper floors.
@@ -114,7 +114,7 @@ export function planPortfolioSite():PortfolioSitePlan{
    panels.push({kind:'ceiling',x:(C.x1+o)/2,y:y1-P.slab-.003,z:(z0+z1)/2,w:o-C.x1,h:z1-z0,face:'down'});
    // Brown louvres on the outer half of the back bay, alternate floors on the front bay.
    if(b===1||i%2)box('slats',C.x1+.02,C.x1+.05,y0+P.rail,y1-P.slab,b===1?z0+.02:z1-.1,b===1?z0+.14:z1-.02);
-   if((i+b)%2===0)for(const s of [.25,.6,.85])plants.push({kind:'trail',x:o+.012,y:y0-P.slab-.08,z:z0+(z1-z0)*s,s:.13});
+   if((i+b)%2===0)for(const s of [.3,.8])plants.push({kind:'trail',x:o+.012,y:y0-P.slab-.08,z:z0+(z1-z0)*s,s:.13});
    if((i+b)%2===1)plants.push({kind:'shrub',x:o-.04,y:y0+.01,z:z0+(z1-z0)*.2,s:.05});
   }
   box('white',C.x1,sd.out,y0-P.slab,y1,sd.fin-.02,sd.fin+.02);
@@ -132,9 +132,9 @@ export function planPortfolioSite():PortfolioSitePlan{
  box('white',C.x0-P.skin,P.pier.x1,roof+P.canopy.lift,top,C.z0-P.skin,P.pier.z1);
  box('white',C.x0-P.skin,C.x0+.01,roof,roof+P.canopy.lift,P.pier.z1-.05,P.pier.z1);
  box('dark',C.x0+.01,C.x1-.04,roof+P.canopy.lift-.02,roof+P.canopy.lift,C.z0+.1,C.z1);
- for(let x=C.x0+.05;x<C.x1-.04;x+=.07)plants.push({kind:'shrub',x,y:roof+P.parapet,z:C.z1-.015,s:.045});
- for(let z=C.z0+.05;z<C.z1-.04;z+=.08)plants.push({kind:'shrub',x:C.x1-.015,y:roof+P.parapet,z,s:.045});
- plants.push({kind:'tree',x:.22,y:roof,z:-.3,s:1},{kind:'tree',x:.0,y:roof,z:.12,s:.8});
+ for(let x=C.x0+.05;x<C.x1-.04;x+=.1)plants.push({kind:'shrub',x,y:roof+P.parapet,z:C.z1-.015,s:.045});
+ for(let z=C.z0+.05;z<C.z1-.04;z+=.11)plants.push({kind:'shrub',x:C.x1-.015,y:roof+P.parapet,z,s:.045});
+ plants.push({kind:'tree',x:.18,y:roof,z:-.28,s:1});
  for(let x=C.x0+.04;x<C.x1;x+=.12)plants.push({kind:'trail',x,y:roof-.06,z:C.z1+.01,s:.1});
  return {lines,roof,top,boxes,panels,plants};
 }

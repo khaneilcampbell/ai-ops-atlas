@@ -6,7 +6,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import type {Tower} from './scene';
 import {focusable,signTexture} from './materials';
 import {compactGeometry} from './atlasHqGeometry';
-import {PORTFOLIO_SITE,planPortfolioSite,type Box,type Kind,type Panel} from './portfolioSitePlan';
+import {PORTFOLIO_SITE,planPortfolioSite,type Box,type Panel} from './portfolioSitePlan';
 import {useQualityLevel} from '../../lib/governor';
 
 const canvas=(w:number,h:number)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return [c,c.getContext('2d')!] as const;};
@@ -65,7 +65,7 @@ function worldBox(w:number,h:number,d:number,x:number,y:number,z:number){
  return g;
 }
 
-const MATERIAL_KINDS:Exclude<Kind,'slats'>[]=['white','rail','dark','lobby'];
+const MATERIAL_KINDS=['white','trim','rail','dark','lobby'] as const;
 
 /**
  * The Portfolio Site as a slim G+8 apartment building (see portfolioSitePlan). Almost every part
@@ -113,9 +113,10 @@ export function PortfolioSite({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
 
  const parts=useMemo(()=>{
   const w=(x:number,y:number,z:number):[number,number,number]=>[t.x+x*k,base+y,t.z+z*k];
-  const boxes:Record<string,Inst[]>={white:[],rail:[],dark:[],lobby:[]};
+  const boxes:Record<string,Inst[]>={white:[],trim:[],rail:[],dark:[],lobby:[]};
   const toInst=(b:Box):Inst=>({p:w((b.x0+b.x1)/2,b.y0,(b.z0+b.z1)/2),s:[(b.x1-b.x0)*k,b.y1-b.y0,(b.z1-b.z0)*k]});
-  for(const b of plan.boxes)if(b.kind!=='slats')boxes[b.kind].push(toInst(b));
+  // Only the big white volumes cast shadows; slab edges and frames would cost a shadow pass each for nothing visible.
+  for(const b of plan.boxes)if(b.kind!=='slats')boxes[b.kind==='white'&&b.y1-b.y0<1?'trim':b.kind].push(toInst(b));
   const panels:Record<Panel['kind'],Inst[]>={glass:[],gate:[],sign:[],ceiling:[]};
   const turn={front:0,side:Math.PI/2,back:Math.PI,down:0};
   for(const q of plan.panels){
@@ -144,7 +145,7 @@ export function PortfolioSite({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    <mesh geometry={slats} material={mats.slats} castShadow receiveShadow {...handlers}/>
    {worker&&<mesh geometry={g.plane} material={worker.mat} position={[(PORTFOLIO_SITE.core.x1+.006)*k,.34,.02*k]} rotation={[0,Math.PI/2,0]} scale={[.14*k,.14*k,1]} raycast={()=>null}/>}
   </group>
-  {MATERIAL_KINDS.map(kind=><Instanced key={kind} items={parts.boxes[kind]} geometry={g.box} material={mats[kind]} pick={every} shadow={kind==='white'||(kind==='rail'&&detailShadow)}/>)}
+  {MATERIAL_KINDS.map(kind=><Instanced key={kind} items={parts.boxes[kind]} geometry={g.box} material={kind==='trim'?mats.white:mats[kind]} pick={every} shadow={kind==='white'}/>)}
   <Instanced items={parts.panels.glass} geometry={g.plane} material={mats.glass} pick={every} shadow={false}/>
   <Instanced items={parts.panels.ceiling} geometry={g.plane} material={mats.ceiling} pick={every} shadow={false}/>
   <Instanced items={parts.panels.gate} geometry={g.plane} material={mats.gate} pick={every} shadow={false}/>
