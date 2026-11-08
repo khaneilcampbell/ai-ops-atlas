@@ -35,4 +35,4 @@ it('raises the corridor when future towers grow, with no fixed Financial Distric
 
 it('also respects tall repositories not yet in the catalog',()=>{const s=buildScene(layoutMap(catalog,[],'none'));s.strays.push({key:'new-tower',name:'Future tower',x:0,z:0,size:3,height:50});expect(flightClearance(s).altitude).toBeGreaterThan(54);});
 
-it('keeps airship gondolas and balloon baskets above the skyline and aircraft corridor',()=>{const s=buildScene(layoutMap(catalog,[],'none')),safe=flightClearance(s),h=decorativeAerialHeights(safe.altitude);expect(h.airship-1.1).toBeGreaterThan(safe.altitude+1);expect(h.balloons-1.7-.2).toBeGreaterThan(h.airship+.8);expect(h.balloons-1.9).toBeGreaterThan(safe.roof+2);});
+it('keeps the airship gondola above the aircraft corridor',()=>{const s=buildScene(layoutMap(catalog,[],'none')),safe=flightClearance(s),h=decorativeAerialHeights(safe.altitude);expect(h.airship-1.1).toBeGreaterThan(safe.altitude+1);expect(h).not.toHaveProperty('balloons');});
