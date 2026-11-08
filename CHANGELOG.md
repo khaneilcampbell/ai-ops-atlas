@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-01 · Selecting the GitHub building now outlines, glows and frames the tower and its glass podium together (#188)
+- 2026-11-08 · Selecting the GitHub building now outlines, glows and frames the tower and its glass podium together (#188)
 - 2026-11-08 · When Atlas can't reach GitHub, the header now says how many repositories failed to sync, and hovering it shows why, instead of quietly showing old data as loaded (#288)
 - 2026-11-08 · Made Website management cards more compact and easier to scan (#246)
 - 2026-11-08 · The Atlas Marketplace is one step smaller: about 20% lower and narrower, same shape, same lot and plaza (#286)
