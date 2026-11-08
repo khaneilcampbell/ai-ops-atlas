@@ -49,14 +49,5 @@ export function Icon({ name, size = 18, className }: { name: IconName; size?: nu
 }
 
 export function AtlasMark({ size = 22 }: { size?: number }) {
-  // Compass rose inside an acorn-like arch: a nod to the reference, drawn for this app.
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 10a8 8 0 0 1 16 0" />
-      <path d="M4 10h16" />
-      <path d="M6 10c0 6 3 10 6 11 3-1 6-5 6-11" />
-      <path d="M12 12.5l1.4 3.1-1.4 2.4-1.4-2.4z" fill="currentColor" stroke="none" />
-      <path d="M12 2v1.6" />
-    </svg>
-  );
+  return <img src="/atlas-orbit.svg" width={size} height={size} alt="" aria-hidden="true" draggable={false} />;
 }
