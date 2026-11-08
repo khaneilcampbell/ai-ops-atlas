@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <rect x="64" y="64" width="896" height="896" rx="200" fill="#1d2b22"/>
-<g transform="translate(176 130) scale(28)"><g fill="#ffffff">
+<g transform="translate(176 130) scale(28)"><g fill="#e9ecdf">
 <path d="M4 15.4 7.1 13.6V22H4Z"/>
 <path d="M7.9 5.5 11.5 3.4V22H7.9Z"/>
 <path d="M12.4 3.4 16 5.5V22h-3.6Z"/>
