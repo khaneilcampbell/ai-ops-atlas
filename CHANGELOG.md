@@ -4,6 +4,8 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-08 · Every plane now has cockpit windows. At night the cockpits glow, planes show red and green wingtip lights, blinking red beacons on the top, belly and tail, white strobes, and landing lights with a beam ahead of the nose while taxiing, taking off and landing (#277)
+- 2026-11-08 · The map draws about 5% fewer triangles with no visible change, so map updates pass the performance check again (#283)
+- 2026-11-08 · Atlas uses the architectural Orbit logo on the dashboard and app icons (#284).
 - 2026-11-08 · The two hot air balloons are gone from the sky over Atlas. The Atlas airship still flies (#281)
 - 2026-11-08 · Train stations look properly built: the roof posts now stand on the platform and track deck instead of hanging in the air, the curved roof fits the platform, and the lift tower no longer pokes through the glass roof (#268)
 - 2026-11-08 · The Intelligence Hub district has about twice the land it had, and the building is widened to match (#278)

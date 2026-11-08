@@ -141,6 +141,8 @@ export function useGeometries() {
       dish: lifted(new THREE.CylinderGeometry(0.5, 0.14, 1, 14)),
       rock: new THREE.DodecahedronGeometry(1, 0),
       ball: new THREE.SphereGeometry(1, 10, 8),
+      // Tiny spheres (heads, lamp globes) a few pixels across: same look, fewer than 60% of the triangles.
+      bead: new THREE.SphereGeometry(1, 8, 6),
       plane: new THREE.PlaneGeometry(1, 1),
     }),
     [],
@@ -370,7 +372,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.deck} geometry={g.box} material={m.plain} />
       <Instanced items={items.rails} geometry={g.box} material={m.plain} />
       <Instanced items={items.piers} geometry={g.cyl} material={m.step} />
-      <Instanced items={items.lamps} geometry={g.ball} material={m.lamp} shadow={false} />
+      <Instanced items={items.lamps} geometry={g.bead} material={m.lamp} shadow={false} />
       <Instanced items={items.pools} geometry={g.cyl} material={m.pool} shadow={false} />
     </group>
   );
@@ -457,6 +459,7 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     const trunks: Inst[] = [];
     const blobs: Inst[] = [];
+    const puffs: Inst[] = [];
     const cones: Inst[] = [];
     scene.trees.forEach((t, i) => {
       const s = t.s;
@@ -473,7 +476,8 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       blobs.push({ p: [t.x, t.y + s * 1.9, t.z], s: [s, s * 0.95, s], c: col(0) });
       blobs.push({ p: [t.x - s * 0.45, t.y + s * 1.55, t.z + s * 0.3], s: [s * 0.72, s * 0.66, s * 0.72], c: col(1) });
       blobs.push({ p: [t.x + s * 0.4, t.y + s * 1.6, t.z - s * 0.25], s: [s * 0.7, s * 0.66, s * 0.7], c: col(2) });
-      blobs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
+      // The small top puff's shadow falls inside the main canopy's, so it skips the shadow pass.
+      puffs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
     });
     const bushes: Inst[] = scene.bushes.map((b, i) => ({ p: [b.x, b.y + b.s * 0.5, b.z], s: [b.s * 1.4, b.s, b.s * 1.4], c: LEAVES[i % 3] }));
     const flowers: Inst[] = scene.bushes
@@ -484,14 +488,15 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, blobs, cones, bushes, flowers, rocks, bollards, caps, pools };
+    return { trunks, blobs, puffs, cones, bushes, flowers, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
       <Instanced items={items.trunks} geometry={g.trunk} material={m.plain} />
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
-      <Instanced items={items.bushes} geometry={g.blob} material={m.foliage} />
+      <Instanced items={items.bushes} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
@@ -1031,7 +1036,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
       <Instanced items={status} geometry={g.box} material={m.glow} shadow={false} />
-      <Instanced items={P.shrubs} geometry={g.blob} material={m.foliage} />
+      <Instanced items={P.shrubs} geometry={g.ball} material={m.foliage} />
       <Instanced items={P.flowers} geometry={g.ball} material={m.foliage} shadow={false} />
       <Instanced items={P.hipRoofs} geometry={g.hip} material={m.roof} />
       <Instanced items={P.spires} geometry={g.cone} material={m.metal} />
