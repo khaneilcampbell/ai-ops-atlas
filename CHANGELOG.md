@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-08 · Made Website management cards more compact and easier to scan (#246)
 - 2026-11-08 · The Atlas Marketplace is one step smaller: about 20% lower and narrower, same shape, same lot and plaza (#286)
 - 2026-11-08 · Removed the Administration, Logistics and Passenger Services buildings from Atlas Airport; Operations stays as the airport office (#285)
 - 2026-11-08 · The Portfolio Site is rebuilt from your G+8 apartment reference: white render with brown brick and timber down the side, a balcony with a slatted railing on every floor, white frames round the middle windows that zigzag every two floors, planted balconies with trailing greenery, a timber chevron gate with a round terracotta name sign, and a roof terrace under a flat white canopy. Its windows and balcony ceilings glow warm at night. It has a ground floor plus twelve floors, about as tall as the plain tower it replaces (#280)
