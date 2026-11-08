@@ -16,8 +16,8 @@ export const GALLERIA_LIFE={
  pace:.32,drive:1.1,shoppers:8,strollers:5,
  /** A street farther than this from the lot's edge is too far to walk to; the walk stops at the lot. */
  maxStreet:4,
- /** The main entrance vestibule in the V-notch: width across, depth out from the glass, height, each sliding pair's width, and how far each pair stands from the revolving door in the middle. */
- portal:{w:1.9,d:.6,h:1.15,door:.46,slide:.68},
+ /** Where people go in and out at the notch's glass: how far out of the glass they stop, and how far apart the in and out points stand. */
+ portal:{d:.12,door:.46,slide:.68},
  /** Clear distance kept between anyone walking and the fountain's rim. */
  fountainClear:.4,
  /** Offset of a car from the drive's centre line, so traffic keeps right. */
@@ -31,8 +31,8 @@ export interface GalleriaWalker {route:CommuterRoute;phase:number;pace:number;la
  /** A shopper's way back out, through the exit doors and round the other side of the fountain. */
  back?:CommuterRoute}
 /**
- * The main entrance (KC, 2026-11-08): a glazed vestibule standing out of the V-notch toward the
- * forecourt, under a canopy, with an entry pair of doors on one side and an exit pair on the other.
+ * The main entrance at the V-notch's glass, where people go in on one side and come out on the other
+ * (the building keeps its original design; there is no separate entrance structure).
  * `u` points out of the building, `p` across it toward the entry side.
  */
 export interface GalleriaPortal {x:number;z:number;u:Pt;p:Pt;entry:Pt;exit:Pt}
@@ -96,7 +96,7 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  for(const {p,a} of every(ring,L.lampStep))if(clearOfWalk(p)&&inRect(rect,p,.3)&&offStreet(p)&&!blocks.some(b=>inRect(b,p,.2))&&!(g.parking&&inRect(g.parking.area,p,.2)))lamps.push({x:p[0],z:p[1],yaw:-a});
  for(let i=1;i<walk.length;i++){const a=walk[i-1],b=walk[i],len=dist(a,b),n=Math.floor(len/1.6),dx=(b[0]-a[0])/len,dz=(b[1]-a[1])/len;
   for(let k=1;k<=n;k++){const x=a[0]+dx*k*len/(n+1),z=a[1]+dz*k*len/(n+1);for(const s of [-1,1])lamps.push({x:x-dz*s*(L.walkWidth/2+.12),z:z+dx*s*(L.walkWidth/2+.12),yaw:Math.atan2(dx*s,-dz*s)});}}
- // The entrance vestibule stands at the notch's apex on the ground-floor glass, facing the forecourt.
+ // People go in and out at the notch's apex on the ground-floor glass, facing the forecourt.
  const apex=g.toMap(GALLERIA_NOTCH),A=g.glass[0].reduce((b,q)=>dist(q,apex)<dist(b,apex)?q:b,g.glass[0][0]);
  const ul=dist(A,J)||1,u:Pt=[(J[0]-A[0])/ul,(J[1]-A[1])/ul],pp:Pt=[-u[1],u[0]],P=L.portal;
  const at=(k:number,j:number):Pt=>[A[0]+u[0]*k+pp[0]*j,A[1]+u[1]*k+pp[1]*j];

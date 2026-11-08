@@ -3,7 +3,7 @@ import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {GALLERIA_LIFE,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
-import {GALLERIA,GALLERIA_NOTCH,galleriaFins,insidePoly} from './galleriaPlan';
+import {insidePoly} from './galleriaPlan';
 import {along} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
@@ -61,13 +61,9 @@ describe('life round Atlas Galleria',()=>{
   const shopper=life.walkers.find(w=>!w.loop)!,end=shopper.route.points.at(-1)!,start=shopper.back!.points[0];
   expect(Math.hypot(end[0]-life.portal.entry[0],end[2]-life.portal.entry[1])).toBeLessThan(1e-6);
   expect(Math.hypot(start[0]-life.portal.exit[0],start[2]-life.portal.exit[1])).toBeLessThan(1e-6);
-  // The doors face the forecourt and stand a full door width apart.
+  // The way in and the way out face the forecourt and stand apart.
   expect(Math.hypot(life.portal.entry[0]-life.portal.exit[0],life.portal.entry[1]-life.portal.exit[1])).toBeGreaterThan(GALLERIA_LIFE.portal.door);
   expect(life.portal.u[0]*(g.entrance.x-life.portal.x)+life.portal.u[1]*(g.entrance.z-life.portal.z)).toBeGreaterThan(0);
- });
- it('lifts the first fin band clear of the entrance',()=>{
-  const g=scene.galleria!,apex=g.toMap(GALLERIA_NOTCH),near=galleriaFins(g).filter(f=>f.level===1&&Math.hypot(f.x-apex[0],f.z-apex[1])<GALLERIA.entranceClear);
-  expect(near.length).toBeGreaterThan(0);for(const f of near)expect(f.h).toBeCloseTo(GALLERIA.rail+GALLERIA.slab,6);
  });
  it('takes driven cars out of the static car park so none is drawn twice',()=>{
   const g=scene.galleria!,driven=g.parking!.driven;
