@@ -35,7 +35,8 @@ export function Palette({ onClose, setTheme }: { onClose: () => void; setTheme: 
     <Dialog label="Search" onClose={onClose} className="palette">
       <input
         class="input"
-        type="search"
+        type="text"
+        enterKeyHint="search"
         placeholder="Search pages and actions"
         aria-label="Search pages and actions"
         role="combobox"
