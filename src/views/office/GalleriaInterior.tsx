@@ -43,22 +43,6 @@ function Boxes({items}:{items:B[]}){
  if(!items.length)return null;
  return <instancedMesh key={items.length} ref={ref} args={[undefined,undefined,items.length]} castShadow receiveShadow><boxGeometry/><meshStandardMaterial roughness={.65}/></instancedMesh>;
 }
-export const DOOR={h:2.2,frame:'#3b4744',glass:'#bfdcd8',solid:'#d9d2c3',open:1.05} as const;
-/**
- * A framed double door in the middle of edge a→b (KC, 2026-11-08): two jambs and a head, and two
- * leaves hinged at the jambs. Shops stand open into the unit (toward `inside`); back-of-house doors
- * are solid and closed. Edges too short for a door get none.
- */
-export function doorway(a:Pt,b:Pt,inside:Pt,y:number,open:boolean):B[]{
- const len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<1.2)return [];
- const ux=(b[0]-a[0])/len,uz=(b[1]-a[1])/len,mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;
- // The normal that points into the unit.
- const side=Math.sign((inside[0]-mx)*-uz+(inside[1]-mz)*ux)||1,nx=-uz*side,nz=ux*side;
- const w=Math.min(1.4,len*.4),l:Pt=[mx-ux*w/2,mz-uz*w/2],r:Pt=[mx+ux*w/2,mz+uz*w/2],t=open?DOOR.open:0;
- const leaf=(h:Pt,dir:number):B=>seg(h,[h[0]+(ux*dir*Math.cos(t)+nx*Math.sin(t))*w/2,h[1]+(uz*dir*Math.cos(t)+nz*Math.sin(t))*w/2],y+.02,DOOR.h-.08,.05,open?DOOR.glass:DOOR.solid);
- const jamb=(p:Pt):B=>({p:[p[0],y,p[1]],s:[.12,DOOR.h,.16],c:DOOR.frame,r:-Math.atan2(uz,ux)});
- return [jamb(l),jamb(r),seg(l,r,y+DOOR.h,.12,.16,DOOR.frame),leaf(l,1),leaf(r,-1)];
-}
 /** A wall box along a→b with its base at y. */
 const seg=(a:Pt,b:Pt,y:number,h:number,t:number,c:string):B=>({p:[(a[0]+b[0])/2,y,(a[1]+b[1])/2],s:[Math.hypot(b[0]-a[0],b[1]-a[1])+.02,h,t],c,r:-Math.atan2(b[1]-a[1],b[0]-a[0])});
 
@@ -75,7 +59,7 @@ export function fitout(u:GalleriaUnit,y:number,near:boolean):B[]{
  const [cx,cz]=COLUMN_IN;let front=0,best=Infinity;
  poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length],d=Math.hypot((a[0]+b[0])/2-cx,(a[1]+b[1])/2-cz);if(d<best){best=d;front=i;}});
  const wall=near?.9:2.8;
- if(u.kind!=='parking')poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length];if(i===front){out.push(seg(a,b,y,.06,.08,ACCENT[u.kind]),seg(a,b,y+2.6,.3,.1,ACCENT[u.kind]),...doorway(a,b,centroid(poly),y,u.kind!=='service'));}else out.push(seg(a,b,y,wall,.12,'#f7f7f0'));});
+ if(u.kind!=='parking')poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length];if(i===front){out.push(seg(a,b,y,.06,.08,ACCENT[u.kind]),seg(a,b,y+2.6,.3,.1,ACCENT[u.kind]));}else out.push(seg(a,b,y,wall,.12,'#f7f7f0'));});
  const grid=(step:number,each:(x:number,z:number,i:number)=>void,pad=.6)=>{let i=0;for(let x=x0+step/2;x<x1;x+=step)for(let z=z0+step/2;z<z1;z+=step)if(inside(x,z,pad))each(x,z,i++);};
  switch(u.kind){
   case 'market':
@@ -117,10 +101,6 @@ function Floor({floor,y,labels,cutaway,night,picked,onPick}:{floor:number;y:numb
   if(atrium)atrium.forEach((a,i)=>{const b=atrium[(i+1)%atrium.length];out.push(seg(a,b,y,1,.04,'#cfe3e0'),seg(a,b,y+1,.05,.08,'#c9a35a'));});
   // Lift and stair core beside the north lobby (plan grid 6/F).
   const [lx,lz]=toIn([50,52]);out.push({p:[lx,y,lz],s:[1.8,GALLERIA_IN.heights[floor]-.2,1.6],c:'#b3beb8'});
-  // Brushed steel lift doors on the core's face toward the atrium, in a dark frame.
-  {const [cx,cz]=COLUMN_IN,alongX=Math.abs(cz-lz)>=Math.abs(cx-lx),f=alongX?Math.sign(cz-lz)*.81:Math.sign(cx-lx)*.91;
-   const at=(dx:number,dz:number):[number,number,number]=>alongX?[lx+dx,y,lz+f+dz]:[lx+f+dz,y,lz+dx],size=(w:number,h:number,t:number):[number,number,number]=>alongX?[w,h,t]:[t,h,w];
-   out.push({p:at(0,0),s:size(1.1,DOOR.h+.12,.04),c:DOOR.frame});for(const k of [-.25,.25])out.push({p:at(k,Math.sign(f)*.02),s:size(.47,DOOR.h,.03),c:'#c9cfcb'});}
   return out;
  },[units,y,cutaway,atrium,floor]);
  return <group>
