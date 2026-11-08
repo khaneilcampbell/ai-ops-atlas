@@ -38,6 +38,9 @@ export const GALLERIA={
  column:[37.5,30.5] as Pt,canopyR:11.5,
  /** Below this, the green is too small for the building to read, and nothing is drawn. */
  minW:8.5,minD:6.6,
+ /** Widest lot it takes: the building at full scale and its parking, so a wider green (a bigger
+  *  neighbouring district) leaves open lawn instead of more trees the map has no triangles for. */
+ maxW:10.8,
  /** Depth of the outdoor parking band (two rows of bays and an aisle). */
  parking:2.5,
 } as const;
@@ -236,7 +239,7 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number)
  const G=GALLERIA,axis=mall.cx;
  const green=land.find(r=>inRect(r,axis,mall.z-1)&&r.w>=6&&r.d>=6);
  if(!green)return;
- const half=Math.min(axis-(green.x+G.edge),green.x+green.w-G.edge-axis);
+ const half=Math.min(axis-(green.x+G.edge),green.x+green.w-G.edge-axis,G.maxW/2);
  const z0=green.z+G.edge,z1=mall.z-G.back;
  if(half*2<G.minW||z1-z0<G.minD)return;
  const rect={x:axis-half,z:z0,w:half*2,d:z1-z0};
