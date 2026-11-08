@@ -1,3 +1,4 @@
+import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { useMemo } from "react";
 import { Icon } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
@@ -63,9 +64,9 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <div className="grid kpis">
         <Tile label="Projects" value={m.projects} sub={`${m.repos} repositories · ${m.synced} synced`} source="Catalog manifests" onClick={() => setView("grid")} />
         <Tile
-          label="Configured agents"
+          label="Agents & automations"
           value={m.agents}
-          sub={`${m.agentsByStatus.active} active · ${m.frameworks} frameworks · ${m.observedAgents} watched via Actions`}
+          sub={residentsLabel(catalog.agents.filter(isAiAgent).length, catalog.agents.filter(a => !isAiAgent(a)).length)}
           source="Catalog manifests"
           onClick={() => toAgents()}
         />

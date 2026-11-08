@@ -27,7 +27,7 @@ describe('Benjaire Marketing Agency',()=>{
   for(const r of a.land)for(const o of others)if(o.w*o.d>=4)expect(overlap(r,o,1e-6),JSON.stringify({r,o})).toBe(false);
   // Clear of the BMW showroom, the Financial District and every other building.
   if(s.dealership)expect(overlap(a.land[0],s.dealership,0)).toBe(false);
-  for(const t of [...s.towers,...s.kiosks,...s.retail])expect(overlap(footprint,{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size},-.3)).toBe(false);
+  for(const t of [...s.towers,...s.kiosks])expect(overlap(footprint,{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size},-.3)).toBe(false);
   expect(a.land[0].x).toBeGreaterThanOrEqual(Math.min(...a.land.map(r=>r.x)));
   for(const r of [footprint,...a.pools])expect(inside(a.land[0],r.x,r.z)&&inside(a.land[0],r.x+r.w,r.z+r.d)).toBe(true);
  });

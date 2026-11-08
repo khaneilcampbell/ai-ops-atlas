@@ -63,7 +63,7 @@ describe("agent tiers", () => {
   });
 
   it("makes orchestrators coordinators", () => {
-    expect(tiers("coordinator")).toEqual(["commerce-loop"]);
+    expect(tiers("coordinator")).toEqual(["benjaire-product-lab", "commerce-loop"]);
   });
 
   it("keeps a declared tier", () => {
@@ -83,6 +83,12 @@ describe("automation categories", () => {
         "benjaire-contact-worker",
         "benjaire-flow-intake",
         "benjaire-inquiry-to-client",
+        "benjaire-product-lab",
+        "benjaire-product-lab-brief",
+        "benjaire-product-lab-competitors",
+        "benjaire-product-lab-customers",
+        "benjaire-product-lab-research",
+        "benjaire-product-lab-scoring",
         "brand-strategist",
         "canva-mockups",
         "commerce-loop",

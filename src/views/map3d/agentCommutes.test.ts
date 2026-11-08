@@ -30,7 +30,8 @@ describe("street graph", () => {
 describe("agent commutes", () => {
   it("gives every working agent a walk, and says why the rest have none", () => {
     expect(plan.commutes.length + plan.skipped.length).toBe(jobs.length);
-    expect(plan.commutes.length).toBeGreaterThanOrEqual(15);
+    // Fixed workflows no longer receive simulated agent commutes.
+    expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "site-builder", "niche-scout", "visual-director", "launch-planner"]);
     expect(plan.skipped.find((s) => s.agentId === "skyline-inquiry-assistant")?.reason).toContain("planned");
     // The Workday tab says workplace agents are not drawn walking; keep the two in step.
     const suites = jobs.filter((j) => j.work.kind === "workplace" && !j.offDuty).map((j) => j.agentId);

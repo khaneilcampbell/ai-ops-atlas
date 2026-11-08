@@ -33,7 +33,7 @@ export function plazaRings(scene: Pick<Scene3D, "towers" | "paving">): Map<strin
 }
 
 /** The centre lines of every street a pedestrian may follow, as 3D polylines. */
-export function streetLines(scene: Scene3D): Pt3[][] {
+export function streetLines(scene: Scene3D, opts: { drive?: boolean } = {}): Pt3[][] {
   const flat = (line: Pt[]): Pt3[] => line.map((p) => [p[0], 0, p[1]]);
   const lines: Pt3[][] = [];
   if (scene.financial) {
@@ -46,7 +46,9 @@ export function streetLines(scene: Scene3D): Pt3[][] {
     const lane = crossing(b, 0);
     lines.push(flat(b.roads[0]), flat(b.roads[1]), [[b.a[0], 0, b.a[1]], ...lane.filter((p) => p[1] > 0).map((p): Pt3 => (b.axis === "x" ? [p[0], p[1], b.a[1]] : [b.a[0], p[1], p[2]])), [b.b[0], 0, b.b[1]]]);
   }
-  for (const g of plazaRings(scene).values()) lines.push(flat([[g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1], [g.x0, g.z1], [g.x0, g.z0]]));
+  // Vehicles never drive across the front of a tower, where its entrance stairs are: for driving,
+  // the plaza lane runs round the sides and back only.
+  for (const g of plazaRings(scene).values()) lines.push(flat(opts.drive ? [[g.x0, g.z1], [g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1]] : [[g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1], [g.x0, g.z1], [g.x0, g.z0]]));
   return lines.map((l) => l.filter((p, i) => !i || Math.hypot(p[0] - l[i - 1][0], p[2] - l[i - 1][2]) > 1e-6)).filter((l) => l.length > 1);
 }
 
@@ -133,5 +135,6 @@ export function streetRoute(g: StreetGraph, from: Pt3, to: Pt3): Pt3[] | undefin
   if (cost[T] === Infinity) return;
   const path: Pt3[] = [];
   for (let i = T; i >= 0; i = came[i]) path.push(nodes[i]);
-  return path.reverse().filter((p, i, all) => !i || len3(p, all[i - 1]) > 1e-6);
+  const clean=path.reverse().filter((p, i, all) => !i || len3(p, all[i - 1]) > 1e-6);
+  return clean.flatMap((p,i)=>{if(!i)return [p];const a=clean[i-1],n=Math.ceil(len3(a,p)/20);return Array.from({length:n},(_,j)=>p.map((v,k)=>a[k]+(v-a[k])*(j+1)/n) as Pt3);});
 }

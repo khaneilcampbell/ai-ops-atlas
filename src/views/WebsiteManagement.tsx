@@ -16,7 +16,7 @@ export function WebsiteManagement() {
       </div>
       <div className="website-grid">
         {PROPERTIES.map((p) => (
-          <PropertyDashboard key={p.id} property={p} />
+          <PropertyDashboard key={p.id} property={p} compact />
         ))}
       </div>
     </section>

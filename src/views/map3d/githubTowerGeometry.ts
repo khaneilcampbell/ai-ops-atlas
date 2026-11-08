@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {GITHUB_TOWER,type Box3,type GithubTowerPlan} from './githubTowerPlan';
 import {GITHUB_ANNEX,type GithubAnnex} from './githubAnnex';
+import {compactGeometry} from './atlasHqGeometry';
 
 /** The GitHub tower's static meshes, merged by material so the whole building is a few draw calls. */
 
@@ -10,7 +11,8 @@ const merge=(gs:THREE.BufferGeometry[])=>{
  const m=parts.length?mergeGeometries(parts):new THREE.BufferGeometry();
  if(!m)throw new Error('GitHub tower: parts could not be merged');
  for(const g of [...gs,...parts])if(g!==m)g.dispose();
- return m;
+ // Indexed, with shared corners merged and all-zero uvs dropped: same look, about half the memory.
+ return compactGeometry(m);
 };
 
 function box(b:Box3){
