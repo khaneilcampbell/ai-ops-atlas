@@ -4,10 +4,12 @@ import type {Pt} from './roads';
 export const MALL_KEY='service:atlas-marketplace';
 /**
  * Atlas Marketplace: a low wave-style mall (stacked curving floors wrapped in white fins) on the
- * open lot between the Skyline park and the Hills boulevard. Sizes are in map units. Floors are as
- * tall as the Atlas Hills mansion's (1.6), so four of them stand twice its height on about its footprint.
+ * open lot between the Skyline park and the Hills boulevard. Sizes are in map units.
+ * KC, 2026-11-08: "reduce down 1x". The building is one step (0.8) smaller in every direction than
+ * before: floors 1.6 -> 1.28 and the footprint `size` 0.8 of the lot. The lot itself, its plaza and
+ * everything planned around it (Galleria, rail, roads) stay where they were.
  */
-export const MALL={levels:4,floor:1.6,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.5} as const;
+export const MALL={levels:4,floor:1.28,size:.8,slab:.1,gap:.35,openingHalf:.78,segments:40,outerFinStep:.15,innerFinStep:.24,maxW:12.4,maxD:11.6,plantStep:.95,canopyR:1.2} as const;
 
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
@@ -72,9 +74,10 @@ export function planMall(s:Input):MallPlan|undefined{
  // No building may stand in the lot.
  if([...s.towers,...s.kiosks,...s.retail].some(b=>b.x+b.size/2>lot.x&&b.x-b.size/2<lot.x+w&&b.z+b.size/2>lot.z&&b.z-b.size/2<lot.z+d))return;
  const plazaD=2.3,bd=d-plazaD;
- const rx=w/2-.1,rz=bd/2-.05;
+ const rx=(w/2-.1)*MALL.size,rz=(bd/2-.05)*MALL.size;
  const plaza={x:lot.x+.3,z:lot.z+bd,w:w-.6,d:plazaD};
- return {...lot,cx:lot.x+w/2,cz:lot.z+bd/2,rx,rz,plaza,fountain:{x:lot.x+w/2,z:plaza.z+1.45,r:.42}};
+ // The smaller building keeps its open side on the plaza, so the entrance still meets the walk.
+ return {...lot,cx:lot.x+w/2,cz:plaza.z-.05-rz,rx,rz,plaza,fountain:{x:lot.x+w/2,z:plaza.z+1.45,r:.42}};
 }
 
 /** Outer and inner edge of one floor. Floors drift in and out, which makes the planted terraces. */

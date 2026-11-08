@@ -50,13 +50,18 @@ describe("Atlas Marketplace mall", () => {
 });
 
 describe("Atlas Marketplace scale", () => {
- it("stands twice the height of the Atlas Hills mansion on about its footprint", async () => {
+ it("is one step (0.8) smaller than its first size, on the same lot (KC, 2026-11-08)", async () => {
   const {HILLS}=await import("./hillsPlan");
   const m=buildScene(layoutMap(catalog,[],"district")).mall!;
-  expect(MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.h*2);
-  expect(m.rx*2).toBeGreaterThan(HILLS.mansion.w*.8);
-  // Bounding volume at least twice the mansion's.
-  expect(m.rx*2*m.rz*2*MALL.levels*MALL.floor).toBeGreaterThanOrEqual(HILLS.mansion.w*HILLS.mansion.d*HILLS.mansion.h*2);
+  expect(MALL.size).toBeCloseTo(.8);
+  expect(MALL.levels*MALL.floor).toBeCloseTo(4*1.6*.8);
+  // Still clearly taller than the mansion, and the lot (plaza, neighbours) is unchanged.
+  expect(MALL.levels*MALL.floor).toBeGreaterThan(HILLS.mansion.h*1.5);
+  expect(m.rx).toBeCloseTo((m.w/2-.1)*.8);
+  expect(m.rz).toBeCloseTo((m.plaza.z-m.z)/2*.8-.04);
+  // The open side of the horseshoe still meets the plaza.
+  expect(m.cz+m.rz).toBeCloseTo(m.plaza.z-.05);
+  expect(m.cz-m.rz).toBeGreaterThan(m.z);
  });
 });
 
