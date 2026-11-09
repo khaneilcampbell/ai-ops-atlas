@@ -106,6 +106,7 @@
 .usage-findings li + li { border-top: 1px solid var(--sage-100); }
 .usage-findings .title { font-weight: 500; margin-top: 6px; }
 .usage-findings p { margin: 4px 0 0; line-height: 1.5; }
+.usage-findings code { font-family: var(--mono, ui-monospace, monospace); font-size: 0.95em; padding: 0 4px; border-radius: 4px; background: var(--sage-100); color: var(--ink-2, inherit); user-select: text; }
 .usage-findings .impact { display: inline-block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--sage-300); color: var(--ink-3); }
 .usage-findings .impact.high { border-color: var(--bad); color: var(--bad); }
 .usage-findings .impact.medium { border-color: var(--m-est); color: var(--m-est); }
