@@ -42,7 +42,11 @@ export default function Commons({plan:p,g,m,pick,night}:{plan?:CommonsPlan;g:Ret
    solid.push(strip([p.amphitheater[0]+r*Math.cos(a),p.amphitheater[1]+r*Math.sin(a)],[p.amphitheater[0]+r*Math.cos(b),p.amphitheater[1]+r*Math.sin(b)],.23,.04+row*.09,.08,'#d9ceb4'));
   }
   for(const [i,[x,z]]of p.trees.entries()){trunks.push(box(x,.05,z,.08,.65,.08,'#786f53'));plants.push(box(x,.75,z,i%3===0?.65:.5,.55,i%3===0?.65:.5,'#719d77'));}
-  for(const [x,z]of p.benches){solid.push(box(x,.2,z,.65,.06,.25,'#b68c60'),box(x,.26,z+.1,.65,.25,.04,'#b68c60'));for(const side of [-1,1])solid.push(box(x+side*.23,.05,z,.05,.15,.2,'#294237'));}
+  for(const [i,[x,z]]of p.benches.entries()){
+   const r=p.benchRotations[i],part=(dx:number,y:number,dz:number,w:number,h:number,d:number,c:string)=>({...box(x+dx*Math.cos(r)+dz*Math.sin(r),y,z-dx*Math.sin(r)+dz*Math.cos(r),w,h,d,c),r});
+   solid.push(part(0,.2,0,.65,.06,.25,'#b68c60'),part(0,.26,.1,.65,.25,.04,'#b68c60'));
+   for(const side of [-1,1])solid.push(part(side*.23,.05,0,.05,.15,.2,'#294237'));
+  }
   for(const [x,z]of p.lights){solid.push(box(x,.04,z,.045,.35,.045,'#294237'));lamps.push(box(x,.39,z,.09,.045,.09,'#fff2d1'));}
   return {solid,plants,trunks,panes,lamps};
  },[p]);

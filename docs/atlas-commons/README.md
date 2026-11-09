@@ -1,6 +1,6 @@
 # Atlas Commons
 
-Static public park between Service Desk and Marketplace. Service Desk, Marketplace, Galleria and transportation stay in place. The amphitheater retains its original position along the park and shifts right away from the street, with over 3.2 scene units between its center and the circular pavilion. Six park tests and the updated desktop selection check passed. Sports courts are deferred to preserve open space. No agents, bookings, integrations or pavilion interior are activated.
+Static public park between Service Desk and Marketplace. Service Desk, Marketplace, Galleria and transportation stay in place. The amphitheater retains its original position along the park and shifts right away from the street, with over 3.2 scene units between its center and the circular pavilion. Seven park tests and the updated desktop selection check passed. Benches now face the pond from outside the walking loop, with tested path and tree clearance. Sports courts are deferred to preserve open space. No agents, bookings, integrations or pavilion interior are activated.
 
 The shared planner supplies the pond, walking loop, bridge landings, entrances, landscape and selection bounds. Existing scattered decorations inside the park are replaced by its planned landscaping.
 

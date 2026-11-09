@@ -29,6 +29,11 @@ describe('Atlas Commons',()=>{
   expect(Math.hypot(p.amphitheater[0]-p.pavilion[0],p.amphitheater[1]-p.pavilion[1])).toBeGreaterThan(3.2);
   expect(inside(p.amphitheater,p.pond)).toBe(false);
  });
+ it('keeps pond-facing benches off walking lanes and away from trees',()=>{
+  const distance=(q:Pt,a:Pt,b:Pt)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(q[0]-a[0]-t*dx,q[1]-a[1]-t*dz);};
+  expect(p.benchRotations).toHaveLength(p.benches.length);
+  for(const q of p.benches){expect(inside(q,p.pond)).toBe(false);for(const path of p.paths)for(let i=1;i<path.length;i++)expect(distance(q,path[i-1],path[i])).toBeGreaterThan(.43);for(const tree of p.trees)expect(Math.hypot(q[0]-tree[0],q[1]-tree[1])).toBeGreaterThan(.5);}
+ });
  it('is deterministic and preserves shared access data',()=>{expect(planCommons(scene)).toEqual(p);expect(scene.transportConnections.find(c=>c.id==='skyline-airport')!.walk[0]).toEqual(p.access.service);});
  it('omits the park when the available space or required neighbors are missing',()=>{
   expect(planCommons({...scene,mall:undefined})).toBeUndefined();
