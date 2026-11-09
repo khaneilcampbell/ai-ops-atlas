@@ -15,6 +15,10 @@ on:
         description: Save this run's screenshots as the CI baselines, on a new branch to open a pull request from
         type: boolean
         default: false
+      specs:
+        description: Only these spec files, space separated (e.g. "views.visual.ts header.visual.ts"). One runner instead of six; leave empty for the whole set
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -34,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -51,12 +55,23 @@ jobs:
             echo "record=1" >> "$GITHUB_OUTPUT"
             echo "::notice::No CI baselines yet. Recording screenshots only; run this workflow by hand with 'update' to save them."
           fi
+      - name: Pick the tests
+        id: pick
+        env:
+          SPECS: ${{ inputs.specs }}
+        run: |
+          if [ -n "$SPECS" ]; then echo "args=$SPECS" >> "$GITHUB_OUTPUT";
+          else echo "args=--shard=${{ matrix.shard }}/6" >> "$GITHUB_OUTPUT"; fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
-        run: npx playwright test -c visual --shard=${{ matrix.shard }}/6
+        env:
+          ARGS: ${{ steps.pick.outputs.args }}
+        run: npx playwright test -c visual $ARGS
       - name: Record baselines
         if: steps.mode.outputs.record == '1'
-        run: BASELINE=1 npx playwright test -c visual --shard=${{ matrix.shard }}/6
+        env:
+          ARGS: ${{ steps.pick.outputs.args }}
+        run: BASELINE=1 npx playwright test -c visual $ARGS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
