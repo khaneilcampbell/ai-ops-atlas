@@ -87,10 +87,10 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
   const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
   for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
  }
- // Keep the original eastern gates open; the western waterfront stays protected.
- // With Circa next door the west wall stops short of the shared street, walks and promenade.
+ // The western waterfront stays protected. With Circa next door the west wall stops short of the shared street, walks and promenade.
+ // No wall on the east side: the district opens straight onto its neighbour (KC, 2026-11-09).
  const westWall=a.circa?F.northWalkZ-.5:a.d-.4;
- solid.push(box(.18,0,.2+westWall/2,.18,.35,westWall,'#c6c3b4'),box(a.w-.18,0,5.7,.18,.35,11,'#c6c3b4'),box(a.w-.18,0,14.65,.18,.35,.2,'#c6c3b4'));
+ solid.push(box(.18,0,.2+westWall/2,.18,.35,westWall,'#c6c3b4'));
  // The street side keeps its low kerb wall only: no railing on posts between the district and the road (KC, 2026-11-08).
  solid.push(box(center,0,.18,span,.35,.18,'#c6c3b4'),box(center,0,a.d-.18,span,.23,.16,'#c6c3b4'));
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
