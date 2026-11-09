@@ -1,8 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { isRibbonTower } from "./ribbonTowerPlan";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { useFrame } from "@react-three/fiber";
 import { isGithubTower } from "./githubTowerPlan";
+import { isIntelligenceHub } from "./intelligenceHubPlan";
+import { isPortfolioSite } from "./portfolioSitePlan";
 import * as THREE from "three";
 import type { Illumination } from "../office/activity";
 import type { useGeometries, useMaterials } from "./models";
@@ -107,7 +109,7 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
       const t = b as Tower;
       // Atlas HQ, Benjaire HQ, Commerce Pipeline and the GitHub tower are not boxes: a box-shaped glow
       // would hide them, so they light their plinth's edges and the ground halo instead.
-      if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
+      if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
       const s = t.size * 1.006;
       return { floors: Array.from({ length: t.floors }, (_, i) => [t.x, FLOOR_BASE + i * FLOOR_H, t.z, s, s] as const), box: [t.x, FLOOR_BASE, t.z, t.size + 0.06, t.floors * FLOOR_H, t.size + 0.06] as const };
     }
@@ -129,3 +131,121 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
 }
 
 const noRaycast = () => null;
+
+type Lit = THREE.MeshStandardMaterial;
+const isLit = (mat: THREE.Material): mat is Lit => (mat as Partial<Lit>).emissive instanceof THREE.Color;
+/** Original material -> this building's own copy, with the original's own glow to add onto. */
+export type GlowCopies = Map<THREE.Material, { copy: Lit; base: THREE.Color; weight: number }>;
+
+/** Lit windows: a glass texture with its own window mask, the same light a night facade shows. */
+export const WINDOW_GLOW = 1.5;
+/** Plain glass panes (lobbies, podium glazing) take a softer light, as if lit from deep inside. */
+export const GLASS_GLOW = 0.35;
+/** Interior surfaces a building already lights at night (lobby ceilings, recesses, bands). */
+export const INTERIOR_GLOW = 0.5;
+
+/**
+ * How much of the state's light a material lets out, read from what the material is. Light comes
+ * from inside, so it shows through windows and glass and on lit interiors, while walls, frames,
+ * fins, slats, stone and roofs stay their own color. Signs and cut-out cards keep their look.
+ */
+export function glowWeight(mat: THREE.Material): number {
+  let w = WEIGHTS.get(mat);
+  if (w === undefined) WEIGHTS.set(mat, (w = weigh(mat)));
+  return w;
+}
+/** Read once per material: buildings ask every frame while they glow. */
+const WEIGHTS = new WeakMap<THREE.Material, number>();
+function weigh(mat: THREE.Material): number {
+  if (!isLit(mat)) return 0;
+  // Name plates, logos and cut-out cards light themselves from their own picture.
+  if (mat.emissiveMap && mat.emissiveMap === mat.map) return 0;
+  if (mat.emissiveMap) return WINDOW_GLOW;
+  if (mat.transparent) return 0;
+  if (mat.metalness >= 0.3 && mat.roughness <= 0.2) return GLASS_GLOW;
+  if (mat.emissive.getHex() !== 0) return INTERIOR_GLOW;
+  return 0;
+}
+
+function eachMaterial(root: THREE.Object3D, fn: (mat: THREE.Material, put: (m: THREE.Material) => void) => void) {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = mesh.material;
+    if (Array.isArray(mats)) mats.forEach((mat, i) => fn(mat, (m) => (mats[i] = m)));
+    else fn(mats, (m) => (mesh.material = m));
+  });
+}
+
+/**
+ * Gives every mesh under root its own copy of each lit material and sets the copies' emissive to
+ * the original's plus glow. Shared materials are never changed, so other buildings stay as they are.
+ */
+export function lightUp(root: THREE.Object3D, copies: GlowCopies, glow: THREE.Color) {
+  const mine = new Set<THREE.Material>([...copies.values()].map((c) => c.copy));
+  eachMaterial(root, (mat, put) => {
+    if (mine.has(mat)) return;
+    // A re-render (night toggle, selection) can hand the mesh its shared material again.
+    let c = copies.get(mat);
+    if (!c) {
+      const weight = glowWeight(mat);
+      if (!weight) return;
+      const lit = mat as Lit;
+      // The original's own light (emissive times intensity), so night windows keep their warmth.
+      c = { copy: lit.clone(), base: lit.emissive.clone().multiplyScalar(lit.emissiveIntensity), weight };
+      copies.set(mat, c);
+      mine.add(c.copy);
+    }
+    put(c.copy);
+  });
+  copies.forEach(({ copy, base, weight }) => {
+    copy.emissiveIntensity = 1;
+    copy.emissive.copy(glow).multiplyScalar(weight).add(base);
+  });
+}
+
+/** Hands every mesh its shared material back and frees the copies. */
+export function restore(root: THREE.Object3D, copies: GlowCopies) {
+  const back = new Map<THREE.Material, THREE.Material>([...copies].map(([orig, c]) => [c.copy, orig]));
+  eachMaterial(root, (mat, put) => {
+    const orig = back.get(mat);
+    if (orig) put(orig);
+  });
+  copies.forEach((c) => c.copy.dispose());
+  copies.clear();
+}
+
+/**
+ * Lights a shaped building as a whole (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, the
+ * Intelligence Hub, the Portfolio Site), which a box-shaped shell would hide. While its work is
+ * running, completed or failed, the building lights from inside in the state's color, following
+ * its own design (see glowWeight): windows brightest, glass softer, solid walls unlit. It uses each
+ * material's own emissive channel, so no geometry, light or draw call is added. Materials are copied for this
+ * building only while it glows, and the originals go back once it has faded out.
+ */
+export function WholeBuildingGlow({ state, reduced, children }: { state: Illumination; reduced: boolean; children: ReactNode }) {
+  const root = useRef<THREE.Group>(null);
+  const level = useRef(0);
+  const color = useMemo(() => new THREE.Color(), []);
+  const target = useMemo(() => new THREE.Color(), []);
+  const glow = useMemo(() => new THREE.Color(), []);
+  const copies = useRef<GlowCopies>(new Map());
+
+  useFrame(({ clock }, dt) => {
+    const on = state !== "idle";
+    const goal = on ? 1 : 0;
+    level.current = reduced ? goal : THREE.MathUtils.clamp(level.current + Math.sign(goal - level.current) * Math.min(dt, 0.1) / FADE, 0, 1);
+    if (!root.current) return;
+    if (level.current <= 0.001) {
+      if (copies.current.size) restore(root.current, copies.current);
+      return;
+    }
+    if (on) target.set(COLOR[state as Exclude<Illumination, "idle">]);
+    color.lerp(target, reduced ? 1 : Math.min(1, dt * 2.5));
+    const e = level.current * level.current * (3 - 2 * level.current);
+    const breath = state === "running" && !reduced ? 0.8 + 0.2 * Math.sin(clock.elapsedTime * 1.8) : 1;
+    lightUp(root.current, copies.current, glow.copy(color).multiplyScalar(e * breath));
+  });
+
+  return <group ref={root}>{children}</group>;
+}

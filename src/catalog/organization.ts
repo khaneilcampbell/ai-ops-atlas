@@ -70,7 +70,7 @@ export function automationCategoryOf(agent: Agent, district?: DistrictId): Decid
   if (reg?.category === "business") return inferred("business", "business category");
   if (/health|monitor|alert|status/i.test(sub)) return inferred("monitoring", `subcategory "${sub}"`);
   if (/backup|maintenance|validation|code quality|documentation/i.test(sub)) return inferred("maintenance", `subcategory "${sub}"`);
-  if (isAiAgent(agent) || reg?.category === "data") return inferred("intelligence", "uses an AI model or works on data");
+  if (isAiAgent(agent) || type === "B" || reg?.category === "data") return inferred("intelligence", "uses an AI model or works on data");
   if (district === "business-operations") return inferred("business", "runs in the Business Operations district");
   if (district === "security-infrastructure") return inferred("security", "runs in the Security & Infrastructure district");
   return inferred("maintenance", "no more specific rule matched");

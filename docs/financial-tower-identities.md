@@ -1,5 +1,9 @@
 # Financial District tower identities
 
+> **Renamed 2026-11-07 (PR #257):** the towers below now use original names (Bayvale Bank, Robin Exchange,
+> Merrow Credit Union, Aldren Insights, Camton Hotel, Halden Trust, Ravelle Advisors, Ellipse Residences) and
+> Vantor Motors replaces BMW. See `docs/building-names.md`. The history below keeps the names used at the time.
+
 Four existing IDs retain their placement and gain distinct, static procedural architecture:
 
 | Stable ID | Display name | Architecture |
@@ -90,3 +94,8 @@ The `residence` tower was renamed **Garden Residences** so the name Circa belong
 ## Experian (stable ID `residence`)
 
 The former Garden Residences tower is an unofficial Experian-inspired business building (`architecture:'curtain'`). Each office floor is one clear glass volume from slab to slab (the district's shared `CLEAR_ARCHITECTURAL_GLASS` material), with dark mullions, a blue service core, desks and magenta/purple meeting pods. The floor panel uses the district's existing interior-glow material, so floors read pale by day and lit at night without any new lights or materials. The sign draws a dot cluster and lowercase wordmark on the shared canvas sign (`symbol:'experian'`). The stable ID, position, height and the old name `Residence` (search alias and interior route) are unchanged. Preview shots: `EXPERIAN_SHOTS=1 npx playwright test -c visual experian`.
+
+### Corvane Capital and Ellery Budget Center (Nov 9)
+- Benjaire Finance is now **Corvane Capital**, a fictional business finance house (stable id `business-finance`, same slot, height and pavilion ribbons). Its sign carries an original drawn logo: a rounded teal badge with a cream open ring and three copper rising bars (`drawEmblem` in `FinancialSigns.tsx`). Benjaire branding and links are gone from this tower; "Benjaire Finance" and "Business Finance" still find it in search.
+- American Express is now **Ellery Budget Center**, a life-management building (stable id `budget`, same slot and Art Deco shape) for spending, budget, bills and household goals. The Amex blue is replaced by plum (`#5a4b8f`). "American Express" and "Spending & Budget" still find it in search.
+- Names are not trademark-searched yet.

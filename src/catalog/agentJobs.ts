@@ -9,8 +9,8 @@ import type { TriggerType } from "../registry/types";
 // fixed rules below, and every field says which (see docs/agent-workdays.md). No model is involved,
 // and nothing here starts an agent: the workday on the map is a simulation of the job as written.
 
-/** Agents live in Circa, the twin-tower residence in the Financial District (KC, 2026-11-01). */
-export const AGENT_RESIDENCE = { id: "circa", name: "Circa", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
+/** Agents live in Ellipse Residences (stable id circa), the twin-tower residence in the Financial District (KC, 2026-11-01). */
+export const AGENT_RESIDENCE = { id: "circa", name: "Ellipse Residences", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
 
 /** A simulated day on the map, in seconds. Shift hours below are hours of this day. */
 export const SIM_DAY_SECONDS = 720;
@@ -107,7 +107,7 @@ export function agentJobs(catalog: Catalog): AgentJob[] {
       owner: ownerOf(a),
       home: homes.get(a.id)!,
       work: a.workplace
-        ? { kind: "workplace", projectId: a.projectId, building: a.workplace.building, label: `${a.workplace.building}, floor ${a.workplace.floor}, suite ${a.workplace.room}` }
+        ? { kind: "workplace", projectId: a.projectId, building: a.workplace.building, label: `${a.workplace.building}, floor ${a.workplace.floor}, ${/^\d+$/.test(a.workplace.room) ? "suite" : "room"} ${a.workplace.room}` }
         : { kind: "headquarters", projectId: a.projectId, building: a.projectId, label: `${project?.name ?? a.projectId} headquarters${a.officeFloor ? `, floor ${a.officeFloor}` : ""}` },
       shift: shiftOf(a),
       budget: budget ? declared(budget, "registry.cost.budget in the manifest") : inferred("Not documented", "no budget written in the manifest"),

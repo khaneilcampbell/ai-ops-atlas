@@ -5,7 +5,7 @@ import {stop,type Stop} from "./walkNav";
 /**
  * The Financial District's other buildings inside "Enter building", in Circa's style: square floor plates in the
  * proportions of each exterior, floor-to-ceiling glass all round, Circa's oak and marble floors with walls, desks and
- * upholstery in each brand's colours (TOWER_THEMES), and agents who walk the building on the real lift. BMW and Circa
+ * upholstery in each brand's colours (TOWER_THEMES), and agents who walk the building on the real lift. Vantor Motors and Ellipse Residences (Circa)
  * keep their own interiors.
  *
  * Plan (the same frame on every floor): x across the building, z from the back (-) to the street (+). The lift landing
@@ -19,17 +19,17 @@ export type TowerProgram="office"|"hotel";
  */
 export type TowerTheme={primary:string;deep:string;highlight:string};
 export type TowerSpec={key:string;id:string;name:string;w:number;d:number;program:TowerProgram;accent:string;theme:TowerTheme;subtitle:string;rooms:string[]};
-/** Brand themes (colours from financialBrands, with Experian's purple and a deeper shade of each brand colour). */
+/** Building themes (colours from financialBrands, with a deeper shade of each building colour). */
 export const TOWER_THEMES:Record<string,TowerTheme>={
-  banks:{primary:"#126bc4",deep:"#143b65",highlight:"#7fb6ea"},                       // Chase blue
-  investments:{primary:"#7fae1f",deep:"#203735",highlight:"#c5ed6c"},                 // Robinhood green
-  insurance:{primary:"#204e7b",deep:"#183c60",highlight:"#9cc3e6"},                   // Navy Federal navy
-  residence:{primary:"#6d2077",deep:"#3f1446",highlight:"#af1685"},                   // Experian purple and magenta
-  "harbor-residence":{primary:"#bfa16b",deep:"#283538",highlight:"#e9d9b7"},          // The Ritz-Carlton gold and charcoal
-  records:{primary:"#b51c32",deep:"#6f1220",highlight:"#f4dd94"},                     // Wells Fargo red and gold
-  "financial-planning":{primary:"#8c2434",deep:"#561520",highlight:"#e3b9bf"},        // Vanguard maroon
-  budget:{primary:"#006fcf",deep:"#00335f",highlight:"#8cc4f2"},                      // American Express blue
-  "business-finance":{primary:"#3b4045",deep:"#1d2023",highlight:"#d8d2c4"},          // Benjaire charcoal and pearl
+  banks:{primary:"#126bc4",deep:"#143b65",highlight:"#7fb6ea"},                       // Bayvale Bank blue
+  investments:{primary:"#b8952f",deep:"#203735",highlight:"#f0d98a"},                 // Robin Exchange gold on deep green
+  insurance:{primary:"#204e7b",deep:"#183c60",highlight:"#9cc3e6"},                   // Merrow Credit Union navy
+  residence:{primary:"#1d4f91",deep:"#14365f",highlight:"#2f8f83"},                   // Aldren Insights blue and teal
+  "harbor-residence":{primary:"#bfa16b",deep:"#283538",highlight:"#e9d9b7"},          // Camton Hotel gold and charcoal
+  records:{primary:"#1f3b4d",deep:"#142731",highlight:"#e8d9a8"},                     // Halden Trust navy and cream
+  "financial-planning":{primary:"#8c2434",deep:"#561520",highlight:"#e3b9bf"},        // Ravelle Advisors maroon
+  budget:{primary:"#5a4b8f",deep:"#3f3466",highlight:"#cfc3ee"},                      // Ellery Budget Center plum
+  "business-finance":{primary:"#1f5f5b",deep:"#163f3c",highlight:"#d39a5b"},          // Corvane Capital teal and copper
 };
 /** Plate width on every building; depth follows the exterior's footprint. */
 export const TOWER_W=22;

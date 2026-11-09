@@ -41,7 +41,7 @@ jobs:
       fix: ${{ steps.scan.outputs.fix }}
       model: ${{ steps.scan.outputs.model }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -91,7 +91,7 @@ jobs:
       BRANCH: design-consistency/run-${{ github.run_id }}
       SHOTS_BRANCH: design-consistency-shots
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # A fine-grained token lets the PR run CI; without it GitHub opens the PR as github-actions.
           token: ${{ secrets.DESIGN_FIX_TOKEN || github.token }}

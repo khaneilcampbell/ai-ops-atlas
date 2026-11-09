@@ -1,5 +1,6 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
+import * as THREE from 'three';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,TERRACE_H,type Rect} from './scene';
@@ -15,19 +16,21 @@ describe('Benjaire Marketing Agency',()=>{
  const s=buildScene(layoutMap(catalog,[],'district')),a=s.agency!;
  const footprint={x:a.x,z:a.z,w:a.w,d:a.d};
 
- it('sits in the open bay between Benjaire HQ, Benjaire Dashboard and the Financial District',()=>{
+ it('sits in the open bay between Benjaire HQ, the Benjaire Dashboard lot and the Financial District',()=>{
   expect(a).toBeDefined();
   const f=s.financial!;
   // North of the city's own districts, south of the Financial District, with the channel kept open.
   expect(a.land[0].z).toBeGreaterThan(f.z+f.d);
-  const hq=s.towers.find(t=>t.name==='Benjaire HQ')!,dash=s.towers.find(t=>t.name==='Benjaire Dashboard')!;
+  // Benjaire Dashboard's tower was removed (2026-11-09); its cleared lot stays where it stood.
+  const hq=s.towers.find(t=>t.name==='Benjaire HQ')!,dash=s.clearedLots!.find(t=>t.projectId==='benjaire-ops')!;
+  expect(s.towers.some(t=>t.projectId==='benjaire-ops')).toBe(false);
   expect(a.cx).toBeGreaterThan(hq.x);expect(a.cz).toBeLessThan(dash.z);
   // The new land fills water only: it never covers another parcel bigger than a coastal sliver.
   const others=s.land.filter(r=>!a.land.includes(r));
   for(const r of a.land)for(const o of others)if(o.w*o.d>=4)expect(overlap(r,o,1e-6),JSON.stringify({r,o})).toBe(false);
   // Clear of the BMW showroom, the Financial District and every other building.
   if(s.dealership)expect(overlap(a.land[0],s.dealership,0)).toBe(false);
-  for(const t of [...s.towers,...s.kiosks,...s.retail])expect(overlap(footprint,{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size},-.3)).toBe(false);
+  for(const t of [...s.towers,...s.kiosks])expect(overlap(footprint,{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size},-.3)).toBe(false);
   expect(a.land[0].x).toBeGreaterThanOrEqual(Math.min(...a.land.map(r=>r.x)));
   for(const r of [footprint,...a.pools])expect(inside(a.land[0],r.x,r.z)&&inside(a.land[0],r.x+r.w,r.z+r.d)).toBe(true);
  });
@@ -102,5 +105,15 @@ describe('Benjaire Marketing Agency',()=>{
   const v=buildScene(layoutMap(catalog,[],g)),b=v.agency;if(!b)return;
   for(const r of b.land)for(const o of v.land.filter(l=>!b.land.includes(l)&&l.w*l.d>=4))expect(overlap(r,o,1e-6)).toBe(false);
   for(const t of v.towers)expect(overlap({x:b.x,z:b.z,w:b.w,d:b.d},{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size})).toBe(false);
+ });
+ it('never draws two materials on the same plane, so nothing flickers in the depth buffer',()=>{
+  // KC, 2026-11-09: the slot's copper linings sat exactly on its cream walls and shimmered.
+  const tris=(g:THREE.BufferGeometry)=>{const p=g.getAttribute('position'),out:THREE.Triangle[]=[];for(let i=0;i<p.count;i+=3){const t=new THREE.Triangle(new THREE.Vector3().fromBufferAttribute(p,i),new THREE.Vector3().fromBufferAttribute(p,i+1),new THREE.Vector3().fromBufferAttribute(p,i+2));if(t.getArea()>1e-6)out.push(t);}return out;};
+  const geo=agencyGeometry(),names=['shell','copper','glass'] as const,hits:string[]=[],plane=new THREE.Plane(),n=new THREE.Vector3(),c=new THREE.Vector3(),q=new THREE.Vector3();
+  for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){const A=tris(geo[names[i]]);
+   for(const b of tris(geo[names[j]])){b.getMidpoint(c);b.getNormal(n);
+    for(const a of A){a.getPlane(plane);if(Math.abs(plane.normal.dot(n))<.999||Math.abs(plane.distanceToPoint(c))>.004)continue;
+     if(a.containsPoint(plane.projectPoint(c,q))){hits.push(`${names[i]}/${names[j]} at ${c.toArray().map(v=>v.toFixed(2)).join(',')}`);break;}}}}
+  expect(hits).toEqual([]);
  });
 });

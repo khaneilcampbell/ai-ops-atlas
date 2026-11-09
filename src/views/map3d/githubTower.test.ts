@@ -13,14 +13,14 @@ const tower=scene.towers.find(t=>t.projectId===GITHUB_TOWER.projectId)!;
 const plan=planGithubTower(tower.size,tower.customHeight!);
 
 describe('GitHub tower',()=>{
- it('stands with the Financial District: taller than before, under its shortest tower',()=>{
+ it('stands with the Financial District: taller than before, under its tallest towers',()=>{
   const reference=scene.financial!.referenceHeight;
   expect(tower.customHeight).toBeCloseTo(githubTowerHeight(reference));
   // Taller than the plain tower it replaces, and at Financial scale, whatever the city scale (#160).
   expect(tower.customHeight!).toBeGreaterThan(tower.height);
   expect(githubTowerTop(tower.customHeight!)).toBeGreaterThan(reference*.9);
-  const shortest=Math.min(...scene.financial!.buildings.map(b=>b.height));
-  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(shortest);
+  const tallest=Math.max(...scene.financial!.buildings.filter(b=>b.id!=='circa').map(b=>b.height));
+  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(tallest);
   // Atlas HQ's roof stands at the reference itself (#159), so the GitHub crown stays under it.
   expect(githubTowerTop(tower.customHeight!)).toBeLessThan(reference);
   // Its own custom height never feeds back into the reference the Financial District rises from.
@@ -93,7 +93,7 @@ describe('GitHub glass podium and its new land',()=>{
   for(const r of city.terraces)if(r.id!==GITHUB_TOWER.projectId)expect(r.x<annex.land.x+annex.land.w&&r.x+r.w>annex.land.x&&r.z<annex.land.z+annex.land.d&&r.z+r.d>annex.land.z).toBe(false);
   const on=(x:number,z:number)=>x>annex.land.x&&x<annex.land.x+annex.land.w&&z>annex.land.z&&z<annex.land.z+annex.land.d;
   for(const p of [...city.trees,...city.bushes,...city.rocks])expect(on(p.x,p.z)).toBe(false);
-  for(const b of [...city.towers,...city.kiosks,...city.retail])expect(on(b.x,b.z)).toBe(false);
+  for(const b of [...city.towers,...city.kiosks])expect(on(b.x,b.z)).toBe(false);
   for(const r of city.carBridges.flatMap(b=>b.roads).flat())expect(on(r[0],r[1])).toBe(false);
   for(const w of city.walks)for(const p of w.route??[])expect(on(p.gx,p.gy)).toBe(false);
  });

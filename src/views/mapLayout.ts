@@ -67,7 +67,24 @@ export interface Park {
   h: number;
   /** Repositories with no manifest, shown as plain buildings in this lot. */
   strays: Stray[];
+  /** Plain lawn where a project building stood before it was taken off the map. */
+  vacant?: true;
 }
+
+/**
+ * Projects that stay registered (agents, Mission Control, search) but have no building on the map.
+ * Skyline's district was removed to make space (KC, 2026-11-08). Service Desk, Career Applications
+ * and Benjaire Dashboard were removed on 2026-11-09, and each keeps its land, so every other
+ * building, road and bridge keeps its place.
+ */
+export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "service-desk", "career-optimizer", "benjaire-ops"]);
+/** Removed towers on the city's edge: their land becomes a plain lawn lot. */
+const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimizer"]);
+/**
+ * Removed towers in the middle of the city: the streets and bridges that link their neighbors run
+ * through the lot, so it keeps its streets and paving and only the building goes.
+ */
+export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
 
 /** A labelled block of districts when the map is grouped. */
 export interface Neighborhood {
@@ -100,6 +117,11 @@ export interface Meadow {
 
 export interface Layout {
   districts: District[];
+  /**
+   * Districts whose tower was removed but whose streets stay, because the city's roads run through
+   * them (see CLEARED_LOTS). The scene lays their streets and paving and draws no building.
+   */
+  cleared?: District[];
   parks: Park[];
   neighborhoods: Neighborhood[];
   walks: Walk[];
@@ -134,9 +156,12 @@ export function districtSize(lotCount: number, projectId?: string) {
 /**
  * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
  * and its grounds. The Commerce district holds the teardrop tower and its garden podium
- * (KC, 2026-11-01: "expand district landscape to fit design"). Sizes stay on the 2.5 grid.
+ * (KC, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
+ * about twice its usual land (7.5 across, from 5: 2.25x the area, the nearest step on the grid),
+ * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
+ * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
-export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10 };
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5 };
 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
@@ -221,8 +246,11 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
 
   // Bucket projects into neighborhoods, then pack each neighborhood on its own.
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
-  // Skyline already has its custom residential district; do not add a duplicate office.
-  for (const p of catalog.projects.filter(p => p.id !== "skyline")) {
+  // Off-map projects have no building (see OFF_MAP_PROJECTS). A removed tower keeps its land as a
+  // vacant lot in every grouping, so the rest of the city, its roads and its traffic stay as they were.
+  const vacant = (p: Project) => VACANT_LOTS.has(p.id);
+  const kept = (p: Project) => !OFF_MAP_PROJECTS.has(p.id) || vacant(p) || CLEARED_LOTS.has(p.id);
+  for (const p of catalog.projects.filter(kept)) {
     const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
     b.projects.push(p);
@@ -230,21 +258,22 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   }
   const ordered = [...buckets.entries()].sort(([ka, a], [kb, b]) => a.rank - b.rank || a.label.localeCompare(b.label) || ka.localeCompare(kb));
 
-  type Item = Box & { project?: Project; park?: true };
+  type Item = Box & { project?: Project; park?: true; vacant?: string };
   const blocks: (Box & { key: string; label: string; count: number; inner: ReturnType<typeof shelf<Item>>; strays?: string[] })[] = ordered.map(([key, b],blockIndex) => {
     const items: Item[] = b.projects
-      .map((project) => {
+      .map((project): Item & { fit: number } => {
         const r = residents(agentsByProject.get(project.id) ?? []);
         const s = districtSize(r.houses.length + r.services.length, project.id);
-        return { project, w: s, h: s, fit: districtSize(r.houses.length + r.services.length) };
+        const fit = districtSize(r.houses.length + r.services.length);
+        return vacant(project) ? { vacant: project.id, w: s, h: s, fit } : { project, w: s, h: s, fit };
       })
       // Largest first packs tighter; ties keep catalog order. A widened district keeps the place its
       // houses and kiosks give it, so it grows where it stands and its neighbors step aside.
       .sort((a, c) => c.fit - a.fit);
-    // An empty park keeps the "room for the next project" corner of the original map.
+    // An empty park keeps the "room for the next project" corner of the original map (the open lot).
     if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
-    return { key, label: b.label, count: b.projects.length, inner, w: inner.w, h: inner.h };
+    return { key, label: b.label, count: b.projects.filter(p => !OFF_MAP_PROJECTS.has(p.id)).length, inner, w: inner.w, h: inner.h };
   });
   if (uncataloged.length) {
     const cols = Math.ceil(Math.sqrt(uncataloged.length * 1.5));
@@ -260,6 +289,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const outer = shelf(blocks, joined ? GAP : GROUP_GAP);
   const rects: { id: string; x: number; y: number; w: number; h: number }[] = [];
   const districts: District[] = [];
+  const cleared: District[] = [];
   const parks: Park[] = [];
   const neighborhoods: Neighborhood[] = [];
   const meadows: Meadow[] = [];
@@ -290,7 +320,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
     // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
     for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
-    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? `park:${blk.key}`, x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
+    const lotId = (it: Item) => it.vacant ? `park:vacant:${it.vacant}` : `park:${blk.key}`;
+    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? lotId(it), x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
     if (joined) rects.push(...own);
     else walks.push(...walkways(own));
     for (const it of blk.inner.placed) {
@@ -298,6 +329,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const oy = blk.y + it.y;
       if (it.park) {
         parks.push({ id: `park:${blk.key}`, ox, oy, w: it.w, h: it.h, strays: [] });
+        continue;
+      }
+      if (it.vacant) {
+        parks.push({ id: lotId(it), ox, oy, w: it.w, h: it.h, strays: [], vacant: true });
         continue;
       }
       const project = it.project!;
@@ -309,14 +344,14 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
-      districts.push({
+      (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
         project,
         group: blk.key,
         ox,
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,
@@ -337,12 +372,13 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
 
   if (joined) walks.push(...walkways(rects));
 
-  const boxes = [...districts.map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
+  const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
   const xs = corners.map((c) => c.x);
   const ys = corners.map((c) => c.y);
   return {
     districts,
+    cleared,
     parks,
     neighborhoods,
     walks,

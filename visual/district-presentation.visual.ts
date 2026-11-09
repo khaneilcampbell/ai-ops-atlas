@@ -13,7 +13,7 @@ test('grouping preserves city geometry and camera; labels and controls stay cons
  });
  await expect(page.locator('.map-view-context')).toHaveCount(0);
  // Financial tower names follow the same overview rule as project towers.
- for(const name of ['Wells Fargo','American Express','Chase','Robinhood','Atlas HQ'])await expect(page.locator('.m3-plaque',{hasText:name}).first()).toHaveCount(1);
+ for(const name of ['Halden Trust','Ellery Budget Center','Bayvale Bank','Robin Exchange','Atlas HQ'])await expect(page.locator('.m3-plaque',{hasText:name}).first()).toHaveCount(1);
  const baseline=await scene();mkdirSync('artifacts/district-presentation',{recursive:true});
  for(const mode of ['none','status','tag','district']){
   await page.getByRole('combobox',{name:'Group projects',exact:true}).selectOption(mode);await settle(page,2);
@@ -24,6 +24,6 @@ test('grouping preserves city geometry and camera; labels and controls stay cons
  }
  await page.getByRole('combobox',{name:'Map view',exact:true}).selectOption('automations');await settle(page,1);
  await expect(page.locator('.map-view-context')).toHaveCount(0);
- await selectBuilding(page,'Financial District');await selectBuilding(page,'Wells Fargo');
- await expect(page.getByLabel('Inspector',{exact:true})).toContainText('Wells Fargo');
+ await selectBuilding(page,'Financial District');await selectBuilding(page,'Halden Trust');
+ await expect(page.getByLabel('Inspector',{exact:true})).toContainText('Halden Trust');
 });

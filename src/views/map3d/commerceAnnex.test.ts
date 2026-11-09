@@ -11,7 +11,7 @@ describe('Commerce district tool offices',()=>{
  const tower=scene.towers.find(t=>isCommerceTower(t.projectId))!;
  const annexes=scene.kiosks.filter(isCommerceAnnex).sort((a,b)=>a.key<b.key?-1:1);
  it('covers every Commerce tool and no other district',()=>{
-  expect(annexes.map(k=>k.name).sort()).toEqual(expect.arrayContaining(['Canva','Serper','Stripe']));
+  expect(annexes.map(k=>k.name).sort()).toEqual(expect.arrayContaining(['Design Studio','Search Desk','Payments Office']));
   for(const k of scene.kiosks)expect(isCommerceAnnex(k)).toBe(k.projectId==='commerce-pipeline');
  });
  it('fits each office and its plinth inside its own lot',()=>{

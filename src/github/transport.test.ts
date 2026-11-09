@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const web = { on: true };
 vi.mock("../lib/env", () => ({ isTauri: () => false, isHostedWeb: () => web.on }));
 
-const { githubGet, takeUsage } = await import("./transport");
+const { githubGet, NOT_IN_TOKEN, takeUsage } = await import("./transport");
 
 const stubFetch = (impl: (url: string, init: RequestInit) => Promise<Response>) => vi.stubGlobal("fetch", vi.fn(impl));
 
@@ -19,6 +19,11 @@ describe("githubGet in the browser", () => {
     stubFetch(async () => Response.json({ message: "Session expired. Reload to sign in again." }, { status: 401 }));
     await expect(githubGet("/repos/o/r")).rejects.toMatchObject({ status: 401, message: "The site refused the request: Session expired. Reload to sign in again." });
     expect(takeUsage().requests).toBe(0);
+  });
+
+  it("explains a fine-grained token that leaves the repository out", async () => {
+    stubFetch(async () => Response.json({ message: "Resource not accessible by personal access token" }, { status: 403, headers: { "x-atlas-authed": "1" } }));
+    await expect(githubGet("/repos/o/private")).rejects.toMatchObject({ status: 403, message: NOT_IN_TOKEN });
   });
 
   it("still reads GitHub's own answers relayed by the site", async () => {

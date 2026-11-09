@@ -8,6 +8,7 @@ import {COMMERCE,commerceFront,commerceTop} from './commerceTowerPlan';
 import {commerceGeometry} from './commerceTowerGeometry';
 import {glassTexture} from './atlasHqTextures';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -27,7 +28,7 @@ function wordmark(text:string){
 export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:number;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
  const k=t.size/COMMERCE.refSize,quality=useQualityLevel();
  const height=commerceTop(k,t.customHeight);
- const geo=useMemo(()=>commerceGeometry(k,height),[k,height]);
+ const geo=useMemo(()=>packNormals(commerceGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
   const silver=glassTexture('#7f9fb8','#d4e2ec','#56718a',73),gold=glassTexture('#d7b06c','#f7e6bd','#b98d4f',89);

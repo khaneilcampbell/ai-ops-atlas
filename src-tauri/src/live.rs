@@ -16,7 +16,7 @@ pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
-const REPORT_AGENTS: &[&str] = &["github-opportunity-scout"];
+const REPORT_AGENTS: &[&str] = &["github-opportunity-scout", "benjaire-product-lab"];
 const MAX_EVENTS: usize = 50;
 
 async fn refused(r: reqwest::Response, path: &str) -> String {

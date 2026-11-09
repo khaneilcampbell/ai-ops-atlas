@@ -1,0 +1,49 @@
+name: Benjaire production handoff
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benjaire-production-fixture
+  cancel-in-progress: false
+
+jobs:
+  fixture:
+    name: Synthetic handoff — review required
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: atlas
+      - name: Read pinned Commerce validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: khaneilcampbell/multi-agent-commerce-pipeline
+          # Merged PR #26: dependency is pinned, never followed by a moving branch.
+          ref: 230605fdbde89585a96f35ded61cc17562f39135
+          persist-credentials: false
+          path: commerce
+      - name: Run one synthetic handoff without approval or publishing
+        env:
+          BENJAIRE_PRODUCTION_STOP: ${{ vars.BENJAIRE_PRODUCTION_STOP || 'false' }}
+        run: python3 atlas/ops/benjaire-production/team.py --brief atlas/ops/benjaire-production/fixtures/brief.json --state-root "$RUNNER_TEMP/benjaire-team" --commerce-root commerce
+      - name: Publish fixture evidence
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/benjaire-team" ]; then
+            find "$RUNNER_TEMP/benjaire-team" -maxdepth 2 -name report.md -exec cat {} \; >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: benjaire-synthetic-handoff-evidence
+          path: |
+            ${{ runner.temp }}/benjaire-team/*/job.json
+            ${{ runner.temp }}/benjaire-team/*/report.md
+          retention-days: 14
+          if-no-files-found: error

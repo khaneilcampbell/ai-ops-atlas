@@ -24,6 +24,10 @@ export const RISE = 0.07;
 const RAMP = 0.42;
 /** A bridge keeps at least this far to the side of the footpath it runs beside. */
 const PATH_GAP = 0.75;
+/** Preference for a bridge on a line another bridge already uses (a through street), and for one on a plaza lane's line. */
+const THROUGH_BONUS = 1.5;
+const LANE_BONUS = 0.5;
+
 
 export const dist = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 
@@ -220,6 +224,123 @@ function roadTo(d: DistrictRoads, axis: "x" | "z", sign: 1 | -1, e: number, q: n
  * follow the same network, so the map stays one street grid in every grouping.
  */
 export function planBridges(sites: BridgeSite[], districts: Map<string, DistrictRoads>): CarBridge[] {
+  // A street grid first: every chain of bridges along one axis shares one straight line, which runs
+  // through the districts it joins, and each tower takes one short driveway off it (see planStreetGrid).
+  const grid = planStreetGrid(sites, districts);
+  // Any chain the grid cannot place keeps the older per-bridge roads, lined up with the grid where they can.
+  const rest = sites.filter((s) => !grid.some((b) => b.key === `bridge:${s.from}:${s.to}`));
+  let plan = planBridgesOnce(rest, districts, grid);
+  plan = planBridgesOnce(rest, districts, [...grid, ...plan]);
+  const all = [...grid, ...plan];
+  return sites.flatMap((s) => all.filter((b) => b.key === `bridge:${s.from}:${s.to}`));
+}
+
+const uvPt = (axis: "x" | "z", u: number, v: number): Pt => (axis === "x" ? [u, v] : [v, u]);
+const alongOf = (axis: "x" | "z", p: Pt) => (axis === "x" ? p[0] : p[1]);
+/** Clearance of a street's centre line from buildings, as the bridge roads use. */
+const STREET_CLEAR = LANE_OFF + CLEAR;
+
+/**
+ * The driveway from a tower's plaza lane to a street on line `q` (across `axis`): straight out of
+ * the side facing the street, or from a front corner when the street is in front, so it never
+ * crosses the entrance stairs. Null when the street runs through the plaza or the driveway is blocked.
+ */
+function driveway(d: DistrictRoads, axis: "x" | "z", q: number): { exit: Pt; foot: Pt } | null {
+  const g = d.ring;
+  if (!g) return null;
+  const [v0, v1] = axis === "x" ? [g.z0, g.z1] : [g.x0, g.x1];
+  const [u0, u1] = axis === "x" ? [g.x0, g.x1] : [g.z0, g.z1];
+  const tu = axis === "x" ? d.tower.x : d.tower.z;
+  const eps = 1e-6;
+  const side = q < v0 + eps ? v0 : q > v1 - eps ? v1 : null;
+  if (side === null) return null;
+  // The ring's +z side is the tower's front.
+  const front = axis === "x" && side === v1;
+  for (const u of front ? [u0, u1] : [tu]) {
+    const exit = uvPt(axis, u, side), foot = uvPt(axis, u, q);
+    if (dist(exit, foot) < eps || pathClear([exit, foot], d.obstacles, STREET_CLEAR, 0.12)) return { exit, foot };
+  }
+  return null;
+}
+
+/**
+ * Straight streets like a real grid. Bridges that follow one axis through a chain of districts form
+ * one street on one line, so the road runs straight on through each district instead of turning
+ * round its tower. The line is the cheapest one every bridge in the chain can use, clear of every
+ * building, house, kiosk, fountain and entrance on the way. Where a district has a street on each
+ * axis they cross at a proper junction, and the tower takes one driveway off the nearer street.
+ */
+export function planStreetGrid(sites: BridgeSite[], districts: Map<string, DistrictRoads>): CarBridge[] {
+  const usable = sites.filter((s) => districts.get(s.from)?.ring && districts.get(s.to)?.ring && s.b - s.a >= 0.6);
+  // Chains: districts joined by bridges along the same axis.
+  const parent = new Map<string, string>();
+  const find = (k: string): string => { const p = parent.get(k) ?? k; if (p === k) return k; const r = find(p); parent.set(k, r); return r; };
+  for (const s of usable) parent.set(find(`${s.axis}:${s.from}`), find(`${s.axis}:${s.to}`));
+  const chains = new Map<string, BridgeSite[]>();
+  for (const s of usable) { const k = find(`${s.axis}:${s.from}`); chains.set(k, [...(chains.get(k) ?? []), s]); }
+
+  type Street = { axis: "x" | "z"; q: number; sites: BridgeSite[]; ways: Map<string, { exit: Pt; foot: Pt }> };
+  const streets: Street[] = [];
+  for (const chain of chains.values()) {
+    const axis = chain[0].axis;
+    const members = [...new Set(chain.flatMap((s) => [s.from, s.to]))];
+    const ends = (id: string) => chain.flatMap((s) => (s.from === id ? [s.a] : s.to === id ? [s.b] : []));
+    const lanes = members.flatMap((id) => { const g = districts.get(id)!.ring!; return axis === "x" ? [g.z0, g.z1] : [g.x0, g.x1]; });
+    const offsets = chain.flatMap((s) => [0.8, 1.0, 1.2, 1.45, 1.7, 2.0, 2.4, 2.8].flatMap((k) => [s.mid - k, s.mid + k]));
+    let best: Street & { cost: number } | null = null;
+    for (const q of [...new Set([...lanes, ...offsets])]) {
+      if (chain.some((s) => q < s.lo + DECK_W / 2 + 0.05 || q > s.hi - DECK_W / 2 - 0.05 || Math.abs(q - s.mid) < PATH_GAP)) continue;
+      let cost = chain.reduce((c, s) => c + Math.abs(q - s.mid) * 0.2, 0);
+      const ways = new Map<string, { exit: Pt; foot: Pt }>();
+      let ok = true;
+      for (const id of members) {
+        const d = districts.get(id)!, way = driveway(d, axis, q);
+        if (!way) { ok = false; break; }
+        const us = [...ends(id), alongOf(axis, way.foot)];
+        const lo = Math.min(...us), hi = Math.max(...us);
+        if (!pathClear([uvPt(axis, lo, q), uvPt(axis, hi, q)], d.obstacles, STREET_CLEAR)) { ok = false; break; }
+        ways.set(id, way);
+        cost += hi - lo + dist(way.exit, way.foot);
+      }
+      if (ok && (!best || cost < best.cost)) best = { axis, q, sites: chain, ways, cost };
+    }
+    if (best) streets.push(best);
+  }
+
+  // Each district: one driveway where its two streets can meet at a junction, otherwise one per street.
+  const route = new Map<string, Map<Street, Pt[]>>();
+  for (const id of new Set(streets.flatMap((st) => [...st.ways.keys()]))) {
+    const mine = streets.filter((st) => st.ways.has(id));
+    const d = districts.get(id)!;
+    const paths = new Map<Street, Pt[]>();
+    for (const st of mine) { const w = st.ways.get(id)!; paths.set(st, [w.exit, w.foot]); }
+    if (mine.length === 2) {
+      const len = (st: Street) => dist(st.ways.get(id)!.exit, st.ways.get(id)!.foot);
+      // The shorter driveway first; the other street joins it at the junction where the two lines cross.
+      for (const [L, M] of [...[[mine[0], mine[1]], [mine[1], mine[0]]]].sort((x, y) => len(x[0]) - len(y[0]))) {
+        const w = L.ways.get(id)!, cross = uvPt(L.axis, M.q, L.q);
+        const mEnds = M.sites.flatMap((s) => (s.from === id ? [s.a] : s.to === id ? [s.b] : []));
+        const far = (axis: "x" | "z", from: Pt, us: number[]) => us.reduce((f, e) => (Math.abs(e - alongOf(axis, from)) > Math.abs(f - alongOf(axis, from)) ? e : f), alongOf(axis, from));
+        if (!pathClear([w.foot, cross], d.obstacles, STREET_CLEAR) || !pathClear([cross, uvPt(M.axis, far(M.axis, cross, mEnds), M.q)], d.obstacles, STREET_CLEAR)) continue;
+        paths.set(L, [w.exit, w.foot]);
+        paths.set(M, [w.exit, w.foot, cross]);
+        break;
+      }
+    }
+    route.set(id, paths);
+  }
+
+  const out: CarBridge[] = [];
+  const tidy = (pts: Pt[]) => pts.filter((p, i) => !i || dist(p, pts[i - 1]) > 1e-6);
+  for (const st of streets) for (const s of st.sites) {
+    const end = (id: string, u: number) => tidy([...route.get(id)!.get(st)!, uvPt(st.axis, u, st.q)]);
+    const ra = end(s.from, s.a), rb = end(s.to, s.b);
+    out.push({ key: `bridge:${s.from}:${s.to}`, ends: [s.from, s.to], axis: s.axis, a: uvPt(s.axis, s.a, st.q), b: uvPt(s.axis, s.b, st.q), roads: [ra, rb] });
+  }
+  return out;
+}
+
+function planBridgesOnce(sites: BridgeSite[], districts: Map<string, DistrictRoads>, known: CarBridge[]): CarBridge[] {
   const out: CarBridge[] = [];
   for (const s of sites) {
     const A = districts.get(s.from);
@@ -228,16 +349,23 @@ export function planBridges(sites: BridgeSite[], districts: Map<string, District
     let best: { q: number; ra: Pt[]; rb: Pt[]; cost: number } | null = null;
     // Offsets from the footpath, and the lines of either plaza lane, which give the straightest roads.
     const lanes = [A.ring, B.ring].flatMap((g) => (!g ? [] : s.axis === "x" ? [g.z0, g.z1] : [g.x0, g.x1]));
-    for (const q of [...[0.8, 1.0, 1.2, 1.45, 1.7, 2.0, 2.4, 2.8].flatMap((k) => [s.mid - k, s.mid + k]), ...lanes]) {
+    // Lines already carrying a bridge on this axis: a bridge on the same line makes one straight
+    // through street across the districts, the way a real street grid runs, instead of a jog at each tower.
+    const key = `bridge:${s.from}:${s.to}`;
+    const through = [...out, ...known.filter((b) => b.key !== key && !out.some((o) => o.key === b.key))].filter((b) => b.axis === s.axis).map((b) => (s.axis === "x" ? b.a[1] : b.a[0]));
+    const aligned = (q: number) => through.some((t) => Math.abs(t - q) < 1e-6);
+    for (const q of [...through, ...lanes, ...[0.8, 1.0, 1.2, 1.45, 1.7, 2.0, 2.4, 2.8].flatMap((k) => [s.mid - k, s.mid + k])]) {
       const k = Math.abs(q - s.mid);
       if (q < s.lo + DECK_W / 2 + 0.05 || q > s.hi - DECK_W / 2 - 0.05 || Math.abs(q - s.mid) < PATH_GAP) continue;
       const ra = roadTo(A, s.axis, 1, s.a, q);
       const rb = ra && roadTo(B, s.axis, -1, s.b, q);
       if (!ra || !rb) continue;
-      const cost = ra.cost + rb.cost + k * 0.2;
+      // Every bend costs a full unit, so a straight road wins over a shorter one with a dog-leg.
+      const bends = ra.pts.length + rb.pts.length - 4;
+      const cost = ra.cost + rb.cost + k * 0.2 + bends - (aligned(q) ? THROUGH_BONUS : 0) - (lanes.includes(q) ? LANE_BONUS : 0);
       if (!best || cost < best.cost) best = { q, ra: ra.pts, rb: rb.pts, cost };
-      // Straight roads at both ends are as good as it gets.
-      if (ra.pts.length === 2 && rb.pts.length === 2) break;
+      // Straight at both ends on a through line is as good as it gets.
+      if (bends === 0 && (aligned(q) || !through.length)) break;
     }
     if (!best) continue;
     const W = (u: number): Pt => (s.axis === "x" ? [u, best.q] : [best.q, u]);
