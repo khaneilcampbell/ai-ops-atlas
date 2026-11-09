@@ -13,7 +13,7 @@ const levels=Array.from({length:TOWER_FLOORS+1},(_,i)=>i);
 
 describe("Financial District interiors",()=>{
   it("covers the nine buildings other than Circa, in their exterior's proportions",()=>{
-    expect(specs.map(s=>s.name).sort()).toEqual(["American Express","Benjaire Finance","Bayvale Bank","Merrow Credit Union","Robin Exchange","Camton Hotel","Ravelle Advisors","Halden Trust","Aldren Insights"].sort());
+    expect(specs.map(s=>s.name).sort()).toEqual(["Ellery Budget Center","Corvane Capital","Bayvale Bank","Merrow Credit Union","Robin Exchange","Camton Hotel","Ravelle Advisors","Halden Trust","Aldren Insights"].sort());
     expect(towerSpec("Ellipse Residences")).toBeUndefined();expect(towerSpec("BMW")).toBeUndefined();
     for(const s of specs){expect(s.w).toBe(TOWER_W);expect(s.d).toBeGreaterThanOrEqual(16);expect(s.d).toBeLessThan(s.w);}
     expect(specs.find(s=>s.name==="Camton Hotel")!.program).toBe("hotel");
@@ -21,7 +21,7 @@ describe("Financial District interiors",()=>{
 
   it("dresses each building in its brand colours",()=>{
     const theme=(name:string)=>specs.find(s=>s.name===name)!.theme.primary;
-    expect(theme("American Express")).toBe("#006fcf");expect(theme("Aldren Insights")).toBe("#1d4f91");expect(theme("Robin Exchange")).toBe("#b8952f");
+    expect(theme("Ellery Budget Center")).toBe("#5a4b8f");expect(theme("Corvane Capital")).toBe("#1f5f5b");expect(theme("Aldren Insights")).toBe("#1d4f91");expect(theme("Robin Exchange")).toBe("#b8952f");
     expect(theme("Halden Trust")).toBe("#1f3b4d");expect(theme("Bayvale Bank")).toBe("#126bc4");
     // Every building has its own theme, and its lobby back wall and room walls use it.
     expect(new Set(specs.map(s=>s.theme.primary)).size).toBe(specs.length);
