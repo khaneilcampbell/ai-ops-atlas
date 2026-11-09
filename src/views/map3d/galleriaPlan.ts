@@ -324,7 +324,7 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
  if(pz1-pz0>=1.4){
   const px0=rect.x+.3,px1=rect.x+rect.w-.3;
   boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:STREET_ASPHALT});
-  const rows=pz1-pz0>=2.6?2:1,rowD=.62,bay=.34;
+  const rows=pz1-pz0>=2.2?2:1,rowD=.62,bay=.34;
   // One row backs onto the aisle beside the other; with a single row the aisle runs along its open side.
   parking={area:{x:px0,z:pz0,w:px1-px0,d:pz1-pz0},aisle:rows===2?(pz0+pz1)/2:pz1-.25,driven:[]};let cars=0;
   // The aisle is a two-way street: the city's dashed centre line, from the far end to the driveway.
