@@ -536,10 +536,54 @@ def ask_claude(batch, tokens, policy):
         messages=[{"role": "user", "content": model_input(batch, tokens)}],
     )
     cost = (response.usage.input_tokens * m["inputUsdPerMTok"] + response.usage.output_tokens * m["outputUsdPerMTok"]) / 1e6
+    post_usage([usage_row(response, m["name"], cost)])
     if response.stop_reason in {"refusal", "max_tokens"}:
         return None, cost, response.stop_reason
     text = "".join(block.text for block in response.content if block.type == "text")
     return json.loads(text), cost, None
+
+
+# ---- usage report: token counts only, so Atlas's API Usage tab can rank this agent ----------
+
+USAGE_AGENT = "Design Consistency"
+
+
+def usage_url():
+    """ATLAS_USAGE_URL, or the feed's sibling route: /api/hooks/agents -> /api/hooks/usage."""
+    url = os.environ.get("ATLAS_USAGE_URL")
+    feed = os.environ.get("ATLAS_FEED_URL") or ""
+    if not url and feed.rstrip("/").endswith("/api/hooks/agents"):
+        url = feed.rstrip("/")[: -len("agents")] + "usage"
+    return url
+
+
+def usage_row(response, model, cost, now=None):
+    """One call in Atlas's usage format (docs/api-usage.md). Numbers only: no prompt, no output."""
+    u = response.usage
+    return {
+        "at": (now or datetime.now(timezone.utc)).isoformat(timespec="seconds"), "provider": "anthropic",
+        "model": getattr(response, "model", None) or model, "agent": USAGE_AGENT,
+        "project": os.environ.get("GITHUB_REPOSITORY"), "requests": 1,
+        "input_tokens": u.input_tokens, "output_tokens": u.output_tokens,
+        "cache_read_tokens": getattr(u, "cache_read_input_tokens", 0) or 0,
+        "cache_write_tokens": getattr(u, "cache_creation_input_tokens", 0) or 0,
+        "cost_usd": round(cost, 6), "cost_type": "estimated",
+    }
+
+
+def post_usage(rows):
+    """Optional and best effort: never stops the run. True only when Atlas stored the rows."""
+    url, token = usage_url(), os.environ.get("ATLAS_FEED_TOKEN")
+    if not url or not token or not rows:
+        return False
+    req = urllib.request.Request(url, data=json.dumps({"records": rows}).encode(), method="POST",
+                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as res:
+            return 200 <= res.status < 300
+    except OSError as e:
+        print(f"Atlas did not store the usage: {getattr(e, 'code', type(e).__name__)}", file=sys.stderr)
+        return False
 
 
 # ---- reporting ----------------------------------------------------------------------------------
