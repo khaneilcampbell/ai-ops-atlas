@@ -7,6 +7,7 @@ import {focusable,signTexture} from './materials';
 import {INTELLIGENCE_HUB,faces,intelligenceHubHeight,planIntelligenceHub} from './intelligenceHubPlan';
 import {allGeometries,intelligenceHubGeometry,windowKey} from './intelligenceHubGeometry';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -62,7 +63,7 @@ export function IntelligenceHub({tower:t,base,g,m,pick,night=false}:{tower:Tower
  const quality=useQualityLevel();
  const height=t.customHeight??intelligenceHubHeight(t.height);
  const plan=useMemo(()=>planIntelligenceHub(t.size,height),[t.size,height]);
- const geo=useMemo(()=>intelligenceHubGeometry(plan),[plan]);
+ const geo=useMemo(()=>packNormals(intelligenceHubGeometry(plan)),[plan]);
  useEffect(()=>()=>{for(const v of allGeometries(geo))v.dispose();},[geo]);
  const mats=useMemo(()=>{
   const fins=finTexture(),panes=paneTextures(3),shop=shopTextures();

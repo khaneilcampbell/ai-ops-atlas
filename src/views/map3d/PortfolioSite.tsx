@@ -8,6 +8,7 @@ import {focusable,signTexture} from './materials';
 import {compactGeometry} from './atlasHqGeometry';
 import {PORTFOLIO_SITE,planPortfolioSite,type Box,type Panel} from './portfolioSitePlan';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const canvas=(w:number,h:number)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return [c,c.getContext('2d')!] as const;};
 const texture=(c:HTMLCanvasElement,repeat?:number)=>{const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1/repeat,1/repeat);}return t;};
@@ -80,7 +81,7 @@ export function PortfolioSite({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   const parts=plan.boxes.filter(b=>b.kind==='slats').map(b=>worldBox((b.x1-b.x0)*k,b.y1-b.y0,(b.z1-b.z0)*k,(b.x0+b.x1)/2*k,b.y0,(b.z0+b.z1)/2*k).toNonIndexed());
   const merged=mergeGeometries(parts);for(const p of parts)p.dispose();
   if(!merged)throw new Error('Portfolio Site: slats could not be merged');
-  return compactGeometry(merged);
+  return packNormals(compactGeometry(merged));
  },[plan,k]);
  useEffect(()=>()=>slats.dispose(),[slats]);
  const mats=useMemo(()=>{
