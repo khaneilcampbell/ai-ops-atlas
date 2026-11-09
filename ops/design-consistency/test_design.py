@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent))
 import design  # noqa: E402
@@ -288,6 +290,34 @@ class Reporting(unittest.TestCase):
         self.assertEqual(design.error_message(b'{"message": "Not Found"}'), "Not Found")
         self.assertEqual(design.error_message(b"<html>"), "<html>")
         self.assertIsInstance(design.GitHubError(502, "x"), OSError)
+
+class UsageReportTest(unittest.TestCase):
+    def test_usage_url_is_the_feed_sibling_or_its_own_setting(self):
+        with mock.patch.dict("os.environ", {"ATLAS_FEED_URL": "https://a.pages.dev/api/hooks/agents"}, clear=True):
+            self.assertEqual(design.usage_url(), "https://a.pages.dev/api/hooks/usage")
+        with mock.patch.dict("os.environ", {"ATLAS_USAGE_URL": "https://b.dev/u", "ATLAS_FEED_URL": "x"}, clear=True):
+            self.assertEqual(design.usage_url(), "https://b.dev/u")
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertIsNone(design.usage_url())
+
+    def test_usage_row_carries_numbers_only(self):
+        usage = SimpleNamespace(input_tokens=1200, output_tokens=300, cache_read_input_tokens=800, cache_creation_input_tokens=None)
+        response = SimpleNamespace(model="claude-opus-5-5", usage=usage, content=[SimpleNamespace(type="text", text="private")])
+        with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "khaneilcampbell/ai-ops-atlas"}, clear=True):
+            row = design.usage_row(response, "fallback-model", 0.0123456789, datetime(2026, 11, 9, 6, 0, tzinfo=timezone.utc))
+        self.assertEqual(row["agent"], design.USAGE_AGENT)
+        self.assertEqual((row["model"], row["input_tokens"], row["output_tokens"], row["cache_read_tokens"], row["cache_write_tokens"]), ("claude-opus-5-5", 1200, 300, 800, 0))
+        self.assertEqual((row["cost_usd"], row["cost_type"], row["project"]), (0.012346, "estimated", "khaneilcampbell/ai-ops-atlas"))
+        self.assertNotIn("private", json.dumps(row))
+
+    def test_post_usage_is_off_without_a_key_and_never_raises(self):
+        with mock.patch.dict("os.environ", {}, clear=True), mock.patch("urllib.request.urlopen") as op:
+            self.assertFalse(design.post_usage([{"x": 1}]))
+            op.assert_not_called()
+        env = {"ATLAS_FEED_URL": "https://a.pages.dev/api/hooks/agents", "ATLAS_FEED_TOKEN": "t"}
+        with mock.patch.dict("os.environ", env, clear=True), mock.patch("urllib.request.urlopen", side_effect=OSError("down")):
+            self.assertFalse(design.post_usage([{"x": 1}]))
+
 
 if __name__ == "__main__":
     unittest.main()
