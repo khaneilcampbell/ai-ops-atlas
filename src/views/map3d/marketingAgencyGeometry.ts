@@ -30,6 +30,9 @@ const screenU=(lx:number)=>SCREEN_LONG[0]+(SCREEN_LONG[1]-SCREEN_LONG[0])*lx/AGE
 /** Texture regions (u): the west end wall, the long faces with the fade, and a plain strip for roofs. */
 export const SCREEN_WEST=[0,.3] as const,SCREEN_LONG=[.3,.9] as const,SCREEN_PLAIN=.975;
 
+/** How far copper linings stand off the cream walls they cover, so the two never share a plane. */
+export const LINING_GAP=.012;
+
 export interface AgencyGeometry{shell:THREE.BufferGeometry;copper:THREE.BufferGeometry;glass:THREE.BufferGeometry;triangles:number}
 
 /** A wall from p to q (plan points), bottom 0, top given per end, facing `out`. */
@@ -93,7 +96,7 @@ function entrance(parts:{shell:Builder;copper:Builder;glass:Builder}){
  for(const sx of [-1,1])glass.quad([ex+sx*hw,0,gz],[ex+sx*hw,0,fz],[ex+sx*hw,dh,fz],[ex+sx*hw,dh,gz],[sx,0,0],[[0,0],[fz-gz,0],[fz-gz,dh],[0,dh]]);
  box(shell,ex-hw-.02,dh,gz,ex+hw+.02,dh+.03,fz+.02);
  for(const x of [ex-hw,ex-hw/2,ex,ex+hw/2,ex+hw])box(copper,x-.014,0,fz,x+.014,dh,fz+.025);
- box(copper,ex-hw,.37,fz,ex+hw,.39,fz+.025);box(copper,ex-hw,0,fz,ex+hw,.02,fz+.025);
+ box(copper,ex-hw,.37,fz,ex+hw,.39,fz+.025);box(copper,ex-hw,.018,fz,ex+hw,.03,fz+.025);
  // Cantilevered canopy: cream plate, curved front, copper fascia, a glowing glass soffit strip.
  const cy=.52,ct=.03,cw=.85,edge=(x:number)=>D+.22+.3*Math.sqrt(Math.max(0,1-((x-ex)/cw)**2)),n=18;
  const plain:[UV,UV,UV,UV]=[[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02],[SCREEN_PLAIN,.02]];
@@ -103,7 +106,7 @@ function entrance(parts:{shell:Builder;copper:Builder;glass:Builder}){
   shell.quad([xa,cy,gz],[xb,cy,gz],[xb,cy,zb],[xa,cy,za],[0,-1,0],plain);
   const nx=-(zb-za),nz=xb-xa;copper.quad([xa,cy-.015,za],[xb,cy-.015,zb],[xb,cy+ct+.01,zb],[xa,cy+ct+.01,za],[nx,0,nz]);
  }
- glass.quad([ex-cw*.7,cy-.002,fz+.04],[ex+cw*.7,cy-.002,fz+.04],[ex+cw*.7,cy-.002,fz+.1],[ex-cw*.7,cy-.002,fz+.1],[0,-1,0],[[0,.5],[1,.5],[1,.5],[0,.5]]);
+ glass.quad([ex-cw*.7,cy-.01,fz+.04],[ex+cw*.7,cy-.01,fz+.04],[ex+cw*.7,cy-.01,fz+.1],[ex-cw*.7,cy-.01,fz+.1],[0,-1,0],[[0,.5],[1,.5],[1,.5],[0,.5]]);
  for(const sx of [-1,1]){const x=ex+sx*cw*.6;box(copper,x-.01,cy+ct,edge(x)-.08,x+.01,cy+ct+.02,edge(x)-.06);
   // Hanger rod rising back to the sweep's frame, drawn as a thin slanted box.
   const z0=edge(x)-.07,z1=D+.02,y0=cy+ct,y1=1.05,t=.012;
@@ -151,8 +154,11 @@ export function agencyGeometry():AgencyGeometry{
  for(const [zf,zg,s] of [[0,i,-1],[D,D-i,1]] as const){
   const xa=cutAt(zf)-cw,xb=cutAt(zf)+cw,ya=Math.min(hW,h+.02);
   copper.quad([xa,ya,zf],[xb,ya,zf],[cutAt(zg)+cw,ya,zg],[cutAt(zg)-cw,ya,zg],[0,-1,0]);
-  copper.quad([xa,0,zf],[xa,ya,zf],[cutAt(zg)-cw,ya,zg],[cutAt(zg)-cw,0,zg],[1,0,0]);
-  copper.quad([xb,0,zf],[xb,ya,zf],[cutAt(zg)+cw,ya,zg],[cutAt(zg)+cw,0,zg],[-1,0,0]);
+  // The side linings stand just inside the slot, clear of the cream slot walls: drawn on the same
+  // plane they fought the walls for the depth buffer and flickered cream and copper (KC, 2026-11-09).
+  const k=LINING_GAP;
+  copper.quad([xa+k,0,zf],[xa+k,ya,zf],[cutAt(zg)-cw+k,ya,zg],[cutAt(zg)-cw+k,0,zg],[1,0,0]);
+  copper.quad([xb-k,0,zf],[xb-k,ya,zf],[cutAt(zg)+cw-k,ya,zg],[cutAt(zg)+cw-k,0,zg],[-1,0,0]);
   void s;
  }
  entrance(parts);
