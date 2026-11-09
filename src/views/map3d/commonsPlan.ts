@@ -16,7 +16,7 @@ export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportCo
  const outline=(grow:number)=>Array.from({length:49},(_,i):Pt=>{const a=i%48/48*Math.PI*2;return [cx+(rx+grow)*Math.cos(a),cz+(rz*(.65+.35*Math.abs(Math.cos(a)))+grow)*Math.sin(a)];});
  const pond=outline(0),loop=outline(.65);
  const bridges:[Pt,Pt][]=[10,14].map(i=>[loop[i],loop[48-i]]);
- const pavilion:Pt=[x+2.1,z+2.1],amphitheater:Pt=[x+2.9,z+d*.55];
+ const pavilion:Pt=[x+2.1,z+2.1],amphitheater:Pt=[x+3.1,z+d*.67];
  // Join the existing Service Desk approach, and the Marketplace's already paved promenade.
  const service:Pt=s.transportConnections.find(c=>c.id==='skyline-airport')?.walk[0]??[desk.x,desk.z+desk.size/2+1.2],marketplace:Pt=[mall.plaza.x+.1,mall.plaza.z+.425],join:Pt=[x+3.6,cz];
  const paths:Pt[][]=[loop,[loop[24],join,[join[0],service[1]],service],[loop[12],[loop[12][0],z+d-.1],[marketplace[0],z+d-.1],marketplace],[[pavilion[0],pavilion[1]+1.15],[join[0],pavilion[1]+1.15],join],[[amphitheater[0],amphitheater[1]+1.15],[join[0],amphitheater[1]+1.15],[join[0],service[1]]]];

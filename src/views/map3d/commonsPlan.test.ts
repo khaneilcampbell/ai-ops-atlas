@@ -25,8 +25,8 @@ describe('Atlas Commons',()=>{
   expect(scene.transportConnections.find(c=>c.id==='skyline-airport')!.walk[0]).toEqual(p.access.service);
  });
  it('sets the amphitheater back from the street toward the park center',()=>{
-  expect(p.amphitheater[0]-p.rect.x).toBeGreaterThan(2.8);expect(p.rect.z+p.rect.d-p.amphitheater[1]).toBeGreaterThan(3);
-  expect(Math.hypot(p.amphitheater[0]-p.pavilion[0],p.amphitheater[1]-p.pavilion[1])).toBeGreaterThan(2.2);
+  expect(p.amphitheater[0]-p.rect.x).toBeGreaterThan(3);expect(p.amphitheater[1]).toBeCloseTo(p.rect.z+p.rect.d*.67);
+  expect(Math.hypot(p.amphitheater[0]-p.pavilion[0],p.amphitheater[1]-p.pavilion[1])).toBeGreaterThan(3.2);
   expect(inside(p.amphitheater,p.pond)).toBe(false);
  });
  it('is deterministic and preserves shared access data',()=>{expect(planCommons(scene)).toEqual(p);expect(scene.transportConnections.find(c=>c.id==='skyline-airport')!.walk[0]).toEqual(p.access.service);});
