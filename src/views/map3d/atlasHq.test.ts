@@ -34,17 +34,17 @@ describe('Atlas HQ',()=>{
   const towerEast=Math.max(...towerOutline().map(([x])=>x));
   expect(at(.25)-.27).toBeLessThan(towerEast);
  });
- it('stays the tallest project building, under the Financial District towers',()=>{
+ it('stays the tallest project building, among the Financial District towers',()=>{
   for(const grouping of ['none','district','status','tag'] as GroupBy[]){
    const scene=buildScene(layoutMap(catalog,[],grouping)),hq=scene.towers.find(t=>t.projectId==='ai-ops-atlas')!;
    expect(hq.identity.landmark).toBe(true);
    const top=towerTop(hq);
    for(const t of scene.towers.filter(t=>t!==hq))expect(top).toBeGreaterThan(towerTop(t));
    // Financial towers stand on the terrace; their heights are measured from it.
-   for(const b of scene.financial?.buildings??[])expect(b.height).toBeGreaterThan(top-TERRACE_H);
-   // Sized with the Financial District: within 10% of its shortest tower.
-   const shortest=Math.min(...(scene.financial?.buildings??[]).map(b=>b.height));
-   if(scene.financial)expect(top-TERRACE_H).toBeGreaterThan(shortest*.9);
+   // Since the district came down to the map's scale (2026-11-09) Atlas HQ stands among its towers:
+   // above its shortest, under its tallest and under Ellipse Residences.
+   const heights=(scene.financial?.buildings??[]).map(b=>b.height);
+   if(scene.financial){expect(top-TERRACE_H).toBeGreaterThan(Math.min(...heights));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights.slice(0,-1)));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights));}
    expect(hq.customHeight).toBeCloseTo(headquartersEnvelope(scene.towers)*CUSTOM_TOWER_SHARE.atlas);
   }
  });

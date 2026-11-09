@@ -4,6 +4,7 @@ import {FINANCIAL_BRANDS,FINANCIAL_SIGN,financialSignPlacement,type FinancialBra
 import {financialDimensions,financialSignLevel} from './financialArchitecture';
 import {financialKey,type FinancialPlan} from './financialPlan';
 import {TERRACE_H} from './scene';
+import {CITY_SCALE} from './cityScale';
 import type {PickHandlerSet} from './models';
 /**
  * An original drawn logo: a rounded badge holding an open ring (the brand's initial) with three
@@ -38,5 +39,5 @@ export function FinancialSigns({plan,night,pick}:{plan?:FinancialPlan;night:bool
  useEffect(()=>{for(const s of signs)s.material.emissiveIntensity=night?.35:0},[night,signs]);
  useEffect(()=>()=>{for(const s of signs){s.material.dispose();s.geometry.dispose();s.texture.dispose()}},[signs]);
  if(!plan)return null;
- return <>{signs.map(s=>{const b=plan.buildings.find(b=>b.id===s.brand.id);if(!b)return null;const size=financialDimensions(b.id),p=financialSignPlacement(financialSignLevel(b.id,b.height),size.depth,size.width),key=financialKey(b.id),handler=pick.of([key]);return [0,1].map(side=><mesh key={`${key}:${side}`} geometry={s.geometry} material={s.material} position={[plan.x+b.x+(side?p.frontX:0),TERRACE_H+(p.bottom+p.top)/2,plan.z+b.z+(side?0:p.frontZ)]} rotation={[0,side?Math.PI/2:0,0]} onPointerOver={e=>{e.stopPropagation();handler.over(key,e)}} onPointerOut={handler.out} onClick={e=>{e.stopPropagation();handler.click(key,e)}}/>);})}</>;
+ return <>{signs.map(s=>{const b=plan.buildings.find(b=>b.id===s.brand.id);if(!b)return null;const size=financialDimensions(b.id),p=financialSignPlacement(financialSignLevel(b.id,b.height),size.depth,size.width),key=financialKey(b.id),handler=pick.of([key]);return [0,1].map(side=><mesh key={`${key}:${side}`} geometry={s.geometry} material={s.material} position={[plan.x+b.x+(side?p.frontX:0),TERRACE_H+(p.bottom+p.top)/2,plan.z+b.z+(side?0:p.frontZ)]} rotation={[0,side?Math.PI/2:0,0]} scale={[CITY_SCALE.financial.footprint,1,1]} onPointerOver={e=>{e.stopPropagation();handler.over(key,e)}} onPointerOut={handler.out} onClick={e=>{e.stopPropagation();handler.click(key,e)}}/>);})}</>;
 }
