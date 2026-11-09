@@ -114,6 +114,14 @@
 .manage-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 12px; border: 1px solid var(--sage-200); border-radius: var(--radius-sm); background: var(--sage-50); }
 .manage-controls .btn { display: inline-flex; align-items: center; gap: 6px; }
 .manage-controls .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.manage-config { display: grid; gap: 10px; padding: 10px 12px; border: 1px solid var(--sage-200); border-radius: var(--radius-sm); }
+.manage-config-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.manage-config-row label { flex: 0 0 160px; font-size: 12px; font-weight: 600; }
+.manage-config-row input { flex: 0 1 220px; min-width: 0; padding: 6px 8px; border: 1px solid var(--sage-200); border-radius: var(--radius-sm); font: inherit; font-size: 13px; background: #fff; color: var(--ink); }
+.manage-config-row input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.manage-config-row input[aria-invalid="true"] { border-color: var(--bad); }
+.manage-config-row .small { flex: 1 0 100%; padding-left: 170px; }
+.manage-config .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .manage-ok { color: #2f5b33; }
 .manage-bad { color: var(--bad); }
 .manage-building { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; margin: 2px 0 0 -6px; }
@@ -121,6 +129,9 @@
 
 /* Phones: each agent becomes a card with labelled fields. Child selectors keep the nested runs table a table. */
 @media (max-width: 760px) {
+  .manage-config-row label { flex-basis: 100%; }
+  .manage-config-row input { flex: 1 1 140px; }
+  .manage-config-row .small { padding-left: 0; }
   .manage .manage-table > thead { display: none; }
   .manage table.manage-table, .manage .manage-detail table.runs-table { min-width: 0; }
   .manage .manage-table, .manage .manage-table > tbody, .manage .manage-table > tbody > tr, .manage .manage-table > tbody > tr > td { display: block; width: auto; box-sizing: border-box; }
