@@ -812,6 +812,7 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 /* Explain existing destinations and evidence without adding a competing panel. */
 .view-description{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.15}.view-description b{font-size:12px;font-weight:600}.view-description small{font-size:10px;color:var(--on-dark-2)}
 .sync-evidence{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.sync-evidence b{font-size:12px;font-weight:500}.sync-evidence small{font-size:10px;color:var(--on-dark-2)}
+.refresh.sync-failing .sync-evidence b,.refresh.sync-failing .sync-evidence small{color:var(--warn)}
 .platform-label{color:var(--on-dark-2);border:1px solid var(--forest-line);border-radius:6px;padding:4px 7px;font-size:10px;white-space:nowrap}
 .map-next-step{margin-top:12px;max-width:350px}.map-next-step button{pointer-events:auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;border:1px solid #a58c52;background:#f5f1e5f2;color:#203c30;border-radius:9px;padding:9px 12px;cursor:pointer;font:500 12px var(--sans);box-shadow:0 2px 8px #14271d12}.map-next-step button b{font-weight:600}.map-next-step button:focus-visible{outline:3px solid #a87f27;outline-offset:3px}.map-next-step small{display:block;margin-top:6px;font-size:10px;line-height:1.5;color:inherit;max-width:310px}.map-stage.night .map-next-step button{background:#203c30f2;color:#f1ead8;border-color:#c9a35a}
 .repository-notice{align-items:flex-start;line-height:1.5}.repository-notice>svg{flex-shrink:0;margin-top:3px}.repository-notice strong{display:block;font-size:12px}.repository-notice p{font-size:12px;margin:5px 0 8px}.repository-notice .text-btn{font-size:12px;text-decoration:underline;text-underline-offset:3px}.repository-notice button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
@@ -844,3 +845,4 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .projects-host.inactive * { pointer-events: none !important; }
 
 .map-stage.night, .map-stage.night .map3d { background: #071827; }
+.rerun a.btn { text-decoration: none; }
