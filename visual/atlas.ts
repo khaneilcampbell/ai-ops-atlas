@@ -57,7 +57,13 @@ export async function settle(page: Page, steps = 3) {
 }
 
 export async function goTo(page: Page, label: string) {
-  await page.locator(".nav-item", { hasText: label }).first().click();
+  const direct = page.getByRole("button", { name: label, exact: true });
+  if (await direct.count()) {
+    await direct.first().click();
+  } else {
+    await page.getByRole("button", { name: "More sections", exact: true }).click();
+    await page.getByRole("dialog", { name: "More sections" }).getByRole("button", { name: label, exact: true }).click();
+  }
   await settle(page);
 }
 

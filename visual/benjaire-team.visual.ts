@@ -5,7 +5,7 @@ for(const phone of [false,true])test(`Coordinator Output remains evidence-based 
  await openAtlas(page,{storage:{mapMode:'2d'}});
  await page.route('**/actions/workflows/benjaire-production.yml/runs*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({total_count:0,workflow_runs:[]})}));
  await page.evaluate(()=>localStorage.removeItem('atlas:repoCache'));await page.reload();await settle(page,3);
- await goTo(page,'Agents');
+ await goTo(page,'Automations');
  await page.locator('[data-id="atlas-production-coordinator"]').first().click();await settle(page,2);
  await page.getByRole('tab',{name:'Output',exact:true}).click();
  await expect(page.getByLabel('Latest recorded work')).toContainText('No execution recorded');
