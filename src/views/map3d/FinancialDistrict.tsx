@@ -10,6 +10,7 @@ import {TRANSPORT} from './transportScale';
 import {intersectionParts,type financialJunctions} from './junctions';
 import {TERRACE_H} from './scene';
 import {CircaTowers} from './CircaTowers';
+import {CITY_SCALE,scaleFootprint} from './cityScale';
 /** Static instanced skyline; shared windows switch with Atlas day/night preferences. */
 export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}:{plan?:FinancialPlan;junctions?:ReturnType<typeof financialJunctions>;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:PickHandlerSet;night:boolean;moving?:boolean}){
  const materials=useMemo(()=>{const css=getComputedStyle(document.documentElement);return {ivory:css.getPropertyValue('--sage-50').trim()||'#f7f7f0',green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a',water:new THREE.MeshStandardMaterial({color:'#6daeb6',roughness:.35,emissive:'#225d67',emissiveIntensity:0}),window:new THREE.MeshStandardMaterial({color:'#72a7b3',roughness:.36,emissive:'#ffe0a6',emissiveIntensity:0})}},[]);
@@ -45,43 +46,46 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
    // Sliding entrance panes are shared with the visitor simulation.
    const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;if(!twin)solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
    for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
-   if(!twin)for(const side of [-1,1])lights.push(box(b.x+side*.6,.15,b.z+dimensions.depth/2+.35,.04,.12,.04,'#ffffff'));
+   if(!twin)for(const side of [-1,1])lights.push(box(b.x+side*.6*CITY_SCALE.financial.footprint,.15,b.z+dimensions.depth/2+.35,.04,.12,.04,'#ffffff'));
    continue;
   }
-  const {x,z,height:h}=b,brand=financialBrand(b.id),body=brand?.body??materials.ivory,trim=brand?.trim??'#aabbb8',accent=brand?.accent??materials.gold,key=financialKey(b.id),w=F.towerWidth,d=F.towerDepth;
-  solid.push(box(x,.04,z,w+.5,.12,d+.5,'#d4d0bf'),box(x,brand?1.1:.16,z,w,(b.style==='stepped'?h*.62:h)-(brand?1.1:.16),d,body));
-  if(b.style==='stepped')solid.push(box(x,h*.62,z,w*.74,h*.38,d,materials.ivory));
+  // Drawn at the designed footprint about (0, 0), then narrowed in plan like the other towers (CITY_SCALE.financial).
+  const x=0,z=0,h=b.height,local:Inst[]=[],localLights:Inst[]=[],localGlass:Inst[]=[],at=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[x,y,z],s:[w,h,d],c}),brand=financialBrand(b.id),body=brand?.body??materials.ivory,trim=brand?.trim??'#aabbb8',accent=brand?.accent??materials.gold,key=financialKey(b.id),w=F.towerWidth,d=F.towerDepth;
+  local.push(at(x,.04,z,w+.5,.12,d+.5,'#d4d0bf'),at(x,brand?1.1:.16,z,w,(b.style==='stepped'?h*.62:h)-(brand?1.1:.16),d,body));
+  if(b.style==='stepped')local.push(at(x,h*.62,z,w*.74,h*.38,d,materials.ivory));
   const levels=Math.max(12,Math.floor((h-.8)/.3)),step=(h-.8)/levels;
   for(let floor=0;floor<levels;floor++){
    const yy=.65+floor*step,ww=b.style==='stepped'&&floor>levels*.62?w*.74:w;
    if(brand&&(yy<1.1||yy>h-FINANCIAL_SIGN.windowSetback))continue;
-   for(const side of [-1,1])for(let col=0;col<6;col++)pane(key,box(x-ww/2+.27+col*(ww-.54)/5,yy,z+side*(d/2+.012),.32,step*.7,.025,brand?brand.glass:'#ffffff'));
-   for(const side of [-1,1])for(let col=0;col<4;col++)pane(key,box(x+side*(ww/2+.012),yy,z-d/2+.35+col*(d-.7)/3,.025,step*.7,.36,brand?brand.glass:'#ffffff'));
-   if(floor%3===0)solid.push(box(x,yy-.06,z,ww+.04,.035,d+.04,brand?.trim??'#b7c7c5'));
-   if(b.style==='balcony'&&floor>0&&floor%3===0){solid.push(box(x,yy-.09,z+d/2+.22,w+.1,.06,.45,'#deded4'),box(x,yy+.2,z+d/2+.43,w,.04,.025,materials.green));for(const dx of [-1.25,0,1.25])solid.push(box(x+dx,yy-.03,z+d/2+.43,.025,.25,.025,materials.green));}
+   for(const side of [-1,1])for(let col=0;col<6;col++)localGlass.push(at(x-ww/2+.27+col*(ww-.54)/5,yy,z+side*(d/2+.012),.32,step*.7,.025,brand?brand.glass:'#ffffff'));
+   for(const side of [-1,1])for(let col=0;col<4;col++)localGlass.push(at(x+side*(ww/2+.012),yy,z-d/2+.35+col*(d-.7)/3,.025,step*.7,.36,brand?brand.glass:'#ffffff'));
+   if(floor%3===0)local.push(at(x,yy-.06,z,ww+.04,.035,d+.04,brand?.trim??'#b7c7c5'));
+   if(b.style==='balcony'&&floor>0&&floor%3===0){local.push(at(x,yy-.09,z+d/2+.22,w+.1,.06,.45,'#deded4'),at(x,yy+.2,z+d/2+.43,w,.04,.025,materials.green));for(const dx of [-1.25,0,1.25])local.push(at(x+dx,yy-.03,z+d/2+.43,.025,.25,.025,materials.green));}
   }
-  if(brand){for(const dx of [-w/2+.025,w/2-.025])for(const dz of [-d/2+.025,d/2-.025])solid.push(box(x+dx,.16,z+dz,.06,h-.16,.06,trim));}
-  else for(const dx of [-w/2,w/2])solid.push(box(x+dx,.16,z,.06,(b.style==='stepped'?h*.62:h)-.16,d+.05,trim));
-  if(b.style==='stepped')for(const dx of [-w*.37,w*.37])solid.push(box(x+dx,h*.62,z,.06,h*.38,d+.05,trim));
-  solid.push(box(x,h,z,(b.style==='stepped'?w*.74:w)+.12,.13,d+.12,materials.ivory),box(x,h+.13,z,w*.7,.16,d*.7,'#99b6b9'));
-  if(b.style==='crown'&&!brand){solid.push(box(x,h+.29,z,w*.45,.38,d*.45,materials.gold),box(x,h+.67,z,.08,.5,.08,materials.gold));}
-  if(b.style==='articulated'&&!brand)solid.push(box(x+.8,.16,z+.15,.18,h-.16,d+.32,materials.gold));
+  if(brand){for(const dx of [-w/2+.025,w/2-.025])for(const dz of [-d/2+.025,d/2-.025])local.push(at(x+dx,.16,z+dz,.06,h-.16,.06,trim));}
+  else for(const dx of [-w/2,w/2])local.push(at(x+dx,.16,z,.06,(b.style==='stepped'?h*.62:h)-.16,d+.05,trim));
+  if(b.style==='stepped')for(const dx of [-w*.37,w*.37])local.push(at(x+dx,h*.62,z,.06,h*.38,d+.05,trim));
+  local.push(at(x,h,z,(b.style==='stepped'?w*.74:w)+.12,.13,d+.12,materials.ivory),at(x,h+.13,z,w*.7,.16,d*.7,'#99b6b9'));
+  if(b.style==='crown'&&!brand){local.push(at(x,h+.29,z,w*.45,.38,d*.45,materials.gold),at(x,h+.67,z,.08,.5,.08,materials.gold));}
+  if(b.style==='articulated'&&!brand)local.push(at(x+.8,.16,z+.15,.18,h-.16,d+.32,materials.gold));
   if(brand){
    const sign=financialSignPlacement(h,d);
-   solid.push(box(x,sign.bottom-.02,z+d/2+.04,2.7,.69,.055,brand.signBackground),box(x+w/2+.04,sign.bottom-.02,z,.055,.69,2.55,brand.signBackground));
-   solid.push(box(x,.16,z,w-.12,.04,d-.12,body),box(x,.2,z-d/2+.1,w-.12,.9,.09,body));
+   local.push(at(x,sign.bottom-.02,z+d/2+.04,2.7,.69,.055,brand.signBackground),at(x+w/2+.04,sign.bottom-.02,z,.055,.69,2.55,brand.signBackground));
+   local.push(at(x,.16,z,w-.12,.04,d-.12,body),at(x,.2,z-d/2+.1,w-.12,.9,.09,body));
    // Reception and seating remain behind transparent glazing, clear of the doorway.
-   solid.push(box(x-.65,.2,z-.2,.9,.32,.35,body),box(x-.65,.52,z-.2,1,.045,.4,accent),box(x-.65,.56,z-.32,.25,.2,.035,trim),box(x+.9,.2,z-.35,.45,.25,.5,body),box(x+.9,.45,z-.56,.45,.3,.07,trim));
-   if(b.id==='investments')for(const [level,width]of [[.13,2.35],[.33,1.8],[.58,1.2]])solid.push(box(x,h+level,z,width,.2,d*.65,level===.58?accent:trim));
-   else solid.push(box(x,h+.3,z,w*.8,.18,d*.75,accent));
+   local.push(at(x-.65,.2,z-.2,.9,.32,.35,body),at(x-.65,.52,z-.2,1,.045,.4,accent),at(x-.65,.56,z-.32,.25,.2,.035,trim),at(x+.9,.2,z-.35,.45,.25,.5,body),at(x+.9,.45,z-.56,.45,.3,.07,trim));
+   if(b.id==='investments')for(const [level,width]of [[.13,2.35],[.33,1.8],[.58,1.2]])local.push(at(x,h+level,z,width,.2,d*.65,level===.58?accent:trim));
+   else local.push(at(x,h+.3,z,w*.8,.18,d*.75,accent));
   }
   // Visible double door and thin canopy; approach remains clear of decorative planting.
-  if(!brand)pane(key,box(x,.17,z+d/2+.04,.7,.55,.035,'#ffffff'));
-  solid.push(box(x,.85,z+d/2+.13,1.05,.06,.42,accent));
-  for(const side of [-1,1])solid.push(box(x+side*.37,.17,z+d/2+.065,.025,.65,.04,materials.green));
-  const doorZ=z+d/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
+  if(!brand)localGlass.push(at(x,.17,z+d/2+.04,.7,.55,.035,'#ffffff'));
+  local.push(at(x,.85,z+d/2+.13,1.05,.06,.42,accent));
+  for(const side of [-1,1])local.push(at(x+side*.37,.17,z+d/2+.065,.025,.65,.04,materials.green));
+  for(const side of [-1,1]){local.push(at(x+side*1.6,.08,z+d/2+.2,.08,.3,.08,materials.green));localLights.push(at(x+side*.6,.15,z+d/2+.35,.04,.12,.04,'#ffffff'));}
+  const k=CITY_SCALE.financial.footprint,place=(p:Inst):Inst=>({...p,p:[a.x+b.x+p.p[0],TERRACE_H+p.p[1],a.z+b.z+p.p[2]]});
+  solid.push(...scaleFootprint(local,k).map(place));lights.push(...scaleFootprint(localLights,k).map(place));for(const p of scaleFootprint(localGlass,k))pane(key,place(p));
+  const doorZ=b.z+dimensions.depth/2+.04,landingZ=b.approach[0][1]-a.z;solid.push(box(b.x,.04,(doorZ+landingZ)/2,.6,.04,landingZ-doorZ+.03,'#e5dfd0'));
   for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
-  for(const side of [-1,1]){solid.push(box(x+side*1.6,.08,z+d/2+.2,.08,.3,.08,materials.green));lights.push(box(x+side*.6,.15,z+d/2+.35,.04,.12,.04,'#ffffff'));}
  }
  // Keep the original eastern gates open; the western waterfront stays protected.
  // With Circa next door the west wall stops short of the shared street, walks and promenade.
@@ -109,7 +113,7 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
  useEffect(()=>()=>{curtain.dispose();interiorGlow.dispose();},[curtain,interiorGlow]);
  const lobbyGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#c8e2e7',transparent:true,opacity:.28,depthWrite:false,roughness:.18}),[]);
  useEffect(()=>()=>lobbyGlass.dispose(),[lobbyGlass]);
- const foyer=useMemo(()=>{const items:Inst[]=[],keys:string[]=[];if(a)for(const b of a.buildings.filter(b=>financialBrand(b.id)&&financialBrand(b.id)?.architecture!=='twin')){const key=financialKey(b.id),x=a.x+b.x,z=a.z+b.z,size=financialDimensions(b.id);for(const side of [-1,1]){items.push({p:[x+side*.98,TERRACE_H+.2,z+size.depth/2+.025],s:[.72,.85,.025]},{p:[x+side*(size.width/2+.025),TERRACE_H+.2,z],s:[.025,.85,size.depth-.1]});keys.push(key,key);}}return {items,keys}},[a]);
+ const foyer=useMemo(()=>{const items:Inst[]=[],keys:string[]=[];if(a)for(const b of a.buildings.filter(b=>financialBrand(b.id)&&financialBrand(b.id)?.architecture!=='twin')){const key=financialKey(b.id),x=a.x+b.x,z=a.z+b.z,size=financialDimensions(b.id);for(const side of [-1,1]){items.push({p:[x+side*.98*CITY_SCALE.financial.footprint,TERRACE_H+.2,z+size.depth/2+.025],s:[.72*CITY_SCALE.financial.footprint,.85,.025]},{p:[x+side*(size.width/2+.025),TERRACE_H+.2,z],s:[.025,.85,size.depth-.1]});keys.push(key,key);}}return {items,keys}},[a]);
  const parkParts=useMemo(()=>{
  const solid:Inst[]=[],plants:Inst[]=[],water:Inst[]=[],lights:Inst[]=[];if(!a)return {solid,plants,water,lights};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[a.x+x,TERRACE_H+y,a.z+z],s:[w,h,d],c});
