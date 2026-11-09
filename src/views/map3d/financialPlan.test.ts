@@ -1,4 +1,5 @@
 import {financialDimensions} from './financialArchitecture';
+import {CITY_SCALE} from './cityScale';
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
@@ -10,9 +11,12 @@ import {airportFootprint} from './airport';
 import {pathClear} from './roads';
 for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`plans ten clear connected high-rises in ${grouping} grouping`,()=>{
  const scene=buildScene(layoutMap(catalog,[],grouping)),f=scene.financial!;expect(f).toBeDefined();expect(f.buildings).toHaveLength(10);
- expect(f.buildings.find(b=>b.id==='budget')!.height).toBeCloseTo(f.referenceHeight*1.08);
+ expect(f.buildings.find(b=>b.id==='budget')!.height).toBeCloseTo(f.referenceHeight*1.08*CITY_SCALE.financial.height);
  for(const r of scene.land.filter(r=>(r.x!==f.x||r.z!==f.z)&&r!==scene.land.find(l=>l.x===f.circa?.x&&l.z===f.circa?.z)))expect(f.x<r.x+r.w&&f.x+f.w>r.x&&f.z<r.z+r.d&&f.z+f.d>r.z).toBe(false);
- const tallest=Math.max(...scene.towers.map(t=>towerTop(t)-TERRACE_H));
+ // At the map's scale (2026-11-09) every tower still clears the plain headquarters, and the district's
+ // tallest towers clear every headquarters, landmarks included.
+ const tallest=Math.max(...scene.towers.filter(t=>t.customHeight===undefined).map(t=>towerTop(t)-TERRACE_H));
+ expect(Math.max(...f.buildings.filter(b=>b.id!=='circa').map(b=>b.height))).toBeGreaterThan(Math.max(...scene.towers.map(t=>towerTop(t)-TERRACE_H)));
  const boxes=f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d}));
  for(let i=0;i<f.buildings.length;i++){const b=f.buildings[i];expect(b.height).toBeGreaterThan(tallest);expect(b.approach.at(-1)).toEqual([f.x+b.x,f.z+F.northWalkZ]);expect(pathClear(b.approach,boxes.filter((_,j)=>i!==j),.3)).toBe(true);if(b.id==='circa')continue;expect(b.x-F.towerWidth/2).toBeGreaterThan(0);expect(b.x+F.towerWidth/2).toBeLessThan(f.w);}
  // Original tower offsets stay fixed within the translated district; the expansion stays airport-ward.

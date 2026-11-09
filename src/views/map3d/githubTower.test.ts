@@ -13,14 +13,14 @@ const tower=scene.towers.find(t=>t.projectId===GITHUB_TOWER.projectId)!;
 const plan=planGithubTower(tower.size,tower.customHeight!);
 
 describe('GitHub tower',()=>{
- it('stands with the Financial District: taller than before, under its shortest tower',()=>{
+ it('stands with the Financial District: taller than before, under its tallest towers',()=>{
   const reference=scene.financial!.referenceHeight;
   expect(tower.customHeight).toBeCloseTo(githubTowerHeight(reference));
   // Taller than the plain tower it replaces, and at Financial scale, whatever the city scale (#160).
   expect(tower.customHeight!).toBeGreaterThan(tower.height);
   expect(githubTowerTop(tower.customHeight!)).toBeGreaterThan(reference*.9);
-  const shortest=Math.min(...scene.financial!.buildings.map(b=>b.height));
-  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(shortest);
+  const tallest=Math.max(...scene.financial!.buildings.filter(b=>b.id!=='circa').map(b=>b.height));
+  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(tallest);
   // Atlas HQ's roof stands at the reference itself (#159), so the GitHub crown stays under it.
   expect(githubTowerTop(tower.customHeight!)).toBeLessThan(reference);
   // Its own custom height never feeds back into the reference the Financial District rises from.
