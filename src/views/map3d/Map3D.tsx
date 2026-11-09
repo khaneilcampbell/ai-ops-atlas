@@ -60,6 +60,8 @@ import { IntelligenceHub } from "./IntelligenceHub";
 import { isIntelligenceHub } from "./intelligenceHubPlan";
 import { PortfolioSite } from "./PortfolioSite";
 import { isPortfolioSite } from "./portfolioSitePlan";
+import { SocLab } from "./SocLab";
+import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
@@ -1155,6 +1157,7 @@ function World({
       {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <IntelligenceHub key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <PortfolioSite key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      {scene.towers.filter((t) => isSocLab(t.projectId)).map((t) => <SocLab key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
       <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />

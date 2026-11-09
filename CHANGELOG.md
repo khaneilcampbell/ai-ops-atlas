@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-09 · The SOC Lab is now a glass and steel tower: a braced steel frame up one side, three terraces with green roofs and cyan light strips sticking out the front, a glass lobby, and a round disc on the roof. The cyan strips glow brighter at night (#PR)
 - 2026-11-09 · The 3D map does about a fifth less drawing work and uses 14% less graphics memory, with the same look: trees and bushes draw a lighter shape when the whole city is in view, and tower shapes store their lighting data more compactly (#294)
 - 2026-11-09 · Behind the scenes only: the screenshot check has fresh reference pictures and can re-check just a few screens on one machine, so pull requests stop showing false red marks from old pictures (#290)
 - 2026-11-08 · On iPhone the bottom bar now fits: Projects, Agents, Mission, Activity and More. More opens the other sections plus sync and CI status, and the CI pill stays in the header. Safari shows a one-time tip to add Atlas to the Home Screen, and failed runs get a Re-run on GitHub button (#291)
