@@ -1,0 +1,8 @@
+{
+  "id": "flow-readiness-fixture",
+  "fixture": true,
+  "objective": "TEST ONLY: prepare one reviewable Benjaire Flow campaign proposal",
+  "research": [{"claim": "Supplied test claim: Benjaire presents Flow as an inquiry-to-client kit; no demand validation is claimed.", "source": "https://benjaire.com/digital/flow"}],
+  "campaign": "TEST DRAFT: propose an owner-reviewed walkthrough for service businesses. No distribution authorized.",
+  "product": "Benjaire Flow; checkout, pricing and fulfillment require independent verification"
+}

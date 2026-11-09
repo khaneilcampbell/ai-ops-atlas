@@ -1,0 +1,92 @@
+{
+  "revision": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6",
+  "fixture": true,
+  "state": "awaiting approval",
+  "workflow": "manual campaign readiness",
+  "events": [
+    {
+      "event_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:0",
+      "event_type": "objective.recorded",
+      "schema_version": 1,
+      "source_system": "benjaire_hq",
+      "destination_system": "market_agency",
+      "correlation_id": "flow-readiness-fixture",
+      "causation_id": null,
+      "business_objective_id": "flow-readiness-fixture",
+      "entity_id": "flow-readiness-fixture",
+      "actor_type": "local_runner",
+      "approval_status": "pending",
+      "payload": {
+        "stage_owner": "atlas-production-coordinator",
+        "execution_source": "supplied-input rehearsal"
+      },
+      "timestamp": "2026-11-04T12:00:00+00:00"
+    },
+    {
+      "event_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:1",
+      "event_type": "campaign.supplied",
+      "schema_version": 1,
+      "source_system": "market_agency",
+      "destination_system": "atlas_marketplace",
+      "correlation_id": "flow-readiness-fixture",
+      "causation_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:0",
+      "business_objective_id": "flow-readiness-fixture",
+      "entity_id": "flow-readiness-fixture",
+      "actor_type": "local_runner",
+      "approval_status": "pending",
+      "payload": {
+        "stage_owner": "benjaire-product-lab-research",
+        "execution_source": "supplied-input rehearsal"
+      },
+      "timestamp": "2026-11-04T12:00:00+00:00"
+    },
+    {
+      "event_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:2",
+      "event_type": "readiness.blocked",
+      "schema_version": 1,
+      "source_system": "atlas_marketplace",
+      "destination_system": "benjaire_hq",
+      "correlation_id": "flow-readiness-fixture",
+      "causation_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:1",
+      "business_objective_id": "flow-readiness-fixture",
+      "entity_id": "flow-readiness-fixture",
+      "actor_type": "local_runner",
+      "approval_status": "pending",
+      "payload": {
+        "stage_owner": "commerce-tests",
+        "execution_source": "supplied-input rehearsal"
+      },
+      "timestamp": "2026-11-04T12:00:00+00:00"
+    },
+    {
+      "event_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:3",
+      "event_type": "summary.prepared",
+      "schema_version": 1,
+      "source_system": "benjaire_hq",
+      "destination_system": "atlas",
+      "correlation_id": "flow-readiness-fixture",
+      "causation_id": "8c35c949e1f3231f815bc463ea1276e107624a6e7df207630d92865c450c06b6:2",
+      "business_objective_id": "flow-readiness-fixture",
+      "entity_id": "flow-readiness-fixture",
+      "actor_type": "local_runner",
+      "approval_status": "pending",
+      "payload": {
+        "stage_owner": "atlas-production-coordinator",
+        "execution_source": "supplied-input rehearsal"
+      },
+      "timestamp": "2026-11-04T12:00:00+00:00"
+    }
+  ],
+  "readiness": "blocked",
+  "blockers": [
+    "Human review of exact supplied campaign required",
+    "Research claims not independently verified",
+    "Checkout and fulfillment not verified"
+  ],
+  "next_action": "Review supplied evidence and verify product readiness through authorized test access",
+  "model_calls": 0,
+  "publish_authorized": false,
+  "external_actions": false,
+  "atlas_delivery": "not connected; local report only",
+  "observed_at": "2026-11-04T12:00:00+00:00"
+}
