@@ -1,3 +1,6 @@
+import {uncoveredLand} from "./neighborhoodLinks";
+import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
+import {planCommons,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
@@ -163,6 +166,7 @@ export interface Park extends Rect {
 
 export interface Scene3D {
   coreLand?:Rect[];
+  stationPlaza?:StationPlaza;
   financial?:FinancialPlan;
   hills?: HillsPlan;
   community?:CommunityPlan;
@@ -176,6 +180,7 @@ export interface Scene3D {
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
+  commons?:CommonsPlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -714,7 +719,7 @@ function buildCity(layout: Layout): Scene3D {
   const connections=districtConnections(airport,stadium,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
-  const neighborhood=planNeighborhoodLinks({marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
+  const neighborhood=planNeighborhoodLinks({airport,marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
   for(const path of neighborhood.walks){
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
@@ -812,9 +817,23 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
 
+  const commons=planCommons({mall,towers,paving,transportConnections:connections});
+  if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
+  const stationPlaza=planStationPlaza({stadium,communityRail},{
+    land,roads:connections.map(c=>c.road),
+    obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+      ...(mall?[{x:mall.x,z:mall.z,w:mall.w,d:mall.d}]:[]),...(galleria?[galleria.rect]:[]),...(commons?[commons.rect]:[]),...(airport?[airportFootprint(airport)]:[]),
+      ...(dealership?[{x:dealership.showroom.cx-dealership.showroom.w/2,z:dealership.showroom.cz-dealership.showroom.d/2,w:dealership.showroom.w,d:dealership.showroom.d}]:[])]});
+  if(stationPlaza){
+    land.push(...uncoveredLand(stationPlaza.bounds,land));
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
+    for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+  }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
+    commons,
     financial,
+    stationPlaza,
     community,
     coreLand:cityLand,communityRail,
     hills,
