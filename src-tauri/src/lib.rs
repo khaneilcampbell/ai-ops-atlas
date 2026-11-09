@@ -4,6 +4,7 @@ mod github;
 mod handoff;
 mod intel;
 mod live;
+mod local_usage;
 mod power;
 mod secrets;
 mod steward;
@@ -71,6 +72,7 @@ pub fn run() {
             actions::agents_token_set,
             actions::agents_token_clear,
             actions::agent_action,
+            actions::agent_config_change,
             usage_sync::usage_sync_status,
             usage_sync::usage_sync_set_url,
             usage_sync::usage_sync_new_key,
@@ -80,6 +82,10 @@ pub fn run() {
             live::live_publish,
             live::live_reports,
             live::live_inquiries,
+            live::live_agent_usage,
+            local_usage::codex_usage,
+            local_usage::claude_code_usage,
+            live::live_properties,
             live::live_inquiry_reply,
             export::save_pdf,
             power::power_on_battery,

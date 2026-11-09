@@ -1,5 +1,5 @@
 import { isTauri } from "../lib/env";
-import type { ActionsStatus, AgentOp, AuditRecord, MergeCheck, Outcome } from "./types";
+import type { ActionsStatus, AgentOp, AuditRecord, ConfigChange, ConfigOutcome, MergeCheck, Outcome } from "./types";
 
 // The only route to a GitHub write. The Rust side checks the switch, reads the run or pull
 // request again, asks for approval in a native dialog (and Touch ID for merges) and writes the
@@ -27,6 +27,8 @@ export const actionsApi = {
   clearAgentsToken: () => call<ActionsStatus>("agents_token_clear"),
   /** Enable, disable or run an allow-listed agent. The Rust side picks the repository and workflow from the agent id. */
   agentAction: (agent: string, op: AgentOp, seenState: string | null) => call<Outcome>("agent_action", { agent, op, seenState }),
+  /** Opens a pull request that changes an allow-listed agent's schedule or cap. The Rust side picks the files and re-checks the value. */
+  agentConfigChange: (agent: string, change: ConfigChange) => call<ConfigOutcome>("agent_config_change", { agent, change }),
   onChange: async (fn: () => void): Promise<() => void> => {
     const { listen } = await import("@tauri-apps/api/event");
     return listen("actions-changed", fn);

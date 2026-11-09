@@ -65,10 +65,10 @@ test("agents, manage", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.
-  await page.getByRole("button", { name: "Show GitHub Profile on the map" }).first().click();
+  await page.getByRole("button", { name: "Show Profile Tower on the map" }).first().click();
   await settle(page);
   await expect(page.locator(".map-stage")).toBeVisible();
-  await expect(page.getByText("GitHub Profile").first()).toBeVisible();
+  await expect(page.getByText("Profile Tower").first()).toBeVisible();
 });
 
 // iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.
@@ -97,5 +97,45 @@ test.describe("phone", () => {
     // No sideways scroll on a phone.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await check(page, "phone-agents-manage");
+  });
+});
+
+// The phone tab bar: four tabs and More, nothing off-screen; More reaches every other section.
+test.describe("phone tab bar", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("fits, and More opens the rest", async ({ page }) => {
+    await openAtlas(page);
+    const bar = await page.locator(".sidebar").evaluate((e) => ({ sw: e.scrollWidth, cw: e.clientWidth }));
+    expect(bar.sw).toBeLessThanOrEqual(bar.cw);
+    await expect(page.locator(".sidebar .nav-item")).toHaveCount(5);
+    const ci = await page.locator(".header .ci-pill").boundingBox();
+    expect(ci && ci.x + ci.width).toBeLessThanOrEqual(390);
+    await page.getByRole("button", { name: "More sections" }).click();
+    await settle(page, 1);
+    await expect(page.locator(".more-status")).toContainText("repositories loaded");
+    await check(page, "phone-more");
+    await page.locator(".more-list button", { hasText: "Settings" }).click();
+    await settle(page, 1);
+    await expect(page.locator(".more-sheet")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "More sections" })).toContainText("Settings");
+  });
+});
+
+// A phone browser (not the Home Screen app) gets the Add to Home Screen tip once.
+test.describe("phone install tip", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("shows, and stays hidden after dismissing", async ({ page }) => {
+    await openAtlas(page, { storage: { installHintDismissed: false } });
+    await goTo(page, "Mission");
+    await expect(page.locator(".install-hint")).toContainText("Add to Home Screen");
+    await expect(page.getByRole("link", { name: /Re-run on GitHub/ }).first()).toBeVisible();
+    await check(page, "phone-install-tip");
+    await page.getByRole("button", { name: "Hide this tip" }).click();
+    await expect(page.locator(".install-hint")).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator(".nav-item").first()).toBeVisible();
+    await expect(page.locator(".install-hint")).toHaveCount(0);
   });
 });

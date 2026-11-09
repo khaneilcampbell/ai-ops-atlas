@@ -1,3 +1,7 @@
+import type {PerimeterRailPlan} from './perimeterRailPlan';
+import {routeAround} from './routing';
+import type {Box} from './roads';
+import {airportPoint,type AirportPlan} from './airport';
 import type {HillsPlan} from './hillsPlan';
 import type {Pt} from './roads';
 import {FINANCIAL,type FinancialPlan} from './financialPlan';
@@ -32,7 +36,7 @@ export function planCommunity(h?:HillsPlan):CommunityPlan|undefined{
  walks:[[[13,16],[13,20.5],[20,20.5],[20,44.3]],[[2,26.35],[20,26.35]],[[2,35],[20,35]],[[2,44.3],[20,44.3]],[[20,26.35],[29,26.35],[29,24.4]],[[20,29],[23,29],[23,44]],[[20,34.5],[23,34.5]],...COMMUNITY_BUILDINGS.filter(b=>!['golf','station','golf-club'].includes(b.id)).map(b=>b.id==='home-4'?[[b.x+.65,b.z+b.d/2+.15],[b.x+.65,11],[22,11],[22,20.5],[20,20.5]] as Pt[]:[[b.x+.65,b.z+b.d/2+.15],[b.x+.65,b.z<27?26.35:b.z<36?35:44.3]] as Pt[]),[[28.65,30.45],[28.65,30.6],[23,30.6]]].map(path=>path.map(p=>world(p as Pt)))};
 }
 export type Point3=[number,number,number];
-export interface RailPlan {route:Pt[];lengths:number[];length:number;hills:Pt;financial:Pt;hillsWalk:Point3[];financialWalk:Point3[]}
+export interface RailPlan {loop?:PerimeterRailPlan;route:Pt[];lengths:number[];length:number;hills:Pt;financial:Pt;hillsWalk:Point3[];financialWalk:Point3[];airportLeg?:RailPlan;airportWalk?:Point3[]}
 /** Financial Park stop: the platform sits on the park's north shore, its stairs land on the park's entry path. */
 export function financialParkStop(f:Pick<FinancialPlan,'x'|'z'>):Pt{return [f.x+COMMUNITY.parkStopX,f.z-COMMUNITY.shoreTrackOffset];}
 /** Ground footprint of the park stop's lift, stairs and landing, kept clear of roads planned earlier. */
@@ -62,3 +66,50 @@ export function walkPoint(path:Point3[],t:number):Point3{const lengths=[0];for(l
 /** Physical track extends past stop centers, supporting the complete parked train. */
 export function railDeck(p:RailPlan):RailPlan{const extension=COMMUNITY.trainLength/2+.7,a=railPoint(p,0),b=railPoint(p,p.length);return {...p,route:[[a.x-Math.sin(a.yaw)*extension,a.z-Math.cos(a.yaw)*extension],...p.route,[b.x+Math.sin(b.yaw)*extension,b.z+Math.cos(b.yaw)*extension]],lengths:[0,...p.lengths.map(d=>d+extension),p.length+2*extension],length:p.length+2*extension};}
 
+
+export const ATLAS_STATION_KEY='service:atlas-station';
+/** Marketplace station replaces the residential endpoint; legacy rail field names remain stable. */
+export function planMarketplaceRail(m:import('./mallPlan').MallPlan,f:FinancialPlan,land:Rect[],airport?:AirportPlan,obstacles:Box[]=[]):RailPlan{
+ const a:Pt=[m.cx,m.z-6.2],b=financialParkStop(f),east=Math.max(...land.map(r=>r.x+r.w))+CITY_SPACING.railEdgeClearance+.6;
+ const route=roundedRoad([a,[east,a[1]],[east,b[1]],b],4),lengths=[0];
+ for(let i=1;i<route.length;i++)lengths.push(lengths[i-1]+Math.hypot(route[i][0]-route[i-1][0],route[i][1]-route[i-1][1]));
+ const bank=f.buildings.find(b=>b.id==='banks')!;
+ // Approach the public plaza along the west side, outside the showroom footprint.
+ const walk:Point3[]=[[m.cx,0,m.z+m.d],[m.x-.5,0,m.z+m.d],[m.x-.5,0,a[1]+5.9],[a[0]+1,0,a[1]+5.9],[a[0]+1,COMMUNITY.platformRise,a[1]+1.7],[a[0]+1,COMMUNITY.platformRise,a[1]+1.05],[a[0],COMMUNITY.platformRise,a[1]+1.05],[a[0],COMMUNITY.platformRise,a[1]+.3]];
+ let airportStop:Pt|undefined,airportPath:Pt[]|undefined;
+ if(airport)for(const dz of [-8,-4,20,24,28,Math.max(...land.map(r=>r.z+r.d))-airport.z+2]){
+  const stop=airportPoint(airport,-3.8,dz),approach:Pt=[stop[0]+6,stop[1]];
+  const buildings=obstacles.filter(o=>o.w!==28||o.d!==43);
+  if(buildings.some(o=>Math.abs(stop[0]-o.x)<o.w/2+4.1&&Math.abs(stop[1]+3-o.z)<o.d/2+3.2))continue;
+  const path=routeAround(a,approach,obstacles,1.8);if(path){airportStop=stop;airportPath=path;break;}
+ }
+ const airportRoute=airportPath&&airportStop?roundedRoad([...airportPath,airportStop],1.5):undefined;
+ const airportLengths=[0];if(airportRoute)for(let i=1;i<airportRoute.length;i++)airportLengths.push(airportLengths[i-1]+Math.hypot(airportRoute[i][0]-airportRoute[i-1][0],airportRoute[i][1]-airportRoute[i-1][1]));
+ const airportWalk:Point3[]|undefined=airportStop&&airport?[[airportStop[0],COMMUNITY.platformRise,airportStop[1]+.3],[airportStop[0]+1,COMMUNITY.platformRise,airportStop[1]+1.7],[airportStop[0]+1,0,airportStop[1]+5.9],[airportStop[0]+1,0,airport.z+6],[airportPoint(airport,-.7,6)[0],0,airportPoint(airport,-.7,6)[1]]]:undefined;
+ const airportLeg:RailPlan|undefined=airportRoute&&airportStop?{route:airportRoute,lengths:airportLengths,length:airportLengths[airportLengths.length-1],hills:a,financial:airportStop,hillsWalk:walk,financialWalk:airportWalk!}:undefined;
+ return {route,lengths,length:lengths[lengths.length-1],hills:a,financial:b,hillsWalk:walk,airportLeg,airportWalk,
+ financialWalk:[[b[0],COMMUNITY.platformRise,b[1]+.3],[b[0]+1,COMMUNITY.platformRise,b[1]+1.7],[b[0]+1,0,b[1]+5.9],[b[0]+1,0,f.z+FINANCIAL.northWalkZ],[f.x+bank.x,0,f.z+FINANCIAL.northWalkZ],...bank.approach.slice().reverse().slice(1).map(p=>[p[0],0,p[1]] as Point3)]};
+}
+
+/** Ground clearances under the shared station stairs and lift, also used to trim landscaping. */
+export function stationAccessAreas([x,z]:Pt):Rect[]{return [{x:x+.4,z:z+1.4,w:1.2,d:4.9},{x:x-3.8,z:z+.9,w:.8,d:1.3}];}
+
+/** One clock drives train doors and passenger handoffs across all three stops. */
+export function railTimetable(p:RailPlan){const travel=p.length/COMMUNITY.speed,airportTravel=(p.airportLeg?.length??0)/COMMUNITY.speed;return {travel,returnArrival:2*COMMUNITY.dwell+2*travel,cycle:p.airportLeg?4*COMMUNITY.dwell+2*(travel+airportTravel):2*(travel+COMMUNITY.dwell)};}
+export function railServiceState(seconds:number,p:RailPlan){
+ if(!p.airportLeg)return railState(seconds,p.length);
+ const {cycle,returnArrival}=railTimetable(p),d=COMMUNITY.dwell,a=p.airportLeg.length/COMMUNITY.speed,t=((seconds%cycle)+cycle)%cycle;
+ if(t<returnArrival)return railState(t,p.length);
+ const u=t-returnArrival;
+ if(u<d)return {distance:0,doors:1,phase:'hills' as const,progress:u/d};
+ if(u<d+a)return {distance:-(u-d)*COMMUNITY.speed,doors:0,phase:'airport-outbound' as const,progress:(u-d)/a};
+ if(u<2*d+a)return {distance:-p.airportLeg.length,doors:1,phase:'airport' as const,progress:(u-d-a)/d};
+ return {distance:-p.airportLeg.length+(u-2*d-a)*COMMUNITY.speed,doors:0,phase:'airport-return' as const,progress:(u-2*d-a)/a};
+}
+/** Combined deck in airport → Marketplace → Financial order; Marketplace distance is the offset. */
+export function serviceRailDeck(p:RailPlan):RailPlan{
+ if(!p.airportLeg)return railDeck(p);
+ const route=[...p.airportLeg.route].reverse().concat(p.route.slice(1)),lengths=[0];
+ for(let i=1;i<route.length;i++)lengths.push(lengths[i-1]+Math.hypot(route[i][0]-route[i-1][0],route[i][1]-route[i-1][1]));
+ return railDeck({...p,route,lengths,length:lengths[lengths.length-1]});
+}

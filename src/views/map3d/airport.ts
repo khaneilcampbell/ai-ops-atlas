@@ -2,7 +2,11 @@ import {roundedRoad} from "./highway";
 import type { Rect, Slab } from "./scene";
 export const AIRPORT_KEY = "service:logistics-airport";
 export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landDepth:43,terminalX:1.5,terminalZ:6,taxiX:11.5,runwayX:15,runwayZ:7.5,runwayWidth:2.2,runwayLength:21,gateX:7,gateZ:[0,4.5,9,13.5],cargoZ:18,departureZ:16.5} as const;
-export const AIRPORT_REMOTE_STANDS=[{x:7,z:-6},{x:7,z:23}] as const;
+/** The north stand is the arrivals turnaround stand: landed jets park there nose-in, then push back. */
+export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
+/** Second runway for landings (KC, 2026-11-07), on the old river strip past the service road.
+ * Jets touch down near the south end and leave by a taxi lane north of runway 1, so they never cross it. */
+export const AIRPORT_LANDING_RUNWAY={x:24.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6} as const;
 export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,roof:2.61,arrivalsX:-1.5,parkingZ:-6.4} as const;
 export function airportParkingBays(){return Array.from({length:5},(_,i)=>({x:-.35+i*.7,z:AIRPORT_TERMINAL.parkingZ+.7}));}
 export const AIRCRAFT_LAYOUT={doorX:-.2,doorZ:-.8,doorY:.19,doorHeight:.29,halfSpan:1.35,halfLength:1.4} as const;
@@ -39,16 +43,18 @@ export function airportFlightPose(seconds:number,moving=true,circuit?:FlightCirc
  const p=departurePose(Math.min(t-24,179),true,circuit);
  return {...p,yaw:t<27?0:p.yaw,x:15+p.x,y:p.y-.28,z:16.5+p.z-10.4};
 }
-/** Reserve new land outside the city; connect to the outermost existing paved edge. */
-export function planAirport(land: Rect[], paving: Slab[], skyline?: Rect): AirportPlan | undefined {
+/**
+ * Where the airport road meets the open lot: just inside its west edge, about two thirds of the way
+ * down. This is the spot the road reached when the lot was the Skyline park (its west promenade),
+ * so the airport and its road did not move when Skyline was removed.
+ */
+export const AIRPORT_LOT_ACCESS={inset:.5,depth:.65} as const;
+/** Reserve new land outside the city; connect to the open lot, or else the outermost paved edge. */
+export function planAirport(land: Rect[], paving: Slab[], lot?: Rect): AirportPlan | undefined {
   if (!land.length || !paving.length) return undefined;
-  if(skyline) {
-    const paths=paving.filter(p=>p.x>=skyline.x-.1&&p.x<=skyline.x+skyline.w&&p.z>=skyline.z&&p.z+p.d<=skyline.z+skyline.d);
-    if(paths.length) {
-      const access=paths.reduce((a,b)=>b.x<a.x?b:a);
-      const accessZ=access.z+access.d/2;
-      return {x:Math.min(...land.map(r=>r.x))-11.2,z:accessZ-6,accessX:access.x+.1,accessZ,west:true,publicViaZ:skyline.x>Math.min(...land.map(r=>r.x))+3?skyline.z+skyline.d+1.5:undefined};
-    }
+  if(lot) {
+    const accessZ=lot.z+lot.d*AIRPORT_LOT_ACCESS.depth,west=Math.min(...land.map(r=>r.x));
+    return {x:west-11.2,z:accessZ-6,accessX:lot.x+AIRPORT_LOT_ACCESS.inset,accessZ,west:true,publicViaZ:lot.x>west+3?lot.z+lot.d+1.5:undefined};
   }
   const edge = Math.max(...land.map(r => r.x + r.w));
   const access = paving.reduce((a,b) => b.x+b.w>a.x+a.w ? b : a);
@@ -99,7 +105,7 @@ export function climbFraction(t:number,top:number=T.climbTop){
 }
 /** Landing gear: 1 = down, 0 = stowed. Retracts shortly after a positive climb. */
 export const gearDown=(t:number)=>1-smooth((t-T.liftoff-T.gearUp)/T.gearTime);
-const DEFAULT_CIRCUIT:FlightCircuit={x:-18,z:-4,rx:22,rz:18};
+export const DEFAULT_CIRCUIT:FlightCircuit={x:-18,z:-4,rx:22,rz:18};
 /** Circuit angular speed: one lap every 60 seconds. */
 const ORBIT=Math.PI/30,STRAIGHT=18;
 /** The climb-out joins the circuit at JOIN; two laps later the aircraft leaves at EXIT and is hidden at HIDE. */
@@ -171,6 +177,8 @@ export function circuitJoin(c:FlightCircuit):JoinTurn{
   joinCache.set(c,chosen);return chosen;
 }
 export const circuitJoinAngle=(c:FlightCircuit)=>circuitJoin(c).angle;
+/** Where an aircraft is on the circuit at departure time `time` (after JOIN), and its velocity per departure second. */
+export function circuitState(c:FlightCircuit,time:number){const angle=circuitJoin(c).angle+SPIN*(time-JOIN)*ORBIT;return {at:orbitPoint(c,angle),velocity:orbitVelocity(c,angle)};}
 /** Decorative three-minute cycle: takeoff, a smooth turn onto two city circuits, departure, then reset offscreen. */
 export function departurePose(seconds:number,moving=true,circuit:FlightCircuit=DEFAULT_CIRCUIT) {
   const t=moving?seconds%180:0,cruise=circuit.altitude??14,turnPlan=circuitJoin(circuit),join=turnPlan.angle;
@@ -198,3 +206,6 @@ export function departurePose(seconds:number,moving=true,circuit:FlightCircuit=D
   // Rotate about the main gear rather than the fuselage centre, so the tail stays clear of the runway.
   return {...p,y:p.y+T.mainGearZ*Math.sin(pitch)*(1-airborne),yaw:heading(p,next),pitch,roll,gear:gearDown(t),visible:t<HIDE};
 }
+
+/** Terminal and apron are not public through-streets. Shared by road and sidewalk planners. */
+export function airportTrafficKeepOut(a:AirportPlan){const p=airportPoint(a,8.6,5);return {x:p[0],z:p[1],w:18.8,d:24};}

@@ -1,0 +1,101 @@
+import {useEffect,useLayoutEffect,useMemo,useRef} from 'react';
+import {useFrame} from '@react-three/fiber';
+import * as THREE from 'three';
+import {usePowerProfile,useWindowFocused} from '../../lib/power';
+import type {Scene3D} from './scene';
+import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
+import {FLEET_STRIDE,carBoxes} from './galleriaFleet';
+import {STREET_ASPHALT,STREET_LINE} from './transportScale';
+import {CAR_SURFACE,GALLERIA_LIFE,carHeight,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
+
+const COATS=['#346583','#a18455','#6d875e','#846798','#ab6355','#2f3a45'];
+/**
+ * Atlas Galleria's grounds: the entrance walk, its lamp posts, and the people and cars that come
+ * and go. Static parts are instanced once; the moving ones are three instanced meshes posed on the
+ * map's own frames (no render loop of their own), and hold still when motion is off.
+ */
+export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:ReturnType<typeof planGalleriaLife>;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;night:boolean;moving:boolean}){
+ const life=useMemo(()=>plan??planGalleriaLife(scene),[plan,scene]),power=usePowerProfile(),focused=useWindowFocused();
+ const y=scene.galleria?.y0??0,L=GALLERIA_LIFE;
+ const glow=useMemo(()=>new THREE.MeshBasicMaterial({color:'#ffd18a',transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
+ useEffect(()=>()=>glow.dispose(),[glow]);
+ const fixed=useMemo(()=>{
+  const paths:Inst[]=[],kerbs:Inst[]=[],poles:Inst[]=[],heads:Inst[]=[],pools:Inst[]=[],court:Inst[]=[];if(!life)return {paths,kerbs,poles,heads,pools,court};
+  // Driveways: asphalt a touch above the pavement they cross, with pale kerb edges and a stop line at the street.
+  for(const {a:[ax,az],b:[bx,bz]} of life.driveways){
+   const len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az),mx=(ax+bx)/2,mz=(az+bz)/2,w=L.driveWidth;
+   court.push({p:[mx,y,mz],s:[w,CAR_SURFACE.driveway,len+.1],r:yaw,c:STREET_ASPHALT});
+   for(const side of [-1,1])court.push({p:[mx+Math.cos(yaw)*side*w/2,y,mz-Math.sin(yaw)*side*w/2],s:[.035,CAR_SURFACE.driveway+.01,len+.1],r:yaw,c:'#c9bfa6'});
+   const k=Math.max(0,len-.55)/len;court.push({p:[ax+(bx-ax)*k,y+CAR_SURFACE.driveway,az+(bz-az)*k],s:[w*.9,.003,.03],r:yaw,c:'#f3efe4'});
+   // Two lanes: a dashed centre line from the car park to the stop line.
+   const ux=(bx-ax)/len,uz=(bz-az)/len;for(let d=.25;d<len-.75;d+=.36)court.push({p:[ax+ux*d,y+CAR_SURFACE.driveway,az+uz*d],s:[.025,.003,.18],r:yaw,c:STREET_LINE});
+   // A wider apron over the last stretch to the road's edge, so turning cars have room.
+   const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:STREET_ASPHALT});
+  }
+  // Zebra stripes painted on the drive where it crosses a walk; the walk itself opens for the drive (CommunityRail, VenueBridge).
+  for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+CAR_SURFACE.driveway,c.z-Math.sin(c.yaw)*d],s:[.065,.004,.48],r:c.yaw,c:'#f7f7f0'});
+  for(let i=1;i<life.walk.length;i++){
+   const [ax,az]=life.walk[i-1],[bx,bz]=life.walk[i],len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az);
+   paths.push({p:[(ax+bx)/2,y,(az+bz)/2],s:[L.walkWidth,.02,len+L.walkWidth],r:yaw,c:'#e3dac4'});
+   for(const s of [-1,1])kerbs.push({p:[(ax+bx)/2+Math.cos(yaw)*s*L.walkWidth/2,y,(az+bz)/2-Math.sin(yaw)*s*L.walkWidth/2],s:[.04,.035,len+L.walkWidth],r:yaw,c:'#c9bfa6'});
+  }
+  for(const l of life.lamps){
+   poles.push({p:[l.x,y,l.z],s:[.04,L.lampHeight,.04],c:'#294237'},{p:[l.x,y,l.z],s:[.09,.07,.09],c:'#b4ac8e'},{p:[l.x+Math.sin(l.yaw)*.1,y+L.lampHeight,l.z+Math.cos(l.yaw)*.1],s:[.035,.035,.22],r:l.yaw,c:'#294237'});
+   heads.push({p:[l.x+Math.sin(l.yaw)*.19,y+L.lampHeight-.02,l.z+Math.cos(l.yaw)*.19],s:[.1,.04,.14],r:l.yaw,c:'#f6dfac'});
+   pools.push({p:[l.x+Math.sin(l.yaw)*.19,y+.025,l.z+Math.cos(l.yaw)*.19],s:[1.1,.003,1.1],c:'#ffffff'});
+  }
+  // The street court: asphalt, bay lines, and the parked cars nobody is about to drive.
+  if(life.court){
+   for(const p of life.court.pad)court.push({p:[p.x+p.w/2,y,p.z+p.d/2],s:[p.w,.012,p.d],c:STREET_ASPHALT});
+   for(const [x,z] of life.court.stripes)court.push({p:[x,y+.012,z],s:[.38,.004,.025],c:'#f3efe4'});
+   for(const c of life.court.cars)for(const b of carBoxes(c.kind,c.c,[c.x,c.z],Math.PI/2,y+.012))court.push({p:[b.x,b.y,b.z],s:[b.w,b.h,b.d],r:b.r,c:b.c});
+  }
+  return {paths,kerbs,poles,heads,pools,court};
+ },[life,y,L]);
+
+ const enabled=moving&&focused&&power.idleFps>15,elapsed=useRef(0);
+ const bodies=useRef<THREE.InstancedMesh>(null),faces=useRef<THREE.InstancedMesh>(null),cars=useRef<THREE.InstancedMesh>(null);
+ const people=(life?.walkers.length??0)+(life?.drivers.length??0),fleet=life?.drivers.length??0;
+ const o=useMemo(()=>new THREE.Object3D(),[]);
+ const place=(t:number)=>{
+  if(!life)return;let i=0;
+  const person=(p:ReturnType<typeof walkerAt>,step:number)=>{
+   if(p.visible){o.position.set(p.x,y+.02+step,p.z);o.rotation.set(0,p.yaw,0);o.scale.set(.07,.16,.06);}else o.scale.setScalar(0);
+   o.updateMatrix();bodies.current?.setMatrixAt(i,o.matrix);
+   if(p.visible){o.position.y=y+.23+step;o.scale.setScalar(.035);}o.updateMatrix();faces.current?.setMatrixAt(i,o.matrix);i++;
+  };
+  life.walkers.forEach((w,k)=>person(walkerAt(w,t),Math.abs(Math.sin(t*6+k))*.008));
+  life.drivers.forEach((d,k)=>{
+   const {person:p,car}=driverAt(d,t);person(p,Math.abs(Math.sin(t*6+k))*.008);
+   // Each car is FLEET_STRIDE boxes of one shared mesh; a model with fewer parts hides the rest.
+   const parts=car.visible?carBoxes(d.car.kind,d.car.c,[car.x,car.z],car.yaw,y+carHeight(life,car.x,car.z)):[];
+   for(let j=0;j<FLEET_STRIDE;j++){
+    const b=parts[j];if(b){o.position.set(b.x,b.y,b.z);o.rotation.set(0,b.r,0);o.scale.set(b.w,b.h,b.d);}else o.scale.setScalar(0);
+    o.updateMatrix();cars.current?.setMatrixAt(k*FLEET_STRIDE+j,o.matrix);
+   }
+  });
+  for(const r of [bodies,faces,cars])if(r.current)r.current.instanceMatrix.needsUpdate=true;
+ };
+ useLayoutEffect(()=>{
+  if(!life)return;const c=new THREE.Color();
+  for(let i=0;i<people;i++){bodies.current?.setColorAt(i,c.set(COATS[i%COATS.length]));faces.current?.setColorAt(i,c.set(i%3?'#dfb996':'#9b6d50'));}
+  life.drivers.forEach((d,k)=>carBoxes(d.car.kind,d.car.c,[0,0],0).forEach((b,j)=>cars.current?.setColorAt(k*FLEET_STRIDE+j,c.set(b.c))));
+  for(const r of [bodies,faces,cars])if(r.current?.instanceColor)r.current.instanceColor.needsUpdate=true;
+  place(elapsed.current);
+  // Posed once when paused; frames then do the work only while moving.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[life,enabled]);
+ useFrame((_,dt)=>{if(!enabled||document.visibilityState==='hidden')return;elapsed.current+=Math.min(dt,.1);place(elapsed.current);});
+ if(!life)return null;
+ return <group name="galleria-life">
+  <Instanced items={fixed.paths} geometry={g.box} material={m.plain} shadow={false}/>
+  <Instanced items={fixed.kerbs} geometry={g.box} material={m.plain} shadow={false}/>
+  <Instanced items={fixed.court} geometry={g.box} material={m.plain} shadow={false}/>
+  <Instanced items={fixed.poles} geometry={g.box} material={m.plain}/>
+  <Instanced items={fixed.heads} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/>
+  {night&&<Instanced items={fixed.pools} geometry={g.cyl} material={glow} shadow={false}/>}
+  <instancedMesh name="galleria-shoppers" ref={bodies} args={[g.cyl,m.plain,people]} castShadow frustumCulled={false} raycast={()=>null}/>
+  <instancedMesh ref={faces} args={[g.ball,m.plain,people]} frustumCulled={false} raycast={()=>null}/>
+  {fleet>0&&<instancedMesh name="galleria-cars" ref={cars} args={[g.box,m.plain,fleet*FLEET_STRIDE]} castShadow frustumCulled={false} raycast={()=>null}/>}
+ </group>;
+}

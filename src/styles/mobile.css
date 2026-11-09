@@ -125,12 +125,12 @@
   /* Toolbar: one row across the bottom of the map, every control in view. Pinch zooms, so the
      zoom buttons go. */
   .map-controls { left: 8px; right: 8px; bottom: 8px; padding: 3px; gap: 0; justify-content: space-between; align-items: center; }
-  .map-controls .icon-btn { width: 38px; height: 40px; min-width: 0; flex: none; }
-  .map-controls .icon-btn.text { width: 40px; padding: 0; }
+  .map-controls .icon-btn { width: 34px; height: 40px; min-width: 0; flex: none; }
+  .map-controls .icon-btn.text { width: 38px; padding: 0; }
   .map-controls .sep, .map-controls button[aria-label="Zoom in"], .map-controls button[aria-label="Zoom out"] { display: none; }
   .map-group { height: 40px; }
   .map-group-face { padding: 0 var(--space-3) 0 var(--space-4); font-size: var(--text-sm); gap: var(--space-2); }
-  .map-group-value { max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
+  .map-group-value { max-width: 84px; overflow: hidden; text-overflow: ellipsis; }
   .map-group-value:has(+ .short) { display: none; }
   .map-group-value.short { display: inline; }
   /* The Connections menu opens above the whole toolbar, full width, instead of off its button. */
@@ -153,7 +153,7 @@
      above it (the camera frames it there); the sheet scrolls for the rest. */
   .map-wrap .panel, .map-wrap .panel.docked { max-height: 55dvh; }
 
-  /* Eight tabs share the bar: keep each label on one line. */
+  /* Keep each tab label on one line. */
   .nav-item span { white-space: nowrap; letter-spacing: 0.02em; }
 
   .icon-btn { min-width: 36px; min-height: 36px; }
@@ -173,3 +173,46 @@
   .nav-item .badge { position: static; order: 3; }
   .panel, .panel.docked { max-height: 92dvh; }
 }
+
+/* ── Phone tab bar: four tabs and More, no sideways scrolling ── */
+.ci-short { display: none; }
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .sidebar.phone-tabs { overflow: visible; justify-content: space-around; }
+  .phone-tabs .nav-item { flex: 1 1 0; min-width: 0; }
+  .phone-tabs .nav-item span:not(.badge) { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .nav-item .badge.warn { background: var(--bad); }
+
+  /* The CI pill stays in the header on a phone, with a short label. */
+  .header .ci-pill { display: inline-flex; padding: 5px 9px; font-size: 11px; white-space: nowrap; flex: none; }
+  .header .ci-pill .ci-long { display: none; }
+  .header .ci-pill .ci-short { display: inline; }
+  .live-pill .live-last { display: none; }
+  .header .brand-mark { flex: none; }
+
+  .more-scrim { inset: 0; z-index: 40; }
+  .more-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-height: 82dvh; overflow: auto;
+    background: var(--sage-50); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgba(22, 33, 26, 0.28);
+    padding: 18px max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 14px) max(16px, env(safe-area-inset-left));
+    animation: sheet 0.22s ease; overscroll-behavior: contain;
+  }
+  .more-status { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--sage-200); border-radius: 12px; margin-bottom: 12px; }
+  .more-status.bad { border-color: var(--bad); }
+  .more-status b { display: block; font-size: 15px; }
+  .more-status small { display: block; font-size: 12.5px; }
+  .more-status .ci { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .more-status .ci .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--good); flex: none; }
+  .more-status .ci.bad .dot { background: var(--bad); }
+  .more-list { list-style: none; margin: 0; padding: 0; }
+  .more-list button {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 0 6px;
+    background: none; border: 0; border-bottom: 1px solid var(--sage-200); font: inherit; font-size: 16px; color: inherit; text-align: left; cursor: pointer;
+  }
+  .more-list button.active { color: var(--gold-deep); font-weight: 600; }
+  .more-list button span:not(.more-go) { flex: 1; }
+  .more-go { font-size: 20px; opacity: 0.5; }
+}
+
+/* Phone browser only: the Add to Home Screen tip (InstallHint). */
+.install-hint { display: flex; align-items: center; gap: 10px; margin: 10px 14px 0; padding: 10px 12px; border: 1px solid var(--gold); border-radius: 12px; background: var(--gold-soft); color: var(--ink); font-size: 13.5px; line-height: 1.4; }
+.main:has(.projects-host:not(.inactive)) .install-hint { position: absolute; top: 64px; left: 0; right: 0; z-index: 5; }

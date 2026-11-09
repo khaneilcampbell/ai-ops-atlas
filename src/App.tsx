@@ -8,6 +8,7 @@ import { useAtlas, type View } from "./state";
 import { attentionItems, ciSummary } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
+import { syncStatus } from "./lib/syncStatus";
 import { MissionControl } from "./views/MissionControl";
 import { GridView } from "./views/Grid";
 import { ActivityView } from "./views/Activity";
@@ -26,8 +27,10 @@ import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
 import { useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
+import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
+import { InstallHint } from "./components/InstallHint";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -40,6 +43,9 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "usage", label: "API Usage", icon: "usage" },
 ];
 
+/** On a phone the bar holds these four plus More; the rest open from the More sheet. */
+export const PHONE_TABS: View[] = ["map", "agents", "overview", "activity"];
+
 export default function App() {
   useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
@@ -48,19 +54,18 @@ export default function App() {
   useLiveFeed();
   const alerts = useAlerts().open;
   useAlertNotifications(alerts);
+  usePropertyPolling();
+  usePropertyNotifications(usePropertyIncidents().open);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
-  const lastFetched = useMemo(() => {
-    const times = Object.values(repos).flatMap((r) => (r.kind === "ok" ? [r.data.fetchedAt] : r.kind === "error" && r.data ? [r.data.fetchedAt] : []));
-    times.sort();
-    return times[times.length - 1];
-  }, [repos]);
-
   const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
-  const loadedRepositories = [...trackedRepositories].filter(name => {
-    const state = repos[name];
-    return state?.kind === "ok" || (state?.kind === "error" && state.data);
-  }).length;
+  const sync = syncStatus(trackedRepositories, repos);
+  const { lastFetched, loaded: loadedRepositories } = sync;
+  const syncFailing = !refreshing && sync.failing.length > 0;
+  const syncTitle = [
+    lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
+    syncFailing ? `\n${sync.failing.length} of ${trackedRepositories.size} repositories failed their last sync, so they show saved data:\n${sync.reasons.map((r) => `• ${r}`).join("\n")}\nOpen Repositories for details, or check the GitHub token in Settings.` : "",
+  ].join("");
   const ci = ciSummary([...trackedRepositories], repos);
   const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
 
@@ -81,11 +86,11 @@ export default function App() {
         <div className="spacer" />
         <ViewSwitch />
         <GlobalSearch />
-        <div className="refresh" title={lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet"}>
+        <div className={`refresh${syncFailing ? " sync-failing" : ""}`} title={syncTitle}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
             <Icon name="refresh" size={16} className={refreshing ? "spin" : undefined} />
           </button>
-          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{loadedRepositories}/{trackedRepositories.size} repositories loaded</small></span>
+          <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{syncFailing ? `${sync.failing.length}/${trackedRepositories.size} failed to sync` : `${loadedRepositories}/${trackedRepositories.size} repositories loaded`}</small></span>
         </div>
         <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
         <LivePill />
@@ -98,27 +103,43 @@ export default function App() {
           title={ci.failing.length ? `CI failing on ${ci.failing.join(", ")}. Open Mission Control.` : ci.checked ? `CI passing on ${ci.passing} of ${ci.checked} repositories with checks. Open Mission Control.` : "CI not checked yet. Open Mission Control."}
         >
           <span className="dot" />
-          {ci.failing.length ? `CI ${ci.failing.length} failing` : ci.checked ? `CI ${ci.passing}/${ci.checked} passing` : "CI not checked"}
+          <span className="ci-long">{ci.failing.length ? `CI ${ci.failing.length} failing` : ci.checked ? `CI ${ci.passing}/${ci.checked} passing` : "CI not checked"}</span>
+          <span className="ci-short" aria-hidden>{ci.failing.length ? `${ci.failing.length} failing` : ci.checked ? "CI ok" : "CI –"}</span>
         </button>
       </header>
 
-      <nav className="sidebar" aria-label="Sections">
-        {NAV.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
-            <Icon name={n.icon} size={20} />
-            <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
-            {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
+      {phone ? (
+        <PhoneNav
+          attention={attention.length + alerts.length}
+          status={{
+            sync: refreshing ? "Refreshing…" : lastFetched ? `Latest sync ${relative(lastFetched)}` : "Not synced yet",
+            coverage: syncFailing ? `${sync.failing.length} of ${trackedRepositories.size} repositories failed to sync and show saved data` : `${loadedRepositories} of ${trackedRepositories.size} repositories loaded`,
+            failing: syncFailing,
+            ci: ci.failing.length ? `CI failing on ${ci.failing.join(", ")}` : ci.checked ? `CI passing on ${ci.passing} of ${ci.checked} repositories with checks` : "CI not checked yet",
+            ciBad: ci.failing.length > 0,
+            platform,
+          }}
+        />
+      ) : (
+        <nav className="sidebar" aria-label="Sections">
+          {NAV.map((n) => (
+            <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
+              <Icon name={n.icon} size={20} />
+              <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
+              {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
+            </button>
+          ))}
+          <div className="grow" />
+          <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
+            <Icon name="settings" size={20} />
+            <span>Settings</span>
           </button>
-        ))}
-        <div className="grow" />
-        <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
-          <Icon name="settings" size={20} />
-          <span>Settings</span>
-        </button>
-      </nav>
+        </nav>
+      )}
 
       <main className="main">
         <StewardNotice />
+        <InstallHint />
         {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
         <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>
           <ErrorBoundary><MapView active={view === "map"}/></ErrorBoundary>
@@ -140,6 +161,72 @@ export default function App() {
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
       {selection && view !== "map" && !((view === "agents" || view === "automations") && selection.kind === "agent" && !phone) && <DetailPanel />}
     </div>
+  );
+}
+
+interface PhoneStatus { sync: string; coverage: string; failing: boolean; ci: string; ciBad: boolean; platform: string }
+
+/**
+ * The phone tab bar: four tabs that always fit, plus More. More opens a sheet with the other
+ * sections and the sync and CI status the narrow header has no room for, so nothing sits
+ * off-screen in a sideways-scrolling bar.
+ */
+function PhoneNav({ attention, status }: { attention: number; status: PhoneStatus }) {
+  const { view, setView } = useAtlas();
+  const [open, setOpen] = useState(false);
+  const tabs = PHONE_TABS.map((v) => NAV.find((n) => n.view === v)!);
+  const more = [...NAV.filter((n) => !PHONE_TABS.includes(n.view)), { view: "settings" as View, label: "Settings", icon: "settings" as IconName }];
+  const inMore = more.some((n) => n.view === view);
+  const go = (v: View) => {
+    setView(v);
+    setOpen(false);
+  };
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return (
+    <>
+      <nav className="sidebar phone-tabs" aria-label="Sections">
+        {tabs.map((n) => (
+          <button key={n.view} className={`nav-item ${view === n.view && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={view === n.view ? "page" : undefined}>
+            <Icon name={n.icon} size={20} />
+            <span>{n.label}</span>
+            {n.view === "overview" && attention > 0 && <span className="badge">{attention}</span>}
+          </button>
+        ))}
+        <button className={`nav-item ${inMore || open ? "active" : ""}`} onClick={() => setOpen((o) => !o)} aria-label="More sections" aria-expanded={open} aria-haspopup="dialog">
+          <Icon name="more" size={20} />
+          <span>{inMore && !open ? (more.find((n) => n.view === view)?.label ?? "More") : "More"}</span>
+          {status.failing && <span className="badge warn" aria-label="Sync problem">!</span>}
+        </button>
+      </nav>
+      {open && (
+        <>
+          <div className="scrim more-scrim" onClick={() => setOpen(false)} />
+          <div className="more-sheet" role="dialog" aria-label="More sections">
+            <div className={`more-status${status.failing ? " bad" : ""}`}>
+              <div><b>{status.sync}</b><small>{status.coverage}</small></div>
+              <div className={status.ciBad ? "ci bad" : "ci"}><span className="dot" />{status.ci}</div>
+              <small className="muted">{status.platform === "Hosted web" ? "Hosted web · read-only. Changes that write to GitHub open on GitHub or run in the Mac app." : status.platform}</small>
+            </div>
+            <ul className="more-list">
+              {more.map((n) => (
+                <li key={n.view}>
+                  <button className={view === n.view ? "active" : undefined} onClick={() => go(n.view)} aria-current={view === n.view ? "page" : undefined}>
+                    <Icon name={n.icon} size={18} />
+                    <span>{n.label}</span>
+                    <span className="more-go" aria-hidden>›</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 

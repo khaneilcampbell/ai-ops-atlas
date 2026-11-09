@@ -83,3 +83,13 @@ export interface MergeCheck {
 
 /** Manage agents: the three things Atlas can do to an allow-listed agent's workflow. */
 export type AgentOp = "enable" | "disable" | "run_now";
+
+/** Manage agents: a schedule or cap change, which Atlas always opens as a pull request. */
+export type ConfigChange = { field: "schedule"; value: string } | { field: "cap"; value: number };
+
+export interface ConfigOutcome extends Outcome {
+  pull_number: number | null;
+  url: string | null;
+  before: string | null;
+  after: string | null;
+}

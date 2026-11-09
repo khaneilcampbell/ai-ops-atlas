@@ -22,7 +22,7 @@ export function risksMarkdown(review: EcoReview) {
 }
 
 export function recommendationMarkdown(r: Rec, n?: number) {
-  const head = `${n != null ? `${n}. ` : ""}**${r.title}** [${WHEN_LABEL[r.priority]} · ${area(r.category)} · ${EFFORT_LABEL[r.effort]}]${repos(r.repos)}`;
+  const head = `${n != null ? `${n}. ` : ""}**${r.title}** [${WHEN_LABEL[r.priority]} · ${area(r.category)} · ${EFFORT_LABEL[r.effort]}${r.owner ? ` · owner ${r.owner}` : ""}]${repos(r.repos)}`;
   const pad = n != null ? "   " : "";
   return [head, `${pad}${r.rationale}`, `${pad}**First step:** ${r.first_step}${refs(r.evidence, r.grounded)}`].join("\n");
 }

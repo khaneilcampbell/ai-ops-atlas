@@ -1,6 +1,6 @@
 # Runbooks: Benjaire.com
 
-Repository: [khaneilcampbell/benjaire.com](https://github.com/khaneilcampbell/benjaire.com). The site's own setup notes are in `site/README.md`; the Flow workflow export and its notes are in the private `khaneilcampbell/benjaire-dashboard` repository under `products/flow/live-ops/`.
+Repository: [khaneilcampbell/benjaire.com](https://github.com/khaneilcampbell/benjaire.com). The site's own setup notes are in `site/README.md`; the Flow workflow export and its notes are in Atlas under `apps/benjaire-dashboard/products/flow/live-ops/`.
 
 ## Contact Form Worker
 

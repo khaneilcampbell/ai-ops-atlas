@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { GAP, layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { GAP, OFF_MAP_PROJECTS, layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { districtHeadings } from "./mapPresentation";
 
 function rects(layout: Layout) {
   return [...layout.districts.map((d) => ({ id: d.project.id, x: d.ox, y: d.oy, w: d.size, h: d.size })), ...layout.parks.map((p, i) => ({ id: `park${i}`, x: p.ox, y: p.oy, w: p.w, h: p.h }))];
@@ -52,8 +53,9 @@ describe("layoutMap", () => {
     const layout = layoutMap(catalog);
     const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
     const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
-    // Skyline has its own custom district instead of a generic office building.
-    const seated = catalog.agents.filter((a) => a.projectId !== "skyline");
+    // Off-map projects have no building: Skyline's one agent works in the Atlas Marketplace, and the
+    // Service Desk and Career Applications agents stay registered without a tower to sit in.
+    const seated = catalog.agents.filter((a) => !OFF_MAP_PROJECTS.has(a.projectId));
     expect([...housed, ...inside].sort()).toEqual(seated.map((a) => a.id).sort());
     expect(housed).toEqual([]);
     expect(inside).toHaveLength(seated.length);
@@ -164,21 +166,47 @@ it("does not draw a second building for a registered repository left in discover
   const name="khaneilcampbell/service-desk-intelligence";
   const layout=layoutMap(catalog,[name]);
   expect(layout.parks.flatMap(p=>p.strays).some(s=>s.name===name)).toBe(false);
-  expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(1);
+  // Service Desk stays registered but has no building (removed 2026-11-09): its land is a vacant lot.
+  expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(0);
+  expect(layout.parks.filter(p=>p.id==="park:vacant:service-desk")).toHaveLength(1);
 });
 
-it("keeps one accessible Skyline district in every map grouping",()=>{
+it("leaves the land of removed towers (Service Desk, Career Applications, Benjaire Dashboard) in every grouping",()=>{
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
-    expect(layout.parks.filter(p=>!p.strays.length)).toHaveLength(1);
+    // The same catalog with the two projects renamed, so they are still drawn as towers.
+    const was=(id:string)=>["service-desk","career-optimizer","benjaire-ops"].includes(id)?`was-${id}`:id;
+    const without=layoutMap({projects:catalog.projects.map(p=>({...p,id:was(p.id)})),agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
+    expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(3);
+    expect(layout.districts.map(d=>d.project.id)).not.toContain("service-desk");
+    expect(layout.districts.map(d=>d.project.id)).not.toContain("career-optimizer");
+    // Benjaire Dashboard's lot keeps its streets (roads to Intelligence Hub run through it): it is
+    // laid out as a cleared district, in the same place, with no building.
+    expect(layout.districts.map(d=>d.project.id)).not.toContain("benjaire-ops");
+    const lot=layout.cleared!.find(d=>d.project.id==="benjaire-ops")!,old=without.districts.find(d=>d.project.id==="was-benjaire-ops")!;
+    expect([lot.ox,lot.oy,lot.size]).toEqual([old.ox,old.oy,old.size]);
+    // Every other building stands exactly where it stood while the two towers were drawn.
+    const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
+    expect(at(layout)).toEqual(at(without));
+    const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();
+    expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:service-desk"]);
+    // A group left with only a vacant lot gets no heading.
+    expect(districtHeadings(layout,group).every(n=>n.count>0)).toBe(true);
+  }
+});
+
+it("keeps one open lot in every map grouping",()=>{
+  for(const group of ["none","district","status","tag"] as const){
+    const layout=layoutMap(catalog,[],group);
+    expect(layout.parks.filter(p=>!p.strays.length&&!p.vacant)).toHaveLength(1);
     expect(overlaps(layout)).toEqual([]);
   }
 });
 
-it("registers Skyline without duplicating its existing residential district", () => {
+it("registers Skyline without giving it a district", () => {
   expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
   const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
-  expect(layout.parks.filter(p => !p.strays.length)).toHaveLength(1);
+  expect(layout.parks.filter(p => !p.strays.length && !p.vacant)).toHaveLength(1);
   expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
 });

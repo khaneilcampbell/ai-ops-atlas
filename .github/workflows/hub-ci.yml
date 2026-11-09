@@ -1,0 +1,99 @@
+name: Intelligence Hub CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      documents:
+        description: Also upload the rendered DOCX files for download
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hub-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCRIPTS: "10 — System Administration/Automation Scripts"
+
+jobs:
+  docs:
+    name: Check and render documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: docs/intelligence-hub
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Install pandoc and Python packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          pip install python-docx ruff
+      - run: python -m compileall -q "$SCRIPTS"
+      - name: Lint (pyflakes rules)
+        run: ruff check --select F "$SCRIPTS"
+      - name: Check every project's sources
+        shell: python
+        run: |
+          import json, sys
+          from pathlib import Path
+
+          required = {"id", "name", "category", "status", "repo", "last_verified"}
+          docs = ["01 Project Overview", "02 Technical Deep Dive", "03 Engineering Learning Guide",
+                  "04 Development Journal", "05 Project Roadmap"]
+          problems = []
+          projects = sorted(Path(".").glob("*/*/Source/project.json"))
+          if not projects:
+              problems.append("No Hub projects found")
+          for meta_path in projects:
+              src = meta_path.parent
+              try:
+                  meta = json.loads(meta_path.read_text())
+              except json.JSONDecodeError as e:
+                  problems.append(f"{meta_path}: invalid JSON ({e})")
+                  continue
+              missing = required - meta.keys()
+              if missing:
+                  problems.append(f"{meta_path}: missing {', '.join(sorted(missing))}")
+              for doc in docs:
+                  if not (src / f"{doc}.md").is_file():
+                      problems.append(f"{src}: missing {doc}.md")
+          print(f"{len(projects)} projects checked")
+          for p in problems:
+              print(f"::error::{p}")
+          sys.exit(1 if problems else 0)
+      # Renders over the committed DOCX in this throwaway checkout, proving every source still builds.
+      - name: Render every project to DOCX
+        run: |
+          find . -path ./.git -prune -o -path '*/Source/project.json' -print0 |
+            while IFS= read -r -d '' meta; do
+              python "$SCRIPTS/build_docs.py" "$(dirname "$(dirname "$meta")")"
+            done
+      - name: Collect documents
+        if: github.event_name == 'workflow_dispatch' && inputs.documents
+        run: |
+          mkdir -p documents
+          find . -path ./.git -prune -o -path ./documents -prune -o -path '*/Source/project.json' -print0 |
+            while IFS= read -r -d '' meta; do
+              dir=$(dirname "$(dirname "$meta")")
+              mkdir -p "documents/$(basename "$dir")"
+              cp "$dir"/*.docx "documents/$(basename "$dir")/"
+            done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name == 'workflow_dispatch' && inputs.documents
+        with:
+          name: project-intelligence-hub-documents
+          path: docs/intelligence-hub/documents
+          retention-days: 7

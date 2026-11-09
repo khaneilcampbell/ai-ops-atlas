@@ -5,14 +5,15 @@ project:
   id: skyline
   name: Skyline
   summary: >-
-    Skyline residences and business district. Initial service: Benjaire
-    Inquiry Assistant, a planned client intake package based on Benjaire Flow. No client workflow
+    Planned client services. Initial service: Benjaire Inquiry Assistant, a planned client intake
+    package based on Benjaire Flow, offered from the Atlas Marketplace. The Skyline district on the
+    map was removed on 2026-11-08 to make space; this registration stays. No client workflow
     or live telemetry is connected through this registration. Implementation is maintained in Atlas;
     shared repository health does not verify Skyline business operations.
   status: idle
   repository: khaneilcampbell/ai-ops-atlas
   district: business-operations
-  tags: [business, residences, intake]
+  tags: [business, intake]
   links:
     - label: Atlas city implementation
       url: https://github.com/khaneilcampbell/ai-ops-atlas
@@ -27,6 +28,7 @@ project:
 agents:
   - id: skyline-inquiry-assistant
     name: Benjaire Inquiry Assistant
+    workplace: {building: Atlas Marketplace, floor: 1, room: "101"}
     purpose: Planned service that captures website inquiries, classifies requests, saves an inquiry log, alerts the owner and acknowledges the sender.
     framework: Planned n8n workflow with an AI classification step
     runtime: Not deployed

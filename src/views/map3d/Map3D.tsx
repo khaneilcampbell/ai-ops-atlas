@@ -1,3 +1,8 @@
+import {StationFerrisWheel} from "./StationFerrisWheel";
+import {StationPlaza} from "./StationPlaza";
+import Commons from './Commons';
+import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
+import {marinaFootprint,marinaSite} from './marinaPlan';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
 import {flightClearance} from './flightClearance';
@@ -5,30 +10,30 @@ import { groupLabels } from "./groupLabels";
 import {DistrictLife} from './DistrictLife';
 import {financialDimensions} from './financialArchitecture';
 import {StreetLights} from './StreetLights';
-import {HillsCommunity,CommunityRail} from './HillsCommunity';
-import {COMMUNITY_BUILDINGS,communityKey,COMMUNITY} from './hillsCommunityPlan';
+import {CommunityRail} from './HillsCommunity';
+import {ATLAS_STATION_KEY,COMMUNITY} from './hillsCommunityPlan';
 import {FinancialDistrict} from "./FinancialDistrict";
 import {FINANCIAL,FINANCIAL_KEY,FINANCIAL_PARK_KEY,financialKey} from "./financialPlan";
 import {financialJunctions} from './junctions';
-import AtlasHills from "./AtlasHills";
-import {HILLS,HILLS_KEY} from "./hillsPlan";
 import {AIRPORT_BUILDINGS,airportBuildingKey} from "./airportBuildings";
 import {Dealership} from "./Dealership";
 import {DEALERSHIP_KEY} from "./dealershipPlan";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
+import {STADIUM_NAME} from "./stadiumPlan";
+import {stadiumCrown} from "./stadiumGeometry";
 import {MarketingAgency} from "./MarketingAgency";
 import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import {Mall} from "./Mall";
 import {MALL,MALL_KEY} from "./mallPlan";
+import {GalleriaLife} from './GalleriaLife';
+import {planGalleriaLife} from './galleriaLifePlan';
+import {Galleria} from "./Galleria";
+import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
-import { SkylineFerrisWheel } from "./SkylineFerrisWheel";
-import {skylineBuildingKey} from "../../catalog/buildings";
-import {skylineProjectAnchor} from "./landmarks";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { CITY_SCALE, shopHeight } from "./cityScale";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -55,15 +60,23 @@ import { ANNEX, isCommerceAnnex } from "./commerceAnnexPlan";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
-import { FLOOR_BASE, Skyline, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { buildScene, TERRACE_H, WATER_Y, type Scene3D } from "./scene";
+import { districtRect, wholeBuilding, type Footprint } from "./buildingExtent";
+import { IntelligenceHub } from "./IntelligenceHub";
+import { isIntelligenceHub } from "./intelligenceHubPlan";
+import { PortfolioSite } from "./PortfolioSite";
+import { isPortfolioSite } from "./portfolioSitePlan";
+import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
-import { ActivityGlow } from "./activity";
+import { ActivityGlow, WholeBuildingGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
-import { usePageVisible, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
+import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
+import { insideLimits, type InsideLimits } from "./inside";
+import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
@@ -128,6 +141,8 @@ interface Props {
   linksMoving: boolean;
   /** Decorative vehicles on the districts' paths; the toolbar's Traffic toggle. */
   traffic: boolean;
+  /** The toolbar's Inside toggle: nearby headquarters show their offices as cutaways (InsideView). */
+  inside?: boolean;
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -151,32 +166,31 @@ const selOf = (key: string): Sel => {
 
 /** Where each clickable thing sits and how big it is, for highlights, labels and camera moves. */
 export function anchorsOf(scene: Scene3D, layout: Layout) {
-  const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
+  // `whole` is the full footprint a click selects when a building spreads past its tower's lot;
+  // the outline and the camera use it, connection lines keep the tower's own centre.
+  const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string; whole?: Footprint }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
-  for(const shop of scene.retail){
-    const anchor={x:shop.x,z:shop.z,y0:TERRACE_H,y1:TERRACE_H+shopHeight(shop)+0.4,w:shop.size,d:shop.size*0.8,project:"skyline"};
-    m.set(skylineBuildingKey(shop.name),anchor);m.set(shop.key,anchor);
+  // Profile Tower's GitHub podium and skybridge are part of the same building.
+  const gh = scene.githubAnnex && scene.towers.find((t) => isGithubTower(t.projectId));
+  if (gh && scene.githubAnnex) {
+    const a = m.get(gh.key)!;
+    m.set(gh.key, { ...a, whole: wholeBuilding(a, [...scene.githubAnnex.tiers, scene.githubAnnex.skybridge]) });
   }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.financial){const f=scene.financial;m.set(FINANCIAL_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:f.w,d:f.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
-  if(scene.hills)m.set(HILLS_KEY,{x:scene.hills.x+scene.hills.w/2,z:scene.hills.z+scene.hills.d/2,y0:TERRACE_H,y1:TERRACE_H+5,w:scene.hills.w,d:scene.hills.d});
-  if(scene.community)for(const b of COMMUNITY_BUILDINGS)m.set(communityKey(b.id),{x:scene.community.x+b.x,z:scene.community.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
-  if(scene.communityRail){const [x,z]=scene.communityRail.financial;m.set("service:financial-station",{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
+  if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
+  else if(scene.communityRail){for(const [key,[x,z]]of [[ATLAS_STATION_KEY,scene.communityRail.hills],["service:financial-station",scene.communityRail.financial]] as const)m.set(key,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
-  if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+4,z:scene.stadium.z+3.5,y0:TERRACE_H,y1:TERRACE_H+2.3,w:8,d:7});
+  if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
+  if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
+  if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+scene.stadium.w/2,z:scene.stadium.z+scene.stadium.d/2,y0:TERRACE_H,y1:TERRACE_H+stadiumCrown(),w:scene.stadium.w,d:scene.stadium.d});
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
-  const skyline=skylineProjectAnchor(scene);
-  if(skyline)m.set("project:skyline",skyline);
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
     const hq = m.get(`project:${d.project.id}`);
-    for(const a of d.crew){
-      const workplace=a.workplace&&scene.retail.find(k=>k.name===a.workplace!.building);
-      const anchor=workplace?m.get(skylineBuildingKey(workplace.name)):hq;
-      if(anchor)m.set(`agent:${a.id}`,anchor);
-    }
+    if(hq)for(const a of d.crew)m.set(`agent:${a.id}`,hq);
   }
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + (k.height ?? TOOL_OFFICE_TOP - 0.4) + 0.4, w: k.size, d: k.size * 0.8, project: k.projectId });
@@ -192,6 +206,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
+  // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
+  const [opened, setOpened] = useState<string[]>([]);
+  const openSet = useMemo(() => new Set(props.inside ? opened : []), [opened, props.inside]);
+  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? INSIDE_ROOF : towerTop(t)), [openSet]);
   const api = useRef<Map3DApi | null>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
   const labelEls = useRef(new Map<string, HTMLDivElement>());
@@ -259,7 +277,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: towerTop(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -269,7 +287,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push({
         id: `hq:${t.projectId}`,
         key: t.key,
-        pos: new THREE.Vector3(t.x, towerTop(t) + PLAQUE.roofGap, t.z),
+        pos: new THREE.Vector3(t.x, roofOf(t) + PLAQUE.roofGap, t.z),
         w,
         h: h + 8,
         priority: 0,
@@ -343,7 +361,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // Group names when the map is grouped, at the back corner of each landmass, one style for every
     // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
     // groups give way to the project plaques.
-    const byDistrict = (props.displayNeighborhoods ?? layout.neighborhoods).some((n) => n.key.startsWith("d:"));
     const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
     for (const g of groupLabels(props.displayNeighborhoods ?? layout.neighborhoods)) {
       const n = hoods.get(g.key)!;
@@ -358,24 +375,18 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       for(const b of f.buildings)if(mapLabelVisible("building",near,selKey===financialKey(b.id),hover===financialKey(b.id)))plaque({id:financialKey(b.id),select:financialKey(b.id),name:b.name,x:f.x+b.x,roof:TERRACE_H+b.height+1.2,z:f.z+b.z,priority:3,mark:PLANNED,title:`${b.name} · Planned workspace`});
       if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
-    if(scene.community&&(mapLabelVisible("detail",near,false,false,selKey===HILLS_KEY||!!selKey?.startsWith("service:hills:"))))for(const b of COMMUNITY_BUILDINGS)plaque({id:communityKey(b.id),select:communityKey(b.id),name:b.name,x:scene.community.x+b.x,roof:TERRACE_H+b.h,z:scene.community.z+b.z,priority:8,mark:PLANNED,title:`${b.name} · Planned community`});
-    if(scene.communityRail&&(near==="near"||selKey==="service:financial-station")){const [x,z]=scene.communityRail.financial;plaque({id:"service:financial-station",select:"service:financial-station",name:"Financial District Station",x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:"Financial District Station · Visual simulation"});}
-    if(scene.hills)plaque({id:HILLS_KEY,select:HILLS_KEY,name:"Atlas Hills",x:scene.hills.x+HILLS.mansion.x,roof:TERRACE_H+HILLS.mansion.h+.25,z:scene.hills.z+HILLS.mansion.z,priority:2,mark:PLANNED,title:"Atlas Hills · Planned community"});
-    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"BMW",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"BMW · Planned visual district"});
-    if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
+    if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${stop.district} · Visual simulation`});}
+    if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
+    if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
-    if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:"Stadium",x:scene.stadium.x+4,roof:TERRACE_H+2.3,z:scene.stadium.z+3.5,priority:2,mark:PLANNED,title:"Stadium · Planned venue"});
+    if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
+    if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
+    if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
-    const skylineHealth=healthFor("khaneilcampbell/ai-ops-atlas"),skylineMark={kind:skylineHealth.kind,label:skylineHealth.label,stale:skylineHealth.stale};
-    for(const shop of scene.retail.filter(shop=>near==="near"||hover===shop.key||selKey===skylineBuildingKey(shop.name)))plaque({id:shop.key,key:shop.key,select:skylineBuildingKey(shop.name),name:shop.name,x:shop.x,roof:TERRACE_H+shopHeight(shop)+0.4,z:shop.z,priority:7,mark:skylineMark,title:`${shop.name} · khaneilcampbell/ai-ops-atlas`});
-    for (const p of scene.parks) {
-      if(near!=="near"&&byDistrict) out.push({id:`district:${p.id}`,key:`district:${p.id}`,pos:new THREE.Vector3(p.x+p.w/2,TERRACE_H+0.1,p.z-0.5),w:measure("SKYLINE",11.5,SANS,500)+34,h:28,priority:1.5,className:"m3-pill hood district",node:"SKYLINE",title:"Skyline district"});
-      plaque({id:p.id,key:p.id,select:"project:skyline",name:p.label,x:p.x+p.w/2,roof:TERRACE_H+4.95*CITY_SCALE.skyline,z:p.z+p.d/2,priority:3,mark:skylineMark,title:`skyline · ${skylineHealth.label}`});
-    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet]);
+  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -401,7 +412,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     of: (keys) => ({
       ...pick.of(keys),
       over: (key) => { setHover(key); setTip(null); },
-      click:(key,e)=>{if(e.delta>4)return;const shop=scene.retail.find(k=>k.key===key);select(shop?skylineBuildingKey(shop.name):key);},
+      click:(key,e)=>{if(e.delta>4)return;select(key);},
     }),
   };
   const terracePick: Pick = {
@@ -426,6 +437,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const activity = useBuildingActivity();
   // Frame rate, pixels and shadow detail follow the Performance setting.
   const power = usePowerProfile();
+  // Inside view: how many buildings open follows the device and the Performance setting.
+  const powerMode = usePowerMode();
+  const battery = useOnBattery();
+  const insideCaps = useMemo(() => insideLimits(phone, powerMode, battery), [phone, powerMode, battery]);
+  const insideOffices = useInsideOffices(!!props.inside);
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
@@ -458,6 +474,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
+          drawing={drawing}
           agentCommutes={agentCommutes}
           power={power}
           light={props.light}
@@ -466,6 +483,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
           traffic={props.traffic}
+          inside={!!props.inside}
+          insideOffices={insideOffices}
+          insideCaps={insideCaps}
+          onInsideOpen={setOpened}
+          insideOpen={openSet}
           onLinkHover={(id, e) => {
             setHoverLink(id);
             const t = id ? props.linkTip(id) : null;
@@ -485,7 +507,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           selectedDistrict={selectedDistrict}
           api={api}
           pick={pick}
-          landmarkSelect={()=>select("project:skyline")}
           kioskPick={kioskPick}
           terracePick={terracePick}
           reduced={props.reduced}
@@ -548,7 +569,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  agentCommutes,
+  drawing,agentCommutes,
   power,
   light: lightMode,
   health,
@@ -556,6 +577,11 @@ function World({
   hoverLink,
   linksMoving,
   traffic,
+  inside,
+  insideOffices,
+  insideCaps,
+  onInsideOpen,
+  insideOpen,
   onLinkHover,
   onLinkPick,
   hoods,
@@ -570,7 +596,6 @@ function World({
   api,
   pick,
   kioskPick,
-  landmarkSelect,
   terracePick,
   reduced,
   activity,
@@ -580,7 +605,7 @@ function World({
   cover,
   surface,
 }: {
-  agentCommutes?: CommutePlan;
+  drawing:boolean;agentCommutes?: CommutePlan;
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -588,6 +613,11 @@ function World({
   hoverLink: string | null;
   linksMoving: boolean;
   traffic: boolean;
+  inside: boolean;
+  insideOffices: Map<string, InsideOffice>;
+  insideCaps: InsideLimits;
+  onInsideOpen: (keys: string[]) => void;
+  insideOpen: Set<string>;
   onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
   onLinkPick: (id: string) => void;
   hoods: number;
@@ -602,7 +632,6 @@ function World({
   api: React.MutableRefObject<Map3DApi | null>;
   pick: PickHandlerSet;
   kioskPick: PickHandlerSet;
-  landmarkSelect: ()=>void;
   terracePick: Pick;
   reduced: boolean;
   activity: Map<string, Illumination>;
@@ -627,6 +656,9 @@ function World({
   const g = useGeometries();
   const m = useMaterials();
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
+  // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
+  const railKeepClear=useMemo(()=>[marinaFootprint(marinaSite(scene,TERRACE_H))],[scene]);
+  const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.map(c=>c.road)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -777,7 +809,7 @@ function World({
   const computeFit = () => {
     // Fit actual ground and building envelopes, not empty elevated corners of a bounding box.
     const corners = scene.land.flatMap(r=>[r.x,r.x+r.w].flatMap(x=>[r.z,r.z+r.d].map(z=>new THREE.Vector3(x,WATER_Y,z))));
-    for(const [x,z]of scene.freight?.highway??[])corners.push(new THREE.Vector3(x,TERRACE_H+.5,z));
+    for(const [x,z]of [...(scene.freight?.highway??[]),...(scene.communityRail?.loop?.route??[])])corners.push(new THREE.Vector3(x,TERRACE_H+.5,z));
     for(const a of anchors.values())for(const x of [a.x-a.w/2,a.x+a.w/2])for(const z of [a.z-a.d/2,a.z+a.d/2])corners.push(new THREE.Vector3(x,a.y1+.3,z));
     const cam = (camera as THREE.PerspectiveCamera).clone();
     cam.aspect = size.width / Math.max(1, size.height);
@@ -878,7 +910,8 @@ function World({
 
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
-    const a = anchors.get(key);
+    const b = anchors.get(key);
+    const a = b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -1099,8 +1132,12 @@ function World({
   });
   useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const hl = (key: string | null) => (key ? anchors.get(key) : undefined);
-  const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
+  // An open building's outline hugs its office, not the shell that was cut away.
+  const hl = (key: string | null) => {
+    const a = key ? anchors.get(key) : undefined;
+    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
+  };
+  const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);
   return (
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
@@ -1110,31 +1147,33 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
-      <Kiosks kiosks={scene.retail} g={g} m={m} pick={kioskPick} />
-      {detailsReady && <SkylineFerrisWheel parks={scene.parks} reduced={reduced} />}
-      <Skyline parks={scene.parks} g={g} m={m} onSelect={landmarkSelect} />
-      <VenueBridge scene={scene} g={g} m={m}/>
+      {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
+      <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <AtlasHills plan={scene.hills} g={g} m={m} night={lightMode==="night"} pick={kioskPick.of([HILLS_KEY])}/>}
-      {detailsReady && <HillsCommunity plan={scene.community} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} g={g} m={m} pick={kioskPick} moving={!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
-      {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
-      {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} garden={scene.mallGarden} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
+      {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
+      {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
+      {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
+      {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
-      {scene.towers.filter((t) => t.identity.landmark).map((t) => <AtlasHq key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <CommerceTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      {scene.towers.filter((t) => t.identity.landmark).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><AtlasHq tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><RibbonTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><CommerceTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><GithubTower tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><IntelligenceHub tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><PortfolioSite tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />

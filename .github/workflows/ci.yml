@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -37,6 +37,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: python3 -m unittest discover -s ops/system-improvements -p 'test_*.py'
+      - run: python3 -m unittest discover -s ops/benjaire-production -p 'test_*.py'
       - run: npm run build
       - run: npm run build:web
 
@@ -45,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install Tauri system libraries
@@ -72,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -89,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -98,6 +99,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/merge-flow -p 'test_*.py'
+      - run: python3 -m unittest discover -s apps/benjaire-dashboard/products/flow/evals -p 'test_*.py'
       - run: python3 -m venv "$RUNNER_TEMP/scout" && "$RUNNER_TEMP/scout/bin/pip" install --quiet pyyaml && "$RUNNER_TEMP/scout/bin/python" -m unittest discover -s ops/opportunity-scout -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/design-consistency -p 'test_*.py'
       - run: python3 ops/design-consistency/design.py scan --dry-run
@@ -110,7 +112,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -154,7 +156,7 @@ jobs:
     timeout-minutes: 15
     environment: macos-signing
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

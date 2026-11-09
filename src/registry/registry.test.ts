@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 51 agents discoverable with no manifest problems", () => {
+  it("keeps all 11 projects and 57 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(11);
-    expect(entries).toHaveLength(51);
+    expect(entries).toHaveLength(57);
   });
 
 
@@ -51,13 +51,14 @@ describe("bundled registry", () => {
     expect(agent.registry?.classification?.type).toBe("B");
     expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
     expect(agent.model).toContain("no model");
-    expect(agent.workplace).toEqual({building:"OpenAI",floor:4,room:"401"});
+    // Works from Atlas HQ since its Model Lab suite left with the Skyline district (2026-11-08).
+    expect(agent.workplace).toBeUndefined();
     expect(agent.registry?.governance?.autonomy).toBe(1);
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 9, B: 13, C: 17, D: 10, E: 1, F: 1, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 15, B: 13, C: 17, D: 10, E: 1, F: 1, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -271,7 +272,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E", "F"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(51);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(57);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -288,7 +289,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(33);
+    expect(s.observable).toBe(34);
   });
 });
 

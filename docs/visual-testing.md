@@ -102,6 +102,8 @@ above 90% of its budget leaves a warning on the pull request but still passes.
 CIRCA_SHOTS=1 npx playwright test -c visual visual/circa.visual.ts
 ```
 
+The "Circa floors inside Enter building" tests shoot Floor 1 (lobby), Floor 2 (pool deck), Floor 3 (apartments) and All floors, by day, night and on a phone. Set `CIRCA_SHOT_DIR` to choose the folder, for example `artifacts/circa/before` on `main` and `artifacts/circa/after` on a branch.
+
 ## Trackpad look-around inside buildings
 
 `visual/interior-trackpad.visual.ts` sends real trackpad wheel events inside five interiors (a half turn, a pinch, an Option-move), checks the camera, and writes PNGs to `visual/out/interior-trackpad/`. It takes about 9 minutes, so it is skipped unless asked for:

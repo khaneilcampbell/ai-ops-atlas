@@ -2,7 +2,9 @@
 
 Status: sandbox prepared and locally checked; not deployed. Updated October 30, 2026.
 
-Skyline is the business operations district. Its first proposed service uses the
+Skyline is a planned client-services project. (Its district on the map was removed on
+November 8, 2026 to make space; the assistant now has Unit 101 in the Atlas Marketplace.)
+Its first proposed service uses the
 Benjaire Flow intake pattern documented in `catalog/benjaire-com.yaml`. The Skyline
 registration is a planned service, not a second running copy of Benjaire Flow.
 Atlas catalogs and observes workflows; this manifest does not execute them.

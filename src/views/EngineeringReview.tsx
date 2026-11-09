@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { CopyButton, ExternalLink } from "../components/bits";
-import { Refs } from "../components/IntelPanel";
+import { RecActions, RefLinks, RepoLink, TrackingNote } from "../components/IntelLinks";
+import { useRecTracking } from "../intel/useTracking";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { intelApi } from "../intel/api";
-import { AREA_LABEL, EFFORT_LABEL, WHEN_LABEL, allFindings, ecosystemContext, isReviewRun } from "../intel/ecosystem";
+import { AREA_LABEL, EFFORT_LABEL, WHEN_LABEL, allFindings, ecosystemContext, isReviewRun, scorecardRows } from "../intel/ecosystem";
+import { alertsListUrl, ecoRefTarget, evidenceLinks, recFixRequest, recRepos } from "../intel/links";
 import { AI_STATE_LABEL, RUN_LABEL, isActive, usd } from "../intel/format";
 import { formatDate, relative } from "../lib/time";
 import {
@@ -25,6 +27,23 @@ import type { CostEstimate, Depth, EcoReport, EcoReview, Rating, RepoEntry, Seve
 const RATING_CLASS: Record<Rating, string> = { good: "h-good", fair: "h-warn", poor: "h-bad", unknown: "h-unknown" };
 const SEV_CLASS: Record<Severity, string> = { critical: "high", high: "high", medium: "medium", low: "low", info: "low" };
 const PRIO_CLASS = { now: "p-high", next: "p-medium", later: "" } as const;
+
+/** Who should carry out a recommendation: a catalog agent (opens it), KC, or unknown with the reason. */
+export function RecOwner({ owner, report }: { owner?: string | null; report: EcoReport }) {
+  const { select } = useAtlas();
+  if (!owner)
+    return <span title="The review didn't name an owner, or named one that isn't in the catalog, so Atlas doesn't guess.">Owner unknown: the review didn't name one</span>;
+  if (owner === "KC") return <span title="Needs your own hands: accounts, billing, settings or approvals.">Owner: KC</span>;
+  const agent = report.context.agents.find((a) => a.id === owner);
+  return (
+    <span>
+      Owner:{" "}
+      <button type="button" className="ref ref-link" title={`Open agent ${agent?.name ?? owner}`} onClick={() => select({ kind: "agent", id: owner })}>
+        {agent?.name ?? owner}
+      </button>
+    </span>
+  );
+}
 
 /** Intel → Engineering review: run the Senior Engineering Reviewer and read its latest review. */
 export function EngineeringReview() {
@@ -185,9 +204,7 @@ function RepoChips({ repos }: { repos: string[] }) {
   return (
     <span className="chips" style={{ display: "inline-flex" }}>
       {repos.map((r) => (
-        <span key={r} className="chip">
-          {short(r)}
-        </span>
+        <RepoLink key={r} repo={r} />
       ))}
     </span>
   );
@@ -203,8 +220,19 @@ function SectionHead({ title, copy }: { title: string; copy: () => string }) {
   );
 }
 
-function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
+export function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
   const agentName = new Map(report.context.agents.map((a) => [a.id, a.name]));
+  const resolve = (ref: string) => ecoRefTarget(ref, report);
+  const { select } = useAtlas();
+  const requestsByRec = useMemo(
+    () =>
+      review.recommendations.map((r) => {
+        const links = evidenceLinks(r.evidence, (ref) => ecoRefTarget(ref, report));
+        return recRepos(r, report).map((repo) => recFixRequest({ title: r.title, rationale: r.rationale, firstStep: r.first_step, evidence: r.evidence }, repo, "Engineering review", links));
+      }),
+    [review, report],
+  );
+  const tracking = useRecTracking(useMemo(() => requestsByRec.flat(), [requestsByRec]));
   return (
     <div className="ai-box selectable">
       <div className="box-head">
@@ -219,13 +247,15 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
       <div>
         <SectionHead title="Scorecard" copy={() => scorecardMarkdown(review)} />
         <div className="scorecard">
-          {review.scorecard.map((s) => (
-            <div key={s.area} className="score">
+          {scorecardRows(review).map((s) => (
+            <div key={s.area} className={`score${s.rated ? "" : " unrated"}`}>
               <span className="health">
                 <i className={RATING_CLASS[s.rating]} /> <b>{AREA_LABEL[s.area]}</b>
                 <span className="muted small"> {s.rating}</span>
               </span>
-              <div className="small">{s.rationale}</div>
+              <div className="small">
+                {s.rationale} {s.rated && s.evidence.length > 0 && <RefLinks refs={s.evidence} grounded={s.grounded} resolve={resolve} />}
+              </div>
             </div>
           ))}
         </div>
@@ -243,7 +273,7 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
                     <b>{r.title}</b> <RepoChips repos={r.repos} />
                   </div>
                   <div className="muted small">
-                    {r.why} <Refs refs={r.evidence} grounded={r.grounded} />
+                    {r.why} <RefLinks refs={r.evidence} grounded={r.grounded} resolve={resolve} />
                   </div>
                 </span>
               </li>
@@ -255,26 +285,33 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
       {review.recommendations.length > 0 && (
         <div>
           <SectionHead title="Recommendations" copy={() => recommendationsMarkdown(review)} />
+          <TrackingNote error={tracking?.error} />
           <ol className="recs">
-            {review.recommendations.map((r, i) => (
-              <li key={i}>
-                <div className="rec-head">
-                  <span className={`prio ${PRIO_CLASS[r.priority]}`}>{WHEN_LABEL[r.priority]}</span>
-                  <b className="grow">{r.title}</b>
-                  <span className="muted small">
-                    {AREA_LABEL[r.category]} · {EFFORT_LABEL[r.effort]}
-                  </span>
-                  <CopyButton compact text={() => recommendationMarkdown(r)} title="Copy this recommendation" />
-                </div>
-                <div className="small">{r.rationale}</div>
-                <div className="small">
-                  <b>First step:</b> {r.first_step}
-                </div>
-                <div className="small">
-                  <RepoChips repos={r.repos} /> <Refs refs={r.evidence} grounded={r.grounded} />
-                </div>
-              </li>
-            ))}
+            {review.recommendations.map((r, i) => {
+              const requests = requestsByRec[i];
+              return (
+                <li key={i}>
+                  <div className="rec-head">
+                    <span className={`prio ${PRIO_CLASS[r.priority]}`}>{WHEN_LABEL[r.priority]}</span>
+                    <b className="grow">{r.title}</b>
+                    <span className="muted small">{AREA_LABEL[r.category]}</span>
+                    <CopyButton compact text={() => recommendationMarkdown(r)} title="Copy this recommendation" />
+                  </div>
+                  <div className="small muted rec-meta">
+                    <RecOwner owner={r.owner} report={report} />
+                    <span>Time: {EFFORT_LABEL[r.effort]}</span>
+                  </div>
+                  <div className="small">{r.rationale}</div>
+                  <div className="small">
+                    <b>First step:</b> {r.first_step}
+                  </div>
+                  <div className="small">
+                    <RepoChips repos={r.repos} /> <RefLinks refs={r.evidence} grounded={r.grounded} resolve={resolve} />
+                  </div>
+                  <RecActions requests={requests} tracked={tracking?.byKey} reason="No reviewed repository is named, so there is nowhere to open an issue." />
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}
@@ -298,11 +335,17 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
           <ul className="obs plain">
             {review.autonomy_notes.map((n, i) => (
               <li key={i}>
-                <b>{agentName.get(n.agent) ?? n.agent}</b>{" "}
+                {agentName.has(n.agent) ? (
+                  <button type="button" className="text-btn inline" style={{ padding: 0 }} onClick={() => select({ kind: "agent", id: n.agent })}>
+                    <b>{agentName.get(n.agent)}</b>
+                  </button>
+                ) : (
+                  <b>{n.agent}</b>
+                )}{" "}
                 <span className="chip">
                   L{n.current_level} → L{n.suggested_level}
                 </span>{" "}
-                {n.reason} <Refs refs={n.evidence} grounded={n.grounded} />
+                {n.reason} <RefLinks refs={n.evidence} grounded={n.grounded} resolve={resolve} />
               </li>
             ))}
           </ul>
@@ -334,16 +377,50 @@ function Review({ report, review }: { report: EcoReport; review: EcoReview }) {
   );
 }
 
-const yes = (a: { state: "assessed"; data: boolean } | { state: "not_assessed"; reason: string } | undefined) => (!a ? "–" : a.state === "assessed" ? (a.data ? "Yes" : "No") : "?");
+const UNKNOWN_NO_CHECKS = "Unknown: settings were not read for this repository";
+const yes = (a: { state: "assessed"; data: boolean } | { state: "not_assessed"; reason: string } | undefined) =>
+  !a ? <Unknown why={UNKNOWN_NO_CHECKS} /> : a.state === "assessed" ? (a.data ? "Yes" : "No") : <Unknown why={a.reason} />;
+
+/** "Unknown", with the reason one hover or tap away and readable by screen readers. */
+function Unknown({ why }: { why: string }) {
+  return (
+    <span className="muted" title={why}>
+      Unknown<span className="sr-only">: {why}</span>
+    </span>
+  );
+}
+
+function alertsCell(e: RepoEntry) {
+  const f = e.facts;
+  if (!f) return <Unknown why={e.error ?? "Facts could not be read"} />;
+  const d = f.security.dependabot;
+  const c = f.security.code_scanning;
+  const part = (label: string, s: typeof d, kind: "dependabot" | "code_scanning") =>
+    s.state === "assessed" ? (
+      <ExternalLink href={alertsListUrl(f.url, kind)}>
+        {label} {s.data.open}
+      </ExternalLink>
+    ) : (
+      <span className="muted" title={s.reason}>
+        {label} unknown
+      </span>
+    );
+  return (
+    <>
+      {part("Dependabot", d, "dependabot")}
+      <div>{part("Code scanning", c, "code_scanning")}</div>
+    </>
+  );
+}
 
 function rulesLabel(e: RepoEntry) {
   const r = e.checks?.branch_rules;
-  if (!r) return "–";
-  if (r.state !== "assessed") return "Not assessed";
+  if (!r) return <Unknown why={UNKNOWN_NO_CHECKS} />;
+  if (r.state !== "assessed") return <Unknown why={r.reason} />;
   return r.data.protected ? (r.data.required_checks.length ? `Protected · ${r.data.required_checks.length} checks` : "Protected") : "None";
 }
 
-function VerifiedTable({ report }: { report: EcoReport }) {
+export function VerifiedTable({ report }: { report: EcoReport }) {
   const findings = allFindings(report);
   const [open, setOpen] = useState(false);
   return (
@@ -369,7 +446,6 @@ function VerifiedTable({ report }: { report: EcoReport }) {
           <tbody>
             {report.repos.map((e) => {
               const f = e.facts;
-              const alerts = f && f.security.dependabot.state === "assessed" ? f.security.dependabot.data.open + (f.security.code_scanning.state === "assessed" ? f.security.code_scanning.data.open : 0) : null;
               const wf = e.checks?.workflows;
               const flagged = wf?.state === "assessed" ? wf.data.filter((w) => w.pull_request_target || w.unpinned_actions.length || (!w.top_level_permissions && !w.job_permissions)).length : 0;
               return (
@@ -378,11 +454,11 @@ function VerifiedTable({ report }: { report: EcoReport }) {
                     <div className="name">{f ? <ExternalLink href={f.url}>{short(e.repo)}</ExternalLink> : short(e.repo)}</div>
                     <div className="desc">{e.error ?? (e.source === "intel_report" ? "From saved report" : "Read for this review")}</div>
                   </td>
-                  <td className="small">{f ? f.ci.state.replace("_", " ") : "–"}</td>
-                  <td className="small">{alerts ?? "?"}</td>
+                  <td className="small">{f ? f.ci.state.replace("_", " ") : <Unknown why={e.error ?? "Facts could not be read"} />}</td>
+                  <td className="small">{alertsCell(e)}</td>
                   <td className="small">{rulesLabel(e)}</td>
                   <td className="small">{yes(e.checks?.dependabot_config)}</td>
-                  <td className="small">{e.checks ? `${e.checks.workflow_files}${flagged ? ` · ${flagged} flagged` : ""}` : "–"}</td>
+                  <td className="small">{e.checks ? `${e.checks.workflow_files}${flagged ? ` · ${flagged} flagged` : ""}` : <Unknown why={UNKNOWN_NO_CHECKS} />}</td>
                 </tr>
               );
             })}

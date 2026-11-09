@@ -17,6 +17,7 @@ import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKe
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
+import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
@@ -48,10 +49,14 @@ const cityModule = import("./map3d/Map3D");
 const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
 import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
+import { STADIUM_OFFICE_ID } from "./map3d/stadiumPlan";
+import { interiorFloors } from "./office/circaFloors";
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 const MallInterior = lazy(() => import("./office/MallInterior"));
+const GalleriaInterior = lazy(() => import("./office/GalleriaInterior"));
+const StadiumInterior = lazy(() => import("./office/StadiumInterior"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -436,6 +441,12 @@ export function MapView({active=true}:{active?:boolean}) {
   };
   // Decorative vehicles on the 3D map; on unless switched off.
   const [traffic, setTrafficState] = useState(() => load<boolean>("mapTraffic", true));
+  // Inside: nearby headquarters open as cutaways showing their offices, without entering.
+  const [inside, setInsideState] = useState(loadInside);
+  const setInside = (on: boolean) => {
+    setInsideState(on);
+    saveInside(on);
+  };
   const setTraffic = (on: boolean) => {
     setTrafficState(on);
     save("mapTraffic", on);
@@ -921,13 +932,14 @@ export function MapView({active=true}:{active?:boolean}) {
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
+    else if (is3d && e.key === "i") setInside(!inside);
   };
 
   return (
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {active && office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : (office.projectId === "skyline-residences" || office.projectId.startsWith("skyline-business:")) ? <SkylineInterior maxFloor={office.projectId==="skyline-business:Atlas Hills"?1:4} light={light} key={office.projectId} building={office.projectId.startsWith("skyline-business:")?office.projectId.slice(17):"Skyline"} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
@@ -937,7 +949,7 @@ export function MapView({active=true}:{active?:boolean}) {
           tabIndex={0}
           role="application"
           aria-roledescription="map"
-          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan."
+          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan, I shows inside the buildings."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
             if (e.button !== 0 || is3d) return;
@@ -1024,6 +1036,7 @@ export function MapView({active=true}:{active?:boolean}) {
               linkFocus={linkPrefs.focus && !selectionOnly}
               showLocal={lens !== "infrastructure"}
               traffic={traffic}
+              inside={inside}
               linksMoving={!linkPrefs.paused}
             />
             </Suspense>
@@ -1179,6 +1192,18 @@ export function MapView({active=true}:{active?:boolean}) {
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
                 3D
+              </button>
+            )}
+            {is3d && (
+              <button
+                className={`icon-btn ${inside ? "on" : ""}`}
+                onClick={() => setInside(!inside)}
+                aria-pressed={inside}
+                aria-label="Inside"
+                aria-keyshortcuts="I"
+                title={inside ? "Close the buildings (I)" : "See inside the buildings near you (I). Select one and Enter it for the full office."}
+              >
+                <Icon name="cutaway" size={17} />
               </button>
             )}
             {is3d && (

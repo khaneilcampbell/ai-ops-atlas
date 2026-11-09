@@ -33,7 +33,7 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
 .header > * { -webkit-app-region: no-drag; }
 .header .brand { display: flex; align-items: center; gap: 12px; -webkit-app-region: drag; min-width: 0; }
 .brand-mark {
-  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--gold); color: var(--gold);
+  width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--forest-line); color: var(--gold);
   display: grid; place-items: center; flex: none; background: rgba(201, 163, 90, 0.06);
 }
 .brand-title { font-family: var(--serif); font-size: 21px; letter-spacing: 0.005em; line-height: 1.1; white-space: nowrap; }
@@ -586,6 +586,19 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .obs, .recs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 .ref { display: inline-block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: rgba(29, 43, 34, 0.06); border-radius: 4px; padding: 0 4px; margin-left: 3px; }
 .ref.ungrounded { font-family: var(--sans); font-style: italic; background: none; }
+/* A citation that links to the agent, repository or GitHub page it names. */
+button.ref.ref-link { border: 0; cursor: pointer; line-height: inherit; }
+.ref.ref-link { color: var(--gold-deep); text-decoration: underline; text-decoration-color: rgba(29, 43, 34, 0.25); text-underline-offset: 2px; }
+.ref.ref-link:hover { text-decoration-color: currentColor; }
+button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
+.rec-actions { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 2px; }
+.rec-action { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.open-issue { color: var(--ink); text-decoration: none; }
+.codex-copy .copy-btn { font-size: 11.5px; }
+.chip.rec-status { text-decoration: none; color: var(--ink-2); }
+.chip.rec-status.done { background: rgba(74, 122, 84, 0.12); border-color: rgba(74, 122, 84, 0.3); color: var(--good, #3f6b48); }
+.rec-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.score.unrated { opacity: 0.75; }
 .prio { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--sage-200); color: var(--ink-2); }
 .prio.p-high { background: rgba(164, 72, 58, 0.14); color: var(--bad); }
 .prio.p-medium { background: var(--gold-soft); color: var(--gold-deep); }
@@ -799,6 +812,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 /* Explain existing destinations and evidence without adding a competing panel. */
 .view-description{display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.15}.view-description b{font-size:12px;font-weight:600}.view-description small{font-size:10px;color:var(--on-dark-2)}
 .sync-evidence{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.sync-evidence b{font-size:12px;font-weight:500}.sync-evidence small{font-size:10px;color:var(--on-dark-2)}
+.refresh.sync-failing .sync-evidence b,.refresh.sync-failing .sync-evidence small{color:var(--warn)}
 .platform-label{color:var(--on-dark-2);border:1px solid var(--forest-line);border-radius:6px;padding:4px 7px;font-size:10px;white-space:nowrap}
 .map-next-step{margin-top:12px;max-width:350px}.map-next-step button{pointer-events:auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;border:1px solid #a58c52;background:#f5f1e5f2;color:#203c30;border-radius:9px;padding:9px 12px;cursor:pointer;font:500 12px var(--sans);box-shadow:0 2px 8px #14271d12}.map-next-step button b{font-weight:600}.map-next-step button:focus-visible{outline:3px solid #a87f27;outline-offset:3px}.map-next-step small{display:block;margin-top:6px;font-size:10px;line-height:1.5;color:inherit;max-width:310px}.map-stage.night .map-next-step button{background:#203c30f2;color:#f1ead8;border-color:#c9a35a}
 .repository-notice{align-items:flex-start;line-height:1.5}.repository-notice>svg{flex-shrink:0;margin-top:3px}.repository-notice strong{display:block;font-size:12px}.repository-notice p{font-size:12px;margin:5px 0 8px}.repository-notice .text-btn{font-size:12px;text-decoration:underline;text-underline-offset:3px}.repository-notice button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
@@ -831,3 +845,4 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .projects-host.inactive * { pointer-events: none !important; }
 
 .map-stage.night, .map-stage.night .map3d { background: #071827; }
+.rerun a.btn { text-decoration: none; }
