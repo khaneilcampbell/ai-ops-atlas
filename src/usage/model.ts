@@ -4,8 +4,11 @@
 import type { Run } from "../intel/types";
 import { isReviewRun, REVIEW_AGENT_NAME } from "../intel/ecosystem";
 
-/** "estimated" = reported tokens × the prices configured in Atlas. "billed" = the provider's own cost figure. */
-export type CostKind = "estimated" | "billed";
+/**
+ * "estimated" = reported tokens × the prices configured in Atlas. "billed" = the provider's own cost figure.
+ * "plan" = covered by a subscription (ChatGPT, Claude): real tokens, but no per-token price, so no cost.
+ */
+export type CostKind = "estimated" | "billed" | "plan";
 
 export interface UsageRecord {
   id: string;
@@ -24,8 +27,8 @@ export interface UsageRecord {
   /** null when no price was configured for the model, so the cost is unknown. */
   costUsd: number | null;
   costKind: CostKind;
-  /** atlas: this Mac's runs. import: a file. sync: the Mac's records on the website. agent: GitHub-run agents that reported their own calls. */
-  source: "atlas" | "import" | "sync" | "agent";
+  /** atlas: this Mac's runs. import: a file. sync: the Mac's records on the website. agent: GitHub-run agents that reported their own calls. codex: ChatGPT Codex logs on this Mac. */
+  source: "atlas" | "import" | "sync" | "agent" | "codex";
 }
 
 /** Runs the repository intelligence agent logged. Only runs that reached the provider carry usage. */
@@ -108,7 +111,7 @@ function importRow(row: unknown, id: string): UsageRecord | null {
   const cost = r.cost_usd == null ? null : num(r.cost_usd);
   if ([requests, input, output, cacheRead, cacheWrite, cost].some((v) => v === undefined)) return null;
   // A cost is provider-billed only when the file says so; anything else stays an estimate.
-  const costKind: CostKind = r.cost_type === "billed" ? "billed" : "estimated";
+  const costKind: CostKind = r.cost_type === "billed" ? "billed" : r.cost_type === "plan" ? "plan" : "estimated";
   return {
     id,
     at: new Date(at).toISOString(),
@@ -121,7 +124,8 @@ function importRow(row: unknown, id: string): UsageRecord | null {
     output: output!,
     cacheRead: cacheRead!,
     cacheWrite: cacheWrite!,
-    costUsd: cost ?? null,
+    // A plan row never carries a cost, whatever the file says.
+    costUsd: costKind === "plan" ? null : (cost ?? null),
     costKind,
     source: "import",
   };
@@ -165,6 +169,8 @@ export interface Totals {
   billedUsd: number;
   /** Records with no cost because no price was configured for their model. */
   unpriced: number;
+  /** Records covered by a subscription plan: tokens counted, no cost. */
+  plan: number;
 }
 
 export interface Bucket {
@@ -187,7 +193,7 @@ export interface GroupRow extends Totals {
 const HOUR = 3_600_000;
 
 function emptyTotals(): Totals {
-  return { records: 0, requests: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, estimatedUsd: 0, billedUsd: 0, unpriced: 0 };
+  return { records: 0, requests: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, estimatedUsd: 0, billedUsd: 0, unpriced: 0, plan: 0 };
 }
 
 function add(t: Totals, r: UsageRecord) {
@@ -197,7 +203,8 @@ function add(t: Totals, r: UsageRecord) {
   t.output += r.output;
   t.cacheRead += r.cacheRead;
   t.cacheWrite += r.cacheWrite;
-  if (r.costUsd == null) t.unpriced++;
+  if (r.costKind === "plan") t.plan++;
+  else if (r.costUsd == null) t.unpriced++;
   else if (r.costKind === "billed") t.billedUsd += r.costUsd;
   else t.estimatedUsd += r.costUsd;
 }

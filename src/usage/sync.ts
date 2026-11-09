@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { intelApi } from "../intel/api";
 import { useIntel } from "../intel/state";
 import { isHostedWeb, isTauri } from "../lib/env";
+import { readCodexUsage } from "./codex";
 import { parseImport, recordsFromRuns, toSyncRows, type UsageRecord } from "./model";
 
 export { toSyncRows };
@@ -28,9 +29,10 @@ export const usageSync = {
   /** Returns the new key once, to paste into the site's USAGE_SYNC_TOKEN secret. */
   newKey: () => call<string>("usage_sync_new_key"),
   clear: () => call<SyncStatus>("usage_sync_clear"),
-  /** Sends every run Atlas recorded. A no-op until a site URL and key are both set. */
+  /** Sends every run Atlas recorded, and this Mac's Codex usage. A no-op until a site URL and key are both set. */
   push: async (agent: string) => {
-    const rows = toSyncRows(recordsFromRuns(await intelApi.runs(), agent));
+    const codex = await readCodexUsage().catch(() => null);
+    const rows = toSyncRows([...recordsFromRuns(await intelApi.runs(), agent), ...(codex ?? [])]);
     return call<SyncStatus>("usage_sync_push", { records: rows });
   },
 };

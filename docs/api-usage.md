@@ -10,13 +10,15 @@ it reads local records when the tab opens and when you press **Refresh**.
 | --- | --- | --- |
 | Repository intelligence runs | Logged by the Mac app on every run that reached Anthropic: the token counts Anthropic reported, the model, the repository, and the attempts. Read with the `intel_runs` command (the run log keeps the latest 300 runs). | **Estimated**: reported tokens × the prices under Settings → Repository intelligence |
 | GitHub agents (Merge Flow, Design Consistency, Opportunity Scout) | After each model call the agent posts the token counts Anthropic reported (input, output, cache reads and writes), the model and an estimated cost to `POST /api/hooks/usage` with the add-only `ATLAS_FEED_TOKEN`. Stored in the site's D1 `agent_usage` table (newest 5,000 rows). The page reads `/api/usage/agents`; the Mac app reads `/api/hooks/usage` with its sync key. | **Estimated**: reported tokens × the prices in the agent's `policy.json` |
+| ChatGPT Codex (Mac app only) | Codex keeps a log of each session in `~/.codex/sessions` (or `$CODEX_HOME`). On open and Refresh, the `codex_usage` command reads the last 35 days and keeps, per session, only the token totals Codex logged, the model, the start time and the folder's name. Prompts, replies and paths are never read into Atlas. Website sync sends these rows too. | **Plan**: no cost, because ChatGPT plan usage has no per-token price |
 | Imported usage files | A JSON file you import on the tab. Stored only in this device's local storage, never sent anywhere. | **Billed** only when a row says `"cost_type": "billed"`, otherwise **estimated** |
 
 Estimated and billed costs are kept apart everywhere: the stat cards, the chart (two series
 with a legend), the top-five list and the table each label which is which.
 
 Claude subscription usage (Pro, Max, Claude Code plans) isn't available through API billing
-endpoints, so it can't appear here.
+endpoints, so it can't appear here. ChatGPT chats on chatgpt.com and Codex in the browser don't
+write local logs and have no usage API, so only Codex sessions run on the Mac are counted.
 
 ## Command center
 

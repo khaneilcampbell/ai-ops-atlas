@@ -115,3 +115,17 @@ describe("agentRecords", () => {
     expect(recs[0]).toMatchObject({ source: "agent", agent: "GitHub Merge Flow", input: 10 });
   });
 });
+
+describe("ChatGPT Codex rows", () => {
+  it("count tokens on a subscription plan without a cost or a missing-price finding", async () => {
+    const { codexRecords } = await import("./codex");
+    const recs = codexRecords([
+      { at: "2026-11-09T09:38:18Z", provider: "openai", model: "gpt-6.1-sol", agent: "Codex (ChatGPT)", project: "AI Ops Atlas", requests: 40, input_tokens: 9000, output_tokens: 1200, cache_read_tokens: 300_000, cost_usd: 5, cost_type: "plan" },
+    ]);
+    expect(recs[0]).toMatchObject({ source: "codex", costKind: "plan", costUsd: null, cacheRead: 300_000 });
+    const rows = rankWorkflows(recs);
+    expect(rows[0]).toMatchObject({ key: "Codex (ChatGPT)", plan: 1, unpriced: 0, costPerRequest: null });
+    expect(rows[0].cacheHitRate).toBeCloseTo(300_000 / 309_000);
+    expect(findings(rows).some((f) => f.id.startsWith("price:"))).toBe(false);
+  });
+});

@@ -22,6 +22,8 @@ export interface WorkflowRow {
   tokens: number;
   costUsd: number;
   unpriced: number;
+  /** Records covered by a subscription plan (tokens, no cost). */
+  plan: number;
   /** Share of all known cost in the window, 0..1. */
   costShare: number;
   /** Share of all tokens in the window, 0..1. */
@@ -60,7 +62,7 @@ export function rankWorkflows(records: UsageRecord[]): WorkflowRow[] {
     .map((g) => {
       const mine = records.filter((r) => r.agent === g.key);
       const tokens = allTokens(g);
-      const priced = g.records - g.unpriced;
+      const priced = g.records - g.unpriced - g.plan;
       return {
         key: g.key,
         providers: g.providers,
@@ -73,6 +75,7 @@ export function rankWorkflows(records: UsageRecord[]): WorkflowRow[] {
         tokens,
         costUsd: cost(g),
         unpriced: g.unpriced,
+        plan: g.plan,
         costShare: totalCost > 0 ? cost(g) / totalCost : 0,
         tokenShare: totalTokens > 0 ? tokens / totalTokens : 0,
         cacheHitRate: cacheHitRate(g),

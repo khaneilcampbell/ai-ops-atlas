@@ -9,6 +9,7 @@ import { useAtlas } from "../state";
 import { isHostedWeb } from "../lib/env";
 import { fetchWebSnapshot, syncConfigured, usageSync, type SyncStatus, type WebSnapshot } from "../usage/sync";
 import { fetchAgentUsage, type AgentUsage } from "../usage/agents";
+import { readCodexUsage } from "../usage/codex";
 import { cacheHitRate, findings, modelMix, rankWorkflows, type Finding, type WorkflowRow } from "../usage/insights";
 import {
   PERIODS,
@@ -43,6 +44,7 @@ function useUsageData() {
   const [snapshot, setSnapshot] = useState<WebSnapshot | null>(null);
   const [agentUsage, setAgentUsage] = useState<AgentUsage | null>(null);
   const [agentError, setAgentError] = useState<string | null>(null);
+  const [codex, setCodex] = useState<UsageRecord[] | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(intel.available || hosted);
@@ -69,6 +71,8 @@ function useUsageData() {
     try {
       if (intel.available) {
         setRuns(await intelApi.runs());
+        // ChatGPT Codex sessions on this Mac; a read problem there never hides the rest.
+        setCodex(await readCodexUsage().catch(() => null));
         // Refresh also sends the records to the website, when website sync is set up.
         const st = await usageSync.status();
         setSync(syncConfigured(st) ? await usageSync.push(agentRef.current).catch(() => usageSync.status()) : st);
@@ -103,8 +107,8 @@ function useUsageData() {
   };
 
   const records = useMemo(
-    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...(agentUsage?.records ?? []), ...imports.records],
-    [runs, agentName, snapshot, agentUsage, imports.records],
+    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...(agentUsage?.records ?? []), ...(codex ?? []), ...imports.records],
+    [runs, agentName, snapshot, agentUsage, codex, imports.records],
   );
   const oldestRun = runs?.find((r) => r.usage)?.started_at ?? null;
   const firstLoad = loading && runs === null && snapshot === null;
@@ -211,6 +215,7 @@ export function UsageView() {
               <div className="num">{money(t.estimatedUsd)}</div>
               <div className="sub">
                 Reported tokens × your configured prices{t.unpriced ? ` · ${t.unpriced} ${t.unpriced === 1 ? "record has" : "records have"} no price` : ""}
+                {t.plan ? ` · ${t.plan} on a subscription plan, not priced` : ""}
               </div>
             </div>
             <div className="card tile">
@@ -260,6 +265,7 @@ export function UsageView() {
 }
 
 function costKindLabel(r: GroupRow) {
+  if (r.plan && !r.billedUsd && !r.estimatedUsd) return "subscription plan";
   if (r.billedUsd && r.estimatedUsd) return "estimated + billed";
   return r.billedUsd ? "billed" : "estimated";
 }
@@ -285,7 +291,9 @@ function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; 
         ) : (
           <ol className="usage-wf">
             {workflows.map((w, i) => {
-              const share = byCost ? w.costShare : w.tokenShare;
+              // Plan usage has no cost, so its share is of tokens, labelled as such.
+              const ofCost = byCost && w.plan === 0;
+              const share = ofCost ? w.costShare : w.tokenShare;
               return (
                 <li key={w.key}>
                   <span className="rank">{i + 1}</span>
@@ -293,14 +301,14 @@ function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; 
                     <div className="wf-line">
                       <span className="title">{w.key}</span>
                       <span className="spacer" />
-                      <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : "–"}</span>
+                      <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : w.plan > 0 ? <span className="muted">Plan</span> : "–"}</span>
                     </div>
                     <div className="meter" aria-hidden="true">
                       <i style={{ width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%` }} />
                     </div>
                     <div className="wf-stats">
                       <span>
-                        <strong>{pctLabel(share)}</strong> of {byCost ? "spend" : "tokens"}
+                        <strong>{pctLabel(share)}</strong> of {ofCost ? "spend" : "tokens"}
                       </span>
                       <span>
                         <strong>{compact(w.requests)}</strong> {w.requests === 1 ? "call" : "calls"}
@@ -563,7 +571,7 @@ function ProviderCard({ records, imports, onImport, onClear }: { records: UsageR
                 </div>
               </>
             ) : (
-              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "Import a usage file to include it."}</div>
+              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "ChatGPT Codex sessions on your Mac appear here on Refresh. Import a file for API usage."}</div>
             )}
           </div>
         ))}
