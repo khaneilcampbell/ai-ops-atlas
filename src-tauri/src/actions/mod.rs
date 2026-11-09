@@ -8,17 +8,20 @@
 //! - `rerun`: pre-flight checks, approval, audit and the single re-run request
 //! - `merge`: readiness checks, approval, Touch ID, audit and the single merge request
 //! - `agents`: Manage agents (enable, disable, run now) for the allow-listed agent workflows
+//! - `agent_config`: Manage agents schedule and cap changes, always as a one-line pull request
 //! - `client`: the write-scoped HTTP client; the only code that sends a GitHub write
 //!
 //! Reads, including the pre-flight check of the run, still go through the read-only
 //! client in `github.rs` and its GET allowlist, which this module leaves untouched.
 
+pub mod agent_config;
 pub mod agents;
 pub mod client;
 pub mod merge;
 pub mod rerun;
 pub mod store;
 
+use agent_config::{AgentConfigurer, ConfigApprover, ConfigChange, ConfigOutcome, ConfigPreview};
 use agents::{AgentApprover, AgentManager, AgentOp, AgentOutcome, AgentPreview};
 use merge::{MergeApprover, MergeCheck, MergeOutcome, MergePreview, Merger};
 use rerun::{Approver, Outcome, Preview, Rerunner};
@@ -34,6 +37,7 @@ pub struct Actions {
     rerunner: Rerunner,
     merger: Merger,
     agents: AgentManager,
+    configurer: AgentConfigurer,
 }
 
 /// Native confirmation, drawn by macOS rather than the web view, so nothing running in the
@@ -145,6 +149,40 @@ impl AgentApprover for NativeApprover {
     }
 }
 
+#[async_trait::async_trait]
+impl ConfigApprover for NativeApprover {
+    async fn approve(&self, p: &ConfigPreview) -> bool {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let mut dialog = self
+            .app
+            .dialog()
+            .message(agent_config::dialog_text(p))
+            .title(format!(
+                "Open a pull request to change {}'s {}?",
+                p.agent, p.what
+            ))
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Open pull request".into(),
+                "Cancel".into(),
+            ));
+        if let Some(w) = self.app.get_webview_window("main") {
+            dialog = dialog.parent(&w);
+        }
+        dialog.show(move |ok| {
+            let _ = tx.send(ok);
+        });
+        rx.await.unwrap_or(false)
+    }
+
+    async fn confirm_owner(&self, p: &ConfigPreview) -> Result<(), String> {
+        let reason = format!("open a pull request changing {}'s {}", p.agent, p.what);
+        tauri::async_runtime::spawn_blocking(move || crate::secrets::confirm_owner(&reason))
+            .await
+            .map_err(|e| e.to_string())?
+    }
+}
+
 fn actor() -> String {
     let user = std::env::var("USER")
         .or_else(|_| std::env::var("USERNAME"))
@@ -178,10 +216,18 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         store.clone(),
         Arc::new(crate::github::Client::new()),
         client.clone(),
-        approver,
+        approver.clone(),
         actor(),
         Box::new(chrono::Utc::now),
         agents::manifest(),
+    );
+    let configurer = AgentConfigurer::new(
+        store.clone(),
+        Arc::new(crate::github::Client::new()),
+        client.clone(),
+        approver,
+        actor(),
+        Box::new(chrono::Utc::now),
     );
     app.manage(Actions {
         store,
@@ -189,6 +235,7 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         rerunner,
         merger,
         agents,
+        configurer,
     });
     Ok(())
 }
@@ -427,6 +474,19 @@ pub async fn agent_action(
     app: AppHandle,
 ) -> Result<AgentOutcome, String> {
     let outcome = actions.agents.run(&agent, op, seen_state.as_deref()).await;
+    app.emit("actions-changed", ()).ok();
+    Ok(outcome)
+}
+
+/// A schedule or cap change in Manage agents. Opens a pull request; never edits main.
+#[tauri::command]
+pub async fn agent_config_change(
+    agent: String,
+    change: ConfigChange,
+    actions: tauri::State<'_, Actions>,
+    app: AppHandle,
+) -> Result<ConfigOutcome, String> {
+    let outcome = actions.configurer.propose(&agent, change).await;
     app.emit("actions-changed", ()).ok();
     Ok(outcome)
 }

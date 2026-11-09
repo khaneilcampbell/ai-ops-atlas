@@ -5,6 +5,7 @@ import type {ThreeEvent} from '@react-three/fiber';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import {GALLERIA,GALLERIA_KEY,galleriaFins,type GalleriaPlan} from './galleriaPlan';
 import type {Pt} from './roads';
+import {packNormals} from './packGeometry';
 
 /** A flat slab from a closed outline (with an optional hole), its top at y+h. Untextured, so no uv, and indexed so the caps share vertices. */
 export function slabGeometry(outline:Pt[],y:number,h:number,hole?:Pt[]){
@@ -124,7 +125,7 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   const cap=new THREE.CircleGeometry(c.r+.04,24);cap.rotateX(-Math.PI/2);cap.translate(c.x,y0+h+.015,c.z);
   const funnel=mergeGeometries([stem,disc,cap])!;
   for(const x of [stem,disc,cap])x.dispose();
-  return {slabs:mergeGeometries(slabs)!,roof,glass:mergeGeometries(glass)!,planters:mergeGeometries(planters)!,lights:mergeGeometries(lights)!,funnel};
+  return packNormals({slabs:mergeGeometries(slabs)!,roof,glass:mergeGeometries(glass)!,planters:mergeGeometries(planters)!,lights:mergeGeometries(lights)!,funnel});
  },[a]);
  useEffect(()=>()=>{if(geo)for(const x of Object.values(geo))x.dispose();},[geo]);
 

@@ -45,7 +45,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   started: "Started",
   merged: "Merged",
   changed: "Changed",
-  // Written only by in-app editing, which has been removed; older audit lines still use it.
+  // Manage agents schedule and cap changes; also older in-app editing audit lines.
   opened: "Pull request opened",
   failed: "Failed",
   unknown: "Outcome unknown",
@@ -69,6 +69,15 @@ export function describeRecord(r: AuditRecord): { title: string; subject: string
       title: `${verb}: ${STAGE_LABEL[r.stage]}`,
       subject: r.workflow ?? r.agent ?? "Agent",
       url: `https://github.com/${r.repo}/actions${r.workflow ? `/workflows/${r.workflow}` : ""}`,
+      result,
+    };
+  }
+  if (r.action === "agent_schedule" || r.action === "agent_cap") {
+    const n = r.pull_number;
+    return {
+      title: `${r.action === "agent_schedule" ? "Change agent schedule" : "Change agent cap"}: ${STAGE_LABEL[r.stage]}`,
+      subject: n ? `#${n}${r.title ? ` ${r.title}` : ""}` : (r.agent ?? "Agent"),
+      url: n ? `https://github.com/${r.repo}/pull/${n}` : `https://github.com/${r.repo}/pulls`,
       result,
     };
   }
