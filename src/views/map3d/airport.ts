@@ -206,3 +206,6 @@ export function departurePose(seconds:number,moving=true,circuit:FlightCircuit=D
   // Rotate about the main gear rather than the fuselage centre, so the tail stays clear of the runway.
   return {...p,y:p.y+T.mainGearZ*Math.sin(pitch)*(1-airborne),yaw:heading(p,next),pitch,roll,gear:gearDown(t),visible:t<HIDE};
 }
+
+/** Terminal and apron are not public through-streets. Shared by road and sidewalk planners. */
+export function airportTrafficKeepOut(a:AirportPlan){const p=airportPoint(a,8.6,5);return {x:p[0],z:p[1],w:18.8,d:24};}

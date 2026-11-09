@@ -59,13 +59,13 @@ they are.
 |---|---|---|---|---|
 | Atlas HQ | Atlas HQ | Atlas app headquarters (`ai-ops-atlas`) | Atlas | Keep |
 | Benjaire HQ | Benjaire HQ | Company website and operations (`benjaire-com`) | Benjaire | Keep |
-| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Keep |
+| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Removed from the map 2026-11-09 (lot cleared, streets kept) |
 | Commerce Pipeline | Commerce Pipeline | Multi-agent commerce (`multi-agent-commerce-pipeline`) | Commerce | Keep |
-| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Keep |
+| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant) |
 | Portfolio Site | Portfolio Site | Personal website (`khaneilcampbell-com`) | Portfolio | Keep |
 | GitHub Profile | Profile Tower | GitHub profile README repo (`khaneilcampbell-profile`); GitHub wordmark sign removed | Portfolio | Done |
 | Intelligence Hub | Intelligence Hub | Project intelligence (`project-intelligence-hub`) | Intelligence | Keep |
-| Service Desk | Service Desk | Service desk dashboard (`service-desk-dashboard`) | Operations | Keep |
+| Service Desk | Service Desk | Service desk dashboard (`service-desk-dashboard`) | Operations | Removed from the map 2026-11-09 (lot left vacant) |
 | SOC Lab | SOC Lab | Brute-force detection lab (`splunk-bruteforce-detection-lab`) | Security | Keep |
 | Skyline | Skyline | Residences and business district (`skyline`) | Skyline | Keep |
 
@@ -75,14 +75,14 @@ they are.
 |---|---|---|---|---|
 | Chase | Bayvale Bank | Banking records review | `banks` | Done |
 | Wells Fargo | Halden Trust | Bills and records bank tower | `records` | Done |
-| American Express | Ellery Budget Center | Spending and budget review | `budget` | Open |
+| American Express | Ellery Budget Center | Life management: spending, budget and bills review; plum Art Deco tower | `budget` | Done |
 | Robinhood | Robin Exchange (KC's pick) | Investment records (no trading) | `investments` | Done |
 | Navy Federal Credit Union | Merrow Credit Union | Member services and records | `insurance` | Done |
 | Experian | Aldren Insights | Credit and data insights offices | `residence` | Done |
 | Vanguard | Ravelle Advisors | Financial planning headquarters | `financial-planning` | Done |
 | The Ritz-Carlton | Camton Hotel (KC's pick) | Waterfront luxury hotel | `harbor-residence` | Done |
 | Circa | Ellipse Residences | Twin-tower residence and pool deck | `circa` | Done |
-| Benjaire Finance | Benjaire Finance | Business finance workspace | `business-finance` | Keep |
+| Benjaire Finance | Corvane Capital | Business finance house; original drawn logo (ring and rising bars badge), teal and copper | `business-finance` | Done |
 | Financial District | Financial District | District nameplate | `FINANCIAL_KEY` | Keep |
 | Financial Park | Financial Park | Public park | `FINANCIAL_PARK_KEY` | Keep |
 | Financial District Station | Financial Station | Rail stop (26 characters today, clips) | `financial-station` | Open |

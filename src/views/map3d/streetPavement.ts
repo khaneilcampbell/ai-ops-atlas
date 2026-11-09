@@ -47,7 +47,9 @@ const box=(r:R,y:number,h:number,c:string):Inst=>({p:[r.x+r.w/2,y,r.z+r.d/2],s:[
 /** Towers with their own sculpted plaza design keep it. */
 const customPlaza=(t:Tower)=>!!t.identity.landmark||isRibbonTower(t.projectId)||isCommerceTower(t.projectId)||isGithubTower(t.projectId)||isIntelligenceHub(t.projectId);
 
-export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|'carBridges'|'towers'|'paving'|'freight'>):{pavement:Inst[];markings:Inst[]}{
+export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|'carBridges'|'towers'|'paving'|'freight'>):{pavement:Inst[];markings:Inst[];
+ /** Centre of each junction arm's zebra, so a walk crossing there adds no second crossing. */
+ zebras:Pt[]}{
  const half=TRANSPORT.cityWidth/2,sw=SIDEWALK.width;
  const streets=scene.freight?.streets??[],onStreet=(q:Pt)=>streets.some(st=>distanceToRoad(q,st)<1e-3);
  // District roads on land, as the deck renderer draws them (VenueBridge), less any already-marked street.
@@ -59,7 +61,7 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
  // Everything a sidewalk must stay off: every carriageway, its corner squares, and the bridge approaches and decks.
  const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),
   ...(scene.carBridges??[]).flatMap(br=>[along(br.a,br.b,TRANSPORT.bridgeWidth/2,.04),...br.roads.flatMap(road=>road.slice(1).map((p,i)=>along(road[i],p,ROAD_W/2,ROAD_W/2)))])];
- const pavement:Inst[]=[],markings:Inst[]=[];
+ const pavement:Inst[]=[],markings:Inst[]=[],zebras:Pt[]=[];
  roads.forEach((s,i)=>{
   const x=s.a[1]===s.b[1];
   // Run a sidewalk on past an end only where it turns a corner into another road; dead ends stop square.
@@ -90,7 +92,7 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   const arms=([[1,0],[-1,0],[0,1],[0,-1]] as const).filter(([dx,dz])=>onRoad([pt[0]+dx*reach,pt[1]+dz*reach]));
   if(arms.length<3)continue;
   for(const [dx,dz] of arms){
-   const d=half+sw+.14;
+   const d=half+sw+.14;zebras.push([pt[0]+dx*d,pt[1]+dz*d]);
    for(let k=-2;k<=2;k++){
     const across=k*.13;
     markings.push({p:[pt[0]+dx*d+(dz?across:0),TERRACE_H+.061,pt[1]+dz*d+(dx?across:0)],s:dx?[.2,.006,.065]:[.065,.006,.2],c:SIDEWALK.zebra});
@@ -109,5 +111,5 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   const clear=(r:R)=>{let parts=[r];for(const c of [...carriage,...roads.map(s=>along(s.a,s.b,half+sw,0))])parts=parts.flatMap(p=>minusRect(p,c));return parts;};
   pavement.push(...clear(outer).map(p=>box(p,top-.004,.008,stone.border)),...clear(inner).map(p=>box(p,top,.008,stone.field)));
  }
- return {pavement,markings};
+ return {pavement,markings,zebras};
 }

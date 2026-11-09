@@ -9,6 +9,7 @@ import {toolSignTexture} from './toolBrand';
 import {ANNEX,annexFront,annexShape} from './commerceAnnexPlan';
 import {annexGeometry} from './commerceAnnexGeometry';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -57,7 +58,7 @@ export function CommerceAnnexes({kiosks,tower,base,g,pick,night=false}:{kiosks:K
 function Annex({kiosk:k,index,tower,base,mats,plane,pick,finsOn,night}:{kiosk:Kiosk;index:number;tower?:{x:number;z:number};base:number;mats:Mats;plane:THREE.PlaneGeometry;pick:PickHandlerSet;finsOn:boolean;night:boolean}){
  const shape=useMemo(()=>annexShape(k,tower,index),[k,tower,index]);
  const height=k.height??ANNEX.refSize*5;
- const geo=useMemo(()=>annexGeometry(shape,height),[shape,height]);
+ const geo=useMemo(()=>packNormals(annexGeometry(shape,height)),[shape,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))v.dispose();},[geo]);
  const sign=useMemo(()=>{const map=toolSignTexture(k.name);return {map,mat:focusable(new THREE.MeshStandardMaterial({map,emissiveMap:map,emissive:'#ffffff',emissiveIntensity:.55,roughness:.45}))};},[k.name]);
  useEffect(()=>()=>{sign.map.dispose();sign.mat.dispose();},[sign]);

@@ -1,6 +1,7 @@
 import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
 import {distanceToRoad} from "./highway";
-import {TRANSPORT} from "./transportScale";
+import {STREET_ASPHALT,STREET_LINE,TRANSPORT} from "./transportScale";
+export {STREET_LINE};
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
 import { TOOL_OFFICE_HEIGHT, toolBrand, toolSignTexture } from "./toolBrand";
@@ -10,6 +11,7 @@ import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
+import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
@@ -19,6 +21,7 @@ import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerc
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
+import { plazaSites } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -65,6 +68,15 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
     m.computeBoundingSphere();
     m.computeBoundingBox();
   }, [items]);
+  // Small round shapes switch to a lighter version while every one of them is a few pixels across.
+  const far = farDetailOf(geometry);
+  const radius = useMemo(() => (far ? items.reduce((r, it) => Math.max(r, ...it.s.map(Math.abs)), 0) : 0), [far, items]);
+  useFrame(({ camera, gl }) => {
+    const m = ref.current;
+    if (!far || !m) return;
+    const next = pickDetail(m, geometry, far, radius, camera, gl);
+    if (m.geometry !== next) m.geometry = next;
+  });
   if (!items.length) return null;
   const key = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId !== undefined ? pick?.keys[e.instanceId] : undefined);
   return (
@@ -130,8 +142,8 @@ function hipRoof() {
 }
 
 export function useGeometries() {
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const kit = {
       box: lifted(new THREE.BoxGeometry(1, 1, 1)),
       gable: gableSlopes(),
       gableEnds: gableEnds(),
@@ -146,9 +158,12 @@ export function useGeometries() {
       // Tiny spheres (heads, lamp globes) a few pixels across: same look, fewer than 60% of the triangles.
       bead: new THREE.SphereGeometry(1, 8, 6),
       plane: new THREE.PlaneGeometry(1, 1),
-    }),
-    [],
-  );
+    };
+    // Far shapes for the overview (see farDetail.ts): canopies 180 -> 80 triangles, balls 140 -> 80.
+    setFarDetail(kit.blob, new THREE.IcosahedronGeometry(1, 1));
+    setFarDetail(kit.ball, kit.bead);
+    return kit;
+  }, []);
 }
 
 /** A textured material whose windows light up at night. */
@@ -207,9 +222,6 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 // ── Road bridges ────────────────────────────────────
 
 const RAIL = "#2f4a3a";
-/** District street paint, shared by the roads and the bridge decks so a street reads as one road. */
-const STREET_ASPHALT = "#424b50";
-export const STREET_LINE = "#e1ce8e";
 const STREET_DASH = 0.3;
 const RISE_OF = (len: number) => deckRise(len, len / 2);
 const DECK_T = 0.07;
@@ -306,7 +318,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
     // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
     const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
-    for(const t of scene.towers) {
+    for(const t of plazaSites(scene)) {
       const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
       const ring=plaza&&towerRing(t,plaza.w);
       if(!ring) continue;

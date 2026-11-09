@@ -3,6 +3,20 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-09 · Behind the scenes: recording new CI screenshots no longer lets one part of the run overwrite another part's fresh screenshots (#206)
+- 2026-11-09 · Streets by the airport and Atlas Stadium now show as one road, without doubled lane lines, overlapping crossings or a footpath painted down the middle; every junction uses the same zebra crossing, and no tree, bush, bollard or street lamp stands in a street (#305)
+- 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)
+- 2026-11-09 · When an agent is working, its whole building lights up again, now including the custom-shaped towers (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, Intelligence Hub, Portfolio Site). The light comes from inside, as the building is designed: windows brightest, glass softer, walls and signs keep their own colors (#303)
+- 2026-11-09 · Atlas Galleria now has pavement all the way round, the car park moved out to make room, the ramp beside the car park is gone, and the car park now holds coupes, luxury SUVs, supercars, pickups, taxis, a limo and a concept truck, with five drivers coming and going, and the car park, now two rows of bays, its driveway and aisle are paved in the same asphalt and centre line as Atlas's streets (#301)
+- 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
+- 2026-11-09 · Selecting Profile Tower now highlights the whole building, GitHub podium and skybridge included, and its district glow covers both of its plots (#300)
+- 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).
+- 2026-11-09 · Two Financial District towers have new original names: Benjaire Finance is now Corvane Capital, a business finance house with its own drawn logo, and American Express is now Ellery Budget Center, a plum life-management building. Old names still work in search (#299)
+- 2026-11-09 · Financial District buildings are smaller on the map so they fit with the rest of the city: a fifth fewer floors and a fifth narrower, same designs, same spots, same interiors (#298)
+- 2026-11-09 · The 3D map does about a fifth less drawing work and uses 14% less graphics memory, with the same look: trees and bushes draw a lighter shape when the whole city is in view, and tower shapes store their lighting data more compactly (#294)
+- 2026-11-09 · Added Atlas Commons beside Marketplace with a pond loop, two footbridges, garden pavilion and seating; Service Desk stays in place (#295)
+- 2026-11-09 · Behind the scenes only: the screenshot check has fresh reference pictures and can re-check just a few screens on one machine, so pull requests stop showing false red marks from old pictures (#290)
+- 2026-11-08 · On iPhone the bottom bar now fits: Projects, Agents, Mission, Activity and More. More opens the other sections plus sync and CI status, and the CI pill stays in the header. Safari shows a one-time tip to add Atlas to the Home Screen, and failed runs get a Re-run on GitHub button (#291)
 - 2026-11-08 · When Atlas can't reach GitHub, the header now says how many repositories failed to sync, and hovering it shows why, instead of quietly showing old data as loaded (#288)
 - 2026-11-08 · Made Website management cards more compact and easier to scan (#246)
 - 2026-11-08 · The Atlas Marketplace is one step smaller: about 20% lower and narrower, same shape, same lot and plaza (#286)

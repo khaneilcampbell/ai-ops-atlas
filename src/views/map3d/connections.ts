@@ -1,4 +1,4 @@
-import {airportPoint,airportFootprint,airportPublicPath,type AirportPlan} from './airport';
+import {airportTrafficKeepOut,airportPoint,airportFootprint,airportPublicPath,type AirportPlan} from './airport';
 import type {StadiumPlan} from './stadiumPlan';
 import {stadiumGate} from './stadiumGeometry';
 import {routeAround} from './routing';
@@ -9,6 +9,7 @@ export interface DistrictConnection {id:string;road:Pt[];walk:Pt[];
 /** Public access remains on the city-facing side, completely outside the aircraft apron. */
 export function districtConnections(a?:AirportPlan,s?:StadiumPlan,boxes:Box[]=[]):DistrictConnection[]{
  const links:DistrictConnection[]=[];
+
  // Roads and walks go around Atlas Stadium, never through its shells or concourse.
  if(s)boxes=[...boxes,{x:s.x+s.w/2,z:s.z+s.d/2,w:s.w,d:s.d}];
  if(a){
@@ -24,13 +25,14 @@ export function districtConnections(a?:AirportPlan,s?:StadiumPlan,boxes:Box[]=[]
    links.push({id:'stadium-airport',road:[front,[front[0],north],[outside,north],[outside,entry[1]],entry],walk:[airportPoint(a,-.7,6),[front[0]+(a.west?-.8:.8),north+.6],[outside+.6,north+.6],[outside+.6,entry[1]+.6],[entry[0],entry[1]+.6],entry]});
   }
  }
- const repair=(path:Pt[],margin:number)=>{
+ const repair=(path:Pt[],margin:number,keepOut:Box[]=[])=>{
+  const blockers=[...boxes,...keepOut];
   const out:Pt[]=[];
   for(let i=1;i<path.length;i++){
-   const a=path[i-1],b=path[i],part=pathClear([a,b],boxes,margin)?[a,b]:routeAround(a,b,boxes,margin);
+   const a=path[i-1],b=path[i],part=pathClear([a,b],blockers,margin)?[a,b]:routeAround(a,b,blockers,margin);
    if(!part)return [];out.push(...part.slice(out.length?1:0));
   }
   return out;
  };
- return links.map(link=>({...link,road:repair(link.road,.3),walk:repair(link.walk,.3)}));
+ return links.map(link=>({...link,road:repair(link.road,.3,a?[airportTrafficKeepOut(a)]:[]),walk:repair(link.walk,.3)}));
 }

@@ -8,6 +8,7 @@ import {LOBBY_SIGN,RIBBON,podiumRing,podiumTop,ribbonTop} from './ribbonTowerPla
 import {ribbonGeometry} from './ribbonTowerGeometry';
 import {glassTexture} from './atlasHqTextures';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -25,7 +26,7 @@ function wordmark(text:string){
 export function RibbonTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:number;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
  const k=t.size/RIBBON.refSize,quality=useQualityLevel();
  const height=ribbonTop(k,t.customHeight);
- const geo=useMemo(()=>ribbonGeometry(k,height),[k,height]);
+ const geo=useMemo(()=>packNormals(ribbonGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
   const dark=glassTexture('#2a333c','#5b6874','#1f262c',61);
