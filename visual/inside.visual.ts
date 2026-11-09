@@ -35,7 +35,7 @@ for (const light of ["day", "night"] as const)
     await waitForScene(page);
     const toggle = page.getByRole("button", { name: "Inside", exact: true });
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await selectBuilding(page, "Atlas");
+    await selectBuilding(page, "Atlas HQ");
     await zoomIn(page, 4);
     // SHOTS=1 also keeps the same view before the toggle, for the pull request's before/after.
     if (process.env.SHOTS) await page.screenshot({ path: `visual/out/inside-${light}-before.png` });
@@ -44,6 +44,8 @@ for (const light of ["day", "night"] as const)
     await settle(page, 8);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     expect(await page.evaluate(() => localStorage.getItem("atlas:mapInside"))).toBe("true");
+    // Buildings are picked a few times a second of map time; a slow renderer can need more frames.
+    for (let i = 0; i < 10 && !(await inside(page)).drawn; i++) await settle(page, 4);
     expect(await inside(page)).toMatchObject({ drawn: true });
     expect((await inside(page)).open).toBeGreaterThan(0);
     await check(page, `inside-${light}`);
@@ -53,6 +55,7 @@ for (const light of ["day", "night"] as const)
     await page.keyboard.press("i");
     await settle(page, 8);
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    for (let i = 0; i < 10 && (await inside(page)).drawn; i++) await settle(page, 4);
     expect(await inside(page)).toEqual({ open: 0, drawn: false });
     expect(errors).toEqual([]);
   });

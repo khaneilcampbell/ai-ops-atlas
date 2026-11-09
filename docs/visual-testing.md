@@ -62,9 +62,17 @@ and that the inspector's copy button puts the repository name on the clipboard.
 
 ## In CI
 
-`.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
-touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
-a required check. The specs run as 6 shards in parallel (`--shard=N/6`, split by spec
+`.github/workflows/visual.yml` is a separate, optional job, never a required check.
+
+**On a pull request** that touches views, styles, components or `visual/` it runs a quick check
+on one runner: `views.visual.ts` and `header.visual.ts` (about 10 minutes). Every click, count
+and layout assertion runs, but screenshots are saved, not compared, so a pull request that
+changes the map on purpose stays green. The screenshots are in the run's `visual-results-1`
+artifact (under `visual/baselines/ci/`) for anyone who wants to look. Pixel comparison on every
+pull request kept failing because each merged map change made the shared baselines stale for
+every other open pull request.
+
+**By hand** from the Actions tab it runs the whole set and compares pixels. The specs run as 6 shards in parallel (`--shard=N/6`, split by spec
 file, 35 minutes each); one runner could no longer finish all of them in 45 minutes.
 Run one shard locally with `npx playwright test -c visual --shard=1/6`. Each shard uploads
 its screenshots, diffs and report as a `visual-results-N` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
