@@ -4,6 +4,8 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-09 · The SOC Lab is now a glass and steel tower: a braced steel frame up one side, three terraces with green roofs and cyan light strips sticking out the front, a glass lobby, and a round disc on the roof. The cyan strips glow brighter at night (#296)
+- 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
+- 2026-11-09 · Selecting Profile Tower now highlights the whole building, GitHub podium and skybridge included, and its district glow covers both of its plots (#300)
 - 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).
 - 2026-11-09 · Two Financial District towers have new original names: Benjaire Finance is now Corvane Capital, a business finance house with its own drawn logo, and American Express is now Ellery Budget Center, a plum life-management building. Old names still work in search (#299)
 - 2026-11-09 · Financial District buildings are smaller on the map so they fit with the rest of the city: a fifth fewer floors and a fifth narrower, same designs, same spots, same interiors (#298)
