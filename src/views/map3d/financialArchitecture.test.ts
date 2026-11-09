@@ -6,7 +6,7 @@ import {FINANCIAL_BUILDINGS} from './financialPlan';
 import {BUILDING_INTERIORS} from '../../catalog/buildings';
 import {financialBuildingMatches} from '../../lib/financialSearch';
 const palette={ivory:'#f7f7f0',green:'#294237',gold:'#d0ad69'};
-const identities=[['residence','Aldren Insights'],['harbor-residence','Camton Hotel'],['records','Halden Trust'],['financial-planning','Ravelle Advisors'],['budget','American Express'],['business-finance','Benjaire Finance']] as const;
+const identities=[['residence','Aldren Insights'],['harbor-residence','Camton Hotel'],['records','Halden Trust'],['financial-planning','Ravelle Advisors'],['budget','Ellery Budget Center'],['business-finance','Corvane Capital']] as const;
 for(const [id,name]of identities)it(`${name} keeps a stable route, searchable name and safe geometry envelope`,()=>{
  const b=FINANCIAL_BUILDINGS.find(b=>b.id===id)!;expect(b.name).toBe(name);expect(financialBuildingMatches(name).map(b=>b.id)).toContain(id);
  expect(financialBuildingMatches(financialInteriorBrand(financialInteriorKey(id))!.legacyName).map(b=>b.id)).toContain(id);
@@ -55,16 +55,16 @@ it('joins the top sign band to floor volumes without coplanar overlapping walls'
  }
 });
 
-it('swaps American Express and Wells Fargo while keeping Experian and stable identities',()=>{
+it('keeps Ellery Budget Center (formerly American Express) and Halden Trust in their swapped slots while keeping Experian and stable identities',()=>{
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='residence')).toMatchObject({name:'Aldren Insights',x:3.5,z:9,rise:1.24});
- expect(FINANCIAL_BUILDINGS.find(b=>b.id==='budget')).toMatchObject({name:'American Express',x:14.5,z:9.5,rise:1.08});
+ expect(FINANCIAL_BUILDINGS.find(b=>b.id==='budget')).toMatchObject({name:'Ellery Budget Center',x:14.5,z:9.5,rise:1.08});
  expect(FINANCIAL_BUILDINGS.find(b=>b.id==='records')).toMatchObject({name:'Halden Trust',x:15.7,z:4.3});
  expect(financialInteriorBrand('Spending & Budget')?.id).toBe('budget');
- expect(financialBuildingMatches('American Express')[0].id).toBe('budget');expect(financialBuildingMatches('Spending & Budget')[0].id).toBe('budget');
+ expect(financialBuildingMatches('American Express')[0].id).toBe('budget');expect(financialBuildingMatches('Ellery')[0].id).toBe('budget');expect(financialBuildingMatches('Spending & Budget')[0].id).toBe('budget');
  expect(financialSignLevel('budget',10)).toBe(5);
 });
 
-it('restores American Express original Art Deco window grid and HQ-relative height',()=>{
+it('keeps Ellery Budget Center on the original Art Deco window grid and HQ-relative height',()=>{
  const shape=financialArchitecture('budget',10,palette);
  expect(shape.clearGlass).toHaveLength(0);expect(shape.glow).toHaveLength(0);
  expect(shape.glass.length).toBeGreaterThan(100);
@@ -72,9 +72,9 @@ it('restores American Express original Art Deco window grid and HQ-relative heig
  expect(financialHeight('budget',8,1.08)).toBeCloseTo(8*1.08*CITY_SCALE.financial.height);
 });
 
-it('Benjaire Finance has three supported pavilion ribbons within its original block',()=>{
+it('Corvane Capital has three supported pavilion ribbons within its original block',()=>{
  const shape=financialArchitecture('business-finance',12,palette),ribbons=shape.solid.filter(p=>p.rx!==undefined);
  expect(ribbons).toHaveLength(24);expect(new Set(ribbons.map(p=>p.p[0])).size).toBe(3);
- expect(financialBuildingMatches('Business Finance')[0].name).toBe('Benjaire Finance');
+ expect(financialBuildingMatches('Business Finance')[0].name).toBe('Corvane Capital');expect(financialBuildingMatches('Corvane Capital')[0].id).toBe('business-finance');
  expect(financialBuildingMatches('Benjaire Finance')[0].id).toBe('business-finance');
 });
