@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react";
 import { intelApi } from "../intel/api";
 import { useIntel } from "../intel/state";
 import { isHostedWeb, isTauri } from "../lib/env";
-import { parseImport, recordsFromRuns, type UsageRecord } from "./model";
+import { readLocalUsage } from "./local";
+import { parseImport, recordsFromRuns, toSyncRows, type UsageRecord } from "./model";
+
+export { toSyncRows };
 
 // Website sync. The Mac app sends its recorded usage to the hosted site; the site shows the
 // latest snapshot. The sync key lives in the Keychain and is only ever handled by Rust.
@@ -19,24 +22,6 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
   return invoke<T>(cmd, args);
 }
 
-/** Records in the import format (docs/api-usage.md), so the site validates them like a file. */
-export function toSyncRows(records: UsageRecord[]) {
-  return records.map((r) => ({
-    at: r.at,
-    provider: r.provider,
-    model: r.model,
-    agent: r.agent,
-    project: r.project,
-    requests: r.requests,
-    input_tokens: r.input,
-    output_tokens: r.output,
-    cache_read_tokens: r.cacheRead,
-    cache_write_tokens: r.cacheWrite,
-    cost_usd: r.costUsd,
-    cost_type: r.costKind,
-  }));
-}
-
 export const usageSync = {
   available: isTauri,
   status: () => call<SyncStatus>("usage_sync_status"),
@@ -44,9 +29,10 @@ export const usageSync = {
   /** Returns the new key once, to paste into the site's USAGE_SYNC_TOKEN secret. */
   newKey: () => call<string>("usage_sync_new_key"),
   clear: () => call<SyncStatus>("usage_sync_clear"),
-  /** Sends every run Atlas recorded. A no-op until a site URL and key are both set. */
+  /** Sends every run Atlas recorded, and this Mac's Codex and Claude Code usage. A no-op until a site URL and key are both set. */
   push: async (agent: string) => {
-    const rows = toSyncRows(recordsFromRuns(await intelApi.runs(), agent));
+    const local = await readLocalUsage().catch(() => null);
+    const rows = toSyncRows([...recordsFromRuns(await intelApi.runs(), agent), ...(local ?? [])]);
     return call<SyncStatus>("usage_sync_push", { records: rows });
   },
 };
