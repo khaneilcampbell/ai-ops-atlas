@@ -5,6 +5,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {TERRACE_H} from './scene';
 import {MALL,MALL_KEY,along,mallFins,mallFloor,type MallPlan} from './mallPlan';
 import {inset,ribbon} from './mallShapes';
+import {packNormals} from './packGeometry';
 
 function signage(){
  const c=document.createElement('canvas');c.width=1024;c.height=160;const ctx=c.getContext('2d')!;
@@ -52,7 +53,7 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   const h=MALL.levels*MALL.floor+.32,pts=Array.from({length:12},(_,i)=>{const t=i/11;return new THREE.Vector2(.07+(MALL.canopyR-.07)*t**2.4,t*h);});
   const stem=new THREE.LatheGeometry(pts,20);stem.translate(a.cx,y0,a.cz);
   const disc=new THREE.CylinderGeometry(MALL.canopyR+.06,MALL.canopyR+.06,.03,28);disc.translate(a.cx,y0+h,a.cz);
-  return {slabs:mergeGeometries(slabs)!,glass:mergeGeometries(glass)!,edges:mergeGeometries(edges)!,roof,stem,disc};
+  return packNormals({slabs:mergeGeometries(slabs)!,glass:mergeGeometries(glass)!,edges:mergeGeometries(edges)!,roof,stem,disc});
  },[a]);
  useEffect(()=>()=>{if(geo)for(const x of Object.values(geo))x.dispose();},[geo]);
 
@@ -89,7 +90,7 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
   <mesh position={[a.fountain.x,TERRACE_H+.105,a.fountain.z]} material={mats.water}><cylinderGeometry args={[a.fountain.r*.86,a.fountain.r*.86,.01,28]}/></mesh>
   <mesh position={[a.cx,TERRACE_H+.21,a.z+a.d-1.71]} geometry={sign.geometry} material={sign.material}/>
   <Instanced items={parts.fins} geometry={g.box} material={m.plain} pick={keys(parts.fins.length)}/>
-  <Instanced items={parts.plants} geometry={g.blob} material={m.plain} shadow={false}/>
+  <Instanced items={parts.plants} geometry={g.ball} material={m.plain} shadow={false}/>
   <Instanced items={parts.solid} geometry={g.box} material={m.plain}/>
  </group>;
 }

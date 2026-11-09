@@ -9,6 +9,7 @@ import {githubAnnexGeometry,githubTowerGeometry} from './githubTowerGeometry';
 import {GITHUB_ANNEX,type GithubAnnex} from './githubAnnex';
 import {TERRACE_H} from './scene';
 import {useQualityLevel} from '../../lib/governor';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -49,9 +50,9 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
  const quality=useQualityLevel();
  const height=t.customHeight??githubTowerHeight(t.height);
  const plan=useMemo(()=>planGithubTower(t.size,height),[t.size,height]);
- const geo=useMemo(()=>githubTowerGeometry(plan),[plan]);
+ const geo=useMemo(()=>packNormals(githubTowerGeometry(plan)),[plan]);
  useEffect(()=>()=>{for(const v of Object.values(geo))v.dispose();},[geo]);
- const podium=useMemo(()=>annex?githubAnnexGeometry(annex,TERRACE_H):null,[annex]);
+ const podium=useMemo(()=>annex?packNormals(githubAnnexGeometry(annex,TERRACE_H)):null,[annex]);
  useEffect(()=>()=>{if(podium)for(const v of Object.values(podium))v.dispose();},[podium]);
  const mats=useMemo(()=>{
   const tex=glassTextures();
@@ -135,7 +136,7 @@ export function GithubTower({tower:t,annex,base,g,m,pick,night=false}:{tower:Tow
   <Instanced items={parts.crowns} geometry={g.blob} material={m.foliage} shadow={detailShadow}/>
   {quality<3&&<Instanced items={parts.trunks} geometry={g.trunk} material={m.plain} shadow={false}/>}
   <Instanced items={parts.soil} geometry={g.box} material={m.plain} shadow={false}/>
-  <Instanced items={parts.shrubs} geometry={g.blob} material={m.foliage} shadow={false}/>
+  <Instanced items={parts.shrubs} geometry={g.ball} material={m.foliage} shadow={false}/>
  </group>;
 }
 

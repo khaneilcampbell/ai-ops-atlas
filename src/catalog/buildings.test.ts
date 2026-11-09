@@ -1,20 +1,8 @@
 import {expect,it} from "vitest";
-import {catalog} from "./index";
-import {BUILDING_INTERIORS,skylineBuildingId,skylineBuildingKey,skylineBuildingName} from "./buildings";
-import {layoutMap} from "../views/mapLayout";
-import {buildScene} from "../views/map3d/scene";
+import {BUILDING_INTERIORS} from "./buildings";
+import {WORKPLACE_BUILDINGS} from "./workplaces";
 
-it("gives every Skyline business a resolvable inspector identity and personalized interior",()=>{
-  const scene=buildScene(layoutMap(catalog));
-  expect(scene.retail).toHaveLength(3);
-  for(const shop of scene.retail){
-    expect(skylineBuildingName(skylineBuildingId(shop.name))).toBe(shop.name);
-    expect(skylineBuildingKey(shop.name)).toBe(`service:skyline:building:${shop.name}`);
-    expect(BUILDING_INTERIORS[shop.name].rooms).toHaveLength(4);
-  }
-});
-it("keeps ordinary tool IDs separate from Skyline businesses",()=>{
-  expect(skylineBuildingName("commerce-pipeline:canva")).toBeUndefined();
-  expect(skylineBuildingName("skyline:building:Unknown")).toBeUndefined();
-  expect(skylineBuildingName("skyline:building:toString")).toBeUndefined();
+it("has no interiors left for the removed Skyline shops",()=>{
+  for(const name of ["Reasoning Lab","Model Lab","Starbucks","Smashburger","Chipotle","Zara","Halden Branch"])expect(BUILDING_INTERIORS[name],name).toBeUndefined();
+  expect(WORKPLACE_BUILDINGS).toEqual(["Atlas Marketplace","Benjaire Marketing Agency"]);
 });

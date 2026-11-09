@@ -49,7 +49,7 @@ describe("Atlas Stadium interior plan",()=>{
     const panel=readFileSync(join(__dirname,"../../components/DetailPanel.tsx"),"utf8");expect(panel).toContain("<EnterBuildingButton id={STADIUM_OFFICE_ID}/>");
     const map=readFileSync(join(__dirname,"../Map.tsx"),"utf8");
     expect(map).toContain('lazy(() => import("./office/StadiumInterior"))');expect(map).toMatch(/office\.projectId === STADIUM_OFFICE_ID \? <StadiumInterior/);
-    // The route comes before the generic Skyline business interior, which would otherwise take it.
-    expect(map.indexOf("STADIUM_OFFICE_ID ?")).toBeLessThan(map.indexOf('startsWith("skyline-business:")) ?'));
+    // The route comes before the generic business interior, which would otherwise take it.
+    expect(map.indexOf("STADIUM_OFFICE_ID ?")).toBeLessThan(map.indexOf('startsWith("skyline-business:") ?'));
   });
 });

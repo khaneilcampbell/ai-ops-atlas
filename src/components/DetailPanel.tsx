@@ -10,7 +10,6 @@ import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings
 import { AgentOutput } from "./AgentOutput";
 import { RepositoryNotice } from "./RepositoryNotice";
 import {CodexReviewHandoff} from "./CodexReviewHandoff";
-import {BUILDING_INTERIORS,skylineBuildingName} from "../catalog/buildings";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
 import { isAiAgent, residentsLabel, servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
@@ -104,27 +103,6 @@ function AgencyAgents(){
   return <section><div className="section-title">Agents & automations</div><ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.registry?.title??a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · {agencyRoom(a.workplace!.room)?.name??a.workplace!.room} · Configured in n8n, not verified</span></li>)}</ul></section>;
 }
 
-function SkylineBusinessDetail({name}:{name:string}) {
-  const {catalog,select}=useAtlas();
-  const project=catalog.projects.find(p=>p.id==="skyline");
-  const building=BUILDING_INTERIORS[name];
-  const assigned=catalog.agents.filter(a=>a.workplace?.building===name);
-  if(!project||!building)return <Head eyebrow="District building" title="Not found"/>;
-  return <>
-    <Head eyebrow="Skyline district · Business building" title={name}>
-      <div className="chips" style={{marginTop:10}}><span className="chip">{building.subtitle}</span><span className="chip">Part of {project.name}</span></div>
-      <EnterBuildingButton id={`skyline-business:${name}`}/>
-    </Head>
-    <div className="panel-body selectable">
-      <p style={{margin:0,fontSize:14}}>A prepared {name} building in Skyline, with a lobby, hallways, elevators, and four floors for {building.subtitle.toLowerCase()}.</p>
-      <LinkedRepositories project={project}/>
-      <section><div className="section-title">Project</div><button className="text-btn" onClick={()=>select({kind:"project",id:project.id})}>{project.name} →</button><p className="muted small">This building shares Skyline’s project repository.</p></section>
-      <section><div className="section-title">Prepared workspaces</div><ul>{building.rooms.map(room=><li key={room}>{room}</li>)}</ul></section>
-      <section><div className="section-title">Agents & automations</div>{assigned.length?<ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · Suite {a.workplace!.room} · {catalog.projects.find(p=>p.id===a.projectId)?.name}</span></li>)}</ul>:<p className="muted">No workers assigned to this building yet.</p>}</section>
-    </div>
-  </>;
-}
-
 function AirportBuildingDetail({id}:{id:string}) {
  const b=airportBuilding(id);
  if(!b)return <Head eyebrow="Airport building" title="Not found"/>;
@@ -134,6 +112,7 @@ function AirportCampusDirectory(){const {select}=useAtlas();return <section><div
 function FinancialDirectory(){const {select}=useAtlas();return <section><div className="section-title">District buildings</div><ul className="link-list">{FINANCIAL_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`financial:${b.id}`})}>{b.name} →</button><span className="muted small">Planned · {b.role}</span></li>)}</ul><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-park"})}>Financial Park →</button><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-station"})}>Financial District Station →</button></section>}
 function ServiceDetail({id}:{id:string}) {
  const {select}=useAtlas();
+ if(id==="atlas-commons")return <><Head eyebrow="Public space · Beside Atlas Marketplace" title="Atlas Commons"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><p>A landscaped neighborhood park between Service Desk and Atlas Marketplace, with a planted pond, a continuous walking loop, two pedestrian bridges, an open-courtyard glass pavilion and amphitheater seating.</p><dl className="kv"><dt>Access</dt><dd>Existing Service Desk approach and Marketplace promenade</dd><dt>Amenities</dt><dd>Pond loop · Two footbridges · Garden pavilion · Amphitheater · Lawn and seating</dd><dt>Activity</dt><dd>Visual public space. No agents, bookings or services activated.</dd></dl><p>Service Desk remains in its original location. Sports courts are deferred to preserve open lawn and clear paths. The pavilion is an exterior landscape feature; no interior is connected.</p></div></>;
  if(id==="financial-park")return <><Head eyebrow="Financial District · Public space" title="Financial Park"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><p>A landscaped center between the original skyline and its airport-side expansion, with a lawn, connected paths, shade trees, seating and a protected reflecting pool.</p><dl className="kv"><dt>Access</dt><dd>Connected to the tower sidewalk, marked crossings and waterfront promenade</dd><dt>Activity</dt><dd>Visual public space · No agents or services activated</dd></dl></div></>;
 
  if(id==="financial-district"||id.startsWith("financial:")){
@@ -145,7 +124,7 @@ function ServiceDetail({id}:{id:string}) {
  if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>Benjaire Product Lab, an n8n agent (no repository)</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
-    <Head eyebrow="Client services · Beside the Skyline park" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
+    <Head eyebrow="Client services" title="Atlas Marketplace"><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
     <div className="panel-body selectable"><p>A four-floor wave-style Marketplace with planned client services and Benjaire product workspaces. Existing Commerce workers are referenced without starting new workflows. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
       <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
@@ -167,12 +146,11 @@ function ServiceDetail({id}:{id:string}) {
     <div className="panel-body selectable"><p>A sports and events venue: a steel-truss hall with a glass curtain wall over a white podium, under a thin sloping roof with curled eaves, white zig-zag bracing and tree columns, beside a lower practice hall. A wide straight stair climbs from the gate to the entrance deck, and the lawn round it is ringed by pools and palms. The gate meets the city roads, walks and Stadium Station.</p><section><div className="section-title">Inside</div><ul><li>Concourse: three gates, stair cores, escalators, food kiosks, the stadium shop, first aid and restrooms</li><li>Seating bowl: an octagonal bowl round one show court, two tiers with aisles, hospitality boxes and the exposed roof trusses</li></ul><p>A schematic of a planned venue. Nobody is shown inside, and no events, tickets or scores exist.</p></section><div className="section-title">Current scope</div><p>Visual infrastructure only. Events, ticketing, and venue operations are planned; this building does not indicate live business activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
   </>;
   if(id === "logistics-airport") return <>
-    <Head eyebrow="Business logistics · Skyline district" title="Atlas Airport"><span className="chip">Planned</span></Head>
+    <Head eyebrow="Business logistics" title="Atlas Airport"><span className="chip">Planned</span></Head>
     <div className="panel-body selectable"><p>A JFK-inspired airport campus representing future business logistics, passenger connections, inbound supplies, and outbound fulfillment.</p><div className="section-title">Current scope</div><p>Visual infrastructure only. The terminal, tower, both runways and decorative aircraft do not represent live flights, deliveries or agent execution. One decorative aircraft holds short at a time, with departures spaced 45 simulation seconds apart; after circling the city each one lands on the second runway, parks at the north stand, pushes back and taxis out again. The shared flight simulation pauses in Battery saver, when traffic is off, or while the map is hidden. Other aircraft remain parked. Prepared owning-agent roles have no live workflows or model calls. A decorative freight truck travels between the Canva parking lot and airport, with loading pauses; no real products are shipped.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Next step</dt><dd>Assign a real logistics project and verified workflow before showing operational status.</dd></dl><AirportCampusDirectory/></div>
   </>;
 
-  const building=skylineBuildingName(id);
-  return building?<SkylineBusinessDetail name={building}/>:<ToolDetail id={id}/>;
+  return <ToolDetail id={id}/>;
 }
 
 function ToolDetail({ id }: { id: string }) {

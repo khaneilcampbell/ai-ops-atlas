@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
 import {financialArchitecture,financialDimensions,financialHeight,financialSignLevel,FINANCIAL_METRES_PER_UNIT,WELLS_FARGO_REFERENCE_METRES} from './financialArchitecture';
+import {CITY_SCALE} from './cityScale';
 import {financialInteriorBrand,financialInteriorKey,financialBrand} from './financialBrands';
 import {FINANCIAL_BUILDINGS} from './financialPlan';
 import {BUILDING_INTERIORS} from '../../catalog/buildings';
@@ -35,13 +36,14 @@ it('Aldren Insights has floor-to-ceiling clear glass on every office floor with 
  }
  expect(financialBrand('residence')).toMatchObject({name:'Aldren Insights',symbol:'wordmark',body:'#1d4f91',accent:'#2f8f83',signLines:['Aldren Insights']});
 });
-it('keeps the Financial District bank distinct from the Skyline branch',()=>{
+it('opens Halden Trust in its Financial District tower (the Skyline branch is gone)',()=>{
  expect(financialInteriorBrand('Halden Branch')).toBeUndefined();expect(financialInteriorBrand('financial:records')?.name).toBe('Halden Trust');expect(financialInteriorBrand('Wells Fargo')?.id).toBe('records');
- expect(BUILDING_INTERIORS['Halden Branch'].subtitle).toBe('BANKING & FINANCIAL OPERATIONS');expect(BUILDING_INTERIORS['financial:records'].subtitle).toContain('FINANCIAL DISTRICT');
+ expect(BUILDING_INTERIORS['Halden Branch']).toBeUndefined();expect(BUILDING_INTERIORS['financial:records'].subtitle).toContain('FINANCIAL DISTRICT');
 });
 it('scales the 235-metre architectural reference without breaking HQ-relative heights',()=>{
- expect(financialHeight('records',8,1.12)).toBe(WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT);
- expect(financialHeight('records',20,1.12)).toBeGreaterThan(20);expect(financialSignLevel('financial-planning',12)).toBeLessThan(12*.54);
+ const k=CITY_SCALE.financial.height;
+ expect(financialHeight('records',8,1.12)).toBeCloseTo(WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT*k);
+ expect(financialHeight('records',20,1.12)).toBeCloseTo(20*1.12*k);expect(financialSignLevel('financial-planning',12)).toBeLessThan(12*.54);
 });
 it('retains the other tower names and stable IDs',()=>{
  expect(FINANCIAL_BUILDINGS.filter(b=>!identities.some(([id])=>id===b.id)).map(b=>[b.id,b.name])).toEqual([['banks','Bayvale Bank'],['investments','Robin Exchange'],['insurance','Merrow Credit Union'],['circa','Ellipse Residences']]);
@@ -67,7 +69,7 @@ it('restores American Express original Art Deco window grid and HQ-relative heig
  expect(shape.clearGlass).toHaveLength(0);expect(shape.glow).toHaveLength(0);
  expect(shape.glass.length).toBeGreaterThan(100);
  expect(shape.solid.some(p=>p.p[0]===0&&p.p[2]===0&&p.s[0]>2&&p.s[1]>.2)).toBe(true);
- expect(financialHeight('budget',8,1.08)).toBeCloseTo(8*1.08);
+ expect(financialHeight('budget',8,1.08)).toBeCloseTo(8*1.08*CITY_SCALE.financial.height);
 });
 
 it('Benjaire Finance has three supported pavilion ribbons within its original block',()=>{

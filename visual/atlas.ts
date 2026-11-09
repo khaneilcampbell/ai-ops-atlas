@@ -17,7 +17,7 @@ export interface Prep {
  * skips Tauri (Keychain, updater, vault) and reads GitHub anonymously, which we intercept.
  */
 export async function openAtlas(page: Page, prep: Prep = {}) {
-  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, ...prep.storage };
+  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, installHintDismissed: true, ...prep.storage };
   await page.addInitScript((entries) => {
     if (sessionStorage.getItem("atlas:visual-seeded")) return;
     localStorage.clear();
@@ -63,7 +63,7 @@ export async function goTo(page: Page, label: string) {
 
 /** Selects a building on the 3D map by its nameplate text. */
 export async function selectBuilding(page: Page, name: string) {
-  // Match the name boundary: “Skyline” must never select “Skyline Station”.
+  // Match the name boundary: a building name must never select a station named after it.
   const plaque = page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`);
   await plaque.first().dispatchEvent("click");
   await settle(page, 4);

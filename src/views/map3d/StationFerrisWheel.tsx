@@ -47,6 +47,6 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
   </group>;
 }
 
-export function SkylineFerrisWheel({ plaza, reduced }: { plaza?: StationPlaza; reduced: boolean }) {
+export function StationFerrisWheel({ plaza, reduced }: { plaza?: StationPlaza; reduced: boolean }) {
   return plaza ? <Wheel {...plaza.wheel} reduced={reduced}/> : null;
 }
