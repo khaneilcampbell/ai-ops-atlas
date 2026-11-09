@@ -15,12 +15,14 @@ describe('Benjaire Marketing Agency',()=>{
  const s=buildScene(layoutMap(catalog,[],'district')),a=s.agency!;
  const footprint={x:a.x,z:a.z,w:a.w,d:a.d};
 
- it('sits in the open bay between Benjaire HQ, Benjaire Dashboard and the Financial District',()=>{
+ it('sits in the open bay between Benjaire HQ, the Benjaire Dashboard lot and the Financial District',()=>{
   expect(a).toBeDefined();
   const f=s.financial!;
   // North of the city's own districts, south of the Financial District, with the channel kept open.
   expect(a.land[0].z).toBeGreaterThan(f.z+f.d);
-  const hq=s.towers.find(t=>t.name==='Benjaire HQ')!,dash=s.towers.find(t=>t.name==='Benjaire Dashboard')!;
+  // Benjaire Dashboard's tower was removed (2026-11-09); its cleared lot stays where it stood.
+  const hq=s.towers.find(t=>t.name==='Benjaire HQ')!,dash=s.clearedLots!.find(t=>t.projectId==='benjaire-ops')!;
+  expect(s.towers.some(t=>t.projectId==='benjaire-ops')).toBe(false);
   expect(a.cx).toBeGreaterThan(hq.x);expect(a.cz).toBeLessThan(dash.z);
   // The new land fills water only: it never covers another parcel bigger than a coastal sliver.
   const others=s.land.filter(r=>!a.land.includes(r));

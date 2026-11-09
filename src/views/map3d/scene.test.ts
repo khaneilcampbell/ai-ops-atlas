@@ -41,7 +41,7 @@ describe("buildScene", () => {
     }
   });
 
-  it("gives office projects a tower and off-map projects none (Skyline, Service Desk, Career Applications)", () => {
+  it("gives office projects a tower and off-map projects none (Skyline, Service Desk, Career Applications, Benjaire Dashboard)", () => {
     const s = buildScene(layoutMap(catalog));
     expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => !OFF_MAP_PROJECTS.has(p.id)).map((p) => p.id).sort());
     expect(s.houses).toEqual([]);
@@ -49,6 +49,8 @@ describe("buildScene", () => {
     // Their land stays as plain lawn, apart from the open lot the Marketplace anchors on.
     expect(s.parks.filter((p) => p.label === VACANT_LOT_LABEL).map((p) => p.id).sort()).toEqual(["park:vacant:career-optimizer", "park:vacant:service-desk"]);
     expect(openLot(s.parks)?.id).toBe("park:all");
+    expect(s.clearedLots?.map((t) => t.projectId)).toEqual(["benjaire-ops"]);
+    expect(s.terraces.some((t) => t.id === "benjaire-ops")).toBe(false);
   });
 
   it("keeps kiosks clear of houses, towers and each other", () => {

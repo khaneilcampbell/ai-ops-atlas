@@ -31,7 +31,7 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Client Intake Specialist (`benjaire-flow-intake`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Client Reply Assistant (`benjaire-inquiry-to-client`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Quality Engineer (`benjaire-site-ci`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Dashboard Quality Engineer (`benjaire-ops-ci`) | benjaire-ops | Benjaire Dashboard | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Dashboard Quality Engineer (`benjaire-ops-ci`) | benjaire-ops | Benjaire Dashboard | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
 | Job Requirements Analyst (`job-analyst`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
 | Resume Content Specialist (`resume-tailor`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
 | Application Quality Reviewer (`resume-quality-review`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |

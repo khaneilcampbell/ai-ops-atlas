@@ -59,7 +59,7 @@ they are.
 |---|---|---|---|---|
 | Atlas HQ | Atlas HQ | Atlas app headquarters (`ai-ops-atlas`) | Atlas | Keep |
 | Benjaire HQ | Benjaire HQ | Company website and operations (`benjaire-com`) | Benjaire | Keep |
-| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Keep |
+| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Removed from the map 2026-11-09 (lot cleared, streets kept) |
 | Commerce Pipeline | Commerce Pipeline | Multi-agent commerce (`multi-agent-commerce-pipeline`) | Commerce | Keep |
 | Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant) |
 | Portfolio Site | Portfolio Site | Personal website (`khaneilcampbell-com`) | Portfolio | Keep |

@@ -171,15 +171,20 @@ it("does not draw a second building for a registered repository left in discover
   expect(layout.parks.filter(p=>p.id==="park:vacant:service-desk")).toHaveLength(1);
 });
 
-it("leaves vacant lots where Service Desk and Career Applications stood, in every grouping",()=>{
+it("leaves the land of removed towers (Service Desk, Career Applications, Benjaire Dashboard) in every grouping",()=>{
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
     // The same catalog with the two projects renamed, so they are still drawn as towers.
-    const was=(id:string)=>id==="service-desk"||id==="career-optimizer"?`was-${id}`:id;
+    const was=(id:string)=>["service-desk","career-optimizer","benjaire-ops"].includes(id)?`was-${id}`:id;
     const without=layoutMap({projects:catalog.projects.map(p=>({...p,id:was(p.id)})),agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
-    expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(2);
+    expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(3);
     expect(layout.districts.map(d=>d.project.id)).not.toContain("service-desk");
     expect(layout.districts.map(d=>d.project.id)).not.toContain("career-optimizer");
+    // Benjaire Dashboard's lot keeps its streets (roads to Intelligence Hub run through it): it is
+    // laid out as a cleared district, in the same place, with no building.
+    expect(layout.districts.map(d=>d.project.id)).not.toContain("benjaire-ops");
+    const lot=layout.cleared!.find(d=>d.project.id==="benjaire-ops")!,old=without.districts.find(d=>d.project.id==="was-benjaire-ops")!;
+    expect([lot.ox,lot.oy,lot.size]).toEqual([old.ox,old.oy,old.size]);
     // Every other building stands exactly where it stood while the two towers were drawn.
     const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
     expect(at(layout)).toEqual(at(without));

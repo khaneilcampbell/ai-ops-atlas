@@ -216,6 +216,11 @@ export interface Scene3D {
   houses: House[];
   kiosks: Kiosk[];
   towers: Tower[];
+  /**
+   * Where a removed tower stood on a cleared lot (Benjaire Dashboard, 2026-11-09). Nothing is drawn
+   * there, but the plaza lane around the old site is still a street, so rings and lights use it.
+   */
+  clearedLots?: Pick<Tower, "projectId" | "x" | "z" | "size">[];
   strays: StrayBuilding[];
   trees: Tree[];
   bushes: Point[];
@@ -276,11 +281,17 @@ function buildCity(layout: Layout): Scene3D {
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
+  // A cleared district (its tower removed, KC 2026-11-09) is laid out like the rest, streets,
+  // paving and bridges included, so the roads through it still join; only its building is dropped
+  // from what the scene returns.
+  const allDistricts = [...layout.districts, ...(layout.cleared ?? [])];
+  const cleared = new Set((layout.cleared ?? []).map((d) => d.project.id));
   // Each district's own paving, so its trees only check what is on its terrace.
   const pavedIn = new Map<string, Slab[]>();
-  for (const d of layout.districts) {
+  for (const d of allDistricts) {
     const pavedFrom = paving.length;
-    terraces.push({ id: d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
+    // A cleared lot's ground is not a building: hovering or clicking it selects nothing.
+    terraces.push({ id: cleared.has(d.project.id) ? `park:cleared:${d.project.id}` : d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
@@ -381,7 +392,7 @@ function buildCity(layout: Layout): Scene3D {
   }
 
   // Road bridges between neighboring districts, beside the footpaths, and the roads out to them.
-  const byId = new Map(layout.districts.map((d) => [d.project.id, d]));
+  const byId = new Map(allDistricts.map((d) => [d.project.id, d]));
   const roadsOf = new Map<string, DistrictRoads>();
   for (const t of towers) {
     const d = byId.get(t.projectId)!;
@@ -463,7 +474,7 @@ function buildCity(layout: Layout): Scene3D {
     if (approaches.every(path => path.length > 1)) pedestrianJourneys.set(`${w.from}:${w.to}`, [...approaches[0], ...approaches[1].slice().reverse()]);
   }
 
-  for (const d of layout.districts) {
+  for (const d of allDistricts) {
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
@@ -848,8 +859,9 @@ function buildCity(layout: Layout): Scene3D {
     walks,
     parks,
     houses,
-    kiosks,
-    towers,
+    kiosks: kiosks.filter((k) => !cleared.has(k.projectId)),
+    towers: towers.filter((t) => !cleared.has(t.projectId)),
+    clearedLots: towers.filter((t) => cleared.has(t.projectId)).map(({ projectId, x, z, size }) => ({ projectId, x, z, size })),
     strays,
     trees,
     bushes,
