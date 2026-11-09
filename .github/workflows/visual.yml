@@ -9,7 +9,6 @@ on:
       - "src/styles/**"
       - "src/components/**"
       - "visual/**"
-      - ".github/workflows/visual.yml"
   workflow_dispatch:
     inputs:
       update:
