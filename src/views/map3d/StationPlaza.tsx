@@ -27,9 +27,11 @@ export function StationPlaza({plan,g,m,night}:{plan?:Plan;g:ReturnType<typeof us
   box(cx,podium+.82,cz+hd/2+.2,1.1,.05,.42,C.gold);
   box(cx,podium/2,cz+a.d/2+.12,1.1,podium*.6,.24,C.podium);
   // Vaulted shell over the hall, sprung from white columns at the podium edge.
-  const across=a.d/2-.1,up=.62,maxA=72*Math.PI/180,slats=9,step=2*maxA/(slats-1),spring=podium+hallH+.05,cy=spring-up*Math.cos(maxA);
+  const across=a.d/2-.1,up=.62,maxA=72*Math.PI/180,slats=15,step=2*maxA/(slats-1),spring=podium+hallH+.05,cy=spring-up*Math.cos(maxA);
   const at=(t:number):[number,number]=>[cz+across*Math.sin(t),cy+up*Math.cos(t)];
-  for(let i=0;i<slats;i++){const t=-maxA+i*step,[pz,py]=at(t),[qz,qy]=at(t+step/2),[oz,oy]=at(t-step/2);box(cx,py,pz,a.w-.2,.045,Math.hypot(qz-oz,qy-oy)+.02,C.shell,tilt(qz-oz,qy-oy));}
+  for(let i=0;i<slats;i++){const t=-maxA+i*step,[pz,py]=at(t),[qz,qy]=at(t+step/2),[oz,oy]=at(t-step/2);box(cx,py,pz,a.w-.2,.05,Math.hypot(qz-oz,qy-oy)+.06,C.shell,tilt(qz-oz,qy-oy));}
+  // A solid ceiling closes the hall under the vault, so the lit glass never shows through the roof.
+  box(cx,podium+hallH+.02,cz,hw+.04,.04,hd+.04,C.shell);
   const ribs=[-1,-.5,0,.5,1].map(k=>k*(a.w/2-.15));
   for(const rx of ribs){
    const end=Math.abs(rx)>a.w/2-.2,c=end?C.gold:C.rib;
