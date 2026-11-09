@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-09 · The round bushes along the sidewalk by Atlas Airport are now palm trees (#PR)
+- 2026-11-09 · The round bushes along the sidewalk by Atlas Airport are now palm trees (#309)
 - 2026-11-09 · Streets by the airport and Atlas Stadium now show as one road, without doubled lane lines, overlapping crossings or a footpath painted down the middle; every junction uses the same zebra crossing, and no tree, bush, bollard or street lamp stands in a street (#305)
 - 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)
 - 2026-11-09 · When an agent is working, its whole building lights up again, now including the custom-shaped towers (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, Intelligence Hub, Portfolio Site). The light comes from inside, as the building is designed: windows brightest, glass softer, walls and signs keep their own colors (#303)
