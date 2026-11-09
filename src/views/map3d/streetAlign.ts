@@ -25,6 +25,23 @@ export const STREET_ALIGN={
 /** A street's carriageway and sidewalk, from its centre line: nothing may stand inside it. */
 export const STREET_CLEAR=ROAD_W/2+.18;
 
+/**
+ * A fast "is this point within `clear` of any of these paths" test: segments are bucketed into a
+ * coarse grid once, so each query looks only at the few segments near it.
+ */
+export function streetHitTest(paths:Pt[][],clear:number,cell=2):(x:number,z:number)=>boolean{
+ const grid=new Map<string,[Pt,Pt][]>(),key=(i:number,j:number)=>`${i}:${j}`;
+ for(const path of paths)for(let k=1;k<path.length;k++){
+  const a=path[k-1],b=path[k];
+  for(let i=Math.floor((Math.min(a[0],b[0])-clear)/cell);i<=Math.floor((Math.max(a[0],b[0])+clear)/cell);i++)
+   for(let j=Math.floor((Math.min(a[1],b[1])-clear)/cell);j<=Math.floor((Math.max(a[1],b[1])+clear)/cell);j++){const c=grid.get(key(i,j));if(c)c.push([a,b]);else grid.set(key(i,j),[[a,b]]);}
+ }
+ return (x,z)=>(grid.get(key(Math.floor(x/cell),Math.floor(z/cell)))??[]).some(([a,b])=>{
+  const dx=b[0]-a[0],dz=b[1]-a[1],len=dx*dx+dz*dz,t=len?Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/len)):0;
+  return Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<clear;
+ });
+}
+
 interface Run {x:boolean;c:number;lo:number;hi:number}
 const run=(a:Pt,b:Pt):Run|undefined=>{
  if(Math.abs(a[1]-b[1])<1e-9&&Math.abs(a[0]-b[0])>1e-9)return {x:true,c:a[1],lo:Math.min(a[0],b[0]),hi:Math.max(a[0],b[0])};
