@@ -5,6 +5,7 @@ top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newe
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)
 - 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
+- 2026-11-09 · Selecting Profile Tower now highlights the whole building, GitHub podium and skybridge included, and its district glow covers both of its plots (#300)
 - 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).
 - 2026-11-09 · Two Financial District towers have new original names: Benjaire Finance is now Corvane Capital, a business finance house with its own drawn logo, and American Express is now Ellery Budget Center, a plum life-management building. Old names still work in search (#299)
 - 2026-11-09 · Financial District buildings are smaller on the map so they fit with the rest of the city: a fifth fewer floors and a fifth narrower, same designs, same spots, same interiors (#298)
