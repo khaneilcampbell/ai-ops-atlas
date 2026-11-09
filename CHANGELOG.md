@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-09 · Removed the low wall on the east side of the Financial District, so it opens straight onto the district next door (#304)
+- 2026-11-09 · Removed the low walls on the east and street sides of the Financial District, so it opens straight onto the districts next door (#304)
 - 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
 - 2026-11-09 · Selecting Profile Tower now highlights the whole building, GitHub podium and skybridge included, and its district glow covers both of its plots (#300)
 - 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).

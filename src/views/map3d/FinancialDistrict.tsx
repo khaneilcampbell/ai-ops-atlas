@@ -91,10 +91,10 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
  // No wall on the east side: the district opens straight onto its neighbour (KC, 2026-11-09).
  const westWall=a.circa?F.northWalkZ-.5:a.d-.4;
  solid.push(box(.18,0,.2+westWall/2,.18,.35,westWall,'#c6c3b4'));
- // The street side keeps its low kerb wall only: no railing on posts between the district and the road (KC, 2026-11-08).
- solid.push(box(center,0,.18,span,.35,.18,'#c6c3b4'),box(center,0,a.d-.18,span,.23,.16,'#c6c3b4'));
+ // No wall on the street side either: the promenade meets the neighbouring district level, and side roads run straight in (KC, 2026-11-09).
+ solid.push(box(center,0,.18,span,.35,.18,'#c6c3b4'));
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
- for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.14,14.5,.06,.12,.06,'#ffffff'));
+ for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.02,14.5,.06,.12,.06,'#ffffff'));
  return {solid,glass,clearGlass,tinted,tintedKeys,glow,clearKeys,bevelled,plants,lights,keys};
  },[a,junctions,materials]);
  const windows=useMemo(()=>parts.glass.map(p=>({...p,c:night?'#ffffff':p.c})),[parts,night]);
