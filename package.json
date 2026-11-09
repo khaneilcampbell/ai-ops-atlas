@@ -11,6 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "validate:catalog": "vitest run src/catalog",
+    "ops": "node scripts/ops.mjs check",
+    "handoff": "node scripts/ops.mjs handoff",
     "tauri": "tauri",
     "lint": "eslint .",
     "version:set": "node scripts/set-version.mjs",

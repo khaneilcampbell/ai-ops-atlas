@@ -5,6 +5,9 @@ to `main` signs and publishes a Mac update that KC's installed app picks up with
 and redeploys the web page. Treat every merge as a production release.
 
 ## Every change
+- Start with `npm run ops`: git state and the checks this change needs, in a few lines, no AI. Before
+  pushing, `npm run ops -- --run` runs them and prints only failures. When a session gets long or the
+  task changes, `npm run handoff -- "what's left"` and continue in a fresh session (`docs/local-ops.md`).
 - One small pull request per change, on its own branch. Fill in `.github/pull_request_template.md`.
 - Add one line at the top of `CHANGELOG.md`: `- YYYY-MM-DD · What changed, in plain words (#PR)`.
   KC reads these in the Update button, so write for KC.

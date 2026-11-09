@@ -105,6 +105,11 @@ export function describe(e: LiveEvent): string | null {
     const r = e.body as Partial<AgentRun>;
     return `${r.phase ?? "Pipeline phase"} ${RUN_WORD[r.status ?? ""] ?? "reported"} · ${r.project ?? "pipeline"}`;
   }
+  if (e.kind === "trigger") {
+    const t = e.body ?? {};
+    const how = t.state === "fired" ? "Agent started" : t.state === "failed" ? "Agent couldn't start" : "Agent ready";
+    return `${how}: ${typeof t.title === "string" ? t.title.slice(0, 100) : "event"}${repo ? ` · ${repo}` : ""}`;
+  }
   if (e.kind === "inquiry") return typeof e.body?.detail === "string" ? e.body.detail.slice(0, 120) : "New website inquiry";
   if (e.kind === "agent_report") return `New report · ${typeof e.body?.agent === "string" ? e.body.agent : "agent"}`;
   if (e.kind === "intel_run") {

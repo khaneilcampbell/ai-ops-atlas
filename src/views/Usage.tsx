@@ -12,6 +12,7 @@ import { fetchAgentUsage, type AgentUsage } from "../usage/agents";
 import { readLocalUsage } from "../usage/local";
 import { chatExportRecords } from "../usage/chatExport";
 import { cacheHitRate, findings, modelMix, rankWorkflows, type Finding, type WorkflowRow } from "../usage/insights";
+import { sessionFindings } from "../usage/sessions";
 import {
   MAX_IMPORTED,
   PERIODS,
@@ -129,7 +130,11 @@ export function UsageView() {
   const span = PERIODS.find((p) => p.id === period)!.span;
   const summary = useMemo(() => summarize(data.records, period), [data.records, period]);
   const workflows = useMemo(() => rankWorkflows(summary.inWindow), [summary.inWindow]);
-  const advice = useMemo(() => findings(workflows), [workflows]);
+  const advice = useMemo(() => {
+    const order: Record<Finding["impact"], number> = { high: 0, medium: 1, low: 2 };
+    // Coding sessions that carried a heavy context sit with the workflow advice, ranked by the same impact.
+    return [...findings(workflows), ...sessionFindings(summary.inWindow)].sort((a, b) => order[a.impact] - order[b.impact]);
+  }, [workflows, summary.inWindow]);
   const t = summary.totals;
   const projectName = useMemo(() => {
     const byRepo = new Map(catalog.projects.map((p) => [p.repository.toLowerCase(), p.name]));
@@ -322,7 +327,7 @@ function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; 
               <li key={f.id}>
                 <span className={`impact ${f.impact}`}>{IMPACT_LABEL[f.impact]}</span>
                 <div className="title">{f.title}</div>
-                <p className="small muted">{f.detail}</p>
+                <p className="small muted">{withCode(f.detail)}</p>
               </li>
             ))}
           </ul>
@@ -330,6 +335,11 @@ function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; 
       </div>
     </div>
   );
+}
+
+/** Renders `backticked` commands in advice text as code, so they read as something to type. */
+function withCode(text: string) {
+  return text.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part));
 }
 
 function WorkflowList({ rows, byCost }: { rows: WorkflowRow[]; byCost: boolean }) {

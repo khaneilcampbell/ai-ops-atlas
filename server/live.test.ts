@@ -187,3 +187,13 @@ describe("pasted keys", () => {
     expect(cleanKey("ab cd")).toBe("ab cd");
   });
 });
+
+describe("compactGithub issues", () => {
+  it("keeps only what the trigger rules need, and blanks bot authors", () => {
+    const p = { action: "opened", repository: { full_name: "khaneilcampbell/ai-ops-atlas" }, issue: { number: 3, title: "Broken", body: "secret details", user: { login: "khaneilcampbell", type: "User" }, labels: [{ name: "bug" }], html_url: "https://github.com/i/3" } };
+    expect(compactGithub("issues", p)).toEqual({ kind: "issue", repo: "khaneilcampbell/ai-ops-atlas", body: { action: "opened", number: 3, title: "Broken", author: "khaneilcampbell", labels: ["bug"], url: "https://github.com/i/3" } });
+    expect(compactGithub("issues", { ...p, issue: { ...p.issue, user: { login: "dependabot[bot]", type: "Bot" } } })?.body.author).toBeNull();
+    expect(compactGithub("issues", { ...p, action: "closed" })).toBeNull();
+  });
+});
+
