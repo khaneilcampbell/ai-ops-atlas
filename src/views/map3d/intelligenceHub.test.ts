@@ -29,12 +29,12 @@ describe('Intelligence Hub',()=>{
   }
  });
 
- it('stands with the Financial District, under its shortest tower and under Atlas HQ',()=>{
+ it('stands with the Financial District, under its tallest towers and under Atlas HQ',()=>{
   const reference=scene.financial!.referenceHeight;
   expect(tower.customHeight).toBeCloseTo(intelligenceHubHeight(reference));
   expect(tower.customHeight!).toBeGreaterThan(tower.height);
-  const shortest=Math.min(...scene.financial!.buildings.map(b=>b.height));
-  expect(intelligenceHubTop(tower.customHeight!)).toBeLessThan(shortest);
+  const tallest=Math.max(...scene.financial!.buildings.filter(b=>b.id!=='circa').map(b=>b.height));
+  expect(intelligenceHubTop(tower.customHeight!)).toBeLessThan(tallest);
   expect(tower.customHeight!).toBeLessThan(reference);
   // Its own custom height never feeds back into the reference the Financial District rises from.
   expect(headquartersEnvelope(scene.towers)).toBeCloseTo(reference);

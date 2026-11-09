@@ -1,4 +1,5 @@
 import type {Inst} from './models';
+import {CITY_SCALE} from './cityScale';
 import type {Pt} from './roads';
 
 /**
@@ -115,12 +116,13 @@ export function circaParts(height:number,palette:{white:string;stone:string;trim
  for(const [x,z]of [[-3.35,-1],[-3.35,1.2],[3.35,-3.3],[3.35,-1.5],[-.6,3.95]] as const){box(out.solid,x,deck+.12,z,.04,.36,.04,palette.wood);out.leaves.push({p:[x,deck+.6,z],s:[.24,.2,.24],c:palette.green});}
 
  // Twin elliptical towers: blue glass, white slab edges, ribbed balconies on one side.
- const base=P.h,floor=(height-base)/T.floors;
+ // On the map the towers carry fewer storeys with the district's scale (CITY_SCALE.financial), at about the same storey height.
+ const floors=Math.max(12,Math.round(T.floors*CITY_SCALE.financial.height)),base=P.h,floor=(height-base)/floors;
  for(const [cx,cz]of T.centres){
   const place=(p:Pt):Pt=>{const [x,z]=rotate(p,T.turn);return [cx+x,cz+z];};
   out.towerGlass.push({p:[cx,base,cz],s:[T.rx*2,height-base,T.rz*2],r:T.turn,c:'#ffffff'});
   // A thin slab edge wraps every floor; on the view side each floor carries a deeper balcony strip.
-  for(let f=1;f<T.floors;f++){out.slabs.push({p:[cx,base+f*floor-.012,cz],s:[T.rx*2+.05,.024,T.rz*2+.05],r:T.turn,c:palette.trim});out.balconies.push({p:[cx,base+f*floor-.014,cz],s:[(T.rx+T.balconySide)*2,.028,(T.rz+T.balconySide)*2],r:T.turn,c:palette.white});}
+  for(let f=1;f<floors;f++){out.slabs.push({p:[cx,base+f*floor-.012,cz],s:[T.rx*2+.05,.024,T.rz*2+.05],r:T.turn,c:palette.trim});out.balconies.push({p:[cx,base+f*floor-.014,cz],s:[(T.rx+T.balconySide)*2,.028,(T.rz+T.balconySide)*2],r:T.turn,c:palette.white});}
   // Slim glass-rail posts at the ends of the balcony strips.
   for(const th of [-1.45,1.45]){
    const [x,z]=place([(T.rx+T.balconySide-.03)*Math.sin(th),(T.rz+T.balconySide-.03)*Math.cos(th)]),normal=Math.atan2(Math.sin(th)/T.rx,Math.cos(th)/T.rz);
