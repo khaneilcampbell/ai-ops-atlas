@@ -20,7 +20,8 @@ export function StationPlaza({plan,g,m,night}:{plan?:Plan;g:ReturnType<typeof us
   // Podium and a glass hall set back from its edge, with white mullions and a gold entrance canopy.
   const podium=.22,hallH=1.05,hw=a.w-.5,hd=a.d-.7;
   box(cx,podium/2,cz,a.w,podium,a.d,C.podium);
-  box(cx,podium+hallH/2,cz,hw,hallH,hd,C.glass);
+  // The glass hall is drawn with the night lights so its windows glow warm after dark.
+  lights.push({p:[cx,y0+podium+hallH/2,cz],s:[hw,hallH,hd],c:C.glass});
   for(const side of [-1,1])for(let x=-hw/2;x<=hw/2+.001;x+=hw/12)box(cx+x,podium+hallH/2,cz+side*(hd/2+.015),.035,hallH,.03,C.steel);
   for(const side of [-1,1])box(cx+side*(hw/2+.015),podium+hallH/2,cz,.03,hallH,hd,C.steel);
   box(cx,podium+.82,cz+hd/2+.2,1.1,.05,.42,C.gold);
@@ -35,7 +36,7 @@ export function StationPlaza({plan,g,m,night}:{plan?:Plan;g:ReturnType<typeof us
    for(let i=0;i<slats;i++){const t=-maxA+i*step,[pz,py]=at(t),[qz,qy]=at(t+step/2),[oz,oy]=at(t-step/2);box(cx+rx,py+Math.cos(t)*.05,pz+Math.sin(t)*.05,.08,.06,Math.hypot(qz-oz,qy-oy)+.03,c,tilt(qz-oz,qy-oy));}
    for(const t of [-maxA,maxA]){const [pz,py]=at(t);box(cx+rx,(podium+py)/2,pz,.07,py-podium,.07,C.steel);}
   }
-  // Warm strip lights along the glass at night.
+  // Warm strip lights along the base of the glass.
   for(const side of [-1,1])lights.push({p:[cx,y0+podium+.06,cz+side*(hd/2+.03)],s:[hw,.03,.02],c:'#e8b76f'});
   return {solid,lights};
  },[plan]);
