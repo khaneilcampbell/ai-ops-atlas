@@ -2,9 +2,9 @@ import {test} from '@playwright/test';import {mkdirSync} from 'node:fs';import {
 /** Financial District interiors inside "Enter building". Preview shots only: runs when FINANCIAL_SHOTS=1. FINANCIAL_SHOT_DIR picks the folder. */
 test.skip(!process.env.FINANCIAL_SHOTS,'Set FINANCIAL_SHOTS=1 to take Financial District interior screenshots.');
 const dir=process.env.FINANCIAL_SHOT_DIR??'artifacts/financial-interiors';
-const BUILDINGS=['Bayvale Bank','Robin Exchange','Merrow Credit Union','Aldren Insights','Camton Hotel','Halden Trust','Ravelle Advisors','American Express','Benjaire Finance'];
+const BUILDINGS=['Bayvale Bank','Robin Exchange','Merrow Credit Union','Aldren Insights','Camton Hotel','Halden Trust','Ravelle Advisors','Ellery Budget Center','Corvane Capital'];
 /** Financial District interior keys (financialInteriorKey). "Halden Trust" alone used to open the Skyline branch, removed with the district. */
-const KEY:Record<string,string>={'Bayvale Bank':'banks','Robin Exchange':'investments','Merrow Credit Union':'insurance','Aldren Insights':'residence','Camton Hotel':'harbor-residence','Halden Trust':'records','Ravelle Advisors':'financial-planning','American Express':'budget','Benjaire Finance':'business-finance'};
+const KEY:Record<string,string>={'Bayvale Bank':'banks','Robin Exchange':'investments','Merrow Credit Union':'insurance','Aldren Insights':'residence','Camton Hotel':'harbor-residence','Halden Trust':'records','Ravelle Advisors':'financial-planning','Ellery Budget Center':'budget','Corvane Capital':'business-finance'};
 const FLOORS:[string,RegExp][]=[['lobby',/^Lobby$/],['floor2',/^Floor 2$/],['all',/^All floors$/]];
 const slug=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-');
 async function shoot(page:import('@playwright/test').Page,b:string,suffix:string,floors=FLOORS){

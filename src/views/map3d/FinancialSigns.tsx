@@ -1,4 +1,3 @@
-import {BENJAIRE_MONOGRAM,BENJAIRE_WORDMARK} from './benjaireIdentity';
 import {useEffect,useMemo} from 'react';
 import * as THREE from 'three';
 import {FINANCIAL_BRANDS,FINANCIAL_SIGN,financialSignPlacement,type FinancialBrand} from './financialBrands';
@@ -6,14 +5,25 @@ import {financialDimensions,financialSignLevel} from './financialArchitecture';
 import {financialKey,type FinancialPlan} from './financialPlan';
 import {TERRACE_H} from './scene';
 import type {PickHandlerSet} from './models';
+/**
+ * An original drawn logo: a rounded badge holding an open ring (the brand's initial) with three
+ * rising bars in its opening, for steady growth. Plain shapes only, no lettering or borrowed marks.
+ */
+export function drawEmblem(c:CanvasRenderingContext2D,brand:Pick<FinancialBrand,'accent'|'signText'|'logoInk'>,x:number,y:number,size:number){
+ const ink=brand.logoInk??brand.signText,cx=x+size/2,cy=y+size/2,r=size*.31;
+ c.save();c.fillStyle=brand.accent;c.strokeStyle=ink;c.lineWidth=size*.03;c.beginPath();c.roundRect(x,y,size,size,size*.18);c.fill();c.stroke();
+ c.strokeStyle=brand.signText;c.lineWidth=size*.085;c.lineCap='round';c.beginPath();c.arc(cx,cy,r,Math.PI*.24,Math.PI*1.76);c.stroke();
+ c.fillStyle=ink;const bar=size*.07;for(const [i,h]of [[0,.16],[1,.26],[2,.38]] as const){const bx=cx+size*(.02+i*.1),bh=size*h;c.beginPath();c.roundRect(bx,cy+size*.17-bh,bar,bh,bar*.3);c.fill();}
+ c.restore();
+}
 /** Original canvas signs follow Atlas's existing procedural sign texture pattern. */
 function sign(brand:FinancialBrand){
  const canvas=document.createElement('canvas');canvas.width=1536;canvas.height=384;const c=canvas.getContext('2d')!;
  c.fillStyle=brand.signBackground;c.fillRect(0,0,1536,384);c.fillStyle=brand.accent;c.fillRect(0,366,1536,18);
- if(brand.symbol==='benjaire'){
-  c.save();c.translate(52,56);c.scale(.42,.42);const ink=c.createLinearGradient(0,0,583,608);for(const [at,color]of [[0,'#18191c'],[.3,'#34373c'],[.52,'#6e737a'],[.74,'#34373c'],[1,'#18191c']] as const)ink.addColorStop(at,color);c.fillStyle=ink;c.fill(new Path2D(BENJAIRE_MONOGRAM));c.restore();
-  c.save();c.translate(355,70);c.strokeStyle=brand.signText;c.lineWidth=18;c.lineJoin='round';c.stroke(new Path2D(BENJAIRE_WORDMARK));c.restore();
-  c.fillStyle=brand.signText;c.font='500 94px sans-serif';c.textAlign='center';c.fillText('FINANCE',895,305,1080);
+ if(brand.symbol==='emblem'){
+  drawEmblem(c,brand,40,40,304);
+  c.fillStyle=brand.signText;c.textAlign='left';c.textBaseline='alphabetic';c.letterSpacing='14px';c.font='600 150px sans-serif';c.fillText(brand.signLines[0].toUpperCase(),400,205,1090);
+  c.letterSpacing='22px';c.font='500 78px sans-serif';c.fillStyle=brand.logoInk??brand.signText;c.fillText((brand.signLines[1]??'').toUpperCase(),404,316,1090);c.letterSpacing='0px';
  }else{
  c.fillStyle=brand.signText;c.textBaseline='middle';c.textAlign=brand.symbol==='wordmark'?'center':'left';
  if(brand.symbol==='wordmark'&&brand.signLines.length>1){c.font='600 139px sans-serif';c.fillText(brand.signLines[0],768,128,1420);c.font='500 112px sans-serif';c.fillText(brand.signLines[1],768,274,1420);}
