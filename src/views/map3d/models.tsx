@@ -1,5 +1,5 @@
 import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
-import {distanceToRoad} from "./highway";
+import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_ASPHALT,STREET_LINE,TRANSPORT} from "./transportScale";
 export {STREET_LINE};
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
@@ -339,7 +339,16 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const squares=new Set<string>();
     spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});
 
+    // A footbridge that lands across a carriageway opens there, rails, deck and piles alike, instead of fencing the road off.
+    const crossRoads: {path: [number,number][]; radius: number}[] = [
+      ...spans.map(sp => ({path: [sp.a, sp.b], radius: ROAD_W / 2 + 0.06})),
+      ...(scene.freight?.streets ?? []).map(path => ({path, radius: TRANSPORT.cityWidth / 2 + 0.06})),
+      ...(scene.freight ? [{path: scene.freight.highway, radius: TRANSPORT.highwayBarrier + 0.06}] : []),
+    ];
     for (const w of scene.walks.filter(w => w.bridge)) {
+      const walkLine: [number,number][] = [[w.x0, w.z0], [w.x1, w.z1]];
+      const cuts = crossRoads.flatMap(r => roadIntersections(r.path, walkLine).map(q => ({q, radius: r.radius})));
+      const marks = [footDeck.length, footRails.length, footPiers.length];
       const alongX = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
       const length = Math.hypot(w.x1 - w.x0, w.z1 - w.z0), y = w.y ?? TERRACE_H;
       const x = (w.x0 + w.x1) / 2, z = (w.z0 + w.z1) / 2;
@@ -362,6 +371,12 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       }
       // Visible timber planks distinguish the promenade from the stone vehicle deck.
       for (let d = 0.04; d < length; d += 0.13) {const point=bridgePoint([w.x0,w.z0],[w.x1,w.z1],d);footDeck.push({ p: [point[0], y, point[1]], s: alongX ? [0.018, 0.008, 0.46] : [0.46, 0.008, 0.018], c: "#775e46" });}
+      if (cuts.length) for (const [list, start] of [[footDeck, marks[0]], [footRails, marks[1]], [footPiers, marks[2]]] as [Inst[], number][]) {
+        const own = list.splice(start);
+        list.push(...own.flatMap(item => Math.max(item.s[0], item.s[2]) >= length * 0.9
+          ? cuts.reduce<Inst[]>((pieces, c) => clipConnectionRails(pieces, [c.q], c.radius), [item])
+          : cuts.some(c => Math.hypot(item.p[0] - c.q[0], item.p[2] - c.q[1]) < c.radius) ? [] : [item]));
+      }
     }
     // Trim every sidewalk against the complete street network, including intersecting roads.
     // Independent curb strips otherwise project across junctions and cover the asphalt.
