@@ -26,3 +26,7 @@ export const TRANSPORT={vehicleScale:2,walkWidth:.48,landingOverlap:.08,junction
  /** Water within this distance of the highway is the highway's approach; canals deeper in town are not. */
  highwayReach:6.5,
  displayBayWidth:.72,displayBayLength:.95,dealerAisle:.9} as const;
+
+/** District street paint, shared by the roads, the bridge decks and the car parks so every drivable surface reads as one road. */
+export const STREET_ASPHALT = "#424b50";
+export const STREET_LINE = "#e1ce8e";
