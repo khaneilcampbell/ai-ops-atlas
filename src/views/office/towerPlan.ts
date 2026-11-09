@@ -28,8 +28,8 @@ export const TOWER_THEMES:Record<string,TowerTheme>={
   "harbor-residence":{primary:"#bfa16b",deep:"#283538",highlight:"#e9d9b7"},          // Camton Hotel gold and charcoal
   records:{primary:"#1f3b4d",deep:"#142731",highlight:"#e8d9a8"},                     // Halden Trust navy and cream
   "financial-planning":{primary:"#8c2434",deep:"#561520",highlight:"#e3b9bf"},        // Ravelle Advisors maroon
-  budget:{primary:"#006fcf",deep:"#00335f",highlight:"#8cc4f2"},                      // American Express blue
-  "business-finance":{primary:"#3b4045",deep:"#1d2023",highlight:"#d8d2c4"},          // Benjaire charcoal and pearl
+  budget:{primary:"#5a4b8f",deep:"#3f3466",highlight:"#cfc3ee"},                      // Ellery Budget Center plum
+  "business-finance":{primary:"#1f5f5b",deep:"#163f3c",highlight:"#d39a5b"},          // Corvane Capital teal and copper
 };
 /** Plate width on every building; depth follows the exterior's footprint. */
 export const TOWER_W=22;

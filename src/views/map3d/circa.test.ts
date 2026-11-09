@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
+import {CITY_SCALE,scaleFootprint} from './cityScale';
 import {CIRCA,circaEntrance,circaParts,circaPieceCount,circaScreenPath} from './circaPlan';
 import {financialDimensions} from './financialArchitecture';
 import {financialBrand} from './financialBrands';
@@ -32,8 +33,9 @@ describe('Circa twin towers',()=>{
  });
 
  it('keeps every part inside its pick box and under the roof envelope',()=>{
+  // The map draws Circa narrowed in plan to the district's scale (CircaTowers), so check what it draws.
   const height=9,parts=circaParts(height,palette),box=financialDimensions('circa');
-  for(const [kind,list]of Object.entries(parts))for(const p of list){
+  for(const [kind,designed]of Object.entries(parts))for(const p of scaleFootprint(designed,CITY_SCALE.financial.footprint)){
    expect([...p.p,...p.s].every(Number.isFinite),kind).toBe(true);expect(p.s.every(n=>n>0),kind).toBe(true);
    const r=p.r??0,radius=kind==='leaves'?1:.5,rx=(Math.abs(Math.cos(r))*p.s[0]+Math.abs(Math.sin(r))*p.s[2])*radius,rz=(Math.abs(Math.sin(r))*p.s[0]+Math.abs(Math.cos(r))*p.s[2])*radius;
    expect(Math.abs(p.p[0])-rx,kind).toBeGreaterThanOrEqual(-box.w/2-.4);
@@ -44,7 +46,9 @@ describe('Circa twin towers',()=>{
   }
   // The LED band wraps all four podium faces and closes on itself.
   const screen=circaScreenPath(),P=CIRCA.podium;
-  for(const [x,z]of screen){expect(Math.abs(x)).toBeLessThanOrEqual(box.w/2);expect(Math.abs(z)).toBeLessThanOrEqual(box.d/2);expect(Math.abs(x)>P.w/2||Math.abs(z)>P.d/2).toBe(true);}
+  // The band is drawn at the designed size and narrowed in plan with the podium (CircaTowers).
+  const k=CITY_SCALE.financial.footprint;
+  for(const [x,z]of screen){expect(Math.abs(x)*k).toBeLessThanOrEqual(box.w/2);expect(Math.abs(z)*k).toBeLessThanOrEqual(box.d/2);expect(Math.abs(x)>P.w/2||Math.abs(z)>P.d/2).toBe(true);}
   expect(Math.max(...screen.map(p=>p[0]))).toBeGreaterThan(P.w/2);expect(Math.min(...screen.map(p=>p[0]))).toBeLessThan(-P.w/2);
   expect(Math.max(...screen.map(p=>p[1]))).toBeGreaterThan(P.d/2);expect(Math.min(...screen.map(p=>p[1]))).toBeLessThan(-P.d/2);
   expect(screen[0][0]).toBeCloseTo(screen.at(-1)![0]);expect(screen[0][1]).toBeCloseTo(screen.at(-1)![1]);

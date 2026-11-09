@@ -1,32 +1,50 @@
 import type {Inst} from './models';
 import {financialBrand} from './financialBrands';
 import {CIRCA} from './circaPlan';
+import {CITY_SCALE,scaleFootprint} from './cityScale';
 
 /** A stylized vertical scale, not a geospatial survey. HQ-relative minimums remain in force. */
 export const FINANCIAL_METRES_PER_UNIT=18;
 export const WELLS_FARGO_REFERENCE_METRES=235;
 export const BALCONY={projection:.44,railHeight:.22,gardenEvery:5,walkClearance:.32} as const;
-export function financialDimensions(id:string){
+/** Footprints as designed, before the district's map scale (CITY_SCALE.financial.footprint). Facade parts are drawn at this size. */
+function designDimensions(id:string){
  const architecture=financialBrand(id)?.architecture;
- if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,w:CIRCA.podium.w+.7,d:CIRCA.podium.d+.7,top:CIRCA.crown};
+ if(architecture==='twin')return {width:CIRCA.podium.w,depth:CIRCA.podium.d,projection:0,margin:.7,top:CIRCA.crown};
  const width=architecture==='hotel'||architecture==='bevelled'?3.6:architecture?3.4:3;
  const depth=architecture?2.8:2.6,projection=architecture==='biophilic'?BALCONY.projection:0;
- return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+(architecture?.7:.5),depth+projection*2+.12),top:architecture?1.1:1.2};
+ return {width,depth,projection,margin:architecture?.7:.5,top:architecture?1.1:1.2};
+}
+/**
+ * A building's footprint on the map: the designed plan narrowed by CITY_SCALE.financial.footprint. `w`/`d` add the
+ * plinth (a fixed margin, so the walk round the building stays the same width). Interiors use only the width:depth ratio.
+ */
+export function financialDimensions(id:string){
+ const k=CITY_SCALE.financial.footprint,{width:dw,depth:dd,projection:dp,margin,top}=designDimensions(id);
+ const width=dw*k,depth=dd*k,projection=dp*k;
+ if(financialBrand(id)?.architecture==='twin')return {width,depth,projection,w:width+margin,d:depth+margin,top};
+ return {width,depth,projection,w:Math.max(width+.5,width+projection*2+.12),d:Math.max(depth+margin,depth+projection*2+.12),top};
 }
 /** Circa is the district's tallest: its main roof clears the Wells Fargo-scaled tower's roof by CIRCA.lead. */
 export function financialHeight(id:string,reference:number,rise:number){
  const wellsFargo=WELLS_FARGO_REFERENCE_METRES/FINANCIAL_METRES_PER_UNIT;
- return Math.max(reference*rise,id==='records'?wellsFargo:id==='circa'?wellsFargo+CIRCA.lead:0);
+ // The district's map scale lowers every tower by the same share, so the order of heights is kept.
+ return Math.max(reference*rise,id==='records'?wellsFargo:id==='circa'?wellsFargo+CIRCA.lead:0)*CITY_SCALE.financial.height;
 }
 export const financialSignLevel=(id:string,height:number)=>financialBrand(id)?.architecture==='deco'?height*.5:height;
 export interface TowerPalette{ivory:string;green:string;gold:string}
 export interface ArchitecturePlan{solid:Inst[];glass:Inst[];clearGlass:Inst[];tintedGlass:Inst[];glow:Inst[];bevelled:Inst[];leaves:Inst[];trees:{x:number;y:number;z:number;floor:number}[];balconies:{y:number;innerW:number;innerD:number;outerW:number;outerD:number;garden:boolean}[]}
-/** Local coordinates, bases at y=0. Rendering, bounds and clearance tests share dimensions. */
+/** Local coordinates, bases at y=0. Drawn at the designed footprint, then narrowed to financialDimensions in plan only. */
 export function financialArchitecture(id:string,height:number,palette:TowerPalette):ArchitecturePlan{
+ const plan=designedArchitecture(id,height,palette),k=CITY_SCALE.financial.footprint;
+ return {solid:scaleFootprint(plan.solid,k),glass:scaleFootprint(plan.glass,k),clearGlass:scaleFootprint(plan.clearGlass,k),tintedGlass:scaleFootprint(plan.tintedGlass,k),glow:scaleFootprint(plan.glow,k),bevelled:scaleFootprint(plan.bevelled,k),leaves:scaleFootprint(plan.leaves,k),
+  trees:plan.trees.map(t=>({...t,x:t.x*k,z:t.z*k})),balconies:plan.balconies.map(b=>({...b,innerW:b.innerW*k,innerD:b.innerD*k,outerW:b.outerW*k,outerD:b.outerD*k}))};
+}
+function designedArchitecture(id:string,height:number,palette:TowerPalette):ArchitecturePlan{
  const solid:Inst[]=[],glass:Inst[]=[],clearGlass:Inst[]=[],tintedGlass:Inst[]=[],glow:Inst[]=[],bevelled:Inst[]=[],leaves:Inst[]=[],trees:ArchitecturePlan['trees']=[],balconies:ArchitecturePlan['balconies']=[];
  const out={solid,glass,clearGlass,tintedGlass,glow,bevelled,leaves,trees,balconies},brand=financialBrand(id);
  if(!brand?.architecture||brand.architecture==='twin')return out;
- const {width:w,depth:d}=financialDimensions(id),{body,trim,accent}=brand;
+ const {width:w,depth:d}=designDimensions(id),{body,trim,accent}=brand;
  const box=(target:Inst[],x:number,y:number,z:number,w:number,h:number,d:number,c:string,r=0)=>target.push({p:[x,y,z],s:[w,h,d],c,r});
  const slab=(y:number,ww:number,dd:number,c=trim,h=.045)=>box(solid,0,y,0,ww,h,dd,c);
  const tree=(x:number,y:number,z:number,floor:number)=>{

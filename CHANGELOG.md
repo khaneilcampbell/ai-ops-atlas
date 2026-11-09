@@ -4,6 +4,10 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)
+- 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
+- 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).
+- 2026-11-09 · Two Financial District towers have new original names: Benjaire Finance is now Corvane Capital, a business finance house with its own drawn logo, and American Express is now Ellery Budget Center, a plum life-management building. Old names still work in search (#299)
+- 2026-11-09 · Financial District buildings are smaller on the map so they fit with the rest of the city: a fifth fewer floors and a fifth narrower, same designs, same spots, same interiors (#298)
 - 2026-11-09 · The 3D map does about a fifth less drawing work and uses 14% less graphics memory, with the same look: trees and bushes draw a lighter shape when the whole city is in view, and tower shapes store their lighting data more compactly (#294)
 - 2026-11-09 · Added Atlas Commons beside Marketplace with a pond loop, two footbridges, garden pavilion and seating; Service Desk stays in place (#295)
 - 2026-11-09 · Behind the scenes only: the screenshot check has fresh reference pictures and can re-check just a few screens on one machine, so pull requests stop showing false red marks from old pictures (#290)

@@ -1,3 +1,5 @@
+import {StationFerrisWheel} from "./StationFerrisWheel";
+import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
@@ -1135,6 +1137,7 @@ function World({
       <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
+      {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}

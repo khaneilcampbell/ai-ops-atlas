@@ -1,5 +1,6 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
+import * as THREE from 'three';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,TERRACE_H,type Rect} from './scene';
@@ -104,5 +105,15 @@ describe('Benjaire Marketing Agency',()=>{
   const v=buildScene(layoutMap(catalog,[],g)),b=v.agency;if(!b)return;
   for(const r of b.land)for(const o of v.land.filter(l=>!b.land.includes(l)&&l.w*l.d>=4))expect(overlap(r,o,1e-6)).toBe(false);
   for(const t of v.towers)expect(overlap({x:b.x,z:b.z,w:b.w,d:b.d},{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size})).toBe(false);
+ });
+ it('never draws two materials on the same plane, so nothing flickers in the depth buffer',()=>{
+  // KC, 2026-11-09: the slot's copper linings sat exactly on its cream walls and shimmered.
+  const tris=(g:THREE.BufferGeometry)=>{const p=g.getAttribute('position'),out:THREE.Triangle[]=[];for(let i=0;i<p.count;i+=3){const t=new THREE.Triangle(new THREE.Vector3().fromBufferAttribute(p,i),new THREE.Vector3().fromBufferAttribute(p,i+1),new THREE.Vector3().fromBufferAttribute(p,i+2));if(t.getArea()>1e-6)out.push(t);}return out;};
+  const geo=agencyGeometry(),names=['shell','copper','glass'] as const,hits:string[]=[],plane=new THREE.Plane(),n=new THREE.Vector3(),c=new THREE.Vector3(),q=new THREE.Vector3();
+  for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){const A=tris(geo[names[i]]);
+   for(const b of tris(geo[names[j]])){b.getMidpoint(c);b.getNormal(n);
+    for(const a of A){a.getPlane(plane);if(Math.abs(plane.normal.dot(n))<.999||Math.abs(plane.distanceToPoint(c))>.004)continue;
+     if(a.containsPoint(plane.projectPoint(c,q))){hits.push(`${names[i]}/${names[j]} at ${c.toArray().map(v=>v.toFixed(2)).join(',')}`);break;}}}}
+  expect(hits).toEqual([]);
  });
 });

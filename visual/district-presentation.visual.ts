@@ -13,7 +13,7 @@ test('grouping preserves city geometry and camera; labels and controls stay cons
  });
  await expect(page.locator('.map-view-context')).toHaveCount(0);
  // Financial tower names follow the same overview rule as project towers.
- for(const name of ['Halden Trust','American Express','Bayvale Bank','Robin Exchange','Atlas HQ'])await expect(page.locator('.m3-plaque',{hasText:name}).first()).toHaveCount(1);
+ for(const name of ['Halden Trust','Ellery Budget Center','Bayvale Bank','Robin Exchange','Atlas HQ'])await expect(page.locator('.m3-plaque',{hasText:name}).first()).toHaveCount(1);
  const baseline=await scene();mkdirSync('artifacts/district-presentation',{recursive:true});
  for(const mode of ['none','status','tag','district']){
   await page.getByRole('combobox',{name:'Group projects',exact:true}).selectOption(mode);await settle(page,2);
