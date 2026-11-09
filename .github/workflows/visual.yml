@@ -1,7 +1,10 @@
 name: Visual checks
 
-# Screenshots of the map, office and Mission Control compared with visual/baselines/ci.
-# Not a required check: it runs only when a pull request touches what it draws, or by hand.
+# Screenshots of the map, office and Mission Control.
+# Not a required check. On a pull request it runs a quick check on one runner: the main views and
+# the header, with every test's behaviour checked but screenshots only saved (not compared), so an
+# intended design change can't turn it red. The screenshots are in the run's visual-results-1
+# artifact. The whole set, compared pixel by pixel with visual/baselines/ci, runs by hand.
 on:
   pull_request:
     paths:
@@ -29,7 +32,7 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual checks (screenshots ${{ matrix.shard }}/6)
+    name: ${{ github.event_name == 'pull_request' && 'Visual checks (quick)' || format('Visual checks (screenshots {0}/6)', matrix.shard) }}
     runs-on: ubuntu-latest
     # The whole set (about 110 tests, software WebGL) no longer fits in 45 minutes on one runner,
     # so it runs as 6 shards side by side, split by spec file. Each shard takes roughly a sixth.
@@ -38,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6]') }}
+        shard: ${{ fromJSON((github.event_name == 'pull_request' || inputs.specs) && '[1]' || '[1, 2, 3, 4, 5, 6]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -51,6 +54,11 @@ jobs:
         id: mode
         run: |
           if [ "${{ inputs.update }}" = "true" ]; then echo "record=1" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Pixels move on purpose in most pull requests; saving instead of comparing keeps an
+            # intended change from failing the check. Clicks, counts and layout asserts still run.
+            echo "record=1" >> "$GITHUB_OUTPUT"
+            echo "::notice::Quick check: screenshots are saved to the visual-results-1 artifact, not compared."
           elif ! ls visual/baselines/ci/*.png >/dev/null 2>&1; then
             echo "record=1" >> "$GITHUB_OUTPUT"
             echo "::notice::No CI baselines yet. Recording screenshots only; run this workflow by hand with 'update' to save them."
@@ -61,13 +69,14 @@ jobs:
           SPECS: ${{ inputs.specs }}
         run: |
           if [ -n "$SPECS" ]; then echo "args=$SPECS" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then echo "args=views.visual.ts header.visual.ts" >> "$GITHUB_OUTPUT";
           else echo "args=--shard=${{ matrix.shard }}/6" >> "$GITHUB_OUTPUT"; fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
         env:
           ARGS: ${{ steps.pick.outputs.args }}
         run: npx playwright test -c visual $ARGS
-      - name: Record baselines
+      - name: Save screenshots (no comparison)
         if: steps.mode.outputs.record == '1'
         env:
           ARGS: ${{ steps.pick.outputs.args }}
