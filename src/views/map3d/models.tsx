@@ -10,6 +10,7 @@ import * as THREE from "three";
 import type { Health } from "../../lib/derive";
 import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
+import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
@@ -65,6 +66,15 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
     m.computeBoundingSphere();
     m.computeBoundingBox();
   }, [items]);
+  // Small round shapes switch to a lighter version while every one of them is a few pixels across.
+  const far = farDetailOf(geometry);
+  const radius = useMemo(() => (far ? items.reduce((r, it) => Math.max(r, ...it.s.map(Math.abs)), 0) : 0), [far, items]);
+  useFrame(({ camera, gl }) => {
+    const m = ref.current;
+    if (!far || !m) return;
+    const next = pickDetail(m, geometry, far, radius, camera, gl);
+    if (m.geometry !== next) m.geometry = next;
+  });
   if (!items.length) return null;
   const key = (e: ThreeEvent<PointerEvent | MouseEvent>) => (e.instanceId !== undefined ? pick?.keys[e.instanceId] : undefined);
   return (
@@ -130,8 +140,8 @@ function hipRoof() {
 }
 
 export function useGeometries() {
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const kit = {
       box: lifted(new THREE.BoxGeometry(1, 1, 1)),
       gable: gableSlopes(),
       gableEnds: gableEnds(),
@@ -146,9 +156,12 @@ export function useGeometries() {
       // Tiny spheres (heads, lamp globes) a few pixels across: same look, fewer than 60% of the triangles.
       bead: new THREE.SphereGeometry(1, 8, 6),
       plane: new THREE.PlaneGeometry(1, 1),
-    }),
-    [],
-  );
+    };
+    // Far shapes for the overview (see farDetail.ts): canopies 180 -> 80 triangles, balls 140 -> 80.
+    setFarDetail(kit.blob, new THREE.IcosahedronGeometry(1, 1));
+    setFarDetail(kit.ball, kit.bead);
+    return kit;
+  }, []);
 }
 
 /** A textured material whose windows light up at night. */
