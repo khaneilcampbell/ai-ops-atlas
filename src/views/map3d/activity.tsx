@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { isRibbonTower } from "./ribbonTowerPlan";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { useFrame } from "@react-three/fiber";
@@ -131,3 +131,86 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
 }
 
 const noRaycast = () => null;
+
+/** How strongly a shaped building's own surfaces light up at full glow. */
+const WHOLE_EMISSIVE = 0.55;
+
+type Lit = THREE.Material & { emissive: THREE.Color };
+const hasEmissive = (mat: THREE.Material): mat is Lit => (mat as Partial<Lit>).emissive instanceof THREE.Color;
+/** Original material -> this building's own copy, with the original's emissive to add onto. */
+export type GlowCopies = Map<THREE.Material, { copy: Lit; base: THREE.Color }>;
+
+function eachMaterial(root: THREE.Object3D, fn: (mat: THREE.Material, put: (m: THREE.Material) => void) => void) {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = mesh.material;
+    if (Array.isArray(mats)) mats.forEach((mat, i) => fn(mat, (m) => (mats[i] = m)));
+    else fn(mats, (m) => (mesh.material = m));
+  });
+}
+
+/**
+ * Gives every mesh under root its own copy of each lit material and sets the copies' emissive to
+ * the original's plus glow. Shared materials are never changed, so other buildings stay as they are.
+ */
+export function lightUp(root: THREE.Object3D, copies: GlowCopies, glow: THREE.Color) {
+  const mine = new Set<THREE.Material>([...copies.values()].map((c) => c.copy));
+  eachMaterial(root, (mat, put) => {
+    if (mine.has(mat) || !hasEmissive(mat)) return;
+    // A re-render (night toggle, selection) can hand the mesh its shared material again.
+    let c = copies.get(mat);
+    if (!c) {
+      c = { copy: mat.clone() as Lit, base: mat.emissive.clone() };
+      copies.set(mat, c);
+      mine.add(c.copy);
+    }
+    put(c.copy);
+  });
+  copies.forEach(({ copy, base }) => copy.emissive.copy(base).add(glow));
+}
+
+/** Hands every mesh its shared material back and frees the copies. */
+export function restore(root: THREE.Object3D, copies: GlowCopies) {
+  const back = new Map<THREE.Material, THREE.Material>([...copies].map(([orig, c]) => [c.copy, orig]));
+  eachMaterial(root, (mat, put) => {
+    const orig = back.get(mat);
+    if (orig) put(orig);
+  });
+  copies.forEach((c) => c.copy.dispose());
+  copies.clear();
+}
+
+/**
+ * Lights a shaped building as a whole (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, the
+ * Intelligence Hub, the Portfolio Site), which a box-shaped shell would hide. While its work is
+ * running, completed or failed, every surface of the building takes the state's color through its
+ * own emissive channel, so no geometry, light or draw call is added. Materials are copied for this
+ * building only while it glows, and the originals go back once it has faded out.
+ */
+export function WholeBuildingGlow({ state, reduced, children }: { state: Illumination; reduced: boolean; children: ReactNode }) {
+  const root = useRef<THREE.Group>(null);
+  const level = useRef(0);
+  const color = useMemo(() => new THREE.Color(), []);
+  const target = useMemo(() => new THREE.Color(), []);
+  const glow = useMemo(() => new THREE.Color(), []);
+  const copies = useRef<GlowCopies>(new Map());
+
+  useFrame(({ clock }, dt) => {
+    const on = state !== "idle";
+    const goal = on ? 1 : 0;
+    level.current = reduced ? goal : THREE.MathUtils.clamp(level.current + Math.sign(goal - level.current) * Math.min(dt, 0.1) / FADE, 0, 1);
+    if (!root.current) return;
+    if (level.current <= 0.001) {
+      if (copies.current.size) restore(root.current, copies.current);
+      return;
+    }
+    if (on) target.set(COLOR[state as Exclude<Illumination, "idle">]);
+    color.lerp(target, reduced ? 1 : Math.min(1, dt * 2.5));
+    const e = level.current * level.current * (3 - 2 * level.current);
+    const breath = state === "running" && !reduced ? 0.8 + 0.2 * Math.sin(clock.elapsedTime * 1.8) : 1;
+    lightUp(root.current, copies.current, glow.copy(color).multiplyScalar(e * breath * WHOLE_EMISSIVE));
+  });
+
+  return <group ref={root}>{children}</group>;
+}
