@@ -4,6 +4,8 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-09 · The round bushes along the sidewalk by Atlas Airport are now palm trees (#309)
+- 2026-11-09 · Removed the low walls on the east, street and station sides of the Financial District, so it opens straight onto the land next door (#304)
+- 2026-11-09 · API Usage is now an AI usage command center: it ranks your agents by cost and tokens, shows cache hits and which models each one uses, lists where to cut usage, and now counts the GitHub agents (Merge Flow, Design Consistency, Opportunity Scout) your ChatGPT Codex and Claude Code sessions on this Mac, and Claude or ChatGPT chat exports you import too (#308)
 - 2026-11-09 · Behind the scenes: recording new CI screenshots no longer lets one part of the run overwrite another part's fresh screenshots (#206)
 - 2026-11-09 · Streets by the airport and Atlas Stadium now show as one road, without doubled lane lines, overlapping crossings or a footpath painted down the middle; every junction uses the same zebra crossing, and no tree, bush, bollard or street lamp stands in a street (#305)
 - 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)

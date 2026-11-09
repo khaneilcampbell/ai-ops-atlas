@@ -105,6 +105,9 @@ jobs:
         id: fix
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Token counts only, to Atlas's API Usage tab (add-only key).
+          ATLAS_FEED_URL: ${{ secrets.ATLAS_FEED_URL }}
+          ATLAS_FEED_TOKEN: ${{ secrets.ATLAS_FEED_TOKEN }}
         run: |
           py=python3; [ -x "$RUNNER_TEMP/design/bin/python" ] && py="$RUNNER_TEMP/design/bin/python"
           "$py" ops/design-consistency/design.py fix

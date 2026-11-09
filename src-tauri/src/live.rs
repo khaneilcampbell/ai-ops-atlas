@@ -11,6 +11,7 @@ pub const FEED_PATH: &str = "/api/hooks/feed";
 pub const PUBLISH_PATH: &str = "/api/hooks/atlas";
 pub const REPORTS_PATH: &str = "/api/hooks/reports";
 pub const INQUIRIES_PATH: &str = "/api/hooks/inquiries";
+pub const AGENT_USAGE_PATH: &str = "/api/hooks/usage";
 pub const INQUIRY_REPLY_PATH: &str = "/api/hooks/inquiries/reply";
 pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
@@ -118,6 +119,33 @@ pub async fn live_inquiries(
             .await
             .map(Some)
             .map_err(|e| format!("The site's inquiries weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Model usage the GitHub-run agents reported (server/agentUsage.ts), or `None` when website sync
+/// isn't set up. Numbers only: token counts, model, agent and estimated cost.
+#[tauri::command]
+pub async fn live_agent_usage(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    // Same sync URL and key as the feed; the key only goes in the header.
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{AGENT_USAGE_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's agent usage wasn't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
