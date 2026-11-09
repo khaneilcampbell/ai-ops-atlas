@@ -1,3 +1,4 @@
+import {galleriaCar,type GalleriaCarKind} from './galleriaFleet';
 import type {Pt,Pt3} from './roads';
 import type {Scene3D} from './scene';
 import {GALLERIA_NOTCH,insidePoly} from './galleriaPlan';
@@ -36,11 +37,11 @@ export interface GalleriaWalker {route:CommuterRoute;phase:number;pace:number;la
  * `u` points out of the building, `p` across it toward the entry side.
  */
 export interface GalleriaPortal {x:number;z:number;u:Pt;p:Pt;entry:Pt;exit:Pt}
-export interface GalleriaDriver {walk:CommuterRoute;drive:CommuterRoute;car:{x:number;z:number;yaw:number;c:string};offset:number;wait:number;
+export interface GalleriaDriver {walk:CommuterRoute;drive:CommuterRoute;car:{x:number;z:number;yaw:number;c:string;kind:GalleriaCarKind};offset:number;wait:number;
  /** Backs out of a bay into the aisle (the car park behind the building) rather than pulling straight out (the street court). */
  backOut:boolean}
 /** Where the lot is too shallow for the car park behind the building: a row of bays each side of the walk, facing the street. */
-export interface GalleriaCourt {pad:{x:number;z:number;w:number;d:number}[];stripes:Pt[];cars:{x:number;z:number;c:string}[]}
+export interface GalleriaCourt {pad:{x:number;z:number;w:number;d:number}[];stripes:Pt[];cars:{x:number;z:number;c:string;kind:GalleriaCarKind}[]}
 /** An asphalt drive from a car park to the street (KC, 2026-11-08), centre line a→b; b is on the street's centre line. */
 export interface GalleriaDriveway {a:Pt;b:Pt}
 export interface GalleriaLife {portal:GalleriaPortal;walk:Pt[];lamps:GalleriaLamp[];walkers:GalleriaWalker[];drivers:GalleriaDriver[];court?:GalleriaCourt;driveways:GalleriaDriveway[];
@@ -122,7 +123,6 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
  for(let i=0;i<L.strollers;i++)walkers.push({route:stroll,phase:i*stroll.length/L.strollers/(L.pace*.8),pace:L.pace*.8,lane:i%2?.08:-.08,loop:true,rest:0});
  // Drivers: out of the entrance, down to their car, then the car backs into the aisle and drives east off the lot.
  const drivers:GalleriaDriver[]=[],driveways:GalleriaDriveway[]=[];let court:GalleriaCourt|undefined;
- const COLORS=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'];
  const farEnd=(q:Pt3,seg:number):Pt3|undefined=>{const sg=graph.segments[seg];if(!sg)return;const [a,b]=sg.map(n=>graph.nodes[n]);return dist([a[0],a[2]],[q[0],q[2]])>dist([b[0],b[2]],[q[0],q[2]])?[a[0],0,a[2]]:[b[0],0,b[2]];};
  if(!g.parking&&walk.length===3){
   // Bays across the strip between the lot and the street, nose to the street, clear of the walk, trees and lamps.
@@ -142,14 +142,14 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
     court.stripes.push([cx,z1]);
    }
    bays.forEach(([x,z],k)=>{
-    if(k%2)return;const c=COLORS[k%4];
-    if(drivers.length<3&&k%4===0){
+    if(k%2)return;const {kind,c}=galleriaCar(k/2);
+    if(drivers.length<5&&k%4===0){
      const door:Pt=[x,z+(z<e.z?.2:-.2)],walkPts:Pt[]=[...outPath,[east,e.z],[east+.1,door[1]],door];
      // Forward into the lane, along it to this half's driveway, out along the driveway and onto the street.
      const half=exits.find(h=>z>=h.z0-.01&&z<=h.z1+.01)??exits[0],ex=nearestStreet(graph,[sx,0,half.z]);
      const drivePts:Pt3[]=[[x,0,z],[lane,0,z],[lane,0,half.z],ex.q];const far=farEnd(ex.q,ex.seg);if(far)drivePts.push(far);
-     drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x,z,yaw:Math.PI/2,c},offset:drivers.length*23,wait:28+drivers.length*6,backOut:false});
-    }else court!.cars.push({x,z,c});
+     drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x,z,yaw:Math.PI/2,c,kind},offset:drivers.length*23,wait:28+drivers.length*6,backOut:false});
+    }else court!.cars.push({x,z,c,kind});
    });
   }
  }
@@ -162,7 +162,7 @@ export function planGalleriaLife(scene:Scene3D):GalleriaLife|undefined{
    const walkPts:Pt[]=[...outPath,[J[0],f.z+f.d+.15],[door[0],f.z+f.d+.15],door];
    const drivePts:Pt3[]=[[c.x,0,c.z],[c.x,0,pk.aisle],[out[0],0,out[1]]];
    if(exitStreet.d<L.maxStreet){drivePts.push(exitStreet.q);const far=farEnd(exitStreet.q,exitStreet.seg);if(far)drivePts.push(far);}
-   drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x:c.x,z:c.z,yaw:0,c:c.c},offset:i*23,wait:28+i*6,backOut:true});
+   drivers.push({walk:commuterRoute(walkPts.map(flat)),drive:commuterRoute(drivePts),car:{x:c.x,z:c.z,yaw:c.yaw,c:c.c,kind:c.kind},offset:i*23,wait:28+i*6,backOut:true});
   });
  }
  // Lamps step off the driveways, and out of the car park and the building where the walk runs beside them.
@@ -188,6 +188,8 @@ export function walkerAt(w:GalleriaWalker,t:number):LifePose{
 }
 
 /** One driver's whole cycle: walk out, drive off, away, drive back, park, walk in, inside. */
+/** Lane offset share along the bay's own stretch: none in the bay (its neighbours are parked close), full by the aisle. */
+const ease=(dd:number,first:number)=>first>0?Math.min(1,Math.max(0,dd/first)):1;
 export function driverAt(d:GalleriaDriver,t:number):{person:LifePose;car:LifePose&{moving?:boolean}}{
  const L=GALLERIA_LIFE,walk=d.walk.length/L.pace,drive=d.drive.length/L.drive,inside=d.wait;
  const period=2*walk+2*drive+d.wait+inside,u=((t+d.offset)%period+period)%period;
@@ -197,9 +199,9 @@ export function driverAt(d:GalleriaDriver,t:number):{person:LifePose;car:LifePos
  let s=u;
  if(s<walk)return {person:at(d.walk,s*L.pace),car:parked};s-=walk;
  // Backing out of the bay faces the car the way it parked; once in the aisle it drives forwards.
- if(s<drive){const dd=s*L.drive,first=d.drive.lengths[1]??0;return {person:{visible:false},car:{...at(d.drive,dd,d.backOut&&dd<first,L.lane),moving:true}};}s-=drive;
+ if(s<drive){const dd=s*L.drive,first=d.drive.lengths[1]??0;return {person:{visible:false},car:{...at(d.drive,dd,d.backOut&&dd<first,L.lane*ease(dd,first)),moving:true}};}s-=drive;
  if(s<d.wait)return {person:{visible:false},car:{visible:false}};s-=d.wait;
- if(s<drive){const dd=d.drive.length-s*L.drive,first=d.drive.lengths[1]??0;return {person:{visible:false},car:{...at(d.drive,dd,dd>first,-L.lane),moving:true}};}s-=drive;
+ if(s<drive){const dd=d.drive.length-s*L.drive,first=d.drive.lengths[1]??0;return {person:{visible:false},car:{...at(d.drive,dd,dd>first,-L.lane*ease(dd,first)),moving:true}};}s-=drive;
  if(s<walk)return {person:at(d.walk,d.walk.length-s*L.pace,true),car:parked};
  return {person:{visible:false},car:parked};
 }

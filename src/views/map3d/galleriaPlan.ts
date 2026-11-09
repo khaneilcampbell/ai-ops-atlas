@@ -1,3 +1,4 @@
+import {carBoxes,galleriaCar,type GalleriaCarKind} from './galleriaFleet';
 import type {Point,Rect,Tree} from './scene';
 import type {MallPlan} from './mallPlan';
 import type {Pt} from './roads';
@@ -229,7 +230,7 @@ export interface GalleriaPlan {
  boxes:GalleriaBox[];rounds:GalleriaBox[];
  trees:Tree[];bushes:Point[];
  /** The outdoor car park, its drive aisle, and the parked cars that drivers take out (drawn by galleriaLife, not as boxes). */
- parking?:{area:Rect;aisle:number;driven:{x:number;z:number;c:string}[]};
+ parking?:{area:Rect;aisle:number;driven:{x:number;z:number;c:string;kind:GalleriaCarKind;yaw:number}[]};
 }
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
@@ -329,11 +330,11 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
    const zr=r===0?pz0+.1+rowD/2:pz1-.1-rowD/2;
    for(let x=px0+.15,k=0;x<=px1-.1;x+=bay,k++){
     boxes.push({x,z:zr,w:.025,d:rowD,h:.004,y:.012,c:'#f3efe4'});
-    // A few parked cars, deterministic.
-    if(k%3===1&&x+bay<px1){const c=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'][k%4];
-     // Every third car in the first row belongs to a driver who comes and goes (up to three).
-     if(r===0&&cars++%3===0&&parking.driven.length<3)parking.driven.push({x:x+bay/2,z:zr,c});
-     else boxes.push({x:x+bay/2,z:zr,w:.2,d:.38,h:.1,y:.012,c},{x:x+bay/2,z:zr,w:.17,d:.2,h:.07,y:.11,c:'#26323a'});}
+    // Two bays in three are taken, by a deterministic mix of the fleet, nose in toward the building.
+    if(k%3!==0&&x+bay<px1){const {kind,c}=galleriaCar(cars),yaw=r===0?Math.PI:0;
+     // Every third car in the first row belongs to a driver who comes and goes (up to five).
+     if(r===0&&cars++%3===0&&parking.driven.length<5)parking.driven.push({x:x+bay/2,z:zr,c,kind,yaw});
+     else{if(r!==0)cars++;for(const b of carBoxes(kind,c,[x+bay/2,zr],yaw,.012))boxes.push(b);}}
    }
   }
  }

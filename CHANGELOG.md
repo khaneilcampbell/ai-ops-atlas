@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-09 · Atlas Galleria now has pavement all the way round, the car park moved out to make room, and the ramp beside the car park is gone (#301)
+- 2026-11-09 · Atlas Galleria now has pavement all the way round, the car park moved out to make room,, the ramp beside the car park is gone, and the car park now holds coupes, luxury SUVs, supercars, pickups, taxis, a limo and a concept truck, with five drivers coming and going (#301)
 - 2026-11-09 · Financial District buildings are smaller on the map so they fit with the rest of the city: a fifth fewer floors and a fifth narrower, same designs, same spots, same interiors (#298)
 - 2026-11-09 · The 3D map does about a fifth less drawing work and uses 14% less graphics memory, with the same look: trees and bushes draw a lighter shape when the whole city is in view, and tower shapes store their lighting data more compactly (#294)
 - 2026-11-09 · Added Atlas Commons beside Marketplace with a pond loop, two footbridges, garden pavilion and seating; Service Desk stays in place (#295)
