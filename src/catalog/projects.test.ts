@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseManifest } from "./parse";
 import type { ManifestIssue } from "./types";
+import { catalog as bundled } from "./index";
 import { projectRepositories } from "./projects";
 import { layoutMap } from "../views/mapLayout";
 import { buildScene } from "../views/map3d/scene";
@@ -60,4 +61,14 @@ describe("projects and linked repository resources", () => {
     expect(issues).toEqual([]);
     expect(projectRepositories(project)).toEqual(["me/default"]);
   });
+});
+
+it("shares Atlas resources without duplicating Skyline or reviving a retired cached repository", () => {
+  const skyline = bundled.projects.find(p => p.id === "skyline")!;
+  expect(skyline.repository).toBe("khaneilcampbell/ai-ops-atlas");
+  expect(bundled.agents.find(a => a.id === "skyline-inquiry-assistant")).toMatchObject({projectId:"skyline", repository:skyline.repository, status:"idle"});
+  const rows = repoRows(bundled, {}, ["khaneilcampbell/skyline"]);
+  expect(rows.filter(r => r.name === skyline.repository)).toHaveLength(1);
+  expect(rows.find(r => r.name === skyline.repository)?.projects.map(p => p.id)).toEqual(expect.arrayContaining(["ai-ops-atlas", "skyline"]));
+  expect(rows.some(r => r.name === "khaneilcampbell/skyline")).toBe(false);
 });

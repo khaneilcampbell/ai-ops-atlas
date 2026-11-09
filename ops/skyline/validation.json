@@ -1,0 +1,54 @@
+{
+  "scope": "Local validation and execution of exported Code nodes and validation expressions; not an n8n engine run or email delivery test",
+  "checks": [
+    {
+      "name": "No webhook, external request, model node or credentials",
+      "result": "pass"
+    },
+    {
+      "name": "Save is the only successor of record construction; notifications follow Save",
+      "result": "pass"
+    },
+    {
+      "name": "All storage uses dedicated sandbox tables",
+      "result": "pass"
+    },
+    {
+      "name": "Synthetic inquiry passes actual workflow normalization and validation",
+      "result": "pass"
+    },
+    {
+      "name": "Invalid email, short message and honeypot are rejected",
+      "result": "pass"
+    },
+    {
+      "name": "HTML and instruction text stay escaped data in the owner preview",
+      "result": "pass"
+    },
+    {
+      "name": "Acknowledgement is fixed and contains no deadline, booking or action links",
+      "result": "pass"
+    },
+    {
+      "name": "Missing, malformed and low-confidence classifier results route to manual review",
+      "result": "pass"
+    },
+    {
+      "name": "Spam classification suppresses the notification branch",
+      "result": "pass"
+    },
+    {
+      "name": "Both email previews explicitly report not sent",
+      "result": "pass"
+    }
+  ],
+  "pending": [
+    "n8n import and engine execution",
+    "sandbox table persistence",
+    "duplicate submission protection",
+    "live AI classification",
+    "email delivery and retries",
+    "retention",
+    "Atlas runtime telemetry"
+  ]
+}

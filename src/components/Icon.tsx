@@ -25,14 +25,18 @@ const PATHS: Record<string, string> = {
   lock: "M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4",
   pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+  more: "M4.5 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M10.75 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M17 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0",
   sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41",
   rotate: "M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5",
+  // A building in section: the roof lifted off, a floor and a desk inside.
+  cutaway: "M3 10l9-6 9 6M5 13v7h14v-7M5 16h14M10 20v-2h4v2M8 9.5l4-2.7 4 2.7",
   car: "M3 17v-4l2.2-5.2A2 2 0 0 1 7 6.5h10a2 2 0 0 1 1.8 1.3L21 13v4h-2M3 17h2M9 17h6M3 13h18M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
   moon: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z",
   network: "M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4",
   usage: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM15 8.5c-.6-.9-1.7-1.5-3-1.5-1.9 0-3 1-3 2.3 0 3 6 1.7 6 4.7 0 1.3-1.2 2.3-3 2.3-1.4 0-2.6-.6-3.2-1.6M12 5.5V7M12 17v1.5",
   spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 1.7 1.7.8-1.7.8L19 20l-.8-1.7-1.7-.8 1.7-.8z",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  download: "M12 3v12M7 10l5 5 5-5M5 21h14",
 };
 
 export type IconName = keyof typeof PATHS;
@@ -46,14 +50,5 @@ export function Icon({ name, size = 18, className }: { name: IconName; size?: nu
 }
 
 export function AtlasMark({ size = 22 }: { size?: number }) {
-  // Compass rose inside an acorn-like arch: a nod to the reference, drawn for this app.
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 10a8 8 0 0 1 16 0" />
-      <path d="M4 10h16" />
-      <path d="M6 10c0 6 3 10 6 11 3-1 6-5 6-11" />
-      <path d="M12 12.5l1.4 3.1-1.4 2.4-1.4-2.4z" fill="currentColor" stroke="none" />
-      <path d="M12 2v1.6" />
-    </svg>
-  );
+  return <img src="/atlas-orbit.svg" width={size} height={size} alt="" aria-hidden="true" draggable={false} />;
 }

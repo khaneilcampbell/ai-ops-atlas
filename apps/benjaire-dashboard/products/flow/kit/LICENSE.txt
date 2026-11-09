@@ -1,0 +1,9 @@
+Benjaire Flow v1.0 license
+
+You may install and use these workflows and files for one business, and you may modify them freely for that use.
+
+Installing Flow for another business, for example as an agency, consultant or freelancer working for a client, needs a separate license for that business or an agency license. Contact contact@benjaire.com for agency terms.
+
+You may not resell, redistribute, sublicense or publish the kit or substantial parts of it, alone or as part of another template, course or product.
+
+The kit is provided as is, without warranty of any kind. You are responsible for your own accounts, API usage costs, data and compliance with the laws that apply to your business.

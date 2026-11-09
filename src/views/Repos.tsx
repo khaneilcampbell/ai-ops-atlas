@@ -1,3 +1,4 @@
+import { RepositoryNotice } from "../components/RepositoryNotice";
 import { useMemo } from "react";
 import { FilterBar, uniqueOptions } from "../components/Filters";
 import { Icon } from "../components/Icon";
@@ -12,7 +13,7 @@ export function ReposView() {
   const all = useMemo(() => repoRows(catalog, repos, uncataloged), [catalog, repos, uncataloged]);
   const rows = all.filter(
     (r) =>
-      (!filters.project || r.project?.id === filters.project) &&
+      (!filters.project || r.projects.some(p => p.id === filters.project)) &&
       (!filters.language || repoData(r.state)?.language === filters.language) &&
       (!filters.framework || r.agents.some((a) => a.framework === filters.framework)) &&
       (!filters.status || r.agents.some((a) => a.status === filters.status)) &&
@@ -84,7 +85,7 @@ export function ReposView() {
                 <div className="grow">
                   <div className="rname">{r.name.split("/")[1]}</div>
                   <div className="muted small">
-                    {r.name.split("/")[0]} · {r.project?.name ?? "Not in the catalog yet"}
+                    {r.name.split("/")[0]} · {r.projects.map(p => p.name).join(" · ") || "Not in the catalog yet"}
                   </div>
                 </div>
                 {snap && <span className="chip">{snap.visibility}</span>}
@@ -93,15 +94,9 @@ export function ReposView() {
                 {snap?.description ?? r.project?.summary ?? ""}
               </div>
               {r.state?.kind === "error" && (
-                <div className="notice">
-                  <Icon name="alert" size={15} />
-                  <span>
-                    {r.state.message}
-                    {r.state.data ? ` Showing data from ${relative(r.state.data.fetchedAt)}.` : ""}
-                  </span>
-                </div>
+                <RepositoryNotice message={r.state.message} actions={false}/>
               )}
-              {r.state?.kind === "loading" && <div className="muted small">Loading from GitHub…</div>}
+              {!snap && r.state?.kind !== "error" && (refreshing ? <div className="muted small">Checking GitHub…</div> : <RepositoryNotice message="No repository snapshot" actions={false}/>)}
               <div className="commit">
                 <div className="section-title" style={{ marginBottom: 4 }}>
                   Latest commit

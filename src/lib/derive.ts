@@ -134,11 +134,13 @@ export function attentionItems(
       const d = daysSince(last, now);
       // Without a live source, a missing run only means nobody filled in last_run by hand.
       const observed = !!a.observe?.githubWorkflow;
-      // An event-driven agent runs when its event happens, so a quiet stretch is normal.
-      const eventDriven = a.registry?.execution?.triggerType === "event";
+      // An event-driven agent runs when its event happens, and a manual one runs when KC asks,
+      // so a quiet stretch is normal for both.
+      const trigger = a.registry?.execution?.triggerType;
+      const waitsForTrigger = trigger === "event" || trigger === "manual";
       if (d === null) {
         if (observed) items.push({ id: `agent:${a.id}:norun`, severity: "low", title: a.name, detail: "Active, but no run is recorded yet", target });
-      } else if (d > 7 && !eventDriven) {
+      } else if (d > 7 && !waitsForTrigger) {
         items.push({ id: `agent:${a.id}:stale`, severity: "medium", title: a.name, detail: `Active, but last run was ${d} days ago`, target });
       }
     }
@@ -230,7 +232,7 @@ export function projectOf(catalog: Catalog, id: string): Project | undefined {
  * data unavailable (GitHub refused or the repository is private or missing), or not verified
  * yet (still loading, or never synced). `stale` marks data kept from an earlier sync.
  */
-export type Verified = "failing" | "passing" | "no-ci" | "unavailable" | "unverified";
+export type Verified = "failing" | "passing" | "running" | "no-ci" | "unavailable" | "unverified";
 
 export function verifiedState(state: RepoState | undefined): { kind: Verified; label: string; stale: boolean } {
   if (!state || state.kind === "loading") return { kind: "unverified", label: "Not verified yet", stale: false };
@@ -238,7 +240,28 @@ export function verifiedState(state: RepoState | undefined): { kind: Verified; l
   if (!snap) return { kind: "unavailable", label: "GitHub data unavailable", stale: false };
   const stale = state.kind === "error" || state.stale;
   const ci = ciHealth(snap);
-  const kind: Verified = ci.health === "bad" ? "failing" : ci.value === "No workflows" ? "no-ci" : "passing";
+  const kind: Verified = ci.health === "bad" ? "failing" : ci.value === "No workflows" ? "no-ci" : ci.value === "Running" ? "running" : "passing";
   const label = kind === "failing" ? `CI ${ci.value} now` : kind === "no-ci" ? "No CI workflows" : `CI ${ci.value.toLowerCase()}`;
   return { kind, label: stale ? `${label} · last known` : label, stale };
+}
+
+/** Header summary of CI across every tracked repository, from the same checks the map shows. */
+export interface CiSummary {
+  failing: string[];
+  passing: number;
+  checked: number;
+  total: number;
+}
+
+export function ciSummary(repositories: string[], repos: Record<string, RepoState>): CiSummary {
+  const failing: string[] = [];
+  let passing = 0;
+  let checked = 0;
+  for (const name of repositories) {
+    const kind = verifiedState(repos[name]).kind;
+    if (kind === "failing") failing.push(name);
+    if (kind === "passing" || kind === "running") passing++;
+    if (kind === "failing" || kind === "passing" || kind === "running") checked++;
+  }
+  return { failing: failing.sort(), passing, checked, total: repositories.length };
 }

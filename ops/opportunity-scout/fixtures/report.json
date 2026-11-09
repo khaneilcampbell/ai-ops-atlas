@@ -1,0 +1,68 @@
+{
+  "agent": "github-opportunity-scout",
+  "at": "2026-10-30T12:00:00+00:00",
+  "run_url": "https://github.com/khaneilcampbell/ai-ops-atlas/actions/runs/41036504662",
+  "model": "claude-opus-5-5",
+  "cost_usd": 0.0507,
+  "registry": {
+    "projects": 2,
+    "agents": 3
+  },
+  "ideas": [
+    {
+      "title": "Audit service",
+      "mechanism": "service",
+      "customer": "Small shops",
+      "reuses": [
+        "site-audit"
+      ],
+      "days_to_first_dollar": 14,
+      "monthly_cost_usd": 2.5,
+      "risks": "Low demand",
+      "scores": {
+        "revenue": 5,
+        "effort": 3,
+        "cost": 4,
+        "risk": 4
+      },
+      "score": 4.2
+    },
+    {
+      "title": "Cheap",
+      "mechanism": "service",
+      "customer": "Small shops",
+      "reuses": [
+        "site-ci"
+      ],
+      "days_to_first_dollar": 14,
+      "monthly_cost_usd": 2.5,
+      "risks": "Low demand",
+      "scores": {
+        "revenue": 2,
+        "effort": 5,
+        "cost": 5,
+        "risk": 5
+      },
+      "score": 3.8
+    }
+  ],
+  "spec": {
+    "idea": "Audit service",
+    "name": "Audit Seller",
+    "purpose": "Drafts site audit offers",
+    "trigger": "Weekly",
+    "schedule": "Mon 09:00 UTC",
+    "approval_point": "KC approves every offer before it is sent",
+    "inputs": [
+      "Site audit report"
+    ],
+    "outputs": [
+      "Draft offer"
+    ],
+    "monthly_cap_usd": 2.0,
+    "building": "portfolio-site"
+  },
+  "notes": [
+    "\"Audit service\" named 1 item(s) that are not in the registry; they were dropped."
+  ]
+}

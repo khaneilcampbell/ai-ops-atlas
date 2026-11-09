@@ -22,3 +22,8 @@ visual/out/
 __pycache__/
 
 ops/security/glib-regression/target/
+# Design Consistency run files
+design-consistency-*.json
+
+# Private manual Benjaire handoff state and drafts
+.local/benjaire-production/

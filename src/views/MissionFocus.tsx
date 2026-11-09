@@ -6,6 +6,8 @@ import { useIntel } from "../intel/state";
 import type { AttentionItem } from "../lib/derive";
 import { buildRegistry } from "../registry/registry";
 import { useAtlas } from "../state";
+import { FixWithClaude } from "../components/FixWithClaude";
+import { FIX_QUEUE_REPO, type FixRequest } from "../lib/fixWithClaude";
 import "../styles/mission-focus.css";
 
 type Scope = "all" | "high" | "agent" | "repo";
@@ -59,6 +61,13 @@ export function MissionFocus({ attention }: { attention: AttentionItem[] }) {
     if (a.target.kind === "agent") setView("agents");
     select(a.target);
   };
+  /** The repository a fix belongs in: the agent's, the repository itself, or Atlas for manifest problems. */
+  const fixRequest = (a: AttentionItem): FixRequest => {
+    const agent = a.target?.kind === "agent" ? catalog.agents.find((g) => g.id === a.target?.id) : undefined;
+    const repo = a.target?.kind === "repo" ? a.target.id : (agent?.repository ?? FIX_QUEUE_REPO);
+    const kind = a.target?.kind === "agent" ? "Agent needs attention" : a.target ? "Repository needs attention" : "Atlas setting or manifest";
+    return { kind, title: a.title, detail: a.detail, repo, links: [{ label: "Repository", url: `https://github.com/${repo}` }] };
+  };
   const toApprovals = () => {
     const queue = document.getElementById("mission-approvals");
     queue?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -100,7 +109,7 @@ export function MissionFocus({ attention }: { attention: AttentionItem[] }) {
       ) : (
         <ul className="list">
           {(expanded ? filtered : filtered.slice(0, SHOWN)).map((a) => (
-            <li key={a.id}>
+            <li key={a.id} className="mission-item">
               <button className="list-row" onClick={() => open(a)}>
                 <span className={`sev ${a.severity}`} aria-label={`${a.severity} priority`} />
                 <span className="grow">
@@ -109,6 +118,7 @@ export function MissionFocus({ attention }: { attention: AttentionItem[] }) {
                 </span>
                 <span className="mission-next small">{a.target?.kind === "agent" ? "Open profile →" : a.target ? "Inspect repository →" : "Open settings →"}</span>
               </button>
+              <FixWithClaude request={fixRequest(a)} />
             </li>
           ))}
         </ul>

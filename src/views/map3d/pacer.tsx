@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { isBusy, onWake, useWindowFocused, wake, type PowerProfile } from "../../lib/power";
+import { isBusy, onWake, pacingPolicy, usePageVisible, useWindowFocused, wake, type PowerProfile } from "../../lib/power";
+import { feed } from "../../lib/governor";
 
 /**
  * Paces an on-demand canvas (frameloop "demand") to the power profile: every display frame
@@ -12,7 +13,8 @@ import { isBusy, onWake, useWindowFocused, wake, type PowerProfile } from "../..
  * `running` false: no idle frames at all; the canvas still redraws on changes and while busy.
  */
 export function FramePacer({ profile, running }: { profile: PowerProfile; running: boolean }) {
-  const { invalidate, gl } = useThree();
+  const { invalidate, gl, frameloop } = useThree();
+  const visible = usePageVisible();
   const focused = useWindowFocused();
 
   useEffect(() => {
@@ -23,6 +25,15 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
     };
   }, [gl, profile.shadowHz]);
   const lastShadow = useRef(-Infinity);
+  // Frames drawn back to back (while busy, or every frame on Best) tell the quality governor how
+  // long a frame really takes; paced idle frames don't.
+  const lastFrame = useRef<{ t: number; busy: boolean }>({ t: -Infinity, busy: false });
+  useFrame(() => {
+    const now = performance.now();
+    const busy = isBusy(now) || profile.idleFps === Infinity;
+    if (busy && lastFrame.current.busy) feed(now - lastFrame.current.t, now);
+    lastFrame.current = { t: now, busy };
+  });
   useFrame(() => {
     if (gl.shadowMap.autoUpdate) return;
     const now = performance.now();
@@ -49,8 +60,9 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
     };
   }, [gl]);
 
-  const idle = !running || (profile.pauseInBackground && !focused) ? 0 : profile.idleFps;
+  const { active, idle } = pacingPolicy(profile, running, focused, visible, frameloop);
   useEffect(() => {
+    if (!active) return;
     let raf = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let last = -Infinity;
@@ -86,6 +98,6 @@ export function FramePacer({ profile, running }: { profile: PowerProfile; runnin
       cancelAnimationFrame(raf);
       clearTimeout(timer);
     };
-  }, [idle, invalidate]);
+  }, [active, idle, invalidate]);
   return null;
 }

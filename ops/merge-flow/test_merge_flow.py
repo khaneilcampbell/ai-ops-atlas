@@ -1,4 +1,5 @@
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -105,15 +106,56 @@ class Triage(unittest.TestCase):
 
 
 class Fetch(unittest.TestCase):
-    def test_gateway_error_is_retried_once(self):
+    def test_gateway_error_is_retried(self):
         ok = mock.MagicMock()
         ok.__enter__.return_value.read.return_value = b'{"data": {}}'
         bad = mf.urllib.error.HTTPError(mf.GRAPHQL, 502, "Bad Gateway", {}, None)
         with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[bad, ok]) as op, mock.patch.object(mf.time, "sleep"):
             self.assertEqual(mf.fetch("q", "t", 5), ({"data": {}}, 12))
         self.assertEqual(op.call_count, 2)
-        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[bad, bad]), mock.patch.object(mf.time, "sleep"):
+        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[bad, bad, bad]), mock.patch.object(mf.time, "sleep"):
             self.assertRaises(mf.urllib.error.HTTPError, mf.fetch, "q", "t", 5)
+        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[TimeoutError(), ok]), mock.patch.object(mf.time, "sleep"):
+            self.assertEqual(mf.fetch("q", "t", 5), ({"data": {}}, 12))
+
+    def test_other_http_errors_are_not_retried(self):
+        denied = mf.urllib.error.HTTPError(mf.GRAPHQL, 401, "Unauthorized", {}, None)
+        with mock.patch.object(mf.urllib.request, "urlopen", side_effect=[denied]) as op:
+            self.assertRaises(mf.urllib.error.HTTPError, mf.fetch, "q", "t", 5)
+        self.assertEqual(op.call_count, 1)
+
+    def test_repositories_are_split_into_small_queries(self):
+        policy = {"repositoriesPerRequest": 2, "openPullRequestsPerRepository": 20, "mergedPullRequestsPerRepository": 10, "requestTimeoutSeconds": 5}
+        queries = []
+
+        def reply(q, token, timeout):
+            queries.append(q)
+            aliases = re.findall(r"(r\d+): repository", q)
+            return {"data": {"rateLimit": {"cost": 1, "remaining": 100 - len(queries)}, **{a: {} for a in aliases}}}, 10
+
+        with mock.patch.object(mf, "fetch", side_effect=reply):
+            result, size, requests = mf.fetch_all(["a/a", "b/b", "c/c"], policy, "t")
+        self.assertEqual(requests, 2)
+        self.assertIn('r2: repository(owner: "c"', queries[1])
+        self.assertEqual(sorted(result["data"]), ["r0", "r1", "r2", "rateLimit"])
+        self.assertEqual(result["data"]["rateLimit"], {"cost": 2, "remaining": 98})
+
+    def test_live_policy_never_sends_one_query_for_every_repository(self):
+        # Guard: one query for all 11 repositories made GitHub's gateway answer 502/504 on busy days.
+        policy = mf.load_policy(Path(__file__).with_name("policy.json"))
+        per = policy["repositoriesPerRequest"]
+        self.assertLessEqual(per, 4)
+        queries = []
+
+        def reply(q, token, timeout):
+            queries.append(q)
+            return {"data": {a: {} for a in re.findall(r"(r\d+): repository", q)}}, 1
+
+        with mock.patch.object(mf, "fetch", side_effect=reply):
+            result, _, requests = mf.fetch_all(policy["repositories"], policy, "t")
+        self.assertEqual(requests, -(-len(policy["repositories"]) // per))
+        self.assertTrue(all(len(re.findall(r": repository\(", q)) <= per for q in queries))
+        self.assertEqual(len([k for k in result["data"] if k != "rateLimit"]), len(policy["repositories"]))
 
 
 class Decide(unittest.TestCase):
@@ -156,6 +198,15 @@ class Commands(unittest.TestCase):
         reply = ({"data": {"rateLimit": {"cost": 1, "remaining": 4999}, **data}}, 1234)
         with mock.patch.object(mf, "fetch", return_value=reply), mock.patch.dict("os.environ", {"GITHUB_TOKEN": "t"}, clear=True):
             return args, mf.cmd_triage(args, NOW)
+
+    def test_gateway_outage_skips_without_failing(self):
+        bad = mf.urllib.error.HTTPError(mf.GRAPHQL, 504, "Gateway Timeout", {}, None)
+        with tempfile.TemporaryDirectory() as t:
+            tmp = Path(t)
+            args = SimpleNamespace(policy=Path(__file__).with_name("policy.json"), state=tmp / "s.json", work=tmp / "w.json", dry_run=False)
+            with mock.patch.object(mf, "fetch", side_effect=bad), mock.patch.dict("os.environ", {"GITHUB_TOKEN": "t"}, clear=True):
+                self.assertEqual(mf.cmd_triage(args, NOW), (None, None))
+            self.assertFalse(args.state.exists())
 
     def test_second_identical_run_is_quiet(self):
         with tempfile.TemporaryDirectory() as t:

@@ -1,18 +1,4 @@
 /* Polished Atlas: shared chrome and information surfaces. */
-:root {
-  --forest-900: #14251e;
-  --forest-800: #1c3027;
-  --forest-700: #294237;
-  --sage-50: #f7f7f0;
-  --sage-100: #edf0e7;
-  --sage-200: #dce2d5;
-  --ink: #20372c;
-  --ink-2: #4d6054;
-  --ink-3: #6a7b6f;
-  --gold: #d0ad69;
-  --radius: 14px;
-  --shadow: 0 2px 5px #182b2110, 0 10px 28px #182b2109;
-}
 .header { background: linear-gradient(110deg, #182d23, #213a2e); box-shadow: 0 1px 0 #e3d0a31c; gap: 14px; }
 .header .brand { gap: 10px; }
 .search { background: #ffffff07; border-color: #e6ebdf21; border-radius: 12px; transition: background .15s, border-color .15s; }

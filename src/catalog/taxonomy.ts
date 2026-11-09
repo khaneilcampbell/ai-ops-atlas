@@ -17,7 +17,7 @@ export const AGENT_TIERS = ["central", "coordinator", "specialized"] as const;
 export type AgentTier = (typeof AGENT_TIERS)[number];
 
 export const TIER_INFO: Record<AgentTier, { label: string; description: string }> = {
-  central: { label: "Central Operations", description: "Works across the whole ecosystem from AI Ops Atlas." },
+  central: { label: "Central Operations", description: "Works across the whole ecosystem from Atlas." },
   coordinator: { label: "Department Coordinator", description: "Orchestrates other agents or automations in its project." },
   specialized: { label: "Specialized Agent", description: "Does one job inside its project." },
 };

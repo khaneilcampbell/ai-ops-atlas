@@ -1,5 +1,8 @@
+import { isAiAgent } from "../../catalog/roles";
+import { AgentOutput } from "../../components/AgentOutput";
 import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
 import { useMemo, useState } from "react";
+import { AgentReports } from "../../components/AgentReports";
 import { Icon } from "../../components/Icon";
 import { CopyButton, ExternalLink, StatusPill } from "../../components/bits";
 import { attentionItems, repoData } from "../../lib/derive";
@@ -8,12 +11,18 @@ import type { RegistryEntry } from "../../registry/registry";
 import { documentationChecks } from "../../registry/profile";
 import { mainline, meetsTarget, observeKpi, OPERATIONAL_LABEL, successTrend } from "../../registry/telemetry";
 import { AUTONOMY_INFO, CATEGORY_LABEL, CLASSIFICATION_INFO, TRIGGER_LABEL, type Kpi, type Telemetry } from "../../registry/types";
+import { isReportAgent } from "../../reports/model";
 import { useAtlas } from "../../state";
+import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/agentJobs";
+import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 
-type Tab = "overview" | "goals" | "workflow" | "operations" | "governance" | "docs";
-const TABS: { id: Tab; label: string }[] = [
+type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "operations" | "governance" | "docs";
+const ALL_TABS: { id: Tab; label: string }[] = [
+  { id: "report", label: "Reports" },
   { id: "overview", label: "Overview" },
+  { id: "output", label: "Output" },
+  { id: "workday", label: "Workday" },
   { id: "goals", label: "Goals" },
   { id: "workflow", label: "Workflow" },
   { id: "operations", label: "Operations" },
@@ -26,9 +35,14 @@ const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log",
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
 export function Inspector({ entry }: { entry: RegistryEntry }) {
   const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
-  const [tab, setTab] = useState<Tab>("overview");
   const { profile: p, telemetry: t } = entry;
+  // Agents that store full reports open on them: that's what they're for.
+  const reports = isReportAgent(p.id) ? p.id : null;
+  const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === p.id), [catalog, p.id]);
+  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job));
+  const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
+  const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
   const snap = repoData(repos[p.repository]);
   const branch = snap?.defaultBranch ?? "HEAD";
   const sourceUrl = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
@@ -51,7 +65,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
     <section className="card agent-profile reg-inspector" aria-label={p.title}>
       <header className="ap-head">
         <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
-          <Icon name="agents" size={20} />
+          <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
         </span>
         <div className="grow">
           <div className="eyebrow">
@@ -113,7 +127,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         </div>
       </div>
 
-      <div className="tabs" role="tablist" aria-label="Agent details" onKeyDown={onTabKey}>
+      <div className="tabs" role="tablist" aria-label={`${itemLabel} details`} onKeyDown={onTabKey}>
         {TABS.map((x) => (
           <button
             key={x.id}
@@ -134,17 +148,20 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       </div>
 
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
-        <CodexReviewHandoff agent={agent}/>
+        {tab === "report" && reports && <AgentReports agent={reports} />}
+
+        {tab !== "output" && <CodexReviewHandoff agent={agent}/>}
+        {tab === "output" && <AgentOutput agent={agent}/>}
         {tab === "overview" && (
           <div className="reg-cols">
             <dl className="kv">
               <dt>Title</dt>
               <dd>{p.title}</dd>
-              <dt>Agent ID</dt>
+              <dt>{itemLabel} ID</dt>
               <dd className="mono">{p.id}</dd>
               <dt>Description</dt>
               <dd>{p.summary}</dd>
-              <dt>Agent type</dt>
+              <dt>{itemLabel} type</dt>
               <dd>
                 Type {p.classification === "unclassified" ? "?" : p.classification} · {CLASSIFICATION_INFO[p.classification].label}
                 <div className="muted small">{CLASSIFICATION_INFO[p.classification].description}</div>
@@ -178,6 +195,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
             </div>
           </div>
         )}
+
+        {tab === "workday" && job && <WorkdayTab job={job} />}
 
         {tab === "goals" && <GoalsTab kpis={p.goals.kpis} objective={p.goals.objective} review={p.goals.reviewFrequency} t={t} />}
 
@@ -324,6 +343,52 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         )}
       </div>
     </section>
+  );
+}
+
+const OFF_DUTY = { planned: "Planned: no workday until it ships, so it stays home.", paused: "Paused: stays home until it is resumed.", retired: "Retired: stays home." } as const;
+
+/** Where a value came from: written in the manifest, or worked out by Atlas's rules (catalog/agentJobs.ts). */
+function Basis({ d }: { d: Decided<unknown> }) {
+  return <div className="muted small">{d.provenance === "declared" ? "From the manifest" : "Worked out by Atlas"} · {d.reason}</div>;
+}
+
+/** The agent's job: home, workplace, shift, budget, owner and the output it owes each day. Read-only. */
+function WorkdayTab({ job }: { job: AgentJob }) {
+  return (
+    <div className="reg-cols">
+      <dl className="kv">
+        <dt>Role</dt>
+        <dd>{job.role.value}<Basis d={job.role} /></dd>
+        <dt>Owner</dt>
+        <dd>{job.owner.value}<Basis d={job.owner} /></dd>
+        <dt>Home</dt>
+        <dd>{job.home.label}</dd>
+        <dt>Works at</dt>
+        <dd>{job.work.label}</dd>
+        <dt>Shift</dt>
+        <dd>
+          {clock(job.shift.value.start)} to {clock(job.shift.value.end)}
+          <Basis d={job.shift} />
+          {job.shift.declared && <div className="muted small">Schedule in the manifest: {job.shift.declared}</div>}
+        </dd>
+        <dt>Budget</dt>
+        <dd>{job.budget.value}<Basis d={job.budget} /></dd>
+        <dt>End-of-day output</dt>
+        <dd>{job.output.value}<Basis d={job.output} /></dd>
+      </dl>
+      <div className="reg-stack">
+        <div className="section-title">On the map</div>
+        <p className="small">
+          {job.offDuty
+            ? OFF_DUTY[job.offDuty]
+            : job.work.kind === "workplace"
+            ? `No street reaches ${job.work.building} on the map yet, so it is not drawn walking there. Its job card still holds.`
+            : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}
+        </p>
+        <p className="muted small">This is a simulation of the job as written, not a live run. Runs Atlas has actually seen are on the Operations tab.</p>
+      </div>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { projectRepositories, LANDMARK_REPOSITORIES } from "../catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
 import type { Agent, Catalog, Project } from "../catalog/types";
 import type { RepoState } from "../github/types";
 import { repoData } from "./derive";
@@ -22,14 +22,16 @@ export function agentMatches(a: Agent, project: Project | undefined, q: string) 
 export interface RepoRow {
   name: string;
   project: Project | undefined;
+  projects: Project[];
   agents: Agent[];
   state: RepoState | undefined;
 }
 
 export function repoRows(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = []): RepoRow[] {
   const names = [...new Set([...LANDMARK_REPOSITORIES.filter(name => name in repos), ...catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)), ...catalog.agents.map((a) => a.repository), ...uncataloged])];
-  return names.map((name) => ({
+  return names.filter(name => !RETIRED_REPOSITORIES.includes(name)).map((name) => ({
     name,
+    projects: catalog.projects.filter(p => projectRepositories(p, catalog.agents).includes(name)),
     project: catalog.projects.find((p) => projectRepositories(p, catalog.agents).includes(name)),
     agents: catalog.agents.filter((a) => a.repository === name),
     state: repos[name],
@@ -38,5 +40,12 @@ export function repoRows(catalog: Catalog, repos: Record<string, RepoState>, unc
 
 export function repoMatches(r: RepoRow, q: string) {
   const d = repoData(r.state);
-  return matches(q, r.name, r.project?.name, r.project?.summary, d?.description, d?.language, ...Object.keys(d?.languages ?? {}), ...(r.project?.tags ?? []));
+  return matches(q, r.name, r.project?.name, r.project?.summary, ...r.projects.flatMap(p => [p.name, p.summary, ...p.tags]), d?.description, d?.language, ...Object.keys(d?.languages ?? {}), ...(r.project?.tags ?? []));
+}
+
+/** Exact names and known aliases precede broad description matches; other order stays stable. */
+export function prioritizeExact<T extends {title:string;aliases?:readonly string[]}>(rows:T[],query:string):T[]{
+ const key=(value:string)=>norm(value).trim().replace(/\s+/g,' '),wanted=key(query);
+ const exact=(row:T)=>Number([row.title,...row.aliases??[]].some(value=>key(value)===wanted));
+ return [...rows].sort((a,b)=>exact(b)-exact(a));
 }

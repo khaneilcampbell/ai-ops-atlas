@@ -1,0 +1,64 @@
+name: Map performance
+
+# What one 3D map frame costs (draw calls, triangles, shader programs, GPU geometry) and whether
+# leaving the map and coming back leaks a WebGL canvas; fails over BUDGET in visual/perf.visual.ts.
+# Runs on every pull request so "Map performance budget" can be a required check. A pull request
+# that cannot change the map passes in seconds without measuring. See docs/visual-testing.md.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    name: Map performance budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Decide whether this change can affect the map
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$BASE_SHA" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          changed=$(git diff --name-only "$BASE_SHA" HEAD)
+          echo "$changed"
+          if echo "$changed" | grep -qE '^(src/|public/|visual/perf\.visual\.ts$|visual/playwright\.config\.ts$|package(-lock)?\.json$|vite\.config\.ts$|index\.html$|\.github/workflows/perf\.yml$)'; then
+            echo "run=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=0" >> "$GITHUB_OUTPUT"
+            echo "Nothing the map is built from changed; skipping the measurement." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.scope.outputs.run == '1'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.scope.outputs.run == '1'
+        run: npm ci
+      - if: steps.scope.outputs.run == '1'
+        run: npx playwright install --with-deps chromium
+      - name: Measure the map against its budget
+        if: steps.scope.outputs.run == '1'
+        run: |
+          set +e
+          PERF=1 PERF_BUDGET=1 PERF_ONLY="desktop day" npx playwright test -c visual perf --reporter=line 2>&1 | tee perf.log
+          status=${PIPESTATUS[0]}
+          grep '^PERF ' perf.log | sed 's/^PERF //' > perf.jsonl || true
+          {
+            echo "### Map performance (desktop, day)"
+            echo '```json'
+            cat perf.jsonl
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
