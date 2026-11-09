@@ -7,6 +7,8 @@ import {bridgeParts,Instanced,STREET_LINE,type Inst,type useGeometries,type useM
 import {distanceToRoad,roadIntersections} from './highway';
 import {ROAD_W,type Pt,type CarBridge} from './roads';
 import {streetPavement} from './streetPavement';
+/** A walk crossing this close to a junction arm's zebra is that zebra. */
+const ZEBRA_MERGE=.5;
 /** Original stone bridge parts and green railings, driven by the same paths as pedestrians. */
 export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;
  /** Drives the walks must open for but that draw their own crossings (the Galleria's driveways). */
@@ -33,6 +35,8 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
    solid.push(...p.deck.filter(v=>v.c!==STREET_LINE||!onStreet([v.p[0],v.p[2]],TRANSPORT.cityWidth/2+.08)),...clipConnectionRails(exposedRails,junctions,TRANSPORT.junctionOpening),...p.piers.filter(v=>!scene.land.some(l=>v.p[0]>=l.x&&v.p[0]<=l.x+l.w&&v.p[2]>=l.z&&v.p[2]<=l.z+l.d)).map(v=>({...v,c:'#bdb59e'})));
    if(!onLand)lamps.push(...p.lamps.filter(v=>!junctions.some(j=>Math.hypot(v.p[0]-j[0],v.p[2]-j[1])<TRANSPORT.junctionOpening)));
   }
+  // Sidewalks, paved corners, zebras and building-matched plazas: flat, so they cast no shadow.
+  const street=streetPavement(scene);
   const walkPaths=connectionSpans(paths.map(l=>l.walk));
   // Every street a walk can run beside: district roads, their frontage streets and the bridge streets.
   const roadSpans=connectionSpans([...paths.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...(scene.carBridges??[]).flatMap(br=>br.roads)]);
@@ -42,7 +46,8 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
     const r=Math.atan2(b[0]-a[0],b[1]-a[1]),x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;
     const crossings=paths.flatMap(l=>roadIntersections([a,b],l.road)),drives=clearRoads.flatMap(road=>roadIntersections([a,b],road));
     solid.push(...clipConnectionRails([{p:[x,TERRACE_H+.035,z],s:[TRANSPORT.walkWidth,.045,len+TRANSPORT.landingOverlap],r,c:'#e6d6b4'}],[...crossings,...drives],TRANSPORT.cityWidth/2+.04));
-    for(const crossing of crossings){const road=segments.find(s=>distanceToRoad(crossing,[s.a,s.b])<.01);if(!road)continue;
+    // A walk crossing at a junction arm uses that arm's zebra: one crossing style, never two overlapping.
+    for(const crossing of crossings){if(street.zebras.some(z=>Math.hypot(z[0]-crossing[0],z[1]-crossing[1])<ZEBRA_MERGE))continue;const road=segments.find(s=>distanceToRoad(crossing,[s.a,s.b])<.01);if(!road)continue;
      const rotation=road.a[0]===road.b[0]?0:Math.PI/2;
      for(let band=-2;band<=2;band++)solid.push({p:[crossing[0]+Math.sin(rotation)*band*.09,TERRACE_H+.061,crossing[1]+Math.cos(rotation)*band*.09],s:[TRANSPORT.bridgeWidth,.006,.045],r:rotation,c:'#f7f2df'});
     }
@@ -60,8 +65,6 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
     for(let t=.5;t<len;t+=1.5){const px=a[0]+(b[0]-a[0])*t/len,pz=a[1]+(b[1]-a[1])*t/len;if(scene.land.some(l=>px>=l.x&&px<=l.x+l.w&&pz>=l.z&&pz<=l.z+l.d))continue;solid.push({p:[a[0]+(b[0]-a[0])*t/len,-1.2,a[1]+(b[1]-a[1])*t/len],s:[.16,TERRACE_H+1.23,.22],c:'#bdb59e'});}
    }
   }
-  // Sidewalks, paved corners, zebras and building-matched plazas: flat, so they cast no shadow.
-  const street=streetPavement(scene);
   return {solid,lamps,flat:[...street.pavement,...street.markings]};
  },[scene,clearRoads]);
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.flat} geometry={g.box} material={m.plain} shadow={false}/><Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/></>;
