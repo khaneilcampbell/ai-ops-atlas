@@ -1,6 +1,7 @@
 import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
 import {distanceToRoad} from "./highway";
-import {TRANSPORT} from "./transportScale";
+import {STREET_ASPHALT,STREET_LINE,TRANSPORT} from "./transportScale";
+export {STREET_LINE};
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
 import { TOOL_OFFICE_HEIGHT, toolBrand, toolSignTexture } from "./toolBrand";
@@ -20,6 +21,7 @@ import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerc
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
+import { plazaSites } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -220,9 +222,6 @@ const slab = (r: { x: number; z: number; w: number; d: number }, y0: number, y1:
 // ── Road bridges ────────────────────────────────────
 
 const RAIL = "#2f4a3a";
-/** District street paint, shared by the roads and the bridge decks so a street reads as one road. */
-const STREET_ASPHALT = "#424b50";
-export const STREET_LINE = "#e1ce8e";
 const STREET_DASH = 0.3;
 const RISE_OF = (len: number) => deckRise(len, len / 2);
 const DECK_T = 0.07;
@@ -319,7 +318,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
     // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
     const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
-    for(const t of scene.towers) {
+    for(const t of plazaSites(scene)) {
       const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
       const ring=plaza&&towerRing(t,plaza.w);
       if(!ring) continue;

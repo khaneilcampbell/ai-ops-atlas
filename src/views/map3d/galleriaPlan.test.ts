@@ -3,6 +3,7 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {GALLERIA,GALLERIA_BASEMENT,GALLERIA_FLOORS,GALLERIA_UNITS,galleriaFins,galleriaPieceCount,glassOutline,insidePoly,slabOutline,type GalleriaPlan} from './galleriaPlan';
+import {STREET_ASPHALT,STREET_LINE} from './transportScale';
 import {stationAccessAreas} from './hillsCommunityPlan';
 import type {Pt} from './roads';
 import type {Rect} from './scene';
@@ -65,6 +66,22 @@ describe('Atlas Galleria on the map',()=>{
   expect(gl.footprint.w/gl.footprint.d).toBeGreaterThan(1.2);expect(gl.footprint.w/gl.footprint.d).toBeLessThan(1.5);
   expect(gl.levels).toHaveLength(4);expect(gl.column.top).toBeGreaterThan(gl.roof);
   expect(gl.s).toBeLessThanOrEqual(GALLERIA.maxScale);
+ });
+ it('paves right round the building and keeps the car park and trees off the pavement',()=>{
+  // Every ground-floor and overhang point sits inside the apron, with the lamp ring's width to spare.
+  for(const l of [0,1,2,3])for(const q of gl.slabs[l])expect(insidePoly(gl.apron,q)).toBe(true);
+  const a=gl.parking!.area;
+  for(const q of gl.apron)expect(q[0]>a.x&&q[0]<a.x+a.w&&q[1]>a.z&&q[1]<a.z+a.d).toBe(false);
+  for(const t of gl.trees.filter(t=>t.y===gl.y0))expect(insidePoly(gl.apron,[t.x,t.z])).toBe(false);
+  // No basement ramp in front of the car park (KC, 2026-11-09): nothing dark and walled between the building and the bays.
+  expect(gl.boxes.some(b=>b.c==='#2b302e')).toBe(false);
+ });
+ it('paves the car park in street asphalt with the street centre line down its aisle',()=>{
+  const a=gl.parking!.area,mid={x:a.x+a.w/2,z:a.z+a.d/2};
+  expect(gl.boxes.find(b=>Math.abs(b.x-mid.x)<1e-6&&Math.abs(b.z-mid.z)<1e-6&&b.w===a.w)?.c).toBe(STREET_ASPHALT);
+  const dashes=gl.boxes.filter(b=>b.c===STREET_LINE);
+  expect(dashes.length).toBeGreaterThan(5);
+  for(const d of dashes)expect(d.z).toBeCloseTo(gl.parking!.aisle);
  });
  it('waves the fin hems and stays inside its piece budget',()=>{
   const fins=galleriaFins(gl),hs=fins.map(f=>f.h);

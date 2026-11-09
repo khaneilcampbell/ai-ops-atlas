@@ -1,7 +1,9 @@
 import {financialDimensions} from './financialArchitecture';
 import type {Scene3D} from './scene';
+import {plazaSites} from './streetGraph';
 import {towerRing,type Pt,type Box} from './roads';
 import {distanceToRoad} from './highway';
+import {STREET_CLEAR} from './streetAlign';
 import {airportPoint,airportPublicPath,AIRPORT_LAYOUT} from './airport';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {HILLS} from './hillsPlan';
@@ -32,7 +34,7 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  if(s.community)for(const road of s.community.streets)add(road);
  if(s.airport)add(airportPublicPath(s.airport),.48);
  for(const walk of s.walks)add(walk.route?.map(p=>[p.gx,p.gy] as Pt)??[[walk.x0,walk.z0],[walk.x1,walk.z1]],.48);
- for(const t of s.towers){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
+ for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
  const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[])];
  const junctions:Pt[]=[...s.transportConnections.flatMap(c=>[c.road[0],c.road[c.road.length-1]]),...(s.freight?.localJunctions??[]),...(s.freight?.exits??[]),...(s.community?.streets.flatMap(p=>[p[0],p[p.length-1]])??[])];
  const result:StreetLamp[]=[],cells=new Map<string,StreetLamp[]>(),cell=STREET_LIGHT.minSeparation;
@@ -42,7 +44,8 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  for(const sign of index++%2?[1,-1]:[-1,1]){let placed=false;for(const setback of [.5,.75]){const offset=path.width/2+setback,x=rx+nx*sign*offset,z=rz+nz*sign*offset;
  if(near(x,z)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
  if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<.3))continue;
- if(paths.some(other=>distanceToRoad([x,z],other.points)<other.width/2+.12))continue;
+ // Off the carriageway and its sidewalk: a district street is wider than the line it is drawn from.
+ if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,STREET_CLEAR))))continue;
  const lamp:StreetLamp={x,z,roadX:rx,roadZ:rz,yaw:Math.atan2(rx-x,rz-z),height:path.highway?STREET_LIGHT.highwayHeight:STREET_LIGHT.height,highway:path.highway};result.push(lamp);const key=`${Math.floor(x/cell)}:${Math.floor(z/cell)}`;cells.set(key,[...(cells.get(key)??[]),lamp]);placed=true;break;}
  if(placed)break;}
  if(result.length>=STREET_LIGHT.maxFixtures)return result;
