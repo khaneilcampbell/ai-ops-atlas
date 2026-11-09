@@ -130,3 +130,17 @@ describe("open lot", () => {
     }
   });
 });
+
+describe("land left by removed towers (KC, 2026-11-09: keep places, fill the holes)", () => {
+  const s = buildScene(layoutMap(catalog));
+  it("plants the Career Applications lot as a pocket park, clear of streets and paving", () => {
+    const lot = s.parks.find((p) => p.id === "park:vacant:career-optimizer")!;
+    const inLot = (t: { x: number; z: number }) => t.x >= lot.x && t.x <= lot.x + lot.w && t.z >= lot.z && t.z <= lot.z + lot.d;
+    expect(s.trees.filter(inLot).length).toBeGreaterThanOrEqual(8);
+    expect(s.trees.filter(inLot).some((t) => s.paving.some((p) => t.x > p.x && t.x < p.x + p.w && t.z > p.z && t.z < p.z + p.d))).toBe(false);
+  });
+  it("stands a fountain where the Benjaire Dashboard tower stood", () => {
+    const spot = s.clearedLots!.find((t) => t.projectId === "benjaire-ops")!;
+    expect(s.fountains.some((f) => Math.hypot(f.x - spot.x, f.z - spot.z) < 0.01)).toBe(true);
+  });
+});

@@ -508,6 +508,10 @@ function buildCity(layout: Layout): Scene3D {
     }
   }
 
+  // A cleared tower's plaza keeps its streets; a fountain now stands where the tower stood, so the
+  // square reads as a civic plaza rather than a hole (KC, 2026-11-09: keep places, fill the holes).
+  for (const t of towers) if (cleared.has(t.projectId)) fountains.push({ x: t.x, z: t.z, k: Math.min(1.4, (t.size / 2 - 0.05) / FOUNTAIN_R) });
+
   for (const p of layout.parks) {
     if (p.strays.length) {
       for (const s of p.strays) strays.push({ key: `repo:${s.name}`, name: s.name, x: s.gx + s.size / 2, z: s.gy + s.size / 2, size: s.size * 1.2, height: 0.9 + hash(s.name) * 0.7 });
@@ -836,6 +840,18 @@ function buildCity(layout: Layout): Scene3D {
 
   const commons=planCommons({mall,towers,paving,transportConnections:connections,parks});
   if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
+  // A removed tower's vacant lot that nothing else has taken over becomes a pocket park: a grove
+  // round a central lawn, with shrubs along its edges (KC, 2026-11-09: keep places, fill the holes).
+  const taken=[...(commons?[commons.rect]:[]),...(galleria?[galleria.rect]:[]),...(mall?[mall]:[])];
+  for(const p of parks.filter(p=>p.label===VACANT_LOT_LABEL&&!taken.some(r=>r.x<p.x+p.w&&r.x+r.w>p.x&&r.z<p.z+p.d&&r.z+r.d>p.z))){
+    const cx=p.x+p.w/2,cz=p.z+p.d/2,lawn=Math.min(p.w,p.d)*0.2;
+    for(const [x,z] of districtGrove({ox:p.x,oy:p.z,size:Math.min(p.w,p.d),hq:{size:0}},cx,cz,1.05)){
+      if(Math.max(Math.abs(x-cx),Math.abs(z-cz))<lawn||paving.some(q=>inRect(q,x,z,0.4))||trees.some(t=>Math.hypot(t.x-x,t.z-z)<0.6))continue;
+      const pick=hash(`${p.id}:${x.toFixed(2)}:${z.toFixed(2)}`);
+      trees.push({x,y:top,z,s:0.22+pick*0.07,kind:pick>0.85?'blossom':pick<0.2?'cone':'round'});
+    }
+    for(const s of treeSpots(`${p.id}:bush`,p.x+0.2,p.z+0.2,Math.min(p.w,p.d)-0.4,10))if(!paving.some(q=>inRect(q,s.gx,s.gy,0.2)))bushes.push({x:s.gx,y:top,z:s.gy,s:0.1+hash(`${s.gx}:${s.gy}:b`)*0.06});
+  }
   const stationPlaza=planStationPlaza({stadium,communityRail},{
     land,roads:connections.map(c=>c.road),
     obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
