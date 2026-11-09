@@ -58,6 +58,7 @@ import { ANNEX, isCommerceAnnex } from "./commerceAnnexPlan";
 import { isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
+import { districtRect, wholeBuilding, type Footprint } from "./buildingExtent";
 import { IntelligenceHub } from "./IntelligenceHub";
 import { isIntelligenceHub } from "./intelligenceHubPlan";
 import { PortfolioSite } from "./PortfolioSite";
@@ -163,8 +164,16 @@ const selOf = (key: string): Sel => {
 
 /** Where each clickable thing sits and how big it is, for highlights, labels and camera moves. */
 export function anchorsOf(scene: Scene3D, layout: Layout) {
-  const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string }>();
+  // `whole` is the full footprint a click selects when a building spreads past its tower's lot;
+  // the outline and the camera use it, connection lines keep the tower's own centre.
+  const m = new Map<string, { x: number; z: number; y0: number; y1: number; w: number; d: number; project?: string; whole?: Footprint }>();
   for (const t of scene.towers) m.set(t.key, { x: t.x, z: t.z, y0: TERRACE_H, y1: towerTop(t), w: t.size, d: t.size, project: t.projectId });
+  // Profile Tower's GitHub podium and skybridge are part of the same building.
+  const gh = scene.githubAnnex && scene.towers.find((t) => isGithubTower(t.projectId));
+  if (gh && scene.githubAnnex) {
+    const a = m.get(gh.key)!;
+    m.set(gh.key, { ...a, whole: wholeBuilding(a, [...scene.githubAnnex.tiers, scene.githubAnnex.skybridge]) });
+  }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
   if(scene.financial){const f=scene.financial;m.set(FINANCIAL_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:f.w,d:f.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
   if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
@@ -899,7 +908,8 @@ function World({
 
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
-    const a = anchors.get(key);
+    const b = anchors.get(key);
+    const a = b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -1123,9 +1133,9 @@ function World({
   // An open building's outline hugs its office, not the shell that was cut away.
   const hl = (key: string | null) => {
     const a = key ? anchors.get(key) : undefined;
-    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a;
+    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
   };
-  const terraceOf = (id?: string) => (id ? scene.terraces.find((t) => t.id === id) : undefined);
+  const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);
   return (
     <>
       <Sky mode={lightMode} reduced={reduced} m={m} sun={light} fog={fog} />
