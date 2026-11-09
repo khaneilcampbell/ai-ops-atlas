@@ -35,7 +35,7 @@ import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
-import { OPEN_LOT_LABEL, openLot } from "./openLot";
+import { OPEN_LOT_LABEL, VACANT_LOT_LABEL, openLot } from "./openLot";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -221,6 +221,11 @@ export interface Scene3D {
   houses: House[];
   kiosks: Kiosk[];
   towers: Tower[];
+  /**
+   * Where a removed tower stood on a cleared lot (Benjaire Dashboard, 2026-11-09). Nothing is drawn
+   * there, but the plaza lane around the old site is still a street, so rings and lights use it.
+   */
+  clearedLots?: Pick<Tower, "projectId" | "x" | "z" | "size">[];
   strays: StrayBuilding[];
   trees: Tree[];
   bushes: Point[];
@@ -281,15 +286,21 @@ function buildCity(layout: Layout): Scene3D {
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
+  // A cleared district (its tower removed, KC 2026-11-09) is laid out like the rest, streets,
+  // paving and bridges included, so the roads through it still join; only its building is dropped
+  // from what the scene returns.
+  const allDistricts = [...layout.districts, ...(layout.cleared ?? [])];
+  const cleared = new Set((layout.cleared ?? []).map((d) => d.project.id));
   // Each district's own paving, so its trees only check what is on its terrace.
   const pavedIn = new Map<string, Slab[]>();
-  for (const d of layout.districts) {
+  for (const d of allDistricts) {
     const pavedFrom = paving.length;
-    terraces.push({ id: d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
+    // A cleared lot's ground is not a building: hovering or clicking it selects nothing.
+    terraces.push({ id: cleared.has(d.project.id) ? `park:cleared:${d.project.id}` : d.project.id, park: false, x: d.ox - TERRACE_M, z: d.oy - TERRACE_M, w: d.size + 2 * TERRACE_M, d: d.size + 2 * TERRACE_M });
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
-    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
     const size = d.hq.size * (identity.landmark ? 1.02 : 0.92) * CITY_SCALE.hq.footprint;
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
@@ -386,7 +397,7 @@ function buildCity(layout: Layout): Scene3D {
   }
 
   // Road bridges between neighboring districts, beside the footpaths, and the roads out to them.
-  const byId = new Map(layout.districts.map((d) => [d.project.id, d]));
+  const byId = new Map(allDistricts.map((d) => [d.project.id, d]));
   const roadsOf = new Map<string, DistrictRoads>();
   for (const t of towers) {
     const d = byId.get(t.projectId)!;
@@ -468,7 +479,7 @@ function buildCity(layout: Layout): Scene3D {
     if (approaches.every(path => path.length > 1)) pedestrianJourneys.set(`${w.from}:${w.to}`, [...approaches[0], ...approaches[1].slice().reverse()]);
   }
 
-  for (const d of layout.districts) {
+  for (const d of allDistricts) {
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     // Trees and flowering shrubs along the terrace edges, clear of houses and paths.
@@ -506,7 +517,9 @@ function buildCity(layout: Layout): Scene3D {
     // residences, shops and wheel that stood here were removed to make space). The Marketplace, the
     // airport road and the railway still take their places from it.
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
-    parks.push({ id: p.id, label: OPEN_LOT_LABEL, x: p.ox, z: p.oy, w: p.w, d: p.h });
+    // A vacant lot (a removed tower's land) is the same plain lawn, but it is not the open lot the
+    // Marketplace and the airport road anchor on.
+    parks.push({ id: p.id, label: p.vacant ? VACANT_LOT_LABEL : OPEN_LOT_LABEL, x: p.ox, z: p.oy, w: p.w, d: p.h });
   }
 
   // Level pedestrian bridges between terraces.
@@ -821,7 +834,7 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
 
-  const commons=planCommons({mall,towers,paving,transportConnections:connections});
+  const commons=planCommons({mall,towers,paving,transportConnections:connections,parks});
   if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
   const stationPlaza=planStationPlaza({stadium,communityRail},{
     land,roads:connections.map(c=>c.road),
@@ -870,8 +883,9 @@ function buildCity(layout: Layout): Scene3D {
     walks,
     parks,
     houses,
-    kiosks,
-    towers,
+    kiosks: kiosks.filter((k) => !cleared.has(k.projectId)),
+    towers: towers.filter((t) => !cleared.has(t.projectId)),
+    clearedLots: towers.filter((t) => cleared.has(t.projectId)).map(({ projectId, x, z, size }) => ({ projectId, x, z, size })),
     strays,
     trees,
     bushes,

@@ -5,13 +5,16 @@ export const COMMONS_NAME='Atlas Commons';
 export const COMMONS={pathWidth:.48,bridgeWidth:.55,edgeClearance:.6,pavilionRadius:1.05} as const;
 export interface CommonsPlan {rect:Rect;pond:Pt[];loop:Pt[];paths:Pt[][];bridges:[Pt,Pt][];pavilion:Pt;amphitheater:Pt;trees:Pt[];benches:Pt[];benchRotations:number[];lights:Pt[];access:{service:Pt;marketplace:Pt}}
 /** One bounded park in the existing meadow; no headquarters or transport coordinates move. */
-export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportConnections'>):CommonsPlan|undefined{
- const mall=s.mall,desk=s.towers.find(t=>t.projectId==='service-desk'),profile=s.towers.find(t=>t.projectId==='github-profile');
+export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportConnections'>&{parks?:Pick<Scene3D,'parks'>['parks']}):CommonsPlan|undefined{
+ // The Service Desk tower was removed (KC, 2026-11-09); its vacant lot stays where it stood, so the
+ // park keeps the same west anchor from the middle of that lot.
+ const lot=s.parks?.find(p=>p.id==='park:vacant:service-desk');
+ const mall=s.mall,desk=s.towers.find(t=>t.projectId==='service-desk')??(lot&&{x:lot.x+lot.w/2,z:lot.z+lot.d/2,size:0}),profile=s.towers.find(t=>t.projectId==='github-profile');
  if(!mall||!desk||!profile)return;
  let x=Math.max(desk.x+desk.size/2+5,profile.x-3.55),z=Math.max(profile.z+profile.size/2+3.4,mall.z+.8),w=mall.x-.7-x,d=mall.plaza.z-.55-z;
 
  if(w<12){w=15;x=mall.x-.7-w;z=mall.z+.8;d=mall.plaza.z-.55-z;}
- if(d<6.8||s.towers.some(b=>b.x+b.size/2>x&&b.x-b.size/2<x+w&&b.z+b.size/2>z&&b.z-b.size/2<z+d))return;
+ if(d<6.8||s.towers.some(b=>b.x+b.size/2>x&&b.x-b.size/2<x+w&&b.z+b.size/2>z&&b.z-b.size/2<z+d)||(lot&&lot.x+lot.w>x&&lot.x<x+w&&lot.z+lot.d>z&&lot.z<z+d))return;
  const rect={x,z,w,d},cx=x+w*.63,cz=z+d*.5,rx=w*.275,rz=d*.245;
  const outline=(grow:number)=>Array.from({length:49},(_,i):Pt=>{const a=i%48/48*Math.PI*2;return [cx+(rx+grow)*Math.cos(a),cz+(rz*(.65+.35*Math.abs(Math.cos(a)))+grow)*Math.sin(a)];});
  const pond=outline(0),loop=outline(.65);
