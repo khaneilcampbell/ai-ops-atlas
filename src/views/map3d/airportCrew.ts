@@ -33,7 +33,7 @@ export const SERVED_GATES=[AIRPORT_LAYOUT.gateZ[0],AIRPORT_LAYOUT.gateZ[3]] as c
 /** Crew doors in the apron face of the gate pier, where walkers leave and re-enter the terminal. */
 export const CREW_DOOR_X=TERMINAL_PIER.x+TERMINAL_PIER.width/2;
 /** Airside service lane just outside the pier and its jet-bridge rotundas. */
-const LANE_X=CREW_DOOR_X+.45;
+const LANE_X=4.5;
 /** Doors sit on the pier's straight face, short of its wider rounded ends. */
 const doorZ=(z:number)=>Math.max(TERMINAL_PIER.from+(TERMINAL_PIER.width+.4)/2+.05,Math.min(TERMINAL_PIER.to-(TERMINAL_PIER.width+.4)/2-.05,z));
 /**
@@ -100,12 +100,14 @@ export function crewAt(c:CrewMember,seconds:number):CrewPose{
 
 /** Baggage trains: a tug and carts drive a loop from the terminal to the hold, park, and return. */
 export function planCrewTrains():CrewTrain[]{
- const gx=AIRPORT_LAYOUT.gateX,trains:CrewTrain[]=[];
+ const trains:CrewTrain[]=[];
  SERVED_GATES.forEach((gz,i)=>{
-  const w=LANE_X+.25,loop=roundedRoad([[w+1.1,gz+2.45],[gx+.85,gz+2.45],[gx+.85,gz+.62],[gx+1.6,gz+.62],[gx+1.6,gz+2.95],[w,gz+2.95],[w,gz+2.45],[w+1.1,gz+2.45]],.32,true);
+  // Remain on the terminal side of the complete parked-aircraft envelope.
+  const w=LANE_X,outer=AIRPORT_LAYOUT.gateX-AIRCRAFT_LAYOUT.halfSpan-.3;
+  const loop=roundedRoad([[w,gz+2.45],[outer,gz+2.45],[outer,gz+1.75],[w,gz+1.75],[w,gz+2.45]],.12,true);
   const length=polylineLength(loop);
   // Park beside the belt loader, nose toward the wing, carts lined up under the hold.
-  const corner=loop.reduce((best,p,k)=>Math.hypot(p[0]-(gx+.85),p[1]-(gz+.95))<Math.hypot(loop[best][0]-(gx+.85),loop[best][1]-(gz+.95))?k:best,0);
+  const corner=loop.reduce((best,p,k)=>Math.hypot(p[0]-(outer),p[1]-(gz+1.75))<Math.hypot(loop[best][0]-(outer),loop[best][1]-(gz+1.75))?k:best,0);
   trains.push({id:`train${i}`,loop,length,pace:.42,stopAt:polylineLength(loop.slice(0,corner+1)),dwell:11,offset:i*9,carts:3});
  });
  // Cargo tug with two container dollies on the cargo road beside the shed.

@@ -66,7 +66,7 @@ describe('airport ground crew',()=>{
   expect(trainDistance(t,arrive+t.dwell-1)).toBeCloseTo(t.stopAt,6);
   expect(trainDistance(t,arrive+t.dwell+2)).toBeGreaterThan(t.stopAt);
   const parked=trainAt(t,arrive+2)[0];
-  expect(Math.abs(parked.x-(AIRPORT_LAYOUT.gateX+.85))).toBeLessThan(.05);
+  expect(Math.abs(parked.x-(AIRPORT_LAYOUT.gateX-AIRCRAFT_LAYOUT.halfSpan-.3))).toBeLessThan(.05);
  });
 
  it('draws fewer extra crew as quality drops and halves them on Battery saver',()=>{
