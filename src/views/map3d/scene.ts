@@ -815,14 +815,18 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
 
-  const stationPlaza=planStationPlaza({stadium,communityRail});
+  const commons=planCommons({mall,towers,paving,transportConnections:connections});
+  if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
+  const stationPlaza=planStationPlaza({stadium,communityRail},{
+    land,roads:connections.map(c=>c.road),
+    obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
+      ...(mall?[{x:mall.x,z:mall.z,w:mall.w,d:mall.d}]:[]),...(galleria?[galleria.rect]:[]),...(commons?[commons.rect]:[]),...(airport?[airportFootprint(airport)]:[]),
+      ...(dealership?[{x:dealership.showroom.cx-dealership.showroom.w/2,z:dealership.showroom.cz-dealership.showroom.d/2,w:dealership.showroom.w,d:dealership.showroom.d}]:[])]});
   if(stationPlaza){
     land.push(...uncoveredLand(stationPlaza.bounds,land));
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
   }
-  const commons=planCommons({mall,towers,paving,transportConnections:connections});
-  if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
