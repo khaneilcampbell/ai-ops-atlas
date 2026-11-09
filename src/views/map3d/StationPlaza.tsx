@@ -14,17 +14,21 @@ const tilt=(dz:number,dy:number)=>Math.atan2(-dy,dz);
  */
 export function StationPlaza({plan,g,m,night}:{plan?:Plan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;night:boolean}){
  const parts=useMemo(()=>{
-  const solid:Inst[]=[],lights:Inst[]=[];if(!plan)return {solid,lights};
+  const solid:Inst[]=[],glass:Inst[]=[],lights:Inst[]=[];if(!plan)return {solid,glass,lights};
   const a=plan.building,cx=a.x+a.w/2,cz=a.z+a.d/2,y0=TERRACE_H;
   const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string,rx=0)=>solid.push({p:[x,y0+y,z],s:[w,h,d],c,rx});
   // Podium and a glass hall set back from its edge, with white mullions and a gold entrance canopy.
   const podium=.22,hallH=1.05,hw=a.w-.5,hd=a.d-.7;
   box(cx,podium/2,cz,a.w,podium,a.d,C.podium);
-  // The glass hall is drawn with the night lights so its windows glow warm after dark.
-  lights.push({p:[cx,y0+podium+hallH/2,cz],s:[hw,hallH,hd],c:C.glass});
+  // The glass hall reads as tinted glass by day and glows warm after dark.
+  glass.push({p:[cx,y0+podium+hallH/2,cz],s:[hw,hallH,hd],c:C.glass});
   for(const side of [-1,1])for(let x=-hw/2;x<=hw/2+.001;x+=hw/12)box(cx+x,podium+hallH/2,cz+side*(hd/2+.015),.035,hallH,.03,C.steel);
-  for(const side of [-1,1])box(cx+side*(hw/2+.015),podium+hallH/2,cz,.03,hallH,hd,C.steel);
+  for(const side of [-1,1])for(let z=-hd/2;z<=hd/2+.001;z+=hd/6)box(cx+side*(hw/2+.015),podium+hallH/2,cz+z,.03,hallH,.035,C.steel);
+  for(const side of [-1,1])for(const y of [.82,hallH])box(cx,podium+y,cz+side*(hd/2+.015),hw,.035,.03,C.steel);
+  for(const side of [-1,1])box(cx+side*(hw/2+.015),podium+.82,cz,.03,.035,hd,C.steel);
+  // Gold entrance canopy, carried on two slim posts at its outer corners.
   box(cx,podium+.82,cz+hd/2+.2,1.1,.05,.42,C.gold);
+  for(const side of [-1,1])box(cx+side*.5,podium+.41,cz+hd/2+.37,.04,.82,.04,C.steel);
   box(cx,podium/2,cz+a.d/2+.12,1.1,podium*.6,.24,C.podium);
   // Vaulted shell over the hall, sprung from white columns at the podium edge.
   const across=a.d/2-.1,up=.62,maxA=72*Math.PI/180,slats=15,step=2*maxA/(slats-1),spring=podium+hallH+.05,cy=spring-up*Math.cos(maxA);
@@ -38,10 +42,19 @@ export function StationPlaza({plan,g,m,night}:{plan?:Plan;g:ReturnType<typeof us
    for(let i=0;i<slats;i++){const t=-maxA+i*step,[pz,py]=at(t),[qz,qy]=at(t+step/2),[oz,oy]=at(t-step/2);box(cx+rx,py+Math.cos(t)*.05,pz+Math.sin(t)*.05,.08,.06,Math.hypot(qz-oz,qy-oy)+.03,c,tilt(qz-oz,qy-oy));}
    for(const t of [-maxA,maxA]){const [pz,py]=at(t);box(cx+rx,(podium+py)/2,pz,.07,py-podium,.07,C.steel);}
   }
+  // Glazed lunettes close both open ends of the vault, split by white mullions.
+  const span=across*Math.sin(maxA),panes=9,pw=2*span/panes,top0=podium+hallH+.04;
+  for(const side of [-1,1]){const ex=cx+side*(a.w/2-.12);
+   for(let i=0;i<panes;i++){const dz=-span+(i+.5)*pw,h=cy+up*Math.sqrt(1-(dz/across)**2)-.03-top0;
+    if(h>.02)glass.push({p:[ex,y0+top0+h/2,cz+dz],s:[.03,h,pw-.01],c:C.glass});
+    if(i>0){const mz=-span+i*pw,mh=cy+up*Math.sqrt(1-(mz/across)**2)-top0;box(ex+side*.005,top0+mh/2,cz+mz,.035,mh,.03,C.steel);}}}
   // Warm strip lights along the base of the glass.
   for(const side of [-1,1])lights.push({p:[cx,y0+podium+.06,cz+side*(hd/2+.03)],s:[hw,.03,.02],c:'#e8b76f'});
-  return {solid,lights};
+  // Positions above are box centres, but g.box stands on its base: drop each box by half its height
+  // along its own (possibly tilted) up axis.
+  for(const it of [...solid,...glass,...lights]){const h=it.s[1]/2,r=it.rx??0;it.p=[it.p[0],it.p[1]-h*Math.cos(r),it.p[2]-h*Math.sin(r)];}
+  return {solid,glass,lights};
  },[plan]);
  if(!plan)return null;
- return <group name='stadium-station-plaza'><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/></group>;
+ return <group name='stadium-station-plaza'><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.darkGlass}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/></group>;
 }
