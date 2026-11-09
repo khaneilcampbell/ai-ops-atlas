@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-04 · Added a local campaign-readiness viewer in Coordinator Output and an inactive n8n test export; review blockers remain explicit and no external actions run (#251).
 - 2026-11-09 · Behind the scenes: recording new CI screenshots no longer lets one part of the run overwrite another part's fresh screenshots (#206)
 - 2026-11-09 · Streets by the airport and Atlas Stadium now show as one road, without doubled lane lines, overlapping crossings or a footpath painted down the middle; every junction uses the same zebra crossing, and no tree, bush, bollard or street lamp stands in a street (#305)
 - 2026-11-09 · Removed the Service Desk, Career Applications and Benjaire Dashboard buildings from the map. Service Desk and Career Applications are now open lawn; Benjaire Dashboard's block keeps its streets so traffic still runs through it (#297)
@@ -54,7 +55,6 @@ shown in the Mac app's **Update available** button, so write them for KC, not fo
 - 2026-11-07 · Remove Atlas Hills and the highway, compact the city and connect five stations with one perimeter train (#256)
 - 2026-11-07 · Closed a security alert in a developer tool (minimatch); nothing changes in the app (#254)
 - 2026-11-05 · Agent keys pasted with a stray space, line break, quotes or an extra "Bearer" are no longer refused, so the Product Lab brief and other agent reports can reach Atlas (#253)
-- 2026-11-04 · Added a local campaign-readiness viewer in Coordinator Output and an inactive n8n test export; review blockers remain explicit and no external actions run (#251).
 - 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#249)
 - 2026-11-04 · Inside the Benjaire Marketing Agency, the six Product Lab agents now sit at desks in gold. Tap one, or its room label, to open the agent. The building panel lists them too (#248)
 - 2026-11-04 · Your n8n Benjaire Product Lab is now in the Agents list: the lead plus its five research roles, each assigned a room in the Benjaire Marketing Agency. They show as "Configured, not verified" until Atlas sees a real run (#247)
