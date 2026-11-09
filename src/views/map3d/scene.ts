@@ -1,3 +1,4 @@
+import {planCommons,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
@@ -175,6 +176,7 @@ export interface Scene3D {
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
+  commons?:CommonsPlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -812,8 +814,11 @@ function buildCity(layout: Layout): Scene3D {
   }
   for (let i=trees.length-1;i>=0;i--) if ((harborTerrace && Math.abs(trees[i].x-(harborTerrace.x+harborTerrace.w/2))<0.9 && trees[i].z>=harborTerrace.z+harborTerrace.d-1 && trees[i].z<=harborTerrace.z+harborTerrace.d+3) || paving.some(p=>p.y>=top && inRect(p,trees[i].x,trees[i].z,0.4))) trees.splice(i,1);
 
+  const commons=planCommons({mall,towers,paving,transportConnections:connections});
+  if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
+    commons,
     financial,
     community,
     coreLand:cityLand,communityRail,
