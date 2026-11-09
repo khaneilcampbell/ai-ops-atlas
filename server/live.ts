@@ -12,6 +12,7 @@ import { validReport } from "../src/production/model";
 
 import { sameSecret } from "./usage";
 import { alertOnRun, type AlertEnv } from "./alerts";
+import { evaluate, type TriggerEnv } from "./triggers";
 
 export interface D1Statement {
   bind(...values: unknown[]): D1Statement;
@@ -24,7 +25,7 @@ export interface D1 {
   batch(statements: D1Statement[]): Promise<unknown>;
 }
 
-export interface LiveEnv extends AlertEnv {
+export interface LiveEnv extends AlertEnv, TriggerEnv {
   /** D1 binding for the `atlas-live` database. */
   LIVE?: D1;
   PRODUCTION_AGENT_KEYS?: string;
@@ -91,8 +92,12 @@ const JOB_KEYS = ["id", "run_id", "run_attempt", "name", "workflow_name", "statu
 export function compactGithub(event: string, p: J): { kind: string; repo: string; body: J } | null {
   const repo = p.repository?.full_name;
   if (typeof repo !== "string") return null;
-  if (event === "workflow_run" && p.workflow_run) return { kind: "workflow_run", repo, body: { action: p.action, run: pick(p.workflow_run, RUN_KEYS) } };
+  if (event === "workflow_run" && p.workflow_run) return { kind: "workflow_run", repo, body: { action: p.action, default_branch: p.repository?.default_branch ?? null, run: pick(p.workflow_run, RUN_KEYS) } };
   if (event === "workflow_job" && p.workflow_job) return { kind: "workflow_job", repo, body: { action: p.action, job: pick(p.workflow_job, JOB_KEYS) } };
+  if (event === "issues" && p.issue && p.action === "opened") {
+    const i = p.issue;
+    return { kind: "issue", repo, body: { action: p.action, number: i.number, title: String(i.title ?? "").slice(0, 200), author: i.user?.type === "Bot" ? null : (i.user?.login ?? null), labels: (Array.isArray(i.labels) ? i.labels : []).map((l: J) => l?.name).filter((n: unknown) => typeof n === "string").slice(0, 10), url: i.html_url } };
+  }
   if (event === "push" && typeof p.ref === "string") {
     const commits = (Array.isArray(p.commits) ? p.commits : []).slice(-10).map((c: J) => ({
       sha: c.id,
@@ -123,6 +128,13 @@ async function readBody(req: Request): Promise<string | null> {
   return text.length > MAX_BODY ? null : text;
 }
 
+/** Wakes an agent when the event is a meaningful change (server/triggers.ts), and logs that in the feed. */
+async function recordTrigger(env: LiveEnv, kind: string, repo: string | null, body: J, now: number) {
+  if (!env.LIVE) return;
+  const t = await evaluate(env.LIVE, env, kind, repo, body, now);
+  if (t) await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "agent", kind: "trigger", repo, delivery: null, body: t }], now);
+}
+
 /** POST /api/hooks/github: a webhook delivery from the GitHub App. */
 export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
   if (!env.LIVE || !env.GITHUB_WEBHOOK_SECRET) return reply(503, { message: "Live updates aren't set up on the site yet (LIVE binding or GITHUB_WEBHOOK_SECRET missing)." });
@@ -140,6 +152,7 @@ export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()
   const c = compactGithub(event, payload);
   if (!c) return reply(202, { ignored: event });
   await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "github", delivery: req.headers.get("x-github-delivery"), ...c }], now);
+  await recordTrigger(env, c.kind, c.repo, c.body, now);
   return reply(202, { stored: c.kind });
 }
 
@@ -225,6 +238,7 @@ export async function receiveAgents(req: Request, env: LiveEnv, now = Date.now()
   await insert(env.LIVE, [{ at: new Date(now).toISOString(), source: "agent", kind: "agent_run", repo: null, delivery: null, body: run }], now);
   // Emails only when alert email is set up; never holds up or fails the report.
   await alertOnRun(env.LIVE, env, run, now);
+  await recordTrigger(env, "agent_run", null, run, now);
   return reply(202, { stored: 1 });
 }
 
