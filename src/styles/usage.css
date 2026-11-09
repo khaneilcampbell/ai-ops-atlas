@@ -110,3 +110,4 @@
 .usage-findings .impact.high { border-color: var(--bad); color: var(--bad); }
 .usage-findings .impact.medium { border-color: var(--m-est); color: var(--m-est); }
 .usage-providers .title.mono { font-size: 12px; }
+.usage-wf-group { padding: 10px 20px 0; border-top: 1px solid var(--sage-200); letter-spacing: 0.02em; }

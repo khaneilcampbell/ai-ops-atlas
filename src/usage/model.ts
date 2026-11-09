@@ -27,8 +27,8 @@ export interface UsageRecord {
   /** null when no price was configured for the model, so the cost is unknown. */
   costUsd: number | null;
   costKind: CostKind;
-  /** atlas: this Mac's runs. import: a file. sync: the Mac's records on the website. agent: GitHub-run agents that reported their own calls. codex: ChatGPT Codex logs on this Mac. */
-  source: "atlas" | "import" | "sync" | "agent" | "codex";
+  /** atlas: this Mac's runs. import: a file. sync: the Mac's records on the website. agent: GitHub-run agents that reported their own calls. local: Codex and Claude Code logs on this Mac. */
+  source: "atlas" | "import" | "sync" | "agent" | "local";
 }
 
 /** Runs the repository intelligence agent logged. Only runs that reached the provider carry usage. */

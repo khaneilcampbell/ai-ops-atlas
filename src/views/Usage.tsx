@@ -9,9 +9,11 @@ import { useAtlas } from "../state";
 import { isHostedWeb } from "../lib/env";
 import { fetchWebSnapshot, syncConfigured, usageSync, type SyncStatus, type WebSnapshot } from "../usage/sync";
 import { fetchAgentUsage, type AgentUsage } from "../usage/agents";
-import { readCodexUsage } from "../usage/codex";
+import { readLocalUsage } from "../usage/local";
+import { chatExportRecords } from "../usage/chatExport";
 import { cacheHitRate, findings, modelMix, rankWorkflows, type Finding, type WorkflowRow } from "../usage/insights";
 import {
+  MAX_IMPORTED,
   PERIODS,
   compact,
   cost,
@@ -44,7 +46,7 @@ function useUsageData() {
   const [snapshot, setSnapshot] = useState<WebSnapshot | null>(null);
   const [agentUsage, setAgentUsage] = useState<AgentUsage | null>(null);
   const [agentError, setAgentError] = useState<string | null>(null);
-  const [codex, setCodex] = useState<UsageRecord[] | null>(null);
+  const [local, setLocal] = useState<UsageRecord[] | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(intel.available || hosted);
@@ -71,8 +73,8 @@ function useUsageData() {
     try {
       if (intel.available) {
         setRuns(await intelApi.runs());
-        // ChatGPT Codex sessions on this Mac; a read problem there never hides the rest.
-        setCodex(await readCodexUsage().catch(() => null));
+        // ChatGPT Codex and Claude Code sessions on this Mac; a read problem there never hides the rest.
+        setLocal(await readLocalUsage().catch(() => null));
         // Refresh also sends the records to the website, when website sync is set up.
         const st = await usageSync.status();
         setSync(syncConfigured(st) ? await usageSync.push(agentRef.current).catch(() => usageSync.status()) : st);
@@ -107,8 +109,8 @@ function useUsageData() {
   };
 
   const records = useMemo(
-    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...(agentUsage?.records ?? []), ...(codex ?? []), ...imports.records],
-    [runs, agentName, snapshot, agentUsage, codex, imports.records],
+    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...(agentUsage?.records ?? []), ...(local ?? []), ...imports.records],
+    [runs, agentName, snapshot, agentUsage, local, imports.records],
   );
   const oldestRun = runs?.find((r) => r.usage)?.started_at ?? null;
   const firstLoad = loading && runs === null && snapshot === null;
@@ -276,69 +278,33 @@ const pctLabel = (v: number | null) => (v == null ? "–" : `${Math.round(v * 10
 const IMPACT_LABEL: Record<Finding["impact"], string> = { high: "High impact", medium: "Medium", low: "Low" };
 
 function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; advice: Finding[]; span: string }) {
-  const byCost = workflows.some((w) => w.costUsd > 0);
+  // Paid API agents rank by cost; subscription tools (Codex, Claude Code, chats) have no cost, so they rank by tokens apart.
+  const paid = workflows.filter((w) => w.plan === 0);
+  const plan = workflows.filter((w) => w.plan > 0).sort((a, b) => b.tokens - a.tokens);
+  const byCost = paid.some((w) => w.costUsd > 0);
   return (
     <div className="grid usage-row usage-command">
       <div className="card usage-workflows">
         <div className="card-head">
           <div className="grow">
             <h3>Workflows by resource use</h3>
-            <div className="small muted">Ranked by {byCost ? "known cost" : "tokens"} in the {span} · share of the total</div>
+            <div className="small muted">
+              {paid.length ? `API agents ranked by ${byCost ? "known cost" : "tokens"}` : "Ranked by tokens"} in the {span} · share of each group's total
+            </div>
           </div>
         </div>
         {workflows.length === 0 ? (
           <div className="empty small">No usage in the {span}.</div>
         ) : (
-          <ol className="usage-wf">
-            {workflows.map((w, i) => {
-              // Plan usage has no cost, so its share is of tokens, labelled as such.
-              const ofCost = byCost && w.plan === 0;
-              const share = ofCost ? w.costShare : w.tokenShare;
-              return (
-                <li key={w.key}>
-                  <span className="rank">{i + 1}</span>
-                  <div className="wf-main">
-                    <div className="wf-line">
-                      <span className="title">{w.key}</span>
-                      <span className="spacer" />
-                      <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : w.plan > 0 ? <span className="muted">Plan</span> : "–"}</span>
-                    </div>
-                    <div className="meter" aria-hidden="true">
-                      <i style={{ width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%` }} />
-                    </div>
-                    <div className="wf-stats">
-                      <span>
-                        <strong>{pctLabel(share)}</strong> of {ofCost ? "spend" : "tokens"}
-                      </span>
-                      <span>
-                        <strong>{compact(w.requests)}</strong> {w.requests === 1 ? "call" : "calls"}
-                      </span>
-                      <span>
-                        <strong>{compact(w.tokens)}</strong> tokens
-                      </span>
-                      <span>
-                        <strong>{pctLabel(w.cacheHitRate)}</strong> cache hits
-                      </span>
-                      {w.costPerRequest != null && (
-                        <span>
-                          <strong>{money(w.costPerRequest)}</strong> per call
-                        </span>
-                      )}
-                    </div>
-                    <div className="wf-models">
-                      {w.models.slice(0, 3).map((m) => (
-                        <span key={m.model} className="chip mono">
-                          {m.model}
-                        </span>
-                      ))}
-                      {w.models.length > 3 && <span className="small muted">+{w.models.length - 3} more</span>}
-                      <span className="small muted">last {relative(w.last)}</span>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
+          <>
+            {paid.length > 0 && <WorkflowList rows={paid} byCost={byCost} />}
+            {plan.length > 0 && (
+              <>
+                <div className="usage-wf-group small muted">Your subscription tools · ranked by tokens · no per-token cost</div>
+                <WorkflowList rows={plan} byCost={false} />
+              </>
+            )}
+          </>
         )}
       </div>
       <div className="card usage-advice">
@@ -366,6 +332,66 @@ function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; 
   );
 }
 
+function WorkflowList({ rows, byCost }: { rows: WorkflowRow[]; byCost: boolean }) {
+  const tokens = rows.reduce((n, w) => n + w.tokens, 0);
+  const cost = rows.reduce((n, w) => n + w.costUsd, 0);
+  return (
+    <ol className="usage-wf">
+      {rows.map((w, i) => {
+        const ofCost = byCost && w.plan === 0;
+        const share = ofCost ? (cost ? w.costUsd / cost : 0) : tokens ? w.tokens / tokens : 0;
+        return (
+          <li key={w.key}>
+            <span className="rank">{i + 1}</span>
+            <div className="wf-main">
+              <div className="wf-line">
+                <span className="title">{w.key}</span>
+                <span className="spacer" />
+                <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : w.plan > 0 ? <span className="muted">Plan</span> : "–"}</span>
+              </div>
+              <div className="meter" aria-hidden="true">
+                <i
+                  style={{
+                    width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%`,
+                  }}
+                />
+              </div>
+              <div className="wf-stats">
+                <span>
+                  <strong>{pctLabel(share)}</strong> of {ofCost ? "spend" : "tokens"}
+                </span>
+                <span>
+                  <strong>{compact(w.requests)}</strong> {w.requests === 1 ? "call" : "calls"}
+                </span>
+                <span>
+                  <strong>{compact(w.tokens)}</strong> tokens
+                </span>
+                <span>
+                  <strong>{pctLabel(w.cacheHitRate)}</strong> cache hits
+                </span>
+                {w.costPerRequest != null && (
+                  <span>
+                    <strong>{money(w.costPerRequest)}</strong> per call
+                  </span>
+                )}
+              </div>
+              <div className="wf-models">
+                {w.models.slice(0, 3).map((m) => (
+                  <span key={m.model} className="chip mono">
+                    {m.model}
+                  </span>
+                ))}
+                {w.models.length > 3 && <span className="small muted">+{w.models.length - 3} more</span>}
+                <span className="small muted">last {relative(w.last)}</span>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function ModelMixCard({ records, span }: { records: UsageRecord[]; span: string }) {
   const rows = useMemo(() => modelMix(records), [records]);
   const byCost = rows.some((r) => r.costUsd > 0);
@@ -386,7 +412,7 @@ function ModelMixCard({ records, span }: { records: UsageRecord[]; span: string 
                 <div className="prov-line">
                   <span className="title mono">{r.model}</span>
                   <span className="spacer" />
-                  <span className="amt">{byCost ? money(r.costUsd) : compact(r.tokens)}</span>
+                  <span className="amt">{!byCost ? compact(r.tokens) : r.costUsd > 0 ? money(r.costUsd) : "–"}</span>
                 </div>
                 <div className="meter" aria-hidden="true">
                   <i style={{ width: `${total ? (v / total) * 100 : 0}%` }} />
@@ -571,7 +597,7 @@ function ProviderCard({ records, imports, onImport, onClear }: { records: UsageR
                 </div>
               </>
             ) : (
-              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "ChatGPT Codex sessions on your Mac appear here on Refresh. Import a file for API usage."}</div>
+              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "ChatGPT Codex sessions on your Mac appear here on Refresh. Import a file for API or chat usage."}</div>
             )}
           </div>
         ))}
@@ -597,7 +623,25 @@ function ImportButton({ onImport }: { onImport: (name: string, r: UsageRecord[])
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     try {
-      const { records, skipped } = parseImport(await f.text(), f.name);
+      const text = await f.text();
+      // A Claude or ChatGPT data export: counted here, its text never stored.
+      let chat: ReturnType<typeof chatExportRecords> = null;
+      try {
+        chat = chatExportRecords(JSON.parse(text), f.name);
+      } catch {
+        /* not JSON: parseImport below explains */
+      }
+      if (chat) {
+        const kept = chat.records.slice(-MAX_IMPORTED);
+        onImport(f.name, kept);
+        const prompts = kept.reduce((n, r) => n + r.requests, 0);
+        setMsg({
+          ok: true,
+          text: `Counted ${prompts.toLocaleString()} prompts in ${kept.length.toLocaleString()} conversation-days from your ${chat.source === "claude" ? "Claude" : "ChatGPT"} export. Tokens are estimated from text length; no chat text was kept.`,
+        });
+        return;
+      }
+      const { records, skipped } = parseImport(text, f.name);
       onImport(f.name, records);
       setMsg({ ok: true, text: `Imported ${records.length} ${records.length === 1 ? "record" : "records"}${skipped ? `, skipped ${skipped} that didn't match the format` : ""}.` });
     } catch (e) {
@@ -764,14 +808,17 @@ function SetupState({
         <li>
           <div className="title">Let the GitHub agents report their calls</div>
           <p className="muted">
-            Merge Flow, Design Consistency and Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and <span className="mono">ATLAS_FEED_TOKEN</span> are set on GitHub. The site keeps the numbers only, never a prompt or a key.
+            Merge Flow, Design Consistency and Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and{" "}
+            <span className="mono">ATLAS_FEED_TOKEN</span> are set on GitHub. The site keeps the numbers only, never a prompt or a key.
           </p>
         </li>
         <li>
-          <div className="title">Import Anthropic or OpenAI usage records</div>
+          <div className="title">Import Anthropic or OpenAI usage records, or a chat export</div>
           <p className="muted">
-            For agents that run outside Atlas, import a JSON file of usage records (format in <span className="mono">docs/api-usage.md</span>). Mark a row's cost as <span className="mono">billed</span> only when it comes from the provider's
-            billing; everything else is shown as an estimate. The file stays on this device.
+            For agents that run outside Atlas, import a JSON file of usage records (format in <span className="mono">docs/api-usage.md</span>). Mark a row's cost as{" "}
+            <span className="mono">billed</span> only when it comes from the provider's billing; everything else is shown as an estimate. For chat use, import the{" "}
+            <span className="mono">conversations.json</span> from a Claude or ChatGPT data export: Atlas counts prompts and estimates tokens per conversation, and keeps none of the text. The file
+            stays on this device.
           </p>
           <ImportButton onImport={onImport} />
         </li>

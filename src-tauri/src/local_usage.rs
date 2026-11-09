@@ -1,4 +1,4 @@
-//! ChatGPT Codex usage, read from the session logs Codex already keeps on this Mac
+//! ChatGPT Codex and Claude Code usage, read from the session logs Codex already keeps on this Mac
 //! (`$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl`, `~/.codex` by default). Read on the API
 //! Usage tab's open and Refresh only, never on a timer. Only numbers leave this module: token
 //! counts, the model, the session's start time and its folder name. Prompts, replies and file
@@ -200,6 +200,141 @@ pub async fn codex_usage() -> Result<Option<Vec<serde_json::Value>>, String> {
     .map_err(|e| format!("Couldn't read Codex's session logs: {e}"))
 }
 
+// ── Claude Code ──────────────────────────────────────────────────────────────
+// Claude Code keeps each session in `~/.claude/projects/<folder>/<session>.jsonl` (or
+// `$CLAUDE_CONFIG_DIR/projects`). Each assistant line carries the `usage` Anthropic reported.
+// Sessions run in the cloud (claude.ai/code, project threads) don't write here and can't be counted.
+
+const CLAUDE_AGENT: &str = "Claude Code";
+
+fn claude_home() -> Option<PathBuf> {
+    if let Some(h) = std::env::var_os("CLAUDE_CONFIG_DIR").filter(|h| !h.is_empty()) {
+        return Some(PathBuf::from(h));
+    }
+    std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".claude"))
+}
+
+/// One Claude Code session's usage in the import format, or None when it made no model call.
+pub fn summarize_claude_session(reader: impl BufRead) -> Option<serde_json::Value> {
+    let mut started: Option<String> = None;
+    let mut folder: Option<String> = None;
+    let mut model: Option<String> = None;
+    let (mut calls, mut input, mut output, mut read, mut write) = (0u64, 0u64, 0u64, 0u64, 0u64);
+    // One reply can be logged on several lines (one per content block) with the same message id.
+    let mut seen = std::collections::HashSet::new();
+    for line in reader.split(b'\n').map_while(Result::ok) {
+        if !line.windows(15).any(|w| w == b"\"output_tokens\"") {
+            continue;
+        }
+        let Ok(v) = serde_json::from_slice::<serde_json::Value>(&line) else {
+            continue;
+        };
+        if v.get("type").and_then(|t| t.as_str()) != Some("assistant") {
+            continue;
+        }
+        let msg = v.get("message").unwrap_or(&serde_json::Value::Null);
+        let Some(u) = msg.get("usage") else { continue };
+        let id = msg.get("id").and_then(|i| i.as_str()).map(str::to_owned);
+        if let Some(id) = id {
+            if !seen.insert(id) {
+                continue;
+            }
+        }
+        if started.is_none() {
+            started = v
+                .get("timestamp")
+                .and_then(|t| t.as_str())
+                .map(str::to_owned);
+        }
+        if folder.is_none() {
+            folder = v
+                .get("cwd")
+                .and_then(|c| c.as_str())
+                .and_then(|c| Path::new(c).file_name())
+                .and_then(|n| n.to_str())
+                .map(str::to_owned);
+        }
+        if let Some(m) = msg
+            .get("model")
+            .and_then(|m| m.as_str())
+            .filter(|m| !m.starts_with('<'))
+        {
+            model = Some(m.to_owned());
+        }
+        calls += 1;
+        input += num(u, "input_tokens");
+        output += num(u, "output_tokens");
+        read += num(u, "cache_read_input_tokens");
+        write += num(u, "cache_creation_input_tokens");
+    }
+    if calls == 0 {
+        return None;
+    }
+    Some(serde_json::json!({
+        "at": started?,
+        "provider": "anthropic",
+        "model": model,
+        "agent": CLAUDE_AGENT,
+        "project": folder,
+        "requests": calls,
+        "input_tokens": input,
+        "output_tokens": output,
+        "cache_read_tokens": read,
+        "cache_write_tokens": write,
+        "cost_type": "plan",
+    }))
+}
+
+fn session_files(root: &Path, now: SystemTime) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    let Ok(dirs) = std::fs::read_dir(root) else {
+        return out;
+    };
+    for d in dirs.flatten().filter(|d| d.path().is_dir()) {
+        let Ok(files) = std::fs::read_dir(d.path()) else {
+            continue;
+        };
+        for f in files.flatten() {
+            let path = f.path();
+            let fresh = f
+                .metadata()
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|m| now.duration_since(m).ok())
+                .is_some_and(|age| age <= MAX_AGE);
+            if fresh && path.extension().is_some_and(|x| x == "jsonl") {
+                out.push(path);
+            }
+            if out.len() >= MAX_FILES {
+                return out;
+            }
+        }
+    }
+    out
+}
+
+/// Claude Code sessions run on this Mac in the last 35 days, one row each. `None` when there are none.
+#[tauri::command]
+pub async fn claude_code_usage() -> Result<Option<Vec<serde_json::Value>>, String> {
+    let Some(root) = claude_home()
+        .map(|h| h.join("projects"))
+        .filter(|p| p.is_dir())
+    else {
+        return Ok(None);
+    };
+    let now = SystemTime::now();
+    tauri::async_runtime::spawn_blocking(move || {
+        session_files(&root, now)
+            .into_iter()
+            .filter_map(|p| File::open(p).ok())
+            .filter_map(|f| summarize_claude_session(BufReader::new(f.take(200 * 1024 * 1024))))
+            .collect::<Vec<_>>()
+    })
+    .await
+    .map(Some)
+    .map_err(|e| format!("Couldn't read Claude Code's session logs: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,5 +370,26 @@ mod tests {
         let first_two: String = SAMPLE.lines().take(3).collect::<Vec<_>>().join("\n");
         assert!(summarize_rollout(first_two.as_bytes()).is_none());
         assert!(summarize_rollout("not json\n".as_bytes()).is_none());
+    }
+
+    const CLAUDE: &str = r#"{"type":"user","timestamp":"2026-11-08T09:00:00.000Z","cwd":"/Users/k/ai-ops-atlas","message":{"role":"user","content":"private prompt with \"output_tokens\""}}
+{"type":"assistant","timestamp":"2026-11-08T09:00:05.000Z","cwd":"/Users/k/ai-ops-atlas","message":{"id":"msg_1","model":"claude-opus-5-5","content":[{"type":"text","text":"private reply"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":2000,"cache_read_input_tokens":0,"output_tokens":300}}}
+{"type":"assistant","timestamp":"2026-11-08T09:00:06.000Z","cwd":"/Users/k/ai-ops-atlas","message":{"id":"msg_1","model":"claude-opus-5-5","content":[{"type":"tool_use"}],"usage":{"input_tokens":10,"cache_creation_input_tokens":2000,"cache_read_input_tokens":0,"output_tokens":300}}}
+{"type":"assistant","timestamp":"2026-11-08T09:01:00.000Z","cwd":"/Users/k/ai-ops-atlas","message":{"id":"msg_2","model":"claude-opus-5-5","content":[],"usage":{"input_tokens":5,"cache_creation_input_tokens":100,"cache_read_input_tokens":2000,"output_tokens":50}}}
+"#;
+
+    #[test]
+    fn totals_a_claude_code_session_once_per_reply() {
+        let row = summarize_claude_session(CLAUDE.as_bytes()).expect("a row");
+        assert_eq!(row["at"], "2026-11-08T09:00:05.000Z");
+        assert_eq!(row["agent"], "Claude Code");
+        assert_eq!(row["project"], "ai-ops-atlas");
+        assert_eq!(row["requests"], 2);
+        assert_eq!(row["input_tokens"], 15);
+        assert_eq!(row["cache_write_tokens"], 2100);
+        assert_eq!(row["cache_read_tokens"], 2000);
+        assert_eq!(row["output_tokens"], 350);
+        assert!(!row.to_string().contains("private"));
+        assert!(summarize_claude_session("".as_bytes()).is_none());
     }
 }

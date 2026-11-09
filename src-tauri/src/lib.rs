@@ -1,10 +1,10 @@
 mod actions;
-mod codex_usage;
 mod export;
 mod github;
 mod handoff;
 mod intel;
 mod live;
+mod local_usage;
 mod power;
 mod secrets;
 mod steward;
@@ -83,7 +83,8 @@ pub fn run() {
             live::live_reports,
             live::live_inquiries,
             live::live_agent_usage,
-            codex_usage::codex_usage,
+            local_usage::codex_usage,
+            local_usage::claude_code_usage,
             live::live_properties,
             live::live_inquiry_reply,
             export::save_pdf,
