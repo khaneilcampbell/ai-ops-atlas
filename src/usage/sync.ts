@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { intelApi } from "../intel/api";
 import { useIntel } from "../intel/state";
 import { isHostedWeb, isTauri } from "../lib/env";
-import { parseImport, recordsFromRuns, type UsageRecord } from "./model";
+import { parseImport, recordsFromRuns, toSyncRows, type UsageRecord } from "./model";
+
+export { toSyncRows };
 
 // Website sync. The Mac app sends its recorded usage to the hosted site; the site shows the
 // latest snapshot. The sync key lives in the Keychain and is only ever handled by Rust.
@@ -17,24 +19,6 @@ export interface SyncStatus {
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<T>(cmd, args);
-}
-
-/** Records in the import format (docs/api-usage.md), so the site validates them like a file. */
-export function toSyncRows(records: UsageRecord[]) {
-  return records.map((r) => ({
-    at: r.at,
-    provider: r.provider,
-    model: r.model,
-    agent: r.agent,
-    project: r.project,
-    requests: r.requests,
-    input_tokens: r.input,
-    output_tokens: r.output,
-    cache_read_tokens: r.cacheRead,
-    cache_write_tokens: r.cacheWrite,
-    cost_usd: r.costUsd,
-    cost_type: r.costKind,
-  }));
 }
 
 export const usageSync = {

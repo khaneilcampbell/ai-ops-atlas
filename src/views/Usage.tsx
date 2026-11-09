@@ -8,6 +8,8 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 import { isHostedWeb } from "../lib/env";
 import { fetchWebSnapshot, syncConfigured, usageSync, type SyncStatus, type WebSnapshot } from "../usage/sync";
+import { fetchAgentUsage, type AgentUsage } from "../usage/agents";
+import { cacheHitRate, findings, modelMix, rankWorkflows, type Finding, type WorkflowRow } from "../usage/insights";
 import {
   PERIODS,
   compact,
@@ -18,7 +20,6 @@ import {
   providerLabel,
   recordsFromRuns,
   summarize,
-  topAgents,
   type Bucket,
   type GroupBy,
   type GroupRow,
@@ -40,6 +41,8 @@ function useUsageData() {
   const hosted = isHostedWeb();
   const [runs, setRuns] = useState<Run[] | null>(null);
   const [snapshot, setSnapshot] = useState<WebSnapshot | null>(null);
+  const [agentUsage, setAgentUsage] = useState<AgentUsage | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const [sync, setSync] = useState<SyncStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(intel.available || hosted);
@@ -56,6 +59,13 @@ function useUsageData() {
       return;
     }
     setLoading(true);
+    // Usage the GitHub-run agents reported to the site. Its own error, so it never hides local records.
+    const agents = fetchAgentUsage()
+      .then((a) => {
+        setAgentUsage(a);
+        setAgentError(null);
+      })
+      .catch((e) => setAgentError(e instanceof Error ? e.message : String(e)));
     try {
       if (intel.available) {
         setRuns(await intelApi.runs());
@@ -65,6 +75,7 @@ function useUsageData() {
       } else {
         setSnapshot(await fetchWebSnapshot());
       }
+      await agents;
       setError(null);
       setUpdatedAt(new Date().toISOString());
     } catch (e) {
@@ -92,13 +103,13 @@ function useUsageData() {
   };
 
   const records = useMemo(
-    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...imports.records],
-    [runs, agentName, snapshot, imports.records],
+    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...(agentUsage?.records ?? []), ...imports.records],
+    [runs, agentName, snapshot, agentUsage, imports.records],
   );
   const oldestRun = runs?.find((r) => r.usage)?.started_at ?? null;
   const firstLoad = loading && runs === null && snapshot === null;
 
-  return { available: intel.available, keyPresent: intel.status?.key_present ?? false, records, runs, snapshot, sync, imports, loading, firstLoad, error, updatedAt, oldestRun, refresh, addImport, clearImports };
+  return { available: intel.available, keyPresent: intel.status?.key_present ?? false, records, runs, snapshot, agentUsage, agentError, sync, imports, loading, firstLoad, error, updatedAt, oldestRun, refresh, addImport, clearImports };
 }
 
 export function UsageView() {
@@ -111,7 +122,8 @@ export function UsageView() {
   };
   const span = PERIODS.find((p) => p.id === period)!.span;
   const summary = useMemo(() => summarize(data.records, period), [data.records, period]);
-  const top = useMemo(() => topAgents(summary.inWindow), [summary.inWindow]);
+  const workflows = useMemo(() => rankWorkflows(summary.inWindow), [summary.inWindow]);
+  const advice = useMemo(() => findings(workflows), [workflows]);
   const t = summary.totals;
   const projectName = useMemo(() => {
     const byRepo = new Map(catalog.projects.map((p) => [p.repository.toLowerCase(), p.name]));
@@ -121,6 +133,7 @@ export function UsageView() {
   const hasAny = data.records.length > 0;
   const firstLoad = data.firstLoad;
   const cached = t.cacheRead + t.cacheWrite;
+  const hitRate = cacheHitRate(t);
   const billedProviders = new Set(summary.inWindow.filter((r) => r.costKind === "billed").map((r) => r.provider));
 
   return (
@@ -128,8 +141,8 @@ export function UsageView() {
       <div className="page-head">
         <div className="grow">
           <div className="eyebrow">API Usage</div>
-          <h1>What your agents spend.</h1>
-          <p className="lede">Tokens, requests and cost from usage Atlas has recorded, totalled on this device. Nothing here calls a model or a provider.</p>
+          <h1>AI usage command center.</h1>
+          <p className="lede">Calls, tokens, cache hits, cost and models for every Atlas agent that reports its usage, ranked so the heaviest workflows and the cheapest fixes come first. Nothing here calls a model or a provider.</p>
         </div>
         <div className="usage-controls">
           <div className="seg-ctl" role="group" aria-label="Period">
@@ -150,6 +163,7 @@ export function UsageView() {
           Showing the {span}
           {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
           {data.snapshot?.pushedAt && <> · Synced from your Mac {relative(data.snapshot.pushedAt)}</>}
+          {data.agentUsage?.configured && <> · {data.agentUsage.records.length.toLocaleString()} calls reported by GitHub agents</>}
           {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}
         </div>
       )}
@@ -162,6 +176,13 @@ export function UsageView() {
               Sync settings
             </button>
           </span>
+        </div>
+      )}
+
+      {data.agentError && (
+        <div className="notice usage-sync-error">
+          <Icon name="alert" size={14} />
+          <span className="grow selectable">GitHub agents' usage couldn't be read: {data.agentError}</span>
         </div>
       )}
 
@@ -205,43 +226,25 @@ export function UsageView() {
               </div>
             </div>
             <div className="card tile">
-              <div className="eyebrow">API requests</div>
+              <div className="eyebrow">Cache hit rate</div>
+              <div className="num">{hitRate == null ? "–" : `${Math.round(hitRate * 100)}%`}</div>
+              <div className="sub">{hitRate == null ? "No prompt tokens in this period" : `${compact(t.cacheRead)} of ${compact(t.input + cached)} prompt tokens read from cache`}</div>
+            </div>
+            <div className="card tile">
+              <div className="eyebrow">API calls</div>
               <div className="num">{compact(t.requests)}</div>
               <div className="sub">
-                {t.records} {t.records === 1 ? "record" : "records"} in the {span}
+                {workflows.length} {workflows.length === 1 ? "workflow" : "workflows"} in the {span}
               </div>
             </div>
           </div>
 
+          <CommandCenter workflows={workflows} advice={advice} span={span} />
+
           <div className="grid usage-row">
             <UsageChart buckets={summary.buckets} period={period} />
             <div className="usage-side">
-              <div className="card">
-                <div className="card-head">
-                  <h3 className="grow">Top agents by cost</h3>
-                </div>
-                {top.length === 0 ? (
-                  <div className="empty small">No priced usage in the {span}.</div>
-                ) : (
-                  <ol className="usage-top">
-                    {top.map((a, i) => (
-                      <li key={a.key}>
-                        <span className="rank">{i + 1}</span>
-                        <span className="grow">
-                          <span className="title">{a.key}</span>
-                          <span className="meta">
-                            {compact(a.requests)} requests · {a.providers.map(providerLabel).join(", ")}
-                          </span>
-                        </span>
-                        <span className="amt">
-                          {money(cost(a))}
-                          <span className="meta">{costKindLabel(a)}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
+              <ModelMixCard records={summary.inWindow} span={span} />
               <ProviderCard records={summary.inWindow} imports={data.imports} onImport={data.addImport} onClear={data.clearImports} />
             </div>
           </div>
@@ -259,6 +262,137 @@ export function UsageView() {
 function costKindLabel(r: GroupRow) {
   if (r.billedUsd && r.estimatedUsd) return "estimated + billed";
   return r.billedUsd ? "billed" : "estimated";
+}
+
+// ── Command center ──────────────────────────────────────────────────────────
+
+const pctLabel = (v: number | null) => (v == null ? "–" : `${Math.round(v * 100)}%`);
+const IMPACT_LABEL: Record<Finding["impact"], string> = { high: "High impact", medium: "Medium", low: "Low" };
+
+function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; advice: Finding[]; span: string }) {
+  const byCost = workflows.some((w) => w.costUsd > 0);
+  return (
+    <div className="grid usage-row usage-command">
+      <div className="card usage-workflows">
+        <div className="card-head">
+          <div className="grow">
+            <h3>Workflows by resource use</h3>
+            <div className="small muted">Ranked by {byCost ? "known cost" : "tokens"} in the {span} · share of the total</div>
+          </div>
+        </div>
+        {workflows.length === 0 ? (
+          <div className="empty small">No usage in the {span}.</div>
+        ) : (
+          <ol className="usage-wf">
+            {workflows.map((w, i) => {
+              const share = byCost ? w.costShare : w.tokenShare;
+              return (
+                <li key={w.key}>
+                  <span className="rank">{i + 1}</span>
+                  <div className="wf-main">
+                    <div className="wf-line">
+                      <span className="title">{w.key}</span>
+                      <span className="spacer" />
+                      <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : "–"}</span>
+                    </div>
+                    <div className="meter" aria-hidden="true">
+                      <i style={{ width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%` }} />
+                    </div>
+                    <div className="wf-stats">
+                      <span>
+                        <strong>{pctLabel(share)}</strong> of {byCost ? "spend" : "tokens"}
+                      </span>
+                      <span>
+                        <strong>{compact(w.requests)}</strong> {w.requests === 1 ? "call" : "calls"}
+                      </span>
+                      <span>
+                        <strong>{compact(w.tokens)}</strong> tokens
+                      </span>
+                      <span>
+                        <strong>{pctLabel(w.cacheHitRate)}</strong> cache hits
+                      </span>
+                      {w.costPerRequest != null && (
+                        <span>
+                          <strong>{money(w.costPerRequest)}</strong> per call
+                        </span>
+                      )}
+                    </div>
+                    <div className="wf-models">
+                      {w.models.slice(0, 3).map((m) => (
+                        <span key={m.model} className="chip mono">
+                          {m.model}
+                        </span>
+                      ))}
+                      {w.models.length > 3 && <span className="small muted">+{w.models.length - 3} more</span>}
+                      <span className="small muted">last {relative(w.last)}</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+      <div className="card usage-advice">
+        <div className="card-head">
+          <div className="grow">
+            <h3>Where to optimize</h3>
+            <div className="small muted">Fixed rules over the numbers on the left, no AI involved</div>
+          </div>
+        </div>
+        {advice.length === 0 ? (
+          <div className="empty small">{workflows.length ? "Nothing stands out: models fit the work, big prompts are cached, and no workflow dominates." : `No usage in the ${span}.`}</div>
+        ) : (
+          <ul className="usage-findings">
+            {advice.map((f) => (
+              <li key={f.id}>
+                <span className={`impact ${f.impact}`}>{IMPACT_LABEL[f.impact]}</span>
+                <div className="title">{f.title}</div>
+                <p className="small muted">{f.detail}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModelMixCard({ records, span }: { records: UsageRecord[]; span: string }) {
+  const rows = useMemo(() => modelMix(records), [records]);
+  const byCost = rows.some((r) => r.costUsd > 0);
+  const total = rows.reduce((s, r) => s + (byCost ? r.costUsd : r.tokens), 0);
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3 className="grow">Model usage</h3>
+      </div>
+      {rows.length === 0 ? (
+        <div className="empty small">No usage in the {span}.</div>
+      ) : (
+        <div className="usage-providers">
+          {rows.map((r) => {
+            const v = byCost ? r.costUsd : r.tokens;
+            return (
+              <div key={r.model} className="prov">
+                <div className="prov-line">
+                  <span className="title mono">{r.model}</span>
+                  <span className="spacer" />
+                  <span className="amt">{byCost ? money(r.costUsd) : compact(r.tokens)}</span>
+                </div>
+                <div className="meter" aria-hidden="true">
+                  <i style={{ width: `${total ? (v / total) * 100 : 0}%` }} />
+                </div>
+                <div className="meta">
+                  {compact(r.requests)} {r.requests === 1 ? "call" : "calls"} · {compact(r.tokens)} tokens · {pctLabel(total ? v / total : null)} of {byCost ? "spend" : "tokens"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Chart ───────────────────────────────────────────────────────────────────
@@ -429,7 +563,7 @@ function ProviderCard({ records, imports, onImport, onClear }: { records: UsageR
                 </div>
               </>
             ) : (
-              <div className="meta">{id === "anthropic" ? "Recorded automatically when repository intelligence runs." : "Import a usage file to include it."}</div>
+              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "Import a usage file to include it."}</div>
             )}
           </div>
         ))}
@@ -618,6 +752,12 @@ function SetupState({
               <Icon name="settings" size={12} /> Open Settings
             </button>
           )}
+        </li>
+        <li>
+          <div className="title">Let the GitHub agents report their calls</div>
+          <p className="muted">
+            Merge Flow, Design Consistency and Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and <span className="mono">ATLAS_FEED_TOKEN</span> are set on GitHub. The site keeps the numbers only, never a prompt or a key.
+          </p>
         </li>
         <li>
           <div className="title">Import Anthropic or OpenAI usage records</div>

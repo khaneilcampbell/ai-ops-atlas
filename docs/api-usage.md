@@ -9,6 +9,7 @@ it reads local records when the tab opens and when you press **Refresh**.
 | Source | How it gets there | Cost shown as |
 | --- | --- | --- |
 | Repository intelligence runs | Logged by the Mac app on every run that reached Anthropic: the token counts Anthropic reported, the model, the repository, and the attempts. Read with the `intel_runs` command (the run log keeps the latest 300 runs). | **Estimated**: reported tokens × the prices under Settings → Repository intelligence |
+| GitHub agents (Merge Flow, Design Consistency, Opportunity Scout) | After each model call the agent posts the token counts Anthropic reported (input, output, cache reads and writes), the model and an estimated cost to `POST /api/hooks/usage` with the add-only `ATLAS_FEED_TOKEN`. Stored in the site's D1 `agent_usage` table (newest 5,000 rows). The page reads `/api/usage/agents`; the Mac app reads `/api/hooks/usage` with its sync key. | **Estimated**: reported tokens × the prices in the agent's `policy.json` |
 | Imported usage files | A JSON file you import on the tab. Stored only in this device's local storage, never sent anywhere. | **Billed** only when a row says `"cost_type": "billed"`, otherwise **estimated** |
 
 Estimated and billed costs are kept apart everywhere: the stat cards, the chart (two series
@@ -17,13 +18,34 @@ with a legend), the top-five list and the table each label which is which.
 Claude subscription usage (Pro, Max, Claude Code plans) isn't available through API billing
 endpoints, so it can't appear here.
 
+## Command center
+
+The top of the tab ranks every workflow (agent) in the period by known cost, or by tokens when
+no cost is known, with its share of the total, calls, tokens, cache hit rate (cache reads ÷ all
+prompt tokens), cost per call and the models it used. Beside it, **Where to optimize** lists
+fixed-rule findings (`src/usage/insights.ts`, no AI):
+
+| Finding | When |
+| --- | --- |
+| Try a smaller model | Most of a workflow's calls use a frontier model (Opus, Fable, GPT-5) but write 2,000 output tokens or fewer per call: summaries, triage, classification |
+| Cache the repeated prompt | 3 or more calls averaging 4,000+ prompt tokens with under 10% read from the cache |
+| One workflow dominates | The top workflow is 50% or more of known spend |
+| Add a price | Records with tokens but no cost, so the ranking may be off |
+
+Impact is high at 40%+ of spend, medium at 15%+, low below. **Model usage** shows each model's
+calls, tokens and share.
+
 ## Setup
 
 Nothing shows until a source exists.
 
 1. **Atlas's own agent:** add an Anthropic API key under Settings → Repository intelligence (it
    stays in the macOS Keychain; the web view never sees it). Each analysis run then adds a record.
-2. **Other agents (Anthropic or OpenAI):** import a JSON usage file with **Import usage file**.
+2. **GitHub agents:** set the `ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN` repository secrets (the
+   same ones that send reports). The usage route is the feed URL's sibling
+   (`/api/hooks/agents` → `/api/hooks/usage`), or set `ATLAS_USAGE_URL`. Nothing else to add:
+   the site creates its table on the first post. Sending is best effort and never stops a run.
+3. **Other agents (Anthropic or OpenAI):** import a JSON usage file with **Import usage file**.
    Re-importing a file with the same name replaces its earlier rows. **Remove imports** clears them.
 
 The hosted web build can't read the Mac app's run log directly. Turn on **Website sync** (below)

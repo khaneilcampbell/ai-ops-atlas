@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-09 · API Usage is now an AI usage command center: it ranks your agents by cost and tokens, shows cache hits and which models each one uses, lists where to cut usage, and now counts the GitHub agents (Merge Flow, Design Consistency, Opportunity Scout) too (#PR)
 - 2026-11-09 · Atlas Galleria now has pavement all the way round, the car park moved out to make room, the ramp beside the car park is gone, and the car park now holds coupes, luxury SUVs, supercars, pickups, taxis, a limo and a concept truck, with five drivers coming and going, and the car park, now two rows of bays, its driveway and aisle are paved in the same asphalt and centre line as Atlas's streets (#301)
 - 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
 - 2026-11-09 · Selecting Profile Tower now highlights the whole building, GitHub podium and skybridge included, and its district glow covers both of its plots (#300)

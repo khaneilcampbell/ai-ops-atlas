@@ -24,7 +24,8 @@ export interface UsageRecord {
   /** null when no price was configured for the model, so the cost is unknown. */
   costUsd: number | null;
   costKind: CostKind;
-  source: "atlas" | "import" | "sync";
+  /** atlas: this Mac's runs. import: a file. sync: the Mac's records on the website. agent: GitHub-run agents that reported their own calls. */
+  source: "atlas" | "import" | "sync" | "agent";
 }
 
 /** Runs the repository intelligence agent logged. Only runs that reached the provider carry usage. */
@@ -124,6 +125,24 @@ function importRow(row: unknown, id: string): UsageRecord | null {
     costKind,
     source: "import",
   };
+}
+
+/** Records in the import format (docs/api-usage.md), so the site validates them like a file. */
+export function toSyncRows(records: UsageRecord[]) {
+  return records.map((r) => ({
+    at: r.at,
+    provider: r.provider,
+    model: r.model,
+    agent: r.agent,
+    project: r.project,
+    requests: r.requests,
+    input_tokens: r.input,
+    output_tokens: r.output,
+    cache_read_tokens: r.cacheRead,
+    cache_write_tokens: r.cacheWrite,
+    cost_usd: r.costUsd,
+    cost_type: r.costKind,
+  }));
 }
 
 // ── Aggregation ──────────────────────────────────────────────────────────────
