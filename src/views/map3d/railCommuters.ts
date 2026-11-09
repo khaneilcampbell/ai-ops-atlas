@@ -9,12 +9,12 @@ import {HILLS} from './hillsPlan';
  * deterministic: the same clock always gives the same picture, with no timers or teleporting.
  */
 export const RAIL_COMMUTERS={rest:8,paces:[.31,.36,.41,.46,.5,.55],laneWidth:.07} as const;
-/** Financial District tower ids: Circa (twin towers), American Express and The Ritz-Carlton. */
+/** Financial District tower ids: Ellipse Residences (twin towers), Ellery Budget Center and Camton Hotel. */
 export const COMMUTER_TOWERS={circa:'circa',amex:'budget',ritz:'harbor-residence'} as const;
 /**
  * KC, 2026-10-31: two groups of six. Each group rides one train together: two to Circa, two to
- * American Express, two to the Ritz-Carlton. Ritz-Carlton guests return to the Atlas Hills mansion,
- * and one American Express guest goes home to Vista House.
+ * Ellery Budget Center, two to Camton Hotel. Camton Hotel guests return to the Atlas Hills mansion,
+ * and one Ellery Budget Center guest goes home to Vista House.
  */
 export const COMMUTER_GROUPS=[
  [{home:'cafe',work:'circa'},{home:'home-4',work:'amex'},{home:'mansion',work:'ritz'},{home:'home-1',work:'circa'},{home:'shops',work:'amex'},{home:'mansion',work:'ritz'}],
@@ -86,7 +86,7 @@ export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|unde
  const trips=groups.flatMap((g,group)=>g.map((trip,k)=>({...trip,group,k})));
  if(trips.some(t=>!tower(t.work)))return;
  const commuters=trips.map(({home,work,group,k},i):RailCommuter=>{
-  // Circa is optional (its own pull request); until it exists its guests use American Express.
+  // Circa is optional (its own pull request); until it exists its guests use Ellery Budget Center.
   const building=tower(work)!,door=doors[k%doors.length];
   return {id:`commuter:${i}`,group,home:c?home:'marketplace',work:building.id,pace:RAIL_COMMUTERS.paces[(k*5+group)%RAIL_COMMUTERS.paces.length],lane:((k%5)-2)*RAIL_COMMUTERS.laneWidth/2,offset:0,
    hills:commuterRoute(c?hillsRoute(c,home,door):[...r.hillsWalk.slice(0,-1),[r.hills[0]+door,COMMUNITY.platformRise,r.hills[1]+.3]]),financial:commuterRoute(financialRoute(f,r,building,door)),
