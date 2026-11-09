@@ -75,14 +75,14 @@ they are.
 |---|---|---|---|---|
 | Chase | Bayvale Bank | Banking records review | `banks` | Done |
 | Wells Fargo | Halden Trust | Bills and records bank tower | `records` | Done |
-| American Express | Ellery Budget Center | Spending and budget review | `budget` | Open |
+| American Express | Ellery Budget Center | Life management: spending, budget and bills review; plum Art Deco tower | `budget` | Done |
 | Robinhood | Robin Exchange (KC's pick) | Investment records (no trading) | `investments` | Done |
 | Navy Federal Credit Union | Merrow Credit Union | Member services and records | `insurance` | Done |
 | Experian | Aldren Insights | Credit and data insights offices | `residence` | Done |
 | Vanguard | Ravelle Advisors | Financial planning headquarters | `financial-planning` | Done |
 | The Ritz-Carlton | Camton Hotel (KC's pick) | Waterfront luxury hotel | `harbor-residence` | Done |
 | Circa | Ellipse Residences | Twin-tower residence and pool deck | `circa` | Done |
-| Benjaire Finance | Benjaire Finance | Business finance workspace | `business-finance` | Keep |
+| Benjaire Finance | Corvane Capital | Business finance house; original drawn logo (ring and rising bars badge), teal and copper | `business-finance` | Done |
 | Financial District | Financial District | District nameplate | `FINANCIAL_KEY` | Keep |
 | Financial Park | Financial Park | Public park | `FINANCIAL_PARK_KEY` | Keep |
 | Financial District Station | Financial Station | Rail stop (26 characters today, clips) | `financial-station` | Open |
