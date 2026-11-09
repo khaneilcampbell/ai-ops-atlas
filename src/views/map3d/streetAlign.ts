@@ -22,6 +22,9 @@ export const STREET_ALIGN={
  walk:.48,
 } as const;
 
+/** A street's carriageway and sidewalk, from its centre line: nothing may stand inside it. */
+export const STREET_CLEAR=ROAD_W/2+.18;
+
 interface Run {x:boolean;c:number;lo:number;hi:number}
 const run=(a:Pt,b:Pt):Run|undefined=>{
  if(Math.abs(a[1]-b[1])<1e-9&&Math.abs(a[0]-b[0])>1e-9)return {x:true,c:a[1],lo:Math.min(a[0],b[0]),hi:Math.max(a[0],b[0])};

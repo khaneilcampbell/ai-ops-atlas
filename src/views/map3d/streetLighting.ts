@@ -2,6 +2,7 @@ import {financialDimensions} from './financialArchitecture';
 import type {Scene3D} from './scene';
 import {towerRing,type Pt,type Box} from './roads';
 import {distanceToRoad} from './highway';
+import {STREET_CLEAR} from './streetAlign';
 import {airportPoint,airportPublicPath,AIRPORT_LAYOUT} from './airport';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {HILLS} from './hillsPlan';
@@ -42,7 +43,8 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  for(const sign of index++%2?[1,-1]:[-1,1]){let placed=false;for(const setback of [.5,.75]){const offset=path.width/2+setback,x=rx+nx*sign*offset,z=rz+nz*sign*offset;
  if(near(x,z)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
  if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<.3))continue;
- if(paths.some(other=>distanceToRoad([x,z],other.points)<other.width/2+.12))continue;
+ // Off the carriageway and its sidewalk: a district street is wider than the line it is drawn from.
+ if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,STREET_CLEAR))))continue;
  const lamp:StreetLamp={x,z,roadX:rx,roadZ:rz,yaw:Math.atan2(rx-x,rz-z),height:path.highway?STREET_LIGHT.highwayHeight:STREET_LIGHT.height,highway:path.highway};result.push(lamp);const key=`${Math.floor(x/cell)}:${Math.floor(z/cell)}`;cells.set(key,[...(cells.get(key)??[]),lamp]);placed=true;break;}
  if(placed)break;}
  if(result.length>=STREET_LIGHT.maxFixtures)return result;

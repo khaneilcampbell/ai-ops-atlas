@@ -2,7 +2,9 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
-import {alignStreets,STREET_ALIGN} from './streetAlign';
+import {alignStreets,STREET_ALIGN,STREET_CLEAR} from './streetAlign';
+import {distanceToRoad} from './highway';
+import {planStreetLights} from './streetLighting';
 import {streetPavement} from './streetPavement';
 import type {Pt} from './roads';
 
@@ -49,5 +51,12 @@ describe('one street per corridor',()=>{
  it('paints one zebra per junction arm',()=>{
   const {zebras}=streetPavement(scene);
   for(let i=0;i<zebras.length;i++)for(let j=i+1;j<zebras.length;j++)expect(Math.hypot(zebras[i][0]-zebras[j][0],zebras[i][1]-zebras[j][1])).toBeGreaterThan(.3);
+ });
+ for(const group of ['district','tag'] as const)it(`keeps trees, bushes, rocks, bollards and lamps out of the streets: ${group}`,()=>{
+  const s=group==='district'?scene:buildScene(layoutMap(catalog,[],group));
+  const streets=[...s.transportConnections.map(c=>c.road),...s.carBridges.flatMap(b=>b.roads)],walks=s.transportConnections.map(c=>c.walk);
+  const items=[...s.trees,...s.bushes,...s.rocks,...s.bollards].map(i=>[i.x,i.z] as Pt);
+  expect(items.filter(p=>streets.some(r=>distanceToRoad(p,r)<STREET_CLEAR)||walks.some(w=>distanceToRoad(p,w)<.24))).toEqual([]);
+  expect(planStreetLights(s).filter(l=>!l.highway&&streets.some(r=>distanceToRoad([l.x,l.z],r)<STREET_CLEAR))).toEqual([]);
  });
 });

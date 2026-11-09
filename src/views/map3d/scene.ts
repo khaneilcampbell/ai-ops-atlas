@@ -25,6 +25,7 @@ import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
 import {distanceToRoad} from "./highway";
+import {STREET_CLEAR} from "./streetAlign";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airportTrafficKeepOut, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
@@ -832,6 +833,10 @@ function buildCity(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
   }
+  // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
+  // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).
+  const streets=[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],linkWalks=connections.map(c=>c.walk);
+  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--){const p:[number,number]=[items[i].x,items[i].z];if(streets.some(r=>distanceToRoad(p,r)<STREET_CLEAR)||linkWalks.some(w=>distanceToRoad(p,w)<.24))items.splice(i,1);}
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
