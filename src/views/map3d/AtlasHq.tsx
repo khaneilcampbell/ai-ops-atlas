@@ -8,6 +8,7 @@ import {HQ,hqRise,lobby,towerRoof} from './atlasHqPlan';
 import {hqGeometry} from './atlasHqGeometry';
 import {useQualityLevel} from '../../lib/governor';
 import {glassTexture} from './atlasHqTextures';
+import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
 
@@ -28,7 +29,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  const k=t.size/HQ.refSize;
  const quality=useQualityLevel();
  const v=hqRise(t.customHeight,k);
- const geo=useMemo(()=>hqGeometry(k,v),[k,v]);
+ const geo=useMemo(()=>packNormals(hqGeometry(k,v)),[k,v]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
   const blue=glassTexture('#5f93bd','#c6deee','#40627f',11),gold=glassTexture('#dcb978','#f8ecc8','#c29c62',29),rib=glassTexture('#86a9c2','#d6e5ee','#5d7b8f',47);

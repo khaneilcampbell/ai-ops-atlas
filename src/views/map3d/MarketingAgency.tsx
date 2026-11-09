@@ -6,6 +6,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {TERRACE_H} from './scene';
 import {AGENCY,AGENCY_KEY,type AgencyPlan} from './marketingAgencyPlan';
 import {agencyGeometry,SCREEN_LONG,SCREEN_WEST} from './marketingAgencyGeometry';
+import {packNormals} from './packGeometry';
 
 /**
  * The perforated screen: a lattice of diamond openings, densest at the west end and low down,
@@ -98,7 +99,7 @@ export function MarketingAgency({plan:a,g,m,pick,night=false,building=true}:{pla
   if(!a)return;
   const shell=agencyGeometry(),pools=mergeGeometries(a.pools.map(p=>{const b=new THREE.BoxGeometry(p.w,.04,p.d);b.translate(p.x+p.w/2,TERRACE_H+.005,p.z+p.d/2);return b;}))!;
   for(const k of ['shell','copper','glass'] as const)shell[k].translate(a.x,TERRACE_H,a.z);
-  return {...shell,pools};
+  return packNormals({...shell,pools});
  },[a]);
  useEffect(()=>()=>{if(geo){geo.shell.dispose();geo.copper.dispose();geo.glass.dispose();geo.pools.dispose();}},[geo]);
  const mats=useMemo(()=>{

@@ -11,6 +11,7 @@ import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
 import type {StadiumSite} from "./stadiumSite";
 import {LAND_TOP} from "./scene";
 import {palmBoxes} from "./palms";
+import {packNormals} from "./packGeometry";
 
 const noRaycast=()=>null;
 
@@ -23,7 +24,7 @@ const noRaycast=()=>null;
  */
 /** `building={false}` draws only the lot, for the interior, where the bowl is drawn inside. */
 export function Stadium({plan:a,site,g,m,pick,night=false,building=true}:{night?:boolean;building?:boolean;plan?:StadiumPlan;site?:StadiumSite;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick}) {
-  const geo=useMemo(()=>a&&building?stadiumGeometry():undefined,[a,building]);
+  const geo=useMemo(()=>a&&building?packNormals(stadiumGeometry()):undefined,[a,building]);
   useEffect(()=>()=>{if(geo)for(const v of Object.values(geo))v.dispose();},[geo]);
   const sheet=useMemo(()=>stadiumRoofTexture(),[]);
   useEffect(()=>()=>sheet.dispose(),[sheet]);
