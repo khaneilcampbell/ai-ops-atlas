@@ -73,7 +73,7 @@ import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
-import { ActivityGlow } from "./activity";
+import { ActivityGlow, WholeBuildingGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
 import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
@@ -1169,13 +1169,13 @@ function World({
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
-      {scene.towers.filter((t) => t.identity.landmark).map((t) => <AtlasHq key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <RibbonTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <CommerceTower key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <GithubTower key={t.key} tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <IntelligenceHub key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <PortfolioSite key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
-      {scene.towers.filter((t) => isSocLab(t.projectId)).map((t) => <SocLab key={t.key} tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} />)}
+      {scene.towers.filter((t) => t.identity.landmark).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><AtlasHq tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><RibbonTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><CommerceTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><GithubTower tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><IntelligenceHub tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><PortfolioSite tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isSocLab(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><SocLab tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />

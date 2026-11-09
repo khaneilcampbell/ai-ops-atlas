@@ -86,7 +86,8 @@ describe("decorative vehicles", () => {
 
   it("builds a road bridge for every pair of neighboring districts", () => {
     const layout = layoutMap(catalog);
-    const ids = new Set(layout.districts.map((d) => d.project.id));
+    // A cleared lot (Benjaire Dashboard) keeps its streets, so its bridges stay too.
+    const ids = new Set([...layout.districts, ...(layout.cleared ?? [])].map((d) => d.project.id));
     const pairs = layout.walks.filter((w) => ids.has(w.from) && ids.has(w.to));
     expect(scene.carBridges.map((b) => b.ends.join(">")).sort()).toEqual(pairs.map((w) => `${w.from}>${w.to}`).sort());
     // Each bridge's roads start on its districts' plaza lanes and reach the deck's two ends.

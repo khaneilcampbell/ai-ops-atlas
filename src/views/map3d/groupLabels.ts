@@ -8,7 +8,8 @@ export interface GroupLabel { key: string; text: string; title: string; district
  */
 export function groupLabels(hoods: readonly { key: string; label: string; count: number }[]): GroupLabel[] {
   if (hoods.length < 2) return [];
-  return hoods.filter((n) => n.label).map((n) => {
+  // A group whose only tower was removed keeps its land as a vacant lot, but no heading.
+  return hoods.filter((n) => n.label && n.count > 0).map((n) => {
     const kind = n.key.startsWith("d:") ? "district" : n.key.startsWith("t:") ? "tag" : n.key.startsWith("s:") ? "status group" : "group";
     return { key: n.key, text: n.label.toUpperCase(), title: `${n.label} ${kind} · ${n.count} ${n.count === 1 ? "project" : "projects"}`, district: kind === "district" };
   });
