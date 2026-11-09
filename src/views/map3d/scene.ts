@@ -7,6 +7,7 @@ import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
 import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
+import {alignStreets} from './streetAlign';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
@@ -24,8 +25,9 @@ import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
 import {distanceToRoad} from "./highway";
+import {STREET_CLEAR,streetHitTest} from "./streetAlign";
 import {districtConnections,type DistrictConnection} from "./connections";
-import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
+import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airportTrafficKeepOut, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
@@ -732,6 +734,9 @@ function buildCity(layout: Layout): Scene3D {
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
   const neighborhood=planNeighborhoodLinks({airport,marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
+  // One street per corridor: links routed side by side share one carriageway, walks move off it.
+  const streetBoxes=[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?[airportTrafficKeepOut(airport)]:[])];
+  connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
   for(const path of neighborhood.walks){
     for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
     walks.push({x0:path[0][0],z0:path[0][1],x1:path[path.length-1][0],z1:path[path.length-1][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
@@ -778,6 +783,7 @@ function buildCity(layout: Layout): Scene3D {
     // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
     ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
   connections.push(...ring);
+  if(ring.length)connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership});
@@ -840,6 +846,10 @@ function buildCity(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
   }
+  // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
+  // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).
+  const inStreet=streetHitTest([...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],STREET_CLEAR),onWalk=streetHitTest(connections.map(c=>c.walk),.24);
+  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inStreet(items[i].x,items[i].z)||onWalk(items[i].x,items[i].z))items.splice(i,1);
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
