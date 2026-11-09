@@ -5,6 +5,7 @@ import {usePowerProfile,useWindowFocused} from '../../lib/power';
 import type {Scene3D} from './scene';
 import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
 import {FLEET_STRIDE,carBoxes} from './galleriaFleet';
+import {STREET_ASPHALT,STREET_LINE} from './transportScale';
 import {CAR_SURFACE,GALLERIA_LIFE,carHeight,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
 
 const COATS=['#346583','#a18455','#6d875e','#846798','#ab6355','#2f3a45'];
@@ -23,13 +24,13 @@ export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:
   // Driveways: asphalt a touch above the pavement they cross, with pale kerb edges and a stop line at the street.
   for(const {a:[ax,az],b:[bx,bz]} of life.driveways){
    const len=Math.hypot(bx-ax,bz-az),yaw=Math.atan2(bx-ax,bz-az),mx=(ax+bx)/2,mz=(az+bz)/2,w=L.driveWidth;
-   court.push({p:[mx,y,mz],s:[w,CAR_SURFACE.driveway,len+.1],r:yaw,c:'#4a504d'});
+   court.push({p:[mx,y,mz],s:[w,CAR_SURFACE.driveway,len+.1],r:yaw,c:STREET_ASPHALT});
    for(const side of [-1,1])court.push({p:[mx+Math.cos(yaw)*side*w/2,y,mz-Math.sin(yaw)*side*w/2],s:[.035,CAR_SURFACE.driveway+.01,len+.1],r:yaw,c:'#c9bfa6'});
    const k=Math.max(0,len-.55)/len;court.push({p:[ax+(bx-ax)*k,y+CAR_SURFACE.driveway,az+(bz-az)*k],s:[w*.9,.003,.03],r:yaw,c:'#f3efe4'});
    // Two lanes: a dashed centre line from the car park to the stop line.
-   const ux=(bx-ax)/len,uz=(bz-az)/len;for(let d=.25;d<len-.75;d+=.36)court.push({p:[ax+ux*d,y+CAR_SURFACE.driveway,az+uz*d],s:[.025,.003,.18],r:yaw,c:'#f3efe4'});
+   const ux=(bx-ax)/len,uz=(bz-az)/len;for(let d=.25;d<len-.75;d+=.36)court.push({p:[ax+ux*d,y+CAR_SURFACE.driveway,az+uz*d],s:[.025,.003,.18],r:yaw,c:STREET_LINE});
    // A wider apron over the last stretch to the road's edge, so turning cars have room.
-   const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:'#4a504d'});
+   const mk=Math.max(0,len-.9);court.push({p:[ax+ux*mk,y,az+uz*mk],s:[w+.36,CAR_SURFACE.driveway,.9],r:yaw,c:STREET_ASPHALT});
   }
   // Zebra stripes painted on the drive where it crosses a walk; the walk itself opens for the drive (CommunityRail, VenueBridge).
   for(const c of life.crossings)for(let d=-L.driveWidth/2+.04;d<=L.driveWidth/2-.03;d+=.14)court.push({p:[c.x+Math.cos(c.yaw)*d,y+CAR_SURFACE.driveway,c.z-Math.sin(c.yaw)*d],s:[.065,.004,.48],r:c.yaw,c:'#f7f7f0'});
@@ -45,7 +46,7 @@ export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:
   }
   // The street court: asphalt, bay lines, and the parked cars nobody is about to drive.
   if(life.court){
-   for(const p of life.court.pad)court.push({p:[p.x+p.w/2,y,p.z+p.d/2],s:[p.w,.012,p.d],c:'#5d6360'});
+   for(const p of life.court.pad)court.push({p:[p.x+p.w/2,y,p.z+p.d/2],s:[p.w,.012,p.d],c:STREET_ASPHALT});
    for(const [x,z] of life.court.stripes)court.push({p:[x,y+.012,z],s:[.38,.004,.025],c:'#f3efe4'});
    for(const c of life.court.cars)for(const b of carBoxes(c.kind,c.c,[c.x,c.z],Math.PI/2,y+.012))court.push({p:[b.x,b.y,b.z],s:[b.w,b.h,b.d],r:b.r,c:b.c});
   }

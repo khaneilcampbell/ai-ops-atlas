@@ -1,4 +1,5 @@
 import {carBoxes,galleriaCar,type GalleriaCarKind} from './galleriaFleet';
+import {STREET_ASPHALT,STREET_LINE} from './transportScale';
 import type {Point,Rect,Tree} from './scene';
 import type {MallPlan} from './mallPlan';
 import type {Pt} from './roads';
@@ -322,10 +323,12 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
  let parking:GalleriaPlan['parking'];
  if(pz1-pz0>=1.4){
   const px0=rect.x+.3,px1=rect.x+rect.w-.3;
-  boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:'#5d6360'});
+  boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:STREET_ASPHALT});
   const rows=pz1-pz0>=2.6?2:1,rowD=.62,bay=.34;
   // One row backs onto the aisle beside the other; with a single row the aisle runs along its open side.
   parking={area:{x:px0,z:pz0,w:px1-px0,d:pz1-pz0},aisle:rows===2?(pz0+pz1)/2:pz1-.25,driven:[]};let cars=0;
+  // The aisle is a two-way street: the city's dashed centre line, from the far end to the driveway.
+  for(let x=px0+.25;x<px1-.2;x+=.36)boxes.push({x,z:parking.aisle,w:.18,d:.025,h:.003,y:.012,c:STREET_LINE});
   for(let r=0;r<rows;r++){
    const zr=r===0?pz0+.1+rowD/2:pz1-.1-rowD/2;
    for(let x=px0+.15,k=0;x<=px1-.1;x+=bay,k++){
