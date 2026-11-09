@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../../catalog";
 import type { Catalog } from "../../catalog/types";
-import { layoutMap } from "../mapLayout";
+import { OFF_MAP_PROJECTS, layoutMap } from "../mapLayout";
 import { buildScene } from "./scene";
-import { openLot } from "./openLot";
+import { VACANT_LOT_LABEL, openLot } from "./openLot";
 
 function bigCatalog(n: number): Catalog {
   const projects = Array.from({ length: n }, (_, i) => ({
@@ -41,11 +41,14 @@ describe("buildScene", () => {
     }
   });
 
-  it("gives office projects a tower and Skyline none (its district was removed)", () => {
+  it("gives office projects a tower and off-map projects none (Skyline, Service Desk, Career Applications)", () => {
     const s = buildScene(layoutMap(catalog));
-    expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => p.id !== "skyline").map((p) => p.id).sort());
+    expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => !OFF_MAP_PROJECTS.has(p.id)).map((p) => p.id).sort());
     expect(s.houses).toEqual([]);
-    expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.filter((a) => a.projectId !== "skyline").length);
+    expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.filter((a) => !OFF_MAP_PROJECTS.has(a.projectId)).length);
+    // Their land stays as plain lawn, apart from the open lot the Marketplace anchors on.
+    expect(s.parks.filter((p) => p.label === VACANT_LOT_LABEL).map((p) => p.id).sort()).toEqual(["park:vacant:career-optimizer", "park:vacant:service-desk"]);
+    expect(openLot(s.parks)?.id).toBe("park:all");
   });
 
   it("keeps kiosks clear of houses, towers and each other", () => {

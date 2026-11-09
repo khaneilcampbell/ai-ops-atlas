@@ -30,7 +30,7 @@ import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
-import { OPEN_LOT_LABEL, openLot } from "./openLot";
+import { OPEN_LOT_LABEL, VACANT_LOT_LABEL, openLot } from "./openLot";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -282,7 +282,7 @@ function buildCity(layout: Layout): Scene3D {
     const agents = d.lots.length + d.crew.length;
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
-    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "service-desk", "benjaire-ops", "soc-lab", "portfolio-site", "career-optimizer"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
+    const floors = ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
     const size = d.hq.size * (identity.landmark ? 1.02 : 0.92) * CITY_SCALE.hq.footprint;
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
@@ -499,7 +499,9 @@ function buildCity(layout: Layout): Scene3D {
     // residences, shops and wheel that stood here were removed to make space). The Marketplace, the
     // airport road and the railway still take their places from it.
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
-    parks.push({ id: p.id, label: OPEN_LOT_LABEL, x: p.ox, z: p.oy, w: p.w, d: p.h });
+    // A vacant lot (a removed tower's land) is the same plain lawn, but it is not the open lot the
+    // Marketplace and the airport road anchor on.
+    parks.push({ id: p.id, label: p.vacant ? VACANT_LOT_LABEL : OPEN_LOT_LABEL, x: p.ox, z: p.oy, w: p.w, d: p.h });
   }
 
   // Level pedestrian bridges between terraces.
