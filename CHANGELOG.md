@@ -5,6 +5,7 @@ top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newe
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-09 · Agents now start only when something changes: a failed deploy or CI run on main, a new issue from KC, or a failed automation, at most five a day (#311)
 - 2026-11-09 · API Usage now flags coding sessions that ran with a heavy context and says when to compact or start fresh; new `npm run ops` and `npm run handoff` checks run without AI (#311)
+- 2026-11-09 · Removed the low walls on the east, street and station sides of the Financial District, so it opens straight onto the land next door (#304)
 - 2026-11-09 · API Usage is now an AI usage command center: it ranks your agents by cost and tokens, shows cache hits and which models each one uses, lists where to cut usage, and now counts the GitHub agents (Merge Flow, Design Consistency, Opportunity Scout) your ChatGPT Codex and Claude Code sessions on this Mac, and Claude or ChatGPT chat exports you import too (#308)
 - 2026-11-09 · Behind the scenes: recording new CI screenshots no longer lets one part of the run overwrite another part's fresh screenshots (#206)
 - 2026-11-09 · Streets by the airport and Atlas Stadium now show as one road, without doubled lane lines, overlapping crossings or a footpath painted down the middle; every junction uses the same zebra crossing, and no tree, bush, bollard or street lamp stands in a street (#305)
