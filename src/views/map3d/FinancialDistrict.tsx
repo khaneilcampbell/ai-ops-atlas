@@ -91,8 +91,7 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
  // No wall on the east side: the district opens straight onto its neighbour (KC, 2026-11-09).
  const westWall=a.circa?F.northWalkZ-.5:a.d-.4;
  solid.push(box(.18,0,.2+westWall/2,.18,.35,westWall,'#c6c3b4'));
- // No wall on the street side either: the promenade meets the neighbouring district level, and side roads run straight in (KC, 2026-11-09).
- solid.push(box(center,0,.18,span,.35,.18,'#c6c3b4'));
+ // No wall on the street side or the station side either: the promenade and the station walks meet the neighbouring land level (KC, 2026-11-09).
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
  for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.02,14.5,.06,.12,.06,'#ffffff'));
  return {solid,glass,clearGlass,tinted,tintedKeys,glow,clearKeys,bevelled,plants,lights,keys};
