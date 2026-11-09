@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-09 · Behind the scenes only: the screenshot check has fresh reference pictures and can re-check just a few screens on one machine, so pull requests stop showing false red marks from old pictures (#290)
 - 2026-11-08 · Updated the map renderer and React DOM packages to work with React 19 (#130)
 - 2026-11-08 · On iPhone the bottom bar now fits: Projects, Agents, Mission, Activity and More. More opens the other sections plus sync and CI status, and the CI pill stays in the header. Safari shows a one-time tip to add Atlas to the Home Screen, and failed runs get a Re-run on GitHub button (#291)
 - 2026-11-08 · When Atlas can't reach GitHub, the header now says how many repositories failed to sync, and hovering it shows why, instead of quietly showing old data as loaded (#288)
