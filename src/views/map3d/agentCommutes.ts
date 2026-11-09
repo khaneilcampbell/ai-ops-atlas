@@ -44,7 +44,7 @@ export interface CommutePlan {
 export type AgentWhere = "home" | "to-work" | "work" | "to-home";
 export type AgentState = { where: "home" | "work"; visible: false } | { where: "to-work" | "to-home"; visible: true; x: number; y: number; z: number; yaw: number };
 
-/** Doorways: the residence's own approach to its sidewalk, a headquarters' front steps, a skyline tenant's door. */
+/** Doorways: the residence's own approach to its sidewalk, a headquarters' front steps. */
 function homeDoor(scene: Scene3D, building: string): Pt3[] | undefined {
   const b = scene.financial?.buildings.find((x) => x.id === building && x.approach.length > 0);
   return b?.approach.map((p): Pt3 => [p[0], 0, p[1]]);
@@ -54,8 +54,8 @@ function workDoor(scene: Scene3D, job: AgentJob): Pt3 | undefined {
     const t = scene.towers.find((x) => x.projectId === job.work.projectId);
     return t && [t.x, 0, t.z + t.size / 2 + ENTRANCE / 2];
   }
-  const shop = scene.retail.find((k) => k.name === job.work.building);
-  return shop && [shop.x, 0, shop.z + shop.size / 2];
+  // Workplace buildings (the Marketplace, the Agency) have no walk-up door on the map yet.
+  return undefined;
 }
 
 export function planAgentCommutes(scene: Scene3D, jobs: AgentJob[], graph: StreetGraph = buildStreetGraph(streetLines(scene))): CommutePlan {

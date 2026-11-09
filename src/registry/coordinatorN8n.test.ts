@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest';
 import { catalog } from '../catalog';
 import { toProfile } from './profile';
-import { agentJobs } from '../catalog/agentJobs';
 
 it('links the existing Coordinator without replacing its fixture source or expanding permissions', () => {
   const agent = catalog.agents.find(a => a.id === 'atlas-production-coordinator')!;
@@ -12,5 +11,6 @@ it('links the existing Coordinator without replacing its fixture source or expan
   expect(p.execution.triggerType).toBe('manual');
   expect(p.responsibilities.limitations.join(' ')).toContain('absent from the published snapshot');
   expect(p.cost.budget).toContain('absent from the inspected published snapshot');
-  expect(agentJobs(catalog).find(job => job.agentId === agent.id)?.work.label).toContain('floor 3');
+  expect(agent.registry?.classification?.type).toBe('B');
+  expect(agent.officeFloor).toBe(3);
 });

@@ -32,6 +32,9 @@ interface Tile {
   note: string;
   tone?: "good" | "warn" | "bad" | "idle";
   title?: string;
+  unchecked?: boolean;
+  checkedAt?: string;
+  checkError?: boolean;
 }
 
 function fromCheck<T>(
@@ -46,6 +49,7 @@ function fromCheck<T>(
       value: loading ? "…" : "–",
       note: loading ? "Checking" : "Not checked on this device",
       tone: "idle",
+      unchecked: !loading,
     };
   if (c.state === "not-configured")
     return {
@@ -62,11 +66,14 @@ function fromCheck<T>(
       note: c.message,
       tone: "idle",
       title: `${c.source}, ${relative(c.checkedAt)}: ${c.message}`,
+      checkedAt: c.checkedAt,
+      checkError: true,
     };
   return {
     label,
     ...ok(c.data, c.checkedAt),
     title: `${c.source}, checked ${relative(c.checkedAt)}`,
+    checkedAt: c.checkedAt,
   };
 }
 
@@ -113,7 +120,7 @@ function deployTile(p: WebProperty, d: Loaded<Deploy[]>): Tile {
   };
 }
 
-export function PropertyDashboard({ property: p }: { property: WebProperty }) {
+export function PropertyDashboard({ property: p, compact = false }: { property: WebProperty; compact?: boolean }) {
   const d = usePropertyData(p.id);
   const { open } = usePropertyIncidents();
   if (!d) return null;
@@ -209,7 +216,7 @@ export function PropertyDashboard({ property: p }: { property: WebProperty }) {
       : "good";
 
   return (
-    <section className="property" aria-label={`${p.domain} live dashboard`}>
+    <section className={`property${compact ? " property-compact" : ""}`} aria-label={`${p.domain} live dashboard`}>
       <div className="section-head">
         <div className="section-title">Live site · {p.domain}</div>
         <span className={`chip property-chip ${headline}`}>
@@ -225,20 +232,27 @@ export function PropertyDashboard({ property: p }: { property: WebProperty }) {
           ))}
         </ul>
       )}
+      {compact && tiles.some(t => t.unchecked) && <p className="small muted property-coverage">{tiles.filter(t => t.unchecked).length} metrics not checked on this device. Site checks need an available connection.</p>}
+      {compact && ((d.site.state === "error" && d.site.value) || (d.deploys.state === "error" && d.deploys.value)) && <p className="small notice">Saved results · latest refresh failed. See check details.</p>}
       <div className="insight-grid property-grid">
         {tiles.map((t) => (
           <div
             key={t.label}
-            className={`insight property-tile ${t.tone ?? ""}`}
+            className={`insight property-tile ${t.tone ?? ""}${compact && t.unchecked ? " unchecked" : ""}`}
             title={t.title}
           >
             <div className="label">{t.label}</div>
-            <div className="value">{t.value}</div>
-            <div className="note">{t.note}</div>
+            <div className="value">{compact && t.unchecked ? "Not checked" : t.value}</div>
+            {!(compact && t.unchecked) && <div className="note">{compact && t.checkError ? "Check failed · details below" : compact && t.checkedAt ? relative(t.checkedAt) : t.note}</div>}
           </div>
         ))}
       </div>
       <div className="property-foot muted small">
+        {compact ? <details className="property-sources grow">
+          <summary>Sources and check details{tiles.some(t => t.checkError) || d.site.state === "error" || d.deploys.state === "error" ? " · check errors" : ""}</summary>
+          <p>{d.deploys.state === "error" ? `Deploy check: ${d.deploys.message} · ` : ""}{p.host} · deploys from GitHub{d.site.at ? ` · site checks ${relative(d.site.at)}` : ""}{d.site.state === "off" || d.site.state === "error" ? ` · ${d.site.message}` : ""}</p>
+          <ul>{tiles.filter(t => !t.unchecked).map(t => <li key={t.label}><b>{t.label}:</b> {t.note}{t.title ? ` · ${t.title}` : ""}</li>)}</ul>
+        </details> : (
         <span className="grow">
           {p.host} · deploys from GitHub
           {d.site.at ? ` · site checks ${relative(d.site.at)}` : ""}
@@ -246,6 +260,7 @@ export function PropertyDashboard({ property: p }: { property: WebProperty }) {
             ? ` · ${d.site.message}`
             : ""}
         </span>
+        )}
         <span className="property-links">
           <ExternalLink href={p.url}>
             <Icon name="external" size={12} /> Site

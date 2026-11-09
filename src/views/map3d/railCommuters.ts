@@ -1,4 +1,4 @@
-import {COMMUNITY,COMMUNITY_BUILDINGS,type CommunityPlan,type Point3,type RailPlan} from './hillsCommunityPlan';
+import {COMMUNITY,COMMUNITY_BUILDINGS,railTimetable,type CommunityPlan,type Point3,type RailPlan} from './hillsCommunityPlan';
 import {FINANCIAL,type FinancialPlan} from './financialPlan';
 import {HILLS} from './hillsPlan';
 
@@ -46,7 +46,7 @@ export interface RailCommuter {
  /** Seconds before departure each one reaches the train, and seconds after arrival they step off. */
  hillsLead:number;financialLead:number;alight:number;
 }
-export interface CommuterPlan {travel:number;cycle:number;returnCycles:number;periodCycles:number;commuters:RailCommuter[]}
+export interface CommuterPlan {clockOffset?:number;travel:number;cycle:number;returnArrival:number;returnCycles:number;periodCycles:number;commuters:RailCommuter[]}
 export type CommuterState={where:'home'|'work'|'aboard';visible:false;direction?:'outbound'|'return'}|{where:'walking';visible:true;x:number;y:number;z:number;yaw:number};
 
 export function commuterRoute(points:Point3[]):CommuterRoute{
@@ -78,18 +78,18 @@ function financialRoute(f:FinancialPlan,r:RailPlan,building:FinancialPlan['build
 }
 
 export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|undefined,r:RailPlan|undefined):CommuterPlan|undefined{
- if(!c||!f||!r)return;
+ if(!f||!r)return;
  const towerId=(key:string)=>key in COMMUTER_TOWERS?COMMUTER_TOWERS[key as keyof typeof COMMUTER_TOWERS]:key;
  const tower=(key:string)=>f.buildings.find(b=>b.id===towerId(key)&&b.approach.length>1)??f.buildings.find(b=>b.id===COMMUTER_TOWERS.amex&&b.approach.length>1);
- const dwell=COMMUNITY.dwell,travel=r.length/COMMUNITY.speed,cycle=2*(travel+dwell),doors=[-1.3,-.8,-.3,.2,.7,1.2];
+ const dwell=COMMUNITY.dwell,{travel,cycle,returnArrival}=railTimetable(r),doors=[-1.3,-.8,-.3,.2,.7,1.2];
  const groups=[...COMMUTER_GROUPS,...VISITOR_GROUPS] as readonly (readonly {home:string;work:string}[])[];
  const trips=groups.flatMap((g,group)=>g.map((trip,k)=>({...trip,group,k})));
  if(trips.some(t=>!tower(t.work)))return;
  const commuters=trips.map(({home,work,group,k},i):RailCommuter=>{
   // Circa is optional (its own pull request); until it exists its guests use American Express.
   const building=tower(work)!,door=doors[k%doors.length];
-  return {id:`commuter:${i}`,group,home,work:building.id,pace:RAIL_COMMUTERS.paces[(k*5+group)%RAIL_COMMUTERS.paces.length],lane:((k%5)-2)*RAIL_COMMUTERS.laneWidth/2,offset:0,
-   hills:commuterRoute(hillsRoute(c,home,door)),financial:commuterRoute(financialRoute(f,r,building,door)),
+  return {id:`commuter:${i}`,group,home:c?home:'marketplace',work:building.id,pace:RAIL_COMMUTERS.paces[(k*5+group)%RAIL_COMMUTERS.paces.length],lane:((k%5)-2)*RAIL_COMMUTERS.laneWidth/2,offset:0,
+   hills:commuterRoute(c?hillsRoute(c,home,door):[...r.hillsWalk.slice(0,-1),[r.hills[0]+door,COMMUNITY.platformRise,r.hills[1]+.3]]),financial:commuterRoute(financialRoute(f,r,building,door)),
    // Arrivals spread across the stop: some are waiting at the doors early, others hurry in at the end.
    hillsLead:1.2+spread(i,1)*(dwell-2.6),financialLead:1.2+spread(i,2)*(dwell-2.6),alight:.4+spread(i,3)*2.6};
  });
@@ -101,7 +101,7 @@ export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|unde
  // KC's two groups ride different trains, half a round of trips apart; the visitor groups fill
  // the trains in between, so most trains carry someone.
  commuters.forEach(p=>{p.offset=p.group<2?p.group*Math.max(1,Math.floor(periodCycles/2)):(p.group-2)*Math.max(1,Math.floor(periodCycles/VISITOR_GROUPS.length))+1;});
- return {travel,cycle,returnCycles,periodCycles,commuters};
+ return {travel,cycle,returnArrival,returnCycles,periodCycles,commuters};
 }
 
 export function along(route:CommuterRoute,distance:number,lane:number){
@@ -115,12 +115,12 @@ export function along(route:CommuterRoute,distance:number,lane:number){
 /** Key times within one person's period, in seconds from the start of their outbound train's cycle. */
 export function commuterTimes(plan:CommuterPlan,p:RailCommuter){
  const dwell=COMMUNITY.dwell,{travel,cycle}=plan,hillsWalk=p.hills.length/p.pace,financialWalk=p.financial.length/p.pace;
- const board=dwell-p.hillsLead,alightFinancial=dwell+travel+p.alight,returnBoard=plan.returnCycles*cycle+2*dwell+travel-p.financialLead,alightHills=(plan.returnCycles+1)*cycle+p.alight;
+ const board=dwell-p.hillsLead,alightFinancial=dwell+travel+p.alight,returnBoard=plan.returnCycles*cycle+2*dwell+travel-p.financialLead,alightHills=plan.returnCycles*cycle+plan.returnArrival+p.alight;
  return {leaveHome:board-hillsWalk,board,alightFinancial,atWork:alightFinancial+financialWalk,leaveWork:returnBoard-financialWalk,returnBoard,alightHills,atHome:alightHills+hillsWalk,period:plan.periodCycles*cycle};
 }
 export function commuterAt(plan:CommuterPlan,p:RailCommuter,seconds:number):CommuterState{
  const k=commuterTimes(plan,p),period=k.period;
- let t=((seconds-p.offset*plan.cycle)%period+period)%period;
+ let t=((seconds-(plan.clockOffset??0)-p.offset*plan.cycle)%period+period)%period;
  // The walk to the train starts before the cycle it rides in, so it wraps from the end of the period.
  if(t>=k.leaveHome+period)t-=period;
  if(t>=k.leaveHome&&t<k.board)return walking(p.hills,(t-k.leaveHome)*p.pace,p.lane);
@@ -134,4 +134,14 @@ export function commuterAt(plan:CommuterPlan,p:RailCommuter,seconds:number):Comm
 }
 function walking(route:CommuterRoute,distance:number,lane:number):CommuterState{
  const q=along(route,distance,lane);return {where:'walking',visible:true,...q};
+}
+
+/** Four unnamed terminal visitors reuse the same bounded passenger handoff, on the airport leg. */
+export function planAirportCommuters(base:CommuterPlan|undefined,r:RailPlan|undefined):CommuterPlan|undefined{
+ if(!base||!r?.airportLeg||!r.airportWalk)return;
+ const travel=r.airportLeg.length/COMMUNITY.speed,returnArrival=2*(COMMUNITY.dwell+travel),cycle=railTimetable(r).cycle;
+ const commuters=base.commuters.slice(0,4).map((p,i)=>({...p,id:`airport-visitor:${i}`,group:0,offset:0,home:'marketplace',work:'airport-terminal',financial:commuterRoute(r.airportWalk!)}));
+ const rest=Math.max(...commuters.map(p=>2*Math.max(p.hills.length,p.financial.length)/p.pace+COMMUNITY.dwell+RAIL_COMMUTERS.rest));
+ const returnCycles=Math.max(1,Math.ceil(rest/cycle));
+ return {clockOffset:railTimetable(r).returnArrival,travel,returnArrival,cycle,returnCycles,periodCycles:2*returnCycles+2,commuters};
 }

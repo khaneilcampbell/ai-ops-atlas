@@ -17,11 +17,11 @@ function car(parts:Parts,x:number,y:number,z:number,color:string,suv:boolean){
 function signage(){
  const c=document.createElement('canvas');c.width=1536;c.height=400;const ctx=c.getContext('2d')!;
  ctx.fillStyle='#f8f9f7';ctx.fillRect(0,0,c.width,c.height);
- const cx=205,cy=200,r=166;ctx.fillStyle='#171f24';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='#b9c3c8';ctx.lineWidth=5;ctx.stroke();
- for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,108,i*Math.PI/2,(i+1)*Math.PI/2);ctx.closePath();ctx.fillStyle=i%2?'#f7f8f5':'#2876bb';ctx.fill();}
- ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 45px sans-serif';ctx.fillText('BMW',cx,cy-122);
- ctx.fillStyle='#20292e';ctx.textAlign='left';ctx.font='bold 300px sans-serif';ctx.fillText('BMW',450,310);
+ // Vantor Motors: an original monogram (a V in a square badge) and wordmark.
+ ctx.fillStyle='#171f24';ctx.beginPath();ctx.roundRect(55,45,310,310,48);ctx.fill();
+ ctx.strokeStyle='#b9c3c8';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(120,110);ctx.lineTo(210,295);ctx.lineTo(300,110);ctx.stroke();
+ ctx.fillStyle='#20292e';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.font='600 210px sans-serif';ctx.fillText('VANTOR',430,240,1060);
+ ctx.fillStyle='#5a6870';ctx.font='500 84px sans-serif';ctx.fillText('MOTORS',436,345,600);
  ctx.fillStyle='#2876bb';ctx.fillRect(0,386,1536,14);
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  return {texture,material:new THREE.MeshBasicMaterial({map:texture,toneMapped:false}),geometry:new THREE.PlaneGeometry(3.072,.8)};
@@ -31,7 +31,7 @@ export function Dealership({plan:a,g,m,pick,night=false,traffic=false,reduced=fa
  const glow=useMemo(()=>new THREE.MeshStandardMaterial({color:'#fff1cd',emissive:'#ffdca1',emissiveIntensity:.1}),[]);
  useEffect(()=>{glow.emissiveIntensity=night?1.7:.08;},[glow,night]);
  useEffect(()=>()=>glow.dispose(),[glow]);
- // Night mode (KC, 2026-10-31 "give me BMW dealership lights at night"): every storey's ceiling glows a
+ // Night mode (KC, 2026-10-31, asked for dealership lights at night): every storey's ceiling glows a
  // clean showroom white through the glass, between the rejected full glow and the dim warm wash.
  const ceiling=useMemo(()=>new THREE.MeshStandardMaterial({color:'#eef0ee',emissive:'#fff3dc',emissiveIntensity:0,roughness:.7}),[]);
  useEffect(()=>{ceiling.emissiveIntensity=night?.75:0;},[ceiling,night]);

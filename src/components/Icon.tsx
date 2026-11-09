@@ -25,6 +25,7 @@ const PATHS: Record<string, string> = {
   lock: "M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4",
   pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+  more: "M4.5 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M10.75 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M17 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0",
   sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41",
   rotate: "M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5",
   // A building in section: the roof lifted off, a floor and a desk inside.
@@ -49,14 +50,5 @@ export function Icon({ name, size = 18, className }: { name: IconName; size?: nu
 }
 
 export function AtlasMark({ size = 22 }: { size?: number }) {
-  // Compass rose inside an acorn-like arch: a nod to the reference, drawn for this app.
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 10a8 8 0 0 1 16 0" />
-      <path d="M4 10h16" />
-      <path d="M6 10c0 6 3 10 6 11 3-1 6-5 6-11" />
-      <path d="M12 12.5l1.4 3.1-1.4 2.4-1.4-2.4z" fill="currentColor" stroke="none" />
-      <path d="M12 2v1.6" />
-    </svg>
-  );
+  return <img src="/atlas-orbit.svg" width={size} height={size} alt="" aria-hidden="true" draggable={false} />;
 }

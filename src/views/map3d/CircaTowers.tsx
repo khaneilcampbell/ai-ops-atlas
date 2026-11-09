@@ -84,7 +84,7 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   <Instanced items={parts.terrace} geometry={g.box} material={m.terrace}/>
   <Instanced items={parts.solid} geometry={g.box} material={m.plain} pick={keyed(parts.solid.length)}/>
   <Instanced items={parts.marks} geometry={g.box} material={m.plain} shadow={false}/>
-  <Instanced items={parts.lamps} geometry={g.ball} material={night?m.lamp:m.plain} shadow={false}/>
+  <Instanced items={parts.lamps} geometry={g.bead} material={night?m.lamp:m.plain} shadow={false}/>
   <Instanced items={parts.storefront} geometry={g.box} material={res.storefront} pick={keyed(parts.storefront.length)}/>
   <Instanced items={parts.towerGlass} geometry={res.ellipse} material={res.glass} pick={keyed(parts.towerGlass.length)}/>
   <Instanced items={parts.slabs} geometry={res.ellipse} material={res.floors} pick={keyed(parts.slabs.length)}/>
