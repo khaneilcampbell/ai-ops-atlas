@@ -78,6 +78,7 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
  tex.lattice.repeat.set(18,6);
  const mats=useMemo(()=>({
   slab:new THREE.MeshStandardMaterial({color:'#f7f7f0',roughness:.7}),
+  paving:new THREE.MeshStandardMaterial({color:'#dcd3bd',roughness:.9}),
   roof:new THREE.MeshStandardMaterial({color:'#d6d9d3',roughness:.85}),
   glass:new THREE.MeshStandardMaterial({color:'#ffffff',map:tex.pane,emissiveMap:tex.paneGlow,roughness:.2,metalness:.2,emissive:'#ffffff',emissiveIntensity:.06,side:THREE.DoubleSide}),
   planter:new THREE.MeshStandardMaterial({color:'#4f7a52',roughness:.95,side:THREE.DoubleSide}),
@@ -125,7 +126,9 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   const cap=new THREE.CircleGeometry(c.r+.04,24);cap.rotateX(-Math.PI/2);cap.translate(c.x,y0+h+.015,c.z);
   const funnel=mergeGeometries([stem,disc,cap])!;
   for(const x of [stem,disc,cap])x.dispose();
-  return packNormals({slabs:mergeGeometries(slabs)!,roof,glass:mergeGeometries(glass)!,planters:mergeGeometries(planters)!,lights:mergeGeometries(lights)!,funnel});
+  // Paved apron round the whole building, under the ground floor plate and the forecourt.
+  const apron=slabGeometry(a.apron,y0,.014);
+  return packNormals({apron,slabs:mergeGeometries(slabs)!,roof,glass:mergeGeometries(glass)!,planters:mergeGeometries(planters)!,lights:mergeGeometries(lights)!,funnel});
  },[a]);
  useEffect(()=>()=>{if(geo)for(const x of Object.values(geo))x.dispose();},[geo]);
 
@@ -142,6 +145,7 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
  const click={onClick:(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();pick.click(GALLERIA_KEY,e);},onPointerOver:(e:ThreeEvent<PointerEvent>)=>{e.stopPropagation();pick.over(GALLERIA_KEY,e);},onPointerOut:()=>pick.out()};
  const [sx,sz]=a.toMap([1,18]);
  return <group name="atlas-galleria">
+  <mesh geometry={geo.apron} material={mats.paving} receiveShadow/>
   <mesh geometry={geo.slabs} material={mats.slab} castShadow receiveShadow {...click}/>
   <mesh geometry={geo.roof} material={mats.roof} castShadow receiveShadow {...click}/>
   <mesh geometry={geo.glass} material={mats.glass} {...click}/>

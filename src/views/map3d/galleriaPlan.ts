@@ -1,3 +1,5 @@
+import {carBoxes,galleriaCar,type GalleriaCarKind} from './galleriaFleet';
+import {STREET_ASPHALT,STREET_LINE} from './transportScale';
 import type {Point,Rect,Tree} from './scene';
 import type {MallPlan} from './mallPlan';
 import type {Pt} from './roads';
@@ -45,6 +47,8 @@ export const GALLERIA={
  maxD:13.65,search:26,
  /** Depth of the outdoor parking band (two rows of bays and an aisle). */
  parking:2.5,
+ /** Pavement round the whole building, plan metres past the ground floor, and past the widest overhang above it. */
+ apron:6,apronPastOverhang:4,
 } as const;
 /** The main entrance: the apex of the V-notch on the ground floor outline, plan metres. */
 export const GALLERIA_NOTCH:Pt=[21,24.6];
@@ -142,6 +146,8 @@ export const slabOutline=(level:number)=>shift(GALLERIA_BASE,i=>slabOffset(level
  */
 export const glassOutline=(storey:number)=>shift(GALLERIA_BASE,i=>Math.min(slabOffset(storey,i),slabOffset(storey+1,i))-(storey===0?.5:1.6));
 export const GALLERIA_ATRIUM_LINE=smoothClosed(GALLERIA_ATRIUM,4);
+/** The paved apron round the building (plan metres): the forecourt's stone carried all the way round, wide enough to clear every overhang. */
+export const apronOutline=()=>shift(GALLERIA_BASE,i=>Math.max(GALLERIA.apron,Math.max(slabOffset(1,i),slabOffset(2,i),slabOffset(3,i))+GALLERIA.apronPastOverhang));
 
 /** The three re-entrant points the roof valleys run to from the canopy: main, north and south lobbies. */
 export const GALLERIA_VALLEYS:Pt[]=[[21,24.6],[54,56.4],[55.4,3.6]];
@@ -215,7 +221,9 @@ export interface GalleriaPlan {
  s:number;toMap:(p:Pt)=>Pt;
  y0:number;
  /** Slab outlines (ground, Floor 1, Floor 2, roof), glazing per storey, atrium, all on the map. */
- slabs:Pt[][];glass:Pt[][];atrium:Pt[];
+ slabs:Pt[][];
+ /** The paved apron round the whole building, on the map. */
+ apron:Pt[];glass:Pt[][];atrium:Pt[];
  /** Height of each slab's top above y0. */
  levels:number[];roof:number;
  column:{x:number;z:number;r:number;top:number};
@@ -223,7 +231,7 @@ export interface GalleriaPlan {
  boxes:GalleriaBox[];rounds:GalleriaBox[];
  trees:Tree[];bushes:Point[];
  /** The outdoor car park, its drive aisle, and the parked cars that drivers take out (drawn by galleriaLife, not as boxes). */
- parking?:{area:Rect;aisle:number;driven:{x:number;z:number;c:string}[]};
+ parking?:{area:Rect;aisle:number;driven:{x:number;z:number;c:string;kind:GalleriaCarKind;yaw:number}[]};
 }
 
 const inRect=(r:Rect,x:number,z:number,pad=0)=>x>=r.x-pad&&x<=r.x+r.w+pad&&z>=r.z-pad&&z<=r.z+r.d+pad;
@@ -275,7 +283,7 @@ export function slabTop(level:number){let h=0;for(let i=0;i<level;i++)h+=GALLERI
 
 /**
  * Places the mall on the green behind the Marketplace. The main entrance faces east, the
- * supermarket lobe west, and the plan's north side (outdoor parking and the basement ramp) faces
+ * supermarket lobe west, and the plan's north side (outdoor parking) faces
  * the Marketplace. Returns nothing when the green is missing, too small, or has anything on it.
  */
 export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,paths:GalleriaPaths={roads:[],walks:[]}):GalleriaPlan|undefined{
@@ -289,13 +297,15 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
  if(s<G.minScale)return;
  // Across a street from the Marketplace, the building and its car park sit on the street side of the
  // lot, so the car park opens onto the street; the rest stays open meadow, with no extra trees.
- if(lot.across){const d=Math.min(rect.d,(maxY-minY)*s+.25+G.parking+.2);rect.z+=rect.d-d;rect.d=d;}
+ const apronPlan=apronOutline(),apronMaxY=Math.max(...apronPlan.map(p=>p[1]));
+ if(lot.across){const d=Math.min(rect.d,(Math.max(maxY,apronMaxY)-minY)*s+.15+G.parking+.2);rect.z+=rect.d-d;rect.d=d;}
  // 180° turn: plan east is map west (-x), plan north is map south (+z).
  // The building takes the lot's north end; parking and trees fill the south toward the Marketplace.
  const ox=rect.x+rect.w/2+(maxX+minX)/2*s,oz=rect.z-minY*s;
  const toMap=([px,py]:Pt):Pt=>[ox-px*s,oz+py*s];
  const footprint={x:ox-maxX*s,z:oz+minY*s,w:(maxX-minX)*s,d:(maxY-minY)*s};
  const slabs=[0,1,2,3].map(l=>slabOutline(l).map(toMap)),glass=[0,1,2].map(l=>glassOutline(l).map(toMap));
+ const apron=apronPlan.map(toMap);
  const atrium=GALLERIA_ATRIUM_LINE.map(toMap),levels=[0,1,2,3].map(slabTop),roof=levels[3];
  const [cx,cz]=toMap(G.column);
  const column={x:cx,z:cz,r:G.canopyR*s,top:roof+G.slab+.34};
@@ -308,30 +318,28 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
  rounds.push({x:fx,z:fz,w:fr*2,d:fr*2,h:.12,y:0,c:'#f7f7f0'},{x:fx,z:fz,w:fr*1.7,d:fr*1.7,h:.01,y:.12,c:'#5aaac0'},{x:fx,z:fz,w:fr*.5,d:fr*.5,h:.3,y:.12,c:'#f7f7f0'});
  // A path from the forecourt out to the walkway on the lot's east edge.
  boxes.push({x:(rect.x+rect.w+ex)/2+.2,z:ez,w:rect.x+rect.w-ex+.7,d:.55,h:.015,y:0,c:'#dcd3bd'});
- // Outdoor parking between the building and the Marketplace, with the basement ramp at its head.
- const pz0=footprint.z+footprint.d+.25,pz1=Math.min(rect.z+rect.d-.15,pz0+G.parking);
+ // Outdoor parking between the building and the Marketplace, shifted out past the apron so the pavement runs right round.
+ const pz0=Math.max(footprint.z+footprint.d+.25,oz+apronMaxY*s+.15),pz1=Math.min(rect.z+rect.d-.15,pz0+G.parking);
  let parking:GalleriaPlan['parking'];
  if(pz1-pz0>=1.4){
   const px0=rect.x+.3,px1=rect.x+rect.w-.3;
-  boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:'#5d6360'});
-  const rows=pz1-pz0>=2.6?2:1,rowD=.62,bay=.34;
+  boxes.push({x:(px0+px1)/2,z:(pz0+pz1)/2,w:px1-px0,d:pz1-pz0,h:.012,y:0,c:STREET_ASPHALT});
+  const rows=pz1-pz0>=2.2?2:1,rowD=.62,bay=.34;
   // One row backs onto the aisle beside the other; with a single row the aisle runs along its open side.
   parking={area:{x:px0,z:pz0,w:px1-px0,d:pz1-pz0},aisle:rows===2?(pz0+pz1)/2:pz1-.25,driven:[]};let cars=0;
+  // The aisle is a two-way street: the city's dashed centre line, from the far end to the driveway.
+  for(let x=px0+.25;x<px1-.2;x+=.36)boxes.push({x,z:parking.aisle,w:.18,d:.025,h:.003,y:.012,c:STREET_LINE});
   for(let r=0;r<rows;r++){
    const zr=r===0?pz0+.1+rowD/2:pz1-.1-rowD/2;
    for(let x=px0+.15,k=0;x<=px1-.1;x+=bay,k++){
     boxes.push({x,z:zr,w:.025,d:rowD,h:.004,y:.012,c:'#f3efe4'});
-    // A few parked cars, deterministic.
-    if(k%3===1&&x+bay<px1){const c=['#b7c2c7','#2f3a45','#e8e4da','#8c3b34'][k%4];
-     // Every third car in the first row belongs to a driver who comes and goes (up to three).
-     if(r===0&&cars++%3===0&&parking.driven.length<3)parking.driven.push({x:x+bay/2,z:zr,c});
-     else boxes.push({x:x+bay/2,z:zr,w:.2,d:.38,h:.1,y:.012,c},{x:x+bay/2,z:zr,w:.17,d:.2,h:.07,y:.11,c:'#26323a'});}
+    // Two bays in three are taken, by a deterministic mix of the fleet, nose in toward the building.
+    if(k%3!==0&&x+bay<px1){const {kind,c}=galleriaCar(cars),yaw=r===0?Math.PI:0;
+     // Every third car in the first row belongs to a driver who comes and goes (up to five).
+     if(r===0&&cars++%3===0&&parking.driven.length<5)parking.driven.push({x:x+bay/2,z:zr,c,kind,yaw});
+     else{if(r!==0)cars++;for(const b of carBoxes(kind,c,[x+bay/2,zr],yaw,.012))boxes.push(b);}}
    }
   }
-  // Ramp down to the basement, as the basement plan draws it, from the plan's north side.
-  const [rx]=toMap([30,0]);
-  boxes.push({x:rx,z:footprint.z+footprint.d+.05,w:1.2,d:.6,h:.006,y:.012,c:'#2b302e'});
-  for(const side of [-1,1])boxes.push({x:rx+side*.62,z:footprint.z+footprint.d+.05,w:.05,d:.6,h:.16,y:0,c:'#e8e4da'});
  }
  // Roof valleys from the canopy out to the three lobbies, a shade darker than the leaves.
  for(const v of GALLERIA_VALLEYS){
@@ -347,12 +355,12 @@ export function planGalleria(mall:MallPlan,land:Rect[],blockers:Rect[],y:number,
   for(const p of along(ring,G.treeStep))trees.push({x:p.x,y:top,z:p.z,s:.15,kind:'round'});
  }
  // Trees round the lot, clear of the building, the forecourt and the parking.
- const clear=(x:number,z:number)=>!inRect(footprint,x,z,.4)&&!inRect({x:Math.min(fa[0],fb[0]),z:Math.min(fa[1],fb[1]),w:Math.abs(fb[0]-fa[0]),d:Math.abs(fb[1]-fa[1])},x,z,.2)&&z<pz0-.3;
+ const clear=(x:number,z:number)=>!inRect(footprint,x,z,.4)&&!insidePoly(apron,[x,z])&&!inRect({x:Math.min(fa[0],fb[0]),z:Math.min(fa[1],fb[1]),w:Math.abs(fb[0]-fa[0]),d:Math.abs(fb[1]-fa[1])},x,z,.2)&&z<pz0-.3;
  for(let z=rect.z+.35;z<rect.z+rect.d-.3;z+=1.15)for(const x of [rect.x+.3,rect.x+rect.w-.3])if(clear(x,z))trees.push({x,y,z,s:.24,kind:z%2>1?'blossom':'round'});
  for(let x=rect.x+1.2;x<rect.x+rect.w-1;x+=1.15)if(clear(x,rect.z+.3))trees.push({x,y,z:rect.z+.3,s:.24,kind:'round'});
  // A row of blossom trees between the parking and the Marketplace, where there is room.
  if(rect.z+rect.d-pz1>.8)for(let x=rect.x+.9;x<rect.x+rect.w-.6;x+=1.05)trees.push({x,y,z:(pz1+rect.z+rect.d)/2,s:.22,kind:'blossom'});
- return {parking,rect,footprint,s,toMap,y0:y,slabs,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes};
+ return {parking,rect,footprint,s,toMap,y0:y,slabs,apron,glass,atrium,levels,roof,column,entrance:{x:ex,z:ez},fountain:{x:fx,z:fz,r:fr},boxes,rounds,trees,bushes};
 }
 
 export interface GalleriaFin {x:number;z:number;y:number;h:number;a:number;level:number}
