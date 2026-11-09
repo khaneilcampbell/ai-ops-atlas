@@ -1,5 +1,6 @@
 import {financialDimensions} from './financialArchitecture';
 import type {Scene3D} from './scene';
+import {plazaSites} from './streetGraph';
 import {towerRing,type Pt,type Box} from './roads';
 import {distanceToRoad} from './highway';
 import {airportPoint,airportPublicPath,AIRPORT_LAYOUT} from './airport';
@@ -32,7 +33,7 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  if(s.community)for(const road of s.community.streets)add(road);
  if(s.airport)add(airportPublicPath(s.airport),.48);
  for(const walk of s.walks)add(walk.route?.map(p=>[p.gx,p.gy] as Pt)??[[walk.x0,walk.z0],[walk.x1,walk.z1]],.48);
- for(const t of s.towers){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
+ for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
  const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[])];
  const junctions:Pt[]=[...s.transportConnections.flatMap(c=>[c.road[0],c.road[c.road.length-1]]),...(s.freight?.localJunctions??[]),...(s.freight?.exits??[]),...(s.community?.streets.flatMap(p=>[p[0],p[p.length-1]])??[])];
  const result:StreetLamp[]=[],cells=new Map<string,StreetLamp[]>(),cell=STREET_LIGHT.minSeparation;

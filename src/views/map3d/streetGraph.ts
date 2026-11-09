@@ -19,10 +19,13 @@ export interface StreetGraph {
 /** A road end this close to another street joins it (T junction or end to end). */
 export const JOIN = 0.35;
 
+/** Towers plus cleared lots: every headquarters plaza whose lane is a street. */
+export const plazaSites = (s: Pick<Scene3D, "towers" | "clearedLots">) => [...s.towers, ...(s.clearedLots ?? [])];
+
 /** The plaza lane around each headquarters, the same ring the vehicles drive. */
-export function plazaRings(scene: Pick<Scene3D, "towers" | "paving">): Map<string, Ring> {
+export function plazaRings(scene: Pick<Scene3D, "towers" | "clearedLots" | "paving">): Map<string, Ring> {
   return new Map(
-    scene.towers.flatMap((t) => {
+    plazaSites(scene).flatMap((t) => {
       const plaza = scene.paving
         .filter((p) => p.w > t.size && Math.abs(p.x + p.w / 2 - t.x) < 1e-6 && Math.abs(p.z + p.d / 2 - t.z) < 1e-6 && Math.abs(p.w - p.d) < 1e-6)
         .sort((a, b) => a.w - b.w)[0];

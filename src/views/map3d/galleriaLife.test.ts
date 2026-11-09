@@ -10,8 +10,11 @@ import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 const scene=buildScene(layoutMap(catalog,[],'district'));
 // The installed app hides the deleted career-application-system repository.
 const app=buildScene(layoutMap({...catalog,projects:catalog.projects.filter(p=>p.repository!=='khaneilcampbell/career-application-system')},[],'district'));
-// Without Service Desk the lot behind the Marketplace is too shallow for the car park behind the building.
-const shallow=buildScene(layoutMap({...catalog,projects:catalog.projects.filter(p=>p.id!=='service-desk')},[],'district'));
+// Without Service Desk's land the lot behind the Marketplace is too shallow for the car park behind
+// the building. The fixture keeps a Career Applications tower standing (its id renamed, as both
+// towers are off the map since 2026-11-09) so the lot keeps the shallow shape this case covers.
+const tower=(id:string)=>id==='career-optimizer'?'career-tower-fixture':id;
+const shallow=buildScene(layoutMap({projects:catalog.projects.filter(p=>p.id!=='service-desk').map(p=>({...p,id:tower(p.id)})),agents:catalog.agents.map(a=>({...a,projectId:tower(a.projectId)}))},[],'district'));
 
 describe('life round Atlas Galleria',()=>{
  for(const [name,s] of [['sample',scene],['app',app],['shallow lot',shallow]] as const)it(`walks, lights and drives round the building (${name} layout)`,()=>{
