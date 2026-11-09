@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-09 · When an agent is working, its whole building lights up again, now including the custom-shaped towers (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, Intelligence Hub, Portfolio Site), which only lit their base before (#303)
+- 2026-11-09 · When an agent is working, its whole building lights up again, now including the custom-shaped towers (Atlas HQ, Benjaire HQ, Commerce Pipeline, GitHub, Intelligence Hub, Portfolio Site). The light comes from inside, as the building is designed: windows brightest, glass softer, walls and signs keep their own colors (#303)
 - 2026-11-09 · The glass slot on Benjaire Marketing Agency no longer flickers: its copper edges sat on top of the cream walls and fought to be seen (#302)
 - 2026-11-09 · Brought the Ferris wheel back, now beside Stadium Station, with a white-and-red station pavilion and paved walks joining both to the station (#275).
 - 2026-11-09 · Two Financial District towers have new original names: Benjaire Finance is now Corvane Capital, a business finance house with its own drawn logo, and American Express is now Ellery Budget Center, a plum life-management building. Old names still work in search (#299)
