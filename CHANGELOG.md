@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-10 · Behind the scenes, the Inside view's screenshot check finds Atlas Command Center by its new name, and the map screenshots are refreshed for the new building names. Nothing on screen changes
+- 2026-11-10 · Behind the scenes, the Inside view's screenshot check finds Atlas Command Center by its new name, and the map screenshots are refreshed for the new building names. Nothing on screen changes (#326)
 - 2026-11-10 · Buildings now use operational names across the map, panels, interiors and search (Atlas HQ is Atlas Command Center, Bayvale Bank is the Financial Operations Tower, and so on). Old names still find them in search, each panel shows the organization it belongs to, each building houses the module that matches its job, Profile Tower is now the Development Hub, and Ravelle Advisors is the Knowledge & Research Center (#323)
 - 2026-11-10 · Four Atlas modules gain their missing lists: Atlas HQ shows every module and the buildings that house it, the GitHub tower lists the dependencies each project declares, Atlas Galleria maps how automations depend on each other, and Aldren Insights lists the data Atlas holds and how fresh it is (#322)
 - 2026-11-10 · In full screen the Atlas logo sits back at the far left above the sidebar, the Repositories and Automations labels no longer clip, the header drops the "Desktop" tag, and the search box gets the room back (#315)
