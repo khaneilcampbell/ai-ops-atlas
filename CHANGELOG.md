@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-10 · The Governance & Compliance Center now shows how each repository's main branch is guarded: whether merging needs a pull request, how many checks must pass, and whether force pushes and deletion are blocked. It flags any repository that isn't protected, and Atlas can't change a rule (#PR)
+- 2026-11-10 · The Governance & Compliance Center now shows how each repository's main branch is guarded: whether merging needs a pull request, how many checks must pass, and whether force pushes and deletion are blocked. It flags any repository that isn't protected, and Atlas can't change a rule (#330)
 - 2026-11-10 · The Financial Operations Tower now shows this month's spend against each spend cap: the Atlas agents' budget, the Anthropic organization's $20 limit and the benjaire-flow workspace's $5 limit. It flags a cap that is nearly used, and links to the page where each cap is set (#329)
 - 2026-11-10 · The Infrastructure Operations Hub now lists where everything runs (benjaire.com, khaneilcampbell.com, Atlas web and the Atlas Mac app), whether each one's latest deploy worked, and the most recent deploys across all of them, with links to each host's console (#328)
 - 2026-11-10 · The Security Operations Center now lists your repositories' open GitHub security alerts: how many Dependabot, code scanning and secret scanning alerts each has, and how severe. Atlas only reads the counts, never the alert details, and can't dismiss anything (#327)
