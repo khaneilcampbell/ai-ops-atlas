@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /** Phase 2 building module panels (KC, 2026-11-10): the inspector names the module a building houses. */
 const out=process.env.SHOT_DIR??'artifacts/module-panel';
-const BUILDINGS:[string,string][]=[['benjaire-hq','Benjaire HQ'],['agency','Benjaire Marketing Agency'],['stadium','Atlas Stadium']];
+const BUILDINGS:[string,string][]=[['atlas-hq','Atlas HQ'],['benjaire-hq','Benjaire HQ'],['agency','Benjaire Marketing Agency'],['stadium','Atlas Stadium']];
 for(const [file,name] of BUILDINGS)test(`Module panel: ${name}`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);

@@ -1,7 +1,8 @@
 import { useAtlas } from "../state";
-import { ciHealth, repoData, type Health } from "../lib/derive";
+import { relative } from "../lib/time";
 import { moduleAvailability, moduleType } from "../modules/catalog";
 import { buildingForSelection } from "../modules/lookup";
+import { aggregateHealth, buildingAssets, executionHistory, observable } from "../modules/operations";
 import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from "../modules/types";
 import { HealthBadge } from "./bits";
 
@@ -10,6 +11,8 @@ const VIEW_LABEL: Record<ModuleView, string> = {
   map: "Projects", agents: "Agents", automations: "Automations", repos: "Repositories", overview: "Mission",
   activity: "Activity", intel: "Intel", usage: "API Usage", settings: "Settings", grid: "Grid",
 };
+
+const RESULT_LABEL = { success: "Succeeded", failure: "Failed", running: "Running", other: "Finished" } as const;
 
 const AVAILABILITY_LABEL: Record<ModuleAvailability, string> = { available: "Available", partial: "Partly available", planned: "Planned · Not connected" };
 
@@ -23,14 +26,16 @@ const CONNECTOR_LABEL: Record<string, string> = {
  * building has no telemetry yet, so its health is shown as not verified rather than guessed.
  */
 export function ModuleSection() {
-  const { selection, catalog, repos, setView } = useAtlas();
+  const { selection, catalog, repos, setView, select } = useAtlas();
   const building = buildingForSelection(selection, catalog);
   const type = moduleType(building?.moduleType);
   if (!building || !type) return null;
   const availability = moduleAvailability(type);
-  const project = building.projectId ? catalog.projects.find((p) => p.id === building.projectId) : undefined;
-  const ci = project ? ciHealth(repoData(repos[project.repository])) : null;
-  const health: Health = ci?.health ?? "unknown";
+  const assets = buildingAssets(building, catalog);
+  const agg = aggregateHealth(assets.repositories, repos);
+  const items = [...assets.agents, ...assets.automations];
+  const runs = executionHistory(items, repos);
+  const watched = observable(items);
   const available = type.capabilities.filter((c) => c.state === "available");
   const planned = type.capabilities.filter((c) => c.state === "planned");
 
@@ -45,7 +50,12 @@ export function ModuleSection() {
         <p className="muted small">{type.description} {PRODUCT_DISTRICT_LABEL[type.productDistrict]} module.</p>
         <dl className="kv">
           <dt>Health</dt>
-          <dd><HealthBadge health={health} /> <span className="muted small">{ci ? `GitHub CI on ${project!.repository}: ${ci.value}` : "No telemetry connected for this building yet"}</span></dd>
+          <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}</span></dd>
+          <dt>Linked assets</dt>
+          <dd>{assets.repositories.length || items.length ? [
+            count(assets.projects.length, "project"), count(assets.repositories.length, "repository", "repositories"),
+            count(assets.agents.length, "agent"), count(assets.automations.length, "automation"),
+          ].filter(Boolean).join(" · ") : "None linked yet"}</dd>
           <dt>Connected services</dt>
           <dd>{type.connectors.length ? type.connectors.map((c) => CONNECTOR_LABEL[c] ?? c).join(" · ") : "None connected"}</dd>
         </dl>
@@ -65,6 +75,24 @@ export function ModuleSection() {
             </ul>
           </>
         )}
+        {items.length > 0 && (
+          <div className="module-runs" aria-label="Recent executions">
+            <div className="muted small">Recent executions{watched ? ` · GitHub Actions, ${watched} of ${items.length} watched` : ""}</div>
+            {runs.length ? (
+              <ul>
+                {runs.map((r) => (
+                  <li key={r.agentId}>
+                    <button className="linklike" onClick={() => select({ kind: "agent", id: r.agentId })}>{r.name}</button>
+                    <span className={`run-${r.result}`}>{RESULT_LABEL[r.result]}</span>
+                    <a className="muted small" href={r.url} target="_blank" rel="noreferrer">{relative(r.at)}</a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">{watched ? (agg.state === "loading" ? "Loading runs from GitHub…" : "No runs observed yet") : "None of these report runs to GitHub Actions; see each one's own panel"}</p>
+            )}
+          </div>
+        )}
         {planned.length > 0 && (
           <details className="module-planned">
             <summary className="muted small">{planned.length} planned {planned.length === 1 ? "capability" : "capabilities"}, not built yet</summary>
@@ -74,4 +102,8 @@ export function ModuleSection() {
       </div>
     </section>
   );
+}
+
+function count(n: number, one: string, many = `${one}s`): string {
+  return n ? `${n} ${n === 1 ? one : many}` : "";
 }
