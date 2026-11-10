@@ -120,7 +120,12 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "finance-analytics-tower", version: V, name: "Finance & Analytics Tower", productDistrict: "business-operations",
     description: "Spend, revenue and financial reporting.",
-    capabilities: [on("ai-spend", "AI and API spend", "src/usage/model.ts"), later("revenue", "Revenue reporting"), later("budgets", "Budgets and forecasts")],
+    capabilities: [
+      on("ai-spend", "AI and API spend", "src/usage/model.ts"),
+      on("caps", "Spend against caps", "src/finance/caps.ts capStatus"),
+      later("revenue", "Revenue reporting"),
+      later("forecasts", "Budgets and forecasts"),
+    ],
     connectors: ["usage-sync"], views: ["usage"], actions: [], permissions: [],
   },
   {
