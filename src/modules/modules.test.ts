@@ -48,7 +48,7 @@ describe("module catalog", () => {
     expect(moduleAvailability(MODULE_TYPES["agent-operations-center"])).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
-    expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("partial");
+    expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("available");
     expect(MODULE_TYPES["finance-analytics-tower"].capabilities.find((c) => c.id === "caps")?.state).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
     expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
