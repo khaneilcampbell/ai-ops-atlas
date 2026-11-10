@@ -1,8 +1,17 @@
 import type {Rect,Scene3D} from './scene';
 import {distanceToRoad} from './highway';
 import {TRANSPORT} from './transportScale';
+import {COMMUNITY} from './hillsCommunityPlan';
+import {stadiumCrown} from './stadiumGeometry';
 type Pt=[number,number];
-export const PLAZA_WHEEL={width:4.1,depth:1.5} as const;
+/**
+ * One skyline for the stadium centre (KC, 2026-11-09): the wheel's hub sits at the station
+ * platform's height and its rim tops out at the stadium roof's crown, so wheel, station and
+ * stadium line up. The base scales with the wheel.
+ */
+const HUB=COMMUNITY.platformRise+.3;
+export const WHEEL={hub:HUB,radius:stadiumCrown()-.04-HUB} as const;
+export const PLAZA_WHEEL={width:4.1*WHEEL.radius/1.65,depth:1.5} as const;
 /** The pavilion's footprint, slab included. */
 const PAVILION={w:3.8,d:2.8} as const;
 export interface StationPlaza {wheel:{x:number;z:number};building:Rect;bounds:Rect;walk:Pt[];entranceWalk:Pt[]}
@@ -36,6 +45,8 @@ export function plazaFits(p:StationPlaza,stationWalk:Pt[],site:Site):boolean{
    if(roads.some(r=>distanceToRoad(pt,r)<PLAZA_ROAD_CLEARANCE))return false;
   }
  }
+ // The shared forecourt under wheel and pavilion stays off the streets too.
+ for(const pt of samples(p.bounds,.5))if(roads.some(r=>distanceToRoad(pt,r)<PLAZA_WALK_CLEARANCE))return false;
  for(const pt of [...along(p.walk),...along(p.entranceWalk)]){
   if(roads.some(r=>distanceToRoad(pt,r)<PLAZA_WALK_CLEARANCE))return false;
   if(site.land&&!site.land.some(l=>inside(l,pt[0],pt[1],.001)))return false;
