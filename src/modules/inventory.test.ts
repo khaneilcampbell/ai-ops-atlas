@@ -15,7 +15,7 @@ describe("module inventory", () => {
   it("lists every module type with its buildings and how much is built", () => {
     const rows = moduleInventory(workspaceBuildings(catalog));
     expect(rows.map((r) => r.type)).toEqual(MODULE_TYPE_LIST.map((t) => t.id));
-    expect(rows.find((r) => r.type === "atlas-command-center")!.buildings).toContain("Atlas HQ");
+    expect(rows.find((r) => r.type === "atlas-command-center")!.buildings).toContain("Atlas Command Center");
     for (const r of rows) expect(r.available).toBeLessThanOrEqual(r.total);
   });
 });
