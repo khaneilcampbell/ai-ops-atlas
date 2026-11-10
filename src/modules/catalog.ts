@@ -29,7 +29,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "identity-governance-tower", version: V, name: "Identity & Governance Tower", productDistrict: "command-governance",
     description: "Users, roles, connector authorization and audit for a workspace.",
-    capabilities: [later("users", "Users and roles"), later("connector-auth", "Connector authorization"), later("audit", "Workspace audit log"), later("entitlements", "Module entitlements")],
+    capabilities: [later("users", "Users and roles"), later("connector-auth", "Connector authorization"), later("audit", "Workspace audit log"), on("entitlements", "Module entitlements", "src/modules/workspace.ts")],
     connectors: [], views: [], actions: [], permissions: [],
   },
   // AI & Automation
@@ -153,7 +153,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "integration-exchange", version: V, name: "Integration Exchange", productDistrict: "data-intelligence",
     description: "Connector catalog and integration contracts.",
-    capabilities: [later("catalog", "Connector catalog"), later("contracts", "Integration contracts")],
+    capabilities: [later("catalog", "Connector catalog"), on("contracts", "Integration contracts", "src/modules/integrations.ts")],
     connectors: [], views: [], actions: [], permissions: [],
   },
 ];
