@@ -108,6 +108,16 @@ or location. Each feed reports one of four states: counted, switched off for the
 readable with the token, or unavailable. A repository shows no open alerts only when all three
 feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
 
+### Spend caps
+The Financial Operations Tower compares this month's spend with each spend cap the workspace has
+set (`src/finance/caps.ts` `SPEND_CAPS`). The Atlas agents' budget is read from Atlas's own settings
+and is exact. A provider cap (such as an Anthropic organization or workspace limit) is set on the
+provider's page, so Atlas lists its amount and counts the priced, pay-per-use calls it has logged
+for that provider this calendar month (UTC). That is a lower bound, and the row links to the page
+with the full figure. A cap whose calls Atlas can't see shows "Spend not visible to Atlas" instead
+of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
+cap changes on the provider's page, change its `limitUsd` here.
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and
