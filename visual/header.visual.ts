@@ -10,12 +10,13 @@ async function desktopChrome(page: Page, mac = true) {
   await page.evaluate((mac) => {
     if (mac) document.documentElement.classList.add("mac-app");
     const header = document.querySelector(".header")!;
+    // The Mac app shows no platform label: "Desktop" told KC nothing they did not know.
     const platform = header.querySelector(".platform-label");
-    if (platform) platform.textContent = "Desktop";
     const live = document.createElement("span");
     live.className = "live-pill live";
     live.innerHTML = '<span class="dot"></span>Live<span class="live-last">Merge flow failed · ai-ops-atlas</span>';
     (platform ?? header.querySelector(".pill-mode"))!.after(live);
+    platform?.remove();
     const mode = header.querySelector(".pill-mode");
     if (mode) { for (const node of mode.childNodes) if (node.nodeType === Node.TEXT_NODE) node.textContent = "CI 10/11 passing"; }
   }, mac);
