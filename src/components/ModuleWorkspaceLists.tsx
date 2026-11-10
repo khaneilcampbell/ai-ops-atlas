@@ -14,10 +14,12 @@ import { useUsageData } from "../usage/data";
 import { money } from "../usage/model";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
 import { infraIncidents } from "../infra/incidents";
-import { usePropertyIncidents } from "../properties/state";
+import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
+import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, type TrafficState } from "../growth/studio";
+import { useAgentReports } from "../reports/client";
 
 const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
 
@@ -39,6 +41,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
     case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
+    case "growth-marketing-studio": return <>{has(type, "audience") && <SiteTraffic />}{has(type, "research") && <ResearchBriefs />}</>;
     default: return null;
   }
 }
@@ -343,6 +346,71 @@ function InfraIncidents() {
         <p className="muted small">{checked ? "No failed or stuck deploys, outages, or expiring certificates seen." : "Reading deploys and site checks."}</p>
       )}
       <p className="muted small">From observed data only: the newest finished deploy of each host, and each website's site checks. A check that couldn't run is not counted as an incident or as healthy. Dismissed website incidents stay hidden here too.</p>
+    </details>
+  );
+}
+
+const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", unavailable: "Unavailable", loading: "Loading" };
+const num = (n: number) => n.toLocaleString();
+
+function SiteTraffic() {
+  const all = useAllPropertyData();
+  const rows = growthSites().map((p) => siteTraffic(p, all[p.id]?.site));
+  const counted = rows.filter((r) => r.state === "counted");
+  const views = counted.reduce((n, r) => n + (r.data?.visits24h ?? 0), 0);
+  const summary = counted.length
+    ? `${num(views)} page views in 24 h`
+    : rows.every((r) => r.state === "loading") ? "Loading" : TRAFFIC_LABEL[rows[0]?.state ?? "loading"];
+  return (
+    <details className="module-list" aria-label="Site traffic">
+      <summary className="muted small">Site traffic · {summary}</summary>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.site.id} data-state={r.state === "counted" ? undefined : "none"}>
+            <a href={r.site.url} target="_blank" rel="noreferrer">{r.site.domain}</a>
+            <span className="muted small">
+              {r.state === "counted" && r.data
+                ? `${r.data.visits24h !== null ? `${num(r.data.visits24h)} page views · ` : ""}${num(r.data.requests24h)} requests${r.data.threats24h ? ` · ${num(r.data.threats24h)} threats blocked` : ""}`
+                : `${TRAFFIC_LABEL[r.state]}${r.note ? ` · ${r.note}` : ""}`}
+              {r.checkedAt ? ` · checked ${relative(r.checkedAt)}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">The last 24 hours, as Cloudflare counted them in the site checks. Page views, not unique visitors: Cloudflare can't add those up across hours. A site Cloudflare can't count shows why, never a zero.</p>
+    </details>
+  );
+}
+
+function ResearchBriefs() {
+  const { select } = useAtlas();
+  const { state, message, reports } = useAgentReports(RESEARCH_AGENT);
+  const briefs = useMemo(() => researchBriefs(reports), [reports]);
+  const summary = briefs.length
+    ? `${briefs.length} month${briefs.length === 1 ? "" : "s"}, latest ${briefs[0].month}`
+    : state === "loading" ? "Loading" : state === "error" ? "Unavailable" : state === "off" ? "Not connected here" : "None yet";
+  return (
+    <details className="module-list" aria-label="Product research briefs">
+      <summary className="muted small">Product research briefs · {summary}</summary>
+      {briefs.length ? (
+        <ul>
+          {briefs.map((b) => (
+            <li key={b.id} title={`Runners-up: ${b.runnersUp.join(", ")}`}>
+              <span>{b.topIdea}<span className="muted small"> · {b.month}</span></span>
+              <span className="muted small">
+                {b.score.toFixed(2)} of 5 · {b.validated ? "Validated by real demand" : "Hypothesis"} · {relative(b.at)}
+                {b.notionUrl ? <> · <a href={b.notionUrl} target="_blank" rel="noreferrer">Notion</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{message ?? (state === "loading" ? "Reading briefs from the site" : "No briefs yet. The next monthly run will appear here.")}</p>
+      )}
+      <p className="muted small">
+        Each month's top pick from the research agent's brief, with its own scorecard total. A pick stays a hypothesis until real signups, preorders or sales back it.{" "}
+        <button className="text-btn small" onClick={() => select({ kind: "agent", id: RESEARCH_AGENT })}>Full reports</button>
+      </p>
     </details>
   );
 }

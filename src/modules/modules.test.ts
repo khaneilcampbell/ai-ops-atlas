@@ -109,7 +109,8 @@ describe("building instances", () => {
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Planned modules are placed but switched off until they are built.
-    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false, organization: "Benjaire" });
+    expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: false });
+    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: true, organization: "Benjaire" });
   });
 
   it("ties each landmark to the map's own key and name, so a rename on the map fails here", () => {

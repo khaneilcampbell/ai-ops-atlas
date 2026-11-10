@@ -131,8 +131,13 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "growth-marketing-studio", version: V, name: "Growth & Marketing Studio", productDistrict: "business-operations",
     description: "Campaigns, content and audience growth.",
-    capabilities: [later("campaigns", "Campaigns"), later("content", "Content pipeline"), later("audience", "Audience metrics")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      later("campaigns", "Campaigns"),
+      later("content", "Content pipeline"),
+      on("audience", "Site traffic", "src/growth/studio.ts siteTraffic"),
+      on("research", "Product research briefs", "src/growth/studio.ts researchBriefs"),
+    ],
+    connectors: ["agent-feed"], views: [], actions: [], permissions: [],
   },
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
