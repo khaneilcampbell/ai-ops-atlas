@@ -239,7 +239,7 @@ export default function MallInterior({light}:{light:LightMode}){
  const levels=mode===ALL?[0,1,2,3]:[mode];
  const info=MALL_LEVELS.find(l=>l.level===mode);
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
- return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label="Atlas Marketplace interior">
+ return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label={`${shown()} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
    <FramePacer profile={power} running={animate}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
@@ -263,7 +263,7 @@ export default function MallInterior({light}:{light:LightMode}){
    </group>}
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to city`}>← Exit building</button><div><small>{shown().toUpperCase()} · BENJAIRE PRODUCT WORKSPACES</small><h2>{title}</h2></div><button aria-pressed={life} title="Visual office movement only; pauses in Battery saver and reduced motion" onClick={()=>setLife(v=>!v)}>{!life?'Office life: Off':reduced||power.pauseInBackground?'Office life paused':'Office life: On'}</button></header>
-  <nav className="skyline-floor-picker" aria-label="Choose Atlas Marketplace floor"><strong>Floor navigation</strong>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${shown()} floor`}><strong>Floor navigation</strong>
    {[ALL,3,2,1,0].map(n=><button key={n} aria-pressed={mode===n} onClick={()=>{setMode(n);setPicked(null);}}>{n===ALL?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
   {worker&&<WorkplaceInspector agent={worker} onClose={()=>setPicked(null)}/>}
   <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Four floors round a funnel-tree atrium · {lookHint()}<span>Visual office simulation · No agents started · No publishing connected.</span></>:<>{info!.summary}<span>Visual office simulation · Select a workspace to inspect its agent.</span></>}</aside>
