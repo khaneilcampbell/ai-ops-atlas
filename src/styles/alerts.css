@@ -6,8 +6,8 @@
 .watch-dot.failing, .watch-dot.silent { background: var(--bad); }
 .watch-dot.ok { background: var(--good); }
 .watch-dot.not-running { background: transparent; border: 1.5px solid var(--sage-400); }
-.watch-chip.failing, .watch-chip.silent, .agent-alerts .chip.chip-bad { color: #fff; background: var(--bad); border-color: var(--bad); }
-.watch-chip.ok { color: var(--good); border-color: rgba(79, 122, 82, 0.4); }
+.watch-chip.failing, .watch-chip.silent, .agent-alerts .chip.chip-bad { color: var(--white); background: var(--bad); border-color: var(--bad); }
+.watch-chip.ok { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
 .watch-chip.no-source, .watch-chip.no-reports { background: transparent; }
 .watch-chip.not-running { background: transparent; color: var(--ink-3); }
 .watch-spacer { width: 52px; flex: none; }
@@ -16,8 +16,8 @@
 .notify-switch { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); cursor: pointer; }
 
 .alert-pill {
-  display: inline-flex; align-items: center; gap: 6px; max-width: 280px; padding: 5px 12px; border-radius: 999px;
-  border: 1px solid var(--bad); background: var(--bad); color: #fff; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; max-width: 280px; padding: 5px 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--bad); background: var(--bad); color: var(--white); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap;
 }
 .alert-pill:hover { filter: brightness(1.1); }
 .alert-pill .alert-text { overflow: hidden; text-overflow: ellipsis; }
