@@ -69,6 +69,9 @@ input, textarea, [contenteditable="true"] { user-select: text; -webkit-user-sele
 .vault-card { width: min(380px, 100%); text-align: center; display: grid; justify-items: center; gap: 10px; -webkit-app-region: no-drag; }
 .vault-card h1 { font-family: var(--serif); font-weight: 500; font-size: 26px; margin: 6px 0 0; }
 .vault-card p { margin: 0; color: var(--on-dark-2); }
+/* macOS puts the Touch ID sheet over the top of the window: keep the logo and message below it. */
+.vault-lock.waiting { place-items: end center; padding-bottom: max(16px, 16vh); }
+.vault-card .vault-welcome { color: var(--on-dark); font-size: 15px; }
 .vault-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
 .vault-actions .btn.primary { background: var(--gold); border-color: var(--gold); color: var(--forest-900); }
 .vault-actions .btn.primary:hover { background: #d6b26c; }
