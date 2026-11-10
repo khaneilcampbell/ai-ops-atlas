@@ -99,8 +99,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "security-operations-center", version: V, name: "Security Operations Center", productDistrict: "infrastructure-engineering",
     description: "Detections, security scanning and incident response.",
-    capabilities: [later("detections", "Detection inventory"), later("scanning", "Security scanning results"), later("incidents", "Security incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), later("incidents", "Security incidents")],
+    connectors: ["github-security"], views: [], actions: [], permissions: [],
   },
   // Business Operations
   {

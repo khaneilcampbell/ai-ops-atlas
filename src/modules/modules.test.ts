@@ -50,6 +50,7 @@ describe("module catalog", () => {
     expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
     expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("partial");
     expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
+    expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);
   });
@@ -69,9 +70,9 @@ describe("building instances", () => {
     expect(MODULE_TYPES[hq.moduleType!].name).toBe("Business Operations HQ");
   });
 
-  it("leaves buildings without a module as personal buildings, and planned modules switched off", () => {
+  it("leaves buildings without a module as personal buildings, and switches on modules with a working capability", () => {
     expect(instances.find((i) => i.id === "portfolio-site")).toMatchObject({ moduleType: null, moduleProvenance: "none", enabled: false });
-    expect(instances.find((i) => i.id === "soc-lab")).toMatchObject({ moduleType: "security-operations-center", enabled: false });
+    expect(instances.find((i) => i.id === "soc-lab")).toMatchObject({ moduleType: "security-operations-center", enabled: true });
   });
 
   it("reports health as unknown until telemetry is connected", () => {
