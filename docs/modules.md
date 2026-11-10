@@ -29,6 +29,8 @@ Add `{ id, name, moduleType }` to `LANDMARK_MODULES` in `workspace.ts`. The `id`
 the map plan constant, so a rename on the map fails the test instead of drifting.
 
 ### Add a module type
+Every module type in this workspace has at least one building, and `modules.test.ts` checks it,
+so a new type also needs a home: a project manifest's `module` field or a `LANDMARK_MODULES` entry.
 Add its id to `MODULE_TYPE_IDS` (`types.ts`) and its definition to `catalog.ts`. A capability is
 `available` only if it cites a file that does it today (the test checks that the file exists).
 Everything else is `planned`. A module with no available capability has no views or actions.
