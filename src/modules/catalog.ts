@@ -74,8 +74,12 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "infrastructure-control-tower", version: V, name: "Infrastructure Control Tower", productDistrict: "infrastructure-engineering",
     description: "Hosting, deployments and infrastructure health.",
-    capabilities: [later("hosts", "Hosting inventory"), later("deploys", "Deployment overview"), later("incidents", "Infrastructure incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      on("hosts", "Hosting inventory", "src/infra/hosts.ts HOSTS"),
+      on("deploys", "Deployment overview", "src/infra/deploys.ts useHostDeploys"),
+      later("incidents", "Infrastructure incidents"),
+    ],
+    connectors: ["github"], views: [], actions: [], permissions: [],
   },
   {
     id: "development-repository-hub", version: V, name: "Development & Repository Hub", productDistrict: "infrastructure-engineering",

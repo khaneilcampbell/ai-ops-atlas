@@ -86,6 +86,16 @@ instance. Only GET requests are made, and only names, on/off and run status and 
 To tie a catalog automation to its n8n workflow, add a link labelled `n8n workflow` to
 `https://<instance>/workflow/<id>`.
 
+### Hosting and deploys
+The Infrastructure Operations Hub lists where each piece of the workspace runs (`src/infra/hosts.ts`
+`HOSTS`) and its newest production deploys. The websites come from the property registry
+(`src/properties/registry.ts`), so their dashboards and this list share one poller. Atlas web and
+the Mac app are added in `hosts.ts`, not to the registry, because the registry is the site checks'
+server allowlist. Deploys are read from GitHub with the same read-only access as the rest of Atlas:
+Cloudflare check runs, GitHub Pages deployments, and CI's "Publish signed main build" job on the
+newest main commits (a skipped job is not counted as a deploy). No new credentials. A host with no
+deploy seen shows as unknown, never as live. To add a host, add an entry with its repository and
+deploy source.
 ### Security alerts
 The Security Operations Center counts open GitHub security alerts for every repository in the
 catalog, through the site (`server/security.ts`): the page asks `/api/security?repos=…` behind
