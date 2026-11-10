@@ -7,7 +7,10 @@ schema: atlas/v2                   # atlas/v1 still works; v2 adds the registry 
 
 project:
   id: commerce-pipeline            # lowercase letters, digits and dashes; unique across files
-  name: Multi-Agent Commerce Pipeline
+  name: Multi-Agent Commerce Pipeline # the building's display name; rename freely, the id stays
+  organization: Acme               # optional: who the building belongs to, kept as metadata
+  former_names: [Commerce Lab]     # optional: earlier names, still found by search
+  module: commerce-product-marketplace # optional: the platform module it houses (docs/modules.md)
   summary: One or two sentences on what the project does.
   status: active                   # active | idle | paused | attention | retired
   repository: owner/repo           # default repository for existing integrations

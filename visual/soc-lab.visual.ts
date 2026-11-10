@@ -30,7 +30,7 @@ for(const light of ['day','night'] as const)test(`SOC Lab, ${light}`,async({page
 });
 test('SOC Lab nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'SOC Lab');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'SOC Lab',exact:true})).toBeVisible();
+ await selectBuilding(page,'Security Operations Center');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Security Operations Center',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('SOC Lab on a phone',async({page})=>{

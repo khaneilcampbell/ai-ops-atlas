@@ -79,7 +79,12 @@ export interface DeclaredConnection {
 
 export interface Project {
   id: string;
+  /** The building's display name, shown everywhere it appears. Never used as an identifier. */
   name: string;
+  /** The organization the building belongs to (manifest `organization`), kept as metadata. */
+  organization?: string;
+  /** Earlier display names (manifest `former_names`): search aliases only, never shown as the name. */
+  formerNames?: string[];
   summary: string;
   status: Status;
   /** Default repository for agent source paths and existing integrations. */

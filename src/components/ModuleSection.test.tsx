@@ -23,7 +23,7 @@ it("reports health as not verified when CI has not loaded, and names the source"
 });
 
 it("marks a planned landmark module as not live and offers no navigation", () => {
-  const html = render({ kind: "service", id: "skyline-stadium" });
+  const html = render({ kind: "service", id: "benjaire-marketing" });
   expect(html).toContain("Growth &amp; Marketing Studio");
   expect(html).toContain("Planned · Not connected");
   expect(html).toContain("No telemetry connected");
@@ -38,8 +38,8 @@ it("renders nothing for buildings without a module", () => {
 
 it("lists the building's linked assets and the agents landmark's whole roster", () => {
   expect(render({ kind: "project", id: "ai-ops-atlas" })).toMatch(/Linked assets.*\d+ repositor.*\d+ agents?.*\d+ automations?/);
-  const agency = render({ kind: "service", id: "benjaire-marketing" });
-  expect(agency).toMatch(/\d+ agents/);
-  expect(agency).toContain("Recent executions");
-  expect(agency).toContain("None of these report runs to GitHub Actions");
+  const agents = render({ kind: "project", id: "intelligence-hub" });
+  expect(agents).toContain("Agent Operations Center");
+  expect(agents).toMatch(/\d+ agents/);
+  expect(agents).toContain("Recent executions");
 });

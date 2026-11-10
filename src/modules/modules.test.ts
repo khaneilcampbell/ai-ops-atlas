@@ -5,12 +5,14 @@ import { buildCatalog } from "../catalog/parse";
 import { CORE_MODULES, MODULE_TYPE_LIST, MODULE_TYPE_SOURCE, MODULE_TYPES, isModuleType, moduleAvailability } from "./catalog";
 import { buildingInstances, instancesOf, landmarkInstances, moduleHealth, workspaceBuildings } from "./instances";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
-import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
+import { MALL_KEY } from "../views/map3d/mallPlan";
+import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
+import { ATLAS_STATION_KEY } from "../views/map3d/hillsCommunityPlan";
+import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
 import { GITHUB_TOWER } from "../views/map3d/githubTowerPlan";
 import { airportBuilding, airportBuildingKey } from "../views/map3d/airportBuildings";
 import { financialBrand } from "../views/map3d/financialBrands";
 import { financialKey } from "../views/map3d/financialPlan";
-import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
 import { LANDMARK_MODULES, WORKSPACE, isEntitled, type AtlasWorkspace } from "./workspace";
 import { MODULE_TYPE_IDS } from "./types";
 
@@ -56,12 +58,12 @@ describe("building instances", () => {
 
   it("keeps every building's id, name and district exactly as the manifest has them", () => {
     expect(instances.map((i) => [i.id, i.name])).toEqual(catalog.projects.map((p) => [p.id, p.name]));
-    expect(instances.find((i) => i.id === "ai-ops-atlas")).toMatchObject({ name: "Atlas HQ", districtId: "ai-operations", moduleType: "atlas-command-center", enabled: true });
+    expect(instances.find((i) => i.id === "ai-ops-atlas")).toMatchObject({ name: "Atlas Command Center", organization: "Atlas", districtId: "ai-operations", moduleType: "atlas-command-center", enabled: true });
   });
 
   it("separates the workspace's building name from its platform module", () => {
     const hq = instances.find((i) => i.id === "benjaire-site")!;
-    expect(hq).toMatchObject({ name: "Benjaire HQ", moduleType: "business-operations-hq", moduleProvenance: "declared", enabled: true });
+    expect(hq).toMatchObject({ name: "Business Operations HQ", organization: "Benjaire", moduleType: "business-operations-hq", moduleProvenance: "declared", enabled: true });
     expect(MODULE_TYPES[hq.moduleType!].name).toBe("Business Operations HQ");
   });
 
@@ -82,27 +84,39 @@ describe("building instances", () => {
     expect(issues.map((i) => i.message).join()).toMatch(/must be one of/);
   });
 
-  it("puts the five core modules in KC's chosen buildings, keeping the map's own ids and names", () => {
+  it("houses each module in the building named for it, keeping the map's own ids", () => {
     const all = workspaceBuildings(catalog);
     const home = (t: string) => instancesOf(all, t as never).map((i) => i.name);
-    expect(home("atlas-command-center")).toEqual(["Atlas HQ"]);
-    expect(home("business-operations-hq")).toEqual(["Benjaire HQ"]);
-    expect(home("agent-operations-center")).toEqual([AGENCY_NAME]);
-    expect(home("workflow-automation-plant")).toEqual([GALLERIA_NAME]);
+    expect(home("atlas-command-center")).toEqual(["Atlas Command Center"]);
+    expect(home("business-operations-hq")).toEqual(["Business Operations HQ"]);
+    expect(home("agent-operations-center")).toEqual(["Agent Operations Center"]);
+    expect(home("commerce-product-marketplace")).toEqual(["Commerce Operations Center", "Product Marketplace"]);
+    expect(home("security-operations-center")).toEqual(["Security Operations Center"]);
+    expect(home("growth-marketing-studio")).toEqual(["Growth & Marketing Studio"]);
+    expect(home("workflow-automation-plant")).toEqual(["Workflow Automation Hub"]);
+    expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
+    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Corvane Capital"]);
+    expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
+    expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
+    expect(home("integration-exchange")).toEqual(["Integration Exchange"]);
+    expect(home("observability-center")).toEqual(["Atlas · Operations"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    expect([AGENCY_KEY, GALLERIA_KEY]).toEqual(["service:benjaire-marketing", "service:atlas-galleria"]);
+    expect(home("model-intelligence-lab")).toEqual(["Atlas · Cargo"]);
+    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
-    const named = Object.fromEntries(LANDMARK_MODULES.map((l) => [`service:${l.id}`, l.name]));
-    expect(named[airportBuildingKey("tower")]).toBe(airportBuilding("tower")!.name);
-    expect(named[airportBuildingKey("operations")]).toBe(airportBuilding("operations")!.name);
-    expect(named[airportBuildingKey("terminal")]).toBe(airportBuilding("terminal")!.name);
-    expect(named[airportBuildingKey("cargo")]).toBe(airportBuilding("cargo")!.name);
-    expect(named[financialKey("residence")]).toBe(financialBrand("residence")!.name);
-    expect(named[financialKey("business-finance")]).toBe(financialBrand("business-finance")!.name);
-    expect(named[STADIUM_KEY]).toBe(STADIUM_NAME);
-    expect(named["service:stadium-station"]).toBe("Stadium Station");
     // Planned modules are placed but switched off until they are built.
-    expect(all.find((i) => i.id === "skyline-stadium")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false });
+    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false, organization: "Benjaire" });
+  });
+
+  it("ties each landmark to the map's own key and name, so a rename on the map fails here", () => {
+    const named = Object.fromEntries(LANDMARK_MODULES.map((l) => [`service:${l.id}`, l.name]));
+    expect(named[AGENCY_KEY]).toBe(AGENCY_NAME);
+    expect(named[MALL_KEY]).toBe("Atlas Marketplace");
+    expect(named[DEALERSHIP_KEY]).toBe("Vantor Motors");
+    expect(named[ATLAS_STATION_KEY]).toBe(LOOP_STATIONS.find((s) => s.id === ATLAS_STATION_KEY)!.name);
+    expect(named[airportBuildingKey("operations")]).toBe(airportBuilding("operations")!.name);
+    for (const id of ["banks", "records", "investments", "residence", "business-finance", "financial-planning"]) expect(named[financialKey(id)], id).toBe(financialBrand(id)!.name);
+    expect(named[airportBuildingKey("cargo")]).toBe(airportBuilding("cargo")!.name);
   });
 });
 

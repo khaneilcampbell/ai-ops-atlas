@@ -40,7 +40,7 @@ export function repoRows(catalog: Catalog, repos: Record<string, RepoState>, unc
 
 export function repoMatches(r: RepoRow, q: string) {
   const d = repoData(r.state);
-  return matches(q, r.name, r.project?.name, r.project?.summary, ...r.projects.flatMap(p => [p.name, p.summary, ...p.tags]), d?.description, d?.language, ...Object.keys(d?.languages ?? {}), ...(r.project?.tags ?? []));
+  return matches(q, r.name, r.project?.name, r.project?.summary, ...r.projects.flatMap(p => [p.name, p.summary, p.organization, ...(p.formerNames ?? []), ...p.tags]), d?.description, d?.language, ...Object.keys(d?.languages ?? {}), ...(r.project?.tags ?? []));
 }
 
 /** Exact names and known aliases precede broad description matches; other order stays stable. */

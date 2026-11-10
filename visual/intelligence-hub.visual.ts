@@ -28,7 +28,7 @@ for(const light of ['day','night'] as const)test(`Intelligence Hub, ${light}`,as
 });
 test('Intelligence Hub nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Intelligence Hub');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Intelligence Hub',exact:true})).toBeVisible();
+ await selectBuilding(page,'Agent Operations Center');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Agent Operations Center',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('Intelligence Hub on a phone',async({page})=>{

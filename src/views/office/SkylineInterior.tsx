@@ -1,4 +1,5 @@
 import {financialInteriorBrand} from '../map3d/financialBrands';
+import {buildingDisplayName} from "../../modules/names";
 import {FINANCIAL_BUILDINGS} from "../map3d/financialPlan";
 import {WorkplaceInspector} from './WorkplaceInspector';
 import {workplaceAgent} from "../../catalog/workplaces";
@@ -102,7 +103,7 @@ function SkylineCamera({allFloors,floor,maxFloor,spread=1}:{allFloors:boolean;fl
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60*spread} maxPolarAngle={Math.PI/2.3}/>;
 }
 export default function SkylineInterior({building,light,maxFloor=4}:{building:string;light:LightMode;maxFloor?:number}) {
-  const identity=financialInteriorBrand(building),displayName=identity?.name??building,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
+  const identity=financialInteriorBrand(building),displayName=identity?.name??building,shownName=identity?buildingDisplayName(`service:financial:${identity.id}`,displayName):displayName,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   // The Financial District interiors (Circa and the others) have walking residents and staff, so they animate.
   const tower=towerSpec(building),spread=circa?1.75:tower?1.25:1;
@@ -121,7 +122,7 @@ export default function SkylineInterior({building,light,maxFloor=4}:{building:st
   const residents=useCircaResidents(circa?catalog.agents.filter(isAiAgent):[]);
   const people=useTowerPeople(tower,catalog.agents.filter(isAiAgent));
   useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.stopPropagation();leaveBuilding(true);}};window.addEventListener("keydown",close,true);return()=>window.removeEventListener("keydown",close,true);},[]);
-  return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${displayName} interior`}>
+  return <section className={`skyline-interior ${isNight?"night":"day"}`} aria-label={`${shownName} interior`}>
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:cameraPose(floor===-1,maxFloor,spread).position,fov:42}}><FramePacer profile={power} running={!reduced}/><color attach="background" args={[isNight?"#101b2c":"#dbe2d8"]}/><ambientLight color={isNight?"#c1cfed":"#ffffff"} intensity={isNight?0.3:0.8}/><hemisphereLight args={[isNight?"#91abdc":"#eef6ff",isNight?"#303e35":"#8c7e64",isNight?0.45:1.3]}/><directionalLight color={isNight?"#99b8ed":"#fff4da"} position={[5,14,8]} intensity={isNight?0.35:2} castShadow shadow-mapSize={[2048,2048]}/><SkylineCamera allFloors={floor===-1} floor={floor} maxFloor={maxFloor} spread={spread}/>
       <CityOutside allFloors={floor===-1} building={building} elevation={floor>0?floor*4:0} {...(circa?{clearSpan:CIRCA_PODIUM.w,extras:c=><CircaSite {...c}/>}:tower?{clearSpan:tower.w,extras:c=><TowerSite spec={tower} {...c}/>}:{})}/>
       {floor===-1&&(circa?<CircaLifts reduced={reduced}/>:tower?<TowerLift spec={tower} reduced={reduced}/>:<MovingLift reduced={reduced}/>)}
@@ -175,8 +176,8 @@ export default function SkylineInterior({building,light,maxFloor=4}:{building:st
       </group>)}
       {!circa&&[-7,7].map(x=><group key={x}><Box p={[x,0.35,-5]} s={[0.6,0.7,0.6]} color="#b49a67"/><mesh position={[x,1.2,-5]}><sphereGeometry args={[0.55,12,12]}/><meshStandardMaterial color="#426844"/></mesh></group>)}
     </Canvas>
-    <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${displayName} and return to city`}>← Exit building</button><div><small>{displayName.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":circa?circaFloorName(floor):floor===0?"Grand lobby":`Floor ${floor} · ${residential?(homes?"Residences":"Guest suites"):business?"Workspaces":"Agent residences"}`}</h2></div></header>
-    <nav className="skyline-floor-picker" aria-label={`Choose ${displayName} floor`}><strong>Floor navigation</strong>{[-1,...Array.from({length:maxFloor},(_,i)=>maxFloor-i),0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);setPickedAgent(null);}}>{n===-1?"All floors":circa?circaPickerName(n):n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
+    <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)}aria-label={`Exit ${shownName} and return to city`}>← Exit building</button><div><small>{shownName.toUpperCase()} · {business?.subtitle??"PRIVATE RESIDENCES"}</small><h2>{floor===-1?"All floors · Open cutaway":circa?circaFloorName(floor):floor===0?"Grand lobby":`Floor ${floor} · ${residential?(homes?"Residences":"Guest suites"):business?"Workspaces":"Agent residences"}`}</h2></div></header>
+    <nav className="skyline-floor-picker" aria-label={`Choose ${shownName} floor`}><strong>Floor navigation</strong>{[-1,...Array.from({length:maxFloor},(_,i)=>maxFloor-i),0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);setPickedAgent(null);}}>{n===-1?"All floors":circa?circaPickerName(n):n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
     {assigned.find(a=>a.id===pickedAgent)&&<WorkplaceInspector agent={assigned.find(a=>a.id===pickedAgent)!} onClose={()=>setPickedAgent(null)}/>}
     <aside className="skyline-interior-note">{picked??(tower?(floor===-1?`Lobby + ${maxFloor} floors · ${lookHint()}`:floor===0?"Front desk · Lounge · Seating · Lift":towerRooms(tower,floor).map(r=>r.name).join(" · ")):circa&&floor===0?"Front desk · Lounges · Parcel lockers · Work table · Both towers' lifts":circa?(floor===-1?`Twin towers on a podium · Lobby, pool deck + ${maxFloor-1} residential floors · ${lookHint()}`:floor===1?"Round pool · Lap pool · Cabanas · Spa · Fire pit · Sun lawn":"Two towers · 2 two-bedroom + 4 one-bedroom apartments · Select a residence"):floor===-1?`Lobby + ${maxFloor} ${residential?"residential":business?"workspace":"apartment"} ${maxFloor===1?"floor":"floors"} · ${lookHint()}`:floor===0?"Front desk · Lounge · Elevators":business?(assigned.length?`${assigned.length} assigned worker · Select a suite to see its role`:"Prepared workspaces · No agents assigned yet"):"4 furnished apartments · Select a residence")}<span>{tower?`${tower.program==="hotel"?"Hotel":"Workplace"} visualization · Agent placement does not indicate live activity`:business&&!circa?(assigned.length?"Automatic reports are model-free · Codex reviews run only on request":"Workspace preview · No workers assigned"):"Residential visualization · Agent placement does not indicate live activity"}</span></aside>
   </section>;

@@ -29,13 +29,13 @@ test("map, night", async ({ page }) => {
 
 test("map, building selected", async ({ page }) => {
   await openAtlas(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await check(page, "map-selected");
 });
 
 test("office", async ({ page }) => {
   await openAtlas(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await page.getByRole("button", { name: "Enter building" }).click();
   await settle(page, 4);
   await waitForOffice(page);
@@ -65,10 +65,10 @@ test("agents, manage", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.
-  await page.getByRole("button", { name: "Show Profile Tower on the map" }).first().click();
+  await page.getByRole("button", { name: "Show Development Hub on the map" }).first().click();
   await settle(page);
   await expect(page.locator(".map-stage")).toBeVisible();
-  await expect(page.getByText("Profile Tower").first()).toBeVisible();
+  await expect(page.getByText("Development Hub").first()).toBeVisible();
 });
 
 // iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.
@@ -88,7 +88,7 @@ test.describe("phone", () => {
   test("map, building selected", async ({ page }) => {
     await openAtlas(page);
     await waitForScene(page);
-    await selectBuilding(page, "Atlas HQ");
+    await selectBuilding(page, "Atlas Command Center");
     await check(page, "phone-map-selected");
   });
 

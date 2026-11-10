@@ -21,7 +21,7 @@ for(const light of ['day','night'] as const)test(`Atlas HQ, ${light}`,async({pag
 });
 test('Atlas HQ nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Atlas HQ');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Atlas HQ',exact:true})).toBeVisible();
+ await selectBuilding(page,'Atlas Command Center');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Atlas Command Center',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('Atlas HQ on a phone',async({page})=>{

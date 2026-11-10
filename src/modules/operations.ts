@@ -19,8 +19,9 @@ export interface OperationalAssets {
 }
 
 /**
- * Landmark modules that oversee the whole workspace rather than one project. Any other landmark
- * has no assets of its own yet, so it reports nothing rather than borrowing another building's.
+ * Modules that oversee the whole workspace rather than one project, wherever they are housed (a
+ * catalog building or a landmark). Any other landmark has no assets of its own yet, so it reports
+ * nothing rather than borrowing another building's.
  */
 const WORKSPACE_SCOPE: Partial<Record<ModuleTypeId, "agents" | "automations">> = {
   "agent-operations-center": "agents",
@@ -28,12 +29,12 @@ const WORKSPACE_SCOPE: Partial<Record<ModuleTypeId, "agents" | "automations">> =
 };
 
 export function buildingAssets(building: BuildingInstance | LandmarkInstance, catalog: Catalog): OperationalAssets {
+  const scope = building.moduleType ? WORKSPACE_SCOPE[building.moduleType] : undefined;
   const project = building.projectId ? catalog.projects.find((p) => p.id === building.projectId) : undefined;
-  if (project) {
+  if (project && !scope) {
     const mine = catalog.agents.filter((a) => a.projectId === project.id);
     return { projects: [project.id], repositories: projectRepositories(project, catalog.agents), agents: mine.filter(isAiAgent), automations: mine.filter((a) => !isAiAgent(a)) };
   }
-  const scope = building.moduleType ? WORKSPACE_SCOPE[building.moduleType] : undefined;
   if (!scope) return { projects: [], repositories: [], agents: [], automations: [] };
   const items = catalog.agents.filter((a) => a.status !== "retired" && (scope === "agents" ? isAiAgent(a) : !isAiAgent(a)));
   return {
