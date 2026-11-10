@@ -101,7 +101,7 @@ export function dismissIncidents(keys: string[]) {
 const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
 
 /** The newest default-branch commits of a repository, from the snapshot Atlas already has. */
-function useShas(repository: string): string[] {
+export function useShas(repository: string): string[] {
   const { repos } = useAtlas();
   const r = repos[repository];
   const snap = r?.kind === "ok" ? r.data : r?.kind === "error" ? r.data : undefined;
@@ -137,6 +137,11 @@ function usePoller(p: WebProperty) {
 export function usePropertyPolling() {
   usePoller(PROPERTIES[0]);
   usePoller(PROPERTIES[1]);
+}
+
+/** Every website's data, keyed by property id. */
+export function useAllPropertyData(): Readonly<Record<string, PropertyData>> {
+  return useSyncExternalStore(subscribe, () => data);
 }
 
 export function usePropertyData(id: string): PropertyData | null {

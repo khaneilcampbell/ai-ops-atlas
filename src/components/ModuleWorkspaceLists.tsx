@@ -7,13 +7,20 @@ import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType } from "../modules/types";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
+import { useHostDeploys } from "../infra/deploys";
+import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
+import type { DeployState } from "../properties/deploys";
+import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
+import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
 
 const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
- * Automation Plant (with live n8n runs) and the dataset inventory in Data Intelligence. Closed by default so the panel
+ * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
+ * security alerts in the Security Operations Center and hosting and deploys in Infrastructure.
+ * Closed by default so the panel
  * stays short; every row comes from a manifest line or an observed sync.
  */
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
@@ -22,6 +29,8 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
     case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
     case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
+    case "infrastructure-control-tower": return <>{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
+    case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
     default: return null;
   }
 }
@@ -152,6 +161,110 @@ function N8nRuns() {
       ) : (
         <p className="muted small">
           {snap?.state === "not-configured" ? `Atlas needs ${snap.need.charAt(0).toLowerCase()}${snap.need.slice(1)}` : n8n.message ?? "Loading n8n runs"}
+        </p>
+      )}
+    </details>
+  );
+}
+
+const HOST_LABEL: Record<HostHealth, string> = { live: "Live", failing: "Last deploy failed", deploying: "Deploying", unknown: "No deploy seen" };
+const DEPLOY_LABEL: Record<DeployState, string> = { success: "Deployed", failure: "Failed", in_progress: "Running", queued: "Queued", cancelled: "Cancelled" };
+const short = (sha: string) => sha.slice(0, 7);
+
+function Hosting() {
+  const deploys = useHostDeploys();
+  const rows = HOSTS.map((h) => ({ h, d: deploys.get(h.id), s: hostStatus(deploys.get(h.id)?.value ?? null) }));
+  const failing = rows.filter((r) => r.s.health === "failing").length;
+  const seen = rows.filter((r) => r.d?.state === "ready").length;
+  return (
+    <details className="module-list" aria-label="Hosting inventory">
+      <summary className="muted small">Hosting inventory · {rows.length} hosts{seen < rows.length ? `, ${seen} checked` : ""}{failing ? `, ${failing} with a failed deploy` : ""}</summary>
+      <ul>
+        {rows.map(({ h, d, s }) => (
+          <li key={h.id} data-state={s.health === "unknown" ? "none" : undefined}>
+            <span>{h.name}<span className="muted small"> · {h.host}</span></span>
+            <span className="muted small">
+              {d?.state === "ready" ? (s.health === "failing" ? <span className="run-failure">{HOST_LABEL[s.health]}</span> : HOST_LABEL[s.health])
+                : d?.state === "error" ? "Unavailable" : "Loading"}
+              {s.live ? ` · serving ${short(s.live.sha)} from ${relative(s.live.finishedAt ?? s.live.at)}` : ""}
+              {" · "}<a href={h.console.url} target="_blank" rel="noreferrer">{h.console.label}</a>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">From each host's deploy checks on the newest commits of its repository. A host with no deploy seen shows as unknown, never as live.</p>
+    </details>
+  );
+}
+
+function DeployOverview() {
+  const deploys = useHostDeploys();
+  const list = useMemo(() => recentDeploys(new Map([...deploys].map(([id, d]) => [id, d.value]))), [deploys]);
+  const failed = list.filter((d) => d.state === "failure").length;
+  const loading = [...deploys.values()].every((d) => d.state !== "ready");
+  return (
+    <details className="module-list" aria-label="Deployment overview">
+      <summary className="muted small">Deployment overview · {list.length ? `${list.length} recent${failed ? `, ${failed} failed` : ""}` : loading ? "Loading" : "None seen"}</summary>
+      {list.length ? (
+        <ul>
+          {list.map((d) => (
+            <li key={`${d.hostId}:${d.id}`}>
+              <span>{d.hostName}<span className="muted small"> · {short(d.sha)}</span></span>
+              <span className="muted small">
+                {d.state === "failure" ? <span className="run-failure">{DEPLOY_LABEL[d.state]}</span> : DEPLOY_LABEL[d.state]} · {relative(d.at)}
+                {d.url ? <> · <a href={d.url} target="_blank" rel="noreferrer">Log</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{loading ? "Reading deploys from GitHub" : "No production deploys on the newest commits"}</p>
+      )}
+    </details>
+  );
+}
+
+const SECURITY_LABEL = { attention: "Open alerts", clear: "No open alerts", unknown: "Not fully read" } as const;
+
+function SecurityAlerts() {
+  const { catalog } = useAtlas();
+  const repos = useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]);
+  const alerts = useSecurityAlerts(repos);
+  const snap = alerts.value;
+  const rows = snap?.state === "ok" ? snap.repos : [];
+  const withAlerts = rows.filter((r) => repoSecurity(r) === "attention").length;
+  const unread = rows.filter((r) => repoSecurity(r) === "unknown").length;
+  const summary =
+    snap?.state === "ok" ? `${rows.length} repositories, ${withAlerts} with open alerts${unread ? `, ${unread} not fully read` : ""}`
+    : snap?.state === "not-configured" ? "Not set up"
+    : alerts.state === "loading" ? "Loading" : alerts.state === "error" ? "Unavailable" : "Not connected here";
+  return (
+    <details className="module-list" aria-label="Security alerts">
+      <summary className="muted small">Security alerts · {summary}</summary>
+      {snap?.state === "ok" ? (
+        <>
+          <ul>
+            {rows.map((r) => {
+              const state = repoSecurity(r);
+              const t = repoTotals(r);
+              const sev = severityText(t.severity);
+              return (
+                <li key={r.repo} data-state={state === "unknown" ? "none" : undefined} title={ALERT_KINDS.map((k) => `${ALERT_LABEL[k]}: ${feedNote(r.feeds[k])}`).join(" · ")}>
+                  <a href={`https://github.com/${r.repo}/security`} target="_blank" rel="noreferrer">{r.repo.split("/")[1]}</a>
+                  <span className="muted small">
+                    {state === "attention" ? <span className="run-failure">{t.open}{t.more ? "+" : ""} open</span> : SECURITY_LABEL[state]}
+                    {sev ? ` · ${sev}` : ""}
+                    {` · ${ALERT_KINDS.map((k) => `${ALERT_LABEL[k]} ${feedNote(r.feeds[k])}`).join(", ")}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="muted small">Counted from GitHub {relative(snap.fetchedAt)}. Only counts and severities are read, never alert details. A repository shows no open alerts only when all three feeds were read.</p>
+        </>
+      ) : (
+        <p className="muted small">
+          {snap?.state === "not-configured" ? `Atlas needs ${snap.need.charAt(0).toLowerCase()}${snap.need.slice(1)}` : alerts.message ?? "Loading security alerts"}
         </p>
       )}
     </details>

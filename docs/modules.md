@@ -86,6 +86,28 @@ instance. Only GET requests are made, and only names, on/off and run status and 
 To tie a catalog automation to its n8n workflow, add a link labelled `n8n workflow` to
 `https://<instance>/workflow/<id>`.
 
+### Hosting and deploys
+The Infrastructure Operations Hub lists where each piece of the workspace runs (`src/infra/hosts.ts`
+`HOSTS`) and its newest production deploys. The websites come from the property registry
+(`src/properties/registry.ts`), so their dashboards and this list share one poller. Atlas web and
+the Mac app are added in `hosts.ts`, not to the registry, because the registry is the site checks'
+server allowlist. Deploys are read from GitHub with the same read-only access as the rest of Atlas:
+Cloudflare check runs, GitHub Pages deployments, and CI's "Publish signed main build" job on the
+newest main commits (a skipped job is not counted as a deploy). No new credentials. A host with no
+deploy seen shows as unknown, never as live. To add a host, add an entry with its repository and
+deploy source.
+### Security alerts
+The Security Operations Center counts open GitHub security alerts for every repository in the
+catalog, through the site (`server/security.ts`): the page asks `/api/security?repos=…` behind
+Access, the Mac app asks `/api/hooks/security?repos=…` with its website sync key (Rust
+`live_security`). The site reads Dependabot, code scanning and secret scanning alerts with its own
+`GITHUB_TOKEN` secret, which needs read access to those three alert types (fine-grained token:
+**Dependabot alerts**, **Code scanning alerts** and **Secret scanning alerts**, all Read-only). Only
+the number of open alerts and their severities come back: no advisory text, file path, secret type
+or location. Each feed reports one of four states: counted, switched off for the repository, not
+readable with the token, or unavailable. A repository shows no open alerts only when all three
+feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and

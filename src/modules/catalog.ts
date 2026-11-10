@@ -74,8 +74,12 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "infrastructure-control-tower", version: V, name: "Infrastructure Control Tower", productDistrict: "infrastructure-engineering",
     description: "Hosting, deployments and infrastructure health.",
-    capabilities: [later("hosts", "Hosting inventory"), later("deploys", "Deployment overview"), later("incidents", "Infrastructure incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      on("hosts", "Hosting inventory", "src/infra/hosts.ts HOSTS"),
+      on("deploys", "Deployment overview", "src/infra/deploys.ts useHostDeploys"),
+      later("incidents", "Infrastructure incidents"),
+    ],
+    connectors: ["github"], views: [], actions: [], permissions: [],
   },
   {
     id: "development-repository-hub", version: V, name: "Development & Repository Hub", productDistrict: "infrastructure-engineering",
@@ -95,8 +99,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "security-operations-center", version: V, name: "Security Operations Center", productDistrict: "infrastructure-engineering",
     description: "Detections, security scanning and incident response.",
-    capabilities: [later("detections", "Detection inventory"), later("scanning", "Security scanning results"), later("incidents", "Security incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), later("incidents", "Security incidents")],
+    connectors: ["github-security"], views: [], actions: [], permissions: [],
   },
   // Business Operations
   {
