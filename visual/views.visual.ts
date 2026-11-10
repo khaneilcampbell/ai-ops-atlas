@@ -65,10 +65,10 @@ test("agents, manage", async ({ page }) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.
-  await page.getByRole("button", { name: "Show Development & Repository Hub on the map" }).first().click();
+  await page.getByRole("button", { name: "Show Development Hub on the map" }).first().click();
   await settle(page);
   await expect(page.locator(".map-stage")).toBeVisible();
-  await expect(page.getByText("Development & Repository Hub").first()).toBeVisible();
+  await expect(page.getByText("Development Hub").first()).toBeVisible();
 });
 
 // iPhone-size checks: the phone layout in mobile.css and the phone camera in Map3D.

@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: github-profile
-  name: Development & Repository Hub
+  name: Development Hub
   former_names: [Profile Tower]
   summary: The profile README shown on github.com/khaneilcampbell, and the GitHub building's own agents, which keep pull requests across the ecosystem moving to production, scout money opportunities in what Atlas already runs, and keep Atlas on its design tokens.
   status: active
