@@ -8,6 +8,10 @@ import { datasetInventory, moduleInventory, projectDependencies, workflowMap, ty
 import type { AtlasModuleType } from "../modules/types";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
+import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
+import { useIntel } from "../intel/state";
+import { useUsageData } from "../usage/data";
+import { money } from "../usage/model";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
@@ -19,7 +23,8 @@ const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) =>
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
  * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
- * security alerts in the Security Operations Center and hosting and deploys in Infrastructure.
+ * security alerts in the Security Operations Center, hosting and deploys in Infrastructure and
+ * spend against caps in Finance.
  * Closed by default so the panel
  * stays short; every row comes from a manifest line or an observed sync.
  */
@@ -29,6 +34,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
     case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
     case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
+    case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
     case "infrastructure-control-tower": return <>{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
     default: return null;
@@ -267,6 +273,40 @@ function SecurityAlerts() {
           {snap?.state === "not-configured" ? `Atlas needs ${snap.need.charAt(0).toLowerCase()}${snap.need.slice(1)}` : alerts.message ?? "Loading security alerts"}
         </p>
       )}
+    </details>
+  );
+}
+
+const CAP_LABEL: Record<CapState, string> = { ok: "Under the cap", near: "Nearly used", over: "Cap reached", unseen: "Spend not visible to Atlas" };
+
+function SpendCaps() {
+  const { setView } = useAtlas();
+  const intel = useIntel();
+  const usage = useUsageData({ push: false });
+  const atlasBudget = intel.status?.config ? { month: intel.status.month_spent_usd, budget: intel.status.config.monthly_budget_usd } : null;
+  const rows = useMemo(() => SPEND_CAPS.map((c) => capStatus(c, usage.records, atlasBudget)), [usage.records, atlasBudget?.month, atlasBudget?.budget]); // eslint-disable-line react-hooks/exhaustive-deps
+  const flagged = rows.filter((r) => r.state === "near" || r.state === "over").length;
+  return (
+    <details className="module-list" aria-label="Spend against caps">
+      <summary className="muted small">Spend against caps · {usage.firstLoad ? "Loading" : `${rows.length} caps${flagged ? `, ${flagged} nearly used or reached` : ""}`}</summary>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.cap.id} data-state={r.state === "unseen" ? "none" : undefined} title={r.cap.covers}>
+            <span>{r.cap.label}{r.limitUsd !== null ? <span className="muted small"> · {money(r.limitUsd)} a month</span> : null}</span>
+            <span className="muted small">
+              {r.state === "near" || r.state === "over" ? <span className="run-failure">{CAP_LABEL[r.state]}</span> : r.state === "ok" && !r.exact ? "Seen so far" : r.state === "unseen" && r.cap.measure.kind === "atlas-budget" ? "Shown in the Mac app" : CAP_LABEL[r.state]}
+              {r.spentUsd !== null ? ` · ${r.exact ? "" : "at least "}${money(r.spentUsd)} used this month` : r.cap.measure.kind === "none" ? ` · ${r.cap.measure.reason}` : ""}
+              {" · "}
+              {"view" in r.cap.where ? (
+                <button className="text-btn small" onClick={() => setView("settings")}>{r.cap.where.label}</button>
+              ) : (
+                <a href={r.cap.where.url} target="_blank" rel="noreferrer">{r.cap.where.label}</a>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">This calendar month, in UTC. Provider caps count only the calls Atlas logs, so they show a lower bound: the provider's page has the full figure. Subscription use (Claude and ChatGPT plans) isn't billed per call, so it doesn't count.</p>
     </details>
   );
 }
