@@ -13,6 +13,7 @@ project:
   repository: khaneilcampbell/multi-agent-commerce-pipeline
   tags: [crewai, claude, stripe, canva, automation]
   district: business-operations
+  module: commerce-product-marketplace
   links:
     - label: Case study
       url: https://khaneilcampbell.com/commerce-pipeline.html

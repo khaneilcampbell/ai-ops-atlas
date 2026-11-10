@@ -12,6 +12,7 @@ project:
   repository: khaneilcampbell/ai-ops-atlas
   tags: [documentation, claude]
   district: ai-engineering
+  module: knowledge-repository
 
 agents:
   - id: docs-builder
