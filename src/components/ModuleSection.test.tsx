@@ -23,11 +23,20 @@ it("reports health as not verified when CI has not loaded, and names the source"
 });
 
 it("marks a planned landmark module as not live and offers no navigation", () => {
-  const html = render({ kind: "service", id: "benjaire-marketing" });
-  expect(html).toContain("Growth &amp; Marketing Studio");
+  const html = render({ kind: "service", id: "atlas-marketplace" });
+  expect(html).toContain("Commerce &amp; Product Marketplace");
   expect(html).toContain("Planned · Not connected");
   expect(html).toContain("No telemetry connected");
   expect(html).not.toContain("Open ");
+});
+
+it("shows site traffic and research briefs in the Growth & Marketing Studio, loading until data arrives", () => {
+  const html = render({ kind: "service", id: "benjaire-marketing" });
+  expect(html).toContain("Growth &amp; Marketing Studio");
+  expect(html).toContain('aria-label="Site traffic"');
+  expect(html).toContain("Site traffic · Loading");
+  expect(html).toContain('aria-label="Product research briefs"');
+  expect(html).not.toContain("0 page views");
 });
 
 it("renders nothing for buildings without a module", () => {

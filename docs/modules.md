@@ -118,6 +118,16 @@ with the full figure. A cap whose calls Atlas can't see shows "Spend not visible
 of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
 cap changes on the provider's page, change its `limitUsd` here.
 
+### Site traffic and product research briefs
+The Growth & Marketing Studio shows two lists from data Atlas already reads (`src/growth/studio.ts`).
+**Site traffic** takes the last 24 hours of Cloudflare analytics from the site checks the website
+dashboards already run (`server/properties.ts`): page views, requests and threats blocked for each
+site in `GROWTH_SITES`. A site whose DNS record isn't proxied through Cloudflare shows "Not proxied"
+instead of a zero, and a check that isn't set up or failed says so. **Product research briefs**
+lists the newest monthly briefs the research agent posted to the site (`src/reports`), one per
+month, with the top pick, its scorecard total and whether real demand has validated it. No new
+credentials, and nothing calls a model.
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and
