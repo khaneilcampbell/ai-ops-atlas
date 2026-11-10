@@ -33,7 +33,6 @@ describe("districts", () => {
       "service-desk": "security-infrastructure",
       "portfolio-site": "career-portfolio",
       "github-profile": "career-portfolio",
-      "career-optimizer": "career-portfolio",
     });
   });
 
@@ -77,7 +76,7 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-ops-ci", "benjaire-site-ci", "career-ci", "commerce-tests", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
+      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-ops-ci", "benjaire-site-ci", "commerce-tests", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
@@ -106,8 +105,8 @@ describe("automation categories", () => {
         "visual-director",
       ],
       monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "job-analyst", "repo-intelligence", "resume-quality-review", "resume-tailor"],
-      maintenance: ["atlas-github-steward", "atlas-system-improvements", "career-db-validator", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
+      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "repo-intelligence"],
+      maintenance: ["atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
 

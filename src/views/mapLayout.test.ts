@@ -174,9 +174,12 @@ it("does not draw a second building for a registered repository left in discover
 it("leaves the land of removed towers (Service Desk, Career Applications, Benjaire Dashboard) in every grouping",()=>{
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
-    // The same catalog with the two projects renamed, so they are still drawn as towers.
-    const was=(id:string)=>["service-desk","career-optimizer","benjaire-ops"].includes(id)?`was-${id}`:id;
-    const without=layoutMap({projects:catalog.projects.map(p=>({...p,id:was(p.id)})),agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
+    // The same catalog with the removed projects renamed, so they are still drawn as towers. Career
+    // Applications has no manifest any more (2026-11-10), so its tower is put back on its old slot.
+    const was=(id:string)=>["service-desk","benjaire-ops"].includes(id)?`was-${id}`:id;
+    const projects=catalog.projects.map(p=>({...p,id:was(p.id)}));
+    projects.splice(projects.findIndex(p=>p.id==="was-benjaire-ops")+1,0,{id:"was-career-optimizer",name:"Career Applications",summary:"",status:"active",repository:"",tags:["claude","career","human-in-the-loop"],district:"career-portfolio",links:[],agentIds:[]});
+    const without=layoutMap({projects,agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
     expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(3);
     expect(layout.districts.map(d=>d.project.id)).not.toContain("service-desk");
     expect(layout.districts.map(d=>d.project.id)).not.toContain("career-optimizer");
@@ -216,9 +219,16 @@ describe("keepRemovedLots", () => {
     const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y}`).sort();
     const full = layoutMap(catalog, [], "district");
     // What the live catalog does with a deleted repository: its project and agents drop out.
-    const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "career-optimizer"), agents: catalog.agents.filter(a => a.projectId !== "career-optimizer") };
+    const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "service-desk"), agents: catalog.agents.filter(a => a.projectId !== "service-desk") };
     expect(where(layoutMap(live, [], "district"))).not.toEqual(where(full));
     expect(where(layoutMap(keepRemovedLots(live, catalog), [], "district"))).toEqual(where(full));
+  });
+  it("keeps Career Applications' lot where it was after its manifest is removed", () => {
+    // career-application-system was deleted on GitHub and its catalog file removed (2026-11-10).
+    expect(catalog.projects.some(p => p.id === "career-optimizer" || p.repository === "khaneilcampbell/career-application-system")).toBe(false);
+    expect(catalog.agents.some(a => a.projectId === "career-optimizer")).toBe(false);
+    const lot = layoutMap(catalog, [], "district").parks.find(p => p.id === "park:vacant:career-optimizer");
+    expect(lot && [lot.ox, lot.oy, lot.w, lot.h]).toEqual([9.75, 22, 5, 5]);
   });
   it("leaves a catalog alone when nothing was dropped", () => {
     expect(keepRemovedLots(catalog, catalog)).toBe(catalog);
