@@ -12,6 +12,7 @@ project:
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
   district: business-operations
+  module: business-operations-hq
   links:
     - label: Live site
       url: https://benjaire.com

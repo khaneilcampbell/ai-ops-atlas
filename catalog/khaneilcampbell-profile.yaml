@@ -10,6 +10,7 @@ project:
   repository: khaneilcampbell/khaneilcampbell
   tags: [profile]
   district: career-portfolio
+  module: development-repository-hub
   links:
     - label: GitHub profile
       url: https://github.com/khaneilcampbell
