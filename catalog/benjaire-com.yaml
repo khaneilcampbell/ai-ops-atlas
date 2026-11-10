@@ -95,6 +95,9 @@ agents:
     alerts:
       failures: true
     last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/iQdSJGMQi6TBHlar
     permissions:
       - 'Resend API: sending on benjaire.com only'
       - Anthropic, through the n8n credential on Classify with Claude

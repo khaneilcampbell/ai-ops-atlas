@@ -48,6 +48,15 @@ catalog manifests. Every instance function takes the workspace as an argument
 (`workspaceBuildings(catalog, workspace)`), so the same module types appear under the other
 workspace's building names.
 
+### Live n8n runs
+The Automation Plant reads KC's n8n Cloud instance through the site (`server/n8n.ts`): the page asks
+`/api/n8n` behind Access, the Mac app asks `/api/hooks/n8n` with its website sync key. The site
+holds the only copy of the n8n API key as the Pages secret `N8N_API_KEY` (create it in n8n under
+Settings → n8n API with the **Read only** scope). `N8N_BASE_URL` optionally points at another
+instance. Only GET requests are made, and only names, on/off and run status and times come back.
+To tie a catalog automation to its n8n workflow, add a link labelled `n8n workflow` to
+`https://<instance>/workflow/<id>`.
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and

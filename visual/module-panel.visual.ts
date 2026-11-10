@@ -23,7 +23,7 @@ for(const [file,name,module] of [['operations','Atlas · Operations','Observabil
  await expect(page.getByRole('complementary',{name:'Inspector'})).toContainText(module);
  await page.screenshot({path:`${out}/${file}-desktop.png`});
 });
-const LISTS:[string,string,string][]=[['inventory','Atlas HQ','Module inventory'],['dependencies','Profile Tower','Project dependencies'],['workflow-map','Atlas Galleria','Workflow map'],['datasets','Aldren Insights','Dataset inventory']];
+const LISTS:[string,string,string][]=[['inventory','Atlas HQ','Module inventory'],['dependencies','Profile Tower','Project dependencies'],['workflow-map','Atlas Galleria','Workflow map'],['n8n-runs','Atlas Galleria','Live n8n runs'],['datasets','Aldren Insights','Dataset inventory']];
 for(const [file,name,list] of LISTS)test(`Module list: ${list}`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
