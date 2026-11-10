@@ -307,6 +307,7 @@ table.table { width: 100%; border-collapse: collapse; }
 .issues { margin: 0; padding-left: 18px; color: var(--bad); }
 
 .mac-app .header { padding-left: 84px; }
+.mac-app.mac-fullscreen .header { padding-left: 14px; }
 .map-bar .status.active { color: #a9cfac; background: rgba(156, 196, 159, 0.12); }
 .map-bar .status.idle { color: var(--on-dark-2); background: rgba(255, 255, 255, 0.06); }
 .two { align-items: start; }
@@ -875,3 +876,9 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 
 .map-stage.night, .map-stage.night .map3d { background: #071827; }
 .rerun a.btn { text-decoration: none; }
+
+/* Long rail labels (Repositories, Automations) fit inside the 60px button instead of clipping. */
+.sidebar .nav-item .nav-label-long{font-size:8.5px;letter-spacing:0}
+/* The live event text gives way before the search box does. */
+.header .live-pill{max-width:260px}
+@media(max-width:1600px){.header .live-last{display:none}}
