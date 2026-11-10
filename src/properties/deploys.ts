@@ -32,9 +32,10 @@ export function checkRunState(r: J): DeployState {
 }
 
 /** The deploy check runs on one commit. */
-export function fromCheckRuns(j: J, sha: string, name: string): Deploy[] {
+export function fromCheckRuns(j: J, sha: string, name: string, ignoreSkipped = false): Deploy[] {
   return (Array.isArray(j?.check_runs) ? j.check_runs : [])
     .filter((r: J) => typeof r?.name === "string" && r.name.startsWith(name))
+    .filter((r: J) => !(ignoreSkipped && r.conclusion === "skipped"))
     .map(
       (r: J): Deploy => ({
         id: `check:${r.id}`,
@@ -87,11 +88,11 @@ const newestFirst = (a: Deploy, b: Deploy) => Date.parse(b.at) - Date.parse(a.at
  * (already in the repository snapshot), so check runs cost one request per commit, and
  * unchanged answers come back as free 304s.
  */
-export async function fetchDeploys(p: WebProperty, shas: string[]): Promise<Deploy[]> {
+export async function fetchDeploys(p: Pick<WebProperty, "repository" | "deploy">, shas: string[]): Promise<Deploy[]> {
   const base = `/repos/${p.repository}`;
   if (p.deploy.kind === "check-runs") {
-    const name = p.deploy.name;
-    const lists = await Promise.all(shas.slice(0, 3).map(async (sha) => fromCheckRuns((await githubGet(`${base}/commits/${sha}/check-runs?per_page=50`)) as J, sha, name)));
+    const { name, ignoreSkipped } = p.deploy;
+    const lists = await Promise.all(shas.slice(0, 3).map(async (sha) => fromCheckRuns((await githubGet(`${base}/commits/${sha}/check-runs?per_page=50`)) as J, sha, name, ignoreSkipped)));
     return lists.flat().sort(newestFirst);
   }
   const env = encodeURIComponent(p.deploy.environment);
