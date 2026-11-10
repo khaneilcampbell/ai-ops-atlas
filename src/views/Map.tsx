@@ -1,3 +1,4 @@
+import { catalog as fullCatalog } from "../catalog";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
@@ -27,6 +28,7 @@ import {
   TH,
   iso,
   layoutMap,
+  keepRemovedLots,
   placeLabels,
   treeSpots,
   TW,
@@ -428,7 +430,7 @@ export function MapView({active=true}:{active?:boolean}) {
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
-  const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
+  const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
   const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();

@@ -86,6 +86,23 @@ const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimi
  */
 export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
 
+/**
+ * Puts removed-tower lots back when the live catalog dropped them. A repository GitHub reports deleted
+ * or archived takes its project out of the live catalog, and with it the lot that holds the city in
+ * place, so every district repacked (2026-11-10: career-application-system gone moved Atlas Stadium
+ * away from Atlas Airport in the installed app). These lots never draw a building, so their
+ * repository's state must not change the map.
+ */
+export function keepRemovedLots(live: Catalog, full: Catalog): Catalog {
+  const have = new Set(live.projects.map(p => p.id));
+  const lost = full.projects.filter(p => (VACANT_LOTS.has(p.id) || CLEARED_LOTS.has(p.id)) && !have.has(p.id));
+  if (!lost.length) return live;
+  const ids = new Set(lost.map(p => p.id));
+  const order = new Map(full.projects.map((p, i) => [p.id, i]));
+  const projects = [...live.projects, ...lost].sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9));
+  return { ...live, projects, agents: [...live.agents, ...full.agents.filter(a => ids.has(a.projectId))] };
+}
+
 /** A labelled block of districts when the map is grouped. */
 export interface Neighborhood {
   key: string;

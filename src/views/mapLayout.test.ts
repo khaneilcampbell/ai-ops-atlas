@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { GAP, OFF_MAP_PROJECTS, layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { GAP, OFF_MAP_PROJECTS, keepRemovedLots, layoutMap, placeLabels, type Layout } from "./mapLayout";
 import { districtHeadings } from "./mapPresentation";
 
 function rects(layout: Layout) {
@@ -209,4 +209,18 @@ it("registers Skyline without giving it a district", () => {
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
   expect(layout.parks.filter(p => !p.strays.length && !p.vacant)).toHaveLength(1);
   expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
+});
+
+describe("keepRemovedLots", () => {
+  it("keeps the city in place when a removed tower's repository is deleted on GitHub", () => {
+    const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y}`).sort();
+    const full = layoutMap(catalog, [], "district");
+    // What the live catalog does with a deleted repository: its project and agents drop out.
+    const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "career-optimizer"), agents: catalog.agents.filter(a => a.projectId !== "career-optimizer") };
+    expect(where(layoutMap(live, [], "district"))).not.toEqual(where(full));
+    expect(where(layoutMap(keepRemovedLots(live, catalog), [], "district"))).toEqual(where(full));
+  });
+  it("leaves a catalog alone when nothing was dropped", () => {
+    expect(keepRemovedLots(catalog, catalog)).toBe(catalog);
+  });
 });

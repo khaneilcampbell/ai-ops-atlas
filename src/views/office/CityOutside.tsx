@@ -10,7 +10,8 @@ import {quarterOf} from "../map3d/trackpad";
 import {useAtlas} from "../../state";
 import {useReducedMotion} from "../../lib/motion";
 import {load} from "../../lib/storage";
-import {layoutMap,type GroupBy} from "../mapLayout";
+import {layoutMap,keepRemovedLots,type GroupBy} from "../mapLayout";
+import {catalog as fullCatalog} from "../../catalog";
 import {buildScene} from "../map3d/scene";
 import {Traffic,Vehicles} from "../map3d/living";
 import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
@@ -27,7 +28,7 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   const traffic=load<boolean>("mapTraffic",true);
   const {catalog,uncataloged}=useAtlas();
   const grouping=load<GroupBy>("mapProjectGrouping","district");
-  const source=useMemo(()=>buildScene(layoutMap(catalog,uncataloged,grouping)),[catalog,uncataloged,grouping]);
+  const source=useMemo(()=>buildScene(layoutMap(keepRemovedLots(catalog,fullCatalog),uncataloged,grouping)),[catalog,uncataloged,grouping]);
   const g=useGeometries(),m=useMaterials();
   const park=openLot(source.parks);
   const pick=useMemo<PickHandlerSet>(()=>({of:keys=>({keys,over:()=>{},out:()=>{},click:()=>{}})}),[]);
