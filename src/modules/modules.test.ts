@@ -7,6 +7,11 @@ import { buildingInstances, instancesOf, moduleHealth, workspaceBuildings } from
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { GITHUB_TOWER } from "../views/map3d/githubTowerPlan";
+import { airportBuilding, airportBuildingKey } from "../views/map3d/airportBuildings";
+import { financialBrand } from "../views/map3d/financialBrands";
+import { financialKey } from "../views/map3d/financialPlan";
+import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
+import { LANDMARK_MODULES } from "./workspace";
 import { MODULE_TYPE_IDS } from "./types";
 
 describe("module catalog", () => {
@@ -86,6 +91,13 @@ describe("building instances", () => {
     expect(home("workflow-automation-plant")).toEqual([GALLERIA_NAME]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
     expect([AGENCY_KEY, GALLERIA_KEY]).toEqual(["service:benjaire-marketing", "service:atlas-galleria"]);
-    expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(["benjaire-marketing", "atlas-galleria"]);
+    expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
+    const named = Object.fromEntries(LANDMARK_MODULES.map((l) => [`service:${l.id}`, l.name]));
+    expect(named[airportBuildingKey("tower")]).toBe(airportBuilding("tower")!.name);
+    expect(named[financialKey("business-finance")]).toBe(financialBrand("business-finance")!.name);
+    expect(named[STADIUM_KEY]).toBe(STADIUM_NAME);
+    expect(named["service:stadium-station"]).toBe("Stadium Station");
+    // Planned modules are placed but switched off until they are built.
+    expect(all.find((i) => i.id === "skyline-stadium")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false });
   });
 });
