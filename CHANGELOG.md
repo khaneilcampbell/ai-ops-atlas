@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-10 · Click a building and its panel now shows the Atlas module it houses: what it does, its health from GitHub CI where Atlas can see it, and which features are live or still planned (#PR)
+- 2026-11-10 · Click a building and its panel now shows the Atlas module it houses: what it does, its health from GitHub CI where Atlas can see it, and which features are live or still planned (#317)
 - 2026-11-10 · Behind the scenes, every building can now be tied to a standard Atlas module (Benjaire HQ is a Business Operations HQ, Atlas HQ the Command Center). Names, places and the map are unchanged (#316)
 - 2026-11-10 · When Atlas opens, the logo and a welcome message show first and sit lower on the screen, so the Touch ID prompt no longer covers them (#313)
 - 2026-11-10 · The map no longer reshuffles when a removed building's repository is deleted on GitHub: Atlas Stadium is back beside Atlas Airport in the Mac app, matching the preview (#314)
