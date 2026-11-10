@@ -96,6 +96,11 @@ Cloudflare check runs, GitHub Pages deployments, and CI's "Publish signed main b
 newest main commits (a skipped job is not counted as a deploy). No new credentials. A host with no
 deploy seen shows as unknown, never as live. To add a host, add an entry with its repository and
 deploy source.
+
+Its **Incidents** list joins the websites' own incidents (the same ones their dashboards raise, and
+dismissed ones stay hidden) with failed or stuck deploys of Atlas web and the Mac app
+(`src/infra/incidents.ts`). The newest finished deploy decides, so an old failure followed by a
+success is history. A check that couldn't run is never an incident.
 ### Security alerts
 The Security Operations Center counts open GitHub security alerts for every repository in the
 catalog, through the site (`server/security.ts`): the page asks `/api/security?repos=…` behind

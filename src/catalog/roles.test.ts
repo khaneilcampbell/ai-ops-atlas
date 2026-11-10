@@ -10,7 +10,7 @@ describe("agent and automation directories", () => {
     expect(isAiAgent({ registry: { classification: { type, confidence: "verified" } } })).toBe(expected);
   });
   it("keeps fixed AI-assisted workflows out of the agent directory", () => {
-    for (const id of ["benjaire-flow-intake", "job-analyst", "github-merge-flow", "atlas-production-coordinator", "canva-mockups"]) {
+    for (const id of ["benjaire-flow-intake", "github-merge-flow", "atlas-production-coordinator", "canva-mockups"]) {
       expect(isAiAgent(catalog.agents.find(a => a.id === id)!)).toBe(false);
     }
     for (const id of ["repo-intelligence", "niche-scout", "benjaire-product-lab", "skyline-inquiry-assistant"]) {

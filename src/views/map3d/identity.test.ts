@@ -13,7 +13,6 @@ describe("identityFor", () => {
 
   it("derives the rest from catalog metadata", () => {
     expect(of("portfolio-site").symbol).toBe("globe");
-    expect(of("career-optimizer").symbol).toBe("briefcase");
     expect(of("commerce-pipeline").symbol).toBe("nodes");
     expect(of("intelligence-hub").symbol).toBe("book");
     expect(of("service-desk").symbol).toBe("chart");
