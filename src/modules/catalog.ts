@@ -59,10 +59,10 @@ const TYPES: AtlasModuleType[] = [
       on("history", "Execution history (GitHub Actions)", "src/registry/telemetry.ts"),
       on("failures", "Failed execution visibility", "src/alerts/alerts.ts"),
       on("related-agents", "Related agents", "src/catalog/types.ts DeclaredConnection"),
-      later("n8n", "Live n8n execution data"),
+      on("n8n", "Live n8n execution data", "src/n8n/runs.ts useN8nRuns"),
       on("dependencies", "Workflow dependency map", "src/modules/inventory.ts workflowMap"),
     ],
-    connectors: ["github"], views: ["automations"], actions: [], permissions: [],
+    connectors: ["github", "n8n"], views: ["automations"], actions: [], permissions: [],
   },
   {
     id: "model-intelligence-lab", version: V, name: "Model Intelligence Lab", productDistrict: "ai-automation",

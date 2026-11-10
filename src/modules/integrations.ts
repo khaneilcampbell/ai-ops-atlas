@@ -6,7 +6,7 @@
 // held by the desktop shell (the Keychain, read only by Rust) or by the hosted site's server
 // functions. Anything that writes is authorized there, not in the page.
 
-export const INTEGRATION_IDS = ["github", "agent-feed", "live-feed", "atlas-intel", "usage-sync"] as const;
+export const INTEGRATION_IDS = ["github", "agent-feed", "live-feed", "atlas-intel", "usage-sync", "n8n"] as const;
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
 /** Where an integration's credentials are held. "none" means it needs none to read. */
@@ -53,6 +53,12 @@ const CONTRACTS: IntegrationContract[] = [
     id: "usage-sync", version: V, label: "API usage sync",
     provides: ["Recorded AI and API usage", "Estimated spend"],
     access: "read", credentials: { desktop: "desktop-keychain", web: "site-server" }, client: "src/usage/sync.ts",
+  },
+  {
+    id: "n8n", version: V, label: "n8n",
+    provides: ["Workflow names and whether each is switched on", "Recent run status and times"],
+    // The read-only n8n API key is a site secret on both: the Mac app asks the site with its sync key.
+    access: "read", credentials: { desktop: "site-server", web: "site-server" }, client: "src/n8n/runs.ts",
   },
 ];
 

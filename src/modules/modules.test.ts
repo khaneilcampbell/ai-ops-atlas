@@ -46,7 +46,8 @@ describe("module catalog", () => {
 
   it("works out availability from the capabilities", () => {
     expect(moduleAvailability(MODULE_TYPES["agent-operations-center"])).toBe("available");
-    expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("partial");
+    expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("available");
+    expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
     expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);

@@ -14,6 +14,7 @@ pub const INQUIRIES_PATH: &str = "/api/hooks/inquiries";
 pub const AGENT_USAGE_PATH: &str = "/api/hooks/usage";
 pub const INQUIRY_REPLY_PATH: &str = "/api/hooks/inquiries/reply";
 pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
+pub const N8N_PATH: &str = "/api/hooks/n8n";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
@@ -178,6 +179,33 @@ pub async fn live_properties(
             .await
             .map(Some)
             .map_err(|e| format!("The site's checks weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Recent n8n workflow runs (server/n8n.ts), or `None` when website sync isn't set up. The n8n
+/// API key stays on the site; the app only sends its sync key. Read-only: the site makes GET
+/// requests to n8n and returns names, on/off and run status and times.
+#[tauri::command]
+pub async fn live_n8n(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{N8N_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's n8n runs weren't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }

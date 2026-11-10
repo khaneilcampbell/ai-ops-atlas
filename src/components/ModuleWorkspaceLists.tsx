@@ -6,20 +6,21 @@ import { useLiveStatus } from "../live/feed";
 import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType } from "../modules/types";
+import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 
 const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
- * Automation Plant and the dataset inventory in Data Intelligence. Closed by default so the panel
+ * Automation Plant (with live n8n runs) and the dataset inventory in Data Intelligence. Closed by default so the panel
  * stays short; every row comes from a manifest line or an observed sync.
  */
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
   switch (type.id) {
     case "atlas-command-center": return has(type, "inventory") ? <Inventory /> : null;
     case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
-    case "workflow-automation-plant": return has(type, "dependencies") ? <WorkflowMap /> : null;
+    case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
     case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
     default: return null;
   }
@@ -107,6 +108,52 @@ function Datasets() {
           </li>
         ))}
       </ul>
+    </details>
+  );
+}
+
+const HEALTH_LABEL = { failing: "Last run failed", ok: "Last run succeeded", idle: "No recent run seen", off: "Switched off in n8n" } as const;
+
+function N8nRuns() {
+  const { catalog } = useAtlas();
+  const n8n = useN8nRuns();
+  const byWorkflow = useMemo(() => new Map(catalog.agents.flatMap((a) => { const id = n8nWorkflowId(a); return id ? [[id, a.name] as const] : []; })), [catalog]);
+  const snap = n8n.value;
+  const rows = snap?.state === "ok" ? snap.workflows : [];
+  const failing = rows.filter((w) => n8nHealth(w) === "failing").length;
+  const summary =
+    snap?.state === "ok" ? `${rows.length} workflows, ${rows.filter((w) => w.active).length} on${failing ? `, ${failing} failing` : ""}`
+    : snap?.state === "not-configured" ? "Not set up"
+    : n8n.state === "loading" ? "Loading" : n8n.state === "error" ? "Unavailable" : "Not connected here";
+  return (
+    <details className="module-list" aria-label="Live n8n runs">
+      <summary className="muted small">Live n8n runs · {summary}</summary>
+      {snap?.state === "ok" ? (
+        <>
+          <ul>
+            {rows.map((w) => {
+              const health = n8nHealth(w);
+              const last = w.runs[0];
+              const linked = byWorkflow.get(w.id);
+              return (
+                <li key={w.id} data-state={health === "off" ? "none" : undefined}>
+                  <span>{w.name}{linked && linked !== w.name ? <span className="muted small"> · {linked}</span> : null}</span>
+                  <span className="muted small">
+                    {health === "failing" ? <span className="run-failure">{HEALTH_LABEL[health]}</span> : HEALTH_LABEL[health]}
+                    {last?.startedAt ? ` · ${relative(last.startedAt)}` : ""}
+                    {w.failures24h ? ` · ${w.failures24h} failed in 24 h` : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="muted small">Read from n8n {relative(snap.fetchedAt)}, covering its {snap.window} most recent runs. A workflow with no run in that window shows as not seen, never as healthy.</p>
+        </>
+      ) : (
+        <p className="muted small">
+          {snap?.state === "not-configured" ? `Atlas needs ${snap.need.charAt(0).toLowerCase()}${snap.need.slice(1)}` : n8n.message ?? "Loading n8n runs"}
+        </p>
+      )}
     </details>
   );
 }
