@@ -92,7 +92,7 @@ export default function App() {
           </button>
           <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{syncFailing ? `${sync.failing.length}/${trackedRepositories.size} failed to sync` : `${loadedRepositories}/${trackedRepositories.size} repositories loaded`}</small></span>
         </div>
-        <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
+        {platform !== "Desktop" && <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>}
         <LivePill />
         <AlertPill open={alerts} />
         <VaultLockedPill />
