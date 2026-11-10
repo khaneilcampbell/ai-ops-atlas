@@ -31,7 +31,18 @@
         },
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The building's display name on the map, in panels, navigation and search. Rename here; the id stays."
+        },
+        "organization": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The organization the building belongs to, kept as metadata (for example Benjaire)."
+        },
+        "former_names": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Earlier display names. Search still finds the building by them; they are never shown as its name."
         },
         "summary": {
           "type": "string",

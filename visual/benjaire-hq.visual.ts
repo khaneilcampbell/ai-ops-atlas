@@ -21,7 +21,7 @@ for(const light of ['day','night'] as const)test(`Benjaire HQ, ${light}`,async({
 });
 test('Benjaire HQ nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire HQ');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Benjaire HQ',exact:true})).toBeVisible();
+ await selectBuilding(page,'Business Operations HQ');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Business Operations HQ',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('Benjaire HQ on a phone',async({page})=>{

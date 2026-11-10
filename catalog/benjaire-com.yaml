@@ -4,7 +4,9 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Benjaire HQ
+  name: Business Operations HQ
+  organization: Benjaire
+  former_names: [Benjaire HQ]
   summary: >-
     Website for Benjaire, an Astro site on Cloudflare Workers with a contact
     Worker that forwards inquiries to the Benjaire Flow intake in n8n.

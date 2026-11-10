@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /** Phase 2 building module panels (KC, 2026-11-10): the inspector names the module a building houses. */
 const out=process.env.SHOT_DIR??'artifacts/module-panel';
-const BUILDINGS:[string,string][]=[['atlas-hq','Atlas HQ'],['benjaire-hq','Benjaire HQ'],['agency','Benjaire Marketing Agency'],['stadium','Atlas Stadium'],['aldren','Aldren Insights']];
+const BUILDINGS:[string,string][]=[['atlas-hq','Atlas Command Center'],['benjaire-hq','Business Operations HQ'],['agency','Growth & Marketing Studio'],['marketplace','Product Marketplace'],['aldren','Data Intelligence Center']];
 for(const [file,name] of BUILDINGS)test(`Module panel: ${name}`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
@@ -13,21 +13,23 @@ for(const [file,name] of BUILDINGS)test(`Module panel: ${name}`,async({page})=>{
 test('Module panel on a phone: Benjaire HQ',async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire HQ');await settle(page,2);
+ await selectBuilding(page,'Business Operations HQ');await settle(page,2);
  await page.screenshot({path:`${out}/benjaire-hq-phone.png`});
 });
-for(const [file,name,module] of [['operations','Atlas · Operations','Observability'],['terminal','Atlas · Terminal','Identity & Governance'],['cargo','Atlas · Cargo','Model Intelligence Lab']])test(`Module panel: ${name} (airport)`,async({page})=>{
+for(const [file,name,module] of [['operations','Atlas · Operations','Observability'],['cargo','Atlas · Cargo','Model Intelligence Lab']])test(`Module panel: ${name} (airport)`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,'Atlas Airport');await page.getByRole('button',{name:`${name} →`}).click();await settle(page,2);
  await expect(page.getByRole('complementary',{name:'Inspector'})).toContainText(module);
  await page.screenshot({path:`${out}/${file}-desktop.png`});
 });
-const LISTS:[string,string,string][]=[['inventory','Atlas HQ','Module inventory'],['dependencies','Profile Tower','Project dependencies'],['workflow-map','Atlas Galleria','Workflow map'],['n8n-runs','Atlas Galleria','Live n8n runs'],['datasets','Aldren Insights','Dataset inventory']];
-for(const [file,name,list] of LISTS)test(`Module list: ${list}`,async({page})=>{
+// The Workflow Automation Hub is a station, so it is reached along the rail from the Financial District.
+const LISTS:[string,string,string,string[]?][]=[['inventory','Atlas Command Center','Module inventory'],['dependencies','Development Hub','Project dependencies'],['workflow-map','Financial District','Workflow map',['Financial District Station','Workflow Automation Hub']],['n8n-runs','Financial District','Live n8n runs',['Financial District Station','Workflow Automation Hub']],['datasets','Data Intelligence Center','Dataset inventory']];
+for(const [file,name,list,via=[]] of LISTS)test(`Module list: ${list}`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,name);await settle(page,2);
+ for(const stop of via){await page.getByRole('button',{name:`${stop} →`,exact:true}).click();await settle(page,2);}
  const details=page.getByRole('group',{name:list});await details.locator('summary').click();await details.scrollIntoViewIfNeeded();await settle(page,1);
  await page.screenshot({path:`${out}/list-${file}.png`});
  expect(errors).toEqual([]);

@@ -2,6 +2,7 @@ import { districtOf } from "../catalog/organization";
 import type { Catalog, Project } from "../catalog/types";
 import type { Health } from "../lib/derive";
 import { moduleAvailability, moduleType } from "./catalog";
+import { buildingDisplayName, buildingOrganization, serviceKey } from "./names";
 import type { BuildingInstance, ModuleHealth } from "./types";
 import { WORKSPACE, isEntitled, type AtlasWorkspace, type LandmarkInstance } from "./workspace";
 
@@ -17,6 +18,7 @@ export function buildingInstance(project: Project, catalog: Catalog, workspace: 
     id: project.id,
     projectId: project.id,
     name: project.name,
+    ...(project.organization ? { organization: project.organization } : {}),
     districtId: districtOf(project, catalog.agents).value,
     moduleType: type?.id ?? null,
     moduleProvenance: type ? "declared" : "none",
@@ -34,7 +36,8 @@ export function buildingInstances(catalog: Catalog, workspace: AtlasWorkspace = 
 export function landmarkInstances(workspace: AtlasWorkspace = WORKSPACE): LandmarkInstance[] {
   return workspace.landmarks.map((l) => {
     const type = moduleType(l.moduleType)!;
-    return { id: l.id, projectId: null, name: l.name, districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned", health: "unknown" };
+    const organization = buildingOrganization(serviceKey(l.id));
+    return { id: l.id, projectId: null, name: buildingDisplayName(serviceKey(l.id), l.name), ...(organization ? { organization } : {}), districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned", health: "unknown" };
   });
 }
 

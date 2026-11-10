@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type React from "react";
 import { clip, measure, SANS } from "../mapText";
+import { buildingDisplayName } from "../../modules/names";
 
 /** One label over the 3D map: where it sits, its size on screen, and what it shows. */
 export interface LabelSpec {
@@ -30,8 +31,9 @@ export const PLAQUE = {
   pad: 24,
   /** Status dot plus its gap. */
   dot: 15,
-  /** Longest name shown before it ends in an ellipsis. */
-  maxText: 168,
+  /** Longest name shown before it ends in an ellipsis: room for the longest operational name,
+   *  "Governance & Compliance Center", in full. */
+  maxText: 196,
   /** World units between a roof and the tip of its plaque, the same for every building. */
   roofGap: 0.35,
 } as const;
@@ -75,7 +77,11 @@ export interface PlaqueInput {
 /** Builds a building nameplate with the shared size, height above the roof, look and status dot. */
 export function buildingPlaque(p: PlaqueInput): LabelSpec {
   const key = p.key ?? p.select;
-  const name = plaqueName(p.name);
+  // The workspace's display name for this building (catalog/workspace/buildings.yaml), else the
+  // map's own name. The plaque's id and keys never change.
+  const shown = buildingDisplayName(p.select, p.name);
+  const name = plaqueName(shown);
+  const title = shown === p.name ? p.title : p.title.replace(p.name, shown);
   const state = p.state ?? (p.selKey === p.select ? "selected" : p.hover === key ? "hover" : "");
   return {
     id: p.id,
@@ -86,7 +92,7 @@ export function buildingPlaque(p: PlaqueInput): LabelSpec {
     priority: state === "selected" ? 0 : state === "hover" ? Math.min(p.priority, 0.5) : p.priority,
     className: `m3-plaque compact${state ? ` ${state}` : ""}${p.dim ? " dim" : ""}`,
     onClick: () => p.onSelect(p.select),
-    title: p.title,
+    title,
     node: (
       <div className="t">
         {name}

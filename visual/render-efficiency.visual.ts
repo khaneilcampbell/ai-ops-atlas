@@ -55,7 +55,7 @@ test('night rendering survives adaptive resolution and day/night switching', asy
   await expect(page.getByRole('button',{name:'Night mode', exact:true})).toHaveAttribute('aria-pressed','true');
   mkdirSync('artifacts/render-efficiency', {recursive:true});
   await page.screenshot({path:'artifacts/render-efficiency/night.png'});
-  await selectBuilding(page, 'Atlas HQ');
+  await selectBuilding(page, 'Atlas Command Center');
   await page.getByRole('button', {name:'Enter building',exact:true}).click();
   await settle(page,4); await waitForOffice(page);
   await page.screenshot({path:'artifacts/render-efficiency/office-night.png'});

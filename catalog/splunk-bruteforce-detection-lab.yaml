@@ -4,7 +4,8 @@ schema: atlas/v2
 
 project:
   id: soc-lab
-  name: SOC Lab
+  name: Security Operations Center
+  former_names: [SOC Lab]
   summary: >-
     Simulates SMB brute-force activity in an isolated lab, detects it in
     Splunk and generates SOC case notes through the Splunk REST API.

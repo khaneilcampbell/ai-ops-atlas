@@ -27,7 +27,7 @@ test('Projects keeps one renderer across navigation, drawing nothing while close
   await expect(page.locator('.map-loading')).toHaveCount(0);
   await expect.poll(async()=>{await page.clock.runFor(34);return read();}).toBeGreaterThan(before);
  }
- await selectBuilding(page,'Atlas HQ');await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);await waitForOffice(page);
+ await selectBuilding(page,'Atlas Command Center');await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);await waitForOffice(page);
  await goTo(page,'Agents');await goTo(page,'Projects');
  await expect(page.getByRole('button',{name:'Exit building',exact:true})).toHaveCount(0);
  expect(await page.locator('.map3d canvas').evaluate(el=>el===(window as unknown as {__city:Element}).__city)).toBe(true);
