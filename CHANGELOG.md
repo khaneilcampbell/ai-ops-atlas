@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-10 · Four Atlas modules gain their missing lists: Atlas HQ shows every module and the buildings that house it, the GitHub tower lists the dependencies each project declares, Atlas Galleria maps how automations depend on each other, and Aldren Insights lists the data Atlas holds and how fresh it is (#322)
 - 2026-11-10 · In full screen the Atlas logo sits back at the far left above the sidebar, the Repositories and Automations labels no longer clip, the header drops the "Desktop" tag, and the search box gets the room back (#315)
 - 2026-11-10 · The last three Atlas modules now have homes: Atlas · Terminal is Identity & Governance, Atlas · Cargo is the Model Intelligence Lab, and Aldren Insights is the Data Intelligence Center. Every module now has a building, and the module entitlements and integration contracts built earlier now show as available. Names and places are unchanged (#321)
 - 2026-11-10 · Atlas · Operations at the airport is now the Observability Center: click it and its panel names the module and says honestly that no telemetry is connected yet. All five module phases passed a final quality check (#320)
