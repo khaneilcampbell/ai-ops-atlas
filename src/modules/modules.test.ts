@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { buildCatalog } from "../catalog/parse";
 import { CORE_MODULES, MODULE_TYPE_LIST, MODULE_TYPE_SOURCE, MODULE_TYPES, isModuleType, moduleAvailability } from "./catalog";
-import { buildingInstances, moduleHealth } from "./instances";
+import { buildingInstances, instancesOf, moduleHealth, workspaceBuildings } from "./instances";
+import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
+import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
+import { GITHUB_TOWER } from "../views/map3d/githubTowerPlan";
 import { MODULE_TYPE_IDS } from "./types";
 
 describe("module catalog", () => {
@@ -72,5 +75,17 @@ describe("building instances", () => {
     const { catalog: other, issues } = buildCatalog({ "a.yaml": yaml("acme-hq", "Acme HQ", "business-operations-hq"), "b.yaml": yaml("acme-x", "Acme X", "made-up-module") });
     expect(buildingInstances(other).map((i) => [i.name, i.moduleType])).toEqual([["Acme HQ", "business-operations-hq"], ["Acme X", null]]);
     expect(issues.map((i) => i.message).join()).toMatch(/must be one of/);
+  });
+
+  it("puts the five core modules in KC's chosen buildings, keeping the map's own ids and names", () => {
+    const all = workspaceBuildings(catalog);
+    const home = (t: string) => instancesOf(all, t as never).map((i) => i.name);
+    expect(home("atlas-command-center")).toEqual(["Atlas HQ"]);
+    expect(home("business-operations-hq")).toEqual(["Benjaire HQ"]);
+    expect(home("agent-operations-center")).toEqual([AGENCY_NAME]);
+    expect(home("workflow-automation-plant")).toEqual([GALLERIA_NAME]);
+    expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
+    expect([AGENCY_KEY, GALLERIA_KEY]).toEqual(["service:benjaire-marketing", "service:atlas-galleria"]);
+    expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(["benjaire-marketing", "atlas-galleria"]);
   });
 });

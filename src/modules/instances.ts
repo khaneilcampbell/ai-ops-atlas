@@ -3,6 +3,7 @@ import type { Catalog, Project } from "../catalog/types";
 import type { Health } from "../lib/derive";
 import { moduleAvailability, moduleType } from "./catalog";
 import type { BuildingInstance, ModuleHealth } from "./types";
+import { LANDMARK_MODULES, type LandmarkInstance } from "./workspace";
 
 // Building instances: the workspace's own buildings, read from the catalog projects that already
 // put them on the map. This layer only adds metadata. Ids, names, districts and placement come
@@ -29,8 +30,21 @@ export function buildingInstances(catalog: Catalog): BuildingInstance[] {
   return catalog.projects.map((p) => buildingInstance(p, catalog));
 }
 
+/** Landmark buildings (not catalog projects) that house a module. They have no catalog district. */
+export function landmarkInstances(): LandmarkInstance[] {
+  return LANDMARK_MODULES.map((l) => {
+    const type = moduleType(l.moduleType)!;
+    return { id: l.id, projectId: null, name: l.name, districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: moduleAvailability(type) !== "planned", health: "unknown" };
+  });
+}
+
+/** Every building in the workspace: catalog projects first, then landmarks. */
+export function workspaceBuildings(catalog: Catalog): (BuildingInstance | LandmarkInstance)[] {
+  return [...buildingInstances(catalog), ...landmarkInstances()];
+}
+
 /** The workspace buildings that are occurrences of a given module type. */
-export function instancesOf(instances: BuildingInstance[], type: BuildingInstance["moduleType"]): BuildingInstance[] {
+export function instancesOf<T extends Pick<BuildingInstance, "moduleType">>(instances: T[], type: BuildingInstance["moduleType"]): T[] {
   return instances.filter((i) => i.moduleType === type);
 }
 
