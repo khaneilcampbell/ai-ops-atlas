@@ -9,7 +9,8 @@ import type { BuildingInstance, ModuleTypeId } from "./types";
  *
  * Each building houses the module that matches what it is for (KC's naming, 2026-11-10). A module
  * can have more than one home when both buildings do that work (two finance towers, two
- * infrastructure buildings, two commerce buildings). Buildings whose function no module covers
+ * commerce buildings). KC, 2026-11-10: the Air Traffic tower and the Terminal are airport
+ * scenery and house none; Cargo keeps the Model Intelligence Lab from #321. Buildings whose function no module covers
  * yet house none, rather than borrow an unrelated one.
  */
 export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: ModuleTypeId }[] = [
@@ -22,8 +23,9 @@ export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: 
   { id: "financial:investments", name: "Robin Exchange", moduleType: "integration-exchange" },
   { id: "financial:residence", name: "Aldren Insights", moduleType: "data-intelligence-center" },
   { id: "financial:business-finance", name: "Corvane Capital", moduleType: "finance-analytics-tower" },
-  { id: "airport-building:tower", name: "Atlas · Air Traffic", moduleType: "infrastructure-control-tower" },
+  { id: "financial:financial-planning", name: "Ravelle Advisors", moduleType: "knowledge-repository" },
   { id: "airport-building:operations", name: "Atlas · Operations", moduleType: "observability-center" },
+  { id: "airport-building:cargo", name: "Atlas · Cargo", moduleType: "model-intelligence-lab" },
 ];
 
 /**

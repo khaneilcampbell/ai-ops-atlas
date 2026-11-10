@@ -22,6 +22,10 @@ buildings:
     display_name: Financial Operations Tower
     organization: Bayvale Bank
     former_names: [Bayvale Bank]
+  "service:financial:financial-planning":
+    display_name: Knowledge & Research Center
+    organization: Ravelle Advisors
+    former_names: [Ravelle Advisors]
   "service:financial:budget":
     display_name: Budget & Forecasting Center
     organization: Ellery Budget Center

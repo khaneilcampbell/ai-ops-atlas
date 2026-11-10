@@ -97,13 +97,12 @@ describe("building instances", () => {
     expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
     expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Corvane Capital"]);
     expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
-    expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub", "Atlas · Air Traffic"]);
+    expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
     expect(home("integration-exchange")).toEqual(["Integration Exchange"]);
     expect(home("observability-center")).toEqual(["Atlas · Operations"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    // Still without a home: no building's function matches them yet.
-    expect(home("knowledge-repository")).toEqual([]);
-    expect(home("model-intelligence-lab")).toEqual([]);
+    expect(home("model-intelligence-lab")).toEqual(["Atlas · Cargo"]);
+    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Planned modules are placed but switched off until they are built.
     expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false, organization: "Benjaire" });
@@ -115,13 +114,18 @@ describe("building instances", () => {
     expect(named[MALL_KEY]).toBe("Atlas Marketplace");
     expect(named[DEALERSHIP_KEY]).toBe("Vantor Motors");
     expect(named[ATLAS_STATION_KEY]).toBe(LOOP_STATIONS.find((s) => s.id === ATLAS_STATION_KEY)!.name);
-    expect(named[airportBuildingKey("tower")]).toBe(airportBuilding("tower")!.name);
     expect(named[airportBuildingKey("operations")]).toBe(airportBuilding("operations")!.name);
-    for (const id of ["banks", "records", "investments", "residence", "business-finance"]) expect(named[financialKey(id)], id).toBe(financialBrand(id)!.name);
+    for (const id of ["banks", "records", "investments", "residence", "business-finance", "financial-planning"]) expect(named[financialKey(id)], id).toBe(financialBrand(id)!.name);
+    expect(named[airportBuildingKey("cargo")]).toBe(airportBuilding("cargo")!.name);
   });
 });
 
 describe("workspace configuration", () => {
+  it("gives every module type at least one building in this workspace (KC, 2026-11-10)", () => {
+    const housed = new Set(workspaceBuildings(catalog).map((b) => b.moduleType));
+    expect(MODULE_TYPE_LIST.filter((t) => !housed.has(t.id)).map((t) => t.id)).toEqual([]);
+  });
+
   it("keeps this install's landmark names in the workspace, not in the module catalog", () => {
     expect(WORKSPACE.landmarks).toBe(LANDMARK_MODULES);
     expect(WORKSPACE.entitlements).toBe("all");
