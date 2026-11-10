@@ -8,6 +8,7 @@ import { datasetInventory, moduleInventory, projectDependencies, workflowMap, ty
 import type { AtlasModuleType } from "../modules/types";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
+import { guardOf, ruleSummary, useBranchRules, type Guard } from "../governance/rules";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
@@ -24,7 +25,7 @@ const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) =>
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
  * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
  * security alerts in the Security Operations Center, hosting and deploys in Infrastructure and
- * spend against caps in Finance.
+ * spend against caps in Finance and branch rules in Governance.
  * Closed by default so the panel
  * stays short; every row comes from a manifest line or an observed sync.
  */
@@ -34,6 +35,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
     case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
     case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
+    case "identity-governance-tower": return has(type, "branch-rules") ? <BranchRulesList /> : null;
     case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
     case "infrastructure-control-tower": return <>{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
@@ -307,6 +309,54 @@ function SpendCaps() {
         ))}
       </ul>
       <p className="muted small">This calendar month, in UTC. Provider caps count only the calls Atlas logs, so they show a lower bound: the provider's page has the full figure. Subscription use (Claude and ChatGPT plans) isn't billed per call, so it doesn't count.</p>
+    </details>
+  );
+}
+
+const GUARD_LABEL: Record<Guard, string> = { guarded: "Guarded", partial: "Partly guarded", classic: "Protected (classic rules)", open: "Not protected" };
+
+function BranchRulesList() {
+  const { catalog, repos } = useAtlas();
+  const targets = useMemo(() => {
+    const seen = new Set<string>();
+    return catalog.projects.flatMap((p) => {
+      const repo = p.repository;
+      const s = repos[repo];
+      const branch = s?.kind === "ok" ? s.data.defaultBranch : null;
+      if (!repo || !branch || seen.has(repo.toLowerCase())) return [];
+      seen.add(repo.toLowerCase());
+      return [{ repo, branch }];
+    }).sort((a, b) => a.repo.localeCompare(b.repo));
+  }, [catalog, repos]);
+  const rules = useBranchRules(targets);
+  const ready = targets.flatMap((t) => (rules[t.repo]?.state === "ready" ? [rules[t.repo]] : [])) as Extract<(typeof rules)[string], { state: "ready" }>[];
+  const open = ready.filter((r) => guardOf(r.value) === "open").length;
+  const summary = !targets.length ? "Waiting for repositories" : `${targets.length} repositories${ready.length < targets.length ? `, ${ready.length} read` : ""}${open ? `, ${open} not protected` : ""}`;
+  return (
+    <details className="module-list" aria-label="Branch rules">
+      <summary className="muted small">Branch rules · {summary}</summary>
+      {targets.length ? (
+        <ul>
+          {targets.map(({ repo, branch }) => {
+            const r = rules[repo];
+            const g = r?.state === "ready" ? guardOf(r.value) : null;
+            const phrases = r?.state === "ready" ? ruleSummary(r.value) : [];
+            return (
+              <li key={repo} data-state={g ? undefined : "none"}>
+                <span>{repo.split("/")[1]}<span className="muted small"> · {branch}</span></span>
+                <span className="muted small">
+                  {r?.state === "ready" ? (g === "open" ? <span className="run-failure">{GUARD_LABEL.open}</span> : GUARD_LABEL[g!]) : r?.state === "error" ? "Unavailable" : "Loading"}
+                  {phrases.length ? ` · ${phrases.join(" · ")}` : ""}
+                  {" · "}<a href={`https://github.com/${repo}/settings/rules`} target="_blank" rel="noreferrer">Rules</a>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="muted small">The list fills in once Atlas has loaded the catalog's repositories.</p>
+      )}
+      <p className="muted small">Read from GitHub for each repository's default branch. Guarded means changes go through a pull request and the branch can't be force pushed or deleted. Classic branch protection details need admin access, so those show only that the branch is protected. Atlas can't change a rule.</p>
     </details>
   );
 }
