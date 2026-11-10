@@ -16,6 +16,9 @@ export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: 
   { id: "skyline-stadium", name: "Atlas Stadium", moduleType: "growth-marketing-studio" },
   { id: "stadium-station", name: "Stadium Station", moduleType: "integration-exchange" },
   { id: "airport-building:operations", name: "Atlas · Operations", moduleType: "observability-center" },
+  { id: "airport-building:terminal", name: "Atlas · Terminal", moduleType: "identity-governance-tower" },
+  { id: "airport-building:cargo", name: "Atlas · Cargo", moduleType: "model-intelligence-lab" },
+  { id: "financial:residence", name: "Aldren Insights", moduleType: "data-intelligence-center" },
 ];
 
 /**

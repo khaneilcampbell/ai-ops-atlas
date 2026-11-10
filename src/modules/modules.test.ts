@@ -95,6 +95,9 @@ describe("building instances", () => {
     const named = Object.fromEntries(LANDMARK_MODULES.map((l) => [`service:${l.id}`, l.name]));
     expect(named[airportBuildingKey("tower")]).toBe(airportBuilding("tower")!.name);
     expect(named[airportBuildingKey("operations")]).toBe(airportBuilding("operations")!.name);
+    expect(named[airportBuildingKey("terminal")]).toBe(airportBuilding("terminal")!.name);
+    expect(named[airportBuildingKey("cargo")]).toBe(airportBuilding("cargo")!.name);
+    expect(named[financialKey("residence")]).toBe(financialBrand("residence")!.name);
     expect(named[financialKey("business-finance")]).toBe(financialBrand("business-finance")!.name);
     expect(named[STADIUM_KEY]).toBe(STADIUM_NAME);
     expect(named["service:stadium-station"]).toBe("Stadium Station");
@@ -104,6 +107,11 @@ describe("building instances", () => {
 });
 
 describe("workspace configuration", () => {
+  it("gives every module type at least one building in this workspace (KC, 2026-11-10)", () => {
+    const housed = new Set(workspaceBuildings(catalog).map((b) => b.moduleType));
+    expect(MODULE_TYPE_LIST.filter((t) => !housed.has(t.id)).map((t) => t.id)).toEqual([]);
+  });
+
   it("keeps this install's landmark names in the workspace, not in the module catalog", () => {
     expect(WORKSPACE.landmarks).toBe(LANDMARK_MODULES);
     expect(WORKSPACE.entitlements).toBe("all");
