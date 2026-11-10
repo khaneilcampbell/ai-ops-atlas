@@ -5,7 +5,7 @@ for(const light of ['day','night'] as const)test(`Marketplace ${light}`,async({p
  await openAtlas(page,{light});
  await page.evaluate(async()=>{const {enterBuilding}=await import('/src/views/office/store.ts');enterBuilding('atlas-marketplace',true);});
  await settle(page,4);await waitForScene(page);
- const nav=page.getByRole('navigation',{name:'Choose Atlas Marketplace floor'});
+ const nav=page.getByRole('navigation',{name:'Choose Product Marketplace floor'});
  await expect(nav).toBeVisible();
  await page.screenshot({path:`artifacts/marketplace-${process.env.BEFORE?'before':'after'}-${light}-all.png`});
  await nav.getByRole('button',{name:process.env.BEFORE?'Ground':'Lobby',exact:true}).click();await page.clock.runFor(200);await settle(page,2);await waitForScene(page);

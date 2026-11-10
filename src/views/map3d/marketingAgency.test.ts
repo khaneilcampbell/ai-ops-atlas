@@ -22,7 +22,7 @@ describe('Benjaire Marketing Agency',()=>{
   // North of the city's own districts, south of the Financial District, with the channel kept open.
   expect(a.land[0].z).toBeGreaterThan(f.z+f.d);
   // Benjaire Dashboard's tower was removed (2026-11-09); its cleared lot stays where it stood.
-  const hq=s.towers.find(t=>t.name==='Benjaire HQ')!,dash=s.clearedLots!.find(t=>t.projectId==='benjaire-ops')!;
+  const hq=s.towers.find(t=>t.projectId==='benjaire-site')!,dash=s.clearedLots!.find(t=>t.projectId==='benjaire-ops')!;
   expect(s.towers.some(t=>t.projectId==='benjaire-ops')).toBe(false);
   expect(a.cx).toBeGreaterThan(hq.x);expect(a.cz).toBeLessThan(dash.z);
   // The new land fills water only: it never covers another parcel bigger than a coastal sliver.

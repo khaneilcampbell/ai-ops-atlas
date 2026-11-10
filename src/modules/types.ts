@@ -4,7 +4,7 @@ import type { IntegrationId } from "./integrations";
 // Three layers, kept apart on purpose:
 // - A module TYPE is a standard platform capability ("Business Operations HQ"). It is static,
 //   lives in ./catalog.ts and never names a workspace, a person or a business.
-// - A building INSTANCE is one occurrence of a module type in a workspace ("Benjaire HQ"). It is
+// - A building INSTANCE is one occurrence of a module type in a workspace ("Business Operations HQ", owned by Benjaire). It is
 //   derived from an existing catalog project, so the building's id, name and map placement stay
 //   exactly what the manifest says today.
 // - Health is observed at runtime and is never stored on a type or in a manifest.
@@ -99,8 +99,10 @@ export interface BuildingInstance {
   /** The project id, the building's stable identity on the map. */
   id: string;
   projectId: string;
-  /** The workspace's own building name (project.name), e.g. "Benjaire HQ". */
+  /** The building's display name (project.name, or catalog/workspace/buildings.yaml for a landmark). */
   name: string;
+  /** The organization the building belongs to, when the workspace records one. */
+  organization?: string;
   /** The map district it stands in today. */
   districtId: DistrictId;
   /** The platform module it is an occurrence of; null for a personal building with no module. */

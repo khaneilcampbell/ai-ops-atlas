@@ -38,7 +38,7 @@ for(const light of ['day','night'] as const)test(`Commerce district, ${light}`,a
 });
 test('Commerce Pipeline nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Commerce Pipeline');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Commerce Pipeline',exact:true})).toBeVisible();
+ await selectBuilding(page,'Commerce Operations Center');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Commerce Operations Center',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('Commerce district on a phone',async({page})=>{

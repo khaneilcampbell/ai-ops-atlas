@@ -23,19 +23,20 @@ describe("operational assets", () => {
     expect(a.automations.map((x) => x.id)).toContain("atlas-ci");
   });
 
-  it("gives the agent and automation landmarks the whole workspace's agents or automations", () => {
-    const agents = buildingAssets(landmark("benjaire-marketing"), catalog);
+  it("gives the agent and automation modules the whole workspace's agents or automations, wherever they are housed", () => {
+    const agents = buildingAssets(building("intelligence-hub"), catalog);
     expect(agents.automations).toEqual([]);
     expect(agents.agents.length).toBeGreaterThan(5);
     expect(agents.agents.every(isAiAgent)).toBe(true);
-    const plant = buildingAssets(landmark("atlas-galleria"), catalog);
+    expect(agents.agents.some((x) => x.projectId !== "intelligence-hub")).toBe(true);
+    const plant = buildingAssets(landmark("atlas-station"), catalog);
     expect(plant.agents).toEqual([]);
     expect(plant.automations.some((x) => x.id === "atlas-ci")).toBe(true);
     expect(plant.automations.some(isAiAgent)).toBe(false);
   });
 
   it("gives other landmarks nothing rather than borrowing another building's data", () => {
-    expect(buildingAssets(landmark("skyline-stadium"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
+    expect(buildingAssets(landmark("benjaire-marketing"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
   });
 });
 

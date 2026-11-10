@@ -2,19 +2,27 @@ import type { BuildingInstance, ModuleTypeId } from "./types";
 
 /**
  * This workspace's landmark buildings that are not catalog projects (they are drawn by the map
- * itself, selected as `service:<id>`), with the platform module each one houses. Ids and names
- * mirror AGENCY_KEY/AGENCY_NAME in views/map3d/marketingAgencyPlan.ts and GALLERIA_KEY/GALLERIA_NAME
- * in views/map3d/galleriaPlan.ts, plus the airport tower, the Business Finance tower, the
- * stadium and its station, and the airport operations building; modules.test.ts checks they stay in step, so nothing on the map
- * is renamed or moved. Chosen by KC, 2026-11-10.
+ * itself, selected as `service:<id>`), with the platform module each one houses. `name` is the
+ * map's own name for the building (AGENCY_NAME, financialBrand(...).name and so on), which
+ * modules.test.ts checks stays in step with the map so nothing is renamed or moved by accident.
+ * What the building is called on screen comes from catalog/workspace/buildings.yaml (names.ts).
+ *
+ * Each building houses the module that matches what it is for (KC's naming, 2026-11-10). A module
+ * can have more than one home when both buildings do that work (two finance towers, two
+ * infrastructure buildings, two commerce buildings). Buildings whose function no module covers
+ * yet house none, rather than borrow an unrelated one.
  */
 export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: ModuleTypeId }[] = [
-  { id: "benjaire-marketing", name: "Benjaire Marketing Agency", moduleType: "agent-operations-center" },
-  { id: "atlas-galleria", name: "Atlas Galleria", moduleType: "workflow-automation-plant" },
-  { id: "airport-building:tower", name: "Atlas · Air Traffic", moduleType: "infrastructure-control-tower" },
+  { id: "benjaire-marketing", name: "Benjaire Marketing Agency", moduleType: "growth-marketing-studio" },
+  { id: "atlas-station", name: "Atlas Central Station", moduleType: "workflow-automation-plant" },
+  { id: "bmw-dealership", name: "Vantor Motors", moduleType: "infrastructure-control-tower" },
+  { id: "atlas-marketplace", name: "Atlas Marketplace", moduleType: "commerce-product-marketplace" },
+  { id: "financial:banks", name: "Bayvale Bank", moduleType: "finance-analytics-tower" },
+  { id: "financial:records", name: "Halden Trust", moduleType: "identity-governance-tower" },
+  { id: "financial:investments", name: "Robin Exchange", moduleType: "integration-exchange" },
+  { id: "financial:residence", name: "Aldren Insights", moduleType: "data-intelligence-center" },
   { id: "financial:business-finance", name: "Corvane Capital", moduleType: "finance-analytics-tower" },
-  { id: "skyline-stadium", name: "Atlas Stadium", moduleType: "growth-marketing-studio" },
-  { id: "stadium-station", name: "Stadium Station", moduleType: "integration-exchange" },
+  { id: "airport-building:tower", name: "Atlas · Air Traffic", moduleType: "infrastructure-control-tower" },
   { id: "airport-building:operations", name: "Atlas · Operations", moduleType: "observability-center" },
 ];
 

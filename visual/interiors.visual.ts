@@ -18,7 +18,7 @@ async function waitForFloorMarkers(page:import("@playwright/test").Page,count:nu
 test("project interiors: all floors, top-floor agents, lobby and exit",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();
   await settle(page,2);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
@@ -67,7 +67,7 @@ test("business night interior: shared navigation and exterior clearance",async({
 test("phone: floor navigation and exit stay accessible",async({page})=>{
   await page.setViewportSize({width:390,height:844});
   await openAtlas(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,4);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
   await expect(page.getByRole("button",{name:"Enter building",exact:true})).toHaveCount(0);
@@ -83,7 +83,7 @@ test("phone: floor navigation and exit stay accessible",async({page})=>{
 
 test("deep commerce building: full night cutaway stays framed and lit",async({page})=>{
   await openAtlas(page,{light:"night"});
-  await selectBuilding(page,"Commerce Pipeline");
+  await selectBuilding(page,"Commerce Operations Center");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);await waitForOffice(page);
   await expect(page.getByRole("navigation",{name:"Building floor navigation"}).getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
   await shot(page,"interior-commerce-night-all");
@@ -93,7 +93,7 @@ test("deep commerce building: full night cutaway stays framed and lit",async({pa
 test("floor switching preserves the renderer in project and business buildings",async({page})=>{
   const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
   await openAtlas(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();
   await settle(page,2);await waitForOffice(page);
   for(const kind of ["office","business"] as const){
@@ -118,7 +118,7 @@ test("floor switching preserves the renderer in project and business buildings",
 
 test("tool buildings show their purpose and workers before explicit entry",async({page})=>{
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
-  await selectBuilding(page,"Commerce Pipeline");
+  await selectBuilding(page,"Commerce Operations Center");
   const tool=page.locator(".m3-pill",{hasText:"Design Studio"}).first();
   await tool.dispatchEvent("click");await settle(page,2);
   const inspector=page.getByRole("complementary",{name:"Inspector"});

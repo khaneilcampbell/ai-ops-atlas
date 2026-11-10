@@ -14,7 +14,7 @@ describe('Benjaire HQ ribbon tower',()=>{
  it('is Benjaire HQ only',()=>{
   expect(isRibbonTower('benjaire-site')).toBe(true);expect(isRibbonTower('ai-ops-atlas')).toBe(false);
   const scene=buildScene(layoutMap(catalog,[],'district'));
-  expect(scene.towers.find(t=>isRibbonTower(t.projectId))?.name).toBe('Benjaire HQ');
+  expect(scene.towers.find(t=>isRibbonTower(t.projectId))?.name).toBe('Business Operations HQ');
  });
  it('stays on its old plinth, so the plaza, kiosks, roads and links stay put',()=>{
   for(const k of [.8,1,1.2])for(const [x,z] of footprint(k)){expect(Math.abs(x)).toBeLessThanOrEqual(RIBBON.plinth*k);expect(Math.abs(z)).toBeLessThanOrEqual(RIBBON.plinth*k);}

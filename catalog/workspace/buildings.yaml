@@ -1,0 +1,48 @@
+# Display names for the buildings the map draws itself (landmarks, Financial District towers,
+# stations). Catalog project buildings are renamed in their own manifest (`project.name`).
+#
+# Rename a building here without touching code. The key is the building's stable id (its map
+# selection key) and must never change: saved selections, interiors and integrations use it.
+#   display_name   what the map plaque, inspector, navigation and search show
+#   organization   who the building belongs to, kept as metadata (optional)
+#   former_names   earlier names, still found by search but never shown (optional)
+# Format: docs/modules.md, "Rename a building".
+schema: atlas/buildings-v1
+
+buildings:
+  "service:benjaire-marketing":
+    display_name: Growth & Marketing Studio
+    organization: Benjaire
+    former_names: [Benjaire Marketing Agency]
+  "service:financial:residence":
+    display_name: Data Intelligence Center
+    organization: Aldren Insights
+    former_names: [Aldren Insights]
+  "service:financial:banks":
+    display_name: Financial Operations Tower
+    organization: Bayvale Bank
+    former_names: [Bayvale Bank]
+  "service:financial:budget":
+    display_name: Budget & Forecasting Center
+    organization: Ellery Budget Center
+    former_names: [Ellery Budget Center]
+  "service:financial:records":
+    display_name: Governance & Compliance Center
+    organization: Halden Trust
+    former_names: [Halden Trust]
+  "service:bmw-dealership":
+    display_name: Infrastructure Operations Hub
+    organization: Vantor Motors
+    former_names: [Vantor Motors]
+  "service:financial:investments":
+    display_name: Integration Exchange
+    organization: Robin Exchange
+    former_names: [Robin Exchange]
+  "service:atlas-marketplace":
+    display_name: Product Marketplace
+    organization: Atlas
+    former_names: [Atlas Marketplace]
+  "service:atlas-station":
+    display_name: Workflow Automation Hub
+    organization: Atlas
+    former_names: [Atlas Central Station]

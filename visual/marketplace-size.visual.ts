@@ -18,13 +18,13 @@ async function shoot(page:Page,prefix:string){
 for(const light of ['day','night'] as const)test(`Marketplace, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Atlas Marketplace');await settle(page,3);
+ await selectBuilding(page,'Product Marketplace');await settle(page,3);
  await page.screenshot({path:`${out}/desktop-selected-${light}.png`});
  await shoot(page,`desktop-${light}`);
 });
 test('Marketplace on a phone',async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Atlas Marketplace');await settle(page,3);
+ await selectBuilding(page,'Product Marketplace');await settle(page,3);
  await page.screenshot({path:`${out}/phone-selected.png`});
 });

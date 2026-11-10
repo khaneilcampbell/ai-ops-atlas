@@ -7,7 +7,7 @@ import {test,expect} from '@playwright/test';import {mkdirSync} from 'node:fs';i
 const out=process.env.SHOT_DIR;
 // The buildings that used to drop out of some groupings: the agency (it only fitted the bay of the
 // By district layout) and the Marketplace (water at its lot's north edge when ungrouped or by status).
-const NAMES=['Benjaire Marketing Agency','Atlas Marketplace'];
+const NAMES=['Growth & Marketing Studio','Product Marketplace'];
 for(const group of ['none','district','status','tag'] as const)for(const [device,size] of [['desktop',{width:1512,height:900}],['phone',{width:390,height:844}]] as const)
 test(`every building is on the map grouped by ${group}, ${device}`,async({page})=>{
  test.setTimeout(300_000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
