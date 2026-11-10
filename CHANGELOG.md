@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-10 · Atlas · Operations at the airport is now the Observability Center: click it and its panel names the module and says honestly that no telemetry is connected yet. All five module phases passed a final quality check (#PR)
+- 2026-11-10 · Atlas · Operations at the airport is now the Observability Center: click it and its panel names the module and says honestly that no telemetry is connected yet. All five module phases passed a final quality check (#320)
 - 2026-11-10 · Behind the scenes, Atlas's modules are now set up for other businesses: one workspace setting holds your building names and which modules are switched on, every data source has a standard read-only description, and a new guide explains how to add modules. Nothing on screen changes for you (#319)
 - 2026-11-10 · A building's Atlas module card now shows what it looks after: its linked repositories, agents and automations, one health reading across all of them (or "checking", "unavailable" or "last known" when GitHub data is not fresh), and its latest workflow runs. The Marketing Agency covers every AI agent and Atlas Galleria every automation. (#318)
 - 2026-11-10 · Click a building and its panel now shows the Atlas module it houses: what it does, its health from GitHub CI where Atlas can see it, and which features are live or still planned (#317)
