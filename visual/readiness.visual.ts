@@ -3,7 +3,7 @@ import { openAtlas, goTo, settle } from './atlas';
 for (const phone of [false, true]) test(`readiness import ${phone ? 'phone' : 'desktop'}`, async ({page}) => {
   await page.setViewportSize(phone ? {width:390,height:844} : {width:1200,height:800});
   await openAtlas(page, {storage:{mapMode:'2d'}});
-  await goTo(page,'Agents');
+  await goTo(page,'Automations');
   await page.locator('[data-id="atlas-production-coordinator"]').first().click();
   await settle(page,2);
   await page.getByRole('tab',{name:'Output',exact:true}).click();

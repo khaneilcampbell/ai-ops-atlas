@@ -10,6 +10,7 @@ project:
   repository: khaneilcampbell/ai-ops-atlas
   tags: [tauri, react, dashboard]
   district: ai-operations
+  module: atlas-command-center
 
 agents:
   - id: atlas-ci

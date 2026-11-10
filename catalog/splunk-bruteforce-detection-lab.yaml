@@ -12,6 +12,7 @@ project:
   repository: khaneilcampbell/splunk-bruteforce-detection-lab
   tags: [splunk, detection-engineering, python, soc]
   district: security-infrastructure
+  module: security-operations-center
   links:
     - label: Case study
       url: https://khaneilcampbell.com/soc-automation-lab.html

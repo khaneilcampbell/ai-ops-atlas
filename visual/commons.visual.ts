@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {mkdirSync} from 'node:fs';
-import {openAtlas,settle,waitForScene} from './atlas';
+import {openAtlas,selectBuilding,settle,waitForScene} from './atlas';
 const out=process.env.SHOT_DIR??'artifacts/commons',before=process.env.COMMONS_BEFORE==='1';
 for(const mode of ['day','night','phone'] as const)test(`Atlas Commons ${mode}`,async({page})=>{
  test.setTimeout(300000);mkdirSync(out,{recursive:true});
@@ -15,7 +15,9 @@ for(const mode of ['day','night','phone'] as const)test(`Atlas Commons ${mode}`,
  });
  await settle(page,1);await page.screenshot({path:`${out}/park-${mode}.png`});
  if(!before){
-  const plaque=page.getByRole('button',{name:/^Atlas Commons Planned/});await expect(plaque).toBeVisible();await plaque.click();
+  // On a phone the park sits just off the start view, so its nameplate is hidden there; select it the way the other building specs do.
+  if(mode==='phone')await selectBuilding(page,'Atlas Commons');
+  else{const plaque=page.getByRole('button',{name:/^Atlas Commons Planned/});await expect(plaque).toBeVisible();await plaque.click();}
   await expect(page.getByRole('heading',{name:'Atlas Commons',exact:true})).toBeVisible();
   await expect(page.getByText('Visual public space. No agents, bookings or services activated.',{exact:true})).toBeVisible();
   await page.screenshot({path:`${out}/selected-${mode}.png`});

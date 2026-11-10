@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader, type Raw } from "./reader";
 import { DISTRICTS } from "./taxonomy";
+import { MODULE_TYPE_IDS } from "../modules/types";
 import { CONNECTION_TYPES, SCHEMAS, type Agent, type AlertRules, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
@@ -114,6 +115,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     repositories: [...new Set(repositories)],
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
     district: r.oneOf(p, "district", "project", DISTRICTS),
+    module: r.oneOf(p, "module", "project", MODULE_TYPE_IDS),
     links: r.links(p, "project"),
     agentIds: agents.map((a) => a.id),
     connections: r.list(p, "connections", "project").flatMap((c, i): DeclaredConnection[] => {
