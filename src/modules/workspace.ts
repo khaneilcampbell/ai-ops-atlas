@@ -12,6 +12,7 @@ export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: 
   { id: "benjaire-marketing", name: "Benjaire Marketing Agency", moduleType: "agent-operations-center" },
   { id: "atlas-galleria", name: "Atlas Galleria", moduleType: "workflow-automation-plant" },
   { id: "airport-building:tower", name: "Atlas · Air Traffic", moduleType: "infrastructure-control-tower" },
+  { id: "airport-building:operations", name: "Atlas · Operations", moduleType: "observability-center" },
   { id: "financial:business-finance", name: "Corvane Capital", moduleType: "finance-analytics-tower" },
   { id: "skyline-stadium", name: "Atlas Stadium", moduleType: "growth-marketing-studio" },
   { id: "stadium-station", name: "Stadium Station", moduleType: "integration-exchange" },

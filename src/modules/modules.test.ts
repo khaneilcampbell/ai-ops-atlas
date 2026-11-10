@@ -94,11 +94,13 @@ describe("building instances", () => {
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     const named = Object.fromEntries(LANDMARK_MODULES.map((l) => [`service:${l.id}`, l.name]));
     expect(named[airportBuildingKey("tower")]).toBe(airportBuilding("tower")!.name);
+    expect(named[airportBuildingKey("operations")]).toBe(airportBuilding("operations")!.name);
     expect(named[financialKey("business-finance")]).toBe(financialBrand("business-finance")!.name);
     expect(named[STADIUM_KEY]).toBe(STADIUM_NAME);
     expect(named["service:stadium-station"]).toBe("Stadium Station");
     // Planned modules are placed but switched off until they are built.
     expect(all.find((i) => i.id === "skyline-stadium")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false });
+    expect(all.find((i) => i.id === "airport-building:operations")).toMatchObject({ moduleType: "observability-center", enabled: false });
   });
 });
 
