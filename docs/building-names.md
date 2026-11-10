@@ -61,7 +61,7 @@ they are.
 | Benjaire HQ | Benjaire HQ | Company website and operations (`benjaire-com`) | Benjaire | Keep |
 | Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Removed from the map 2026-11-09 (lot cleared, streets kept) |
 | Commerce Pipeline | Commerce Pipeline | Multi-agent commerce (`multi-agent-commerce-pipeline`) | Commerce | Keep |
-| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant) |
+| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant); repository deleted and catalog file removed 2026-11-10, the lot stays |
 | Portfolio Site | Portfolio Site | Personal website (`khaneilcampbell-com`) | Portfolio | Keep |
 | GitHub Profile | Profile Tower | GitHub profile README repo (`khaneilcampbell-profile`); GitHub wordmark sign removed | Portfolio | Done |
 | Intelligence Hub | Intelligence Hub | Project intelligence (`project-intelligence-hub`) | Intelligence | Keep |
