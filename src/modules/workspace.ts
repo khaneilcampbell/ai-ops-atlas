@@ -5,7 +5,7 @@ import type { BuildingInstance, ModuleTypeId } from "./types";
  * itself, selected as `service:<id>`), with the platform module each one houses. Ids and names
  * mirror AGENCY_KEY/AGENCY_NAME in views/map3d/marketingAgencyPlan.ts and GALLERIA_KEY/GALLERIA_NAME
  * in views/map3d/galleriaPlan.ts, plus the airport tower, the Business Finance tower, the
- * stadium and its station; modules.test.ts checks they stay in step, so nothing on the map
+ * stadium and its station, and the airport operations building; modules.test.ts checks they stay in step, so nothing on the map
  * is renamed or moved. Chosen by KC, 2026-11-10.
  */
 export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: ModuleTypeId }[] = [
@@ -15,6 +15,7 @@ export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: 
   { id: "financial:business-finance", name: "Corvane Capital", moduleType: "finance-analytics-tower" },
   { id: "skyline-stadium", name: "Atlas Stadium", moduleType: "growth-marketing-studio" },
   { id: "stadium-station", name: "Stadium Station", moduleType: "integration-exchange" },
+  { id: "airport-building:operations", name: "Atlas · Operations", moduleType: "observability-center" },
 ];
 
 /**

@@ -16,3 +16,10 @@ test('Module panel on a phone: Benjaire HQ',async({page})=>{
  await selectBuilding(page,'Benjaire HQ');await settle(page,2);
  await page.screenshot({path:`${out}/benjaire-hq-phone.png`});
 });
+test('Module panel: Atlas · Operations (airport)',async({page})=>{
+ test.setTimeout(300_000);mkdirSync(out,{recursive:true});
+ await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
+ await selectBuilding(page,'Atlas Airport');await page.getByRole('button',{name:'Atlas · Operations →'}).click();await settle(page,2);
+ await expect(page.getByRole('complementary',{name:'Inspector'})).toContainText('Observability');
+ await page.screenshot({path:`${out}/operations-desktop.png`});
+});

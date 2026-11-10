@@ -57,7 +57,13 @@ export async function settle(page: Page, steps = 3) {
 }
 
 export async function goTo(page: Page, label: string) {
-  await page.locator(".nav-item", { hasText: label }).first().click();
+  // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
+  const tab = page.locator(".nav-item", { hasText: label }).first();
+  if (await tab.isVisible()) await tab.click();
+  else {
+    await page.getByRole("button", { name: "More sections" }).click();
+    await page.locator(".more-list button", { hasText: label }).first().click();
+  }
   await settle(page);
 }
 
