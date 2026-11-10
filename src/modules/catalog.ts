@@ -17,7 +17,7 @@ const TYPES: AtlasModuleType[] = [
     capabilities: [
       on("dashboard", "System-wide dashboard", "src/views/MissionControl.tsx"),
       on("services", "Connected services overview", "src/lib/connections.ts"),
-      later("inventory", "Building and module inventory"),
+      on("inventory", "Building and module inventory", "src/modules/inventory.ts moduleInventory"),
       on("health", "Operational health", "src/lib/derive.ts attentionItems"),
       on("activity", "Recent activity", "src/views/Activity.tsx"),
       on("alerts", "Alerts and notifications", "src/alerts/alerts.ts"),
@@ -60,7 +60,7 @@ const TYPES: AtlasModuleType[] = [
       on("failures", "Failed execution visibility", "src/alerts/alerts.ts"),
       on("related-agents", "Related agents", "src/catalog/types.ts DeclaredConnection"),
       later("n8n", "Live n8n execution data"),
-      later("dependencies", "Workflow dependency graph"),
+      on("dependencies", "Workflow dependency map", "src/modules/inventory.ts workflowMap"),
     ],
     connectors: ["github"], views: ["automations"], actions: [], permissions: [],
   },
@@ -88,7 +88,7 @@ const TYPES: AtlasModuleType[] = [
       on("deploys", "Deployment information where available", "src/properties/deploys.ts"),
       on("health", "Repository health", "src/lib/derive.ts repoHealth"),
       on("linked", "Connected agents and automations", "src/catalog/projects.ts projectRepositories"),
-      later("dependencies", "Project dependency information"),
+      on("dependencies", "Project dependency information", "src/modules/inventory.ts projectDependencies"),
     ],
     connectors: ["github"], views: ["repos", "grid"], actions: ["rerun-failed-jobs"], permissions: ["github:actions:write"],
   },
@@ -135,7 +135,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "data-intelligence-center", version: V, name: "Data Intelligence Center", productDistrict: "data-intelligence",
     description: "Analysis and recommendations across the workspace.",
-    capabilities: [on("insights", "Insights and engineering review", "src/views/Intelligence.tsx"), later("datasets", "Dataset inventory")],
+    capabilities: [on("insights", "Insights and engineering review", "src/views/Intelligence.tsx"), on("datasets", "Dataset inventory", "src/modules/inventory.ts datasetInventory")],
     connectors: ["atlas-intel"], views: ["intel"], actions: [], permissions: [],
   },
   {

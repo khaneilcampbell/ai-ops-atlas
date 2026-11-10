@@ -7,6 +7,7 @@ import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from
 import { integrationLabel } from "../modules/integrations";
 import { WORKSPACE, isEntitled } from "../modules/workspace";
 import { HealthBadge } from "./bits";
+import { ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
 
 /** Labels match the app's navigation (App.tsx NAV). */
 const VIEW_LABEL: Record<ModuleView, string> = {
@@ -74,6 +75,7 @@ export function ModuleSection() {
             <ul className="module-caps">
               {available.map((c) => <li key={c.id}><i className="cap-on" aria-hidden />{c.label}</li>)}
             </ul>
+            <ModuleWorkspaceLists type={type} />
           </>
         )}
         {items.length > 0 && (

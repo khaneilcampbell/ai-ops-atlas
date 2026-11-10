@@ -377,6 +377,12 @@ table.table { width: 100%; border-collapse: collapse; }
 .module-runs .run-success { color: #2f5b33; }
 .module-runs .run-failure { color: var(--bad); }
 .module-runs .run-running, .module-runs .run-other { color: var(--ink-3); }
+.module-list summary { cursor: pointer; }
+.module-list ul { list-style: none; margin: 6px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+.module-list li { display: flex; flex-direction: column; gap: 1px; }
+.module-list li > span:first-child { color: var(--ink); }
+.module-list .run-failure { color: var(--bad); }
+.module-list li[data-state="none"] > span:first-child { color: var(--ink-3); }
 .health-badge.hb-warn { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
 .runs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
 .runs li { display: flex; align-items: center; gap: 8px; }
