@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-10 · The Product Marketplace and Commerce Operations Center now list every step of the commerce pipeline with its latest run, failures first. Steps that are off while the pipeline moves to the Oracle VM say "Not running" and why, instead of looking broken (#PR)
 - 2026-11-10 · The Infrastructure Operations Hub now opens with an incidents list: a failed or stuck deploy of Atlas web, the Mac app or either website, a site that's down, or a certificate about to expire, each with links to fix it (#331)
 - 2026-11-10 · Career Applications is gone for good: its GitHub repository was deleted, so its catalog entry and its five agents and automations are removed. Its empty lot stays, so nothing else on the map moves (#325)
 - 2026-11-10 · The Financial Operations Tower now shows this month's spend against each spend cap: the Atlas agents' budget, the Anthropic organization's $20 limit and the benjaire-flow workspace's $5 limit. It flags a cap that is nearly used, and links to the page where each cap is set (#329)

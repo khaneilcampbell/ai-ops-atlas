@@ -123,6 +123,14 @@ with the full figure. A cap whose calls Atlas can't see shows "Spend not visible
 of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
 cap changes on the provider's page, change its `limitUsd` here.
 
+### Publishing pipeline
+The Commerce & Product Marketplace lists every agent of the projects whose catalog file sets
+`module: commerce-product-marketplace` (today the Commerce Operations Center), worst first
+(`src/commerce/pipeline.ts` `pipelineStages`). An agent with an `alerts` block follows the alert
+rules, so a stage whose manifest says `not_running` shows "Not running" with that reason, never
+"Failed". Other agents show their newest finished run on the default branch. A stage with no run
+seen, or whose live feed isn't reaching this device, shows "Unknown", never "Healthy". Read only.
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and

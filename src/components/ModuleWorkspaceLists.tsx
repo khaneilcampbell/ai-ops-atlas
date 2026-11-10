@@ -18,6 +18,8 @@ import { usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
+import { buildRegistry } from "../registry/registry";
+import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
 
 const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
 
@@ -39,6 +41,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
     case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
+    case "commerce-product-marketplace": return has(type, "pipeline") ? <PublishingPipeline /> : null;
     default: return null;
   }
 }
@@ -343,6 +346,46 @@ function InfraIncidents() {
         <p className="muted small">{checked ? "No failed or stuck deploys, outages, or expiring certificates seen." : "Reading deploys and site checks."}</p>
       )}
       <p className="muted small">From observed data only: the newest finished deploy of each host, and each website's site checks. A check that couldn't run is not counted as an incident or as healthy. Dismissed website incidents stay hidden here too.</p>
+    </details>
+  );
+}
+
+const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
+
+function PublishingPipeline() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const stages = useMemo(() => pipelineStages(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const n = pipelineCounts(stages);
+  const parts = [n.failing && `${n.failing} failing`, n.silent && `${n.silent} silent`, n.ok && `${n.ok} healthy`, n["not-running"] && `${n["not-running"]} not running`, n.unknown && `${n.unknown} unknown`].filter(Boolean);
+  return (
+    <details className="module-list" aria-label="Publishing pipeline" open={n.failing + n.silent > 0}>
+      <summary className="muted small">Publishing pipeline · {stages.length ? parts.join(", ") : "No commerce agents"}</summary>
+      {stages.length ? (
+        <ul>
+          {stages.map((s) => (
+            <li key={s.agent.id} data-state={s.state === "not-running" ? "none" : undefined}>
+              <span>{s.agent.name}</span>
+              <span className="muted small">
+                {s.state === "failing" || s.state === "silent" ? <span className="run-failure">{STAGE_LABEL[s.state]}</span> : STAGE_LABEL[s.state]}
+                {s.last?.at ? ` · ${relative(s.last.at)}` : ""}
+                {s.detail ? ` · ${s.detail}` : ""}
+                {s.last?.url ? <> · <a href={s.last.url} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No project in the catalog uses this module yet.</p>
+      )}
+      <p className="muted small">Every agent of the commerce projects, from observed runs only. Agents with alert rules follow them, so a stage switched off on purpose shows as not running, not failed. A stage with no run seen shows as unknown, never as healthy.</p>
     </details>
   );
 }

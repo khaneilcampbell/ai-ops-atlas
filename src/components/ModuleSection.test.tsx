@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { catalog } from "../catalog";
 import { AtlasContext } from "../state";
 import { ModuleSection } from "./ModuleSection";
+
+// No Atlas Intelligence on this device: the lists read telemetry as unavailable.
+vi.mock("../intel/state", () => ({ useIntel: () => ({ telemetry: null }) }));
 
 const render = (selection: unknown, repos: Record<string, unknown> = {}) =>
   renderToStaticMarkup(<AtlasContext.Provider value={{ selection, catalog, repos, setView: () => {}, select: () => {} } as never}><ModuleSection /></AtlasContext.Provider>);
@@ -28,6 +31,14 @@ it("marks a planned landmark module as not live and offers no navigation", () =>
   expect(html).toContain("Planned · Not connected");
   expect(html).toContain("No telemetry connected");
   expect(html).not.toContain("Open ");
+});
+
+it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
+  const html = render({ kind: "service", id: "atlas-marketplace" });
+  expect(html).toContain("Commerce &amp; Product Marketplace");
+  expect(html).toContain('aria-label="Publishing pipeline"');
+  expect(html).toContain("not running");
+  expect(html).not.toContain("No commerce agents");
 });
 
 it("renders nothing for buildings without a module", () => {
