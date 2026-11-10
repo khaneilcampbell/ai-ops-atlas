@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAtlas } from "../state";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
@@ -13,6 +13,8 @@ import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
 import { money } from "../usage/model";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
+import { infraIncidents } from "../infra/incidents";
+import { usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
@@ -35,7 +37,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
     case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
     case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
-    case "infrastructure-control-tower": return <>{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
+    case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
     default: return null;
   }
@@ -307,6 +309,40 @@ function SpendCaps() {
         ))}
       </ul>
       <p className="muted small">This calendar month, in UTC. Provider caps count only the calls Atlas logs, so they show a lower bound: the provider's page has the full figure. Subscription use (Claude and ChatGPT plans) isn't billed per call, so it doesn't count.</p>
+    </details>
+  );
+}
+
+function InfraIncidents() {
+  const deploys = useHostDeploys();
+  const websites = usePropertyIncidents().open;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const list = useMemo(() => infraIncidents(websites, new Map([...deploys].map(([id, d]) => [id, d.value])), now), [websites, deploys, now]);
+  const critical = list.filter((i) => i.severity === "critical").length;
+  const checked = [...deploys.values()].some((d) => d.state === "ready");
+  return (
+    <details className="module-list" aria-label="Infrastructure incidents" open={list.length > 0}>
+      <summary className="muted small">Incidents · {list.length ? `${list.length} open${critical ? `, ${critical} critical` : ""}` : checked ? "None open" : "Checking"}</summary>
+      {list.length ? (
+        <ul>
+          {list.map((i) => (
+            <li key={i.key}>
+              <span>{i.severity === "critical" ? <span className="run-failure">{i.title}</span> : i.title}<span className="muted small"> · {i.hostName}</span></span>
+              <span className="muted small">
+                {i.detail} · since {relative(i.since)}
+                {i.actions.map((a) => <span key={a.label}> · <a href={a.url} target="_blank" rel="noreferrer">{a.label}</a></span>)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{checked ? "No failed or stuck deploys, outages, or expiring certificates seen." : "Reading deploys and site checks."}</p>
+      )}
+      <p className="muted small">From observed data only: the newest finished deploy of each host, and each website's site checks. A check that couldn't run is not counted as an incident or as healthy. Dismissed website incidents stay hidden here too.</p>
     </details>
   );
 }
