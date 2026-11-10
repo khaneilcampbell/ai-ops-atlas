@@ -86,6 +86,18 @@ instance. Only GET requests are made, and only names, on/off and run status and 
 To tie a catalog automation to its n8n workflow, add a link labelled `n8n workflow` to
 `https://<instance>/workflow/<id>`.
 
+### Security alerts
+The Security Operations Center counts open GitHub security alerts for every repository in the
+catalog, through the site (`server/security.ts`): the page asks `/api/security?repos=…` behind
+Access, the Mac app asks `/api/hooks/security?repos=…` with its website sync key (Rust
+`live_security`). The site reads Dependabot, code scanning and secret scanning alerts with its own
+`GITHUB_TOKEN` secret, which needs read access to those three alert types (fine-grained token:
+**Dependabot alerts**, **Code scanning alerts** and **Secret scanning alerts**, all Read-only). Only
+the number of open alerts and their severities come back: no advisory text, file path, secret type
+or location. Each feed reports one of four states: counted, switched off for the repository, not
+readable with the token, or unavailable. A repository shows no open alerts only when all three
+feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and

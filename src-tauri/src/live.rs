@@ -15,6 +15,7 @@ pub const AGENT_USAGE_PATH: &str = "/api/hooks/usage";
 pub const INQUIRY_REPLY_PATH: &str = "/api/hooks/inquiries/reply";
 pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 pub const N8N_PATH: &str = "/api/hooks/n8n";
+pub const SECURITY_PATH: &str = "/api/hooks/security";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
@@ -211,6 +212,60 @@ pub async fn live_n8n(
     }
 }
 
+/// Repositories the page may ask about: `owner/name` with GitHub's name characters, at most 20.
+fn security_repos(repos: &[String]) -> Option<String> {
+    let ok = |r: &String| {
+        let mut parts = r.split('/');
+        let name_ok = |p: &str| {
+            !p.is_empty()
+                && p != "."
+                && p != ".."
+                && p.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+        };
+        matches!((parts.next(), parts.next(), parts.next()), (Some(o), Some(n), None) if name_ok(o) && name_ok(n))
+    };
+    let picked: Vec<&str> = repos
+        .iter()
+        .filter(|r| ok(r))
+        .take(20)
+        .map(String::as_str)
+        .collect();
+    (!picked.is_empty()).then(|| picked.join(","))
+}
+
+/// Open GitHub security alert counts per repository (server/security.ts), or `None` when website
+/// sync isn't set up. The site reads GitHub with its own token; the app only sends its sync key and
+/// the repository names. Read-only: counts and severities come back, never alert text.
+#[tauri::command]
+pub async fn live_security(
+    sync: tauri::State<'_, UsageSync>,
+    repos: Vec<String>,
+) -> Result<Option<serde_json::Value>, String> {
+    let Some(list) = security_repos(&repos) else {
+        return Err("No repositories to check.".into());
+    };
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{SECURITY_PATH}"))
+        .query(&[("repos", list)])
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's security alerts weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
 /// Sends one reviewed reply to a website inquiry as the designed Benjaire email (the site looks the
 /// address up from the stored inquiry and copies KC). Only runs when KC presses Send in Atlas.
 #[tauri::command]
@@ -269,5 +324,29 @@ pub async fn live_publish(
         Ok(r) if r.status().is_success() => Ok(()),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::security_repos;
+
+    #[test]
+    fn security_repos_keeps_only_well_formed_names() {
+        let asked = vec![
+            "khaneilcampbell/ai-ops-atlas".to_string(),
+            "khaneilcampbell/benjaire.com".to_string(),
+            "../etc".to_string(),
+            "a/b/c".to_string(),
+            "owner/..".to_string(),
+            "owner/na me".to_string(),
+        ];
+        assert_eq!(
+            security_repos(&asked).as_deref(),
+            Some("khaneilcampbell/ai-ops-atlas,khaneilcampbell/benjaire.com")
+        );
+        assert_eq!(security_repos(&["bad".to_string()]), None);
+        let many: Vec<String> = (0..30).map(|i| format!("o/r{i}")).collect();
+        assert_eq!(security_repos(&many).unwrap().split(',').count(), 20);
     }
 }
