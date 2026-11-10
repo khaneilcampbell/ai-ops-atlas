@@ -17,4 +17,29 @@ export const LANDMARK_MODULES: readonly { id: string; name: string; moduleType: 
   { id: "stadium-station", name: "Stadium Station", moduleType: "integration-exchange" },
 ];
 
+/**
+ * A workspace: the business or person using Atlas, its own building names for landmark modules,
+ * and the module types it may use. Everything business-specific lives here or in its catalog
+ * manifests; the module types (catalog.ts) stay generic, so another workspace reuses them under
+ * its own names. Entitlements only decide what the page shows as switched on. They are not a
+ * security boundary: protected actions are authorized where they run (the Rust shell or the
+ * site's server functions).
+ */
+export interface AtlasWorkspace {
+  id: string;
+  name: string;
+  landmarks: readonly LandmarkAssignment[];
+  /** Module types this workspace may use, or "all". */
+  entitlements: readonly ModuleTypeId[] | "all";
+}
+
+export type LandmarkAssignment = (typeof LANDMARK_MODULES)[number];
+
+/** This Atlas install's workspace. */
+export const WORKSPACE: AtlasWorkspace = { id: "benjaire", name: "Benjaire", landmarks: LANDMARK_MODULES, entitlements: "all" };
+
+export function isEntitled(workspace: Pick<AtlasWorkspace, "entitlements">, type: ModuleTypeId | null | undefined): boolean {
+  return !!type && (workspace.entitlements === "all" || workspace.entitlements.includes(type));
+}
+
 export type LandmarkInstance = Omit<BuildingInstance, "districtId" | "projectId"> & { districtId: null; projectId: null };

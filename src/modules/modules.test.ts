@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { buildCatalog } from "../catalog/parse";
 import { CORE_MODULES, MODULE_TYPE_LIST, MODULE_TYPE_SOURCE, MODULE_TYPES, isModuleType, moduleAvailability } from "./catalog";
-import { buildingInstances, instancesOf, moduleHealth, workspaceBuildings } from "./instances";
+import { buildingInstances, instancesOf, landmarkInstances, moduleHealth, workspaceBuildings } from "./instances";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { GITHUB_TOWER } from "../views/map3d/githubTowerPlan";
@@ -11,7 +11,7 @@ import { airportBuilding, airportBuildingKey } from "../views/map3d/airportBuild
 import { financialBrand } from "../views/map3d/financialBrands";
 import { financialKey } from "../views/map3d/financialPlan";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
-import { LANDMARK_MODULES } from "./workspace";
+import { LANDMARK_MODULES, WORKSPACE, isEntitled, type AtlasWorkspace } from "./workspace";
 import { MODULE_TYPE_IDS } from "./types";
 
 describe("module catalog", () => {
@@ -99,5 +99,27 @@ describe("building instances", () => {
     expect(named["service:stadium-station"]).toBe("Stadium Station");
     // Planned modules are placed but switched off until they are built.
     expect(all.find((i) => i.id === "skyline-stadium")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false });
+  });
+});
+
+describe("workspace configuration", () => {
+  it("keeps this install's landmark names in the workspace, not in the module catalog", () => {
+    expect(WORKSPACE.landmarks).toBe(LANDMARK_MODULES);
+    expect(WORKSPACE.entitlements).toBe("all");
+    expect(workspaceBuildings(catalog).filter((b) => b.enabled).length).toBeGreaterThan(0);
+  });
+
+  it("switches off modules a workspace is not entitled to, without renaming or moving buildings", () => {
+    const limited: AtlasWorkspace = { ...WORKSPACE, entitlements: ["business-operations-hq"] };
+    const all = workspaceBuildings(catalog, limited);
+    expect(all.map((b) => [b.id, b.name, b.moduleType])).toEqual(workspaceBuildings(catalog).map((b) => [b.id, b.name, b.moduleType]));
+    expect(all.filter((b) => b.enabled).map((b) => b.moduleType)).toEqual(["business-operations-hq"]);
+    expect(isEntitled(limited, "atlas-command-center")).toBe(false);
+    expect(isEntitled(WORKSPACE, null)).toBe(false);
+  });
+
+  it("lets another workspace bring its own landmark names for the same modules", () => {
+    const acme: AtlasWorkspace = { id: "acme", name: "Acme", entitlements: "all", landmarks: [{ id: "acme-ops", name: "Acme Ops Floor", moduleType: "agent-operations-center" }] };
+    expect(landmarkInstances(acme)).toMatchObject([{ id: "acme-ops", name: "Acme Ops Floor", moduleType: "agent-operations-center", enabled: true }]);
   });
 });

@@ -1,3 +1,4 @@
+import type { IntegrationId } from "./integrations";
 // Building module contract (Phase 1 of the commercial architecture, docs/building-modules.md).
 //
 // Three layers, kept apart on purpose:
@@ -77,8 +78,8 @@ export interface AtlasModuleType {
   productDistrict: ProductDistrictId;
   description: string;
   capabilities: ModuleCapability[];
-  /** Data sources the module reads, by the names Atlas already uses (github, agent-feed, ...). */
-  connectors: string[];
+  /** Data sources the module reads, each described by an integration contract (integrations.ts). */
+  connectors: IntegrationId[];
   /** Existing views that show this module's data. Empty for planned modules. */
   views: ModuleView[];
   /** Existing guarded actions it exposes (src/actions). Never a new write path. */
@@ -105,7 +106,7 @@ export interface BuildingInstance {
   /** The platform module it is an occurrence of; null for a personal building with no module. */
   moduleType: ModuleTypeId | null;
   moduleProvenance: ModuleProvenance;
-  /** False when the module is planned only, or the project is retired. */
+  /** False when the module is planned only, the workspace is not entitled to it, or the project is retired. */
   enabled: boolean;
   /** Placeholder until Phase 3 aggregates telemetry: always "unknown" when built from the catalog. */
   health: ModuleHealth;

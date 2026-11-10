@@ -4,6 +4,8 @@ import { moduleAvailability, moduleType } from "../modules/catalog";
 import { buildingForSelection } from "../modules/lookup";
 import { aggregateHealth, buildingAssets, executionHistory, observable } from "../modules/operations";
 import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from "../modules/types";
+import { integrationLabel } from "../modules/integrations";
+import { WORKSPACE, isEntitled } from "../modules/workspace";
 import { HealthBadge } from "./bits";
 
 /** Labels match the app's navigation (App.tsx NAV). */
@@ -16,10 +18,6 @@ const RESULT_LABEL = { success: "Succeeded", failure: "Failed", running: "Runnin
 
 const AVAILABILITY_LABEL: Record<ModuleAvailability, string> = { available: "Available", partial: "Partly available", planned: "Planned · Not connected" };
 
-const CONNECTOR_LABEL: Record<string, string> = {
-  github: "GitHub", "agent-feed": "Agent reports feed", "live-feed": "Live updates", "atlas-intel": "Atlas Intel", "usage-sync": "API usage sync",
-};
-
 /**
  * The building's Atlas module, shown in the inspector for every building that houses one.
  * Health comes only from an observed signal (the project repository's GitHub CI); a landmark
@@ -30,6 +28,7 @@ export function ModuleSection() {
   const building = buildingForSelection(selection, catalog);
   const type = moduleType(building?.moduleType);
   if (!building || !type) return null;
+  const entitled = isEntitled(WORKSPACE, type.id);
   const availability = moduleAvailability(type);
   const assets = buildingAssets(building, catalog);
   const agg = aggregateHealth(assets.repositories, repos);
@@ -45,7 +44,7 @@ export function ModuleSection() {
       <div className="module-card">
         <div className="module-head">
           <strong>{type.name}</strong>
-          <span className={`chip module-${availability}`}>{AVAILABILITY_LABEL[availability]}</span>
+          <span className={`chip module-${entitled ? availability : "planned"}`}>{entitled ? AVAILABILITY_LABEL[availability] : "Not included in this workspace"}</span>
         </div>
         <p className="muted small">{type.description} {PRODUCT_DISTRICT_LABEL[type.productDistrict]} module.</p>
         <dl className="kv">
@@ -57,9 +56,11 @@ export function ModuleSection() {
             count(assets.agents.length, "agent"), count(assets.automations.length, "automation"),
           ].filter(Boolean).join(" · ") : "None linked yet"}</dd>
           <dt>Connected services</dt>
-          <dd>{type.connectors.length ? type.connectors.map((c) => CONNECTOR_LABEL[c] ?? c).join(" · ") : "None connected"}</dd>
+          <dd>{type.connectors.length ? type.connectors.map((c) => integrationLabel(c)).join(" · ") : "None connected"}</dd>
         </dl>
-        {availability === "planned" ? (
+        {!entitled ? (
+          <p className="muted small">This workspace doesn't include this module, so its views are switched off here.</p>
+        ) : availability === "planned" ? (
           <p className="muted small">This module is planned. None of its capabilities are built yet, so nothing here is live.</p>
         ) : (
           <>

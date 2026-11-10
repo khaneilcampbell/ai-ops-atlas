@@ -3,7 +3,7 @@ import type { Catalog, Project } from "../catalog/types";
 import type { Health } from "../lib/derive";
 import { moduleAvailability, moduleType } from "./catalog";
 import type { BuildingInstance, ModuleHealth } from "./types";
-import { LANDMARK_MODULES, type LandmarkInstance } from "./workspace";
+import { WORKSPACE, isEntitled, type AtlasWorkspace, type LandmarkInstance } from "./workspace";
 
 // Building instances: the workspace's own buildings, read from the catalog projects that already
 // put them on the map. This layer only adds metadata. Ids, names, districts and placement come
@@ -11,7 +11,7 @@ import { LANDMARK_MODULES, type LandmarkInstance } from "./workspace";
 // A manifest opts a building into a platform module with `project.module`; without it the
 // building stays a personal building with no module (moduleType null).
 
-export function buildingInstance(project: Project, catalog: Catalog): BuildingInstance {
+export function buildingInstance(project: Project, catalog: Catalog, workspace: AtlasWorkspace = WORKSPACE): BuildingInstance {
   const type = moduleType(project.module);
   return {
     id: project.id,
@@ -20,27 +20,27 @@ export function buildingInstance(project: Project, catalog: Catalog): BuildingIn
     districtId: districtOf(project, catalog.agents).value,
     moduleType: type?.id ?? null,
     moduleProvenance: type ? "declared" : "none",
-    enabled: !!type && moduleAvailability(type) !== "planned" && project.status !== "retired",
+    enabled: !!type && isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned" && project.status !== "retired",
     health: "unknown",
   };
 }
 
 /** One instance per catalog project, in catalog order. */
-export function buildingInstances(catalog: Catalog): BuildingInstance[] {
-  return catalog.projects.map((p) => buildingInstance(p, catalog));
+export function buildingInstances(catalog: Catalog, workspace: AtlasWorkspace = WORKSPACE): BuildingInstance[] {
+  return catalog.projects.map((p) => buildingInstance(p, catalog, workspace));
 }
 
 /** Landmark buildings (not catalog projects) that house a module. They have no catalog district. */
-export function landmarkInstances(): LandmarkInstance[] {
-  return LANDMARK_MODULES.map((l) => {
+export function landmarkInstances(workspace: AtlasWorkspace = WORKSPACE): LandmarkInstance[] {
+  return workspace.landmarks.map((l) => {
     const type = moduleType(l.moduleType)!;
-    return { id: l.id, projectId: null, name: l.name, districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: moduleAvailability(type) !== "planned", health: "unknown" };
+    return { id: l.id, projectId: null, name: l.name, districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned", health: "unknown" };
   });
 }
 
 /** Every building in the workspace: catalog projects first, then landmarks. */
-export function workspaceBuildings(catalog: Catalog): (BuildingInstance | LandmarkInstance)[] {
-  return [...buildingInstances(catalog), ...landmarkInstances()];
+export function workspaceBuildings(catalog: Catalog, workspace: AtlasWorkspace = WORKSPACE): (BuildingInstance | LandmarkInstance)[] {
+  return [...buildingInstances(catalog, workspace), ...landmarkInstances(workspace)];
 }
 
 /** The workspace buildings that are occurrences of a given module type. */
