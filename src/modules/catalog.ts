@@ -77,7 +77,7 @@ const TYPES: AtlasModuleType[] = [
     capabilities: [
       on("hosts", "Hosting inventory", "src/infra/hosts.ts HOSTS"),
       on("deploys", "Deployment overview", "src/infra/deploys.ts useHostDeploys"),
-      later("incidents", "Infrastructure incidents"),
+      on("incidents", "Infrastructure incidents", "src/infra/incidents.ts infraIncidents"),
     ],
     connectors: ["github"], views: [], actions: [], permissions: [],
   },
