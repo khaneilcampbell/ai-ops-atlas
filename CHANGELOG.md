@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-10 · When Atlas opens, the logo and a welcome message show first and sit lower on the screen, so the Touch ID prompt no longer covers them (#313)
 - 2026-11-10 · The map no longer reshuffles when a removed building's repository is deleted on GitHub: Atlas Stadium is back beside Atlas Airport in the Mac app, matching the preview (#314)
 - 2026-11-09 · Stadium Station, the stadium and the Ferris wheel now read as one centre: the pavilion is rebuilt in their style (white podium, glass walls, a small vaulted shell with gold end ribs like the station), the wheel is white steel with a gold rim and tops out level with the stadium roof, and one paved forecourt joins the wheel and pavilion to the station stair (#306)
 - 2026-11-09 · The round bushes along the sidewalk by Atlas Airport are now palm trees (#309)

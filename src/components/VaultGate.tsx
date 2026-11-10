@@ -4,6 +4,12 @@ import { isTauri } from "../lib/env";
 import { vault, type VaultStatus } from "../lib/vault";
 
 /**
+ * How long the logo and message show before macOS raises the Touch ID sheet. The sheet
+ * sits over the top of the window, so the lock screen keeps its content low while it waits.
+ */
+export const UNLOCK_DELAY_MS = 900;
+
+/**
  * Holds the app behind a lock screen until the saved keys are unlocked, so every request
  * made at launch already has its token and nothing waits on the Touch ID sheet.
  * With nothing saved there's no prompt and the screen never shows.
@@ -17,29 +23,40 @@ export function VaultGate({ children }: { children: ReactNode }) {
     vault.unlock().then(setStatus, (e) => setStatus({ state: "declined", error: String(e) }));
   };
   useEffect(() => {
-    if (isTauri()) unlock();
+    if (!isTauri()) return;
+    // Paint the logo and message first, then ask for Touch ID.
+    const t = window.setTimeout(unlock, UNLOCK_DELAY_MS);
+    return () => window.clearTimeout(t);
   }, []);
 
   if (status?.state === "unlocked" || skipped) return <>{children}</>;
 
+  return <VaultLockScreen status={status} onUnlock={unlock} onSkip={() => setSkipped(true)} />;
+}
+
+/** The lock screen itself. While Touch ID is asked for, the card sits low so the sheet doesn't cover it. */
+export function VaultLockScreen({ status, onUnlock, onSkip }: { status: VaultStatus | null; onUnlock: () => void; onSkip: () => void }) {
   const waiting = status === null;
   return (
-    <div className="vault-lock">
+    <div className={waiting ? "vault-lock waiting" : "vault-lock"}>
       <div className="vault-card">
         <div className="brand-mark">
           <AtlasMark />
         </div>
         <h1>Atlas</h1>
         {waiting ? (
-          <p>Use Touch ID to unlock your saved GitHub and Anthropic keys.</p>
+          <>
+            <p className="vault-welcome">Welcome back.</p>
+            <p>Use Touch ID to unlock your saved GitHub and Anthropic keys.</p>
+          </>
         ) : (
           <>
             <p>{status.error ?? "Your saved keys are still locked."}</p>
             <div className="vault-actions">
-              <button className="btn primary" onClick={unlock}>
+              <button className="btn primary" onClick={onUnlock}>
                 Unlock with Touch ID
               </button>
-              <button className="btn" onClick={() => setSkipped(true)}>
+              <button className="btn" onClick={onSkip}>
                 Continue without keys
               </button>
             </div>
