@@ -50,7 +50,9 @@ describe("module catalog", () => {
     expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
     expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("available");
     expect(MODULE_TYPES["finance-analytics-tower"].capabilities.find((c) => c.id === "caps")?.state).toBe("available");
-    expect(moduleAvailability(MODULE_TYPES["model-intelligence-lab"])).toBe("planned");
+    expect(moduleAvailability(MODULE_TYPES["model-intelligence-lab"])).toBe("partial");
+    // Every module now has at least one built capability; one with none still reads planned.
+    expect(moduleAvailability({ capabilities: [{ id: "evals", label: "Evaluations", state: "planned" }] })).toBe("planned");
     expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);
@@ -108,9 +110,9 @@ describe("building instances", () => {
     expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
-    // Planned modules are placed but switched off until they are built.
+    // Modules are placed in their buildings and switched on once a capability is built.
     expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
-    expect(all.find((i) => i.id === "airport-building:cargo")).toMatchObject({ moduleType: "model-intelligence-lab", enabled: false });
+    expect(all.find((i) => i.id === "airport-building:cargo")).toMatchObject({ moduleType: "model-intelligence-lab", enabled: true });
     expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: true, organization: "Benjaire" });
   });
 

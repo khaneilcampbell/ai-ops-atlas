@@ -196,6 +196,14 @@ lists the newest monthly briefs the research agent posted to the site (`src/repo
 month, with the top pick, its scorecard total and whether real demand has validated it. No new
 credentials, and nothing calls a model.
 
+### Model inventory and cost per model
+The Model Intelligence Lab at the airport lists every model a recorded call used in the last 30
+days, with its provider, calls and the agents that call it (`src/models/lab.ts` `modelInventory`),
+and the same models ranked by known cost (`costPerModel`). Both read the API Usage records, so they
+count only what Atlas logged or imported. A model with no price set shows "Cost unknown" or "at
+least" its priced part, never $0; subscription calls show "Covered by a plan". Evaluations stay
+planned.
+
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't
 entitled to keeps its building and name, but its card says "Not included in this workspace" and
