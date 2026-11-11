@@ -411,10 +411,15 @@ export const MODULE_HEALTH: Partial<Record<ModuleTypeId, ComponentType>> = {
   "growth-marketing-studio": StudioHealthRow,
 };
 
-function StudioHealthRow() {
+/** The Growth & Marketing Studio's health from its own sources, for its card and its map label. */
+export function useStudioHealth() {
   const all = useAllPropertyData();
   const { state } = useAgentReports(RESEARCH_AGENT);
-  const h = studioHealth(growthSites().map((p) => siteTraffic(p, all[p.id]?.site)), state);
+  return studioHealth(growthSites().map((p) => siteTraffic(p, all[p.id]?.site)), state);
+}
+
+function StudioHealthRow() {
+  const h = useStudioHealth();
   return <dd data-state={h.state}><HealthBadge health={h.health} /> <span className="muted small">{h.summary}</span></dd>;
 }
 
