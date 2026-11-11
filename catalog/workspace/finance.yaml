@@ -1,6 +1,7 @@
 # Benjaire finance: what business data each Financial District building will hold.
 #
-# Every Financial District building belongs to Benjaire. This file gives each one a defined place
+# Every Financial District building belongs to the workspace's business (Benjaire, set in
+# workspace.yaml). This file gives each one a defined place
 # for Benjaire's financial data, so a later import or agent knows where a record lands and the
 # building panel can show what is (and isn't) there yet. It only describes the SHAPE of the data:
 # no figures, balances or account details ever go in this file, because the repository is public.
@@ -8,6 +9,9 @@
 #
 # Per building (keyed by its stable map id, the same keys as buildings.yaml):
 #   focus      one line: the part of Benjaire's finances this building looks after
+#   sign       optional, at most 22 characters: the second line of the facade sign. The first line
+#              is the workspace name (workspace.yaml `workspace.name`), so another business sees
+#              its own name on the towers with no code change. Without it the sign keeps its art.
 #   datasets   the data sets it owns. Each data set:
 #     id       stable id (lowercase, dashes). Imports and agents write records under this id.
 #     label    what the panel shows
@@ -19,10 +23,10 @@
 # A data set's status is worked out when the app runs: Live when its feed has data, Imported when
 # records exist in the local store, otherwise Not connected. Nothing here can mark data as live.
 schema: atlas/finance-v1
-business: Benjaire
 
 buildings:
   "service:financial:banks":
+    sign: Financial Operations
     focus: Cash, bank accounts and money in and out
     datasets:
       - id: bank-accounts
@@ -49,6 +53,7 @@ buildings:
         feed: spend-caps
 
   "service:financial:business-finance":
+    sign: Business Finance
     focus: Profit and loss, revenue, invoices and costs
     datasets:
       - id: profit-and-loss
@@ -78,6 +83,7 @@ buildings:
         sources: [Card statement CSV, Manual list]
 
   "service:financial:budget":
+    sign: Budget & Forecasting
     focus: Budgets, forecasts and runway
     datasets:
       - id: budget-vs-actual
@@ -92,6 +98,7 @@ buildings:
         sources: [Budget sheet]
 
   "service:financial:records":
+    sign: Governance
     focus: Tax, filings and compliance deadlines
     datasets:
       - id: tax-records
@@ -106,6 +113,7 @@ buildings:
         sources: [Manual list]
 
   "service:financial:insurance":
+    sign: Risk & Insurance
     focus: Insurance and financial risk
     datasets:
       - id: insurance-policies
@@ -120,8 +128,24 @@ buildings:
         sources: [Manual list]
 
   "service:financial:investments":
-    focus: Finance data connections
+    sign: Investments
+    focus: Investments, agent trading and finance data connections
     datasets:
+      - id: brokerage-holdings
+        label: Holdings and balances
+        holds: One position or cash balance in the agentic trading account, read only
+        fields: [symbol, quantity, market_value, cash, as_of]
+        sources: [Robinhood agentic account (read only), Brokerage statement CSV]
+      - id: agent-trades
+        label: Agent trades
+        holds: One order an agent proposed or placed, who approved it and how it ended
+        fields: [time, agent, symbol, side, quantity, limit_price, approval, status]
+        sources: [Robinhood agentic account (read only)]
+      - id: trading-limits
+        label: Trading limits
+        holds: One limit agents must stay inside (per order, per day, allowed symbols, halt)
+        fields: [limit, value, applies_to, updated]
+        sources: [Atlas trading policy]
       - id: finance-connections
         label: Finance data connections
         holds: One finance source, how it reaches Atlas and when it last updated
@@ -129,6 +153,7 @@ buildings:
         sources: [Atlas import log]
 
   "service:financial:residence":
+    sign: Data Intelligence
     focus: Finance reports and KPIs
     datasets:
       - id: finance-kpis
@@ -138,6 +163,7 @@ buildings:
         sources: [Worked out from imported data]
 
   "service:financial:financial-planning":
+    sign: Knowledge & Research
     focus: Finance documents and research
     datasets:
       - id: finance-documents
@@ -147,6 +173,7 @@ buildings:
         sources: [Document folder, Manual list]
 
   "service:financial:harbor-residence":
+    sign: Client Success
     focus: Client billing and renewals
     datasets:
       - id: client-accounts

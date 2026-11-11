@@ -30,7 +30,7 @@ describe("workspace building names", () => {
       [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
       [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
       [DEALERSHIP_KEY, "Infrastructure Operations Hub", "Vantor Motors"],
-      [financialKey("investments"), "Integration Exchange", "Benjaire"],
+      [financialKey("investments"), "Investment Operations Center", "Benjaire"],
       [MALL_KEY, "Product Marketplace", "Atlas"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
       [financialKey("harbor-residence"), "Client Success Center", "Benjaire"],

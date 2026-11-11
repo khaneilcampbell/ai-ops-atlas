@@ -1,5 +1,6 @@
 import yaml from "js-yaml";
 import type { ManifestIssue } from "../catalog/types";
+import { WORKSPACE } from "../modules/workspace";
 
 // Benjaire finance: the business data each Financial District building will hold.
 // catalog/workspace/finance.yaml describes only the shape (data sets, fields, sources). Figures are
@@ -25,11 +26,12 @@ export interface FinanceDataset {
 export interface BuildingFinance {
   key: string;
   focus: string;
+  /** Second line of the facade sign; the first is the workspace name. */
+  sign?: string;
   datasets: FinanceDataset[];
 }
 
 export interface FinancePlan {
-  business: string;
   buildings: Record<string, BuildingFinance>;
 }
 
@@ -51,13 +53,14 @@ export type FeedSnapshot = Partial<Record<FinanceFeed, { asOf: string | null } |
 /** Records already imported into the local store, by data set id. Empty until imports exist. */
 export type ImportSnapshot = Readonly<Record<string, { asOf: string; source: string } | undefined>>;
 
+const SIGN_MAX = 22;
 const KEY_RE = /^service:financial:[a-z0-9][a-z0-9-]*$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 
 /** Parses the finance plan. Problems are reported in `issues`, never thrown. */
 export function parseFinancePlan(file: string, text: string, issues: ManifestIssue[]): FinancePlan {
   const fail = (message: string) => issues.push({ file, message });
-  const empty: FinancePlan = { business: "", buildings: {} };
+  const empty: FinancePlan = { buildings: {} };
   let doc: unknown;
   try {
     doc = yaml.load(text, { schema: yaml.DEFAULT_SCHEMA });
@@ -69,12 +72,10 @@ export function parseFinancePlan(file: string, text: string, issues: ManifestIss
   if (root.schema !== FINANCE_SCHEMA) fail(`schema: must be "${FINANCE_SCHEMA}"`);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
   const list = (v: unknown) => (Array.isArray(v) ? v.map(str).filter((s): s is string => !!s) : []);
-  const business = str(root.business);
-  if (!business) fail("business: is required");
   const raw = root.buildings;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     fail("buildings: expected a mapping of building ids");
-    return { ...empty, business: business ?? "" };
+    return empty;
   }
   const buildings: Record<string, BuildingFinance> = {};
   const seen = new Set<string>();
@@ -84,6 +85,8 @@ export function parseFinancePlan(file: string, text: string, issues: ManifestIss
     const o = b && typeof b === "object" ? (b as Record<string, unknown>) : {};
     const focus = str(o.focus);
     if (!focus) { fail(`${at}.focus: is required`); continue; }
+    const sign = str(o.sign);
+    if (sign && sign.length > SIGN_MAX) fail(`${at}.sign: at most ${SIGN_MAX} characters, so it fits the facade sign`);
     const datasets: FinanceDataset[] = [];
     (Array.isArray(o.datasets) ? o.datasets : []).forEach((d, i) => {
       const where = `${at}.datasets[${i}]`;
@@ -101,9 +104,9 @@ export function parseFinancePlan(file: string, text: string, issues: ManifestIss
       datasets.push({ id, label, holds, fields, sources, ...(feed ? { feed: feed as FinanceFeed } : {}) });
     });
     if (!datasets.length) { fail(`${at}.datasets: needs at least one data set`); continue; }
-    buildings[key] = { key, focus, datasets };
+    buildings[key] = { key, focus, ...(sign && sign.length <= SIGN_MAX ? { sign } : {}), datasets };
   }
-  return { business: business ?? "", buildings };
+  return { buildings };
 }
 
 /**
@@ -121,8 +124,20 @@ export function datasetState(dataset: FinanceDataset, feeds: FeedSnapshot, impor
 const files = import.meta.glob("../../catalog/workspace/finance.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const issues: ManifestIssue[] = [];
 /** This workspace's finance plan. */
-export const FINANCE_PLAN: FinancePlan = Object.values(files).map((t) => parseFinancePlan("workspace/finance.yaml", t, issues))[0] ?? { business: "", buildings: {} };
+export const FINANCE_PLAN: FinancePlan = Object.values(files).map((t) => parseFinancePlan("workspace/finance.yaml", t, issues))[0] ?? { buildings: {} };
 export const financePlanIssues: readonly ManifestIssue[] = issues;
 
 /** The finance data a building holds, when it has a place in the plan. */
 export const buildingFinance = (key: string, plan: FinancePlan = FINANCE_PLAN): BuildingFinance | undefined => plan.buildings[key];
+
+/** The business that owns the Financial District: the workspace's own name (workspace.yaml). */
+export const FINANCE_BUSINESS = WORKSPACE.name;
+
+/**
+ * The two lines of a Financial District facade sign: the workspace name, then the building's
+ * `sign`. Undefined when the building has no `sign`, so it keeps its own sign art.
+ */
+export function financeSignLines(key: string, plan: FinancePlan = FINANCE_PLAN, business: string = FINANCE_BUSINESS): [string, string] | undefined {
+  const sign = plan.buildings[key]?.sign;
+  return sign && business ? [business, sign] : undefined;
+}

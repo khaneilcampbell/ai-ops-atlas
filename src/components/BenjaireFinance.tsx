@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { buildingFinance, datasetState, FINANCE_PLAN, FINANCE_STATUS_LABEL, type BuildingFinance, type FeedSnapshot } from "../finance/benjaire";
+import { buildingFinance, datasetState, FINANCE_BUSINESS, FINANCE_STATUS_LABEL, type BuildingFinance, type FeedSnapshot } from "../finance/benjaire";
 import { capStatus, SPEND_CAPS } from "../finance/caps";
 import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
@@ -34,8 +34,8 @@ export function FinanceList({ plan, feeds, loading = false }: { plan: BuildingFi
   const rows = plan.datasets.map((d) => datasetState(d, feeds));
   const connected = rows.filter((r) => r.status !== "not-connected").length;
   return (
-    <section className="benjaire-finance" aria-label={`${FINANCE_PLAN.business} finance`}>
-      <div className="section-title">{FINANCE_PLAN.business} finance</div>
+    <section className="benjaire-finance" aria-label={`${FINANCE_BUSINESS} finance`}>
+      <div className="section-title">{FINANCE_BUSINESS} finance</div>
       <p className="muted small">{plan.focus} · {connected ? `${connected} of ${rows.length} data sets have data` : `${rows.length} data sets, none connected yet`}</p>
       <ul className="finance-datasets">
         {rows.map((r) => (

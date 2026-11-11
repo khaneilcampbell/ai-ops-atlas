@@ -4,12 +4,12 @@ import type { ManifestIssue } from "../catalog/types";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { buildingOrganization } from "../modules/names";
 import { FinanceList } from "../components/BenjaireFinance";
-import { buildingFinance, datasetState, FINANCE_PLAN, financePlanIssues, parseFinancePlan } from "./benjaire";
+import { buildingFinance, datasetState, FINANCE_BUSINESS, FINANCE_PLAN, financePlanIssues, financeSignLines, parseFinancePlan } from "./benjaire";
 
 describe("Benjaire finance plan", () => {
   it("loads cleanly and gives every Financial District building, all owned by Benjaire, a place for its data", () => {
     expect(financePlanIssues).toEqual([]);
-    expect(FINANCE_PLAN.business).toBe("Benjaire");
+    expect(FINANCE_BUSINESS).toBe("Benjaire");
     for (const b of FINANCIAL_BUILDINGS) {
       const key = financialKey(b.id);
       expect(buildingOrganization(key), key).toBe("Benjaire");
@@ -27,7 +27,6 @@ describe("Benjaire finance plan", () => {
   it("refuses statuses, dates or figures in the file, unknown feeds and duplicate ids", () => {
     const issues: ManifestIssue[] = [];
     parseFinancePlan("f", `schema: atlas/finance-v1
-business: Benjaire
 buildings:
   "service:financial:banks":
     focus: Cash
@@ -44,6 +43,13 @@ buildings:
     expect(text).toMatch(/datasets\[1\]\.feed/);
     expect(text).toMatch(/datasets\[3\]\.id: "c" is used/);
     expect(text).toMatch(/service:atlas-station: use a Financial District building id/);
+  });
+
+  it("signs each tower with the workspace name over its role, and leaves Team Residence Towers unsigned", () => {
+    expect(financeSignLines(financialKey("banks"))).toEqual(["Benjaire", "Financial Operations"]);
+    expect(financeSignLines(financialKey("business-finance"), FINANCE_PLAN, "Another Co")).toEqual(["Another Co", "Business Finance"]);
+    expect(financeSignLines(financialKey("circa"))).toBeUndefined();
+    for (const b of Object.values(FINANCE_PLAN.buildings)) expect((b.sign ?? "").length, b.key).toBeLessThanOrEqual(22);
   });
 
   it("is Live only when a feed has data, Imported only with records, otherwise Not connected", () => {

@@ -102,7 +102,7 @@ describe("building instances", () => {
     expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Business Finance Center"]);
     expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
     expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
-    expect(home("integration-exchange")).toEqual(["Integration Exchange"]);
+    expect(home("integration-exchange")).toEqual(["Investment Operations Center"]);
     expect(home("observability-center")).toEqual(["Observability Center"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
     expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);

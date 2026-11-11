@@ -27,11 +27,26 @@ its focus.
 | Budget & Forecasting Center (`budget`) | Budgets, forecasts and runway | budget-vs-actual, cash-forecast |
 | Governance & Compliance Center (`records`) | Tax, filings and compliance deadlines | tax-records, business-filings |
 | Risk & Insurance Center (`insurance`) | Insurance and financial risk | insurance-policies, financial-risks |
-| Integration Exchange (`investments`) | Finance data connections | finance-connections |
+| Investment Operations Center (`investments`) | Investments, agent trading and finance data connections | brokerage-holdings, agent-trades, trading-limits, finance-connections |
 | Data Intelligence Center (`residence`) | Finance reports and KPIs | finance-kpis |
 | Knowledge & Research Center (`financial-planning`) | Finance documents and research | finance-documents |
 | Client Success Center (`harbor-residence`) | Client billing and renewals | client-accounts |
 | Team Residence Towers (`circa`) | Team and contractor costs | team-costs |
+
+## Facade signs
+
+Each tower's sign reads the workspace name (`workspace.name` in `catalog/workspace/workspace.yaml`,
+Benjaire) over the building's `sign` line from finance.yaml, in the building's own colours. Another
+business would see its own name with no code change. A building without `sign` keeps its own sign
+art (Team Residence Towers has none). The code is `financeSignLines` in `src/finance/benjaire.ts`,
+drawn by `src/views/map3d/FinancialSigns.tsx`.
+
+## Investment Operations Center
+
+This building is where the agentic trading account will land. It is planned, not connected.
+The data sets are holdings (read only), a log of every agent trade with who approved it, and the
+trading limits agents must stay inside. Atlas places no orders. Connecting the account follows the
+Oct 31 safety plan (read only first, then paper trading, then live with approval).
 
 ## Status: never greener than the data
 

@@ -42,9 +42,9 @@ buildings:
     organization: Vantor Motors
     former_names: [Vantor Motors]
   "service:financial:investments":
-    display_name: Integration Exchange
+    display_name: Investment Operations Center
     organization: Benjaire
-    former_names: [Robin Exchange]
+    former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
     display_name: Product Marketplace
     organization: Atlas
