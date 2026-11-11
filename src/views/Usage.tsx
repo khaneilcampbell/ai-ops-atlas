@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useUsageData, type ImportStore } from "../usage/data";
 import { Icon } from "../components/Icon";
-import { intelApi } from "../intel/api";
-import type { Run } from "../intel/types";
-import { useIntel } from "../intel/state";
-import { load, remove, save } from "../lib/storage";
+import { load, save } from "../lib/storage";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
-import { isHostedWeb } from "../lib/env";
-import { fetchWebSnapshot, syncConfigured, usageSync, type SyncStatus, type WebSnapshot } from "../usage/sync";
+import { syncConfigured, type WebSnapshot } from "../usage/sync";
+import { chatExportRecords } from "../usage/chatExport";
+import { cacheHitRate, findings, modelMix, rankWorkflows, type Finding, type WorkflowRow } from "../usage/insights";
 import {
+  MAX_IMPORTED,
   PERIODS,
   compact,
   cost,
@@ -16,9 +16,7 @@ import {
   money,
   parseImport,
   providerLabel,
-  recordsFromRuns,
   summarize,
-  topAgents,
   type Bucket,
   type GroupBy,
   type GroupRow,
@@ -26,80 +24,9 @@ import {
   type UsageRecord,
 } from "../usage/model";
 import "../styles/usage.css";
+import { formatDateTime, formatDay } from "../lib/timezone";
 
-interface ImportStore {
-  files: { name: string; importedAt: string; count: number }[];
-  records: UsageRecord[];
-}
-const IMPORT_KEY = "usageImports";
 const KNOWN_PROVIDERS = ["anthropic", "openai"];
-
-/** Reads usage Atlas already logged, on open and when Refresh is pressed. No polling, no model calls. */
-function useUsageData() {
-  const intel = useIntel();
-  const hosted = isHostedWeb();
-  const [runs, setRuns] = useState<Run[] | null>(null);
-  const [snapshot, setSnapshot] = useState<WebSnapshot | null>(null);
-  const [sync, setSync] = useState<SyncStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(intel.available || hosted);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [imports, setImports] = useState<ImportStore>(() => load<ImportStore>(IMPORT_KEY, { files: [], records: [] }));
-  const agentName = intel.status?.name ?? "Repository Intelligence";
-  const agentRef = useRef(agentName);
-  agentRef.current = agentName;
-
-  const refresh = useCallback(async () => {
-    setImports(load<ImportStore>(IMPORT_KEY, { files: [], records: [] }));
-    if (!intel.available && !hosted) {
-      setUpdatedAt(new Date().toISOString());
-      return;
-    }
-    setLoading(true);
-    try {
-      if (intel.available) {
-        setRuns(await intelApi.runs());
-        // Refresh also sends the records to the website, when website sync is set up.
-        const st = await usageSync.status();
-        setSync(syncConfigured(st) ? await usageSync.push(agentRef.current).catch(() => usageSync.status()) : st);
-      } else {
-        setSnapshot(await fetchWebSnapshot());
-      }
-      setError(null);
-      setUpdatedAt(new Date().toISOString());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [intel.available, hosted]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const addImport = (name: string, records: UsageRecord[]) => {
-    const next: ImportStore = {
-      files: [...imports.files.filter((f) => f.name !== name), { name, importedAt: new Date().toISOString(), count: records.length }],
-      records: [...imports.records.filter((r) => !r.id.startsWith(`import:${name}:`)), ...records],
-    };
-    save(IMPORT_KEY, next);
-    setImports(load<ImportStore>(IMPORT_KEY, { files: [], records: [] }));
-  };
-  const clearImports = () => {
-    remove(IMPORT_KEY);
-    setImports({ files: [], records: [] });
-  };
-
-  const records = useMemo(
-    () => [...recordsFromRuns(runs ?? [], agentName), ...(snapshot?.records ?? []), ...imports.records],
-    [runs, agentName, snapshot, imports.records],
-  );
-  const oldestRun = runs?.find((r) => r.usage)?.started_at ?? null;
-  const firstLoad = loading && runs === null && snapshot === null;
-
-  return { available: intel.available, keyPresent: intel.status?.key_present ?? false, records, runs, snapshot, sync, imports, loading, firstLoad, error, updatedAt, oldestRun, refresh, addImport, clearImports };
-}
 
 export function UsageView() {
   const { catalog, setView } = useAtlas();
@@ -111,7 +38,8 @@ export function UsageView() {
   };
   const span = PERIODS.find((p) => p.id === period)!.span;
   const summary = useMemo(() => summarize(data.records, period), [data.records, period]);
-  const top = useMemo(() => topAgents(summary.inWindow), [summary.inWindow]);
+  const workflows = useMemo(() => rankWorkflows(summary.inWindow), [summary.inWindow]);
+  const advice = useMemo(() => findings(workflows), [workflows]);
   const t = summary.totals;
   const projectName = useMemo(() => {
     const byRepo = new Map(catalog.projects.map((p) => [p.repository.toLowerCase(), p.name]));
@@ -121,6 +49,7 @@ export function UsageView() {
   const hasAny = data.records.length > 0;
   const firstLoad = data.firstLoad;
   const cached = t.cacheRead + t.cacheWrite;
+  const hitRate = cacheHitRate(t);
   const billedProviders = new Set(summary.inWindow.filter((r) => r.costKind === "billed").map((r) => r.provider));
 
   return (
@@ -128,8 +57,8 @@ export function UsageView() {
       <div className="page-head">
         <div className="grow">
           <div className="eyebrow">API Usage</div>
-          <h1>What your agents spend.</h1>
-          <p className="lede">Tokens, requests and cost from usage Atlas has recorded, totalled on this device. Nothing here calls a model or a provider.</p>
+          <h1>AI usage command center.</h1>
+          <p className="lede">Calls, tokens, cache hits, cost and models for every Atlas agent that reports its usage, ranked so the heaviest workflows and the cheapest fixes come first. Nothing here calls a model or a provider.</p>
         </div>
         <div className="usage-controls">
           <div className="seg-ctl" role="group" aria-label="Period">
@@ -146,10 +75,11 @@ export function UsageView() {
       </div>
       {(hasAny || data.available) && (
         <div className="usage-meta small muted">
-          {data.updatedAt ? <>Last updated {new Date(data.updatedAt).toLocaleString()} · </> : null}
+          {data.updatedAt ? <>Last updated {formatDateTime(data.updatedAt)} · </> : null}
           Showing the {span}
-          {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
+          {data.oldestRun && <> · Atlas records go back to {formatDay(data.oldestRun)}</>}
           {data.snapshot?.pushedAt && <> · Synced from your Mac {relative(data.snapshot.pushedAt)}</>}
+          {data.agentUsage?.configured && <> · {data.agentUsage.records.length.toLocaleString()} calls reported by GitHub agents</>}
           {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}
         </div>
       )}
@@ -162,6 +92,13 @@ export function UsageView() {
               Sync settings
             </button>
           </span>
+        </div>
+      )}
+
+      {data.agentError && (
+        <div className="notice usage-sync-error">
+          <Icon name="alert" size={14} />
+          <span className="grow selectable">GitHub agents' usage couldn't be read: {data.agentError}</span>
         </div>
       )}
 
@@ -190,6 +127,7 @@ export function UsageView() {
               <div className="num">{money(t.estimatedUsd)}</div>
               <div className="sub">
                 Reported tokens × your configured prices{t.unpriced ? ` · ${t.unpriced} ${t.unpriced === 1 ? "record has" : "records have"} no price` : ""}
+                {t.plan ? ` · ${t.plan} on a subscription plan, not priced` : ""}
               </div>
             </div>
             <div className="card tile">
@@ -205,43 +143,25 @@ export function UsageView() {
               </div>
             </div>
             <div className="card tile">
-              <div className="eyebrow">API requests</div>
+              <div className="eyebrow">Cache hit rate</div>
+              <div className="num">{hitRate == null ? "–" : `${Math.round(hitRate * 100)}%`}</div>
+              <div className="sub">{hitRate == null ? "No prompt tokens in this period" : `${compact(t.cacheRead)} of ${compact(t.input + cached)} prompt tokens read from cache`}</div>
+            </div>
+            <div className="card tile">
+              <div className="eyebrow">API calls</div>
               <div className="num">{compact(t.requests)}</div>
               <div className="sub">
-                {t.records} {t.records === 1 ? "record" : "records"} in the {span}
+                {workflows.length} {workflows.length === 1 ? "workflow" : "workflows"} in the {span}
               </div>
             </div>
           </div>
 
+          <CommandCenter workflows={workflows} advice={advice} span={span} />
+
           <div className="grid usage-row">
             <UsageChart buckets={summary.buckets} period={period} />
             <div className="usage-side">
-              <div className="card">
-                <div className="card-head">
-                  <h3 className="grow">Top agents by cost</h3>
-                </div>
-                {top.length === 0 ? (
-                  <div className="empty small">No priced usage in the {span}.</div>
-                ) : (
-                  <ol className="usage-top">
-                    {top.map((a, i) => (
-                      <li key={a.key}>
-                        <span className="rank">{i + 1}</span>
-                        <span className="grow">
-                          <span className="title">{a.key}</span>
-                          <span className="meta">
-                            {compact(a.requests)} requests · {a.providers.map(providerLabel).join(", ")}
-                          </span>
-                        </span>
-                        <span className="amt">
-                          {money(cost(a))}
-                          <span className="meta">{costKindLabel(a)}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
+              <ModelMixCard records={summary.inWindow} span={span} />
               <ProviderCard records={summary.inWindow} imports={data.imports} onImport={data.addImport} onClear={data.clearImports} />
             </div>
           </div>
@@ -257,8 +177,166 @@ export function UsageView() {
 }
 
 function costKindLabel(r: GroupRow) {
+  if (r.plan && !r.billedUsd && !r.estimatedUsd) return "subscription plan";
   if (r.billedUsd && r.estimatedUsd) return "estimated + billed";
   return r.billedUsd ? "billed" : "estimated";
+}
+
+// ── Command center ──────────────────────────────────────────────────────────
+
+const pctLabel = (v: number | null) => (v == null ? "–" : `${Math.round(v * 100)}%`);
+const IMPACT_LABEL: Record<Finding["impact"], string> = { high: "High impact", medium: "Medium", low: "Low" };
+
+function CommandCenter({ workflows, advice, span }: { workflows: WorkflowRow[]; advice: Finding[]; span: string }) {
+  // Paid API agents rank by cost; subscription tools (Codex, Claude Code, chats) have no cost, so they rank by tokens apart.
+  const paid = workflows.filter((w) => w.plan === 0);
+  const plan = workflows.filter((w) => w.plan > 0).sort((a, b) => b.tokens - a.tokens);
+  const byCost = paid.some((w) => w.costUsd > 0);
+  return (
+    <div className="grid usage-row usage-command">
+      <div className="card usage-workflows">
+        <div className="card-head">
+          <div className="grow">
+            <h3>Workflows by resource use</h3>
+            <div className="small muted">
+              {paid.length ? `API agents ranked by ${byCost ? "known cost" : "tokens"}` : "Ranked by tokens"} in the {span} · share of each group's total
+            </div>
+          </div>
+        </div>
+        {workflows.length === 0 ? (
+          <div className="empty small">No usage in the {span}.</div>
+        ) : (
+          <>
+            {paid.length > 0 && <WorkflowList rows={paid} byCost={byCost} />}
+            {plan.length > 0 && (
+              <>
+                <div className="usage-wf-group small muted">Your subscription tools · ranked by tokens · no per-token cost</div>
+                <WorkflowList rows={plan} byCost={false} />
+              </>
+            )}
+          </>
+        )}
+      </div>
+      <div className="card usage-advice">
+        <div className="card-head">
+          <div className="grow">
+            <h3>Where to optimize</h3>
+            <div className="small muted">Fixed rules over the numbers on the left, no AI involved</div>
+          </div>
+        </div>
+        {advice.length === 0 ? (
+          <div className="empty small">{workflows.length ? "Nothing stands out: models fit the work, big prompts are cached, and no workflow dominates." : `No usage in the ${span}.`}</div>
+        ) : (
+          <ul className="usage-findings">
+            {advice.map((f) => (
+              <li key={f.id}>
+                <span className={`impact ${f.impact}`}>{IMPACT_LABEL[f.impact]}</span>
+                <div className="title">{f.title}</div>
+                <p className="small muted">{f.detail}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowList({ rows, byCost }: { rows: WorkflowRow[]; byCost: boolean }) {
+  const tokens = rows.reduce((n, w) => n + w.tokens, 0);
+  const cost = rows.reduce((n, w) => n + w.costUsd, 0);
+  return (
+    <ol className="usage-wf">
+      {rows.map((w, i) => {
+        const ofCost = byCost && w.plan === 0;
+        const share = ofCost ? (cost ? w.costUsd / cost : 0) : tokens ? w.tokens / tokens : 0;
+        return (
+          <li key={w.key}>
+            <span className="rank">{i + 1}</span>
+            <div className="wf-main">
+              <div className="wf-line">
+                <span className="title">{w.key}</span>
+                <span className="spacer" />
+                <span className="amt">{w.costUsd > 0 ? money(w.costUsd) : w.plan > 0 ? <span className="muted">Plan</span> : "–"}</span>
+              </div>
+              <div className="meter" aria-hidden="true">
+                <i
+                  style={{
+                    width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%`,
+                  }}
+                />
+              </div>
+              <div className="wf-stats">
+                <span>
+                  <strong>{pctLabel(share)}</strong> of {ofCost ? "spend" : "tokens"}
+                </span>
+                <span>
+                  <strong>{compact(w.requests)}</strong> {w.requests === 1 ? "call" : "calls"}
+                </span>
+                <span>
+                  <strong>{compact(w.tokens)}</strong> tokens
+                </span>
+                <span>
+                  <strong>{pctLabel(w.cacheHitRate)}</strong> cache hits
+                </span>
+                {w.costPerRequest != null && (
+                  <span>
+                    <strong>{money(w.costPerRequest)}</strong> per call
+                  </span>
+                )}
+              </div>
+              <div className="wf-models">
+                {w.models.slice(0, 3).map((m) => (
+                  <span key={m.model} className="chip mono">
+                    {m.model}
+                  </span>
+                ))}
+                {w.models.length > 3 && <span className="small muted">+{w.models.length - 3} more</span>}
+                <span className="small muted">last {relative(w.last)}</span>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ModelMixCard({ records, span }: { records: UsageRecord[]; span: string }) {
+  const rows = useMemo(() => modelMix(records), [records]);
+  const byCost = rows.some((r) => r.costUsd > 0);
+  const total = rows.reduce((s, r) => s + (byCost ? r.costUsd : r.tokens), 0);
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h3 className="grow">Model usage</h3>
+      </div>
+      {rows.length === 0 ? (
+        <div className="empty small">No usage in the {span}.</div>
+      ) : (
+        <div className="usage-providers">
+          {rows.map((r) => {
+            const v = byCost ? r.costUsd : r.tokens;
+            return (
+              <div key={r.model} className="prov">
+                <div className="prov-line">
+                  <span className="title mono">{r.model}</span>
+                  <span className="spacer" />
+                  <span className="amt">{!byCost ? compact(r.tokens) : r.costUsd > 0 ? money(r.costUsd) : "–"}</span>
+                </div>
+                <div className="meter" aria-hidden="true">
+                  <i style={{ width: `${total ? (v / total) * 100 : 0}%` }} />
+                </div>
+                <div className="meta">
+                  {compact(r.requests)} {r.requests === 1 ? "call" : "calls"} · {compact(r.tokens)} tokens · {pctLabel(total ? v / total : null)} of {byCost ? "spend" : "tokens"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Chart ───────────────────────────────────────────────────────────────────
@@ -429,7 +507,7 @@ function ProviderCard({ records, imports, onImport, onClear }: { records: UsageR
                 </div>
               </>
             ) : (
-              <div className="meta">{id === "anthropic" ? "Recorded automatically when repository intelligence runs." : "Import a usage file to include it."}</div>
+              <div className="meta">{id === "anthropic" ? "Recorded by repository intelligence runs and by GitHub agents that report their calls." : "ChatGPT Codex sessions on your Mac appear here on Refresh. Import a file for API or chat usage."}</div>
             )}
           </div>
         ))}
@@ -455,7 +533,25 @@ function ImportButton({ onImport }: { onImport: (name: string, r: UsageRecord[])
   const onFile = async (f: File | undefined) => {
     if (!f) return;
     try {
-      const { records, skipped } = parseImport(await f.text(), f.name);
+      const text = await f.text();
+      // A Claude or ChatGPT data export: counted here, its text never stored.
+      let chat: ReturnType<typeof chatExportRecords> = null;
+      try {
+        chat = chatExportRecords(JSON.parse(text), f.name);
+      } catch {
+        /* not JSON: parseImport below explains */
+      }
+      if (chat) {
+        const kept = chat.records.slice(-MAX_IMPORTED);
+        onImport(f.name, kept);
+        const prompts = kept.reduce((n, r) => n + r.requests, 0);
+        setMsg({
+          ok: true,
+          text: `Counted ${prompts.toLocaleString()} prompts in ${kept.length.toLocaleString()} conversation-days from your ${chat.source === "claude" ? "Claude" : "ChatGPT"} export. Tokens are estimated from text length; no chat text was kept.`,
+        });
+        return;
+      }
+      const { records, skipped } = parseImport(text, f.name);
       onImport(f.name, records);
       setMsg({ ok: true, text: `Imported ${records.length} ${records.length === 1 ? "record" : "records"}${skipped ? `, skipped ${skipped} that didn't match the format` : ""}.` });
     } catch (e) {
@@ -620,10 +716,19 @@ function SetupState({
           )}
         </li>
         <li>
-          <div className="title">Import Anthropic or OpenAI usage records</div>
+          <div className="title">Let the GitHub agents report their calls</div>
           <p className="muted">
-            For agents that run outside Atlas, import a JSON file of usage records (format in <span className="mono">docs/api-usage.md</span>). Mark a row's cost as <span className="mono">billed</span> only when it comes from the provider's
-            billing; everything else is shown as an estimate. The file stays on this device.
+            Merge Flow, Design Consistency and Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and{" "}
+            <span className="mono">ATLAS_FEED_TOKEN</span> are set on GitHub. The site keeps the numbers only, never a prompt or a key.
+          </p>
+        </li>
+        <li>
+          <div className="title">Import Anthropic or OpenAI usage records, or a chat export</div>
+          <p className="muted">
+            For agents that run outside Atlas, import a JSON file of usage records (format in <span className="mono">docs/api-usage.md</span>). Mark a row's cost as{" "}
+            <span className="mono">billed</span> only when it comes from the provider's billing; everything else is shown as an estimate. For chat use, import the{" "}
+            <span className="mono">conversations.json</span> from a Claude or ChatGPT data export: Atlas counts prompts and estimates tokens per conversation, and keeps none of the text. The file
+            stays on this device.
           </p>
           <ImportButton onImport={onImport} />
         </li>

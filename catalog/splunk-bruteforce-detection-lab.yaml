@@ -4,7 +4,8 @@ schema: atlas/v2
 
 project:
   id: soc-lab
-  name: SOC Lab
+  name: Security Operations Center
+  former_names: [SOC Lab]
   summary: >-
     Simulates SMB brute-force activity in an isolated lab, detects it in
     Splunk and generates SOC case notes through the Splunk REST API.
@@ -12,6 +13,7 @@ project:
   repository: khaneilcampbell/splunk-bruteforce-detection-lab
   tags: [splunk, detection-engineering, python, soc]
   district: security-infrastructure
+  module: security-operations-center
   links:
     - label: Case study
       url: https://khaneilcampbell.com/soc-automation-lab.html

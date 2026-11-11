@@ -9,7 +9,13 @@
 /** Where Atlas reads a site's production deploys from. Both are read-only GitHub requests. */
 export type DeploySource =
   /** Cloudflare Workers Builds reports each build as a check run on the commit it built. */
-  | { kind: "check-runs"; /** Check runs whose name starts with this are the deploy. */ name: string }
+  | {
+      kind: "check-runs";
+      /** Check runs whose name starts with this are the deploy. */
+      name: string;
+      /** Leave out skipped runs (a skipped publish job did not ship anything). */
+      ignoreSkipped?: boolean;
+    }
   /** GitHub Pages records each publish as a GitHub deployment with statuses. */
   | { kind: "deployments"; environment: string };
 

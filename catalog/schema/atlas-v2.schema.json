@@ -31,7 +31,18 @@
         },
         "name": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "The building's display name on the map, in panels, navigation and search. Rename here; the id stays."
+        },
+        "organization": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The organization the building belongs to, kept as metadata (for example Benjaire)."
+        },
+        "former_names": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Earlier display names. Search still finds the building by them; they are never shown as its name."
         },
         "summary": {
           "type": "string",
@@ -66,6 +77,27 @@
             "career-portfolio"
           ],
           "description": "Infrastructure district on the map. Left out, Atlas infers one from the project's tags and agents."
+        },
+        "module": {
+          "enum": [
+            "atlas-command-center",
+            "identity-governance-tower",
+            "agent-operations-center",
+            "workflow-automation-plant",
+            "model-intelligence-lab",
+            "infrastructure-control-tower",
+            "development-repository-hub",
+            "security-operations-center",
+            "business-operations-hq",
+            "finance-analytics-tower",
+            "growth-marketing-studio",
+            "commerce-product-marketplace",
+            "data-intelligence-center",
+            "knowledge-repository",
+            "observability-center",
+            "integration-exchange"
+          ],
+          "description": "Platform module this building is an occurrence of (src/modules/catalog.ts). Left out, the building is a personal building with no module. Never changes the building's name or place on the map."
         },
         "links": {
           "type": "array",

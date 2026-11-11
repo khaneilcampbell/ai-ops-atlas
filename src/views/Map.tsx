@@ -1,3 +1,4 @@
+import { catalog as fullCatalog } from "../catalog";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
@@ -22,11 +23,13 @@ import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
+import { useLandmarkMarks } from "./map3d/landmarkMarks";
 import {
   hash,
   TH,
   iso,
   layoutMap,
+  keepRemovedLots,
   placeLabels,
   treeSpots,
   TW,
@@ -428,7 +431,7 @@ export function MapView({active=true}:{active?:boolean}) {
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
-  const layout = useMemo(() => layoutMap(catalog, uncataloged, "district"), [catalog, uncataloged]);
+  const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
   const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -896,6 +899,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
+  const landmarkMarks = useLandmarkMarks();
   const healthFor = useCallback(
     (repository: string) => ({ ...verifiedState(repos[repository]), health: overallHealth(repoHealth(repoData(repos[repository]), 0)) }),
     [repos],
@@ -1020,6 +1024,7 @@ export function MapView({active=true}:{active?:boolean}) {
               reduced={reduced}
               tipFor={tipFor}
               healthFor={healthFor}
+              landmarkMarks={landmarkMarks}
               light={light}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);

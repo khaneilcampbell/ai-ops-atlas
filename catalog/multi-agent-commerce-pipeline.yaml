@@ -4,7 +4,8 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: Commerce Pipeline
+  name: Commerce Operations Center
+  former_names: [Commerce Pipeline]
   summary: >-
     Autonomous pipeline that researches a niche, builds digital products with
     Canva, sells them through Stripe on a static storefront, emails buyers
@@ -13,6 +14,7 @@ project:
   repository: khaneilcampbell/multi-agent-commerce-pipeline
   tags: [crewai, claude, stripe, canva, automation]
   district: business-operations
+  module: commerce-product-marketplace
   links:
     - label: Case study
       url: https://khaneilcampbell.com/commerce-pipeline.html

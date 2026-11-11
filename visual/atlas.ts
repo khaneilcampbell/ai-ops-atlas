@@ -17,7 +17,8 @@ export interface Prep {
  * skips Tauri (Keychain, updater, vault) and reads GitHub anonymously, which we intercept.
  */
 export async function openAtlas(page: Page, prep: Prep = {}) {
-  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, installHintDismissed: true, ...prep.storage };
+  // timeZone: UTC keeps the baselines as they were before the time zone setting (default New York).
+  const storage: Record<string, unknown> = { mapMode: "3d", mapLight: prep.light ?? "day", mapTraffic: true, installHintDismissed: true, timeZone: "UTC", ...prep.storage };
   await page.addInitScript((entries) => {
     if (sessionStorage.getItem("atlas:visual-seeded")) return;
     localStorage.clear();
@@ -57,7 +58,13 @@ export async function settle(page: Page, steps = 3) {
 }
 
 export async function goTo(page: Page, label: string) {
-  await page.locator(".nav-item", { hasText: label }).first().click();
+  // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
+  const tab = page.locator(".nav-item", { hasText: label }).first();
+  if (await tab.isVisible()) await tab.click();
+  else {
+    await page.getByRole("button", { name: "More sections" }).click();
+    await page.locator(".more-list button", { hasText: label }).first().click();
+  }
   await settle(page);
 }
 

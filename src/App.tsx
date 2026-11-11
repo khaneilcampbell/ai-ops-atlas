@@ -1,4 +1,4 @@
-import {financialBuildingMatches,financialBuildingAliases} from './lib/financialSearch';
+import {financialBuildingMatches,financialBuildingAliases,financialDisplayName,landmarkMatches} from './lib/financialSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
@@ -31,6 +31,7 @@ import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } fr
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 import { InstallHint } from "./components/InstallHint";
+import { formatDateTime, useTimeZone } from "./lib/timezone";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -52,6 +53,8 @@ export default function App() {
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
+  // Re-render every date and time when the zone changes in Settings.
+  useTimeZone();
   const alerts = useAlerts().open;
   useAlertNotifications(alerts);
   usePropertyPolling();
@@ -63,7 +66,7 @@ export default function App() {
   const { lastFetched, loaded: loadedRepositories } = sync;
   const syncFailing = !refreshing && sync.failing.length > 0;
   const syncTitle = [
-    lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
+    lastFetched ? `Latest successful repository fetch: ${formatDateTime(lastFetched)}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
     syncFailing ? `\n${sync.failing.length} of ${trackedRepositories.size} repositories failed their last sync, so they show saved data:\n${sync.reasons.map((r) => `• ${r}`).join("\n")}\nOpen Repositories for details, or check the GitHub token in Settings.` : "",
   ].join("");
   const ci = ciSummary([...trackedRepositories], repos);
@@ -92,7 +95,7 @@ export default function App() {
           </button>
           <span className="sync-evidence"><b>{refreshing ? "Refreshing…" : lastFetched ? `Latest ${relative(lastFetched)}` : "Not synced"}</b><small>{syncFailing ? `${sync.failing.length}/${trackedRepositories.size} failed to sync` : `${loadedRepositories}/${trackedRepositories.size} repositories loaded`}</small></span>
         </div>
-        <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>
+        {platform !== "Desktop" && <span className="platform-label" title={platform === "Local preview" ? "Local preview · public GitHub data only. Private repository access is configured in the desktop app or hosted server." : `${platform} · connection settings apply to this version`}>{platform}</span>}
         <LivePill />
         <AlertPill open={alerts} />
         <VaultLockedPill />
@@ -256,9 +259,10 @@ function GlobalSearch() {
     const rs = repoRows(catalog, repos, uncataloged)
       .filter((r) => repoMatches(r, q))
       .map((r) => ({ kind: "repo" as const, id: r.name, title: r.name, meta: `Repository · ${r.project?.name ?? "Not in the catalog"}` }));
-    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, projects: [p], agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, meta: "Project · Building" }));
-    const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:b.name,aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
-    return prioritizeExact([...projects, ...buildings, ...agents, ...rs],q).slice(0, 8);
+    const projects = catalog.projects.filter(p => repoMatches({ name: p.repository, project: p, projects: [p], agents: [], state: undefined }, q)).map(p => ({ kind: "project" as const, id: p.id, title: p.name, aliases: p.formerNames, meta: "Project · Building" }));
+    const buildings=financialBuildingMatches(q).map(b=>({kind:"service" as const,id:`financial:${b.id}`,title:financialDisplayName(b),aliases:financialBuildingAliases(b.id),meta:"Financial District · Planned · Not connected"}));
+    const landmarks=landmarkMatches(q).map(n=>({kind:"service" as const,id:n.key.slice(8),title:n.displayName,aliases:n.formerNames,meta:"Landmark · Planned"}));
+    return prioritizeExact([...projects, ...landmarks, ...buildings, ...agents, ...rs],q).slice(0, 8);
   }, [q, catalog, repos, uncataloged]);
 
   // The list views filter in place, so the popover is only needed elsewhere.

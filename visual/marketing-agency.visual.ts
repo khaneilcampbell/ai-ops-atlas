@@ -21,8 +21,8 @@ for(const light of ['day','night'] as const)test(`Benjaire Marketing Agency, ${l
 });
 test('Benjaire Marketing Agency nameplate opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
- await expect(page.getByRole('heading',{name:'Benjaire Marketing Agency',exact:true})).toBeVisible();
+ await selectBuilding(page,'Growth & Marketing Studio');await settle(page,2);
+ await expect(page.getByRole('heading',{name:'Growth & Marketing Studio',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:/Enter building/})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
@@ -34,9 +34,9 @@ test('Benjaire Marketing Agency on a phone',async({page})=>{
 for(const [name,size] of [['desktop',{width:1440,height:900}],['phone',{width:390,height:844}]] as const)test(`Benjaire Product Lab desk opens its inspector, ${name}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize(size);await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
+ await selectBuilding(page,'Growth & Marketing Studio');await settle(page,2);
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);
- const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
+ const nav=page.getByRole('navigation',{name:'Choose Growth & Marketing Studio floor'});
  await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await floorMarkers(page,1);await settle(page,3);
  // On a phone the floor picker can sit over the room label, so fire the click on the label itself.
  await page.getByRole('button',{name:/Strategy room/}).dispatchEvent('click');await settle(page,2);
@@ -52,17 +52,17 @@ async function floorMarkers(page:import('@playwright/test').Page,count:number){
 for(const [light,size] of [['day',{width:1440,height:900}],['night',{width:1440,height:900}],['phone',{width:390,height:844}]] as const)test(`Benjaire Marketing Agency interior, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setViewportSize(size);await openAtlas(page,{light:light==='night'?'night':'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
+ await selectBuilding(page,'Growth & Marketing Studio');await settle(page,2);
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);
  await expect(page.locator('.skyline-interior')).toBeVisible();
- const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
+ const nav=page.getByRole('navigation',{name:'Choose Growth & Marketing Studio floor'});
  await floorMarkers(page,4);await settle(page,3);await page.screenshot({path:`${out}/interior-all-${light}.png`});
  for(const [label,name] of [['Lobby','lobby'],['Floor 1','floor1'],['Floor 2','floor2'],['Floor 3','floor3']] as const){
   if(light==='phone'&&name==='floor3')continue;
   await nav.getByRole('button',{name:label,exact:true}).click();await floorMarkers(page,1);await settle(page,3);
   await page.screenshot({path:`${out}/interior-${name}-${light}.png`});
  }
- await page.getByRole('button',{name:/Exit Benjaire Marketing Agency/}).click();await settle(page,3);
+ await page.getByRole('button',{name:/Exit Growth & Marketing Studio/}).click();await settle(page,3);
  await expect(page.locator('.skyline-interior')).toHaveCount(0);
  expect(errors).toEqual([]);
 });
@@ -70,10 +70,10 @@ test('Benjaire Marketing Agency people move between frames',async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.emulateMedia({reducedMotion:'no-preference'});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Benjaire Marketing Agency');await settle(page,2);
+ await selectBuilding(page,'Growth & Marketing Studio');await settle(page,2);
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,4);await floorMarkers(page,4);
  await expect(page.getByRole('button',{name:/Walk-through/})).toHaveCount(0);
- const nav=page.getByRole('navigation',{name:'Choose Benjaire Marketing Agency floor'});
+ const nav=page.getByRole('navigation',{name:'Choose Growth & Marketing Studio floor'});
  for(const [label,name] of [['Floor 3','hall'],['Lobby','lobby']] as const){
   await nav.getByRole('button',{name:label,exact:true}).click();await floorMarkers(page,1);await settle(page,3);
   await page.screenshot({path:`${out}/people-${name}-a.png`});await page.clock.fastForward(3000);await settle(page,1);

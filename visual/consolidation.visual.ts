@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 import { openAtlas, selectBuilding, settle, waitForOffice } from "./atlas";
 
 test.use({ deviceScaleFactor: 1 });
-for (const name of ["Benjaire Dashboard", "Intelligence Hub"]) {
+// Benjaire Dashboard left the map in #297, so only Intelligence Hub still has a building to enter.
+for (const name of ["Agent Operations Center"]) {
   test(`${name}: Atlas repository, building entry, floors and exit`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));

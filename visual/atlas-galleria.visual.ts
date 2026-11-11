@@ -21,23 +21,23 @@ async function shoot(page:Page,prefix:string){
 for(const light of ['day','night'] as const)test(`Galleria exterior, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Atlas Marketplace');await settle(page,3);
+ await selectBuilding(page,'Product Marketplace');await settle(page,3);
  await shoot(page,`desktop-${light}`);
- const galleria=page.locator('.m3-plaque[title^="Atlas Galleria ·"]');
- if(await galleria.count()){await selectBuilding(page,'Atlas Galleria');await settle(page,3);await page.screenshot({path:`${out}/desktop-selected-${light}.png`});}
+ const galleria=page.locator('.m3-plaque[title^="Vendor & Supplier Hub ·"]');
+ if(await galleria.count()){await selectBuilding(page,'Vendor & Supplier Hub');await settle(page,3);await page.screenshot({path:`${out}/desktop-selected-${light}.png`});}
 });
 test('Galleria interior',async({page})=>{
  test.setTimeout(900_000);mkdirSync(out,{recursive:true});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- test.skip(!(await page.locator('.m3-plaque[title^="Atlas Galleria ·"]').count()),'No Galleria on this build.');
- await selectBuilding(page,'Atlas Galleria');await settle(page,3);
+ test.skip(!(await page.locator('.m3-plaque[title^="Vendor & Supplier Hub ·"]').count()),'No Galleria on this build.');
+ await selectBuilding(page,'Vendor & Supplier Hub');await settle(page,3);
  await page.getByRole('button',{name:'Enter building',exact:true}).click();await page.clock.runFor(1200);await settle(page,4);await waitForScene(page);
- const nav=page.getByRole('navigation',{name:'Choose Atlas Galleria floor'});await expect(nav).toBeVisible();
+ const nav=page.getByRole('navigation',{name:'Choose Vendor & Supplier Hub floor'});await expect(nav).toBeVisible();
  for(const [label,slug] of [['Basement','basement'],['Ground','ground'],['Floor 1','floor1'],['Floor 2','floor2'],['All floors','all']]){await nav.getByRole('button',{name:label,exact:true}).click();await settle(page,4);await waitForScene(page);await page.screenshot({path:`${out}/interior-${slug}.png`});}
 });
 test('Galleria on a phone',async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Atlas Marketplace');await settle(page,3);await shoot(page,'phone');
- if(await page.locator('.m3-plaque[title^="Atlas Galleria ·"]').count()){await selectBuilding(page,'Atlas Galleria');await settle(page,3);await page.screenshot({path:`${out}/phone-selected.png`});}
+ await selectBuilding(page,'Product Marketplace');await settle(page,3);await shoot(page,'phone');
+ if(await page.locator('.m3-plaque[title^="Vendor & Supplier Hub ·"]').count()){await selectBuilding(page,'Vendor & Supplier Hub');await settle(page,3);await page.screenshot({path:`${out}/phone-selected.png`});}
 });

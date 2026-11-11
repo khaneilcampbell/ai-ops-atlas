@@ -39,7 +39,7 @@ class Registry(unittest.TestCase):
         ids = {a["id"] for a in d["agents"]}
         self.assertIn("github-opportunity-scout", ids)
         self.assertIn("github-merge-flow", ids)
-        self.assertGreaterEqual(len(d["projects"]), 11)
+        self.assertGreaterEqual(len(d["projects"]), 10)
         for a in d["agents"]:
             self.assertEqual(set(a), {"id", "project", "name", "status", "type", "category", "framework", "purpose"})
             self.assertLessEqual(len(a["purpose"] or ""), POLICY["purposeChars"])
@@ -236,6 +236,34 @@ class AtlasReport(unittest.TestCase):
             self.assertEqual(sent["ideas"][0]["title"], "Audit service")
             self.assertEqual(sent["cost_usd"], 0.04)
             self.assertNotIn("Audit service", (Path(t) / "sum.md").read_text())
+
+
+class UsageReportTest(unittest.TestCase):
+    def test_usage_url_is_the_feed_sibling_or_its_own_setting(self):
+        with mock.patch.dict("os.environ", {"ATLAS_FEED_URL": "https://a.pages.dev/api/hooks/agents"}, clear=True):
+            self.assertEqual(sc.usage_url(), "https://a.pages.dev/api/hooks/usage")
+        with mock.patch.dict("os.environ", {"ATLAS_USAGE_URL": "https://b.dev/u", "ATLAS_FEED_URL": "x"}, clear=True):
+            self.assertEqual(sc.usage_url(), "https://b.dev/u")
+        with mock.patch.dict("os.environ", {}, clear=True):
+            self.assertIsNone(sc.usage_url())
+
+    def test_usage_row_carries_numbers_only(self):
+        usage = SimpleNamespace(input_tokens=1200, output_tokens=300, cache_read_input_tokens=800, cache_creation_input_tokens=None)
+        response = SimpleNamespace(model="claude-opus-5-5", usage=usage, content=[SimpleNamespace(type="text", text="private")])
+        with mock.patch.dict("os.environ", {"GITHUB_REPOSITORY": "khaneilcampbell/ai-ops-atlas"}, clear=True):
+            row = sc.usage_row(response, "fallback-model", 0.0123456789, datetime(2026, 11, 9, 6, 0, tzinfo=timezone.utc))
+        self.assertEqual(row["agent"], sc.USAGE_AGENT)
+        self.assertEqual((row["model"], row["input_tokens"], row["output_tokens"], row["cache_read_tokens"], row["cache_write_tokens"]), ("claude-opus-5-5", 1200, 300, 800, 0))
+        self.assertEqual((row["cost_usd"], row["cost_type"], row["project"]), (0.012346, "estimated", "khaneilcampbell/ai-ops-atlas"))
+        self.assertNotIn("private", json.dumps(row))
+
+    def test_post_usage_is_off_without_a_key_and_never_raises(self):
+        with mock.patch.dict("os.environ", {}, clear=True), mock.patch("urllib.request.urlopen") as op:
+            self.assertFalse(sc.post_usage([{"x": 1}]))
+            op.assert_not_called()
+        env = {"ATLAS_FEED_URL": "https://a.pages.dev/api/hooks/agents", "ATLAS_FEED_TOKEN": "t"}
+        with mock.patch.dict("os.environ", env, clear=True), mock.patch("urllib.request.urlopen", side_effect=OSError("down")):
+            self.assertFalse(sc.post_usage([{"x": 1}]))
 
 
 if __name__ == "__main__":

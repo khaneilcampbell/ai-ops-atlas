@@ -1,5 +1,6 @@
 import type { RegistryManifest } from "../registry/types";
 import type { DistrictId } from "./taxonomy";
+import type { ModuleTypeId } from "../modules/types";
 
 /** Manifest versions. atlas/v2 adds the optional per-agent `registry` block. */
 export const SCHEMAS = ["atlas/v1", "atlas/v2"] as const;
@@ -78,7 +79,12 @@ export interface DeclaredConnection {
 
 export interface Project {
   id: string;
+  /** The building's display name, shown everywhere it appears. Never used as an identifier. */
   name: string;
+  /** The organization the building belongs to (manifest `organization`), kept as metadata. */
+  organization?: string;
+  /** Earlier display names (manifest `former_names`): search aliases only, never shown as the name. */
+  formerNames?: string[];
   summary: string;
   status: Status;
   /** Default repository for agent source paths and existing integrations. */
@@ -88,6 +94,8 @@ export interface Project {
   tags: string[];
   /** Infrastructure district declared in the manifest; Atlas infers one when this is absent. */
   district?: DistrictId;
+  /** Platform module this building is an occurrence of (src/modules). Absent: a personal building. */
+  module?: ModuleTypeId;
   links: Link[];
   agentIds: string[];
   /** Relationships the manifest declares; empty when none. */

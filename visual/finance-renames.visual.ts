@@ -3,7 +3,7 @@ import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} fr
 test.skip(!process.env.FINANCE_RENAME_SHOTS,'Set FINANCE_RENAME_SHOTS=1 to take finance rename preview screenshots.');
 const out=process.env.FINANCE_RENAME_OUT??'artifacts/finance-renames';
 /** Plaque names to select: FINANCE_RENAME_NAMES="Corvane Capital,Ellery Budget Center" (defaults to the current names). */
-const names=(process.env.FINANCE_RENAME_NAMES??'Corvane Capital,Ellery Budget Center').split(',');
+const names=(process.env.FINANCE_RENAME_NAMES??'Business Finance Center,Budget & Forecasting Center').split(',');
 /** Stable ids; each sign mesh is matched to its brand by its sign background colour. */
 const ids=['business-finance','budget'];
 for(const light of ['day','night'] as const)test(`finance renames, ${light}`,async({page})=>{

@@ -17,6 +17,7 @@ import { AgentAlerts } from "./AgentAlerts";
 import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
 import { WebsiteManagement } from "./WebsiteManagement";
+import { formatDateTime } from "../lib/timezone";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
 const used = (r: { limit: number; remaining: number }) => Math.max(0, r.limit - r.remaining);
@@ -209,7 +210,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                         · {f.run.event} on {f.run.branch}
                       </div>
                     </span>
-                    <span className="muted small nowrap" title={new Date(f.run.createdAt).toLocaleString()}>
+                    <span className="muted small nowrap" title={formatDateTime(f.run.createdAt)}>
                       {relative(f.run.createdAt)}
                     </span>
                     <RerunButton repo={f.repo} run={f.run} />
@@ -279,7 +280,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                       <div className="title">{a.title}</div>
                       <div className="meta">{a.subtitle}</div>
                     </span>
-                    <span className="muted small nowrap" title={new Date(a.at).toLocaleString()}>
+                    <span className="muted small nowrap" title={formatDateTime(a.at)}>
                       {relative(a.at)}
                     </span>
                   </button>

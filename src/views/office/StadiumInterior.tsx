@@ -9,7 +9,10 @@ import {FramePacer} from '../map3d/pacer';
 import {night as cityNight} from '../map3d/materials';
 import type {LightMode} from '../map3d/living';
 import {Stadium} from '../map3d/Stadium';
-import {STADIUM_NAME} from '../map3d/stadiumPlan';
+import {STADIUM_KEY,STADIUM_NAME} from '../map3d/stadiumPlan';
+import {buildingDisplayName} from '../../modules/names';
+/** The name shown inside; STADIUM_NAME stays the map key. */
+const shown=()=>buildingDisplayName(STADIUM_KEY,STADIUM_NAME);
 import {stadiumCentre} from '../map3d/stadiumGeometry';
 import CityOutside from './CityOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
@@ -147,7 +150,7 @@ export default function StadiumInterior({light}:{light:LightMode}){
  const bowl=useMemo(()=>view!==0?bowlItems(all):[],[view,all]);
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  const mid=concourseMid(),title=all?'All · Open cutaway':STADIUM_VIEWS[view];
- return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${STADIUM_NAME} interior`}>
+ return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows camera={{position:VIEW_EYES[-1],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
@@ -167,8 +170,8 @@ export default function StadiumInterior({light}:{light:LightMode}){
    {/* The view's only point light: a warm wash over the court, or over the concourse ring. */}
    <pointLight position={view===0?[0,6,0]:[0,16,0]} color="#ffe6bf" intensity={isNight?(view===0?60:140):10} distance={view===0?40:48} decay={1.6}/>
   </Canvas>
-  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${STADIUM_NAME} and return to city`}>← Exit building</button><div><small>{STADIUM_NAME.toUpperCase()} · SPORTS AND EVENTS VENUE</small><h2>{title}</h2></div></header>
-  <nav className="skyline-floor-picker" aria-label={`Choose ${STADIUM_NAME} view`}><strong>Floor navigation</strong>{[-1,1,0].map(n=><button key={n} aria-pressed={view===n} onClick={()=>{setView(n);setPicked(null);}}>{n===-1?'All':STADIUM_VIEWS[n]}</button>)}</nav>
+  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to city`}>← Exit building</button><div><small>{shown().toUpperCase()} · SPORTS AND EVENTS VENUE</small><h2>{title}</h2></div></header>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${shown()} view`}><strong>Floor navigation</strong>{[-1,1,0].map(n=><button key={n} aria-pressed={view===n} onClick={()=>{setView(n);setPicked(null);}}>{n===-1?'All':STADIUM_VIEWS[n]}</button>)}</nav>
   <aside className="skyline-interior-note">{picked??(all?`Concourse inside the glass, and the seating bowl round the show court · ${lookHint()}`:view===0?'Gates, stair cores, escalators, food kiosks, the shop, first aid and restrooms · Select a space':'An octagonal bowl round one show court, two tiers with aisles, hospitality boxes and the roof trusses · Select a part')}<span>{`${STADIUM_STATUS} · No tickets, attendance, scores or schedules · Nobody is shown inside · A schematic of the venue, not a seat-by-seat model`}</span></aside>
  </section>;
 }

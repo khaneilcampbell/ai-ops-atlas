@@ -4,7 +4,9 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Benjaire HQ
+  name: Business Operations HQ
+  organization: Benjaire
+  former_names: [Benjaire HQ]
   summary: >-
     Website for Benjaire, an Astro site on Cloudflare Workers with a contact
     Worker that forwards inquiries to the Benjaire Flow intake in n8n.
@@ -12,6 +14,7 @@ project:
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
   district: business-operations
+  module: business-operations-hq
   links:
     - label: Live site
       url: https://benjaire.com
@@ -94,6 +97,9 @@ agents:
     alerts:
       failures: true
     last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/iQdSJGMQi6TBHlar
     permissions:
       - 'Resend API: sending on benjaire.com only'
       - Anthropic, through the n8n credential on Classify with Claude

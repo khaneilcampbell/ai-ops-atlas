@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { REPO_RE, Reader, type Raw } from "./reader";
 import { DISTRICTS } from "./taxonomy";
+import { MODULE_TYPE_IDS } from "../modules/types";
 import { CONNECTION_TYPES, SCHEMAS, type Agent, type AlertRules, type DeclaredConnection, type Catalog, type ManifestIssue, type Project } from "./types";
 
 /** Parses one manifest file. Problems are reported in `issues`, never thrown. */
@@ -108,12 +109,14 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
   const project: Project = {
     id: projectId,
     name: r.str(p, "name", "project") ?? projectId,
+    ...optionalNames(r, p),
     summary: r.str(p, "summary", "project") ?? "",
     status: r.status(p, "project"),
     repository,
     repositories: [...new Set(repositories)],
     tags: r.list(p, "tags", "project").filter((t): t is string => typeof t === "string"),
     district: r.oneOf(p, "district", "project", DISTRICTS),
+    module: r.oneOf(p, "module", "project", MODULE_TYPE_IDS),
     links: r.links(p, "project"),
     agentIds: agents.map((a) => a.id),
     connections: r.list(p, "connections", "project").flatMap((c, i): DeclaredConnection[] => {
@@ -130,6 +133,13 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
     file: file.split("/").pop(),
   };
   return { projects: [project], agents };
+}
+
+/** The building's organization and earlier names, present only when the manifest sets them. */
+function optionalNames(r: Reader, p: Raw): Pick<Project, "organization" | "formerNames"> {
+  const organization = r.str(p, "organization", "project", false);
+  const formerNames = r.list(p, "former_names", "project").filter((n): n is string => typeof n === "string" && !!n.trim()).map((n) => n.trim());
+  return { ...(organization ? { organization } : {}), ...(formerNames.length ? { formerNames } : {}) };
 }
 
 /** Merges manifests and reports duplicate ids across files. */

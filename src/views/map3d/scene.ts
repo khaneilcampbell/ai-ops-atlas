@@ -14,6 +14,7 @@ import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {sizeIntelligenceHub} from "./intelligenceHubPlan";
 import {sizePortfolioSite} from "./portfolioSitePlan";
+import {sizeSocLab} from "./socLabPlan";
 import {addGithubAnnex,type GithubAnnex} from "./githubAnnex";
 import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
@@ -721,6 +722,7 @@ function buildCity(layout: Layout): Scene3D {
   sizeGithubTower(towers);
   sizeIntelligenceHub(towers);
   sizePortfolioSite(towers);
+  sizeSocLab(towers);
   const financial=planFinancial({stadium,land,towers,kiosks,airport,terraces,carBridges,paving,coreLand:cityLand});
   if(financial)alignOfficeScale(towers,financial.referenceHeight);
   if(financial)land.push({x:financial.x,z:financial.z,w:financial.w,d:financial.d});
@@ -844,6 +846,8 @@ function buildCity(layout: Layout): Scene3D {
   if(stationPlaza){
     land.push(...uncoveredLand(stationPlaza.bounds,land));
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(stationPlaza.bounds,items[i].x,items[i].z,.4))items.splice(i,1);
+    // One paved forecourt under the wheel and pavilion, joined to the station stair by the walks.
+    paving.push({...stationPlaza.bounds,y:top,h:.03});
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
   }
   // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its

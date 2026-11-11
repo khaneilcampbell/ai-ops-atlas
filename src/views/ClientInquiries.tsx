@@ -7,6 +7,7 @@ import { followUpDraft, gmailCompose, nextStep, replyDraft, type Inquiry, type N
 import { markClosed, markFollowedUp, markReplied, reopen, useInquiryProgress } from "../inquiries/state";
 import { relative } from "../lib/time";
 import "../styles/inquiries.css";
+import { formatDay } from "../lib/timezone";
 
 const TICK_MS = 60_000;
 
@@ -32,7 +33,7 @@ async function openDraft(to: string, draft: { subject: string; body: string }): 
   return copied ? "Branded reply copied. Click in the Gmail message and press ⌘V to paste it." : "Gmail opened with plain text; the branded copy was blocked by the browser.";
 }
 
-const dateOnly = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+const dateOnly = (iso: string) => formatDay(iso, { weekday: "short", month: "short", day: "numeric" });
 
 function stepChip(step: NextStep): { text: string; tone: string } {
   if (step.kind === "reply") return { text: step.overdue ? "Reply overdue" : "Reply needed", tone: step.overdue ? "bad" : "warn" };

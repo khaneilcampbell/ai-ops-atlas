@@ -2,7 +2,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
-import {layoutMap,DISTRICT_MIN_SIZE,type GroupBy} from '../mapLayout';
+import {layoutMap,DISTRICT_MIN_SIZE,DISTRICT_HQ_SHARE,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {towerTop} from './models';
 import {isRibbonTower} from './ribbonTowerPlan';
@@ -17,7 +17,7 @@ describe('Commerce Pipeline teardrop tower',()=>{
   expect(isCommerceTower('commerce-pipeline')).toBe(true);expect(isCommerceTower('benjaire-site')).toBe(false);
   for(const grouping of GROUPINGS){
    const scene=buildScene(layoutMap(catalog,[],grouping)),t=scene.towers.find(t=>isCommerceTower(t.projectId))!;
-   expect(t.name).toBe('Commerce Pipeline');expect(t.size).toBeCloseTo(COMMERCE.refSize,3);
+   expect(t.name).toBe('Commerce Operations Center');expect(t.size).toBeCloseTo(DISTRICT_MIN_SIZE[COMMERCE.projectId]*DISTRICT_HQ_SHARE[COMMERCE.projectId]*.92,3);expect(t.size).toBeGreaterThan(COMMERCE.refSize);
   }
  });
  it('widens the Commerce district where it stands, so Benjaire HQ keeps its place',()=>{

@@ -9,7 +9,8 @@ import {FramePacer} from '../map3d/pacer';
 import {night as cityNight} from '../map3d/materials';
 import type {LightMode} from '../map3d/living';
 import {MarketingAgency} from '../map3d/MarketingAgency';
-import {AGENCY_NAME} from '../map3d/marketingAgencyPlan';
+import {AGENCY_KEY,AGENCY_NAME} from '../map3d/marketingAgencyPlan';
+import {buildingDisplayName} from '../../modules/names';
 import CityOutside from './CityOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import FloorLabel from './FloorLabel';
@@ -22,6 +23,8 @@ import type {Agent} from '../../catalog/types';
 import {WorkplaceInspector} from './WorkplaceInspector';
 import {agencyAssignedAgent,agencySeat} from './agencyWorkplaces';
 import '../../styles/skyline.css';
+/** The agency's display name; AGENCY_NAME stays its key for interiors and the city outside. */
+const shown=()=>buildingDisplayName(AGENCY_KEY,AGENCY_NAME);
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
 /** Everyone in the building, planned once: scripted paths, no AI. */
@@ -173,7 +176,7 @@ export default function AgencyInterior({light}:{light:LightMode}){
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  const all=floor===-1,levels=all?Array.from({length:INTERIOR.levels},(_,i)=>i):[floor];
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
- return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${AGENCY_NAME} interior`}>
+ return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
@@ -185,8 +188,8 @@ export default function AgencyInterior({light}:{light:LightMode}){
     extras={({scene,g,m})=><MarketingAgency plan={scene.agency} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
    {levels.map(level=><group key={level} position={[0,all?level*H:0,0]}><Floor level={level} single={!all} night={isNight} animate={!reduced} onPick={t=>{setAgent(null);setPicked(t);}} onAgent={a=>{setPicked(null);setAgent(a);}}/></group>)}
   </Canvas>
-  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${AGENCY_NAME} and return to city`}>← Exit building</button><div><small>{AGENCY_NAME.toUpperCase()} · BRAND, CONTENT & CAMPAIGNS</small><h2>{all?'All floors · Open cutaway':floor===0?AGENCY_FLOORS[0]:`Floor ${floor} · ${AGENCY_FLOORS[floor]}`}</h2></div></header>
-  <nav className="skyline-floor-picker" aria-label={`Choose ${AGENCY_NAME} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);setAgent(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
+  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to city`}>← Exit building</button><div><small>{shown().toUpperCase()} · BRAND, CONTENT & CAMPAIGNS</small><h2>{all?'All floors · Open cutaway':floor===0?AGENCY_FLOORS[0]:`Floor ${floor} · ${AGENCY_FLOORS[floor]}`}</h2></div></header>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${shown()} floor`}><strong>Floor navigation</strong>{[-1,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);setAgent(null);}}>{n===-1?'All floors':n===0?'Lobby':`Floor ${n}`}</button>)}</nav>
   <aside className="skyline-interior-note">{picked??(all?`Lobby + 3 floors round a central atrium · ${lookHint()}`:`${AGENCY_ROOMS.filter(r=>r.level===floor).map(r=>r.name).join(' · ')} · Select a room`)}<span>{`Owning agent: ${AGENCY_OWNER} · Planned, not running · ${SEATED.size} Benjaire Product Lab agents seated (gold), configured in n8n, not verified · No ad, email or social accounts connected · Other people shown are scripted illustrations, not running agents`}</span></aside>
   {agent&&<WorkplaceInspector agent={agent} onClose={()=>setAgent(null)}/>}
  </section>;

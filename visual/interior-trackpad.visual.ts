@@ -46,10 +46,10 @@ async function camera(page: Page): Promise<Cam> {
 }
 
 const BUILDINGS: { name: string; file: string; office: boolean }[] = [
-  { name: "Atlas HQ", file: "office", office: true },
-  { name: "Commerce Pipeline", file: "commerce", office: true },
-  { name: "Atlas Marketplace", file: "mall", office: false },
-  { name: "Benjaire Marketing Agency", file: "agency", office: false },
+  { name: "Atlas Command Center", file: "office", office: true },
+  { name: "Commerce Operations Center", file: "commerce", office: true },
+  { name: "Product Marketplace", file: "mall", office: false },
+  { name: "Growth & Marketing Studio", file: "agency", office: false },
 ];
 
 for (const b of BUILDINGS)
@@ -111,7 +111,7 @@ test("phone: the project interior still opens framed, touch unchanged", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await openAtlas(page, { light: "day" });
   await waitForScene(page);
-  await selectBuilding(page, "Atlas HQ");
+  await selectBuilding(page, "Atlas Command Center");
   await settle(page, 2);
   await page.getByRole("button", { name: "Enter building", exact: true }).click();
   await settle(page, 4);
