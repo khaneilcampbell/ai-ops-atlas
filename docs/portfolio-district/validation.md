@@ -11,3 +11,9 @@ Final checks on this source tree: lint and typecheck passed; `npm test -- --maxW
 Environment: local macOS, repository dependencies, Chromium with SwiftShader and frozen-clock fixture data. These are web scene checks, not installed desktop or live operations evidence. Rust unchanged. No extra rendering parts or lights. No merge or deployment.
 
 Images: before-day.png, before-night.png, before-phone.png and corresponding after images.
+
+## Brown wall alignment follow-up
+
+User's roof-corner screenshot revealed one brown wall reaching `roof + parapet` while the other stopped at `roof`. Lowered the taller section by 0.12 world units to the same roof edge. District footprint, canopy, floor count, materials and other buildings are unchanged by this follow-up. Added a regression check for both original and matched building heights.
+
+Tested source commit: 68aeeafc43fd591b9f527f9f6117ddd34713cd04. Lint/typecheck passed. Full unit suite with one worker: 197 files, 1,354 tests passed. Final Portfolio visual suite: 3 passed, desktop day/night and phone. Added rear roof camera views and reviewed all three after captures. Before desktop/phone and after day/night/phone images use the same roof framing (`wall-*.png`). Screenshot-only checks, with fixture data; no baseline was changed. The earlier selection limitation still applies.
