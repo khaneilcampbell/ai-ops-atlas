@@ -9,6 +9,7 @@ import {buildingDisplayName,buildingOrganization,currentBuildingName,serviceKey}
 import {STADIUM_OFFICE_ID} from "../views/map3d/stadiumPlan";
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
+import {landmarkModuleStatus} from "../modules/lookup";
 import { AgentOutput } from "./AgentOutput";
 import { RepositoryNotice } from "./RepositoryNotice";
 import {CodexReviewHandoff} from "./CodexReviewHandoff";
@@ -117,12 +118,15 @@ function AgencyAgents(){
   return <section><div className="section-title">Agents & automations</div><ul className="link-list">{assigned.map(a=><li key={a.id}><button className="text-btn" onClick={()=>select({kind:"agent",id:a.id})}>{a.registry?.title??a.name} →</button><span className="muted small">Floor {a.workplace!.floor} · {agencyRoom(a.workplace!.room)?.name??a.workplace!.room} · Configured in n8n, not verified</span></li>)}</ul></section>;
 }
 
+/** The airport building's module when it already shows real data; undefined while everything in it is planned. */
+function airportLiveModule(id:string){const m=landmarkModuleStatus(`airport-building:${id}`);return m&&m.availability!=="planned"?m:undefined;}
 function AirportBuildingDetail({id}:{id:string}) {
  const b=airportBuilding(id);
  if(!b)return <Head eyebrow="Airport building" title="Not found"/>;
- return <><Head eyebrow="Atlas Airport · Prepared workspace" title={b.name} building={serviceKey(`airport-building:${b.id}`)}><span className="chip">Planned · No live operations</span><EnterBuildingButton id={`skyline-business:${b.name}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>{b.rooms.join(" · ")}</p><dl className="kv"><dt>Owning agent role</dt><dd>{b.agent} · Prepared, not running</dd><dt>Model usage</dt><dd>None. No scheduled tasks or model calls.</dd><dt>Repository / workflow</dt><dd>Not connected</dd></dl><div className="section-title">Workspace</div><p>Enter the building to explore its lobby, floor navigation and furnished desks. People and furnishings are visualization only.</p></div></>;
+ const live=airportLiveModule(b.id);
+ return <><Head eyebrow={`Atlas Airport · ${live?"Operational workspace":"Prepared workspace"}`} title={b.name} building={serviceKey(`airport-building:${b.id}`)}><span className="chip">{live?`${live.name} · ${live.availability==="available"?"Available":"Partly available"}`:"Planned · No live operations"}</span><EnterBuildingButton id={`skyline-business:${b.name}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>{b.rooms.join(" · ")}</p><dl className="kv"><dt>Owning agent role</dt><dd>{b.agent} · Prepared, not running</dd><dt>Model usage</dt><dd>None. No scheduled tasks or model calls.</dd><dt>Repository / workflow</dt><dd>{live?`Reads ${live.connectors.join(", ")}`:"Not connected"}</dd></dl><div className="section-title">Workspace</div><p>Enter the building to explore its lobby, floor navigation and furnished desks. People and furnishings are visualization only.</p></div></>;
 }
-function AirportCampusDirectory(){const {select}=useAtlas();return <section><div className="section-title">Airport buildings</div><ul className="link-list">{AIRPORT_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`airport-building:${b.id}`})}>{buildingDisplayName(serviceKey(`airport-building:${b.id}`),b.name)} →</button><span className="muted small">{b.agent} · Planned</span></li>)}</ul></section>}
+function AirportCampusDirectory(){const {select}=useAtlas();return <section><div className="section-title">Airport buildings</div><ul className="link-list">{AIRPORT_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`airport-building:${b.id}`})}>{buildingDisplayName(serviceKey(`airport-building:${b.id}`),b.name)} →</button><span className="muted small">{b.agent} · {airportLiveModule(b.id)?"Live module":"Planned"}</span></li>)}</ul></section>}
 function FinancialDirectory(){const {select}=useAtlas();return <section><div className="section-title">District buildings</div><ul className="link-list">{FINANCIAL_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`financial:${b.id}`})}>{buildingDisplayName(serviceKey(`financial:${b.id}`),b.name)} →</button><span className="muted small">Planned · {b.role}</span></li>)}</ul><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-park"})}>Financial Park →</button><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-station"})}>Financial District Station →</button></section>}
 function ServiceDetail({id}:{id:string}) {
  const {select}=useAtlas();
