@@ -223,7 +223,8 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
  * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
-export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.32 };
+export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
+const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site"]);
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
@@ -397,7 +398,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const n = houses.length + services.length;
       const size = it.w;
       const m = n ? ringFor(n) : 2;
-      const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
+      const operationsWidth = districtSize(0, "intelligence-hub") * .34;
+      const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
+      // Give the wider central hub a front approach clear of its existing tool offices.
+      const hqSetback = project.id === "ai-ops-atlas" ? .35 : 0;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
@@ -407,7 +411,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2 - hqSetback, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,
