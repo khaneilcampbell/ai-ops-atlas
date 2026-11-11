@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-11 · Settings has a Time zone picker, set to New York (Eastern Time). It opens on a short list of common zones, with every other zone under Show all and in search. Every date and time in Atlas follows it (#356)
 - 2026-11-11 · Buildings like the Growth & Marketing Studio now show a green dot by their name on the map once their telemetry is connected and healthy (amber when partly live, red when failing). Buildings with nothing connected keep the dashed planned dot (#359)
 - 2026-11-11 · The Growth & Marketing Studio is now linked to the benjaire.com repository: its panel lists that repository and the marketing agents that work in the building, and its Health still comes from the site's own traffic and research briefs (#357)
 - 2026-11-11 · The Growth & Marketing Studio's Health now comes from its own site traffic and Product Lab briefs: "Live" only when both return real data, "Partly live" when one does, "Not verified" otherwise. A preview with no site to ask now says "Not connected here" instead of "Unavailable" (#354)

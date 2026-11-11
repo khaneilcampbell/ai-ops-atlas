@@ -5,6 +5,7 @@ import { isHostedWeb, isTauri } from "../lib/env";
 import { STEWARD_REPO } from "../steward/check";
 import { nextCheck } from "../steward/schedule";
 import { formatDate, relative } from "../lib/time";
+import { formatTime } from "../lib/timezone";
 
 export function GithubSteward() {
   const state = useSyncExternalStore(stewardStore.subscribe, stewardStore.snapshot);
@@ -73,7 +74,7 @@ export function GithubSteward() {
       <section className="card">
         <div className="card-head"><h2>Run history</h2></div>
         {!state.history.length ? <div className="empty small">No runs yet.</div> : <ul className="list">{state.history.map((r) => <li key={r.id}>
-          <button className="list-row" aria-pressed={selected?.id === r.id} onClick={() => setPicked(r.id)}><span className="grow"><span className="title">{formatDate(r.finishedAt)} · {new Date(r.finishedAt).toLocaleTimeString()}</span><span className="meta">{r.trigger ?? "manual"} · {r.status} · {r.checks.filter((c) => c.state === "attention").length} need review · {r.checks.filter((c) => c.state === "unknown").length} not verified</span></span></button>
+          <button className="list-row" aria-pressed={selected?.id === r.id} onClick={() => setPicked(r.id)}><span className="grow"><span className="title">{formatDate(r.finishedAt)} · {formatTime(r.finishedAt)}</span><span className="meta">{r.trigger ?? "manual"} · {r.status} · {r.checks.filter((c) => c.state === "attention").length} need review · {r.checks.filter((c) => c.state === "unknown").length} not verified</span></span></button>
         </li>)}</ul>}
         <div className="card-pad muted small">{desktop ? "The latest 30 summaries are saved in Atlas’s data folder on this Mac, with a one-line-per-run audit log beside them. Quitting Atlas ends a running check, which is then recorded as interrupted." : "The latest 30 summaries are saved in this app’s local storage on this device. Closing the app ends a running check. History is not an immutable audit log."}</div>
       </section>

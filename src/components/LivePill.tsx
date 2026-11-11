@@ -1,5 +1,6 @@
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
+import { formatTime } from "../lib/timezone";
 
 /** Whether live updates are flowing, and the latest thing they reported. */
 export function LivePill() {
@@ -8,7 +9,7 @@ export function LivePill() {
   const label = s.state === "live" ? "Live" : s.state === "connecting" ? "Connecting…" : s.state === "error" ? "Live paused" : "Live off";
   const title =
     s.state === "live"
-      ? `Checking for new GitHub and agent activity every few seconds${s.checkedAt ? `; last checked ${new Date(s.checkedAt).toLocaleTimeString()}` : ""}.${s.last ? `\nLatest: ${s.last.text} (${relative(s.last.at)})` : "\nNothing has happened since this window opened."}`
+      ? `Checking for new GitHub and agent activity every few seconds${s.checkedAt ? `; last checked ${formatTime(s.checkedAt)}` : ""}.${s.last ? `\nLatest: ${s.last.text} (${relative(s.last.at)})` : "\nNothing has happened since this window opened."}`
       : s.message ?? label;
   return (
     <span className={`live-pill ${s.state}`} title={title} aria-live="polite">

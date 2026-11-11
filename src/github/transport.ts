@@ -1,5 +1,6 @@
 import { isHostedWeb, isTauri } from "../lib/env";
 import { load, save } from "../lib/storage";
+import { formatTime } from "../lib/timezone";
 
 export interface RateLimit {
   limit: number;
@@ -76,7 +77,7 @@ export function takeUsage(): Usage {
 }
 
 function resetTime(r: RateLimit) {
-  return new Date(r.reset * 1000).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return formatTime(r.reset * 1000, { hour: "numeric", minute: "2-digit" });
 }
 
 function track(res: GithubResponse) {
