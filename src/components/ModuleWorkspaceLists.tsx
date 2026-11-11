@@ -27,6 +27,7 @@ import { useAgentReports } from "../reports/client";
 import { HealthBadge } from "./bits";
 import { signalCounts, signalRows, type SignalState } from "../observability/signals";
 import { documentCount, documentInventory } from "../knowledge/docs";
+import { assignmentCounts, automationAssignments, type AssignmentState } from "../business/assignments";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
@@ -40,6 +41,7 @@ import { documentCount, documentInventory } from "../knowledge/docs";
  */
 export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePanel<ComponentType>[]>> = {
   "atlas-command-center": [{ capability: "inventory", label: "Module inventory", component: Inventory }],
+  "business-operations-hq": [{ capability: "assignments", label: "Automation assignments", component: Assignments }],
   "development-repository-hub": [{ capability: "dependencies", label: "Project dependencies", component: Dependencies }],
   "workflow-automation-plant": [
     { capability: "n8n", label: "Live n8n runs", component: N8nRuns },
@@ -626,6 +628,40 @@ function ModelCost() {
         Estimated means reported tokens times the prices set in Atlas; billed is the provider's own figure. A model with no price set shows its cost as unknown, never $0.{" "}
         <button className="text-btn small" onClick={() => setView("usage")}>API Usage</button>
       </p>
+    </details>
+  );
+}
+
+const ASSIGNMENT_LABEL: Record<AssignmentState, string> = {
+  ok: "Last run succeeded", failing: "Last run failed", running: "Running now", off: "Switched off in n8n", "not-seen": "No recent run seen", "not-observed": "Runs not reported to Atlas",
+};
+
+function Assignments() {
+  const { catalog, repos } = useAtlas();
+  const n8n = useN8nRuns();
+  const groups = useMemo(() => automationAssignments(catalog, n8n.value, repos), [catalog, n8n.value, repos]);
+  const c = assignmentCounts(groups);
+  return (
+    <details className="module-list" aria-label="Automation assignments">
+      <summary className="muted small">Automation assignments · {c.total} assigned{c.failing ? `, ${c.failing} failing` : ""}, {c.observed} with a run seen</summary>
+      {groups.map((g) => (
+        <div key={g.projectId}>
+          {groups.length > 1 && <div className="small">{g.business}</div>}
+          <ul>
+            {g.items.map((i) => (
+              <li key={i.id} data-state={i.state === "not-observed" || i.state === "off" ? "none" : undefined} title={i.trigger ? `Starts on: ${i.trigger}` : undefined}>
+                <span>{i.name}<span className="muted small"> · {i.kind === "agent" ? "AI agent" : "Automation"}{i.runtime ? `, ${i.runtime}` : ""}</span></span>
+                <span className="muted small">
+                  {i.state === "failing" ? <span className="run-failure">{ASSIGNMENT_LABEL[i.state]}</span> : ASSIGNMENT_LABEL[i.state]}
+                  {i.lastAt ? ` · ${relative(i.lastAt)}` : ""}
+                  {i.source ? ` · ${i.source === "n8n" ? "n8n" : "GitHub"}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p className="muted small">Every agent and automation that works for this business, from its manifest. The last run comes from live n8n or GitHub Actions; an item that reports nowhere Atlas reads is never shown as healthy. Hover a row for what starts it.</p>
     </details>
   );
 }
