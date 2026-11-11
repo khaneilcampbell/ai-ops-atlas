@@ -67,8 +67,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "model-intelligence-lab", version: V, name: "Model Intelligence Lab", productDistrict: "ai-automation",
     description: "Model choice, evaluation and cost comparison.",
-    capabilities: [later("models", "Model inventory"), later("evals", "Evaluations"), later("cost", "Cost per model")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [on("models", "Model inventory", "src/models/lab.ts modelInventory"), later("evals", "Evaluations"), on("cost", "Cost per model", "src/models/lab.ts costPerModel")],
+    connectors: ["atlas-intel", "usage-sync"], views: ["usage"], actions: [], permissions: [],
   },
   // Infrastructure & Engineering
   {

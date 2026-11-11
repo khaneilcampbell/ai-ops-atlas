@@ -28,7 +28,7 @@ describe("landmarkModuleStatus", () => {
     expect(ops?.name).toBe("Observability Center");
     expect(ops?.availability).toBe("partial");
     expect(ops?.connectors).toContain("GitHub");
-    expect(landmarkModuleStatus("airport-building:cargo")?.availability).toBe("planned");
+    expect(landmarkModuleStatus("airport-building:cargo")?.availability).toBe("partial");
     expect(landmarkModuleStatus("airport-building:nope")).toBeUndefined();
   });
 });
