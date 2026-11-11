@@ -35,8 +35,17 @@ describe("operational assets", () => {
     expect(plant.automations.some(isAiAgent)).toBe(false);
   });
 
+  it("gives a landmark linked to a project that repository and only the agents working in it", () => {
+    const studio = buildingAssets(landmark("benjaire-marketing"), catalog);
+    expect(studio.projects).toEqual(["benjaire-site"]);
+    expect(studio.repositories).toEqual(["khaneilcampbell/benjaire.com"]);
+    expect(studio.agents.map((a) => a.id)).toContain("benjaire-product-lab");
+    expect([...studio.agents, ...studio.automations].every((a) => a.workplace?.building === "Benjaire Marketing Agency")).toBe(true);
+    expect(studio.automations.map((a) => a.id)).not.toContain("benjaire-contact-worker");
+  });
+
   it("gives other landmarks nothing rather than borrowing another building's data", () => {
-    expect(buildingAssets(landmark("benjaire-marketing"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
+    expect(buildingAssets(landmark("bmw-dealership"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
   });
 });
 

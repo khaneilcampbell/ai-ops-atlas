@@ -35,6 +35,7 @@ import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
+import { formatDateTime } from "../lib/timezone";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -141,7 +142,7 @@ function ServiceDetail({id}:{id:string}) {
  }
  if(LOOP_STATIONS.some(s=>s.id===`service:${id}`)){const station=LOOP_STATIONS.find(s=>s.id===`service:${id}`)!;return <><Head eyebrow="Planned perimeter railway" title={station.name} building={station.id}><span className="chip">Planned · Visual simulation · Not connected</span></Head><div className="panel-body selectable"><ModuleSection/><p>One simulated train circles the landmass and stops for 15 seconds at each platform. Doors open only while stopped. Public paths connect this stop to {currentBuildingName(station.district)}.</p><section><div className="section-title">Connected stops</div><ul className="link-list">{LOOP_STATIONS.filter(s=>s.id!==station.id).map(s=><li key={s.id}><button className="text-btn" onClick={()=>select({kind:"service",id:s.id.slice(8)})}>{buildingDisplayName(s.id,s.name)} →</button></li>)}</ul></section><button className="text-btn" onClick={()=>select({kind:"service",id:"atlas-marketplace"})}>Back to {marketplaceName()}</button><p>Unnamed passengers are visual simulation, not live agent execution. Movement follows Traffic, reduced motion, Battery saver and map visibility controls. No external transit service is connected.</p></div></>;}
 
- if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>Benjaire Product Lab, an n8n agent (no repository)</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
+ if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>khaneilcampbell/benjaire.com (site traffic and research briefs) · Benjaire Product Lab, an n8n agent</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
     <Head eyebrow="Client services" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
@@ -415,7 +416,7 @@ function RepoDetail({ name }: { name: string }) {
                       <ExternalLink href={r.url}>{r.name}</ExternalLink>
                       <span className="muted"> · {r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion}</span>
                     </span>
-                    <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
+                    <span className="muted small" title={formatDateTime(r.createdAt)}>
                       {relative(r.createdAt)}
                     </span>
                     <RerunButton repo={name} run={r} />
@@ -537,7 +538,7 @@ function RepoDetail({ name }: { name: string }) {
                   {history.slice(0, more ? 20 : 6).map((h) => (
                     <li key={h.id} className={`k-${h.kind}`}>
                       <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
-                      <div className="muted small" title={new Date(h.at).toLocaleString()}>
+                      <div className="muted small" title={formatDateTime(h.at)}>
                         {relative(h.at)} · {h.subtitle}
                       </div>
                     </li>

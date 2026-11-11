@@ -2,6 +2,7 @@ import { fixIssueUrl } from "../lib/fixWithClaude";
 import type { Deploy } from "./deploys";
 import type { WebProperty } from "./registry";
 import type { SiteSnapshot } from "./types";
+import { formatTime } from "../lib/timezone";
 
 // Incidents on a website building: something KC should act on, each with the links to act. They
 // come only from observed data (a failed build, an expiring certificate, a site that didn't
@@ -91,7 +92,7 @@ export function siteIncidents(p: WebProperty, s: SiteSnapshot, now: number): Inc
   const { probe, dns, tls, domain, performance } = s.checks;
 
   if (probe.state === "ok" && probe.data.status >= 500) {
-    const detail = `${p.url} answered HTTP ${probe.data.status} when checked ${new Date(probe.checkedAt).toLocaleTimeString()}.`;
+    const detail = `${p.url} answered HTTP ${probe.data.status} when checked ${formatTime(probe.checkedAt)}.`;
     out.push({ key: `${p.id}:down:${dateOnly(probe.checkedAt)}`, propertyId: p.id, kind: "site-down", severity: "critical", title: "Site is returning errors", detail, since: probe.checkedAt, actions: [{ label: "Open the site", url: p.url }, p.deployConsole, ...fixLink(p, "Site is returning errors", detail, [])] });
   } else if (probe.state === "error" && dns.state === "ok") {
     // DNS answered but the site didn't: the site is down, not the checker.

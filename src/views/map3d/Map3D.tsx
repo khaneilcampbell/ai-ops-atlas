@@ -82,7 +82,7 @@ import { insideLimits, type InsideLimits } from "./inside";
 import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
-import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
+import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 
@@ -129,6 +129,8 @@ interface Props {
   tipFor: (key: string) => { title: string; sub: string } | null;
   /** Verified repository health, for the discreet mark on each nameplate. */
   healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean; health: Health };
+  /** Live status dots for landmark buildings whose telemetry answered, by selection key (landmarkMarks.ts). */
+  landmarkMarks?: Readonly<Record<string, PlaqueMark>>;
   /** Day or night lighting. */
   light: LightMode;
   /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
@@ -371,7 +373,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     // Every other building and place uses the same nameplate (see plaques.tsx): one size, one
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
-    const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => out.push(buildingPlaque({ ...p, selKey, hover, onSelect: select }));
+    // A landmark whose telemetry answered shows its real status instead of the planned dot.
+    const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => {
+      const live = props.landmarkMarks?.[p.select];
+      out.push(buildingPlaque({ ...p, ...(live ? { mark: live, title: `${p.name} · ${live.label}` } : {}), selKey, hover, onSelect: select }));
+    };
     if(scene.financial){
       const f=scene.financial,top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
       plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:f.x+f.w/2,roof:top,z:f.z+f.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
@@ -389,7 +395,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
