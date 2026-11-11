@@ -58,7 +58,7 @@ test("Mission Control's Website management shows a failed deploy as an incident,
 
 test("a healthy site shows every signal, and the building panel is back to its original design", async ({ page }) => {
   await open(page);
-  await selectBuilding(page, "Portfolio Site");
+  await selectBuilding(page, "Portfolio Web Studio");
   await expect(page.locator(".property")).toHaveCount(0);
   await toMission(page);
   const dash = site(page, "khaneilcampbell.com");

@@ -6,6 +6,7 @@ import {financialKey,type FinancialPlan} from './financialPlan';
 import {TERRACE_H} from './scene';
 import {CITY_SCALE} from './cityScale';
 import type {PickHandlerSet} from './models';
+import {financeSignLines} from '../../finance/benjaire';
 /**
  * An original drawn logo: a rounded badge holding an open ring (the brand's initial) with three
  * rising bars in its opening, for steady growth. Plain shapes only, no lettering or borrowed marks.
@@ -18,7 +19,13 @@ export function drawEmblem(c:CanvasRenderingContext2D,brand:Pick<FinancialBrand,
  c.restore();
 }
 /** Original canvas signs follow Atlas's existing procedural sign texture pattern. */
-function sign(brand:FinancialBrand){
+/**
+ * Every Financial District building belongs to the workspace's business, so its sign reads the
+ * workspace name over the building's role (catalog/workspace/finance.yaml `sign`). The colours,
+ * emblem and placement stay the building's own.
+ */
+function sign(base:FinancialBrand){
+ const lines=financeSignLines(financialKey(base.id));const brand:FinancialBrand=lines?{...base,signLines:lines,symbol:base.symbol==='emblem'?'emblem':'wordmark'}:base;
  const canvas=document.createElement('canvas');canvas.width=1536;canvas.height=384;const c=canvas.getContext('2d')!;
  c.fillStyle=brand.signBackground;c.fillRect(0,0,1536,384);c.fillStyle=brand.accent;c.fillRect(0,366,1536,18);
  if(brand.symbol==='emblem'){
@@ -32,7 +39,7 @@ function sign(brand:FinancialBrand){
  }
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const material=new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:'#ffffff',emissiveIntensity:0,roughness:.6});
- return {brand,texture,material,geometry:new THREE.PlaneGeometry(FINANCIAL_SIGN.width,FINANCIAL_SIGN.height)};
+ return {brand:base,texture,material,geometry:new THREE.PlaneGeometry(FINANCIAL_SIGN.width,FINANCIAL_SIGN.height)};
 }
 export function FinancialSigns({plan,night,pick}:{plan?:FinancialPlan;night:boolean;pick:PickHandlerSet}){
  const signs=useMemo(()=>FINANCIAL_BRANDS.filter(b=>!b.noSign).map(sign),[]);

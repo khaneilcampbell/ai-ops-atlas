@@ -99,13 +99,13 @@ describe("building instances", () => {
     expect(home("growth-marketing-studio")).toEqual(["Growth & Marketing Studio"]);
     expect(home("workflow-automation-plant")).toEqual(["Workflow Automation Hub"]);
     expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
-    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Corvane Capital"]);
+    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Business Finance Center"]);
     expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
     expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
-    expect(home("integration-exchange")).toEqual(["Integration Exchange"]);
-    expect(home("observability-center")).toEqual(["Atlas · Operations"]);
+    expect(home("integration-exchange")).toEqual(["Investment Operations Center"]);
+    expect(home("observability-center")).toEqual(["Observability Center"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    expect(home("model-intelligence-lab")).toEqual(["Atlas · Cargo"]);
+    expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Planned modules are placed but switched off until they are built.
