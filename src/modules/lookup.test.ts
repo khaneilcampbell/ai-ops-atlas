@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { buildingForSelection } from "./lookup";
 
@@ -19,4 +19,16 @@ it("returns nothing for selections that are not module buildings", () => {
   expect(buildingForSelection({ kind: "service", id: "Benjaire Marketing Agency" }, catalog)).toBeUndefined();
   expect(buildingForSelection({ kind: "agent", id: "benjaire-site" }, catalog)).toBeUndefined();
   expect(buildingForSelection(null, catalog)).toBeUndefined();
+});
+
+describe("landmarkModuleStatus", () => {
+  it("tells a landmark with real data apart from a planned one, and names what it reads", async () => {
+    const { landmarkModuleStatus } = await import("./lookup");
+    const ops = landmarkModuleStatus("airport-building:operations");
+    expect(ops?.name).toBe("Observability Center");
+    expect(ops?.availability).toBe("partial");
+    expect(ops?.connectors).toContain("GitHub");
+    expect(landmarkModuleStatus("airport-building:cargo")?.availability).toBe("planned");
+    expect(landmarkModuleStatus("airport-building:nope")).toBeUndefined();
+  });
 });
