@@ -29,6 +29,14 @@ describe('Portfolio Site',()=>{
   for(const box of matched.boxes)expect(box.y1).toBeGreaterThan(box.y0);
  });
 
+ it('aligns both brown wall tops with the lower roof edge',()=>{
+  for(const roof of [plan.roof,tower.customHeight!]){
+   const walls=planPortfolioSite(roof).boxes.filter(box=>box.kind==='slats'&&box.y0===PORTFOLIO_SITE.ground-PORTFOLIO_SITE.slab);
+   expect(walls).toHaveLength(2);
+   for(const wall of walls)expect(wall.y1).toBeCloseTo(roof);
+  }
+ });
+
  it('does not move the Financial District reference height',()=>{
   expect(headquartersEnvelope(scene.towers)).toBeCloseTo(scene.financial!.referenceHeight);
  });
