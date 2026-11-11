@@ -1,7 +1,7 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,type CommonsPlan} from './commonsPlan';
-import {planRingRoad} from './ringRoad';
+import {RING_ROAD_ID,planRingRoad} from './ringRoad';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
@@ -784,9 +784,12 @@ function buildCity(layout: Layout): Scene3D {
     ...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),
     // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
     ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
-  connections.push(...ring);
-  if(ring.length)connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
-  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
+  // The district grid's middle street (KC, 2026-11-10): one straight avenue from the Financial District's
+  // street south between the two columns of districts, past Career & Portfolio.
+  const middle:DistrictConnection[]=layout.street&&financial?.street?.length?[{id:`${RING_ROAD_ID}:middle`,road:[[layout.street.x,financial.street[0][1]],[layout.street.x,layout.street.z1]],walk:[]}]:[];
+  connections.push(...ring,...middle);
+  if(ring.length||middle.length)connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
+  for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if([...ring,...middle].some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership});
   // Keep station walks clear of plaza trees, beds and bollards.

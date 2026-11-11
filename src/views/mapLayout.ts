@@ -103,6 +103,86 @@ export function keepRemovedLots(live: Catalog, full: Catalog): Catalog {
   return { ...live, projects, agents: [...live.agents, ...full.agents.filter(a => ids.has(a.projectId))] };
 }
 
+/** Removed-tower lots left off the district map once the districts stand in a grid. */
+const GRID_DROPPED_LOTS: ReadonlySet<string> = new Set(["career-optimizer", "benjaire-ops"]);
+
+/**
+ * The district map as two columns either side of one straight street (KC, 2026-11-10): from the
+ * Financial District's edge, Business Operations left and AI Operations right, then AI Engineering
+ * left and Security & Infrastructure right, then Career & Portfolio below on the left, with the
+ * street running on past it. The east column sits low in its row and stops short of x = 25, so the
+ * Marketing Agency's bay by the Financial District and the Galleria's land keep their places.
+ */
+export const DISTRICT_GRID: Readonly<Record<string, { side: "left" | "right"; row: number }>> = {
+  "d:business-operations": { side: "left", row: 0 },
+  "d:ai-operations": { side: "right", row: 0 },
+  "d:ai-engineering": { side: "left", row: 1 },
+  "d:security-infrastructure": { side: "right", row: 1 },
+  "d:career-portfolio": { side: "left", row: 2 },
+};
+/** Top of the Career & Portfolio row: where Profile Tower stood before the grid. */
+const GRID_LAST_ROW_Y = 29.25;
+/** Grid x of the middle street's centre line, chosen so the west column starts at x = 0. */
+export const GRID_STREET_X = 21.375;
+/**
+ * Open land that other places anchor on keeps the exact spot it had before the grid: Atlas Commons
+ * stands on the Service Desk lot, and the Marketplace and Galleria on the open lot.
+ */
+const PINNED_LOTS: Readonly<Record<string, { x: number; y: number }>> = {
+  "park:vacant:service-desk": { x: 0, y: 40.5 },
+  open: { x: 9.75, y: 36.5 },
+};
+
+type GridItem = Box & { project?: { id: string }; park?: true; vacant?: string };
+type GridBlock = Box & { key: string; inner: { placed: Placed<GridItem>[]; w: number; h: number }; strays?: string[] };
+/**
+ * Places the district blocks in {@link DISTRICT_GRID}, each block's buildings in one row hugging the
+ * street. Returns undefined (so the caller packs as before) when a district is not in the grid.
+ */
+function districtGrid<B extends GridBlock>(blocks: B[]): { placed: Placed<B>[]; w: number; h: number } | undefined {
+  if (!blocks.every((b) => DISTRICT_GRID[b.key] && !b.strays)) return undefined;
+  const g2 = GAP / 2;
+  const lots: { block: B; item: GridItem; at: { x: number; y: number } }[] = [];
+  const rows = blocks.map((block) => {
+    const items = block.inner.placed.filter((it) => {
+      const pin = it.park ? PINNED_LOTS.open : it.vacant ? PINNED_LOTS[`park:vacant:${it.vacant}`] : undefined;
+      if (pin) lots.push({ block, item: it, at: pin });
+      return !it.park && !it.vacant;
+    });
+    const h = Math.max(0, ...items.map((it) => it.h));
+    return { block, items, h, ...DISTRICT_GRID[block.key] };
+  });
+  const rowH = (r: number) => Math.max(0, ...rows.filter((b) => b.row === r).map((b) => b.h));
+  // Rows one street apart, the first on the Financial District's edge. Career & Portfolio keeps
+  // Profile Tower's old row, a street above the open lot: Atlas Stadium is planned off its plaza, so
+  // the stadium stays beside Atlas Airport.
+  const top = [0, rowH(0) + GAP, Math.max(rowH(0) + GAP + rowH(1) + GAP, GRID_LAST_ROW_Y)];
+  const placed: Placed<B>[] = [];
+  for (const r of rows) {
+    const y = top[r.row];
+    // Buildings in one row from the street outwards: west ones top-aligned on the row, east ones
+    // bottom-aligned, so the east column leaves the bay under the Financial District open.
+    const own: Placed<GridItem>[] = [];
+    const rh = rowH(r.row);
+    let x = GRID_STREET_X - g2;
+    if (r.side === "left") for (const it of r.items) { x -= it.w; own.push({ ...it, x, y, cy: y, ch: r.h }); x -= GAP; }
+    x = GRID_STREET_X + g2;
+    if (r.side === "right") for (const it of r.items) { own.push({ ...it, x, y: y + rh - it.h, cy: y + rh - r.h, ch: r.h }); x += it.w + GAP; }
+    const minX = Math.min(...own.map((o) => o.x)), maxX = Math.max(...own.map((o) => o.x + o.w));
+    // Items are stored relative to their block, as shelf() leaves them.
+    const by = Math.min(...own.map((o) => o.y));
+    const inner = own.map((o) => ({ ...o, x: o.x - minX, y: o.y - by, cy: o.cy - by }));
+    placed.push({ ...r.block, inner: { placed: inner, w: maxX - minX, h: r.h }, w: maxX - minX, h: r.h, x: minX, y: by, cy: by, ch: r.h });
+  }
+  // Each pinned lot becomes its own block so it keeps its old spot whatever the districts do.
+  for (const l of lots) {
+    const item = { ...l.item, x: 0, y: 0, cy: 0, ch: l.item.h };
+    placed.push({ ...l.block, count: 0, inner: { placed: [item], w: item.w, h: item.h }, w: item.w, h: item.h, x: l.at.x, y: l.at.y, cy: l.at.y, ch: item.h });
+  }
+  const w = Math.max(...placed.map((p) => p.x + p.w)), h = Math.max(...placed.map((p) => p.y + p.h));
+  return { placed, w, h };
+}
+
 /** A labelled block of districts when the map is grouped. */
 export interface Neighborhood {
   key: string;
@@ -143,6 +223,8 @@ export interface Layout {
   neighborhoods: Neighborhood[];
   walks: Walk[];
   meadows: Meadow[];
+  /** The district grid's middle street: its centre line x, running south from the Financial District to z1. */
+  street?: { x: number; z1: number };
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
@@ -266,7 +348,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   // Off-map projects have no building (see OFF_MAP_PROJECTS). A removed tower keeps its land as a
   // vacant lot in every grouping, so the rest of the city, its roads and its traffic stay as they were.
   const vacant = (p: Project) => VACANT_LOTS.has(p.id);
-  const kept = (p: Project) => !OFF_MAP_PROJECTS.has(p.id) || vacant(p) || CLEARED_LOTS.has(p.id);
+  // On the district map the Career Applications and Benjaire Dashboard lots are gone too (KC,
+  // 2026-11-10): the districts stand in a fixed grid (see districtGrid), so nothing leans on them.
+  const kept = (p: Project) => !OFF_MAP_PROJECTS.has(p.id) || ((vacant(p) || CLEARED_LOTS.has(p.id)) && !(groupBy === "district" && GRID_DROPPED_LOTS.has(p.id)));
   for (const p of catalog.projects.filter(kept)) {
     const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
@@ -303,7 +387,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   // Districts share one landmass: the usual street gap between them, and walkways across, so
   // roads, bridges and street-routed connections reach every district. Other groupings stay apart.
   const joined = groupBy === "district";
-  const outer = shelf(blocks, joined ? GAP : GROUP_GAP);
+  const grid = joined ? districtGrid(blocks) : undefined;
+  const outer = grid ?? shelf(blocks, joined ? GAP : GROUP_GAP);
   const rects: { id: string; x: number; y: number; w: number; h: number }[] = [];
   const districts: District[] = [];
   const cleared: District[] = [];
@@ -388,6 +473,16 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   }
 
   if (joined) walks.push(...walkways(rects));
+  // The grid's districts share one lawn, from the Financial District's edge down to the last row, so
+  // no channel of water opens where a column is narrower than its neighbor.
+  let street: Layout["street"];
+  if (grid) {
+    const cells = grid.placed.filter((b) => b.count > 0);
+    const x0 = Math.min(...cells.map((b) => b.x)), x1 = Math.max(...cells.map((b) => b.x + b.w));
+    const z1 = Math.max(...cells.map((b) => b.y + b.h));
+    meadows.push({ ox: x0 - g2, oy: -g2, w: x1 - x0 + GAP, h: z1 + GAP });
+    street = { x: GRID_STREET_X, z1: z1 + g2 };
+  }
 
   const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
@@ -400,6 +495,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     neighborhoods,
     walks,
     meadows,
+    street,
     bounds: xs.length ? { minX: Math.min(...xs), minY: Math.min(...ys) - 120, maxX: Math.max(...xs), maxY: Math.max(...ys) + 90 } : { minX: -200, minY: -200, maxX: 200, maxY: 200 },
   };
 }
