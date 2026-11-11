@@ -52,13 +52,16 @@ const days = (ms: number) => Math.max(0, Math.floor(ms / DAY));
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 const dateOnly = (iso: string) => iso.slice(0, 10);
 
-function fixLink(p: WebProperty, title: string, detail: string, evidence: IncidentAction[]): IncidentAction[] {
+/** What deploy incidents need to know about where they happened. */
+export type DeployTarget = Pick<WebProperty, "id" | "domain" | "repository" | "deployConsole">;
+
+function fixLink(p: Pick<WebProperty, "domain" | "repository">, title: string, detail: string, evidence: IncidentAction[]): IncidentAction[] {
   const url = fixIssueUrl({ kind: "Website incident", title: `${p.domain}: ${title}`, detail, repo: p.repository, links: evidence });
   return url ? [{ label: "Fix with Claude", url }] : [];
 }
 
 /** The newest finished deploy decides whether production is broken; an older failure followed by a success is history. */
-export function deployIncidents(p: WebProperty, deploys: Deploy[], now: number): Incident[] {
+export function deployIncidents(p: DeployTarget, deploys: Deploy[], now: number): Incident[] {
   const out: Incident[] = [];
   const finished = deploys.find((d) => d.state === "success" || d.state === "failure");
   if (finished?.state === "failure") {

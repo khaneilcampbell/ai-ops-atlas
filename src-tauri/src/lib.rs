@@ -86,6 +86,8 @@ pub fn run() {
             local_usage::codex_usage,
             local_usage::claude_code_usage,
             live::live_properties,
+            live::live_n8n,
+            live::live_security,
             live::live_inquiry_reply,
             export::save_pdf,
             power::power_on_battery,

@@ -46,8 +46,12 @@ describe("module catalog", () => {
 
   it("works out availability from the capabilities", () => {
     expect(moduleAvailability(MODULE_TYPES["agent-operations-center"])).toBe("available");
-    expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("partial");
+    expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("available");
+    expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
+    expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("available");
+    expect(MODULE_TYPES["finance-analytics-tower"].capabilities.find((c) => c.id === "caps")?.state).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
+    expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);
   });
@@ -67,9 +71,9 @@ describe("building instances", () => {
     expect(MODULE_TYPES[hq.moduleType!].name).toBe("Business Operations HQ");
   });
 
-  it("leaves buildings without a module as personal buildings, and planned modules switched off", () => {
+  it("leaves buildings without a module as personal buildings, and switches on modules with a working capability", () => {
     expect(instances.find((i) => i.id === "portfolio-site")).toMatchObject({ moduleType: null, moduleProvenance: "none", enabled: false });
-    expect(instances.find((i) => i.id === "soc-lab")).toMatchObject({ moduleType: "security-operations-center", enabled: false });
+    expect(instances.find((i) => i.id === "soc-lab")).toMatchObject({ moduleType: "security-operations-center", enabled: true });
   });
 
   it("reports health as unknown until telemetry is connected", () => {
@@ -105,7 +109,9 @@ describe("building instances", () => {
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Planned modules are placed but switched off until they are built.
-    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false, organization: "Benjaire" });
+    expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
+    expect(all.find((i) => i.id === "airport-building:operations")).toMatchObject({ moduleType: "observability-center", enabled: false });
+    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: true, organization: "Benjaire" });
   });
 
   it("ties each landmark to the map's own key and name, so a rename on the map fails here", () => {

@@ -32,11 +32,6 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Client Reply Assistant (`benjaire-inquiry-to-client`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Quality Engineer (`benjaire-site-ci`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Dashboard Quality Engineer (`benjaire-ops-ci`) | benjaire-ops | Benjaire Dashboard | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
-| Job Requirements Analyst (`job-analyst`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
-| Resume Content Specialist (`resume-tailor`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
-| Application Quality Reviewer (`resume-quality-review`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
-| Career Data Quality Analyst (`career-db-validator`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
-| Career Workflow Quality Engineer (`career-ci`) | career-optimizer | Career Applications | None (building removed 2026-11-09) | Still registered; no desk on the map | Existing configuration preserved; see recorded Output |
 | Portfolio Web Developer (`site-builder`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Quality Auditor (`site-audit`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Website Security Analyst (`security-check`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |

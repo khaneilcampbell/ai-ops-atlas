@@ -57,6 +57,24 @@ Add `{ id, name, moduleType }` to `LANDMARK_MODULES` in `workspace.ts`. The `id`
 no module covers houses none rather than borrow an unrelated one. Add an assertion to `modules.test.ts` that ties the id and name to
 the map plan constant, so a rename on the map fails the test instead of drifting.
 
+### Add a workspace panel
+A module's **workspace** is what a building opens into: the lists under its module card, and the
+Atlas views its "Open … →" buttons lead to. It is defined once per module type, never per building,
+so the two finance towers show the same finance workspace and a new home for a module needs no new
+code. The definition lives in `WORKSPACE_PANELS` (`components/ModuleWorkspaceLists.tsx`), one row
+per module type, read through `modules/workspaces.ts`:
+
+```ts
+"finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+```
+
+`capability` names the catalog capability the panel is the evidence for; the panel shows only while
+that capability is `available`, so a planned capability can never show a live-looking list
+(`workspaces.test.tsx` checks every row). "Open Agents →" and "Open Automations →" from a building
+that is a catalog project open the directory filtered to that project's agents (`workspaceScope`);
+landmarks and every other view open unscoped. The map is never offered as a destination, because
+the building is already there.
+
 ### Add a module type
 Every module type in this workspace has at least one building, and `modules.test.ts` checks it,
 so a new type also needs a home: a project manifest's `module` field or a `LANDMARK_MODULES` entry.
@@ -76,6 +94,69 @@ Make a new `AtlasWorkspace` with its own `id`, `name`, `landmarks` and `entitlem
 catalog manifests. Every instance function takes the workspace as an argument
 (`workspaceBuildings(catalog, workspace)`), so the same module types appear under the other
 workspace's building names.
+
+### Live n8n runs
+The Automation Plant reads KC's n8n Cloud instance through the site (`server/n8n.ts`): the page asks
+`/api/n8n` behind Access, the Mac app asks `/api/hooks/n8n` with its website sync key. The site
+holds the only copy of the n8n API key as the Pages secret `N8N_API_KEY` (create it in n8n under
+Settings → n8n API with the **Read only** scope). `N8N_BASE_URL` optionally points at another
+instance. Only GET requests are made, and only names, on/off and run status and times come back.
+To tie a catalog automation to its n8n workflow, add a link labelled `n8n workflow` to
+`https://<instance>/workflow/<id>`.
+
+### Hosting and deploys
+The Infrastructure Operations Hub lists where each piece of the workspace runs (`src/infra/hosts.ts`
+`HOSTS`) and its newest production deploys. The websites come from the property registry
+(`src/properties/registry.ts`), so their dashboards and this list share one poller. Atlas web and
+the Mac app are added in `hosts.ts`, not to the registry, because the registry is the site checks'
+server allowlist. Deploys are read from GitHub with the same read-only access as the rest of Atlas:
+Cloudflare check runs, GitHub Pages deployments, and CI's "Publish signed main build" job on the
+newest main commits (a skipped job is not counted as a deploy). No new credentials. A host with no
+deploy seen shows as unknown, never as live. To add a host, add an entry with its repository and
+deploy source.
+
+Its **Incidents** list joins the websites' own incidents (the same ones their dashboards raise, and
+dismissed ones stay hidden) with failed or stuck deploys of Atlas web and the Mac app
+(`src/infra/incidents.ts`). The newest finished deploy decides, so an old failure followed by a
+success is history. A check that couldn't run is never an incident.
+### Security alerts
+The Security Operations Center counts open GitHub security alerts for every repository in the
+catalog, through the site (`server/security.ts`): the page asks `/api/security?repos=…` behind
+Access, the Mac app asks `/api/hooks/security?repos=…` with its website sync key (Rust
+`live_security`). The site reads Dependabot, code scanning and secret scanning alerts with its own
+`GITHUB_TOKEN` secret, which needs read access to those three alert types (fine-grained token:
+**Dependabot alerts**, **Code scanning alerts** and **Secret scanning alerts**, all Read-only). Only
+the number of open alerts and their severities come back: no advisory text, file path, secret type
+or location. Each feed reports one of four states: counted, switched off for the repository, not
+readable with the token, or unavailable. A repository shows no open alerts only when all three
+feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
+
+### Spend caps
+The Financial Operations Tower compares this month's spend with each spend cap the workspace has
+set (`src/finance/caps.ts` `SPEND_CAPS`). The Atlas agents' budget is read from Atlas's own settings
+and is exact. A provider cap (such as an Anthropic organization or workspace limit) is set on the
+provider's page, so Atlas lists its amount and counts the priced, pay-per-use calls it has logged
+for that provider this calendar month (UTC). That is a lower bound, and the row links to the page
+with the full figure. A cap whose calls Atlas can't see shows "Spend not visible to Atlas" instead
+of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
+cap changes on the provider's page, change its `limitUsd` here.
+
+### Publishing pipeline
+The Commerce & Product Marketplace lists every agent of the projects whose catalog file sets
+`module: commerce-product-marketplace` (today the Commerce Operations Center), worst first
+(`src/commerce/pipeline.ts` `pipelineStages`). An agent with an `alerts` block follows the alert
+rules, so a stage whose manifest says `not_running` shows "Not running" with that reason, never
+"Failed". Other agents show their newest finished run on the default branch. A stage with no run
+seen, or whose live feed isn't reaching this device, shows "Unknown", never "Healthy". Read only.
+### Site traffic and product research briefs
+The Growth & Marketing Studio shows two lists from data Atlas already reads (`src/growth/studio.ts`).
+**Site traffic** takes the last 24 hours of Cloudflare analytics from the site checks the website
+dashboards already run (`server/properties.ts`): page views, requests and threats blocked for each
+site in `GROWTH_SITES`. A site whose DNS record isn't proxied through Cloudflare shows "Not proxied"
+instead of a zero, and a check that isn't set up or failed says so. **Product research briefs**
+lists the newest monthly briefs the research agent posted to the site (`src/reports`), one per
+month, with the top pick, its scorecard total and whether real demand has validated it. No new
+credentials, and nothing calls a model.
 
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't

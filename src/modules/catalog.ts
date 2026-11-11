@@ -59,10 +59,10 @@ const TYPES: AtlasModuleType[] = [
       on("history", "Execution history (GitHub Actions)", "src/registry/telemetry.ts"),
       on("failures", "Failed execution visibility", "src/alerts/alerts.ts"),
       on("related-agents", "Related agents", "src/catalog/types.ts DeclaredConnection"),
-      later("n8n", "Live n8n execution data"),
+      on("n8n", "Live n8n execution data", "src/n8n/runs.ts useN8nRuns"),
       on("dependencies", "Workflow dependency map", "src/modules/inventory.ts workflowMap"),
     ],
-    connectors: ["github"], views: ["automations"], actions: [], permissions: [],
+    connectors: ["github", "n8n"], views: ["automations"], actions: [], permissions: [],
   },
   {
     id: "model-intelligence-lab", version: V, name: "Model Intelligence Lab", productDistrict: "ai-automation",
@@ -74,8 +74,12 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "infrastructure-control-tower", version: V, name: "Infrastructure Control Tower", productDistrict: "infrastructure-engineering",
     description: "Hosting, deployments and infrastructure health.",
-    capabilities: [later("hosts", "Hosting inventory"), later("deploys", "Deployment overview"), later("incidents", "Infrastructure incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      on("hosts", "Hosting inventory", "src/infra/hosts.ts HOSTS"),
+      on("deploys", "Deployment overview", "src/infra/deploys.ts useHostDeploys"),
+      on("incidents", "Infrastructure incidents", "src/infra/incidents.ts infraIncidents"),
+    ],
+    connectors: ["github"], views: [], actions: [], permissions: [],
   },
   {
     id: "development-repository-hub", version: V, name: "Development & Repository Hub", productDistrict: "infrastructure-engineering",
@@ -95,8 +99,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "security-operations-center", version: V, name: "Security Operations Center", productDistrict: "infrastructure-engineering",
     description: "Detections, security scanning and incident response.",
-    capabilities: [later("detections", "Detection inventory"), later("scanning", "Security scanning results"), later("incidents", "Security incidents")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), later("incidents", "Security incidents")],
+    connectors: ["github-security"], views: [], actions: [], permissions: [],
   },
   // Business Operations
   {
@@ -116,20 +120,30 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "finance-analytics-tower", version: V, name: "Finance & Analytics Tower", productDistrict: "business-operations",
     description: "Spend, revenue and financial reporting.",
-    capabilities: [on("ai-spend", "AI and API spend", "src/usage/model.ts"), later("revenue", "Revenue reporting"), later("budgets", "Budgets and forecasts")],
+    capabilities: [
+      on("ai-spend", "AI and API spend", "src/usage/model.ts"),
+      on("caps", "Spend against caps", "src/finance/caps.ts capStatus"),
+      later("revenue", "Revenue reporting"),
+      later("forecasts", "Budgets and forecasts"),
+    ],
     connectors: ["usage-sync"], views: ["usage"], actions: [], permissions: [],
   },
   {
     id: "growth-marketing-studio", version: V, name: "Growth & Marketing Studio", productDistrict: "business-operations",
     description: "Campaigns, content and audience growth.",
-    capabilities: [later("campaigns", "Campaigns"), later("content", "Content pipeline"), later("audience", "Audience metrics")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      later("campaigns", "Campaigns"),
+      later("content", "Content pipeline"),
+      on("audience", "Site traffic", "src/growth/studio.ts siteTraffic"),
+      on("research", "Product research briefs", "src/growth/studio.ts researchBriefs"),
+    ],
+    connectors: ["agent-feed"], views: [], actions: [], permissions: [],
   },
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
     description: "Products, orders and the pipelines that publish them.",
-    capabilities: [later("catalog", "Product catalog"), later("orders", "Orders"), later("pipeline", "Publishing pipeline status")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [later("catalog", "Product catalog"), later("orders", "Orders"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
+    connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
   },
   // Data & Intelligence
   {
