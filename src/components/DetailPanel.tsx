@@ -38,7 +38,9 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   const { selection, select } = useAtlas();
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && select(null);
+    // Escape closes the panel, unless it is meant for a text field (clearing the search box).
+    const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !typing(e.target) && select(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [select]);

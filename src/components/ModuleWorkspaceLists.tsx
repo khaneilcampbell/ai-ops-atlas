@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useAtlas } from "../state";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
 import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
-import type { AtlasModuleType } from "../modules/types";
+import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
+import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
@@ -23,30 +24,42 @@ import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pip
 import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, type TrafficState } from "../growth/studio";
 import { useAgentReports } from "../reports/client";
 
-const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
-
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
  * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
- * security alerts in the Security Operations Center, hosting and deploys in Infrastructure and
- * spend against caps in Finance.
- * Closed by default so the panel
- * stays short; every row comes from a manifest line or an observed sync.
+ * security alerts in the Security Operations Center, hosting and deploys in Infrastructure, spend
+ * against caps in Finance, the publishing pipeline in Commerce and traffic and briefs in Growth.
+ * Closed by default so the panel stays short; every row comes from a manifest line or an observed
+ * sync. The table is the whole workspace definition: one row per module type, and every building
+ * that houses the module shows the same panels (modules/workspaces.ts).
  */
+export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePanel<ComponentType>[]>> = {
+  "atlas-command-center": [{ capability: "inventory", label: "Module inventory", component: Inventory }],
+  "development-repository-hub": [{ capability: "dependencies", label: "Project dependencies", component: Dependencies }],
+  "workflow-automation-plant": [
+    { capability: "n8n", label: "Live n8n runs", component: N8nRuns },
+    { capability: "dependencies", label: "Workflow map", component: WorkflowMap },
+  ],
+  "data-intelligence-center": [{ capability: "datasets", label: "Dataset inventory", component: Datasets }],
+  "finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+  "infrastructure-control-tower": [
+    { capability: "incidents", label: "Infrastructure incidents", component: InfraIncidents },
+    { capability: "hosts", label: "Hosting inventory", component: Hosting },
+    { capability: "deploys", label: "Deployment overview", component: DeployOverview },
+  ],
+  "security-operations-center": [{ capability: "scanning", label: "Security alerts", component: SecurityAlerts }],
+  "commerce-product-marketplace": [{ capability: "pipeline", label: "Publishing pipeline", component: PublishingPipeline }],
+  "growth-marketing-studio": [
+    { capability: "audience", label: "Site traffic", component: SiteTraffic },
+    { capability: "research", label: "Product research briefs", component: ResearchBriefs },
+  ],
+};
+
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
-  switch (type.id) {
-    case "atlas-command-center": return has(type, "inventory") ? <Inventory /> : null;
-    case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
-    case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
-    case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
-    case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
-    case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
-    case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
-    case "commerce-product-marketplace": return has(type, "pipeline") ? <PublishingPipeline /> : null;
-    case "growth-marketing-studio": return <>{has(type, "audience") && <SiteTraffic />}{has(type, "research") && <ResearchBriefs />}</>;
-    default: return null;
-  }
+  const panels = panelsFor(type, WORKSPACE_PANELS);
+  if (!panels.length) return null;
+  return <>{panels.map((p) => <p.component key={p.capability} />)}</>;
 }
 
 function Inventory() {
