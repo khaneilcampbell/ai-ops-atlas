@@ -426,6 +426,26 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
   }
 
+  // Reuse the equal-sized cleared central parcel; keep the meadow grid and landmark anchors.
+  if (joined) {
+    const hub = districts.find(d => d.project.id === "ai-ops-atlas");
+    const center = cleared.find(d => d.project.id === "benjaire-ops");
+    const campusComplete = ["benjaire-site", "commerce-pipeline", "intelligence-hub", "soc-lab", "portfolio-site", "github-profile"].every(id => districts.some(d => d.project.id === id));
+    // Keep the proven fallback packing when repository filtering removes part of this campus.
+    if (hub && center && campusComplete && catalog.projects.some(p => p.id === "service-desk") && hub.size === center.size) {
+      const dx = center.ox - hub.ox, dy = center.oy - hub.oy;
+      const move = (d: District, x: number, y: number) => {
+        d.ox += x; d.oy += y; d.hq.gx += x; d.hq.gy += y;
+        for (const lot of [...d.lots, ...d.kiosks]) { lot.gx += x; lot.gy += y; }
+        const rect = rects.find(r => r.id === d.project.id);
+        if (rect) { rect.x += x; rect.y += y; }
+      };
+      move(hub, dx, dy); move(center, -dx, -dy);
+      const heading = neighborhoods.find(n => n.key === hub.group);
+      if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
+    }
+  }
+
   if (joined) walks.push(...walkways(rects));
 
   const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
