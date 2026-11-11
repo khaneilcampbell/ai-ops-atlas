@@ -41,8 +41,9 @@ async function plaqueLooks(page: Page) {
   );
 }
 
-function expectConsistent(looks: Awaited<ReturnType<typeof plaqueLooks>>) {
-  expect(looks.length).toBeGreaterThan(3);
+// A selected building zooms the camera in, so only its close neighbors keep a plaque on screen.
+function expectConsistent(looks: Awaited<ReturnType<typeof plaqueLooks>>, min = 4) {
+  expect(looks.length).toBeGreaterThanOrEqual(min);
   const first = looks[0];
   for (const l of looks) {
     expect.soft(l.height, l.name).toBe(first.height);
@@ -64,7 +65,7 @@ test("every building plaque shares one size, font, color and status dot", async 
     await selectBuilding(page, name);
     await waitForScene(page);
     await shot(page, `${name.toLowerCase().replace(/\s+/g, "-")}-day`);
-    expectConsistent(await plaqueLooks(page));
+    expectConsistent(await plaqueLooks(page), 2);
   }
 });
 

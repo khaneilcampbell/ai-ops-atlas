@@ -35,7 +35,7 @@ for (const light of ["day", "night"] as const)
     await waitForScene(page);
     const toggle = page.getByRole("button", { name: "Inside", exact: true });
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await selectBuilding(page, "Atlas");
+    await selectBuilding(page, "Atlas Command Center");
     await zoomIn(page, 4);
     // SHOTS=1 also keeps the same view before the toggle, for the pull request's before/after.
     if (process.env.SHOTS) await page.screenshot({ path: `visual/out/inside-${light}-before.png` });
