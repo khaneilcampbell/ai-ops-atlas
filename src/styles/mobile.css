@@ -83,6 +83,7 @@
   .table .desc { max-width: 30ch; }
 
   .setting { flex-wrap: wrap; padding: 14px 16px; }
+  .tz-picker .field { flex: 1 1 100%; height: 40px; }
   .kv { grid-template-columns: 96px minmax(0, 1fr); }
   .tabs, .seg, .panel-tabs { overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar, .seg::-webkit-scrollbar, .panel-tabs::-webkit-scrollbar { display: none; }

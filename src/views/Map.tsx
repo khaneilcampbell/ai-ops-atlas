@@ -23,6 +23,7 @@ import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
+import { useLandmarkMarks } from "./map3d/landmarkMarks";
 import {
   hash,
   TH,
@@ -898,6 +899,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
+  const landmarkMarks = useLandmarkMarks();
   const healthFor = useCallback(
     (repository: string) => ({ ...verifiedState(repos[repository]), health: overallHealth(repoHealth(repoData(repos[repository]), 0)) }),
     [repos],
@@ -1022,6 +1024,7 @@ export function MapView({active=true}:{active?:boolean}) {
               reduced={reduced}
               tipFor={tipFor}
               healthFor={healthFor}
+              landmarkMarks={landmarkMarks}
               light={light}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);

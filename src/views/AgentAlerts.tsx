@@ -6,6 +6,7 @@ import { dismiss, setNotifyOn, useAlerts, useNotifyOn } from "../alerts/state";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 import "../styles/alerts.css";
+import { formatDateTime } from "../lib/timezone";
 
 /** Mission Control's list of watched agents: what failed, what went quiet, and what can't be known. */
 export function AgentAlerts() {
@@ -40,7 +41,7 @@ export function AgentAlerts() {
                 </div>
               </span>
               <span className={`chip watch-chip ${w.state}`}>{STATE_LABEL[w.state]}</span>
-              <span className="muted small nowrap" title={w.last ? new Date(w.last.at).toLocaleString() : "No report on this device"}>
+              <span className="muted small nowrap" title={w.last ? formatDateTime(w.last.at) : "No report on this device"}>
                 {w.last ? `Last report ${relative(w.last.at)}` : "No report"}
               </span>
               {w.key && ALERTING.has(w.state) && openKeys.has(w.key) ? (

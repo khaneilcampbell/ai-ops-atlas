@@ -1,0 +1,63 @@
+# This Atlas install's workspace: who is using Atlas, which platform modules they may use, and
+# which of the buildings the map draws itself (landmarks, Financial District towers, stations,
+# airport buildings) houses which module. Catalog project buildings choose their module in their
+# own manifest (`project.module`). Display names live in buildings.yaml, not here.
+#
+# Set up another workspace by editing this file; no code changes.
+#   workspace.id / name   the business or person using Atlas
+#   workspace.entitlements  `all`, or a list of module type ids the workspace may use
+#   landmarks               keyed by the building's stable id (its map selection key), never renamed
+#     map_name              the map's own name for the building, which a test ties to the map
+#                           plan so a building renamed or moved on the map fails loudly
+#     module                a module type id from src/modules/catalog.ts
+#     project               optional: the catalog project whose repository and agents this building
+#                           operates with (its agents are the ones whose workplace is this building)
+# Each building houses the module that matches what it is for (KC, 2026-11-10). A module can have
+# more than one home when both buildings do that work. Buildings whose function no module covers
+# house none, rather than borrow an unrelated one; leave them out.
+# Format: docs/modules.md, "Set up another workspace".
+schema: atlas/workspace-v1
+
+workspace:
+  id: benjaire
+  name: Benjaire
+  entitlements: all
+
+landmarks:
+  "service:benjaire-marketing":
+    map_name: Benjaire Marketing Agency
+    module: growth-marketing-studio
+    project: benjaire-site
+  "service:atlas-station":
+    map_name: Atlas Central Station
+    module: workflow-automation-plant
+  "service:bmw-dealership":
+    map_name: Vantor Motors
+    module: infrastructure-control-tower
+  "service:atlas-marketplace":
+    map_name: Atlas Marketplace
+    module: commerce-product-marketplace
+  "service:financial:banks":
+    map_name: Bayvale Bank
+    module: finance-analytics-tower
+  "service:financial:records":
+    map_name: Halden Trust
+    module: identity-governance-tower
+  "service:financial:investments":
+    map_name: Robin Exchange
+    module: integration-exchange
+  "service:financial:residence":
+    map_name: Aldren Insights
+    module: data-intelligence-center
+  "service:financial:business-finance":
+    map_name: Corvane Capital
+    module: finance-analytics-tower
+  "service:financial:financial-planning":
+    map_name: Ravelle Advisors
+    module: knowledge-repository
+  "service:airport-building:operations":
+    map_name: Atlas · Operations
+    module: observability-center
+  "service:airport-building:cargo":
+    map_name: Atlas · Cargo
+    module: model-intelligence-lab

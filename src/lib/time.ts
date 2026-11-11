@@ -1,3 +1,5 @@
+import { formatDay } from "./timezone";
+
 const DAY = 86_400_000;
 
 export function daysSince(iso: string | null | undefined, now = Date.now()): number | null {
@@ -33,5 +35,5 @@ export function resetsIn(resetSec: number, now = Date.now()): string {
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "Not recorded";
-  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return formatDay(iso, { year: "numeric", month: "short", day: "numeric" });
 }
