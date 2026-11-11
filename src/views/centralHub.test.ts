@@ -16,13 +16,13 @@ describe('central command district',()=>{
   expect(scene.agency).toMatchObject({x:20.825,w:9.6,d:4.8});expect(scene.agency!.z).toBeCloseTo(-.175);
   expect(layout.districts.find(d=>d.project.id==='intelligence-hub')).toMatchObject({ox:26.75,oy:12.25});
  });
- it('widens headquarters without changing their land parcels',()=>{
+ it('widens headquarters and expands Portfolio into its available parcel',()=>{
   const get=(id:string)=>layout.districts.find(d=>d.project.id===id)!;
   const reference=get('intelligence-hub');
   for(const id of ['ai-ops-atlas','benjaire-site','portfolio-site','github-profile','soc-lab'])expect(get(id).hq.size).toBeCloseTo(reference.hq.size);
   expect(get('commerce-pipeline').hq.size).toBeCloseTo(3.6);
   expect(get('commerce-pipeline').size).toBe(10);expect(get('benjaire-site').size).toBe(7.5);
-  expect(get('portfolio-site').size).toBe(5);expect(get('github-profile').size).toBe(5);expect(get('soc-lab').size).toBe(7.5);
+  expect(get('portfolio-site').size).toBe(7.5);expect(get('github-profile').size).toBe(5);expect(get('soc-lab').size).toBe(7.5);
   for(const id of ['ai-ops-atlas','benjaire-site','commerce-pipeline','portfolio-site','github-profile','soc-lab']) {
    const d=get(id),hq=d.hq;
    for(const lot of [...d.lots,...d.kiosks])expect(hq.gx+hq.size+.15<=lot.gx||lot.gx+lot.size+.15<=hq.gx||hq.gy+hq.size+.15<=lot.gy||lot.gy+lot.size+.15<=hq.gy).toBe(true);

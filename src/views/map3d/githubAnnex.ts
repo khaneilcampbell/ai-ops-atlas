@@ -72,11 +72,25 @@ export interface AnnexSite {
 export function planGithubAnnex(s:AnnexSite):GithubAnnex|undefined{
  const A=GITHUB_ANNEX;
  for(const side of ['+x','+z','-x','-z'] as Side[]){
-  const terrace=annexRect(s.terrace,side,A.depth),land=trimInward(grow(terrace,A.beach),s.terrace,side);
-  // Neighbouring meadows may meet the new beach edge to edge, but nothing may sit on it.
-  if(s.blocked.some(r=>overlaps(land,r,-.05)))continue;
-  if(s.lines.some(l=>l.some(p=>inside(land,p,.2))))continue;
-  return {side,terrace,land,...podium(s.tower,s.terrace,terrace,side)};
+  const sites=[s.terrace];
+  // A neighbor can occupy one end without taking the whole side. Keep a clear span
+  // containing the tower's skybridge instead of dropping the annex entirely.
+  const full=trimInward(grow(annexRect(s.terrace,side,A.depth),A.beach),s.terrace,side);
+  const x=side.endsWith('x'),start=x?s.terrace.z:s.terrace.x,end=start+(x?s.terrace.d:s.terrace.w),bridge=x?s.tower.z:s.tower.x;
+  for(const block of s.blocked.filter(r=>overlaps(full,r,-.05))){
+   for(const [lo,hi] of [[start,x?block.z:block.x],[x?block.z+block.d:block.x+block.w,end]]){
+    const a=Math.max(start,lo+.05),b=Math.min(end,hi-.05);
+    if(b-a<3||bridge<a+A.ends||bridge>b-A.ends)continue;
+    sites.push(x?{...s.terrace,z:a,d:b-a}:{...s.terrace,x:a,w:b-a});
+   }
+  }
+  for(const site of sites){
+   const terrace=annexRect(site,side,A.depth),land=trimInward(grow(terrace,A.beach),site,side);
+   // Neighbouring meadows may meet the beach edge to edge, but nothing may sit on it.
+   if(s.blocked.some(r=>overlaps(land,r,-.05)))continue;
+   if(s.lines.some(l=>l.some(p=>inside(land,p,.2))))continue;
+   return {side,terrace,land,...podium(s.tower,site,terrace,side)};
+  }
  }
  return undefined;
 }

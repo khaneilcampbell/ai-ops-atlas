@@ -75,7 +75,7 @@ const MATERIAL_KINDS=['white','trim','rail','dark','lobby'] as const;
  */
 export function PortfolioSite({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:number;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
  const quality=useQualityLevel();
- const plan=useMemo(()=>planPortfolioSite(),[]);
+ const plan=useMemo(()=>planPortfolioSite(t.customHeight),[t.customHeight]);
  const k=t.size;
  const slats=useMemo(()=>{
   const parts=plan.boxes.filter(b=>b.kind==='slats').map(b=>worldBox((b.x1-b.x0)*k,b.y1-b.y0,(b.z1-b.z0)*k,(b.x0+b.x1)/2*k,b.y0,(b.z0+b.z1)/2*k).toNonIndexed());

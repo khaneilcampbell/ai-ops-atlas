@@ -216,7 +216,7 @@ export function districtSize(lotCount: number, projectId?: string) {
  * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
  * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
-export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5 };
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5, "portfolio-site": 7.5 };
 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
@@ -320,7 +320,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     const items: Item[] = b.projects
       .map((project): Item & { fit: number } => {
         const r = residents(agentsByProject.get(project.id) ?? []);
-        const s = districtSize(r.houses.length + r.services.length, project.id);
+        // Portfolio grows into the free space to its east and south in the complete city.
+        // Keep the established shelf cells so protected landmarks and Commons stay anchored.
+        const s = districtSize(r.houses.length + r.services.length, project.id === "portfolio-site" ? undefined : project.id);
         const fit = districtSize(r.houses.length + r.services.length);
         return vacant(project) ? { vacant: project.id, w: s, h: s, fit } : { project, w: s, h: s, fit };
       })
@@ -378,7 +380,15 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
     for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
     const lotId = (it: Item) => it.vacant ? `park:vacant:${it.vacant}` : `park:${blk.key}`;
-    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? lotId(it), x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
+    // Grow only within the established city envelope; filtered layouts retain their fallback.
+    const edgeX = Math.max(...outer.placed.map(b => b.x + b.w));
+    const edgeY = Math.max(...outer.placed.map(b => b.y + b.h));
+    const parcelSize = (it: Placed<Item>) => {
+      if (it.project?.id !== "portfolio-site") return it.w;
+      const size = Math.max(it.w, DISTRICT_MIN_SIZE["portfolio-site"]);
+      return blk.x + it.x + size <= edgeX && blk.y + it.y + size <= edgeY ? size : it.w;
+    };
+    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? lotId(it), x: blk.x + it.x, y: blk.y + it.y, w: parcelSize(it), h: it.project ? parcelSize(it) : it.h }));
     if (joined) rects.push(...own);
     else walks.push(...walkways(own));
     for (const it of blk.inner.placed) {
@@ -396,7 +406,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const agents = agentsByProject.get(project.id) ?? [];
       const { crew, houses, services } = residents(agents);
       const n = houses.length + services.length;
-      const size = it.w;
+      const size = parcelSize(it);
       const m = n ? ringFor(n) : 2;
       const operationsWidth = districtSize(0, "intelligence-hub") * .34;
       const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);

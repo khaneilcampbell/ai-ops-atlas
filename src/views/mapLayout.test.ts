@@ -238,3 +238,14 @@ describe("keepRemovedLots", () => {
     expect(keepRemovedLots(catalog, catalog)).toBe(catalog);
   });
 });
+
+// The district and building footprints match in every supported grouping.
+for(const grouping of ['none','district','status','tag'] as const){
+ it(`matches Portfolio and Operations Center footprints (${grouping})`,()=>{
+  const districts=layoutMap(catalog,[],grouping).districts;
+  const portfolio=districts.find(d=>d.project.id==='portfolio-site')!;
+  const operations=districts.find(d=>d.project.id==='intelligence-hub')!;
+  expect(portfolio.size).toBe(operations.size);
+  expect(portfolio.hq.size).toBeCloseTo(operations.hq.size);
+ });
+}

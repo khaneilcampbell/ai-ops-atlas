@@ -723,7 +723,7 @@ export function towerTop(t: Tower) {
   // The Intelligence Hub is drawn by IntelligenceHub: a parapet and a roof garden, no board.
   if (isIntelligenceHub(t.projectId)) return FLOOR_BASE + intelligenceHubTop(t.customHeight ?? t.height) + 0.04;
   // The Portfolio Site is drawn by PortfolioSite: its roof canopy is the top.
-  if (isPortfolioSite(t.projectId)) return FLOOR_BASE + portfolioSiteTop() + 0.04;
+  if (isPortfolioSite(t.projectId)) return FLOOR_BASE + portfolioSiteTop(t.customHeight) + 0.04;
   // The SOC Lab is drawn by SocLab: its disc crown is the top.
   if (isSocLab(t.projectId)) return FLOOR_BASE + socLabTop(t.customHeight ?? t.height) + 0.04;
   const crown = t.identity.landmark ? LANTERN_H + SPIRE_H : hasBoard(t) ? BOARD_LIFT + t.size * 0.5 : t.identity.style === "classic" ? t.size * 0.3 + 0.45 : t.identity.style === "secure" ? 1.4 : 0;
