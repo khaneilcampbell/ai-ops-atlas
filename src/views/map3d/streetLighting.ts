@@ -9,6 +9,8 @@ import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {HILLS} from './hillsPlan';
 import {STADIUM,STADIUM_SCALE,stadiumRingCentre} from './stadiumGeometry';
 export const STREET_LIGHT={spacing:3.6,highwaySpacing:6,minSeparation:1.2,junctionClearance:.8,height:.95,highwayHeight:1.35,poleRadius:.025,maxFixtures:420} as const;
+/** A lamp stands clear of a walk's edge (half of the .48 walk plus a step), so neither its post nor its arm is in the walkers' way. */
+export const WALK_CLEAR=.4;
 export interface StreetLamp {x:number;z:number;roadX:number;roadZ:number;yaw:number;height:number;highway:boolean}
 export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size+.25,d:b.size+.25}));
  if(s.financial){const f=s.financial;boxes.push(...f.buildings.map(b=>({x:f.x+b.x,z:f.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d})),{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,w:f.park.w,d:f.park.d});}
@@ -43,7 +45,7 @@ export function planStreetLights(s:Scene3D):StreetLamp[]{
  for(let d=carried;d<len;d+=path.highway?STREET_LIGHT.highwaySpacing:STREET_LIGHT.spacing){const rx=a[0]+(b[0]-a[0])*d/len,rz=a[1]+(b[1]-a[1])*d/len;if(junctions.some(p=>Math.hypot(rx-p[0],rz-p[1])<STREET_LIGHT.junctionClearance))continue;
  for(const sign of index++%2?[1,-1]:[-1,1]){let placed=false;for(const setback of [.5,.75]){const offset=path.width/2+setback,x=rx+nx*sign*offset,z=rz+nz*sign*offset;
  if(near(x,z)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
- if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<.3))continue;
+ if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<WALK_CLEAR))continue;
  // Off the carriageway and its sidewalk: a district street is wider than the line it is drawn from.
  if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,STREET_CLEAR))))continue;
  const lamp:StreetLamp={x,z,roadX:rx,roadZ:rz,yaw:Math.atan2(rx-x,rz-z),height:path.highway?STREET_LIGHT.highwayHeight:STREET_LIGHT.height,highway:path.highway};result.push(lamp);const key=`${Math.floor(x/cell)}:${Math.floor(z/cell)}`;cells.set(key,[...(cells.get(key)??[]),lamp]);placed=true;break;}
