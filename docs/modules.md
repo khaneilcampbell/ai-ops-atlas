@@ -123,6 +123,13 @@ with the full figure. A cap whose calls Atlas can't see shows "Spend not visible
 of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
 cap changes on the provider's page, change its `limitUsd` here.
 
+### Publishing pipeline
+The Commerce & Product Marketplace lists every agent of the projects whose catalog file sets
+`module: commerce-product-marketplace` (today the Commerce Operations Center), worst first
+(`src/commerce/pipeline.ts` `pipelineStages`). An agent with an `alerts` block follows the alert
+rules, so a stage whose manifest says `not_running` shows "Not running" with that reason, never
+"Failed". Other agents show their newest finished run on the default branch. A stage with no run
+seen, or whose live feed isn't reaching this device, shows "Unknown", never "Healthy". Read only.
 ### Site traffic and product research briefs
 The Growth & Marketing Studio shows two lists from data Atlas already reads (`src/growth/studio.ts`).
 **Site traffic** takes the last 24 hours of Cloudflare analytics from the site checks the website

@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-10 · The Product Marketplace and Commerce Operations Center now list every step of the commerce pipeline with its latest run, failures first. Steps that are off while the pipeline moves to the Oracle VM say "Not running" and why, instead of looking broken (#333)
 - 2026-11-10 · The Growth & Marketing Studio (Marketing Agency) now shows benjaire.com's traffic for the last 24 hours and each month's Product Lab pick, from data Atlas already reads (#332)
 - 2026-11-10 · The Infrastructure Operations Hub now opens with an incidents list: a failed or stuck deploy of Atlas web, the Mac app or either website, a site that's down, or a certificate about to expire, each with links to fix it (#331)
 - 2026-11-10 · Career Applications is gone for good: its GitHub repository was deleted, so its catalog entry and its five agents and automations are removed. Its empty lot stays, so nothing else on the map moves (#325)
