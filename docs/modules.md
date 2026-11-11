@@ -28,6 +28,11 @@ repositories, agents or integrations, and the earlier name keeps working in sear
 
 ## Extension points
 
+### Benjaire finance data
+
+What Benjaire business data each Financial District building holds, and where an import or
+agent writes it: [benjaire-finance.md](benjaire-finance.md).
+
 ### Rename a building
 - A catalog building: set `name` in its manifest, keep the old name in `former_names`, and put who
   it belongs to in `organization`.

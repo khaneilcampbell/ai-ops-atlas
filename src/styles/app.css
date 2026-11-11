@@ -383,6 +383,15 @@ table.table { width: 100%; border-collapse: collapse; }
 .module-list li { display: flex; flex-direction: column; gap: 1px; }
 .module-list li > span:first-child { color: var(--ink); }
 .module-list .run-failure { color: var(--bad); }
+/* Benjaire finance section of a Financial District building (components/BenjaireFinance.tsx). */
+.finance-datasets { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; }
+.finance-datasets li { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid var(--sage-200); }
+.finance-datasets li[data-status="live"] { border-left-color: var(--good); }
+.finance-datasets li[data-status="imported"] { border-left-color: var(--gold-deep); }
+.finance-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); }
+.chip.finance-status.not-connected { background: transparent; color: var(--ink-3); }
+.chip.finance-status.imported { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
+.chip.finance-status.live { background: rgba(74, 122, 84, 0.12); border-color: rgba(74, 122, 84, 0.3); color: var(--good, #3f6b48); }
 .module-list li[data-state="none"] > span:first-child { color: var(--ink-3); }
 .health-badge.hb-warn { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
 .runs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }

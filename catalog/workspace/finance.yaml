@@ -1,0 +1,165 @@
+# Benjaire finance: what business data each Financial District building will hold.
+#
+# Every Financial District building belongs to Benjaire. This file gives each one a defined place
+# for Benjaire's financial data, so a later import or agent knows where a record lands and the
+# building panel can show what is (and isn't) there yet. It only describes the SHAPE of the data:
+# no figures, balances or account details ever go in this file, because the repository is public.
+# Records are kept outside git (see docs/benjaire-finance.md, "Where data is written").
+#
+# Per building (keyed by its stable map id, the same keys as buildings.yaml):
+#   focus      one line: the part of Benjaire's finances this building looks after
+#   datasets   the data sets it owns. Each data set:
+#     id       stable id (lowercase, dashes). Imports and agents write records under this id.
+#     label    what the panel shows
+#     holds    what one record is, in plain words
+#     fields   the columns a record carries (an import must map its columns onto these)
+#     sources  where the data can come from, in order of preference
+#     feed     optional: an Atlas feed that already exists and serves this data set
+#              (ai-spend = API Usage records, spend-caps = Spend against caps)
+# A data set's status is worked out when the app runs: Live when its feed has data, Imported when
+# records exist in the local store, otherwise Not connected. Nothing here can mark data as live.
+schema: atlas/finance-v1
+business: Benjaire
+
+buildings:
+  "service:financial:banks":
+    focus: Cash, bank accounts and money in and out
+    datasets:
+      - id: bank-accounts
+        label: Bank accounts and balances
+        holds: One Benjaire business account and its closing balance on a date
+        fields: [account_name, institution, account_type, currency, balance, as_of]
+        sources: [Bank statement CSV, Read-only bank feed]
+      - id: cash-flow
+        label: Cash flow
+        holds: Money in and out per month, by category
+        fields: [month, category, money_in, money_out, net]
+        sources: [Bank statement CSV, Accounting export]
+      - id: ai-spend
+        label: AI and API spend
+        holds: Priced AI and API usage, per provider and day
+        fields: [date, provider, model, cost_usd]
+        sources: [Atlas API Usage]
+        feed: ai-spend
+      - id: spend-caps
+        label: Spend against caps
+        holds: Each monthly spend cap and how much of it is used
+        fields: [cap, limit_usd, spent_usd, state]
+        sources: [Atlas spend caps]
+        feed: spend-caps
+
+  "service:financial:business-finance":
+    focus: Profit and loss, revenue, invoices and costs
+    datasets:
+      - id: profit-and-loss
+        label: Profit and loss
+        holds: Revenue, costs and profit for one month
+        fields: [month, revenue, cost_of_sales, operating_costs, net_profit]
+        sources: [Accounting export]
+      - id: revenue
+        label: Revenue by channel
+        holds: Sales for one channel in one month
+        fields: [month, channel, orders, gross, refunds, net]
+        sources: [Payments export, Store export]
+      - id: invoices
+        label: Invoices and receivables
+        holds: One invoice Benjaire sent and whether it has been paid
+        fields: [invoice_number, client, issued, due, amount, status]
+        sources: [Invoicing export, Accounting export]
+      - id: expenses
+        label: Expenses and bills
+        holds: One business expense or bill
+        fields: [date, vendor, category, amount, paid]
+        sources: [Accounting export, Receipt scans]
+      - id: subscriptions
+        label: Subscriptions and tools
+        holds: One recurring software or service subscription
+        fields: [vendor, plan, monthly_cost, renews, owner]
+        sources: [Card statement CSV, Manual list]
+
+  "service:financial:budget":
+    focus: Budgets, forecasts and runway
+    datasets:
+      - id: budget-vs-actual
+        label: Budget vs actual
+        holds: Planned against real spend for one category in one month
+        fields: [month, category, budget, actual, variance]
+        sources: [Budget sheet, Accounting export]
+      - id: cash-forecast
+        label: Cash forecast and runway
+        holds: Expected cash at the end of a future month
+        fields: [month, expected_in, expected_out, closing_cash]
+        sources: [Budget sheet]
+
+  "service:financial:records":
+    focus: Tax, filings and compliance deadlines
+    datasets:
+      - id: tax-records
+        label: Tax filings and deadlines
+        holds: One tax return, payment or deadline
+        fields: [tax, period, due, filed, amount, status]
+        sources: [Accountant export, Manual list]
+      - id: business-filings
+        label: Registrations and licences
+        holds: One registration, licence or annual filing and its renewal date
+        fields: [filing, authority, renews, status]
+        sources: [Manual list]
+
+  "service:financial:insurance":
+    focus: Insurance and financial risk
+    datasets:
+      - id: insurance-policies
+        label: Insurance policies
+        holds: One business policy, its cover and renewal date
+        fields: [policy, insurer, cover, premium, renews]
+        sources: [Policy documents, Manual list]
+      - id: financial-risks
+        label: Financial risks
+        holds: One risk to Benjaire's finances and how it is handled
+        fields: [risk, likelihood, impact, owner, response]
+        sources: [Manual list]
+
+  "service:financial:investments":
+    focus: Finance data connections
+    datasets:
+      - id: finance-connections
+        label: Finance data connections
+        holds: One finance source, how it reaches Atlas and when it last updated
+        fields: [source, method, datasets, last_update, status]
+        sources: [Atlas import log]
+
+  "service:financial:residence":
+    focus: Finance reports and KPIs
+    datasets:
+      - id: finance-kpis
+        label: Finance KPIs
+        holds: One KPI for one month, worked out from the other data sets
+        fields: [month, kpi, value, target]
+        sources: [Worked out from imported data]
+
+  "service:financial:financial-planning":
+    focus: Finance documents and research
+    datasets:
+      - id: finance-documents
+        label: Statements and documents
+        holds: One statement, receipt, contract or report, stored by reference
+        fields: [document, kind, period, location]
+        sources: [Document folder, Manual list]
+
+  "service:financial:harbor-residence":
+    focus: Client billing and renewals
+    datasets:
+      - id: client-accounts
+        label: Client billing
+        holds: One client, what they are billed and when they renew
+        fields: [client, plan, billed_monthly, renews, balance_due]
+        sources: [Invoicing export, CRM export]
+
+  "service:financial:circa":
+    focus: Team and contractor costs
+    datasets:
+      - id: team-costs
+        label: Payroll and contractors
+        holds: Team and contractor cost for one month
+        fields: [month, kind, people, cost]
+        sources: [Payroll export, Contractor invoices]
