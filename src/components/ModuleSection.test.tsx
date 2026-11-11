@@ -49,6 +49,10 @@ it("shows site traffic and research briefs in the Growth & Marketing Studio, loa
   expect(html).toContain("Site traffic · Loading");
   expect(html).toContain('aria-label="Product research briefs"');
   expect(html).not.toContain("0 page views");
+  // Its health comes from its own sources, never the "no telemetry" line or a guessed green.
+  expect(html).not.toContain("No telemetry connected");
+  expect(html).toContain("Checking the site");
+  expect(html).not.toContain("Healthy");
 });
 
 it("renders nothing for buildings without a module", () => {

@@ -21,8 +21,9 @@ import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSec
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
 import { buildRegistry } from "../registry/registry";
 import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
-import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, type TrafficState } from "../growth/studio";
+import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, studioHealth, type TrafficState } from "../growth/studio";
 import { useAgentReports } from "../reports/client";
+import { HealthBadge } from "./bits";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
@@ -366,7 +367,7 @@ function InfraIncidents() {
   );
 }
 
-const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", unavailable: "Unavailable", loading: "Loading" };
+const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", "not-connected": "Not connected here", unavailable: "Unavailable", loading: "Loading" };
 const num = (n: number) => n.toLocaleString();
 
 function SiteTraffic() {
@@ -396,6 +397,21 @@ function SiteTraffic() {
       <p className="muted small">The last 24 hours, as Cloudflare counted them in the site checks. Page views, not unique visitors: Cloudflare can't add those up across hours. A site Cloudflare can't count shows why, never a zero.</p>
     </details>
   );
+}
+
+/**
+ * Health for modules whose building has no repository but which read their own live sources.
+ * A module listed here replaces the "no telemetry" line with what its sources actually returned.
+ */
+export const MODULE_HEALTH: Partial<Record<ModuleTypeId, ComponentType>> = {
+  "growth-marketing-studio": StudioHealthRow,
+};
+
+function StudioHealthRow() {
+  const all = useAllPropertyData();
+  const { state } = useAgentReports(RESEARCH_AGENT);
+  const h = studioHealth(growthSites().map((p) => siteTraffic(p, all[p.id]?.site)), state);
+  return <dd data-state={h.state}><HealthBadge health={h.health} /> <span className="muted small">{h.summary}</span></dd>;
 }
 
 function ResearchBriefs() {
