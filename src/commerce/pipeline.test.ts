@@ -47,4 +47,10 @@ describe("commerce publishing pipeline", () => {
     expect(stages.map((s) => s.agent.id)).toEqual(["c-bad", "b-ok", "a-off"]);
     expect(pipelineCounts(stages)).toEqual({ failing: 1, silent: 0, ok: 1, "not-running": 1, unknown: 0 });
   });
+
+  it("leaves retired agents out of the pipeline", () => {
+    const old = { ...agent("old-vps"), status: "retired" } as Agent;
+    const stages = pipelineStages([project("commerce", "commerce-product-marketplace")], [agent("b-ok"), old], [entry("b-ok", [run(1)])], NOW, true);
+    expect(stages.map((s) => s.agent.id)).toEqual(["b-ok"]);
+  });
 });
