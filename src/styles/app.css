@@ -295,6 +295,10 @@ table.table { width: 100%; border-collapse: collapse; }
 .setting:first-of-type { border-top: 0; }
 .setting .grow { flex: 1; }
 .setting .label { font-weight: 500; }
+.tz-picker { flex-wrap: wrap; }
+.tz-picker .field input { width: 200px; }
+.tz-picker .field.grow { min-width: 0; }
+.tz-picker .field select { max-width: none; width: 100%; }
 .toggle { appearance: none; -webkit-appearance: none; width: 38px; height: 22px; border-radius: 999px; background: var(--sage-300); position: relative; cursor: pointer; transition: background 0.15s; flex: none; }
 .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform 0.15s; }
 .toggle:checked { background: var(--forest-600); }

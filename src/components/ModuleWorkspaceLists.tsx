@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useAtlas } from "../state";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
 import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
-import type { AtlasModuleType } from "../modules/types";
+import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
+import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
@@ -18,32 +19,52 @@ import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
-import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, type TrafficState } from "../growth/studio";
+import { buildRegistry } from "../registry/registry";
+import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
+import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, studioHealth, type TrafficState } from "../growth/studio";
 import { useAgentReports } from "../reports/client";
-
-const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
+import { HealthBadge } from "./bits";
+import { signalCounts, signalRows, type SignalState } from "../observability/signals";
+import { documentCount, documentInventory } from "../knowledge/docs";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
  * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
- * security alerts in the Security Operations Center, hosting and deploys in Infrastructure and
- * spend against caps in Finance.
- * Closed by default so the panel
- * stays short; every row comes from a manifest line or an observed sync.
+ * security alerts in the Security Operations Center, hosting and deploys in Infrastructure, spend
+ * against caps in Finance, the publishing pipeline in Commerce and traffic and briefs in Growth.
+ * Closed by default so the panel stays short; every row comes from a manifest line or an observed
+ * sync. The table is the whole workspace definition: one row per module type, and every building
+ * that houses the module shows the same panels (modules/workspaces.ts).
  */
+export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePanel<ComponentType>[]>> = {
+  "atlas-command-center": [{ capability: "inventory", label: "Module inventory", component: Inventory }],
+  "development-repository-hub": [{ capability: "dependencies", label: "Project dependencies", component: Dependencies }],
+  "workflow-automation-plant": [
+    { capability: "n8n", label: "Live n8n runs", component: N8nRuns },
+    { capability: "dependencies", label: "Workflow map", component: WorkflowMap },
+  ],
+  "data-intelligence-center": [{ capability: "datasets", label: "Dataset inventory", component: Datasets }],
+  "finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+  "infrastructure-control-tower": [
+    { capability: "incidents", label: "Infrastructure incidents", component: InfraIncidents },
+    { capability: "hosts", label: "Hosting inventory", component: Hosting },
+    { capability: "deploys", label: "Deployment overview", component: DeployOverview },
+  ],
+  "security-operations-center": [{ capability: "scanning", label: "Security alerts", component: SecurityAlerts }],
+  "commerce-product-marketplace": [{ capability: "pipeline", label: "Publishing pipeline", component: PublishingPipeline }],
+  "growth-marketing-studio": [
+    { capability: "audience", label: "Site traffic", component: SiteTraffic },
+    { capability: "research", label: "Product research briefs", component: ResearchBriefs },
+  ],
+  "observability-center": [{ capability: "signals", label: "Connected signals", component: ConnectedSignals }],
+  "knowledge-repository": [{ capability: "docs", label: "Document inventory", component: DocumentInventory }],
+};
+
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
-  switch (type.id) {
-    case "atlas-command-center": return has(type, "inventory") ? <Inventory /> : null;
-    case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
-    case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
-    case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
-    case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
-    case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
-    case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
-    case "growth-marketing-studio": return <>{has(type, "audience") && <SiteTraffic />}{has(type, "research") && <ResearchBriefs />}</>;
-    default: return null;
-  }
+  const panels = panelsFor(type, WORKSPACE_PANELS);
+  if (!panels.length) return null;
+  return <>{panels.map((p) => <p.component key={p.capability} />)}</>;
 }
 
 function Inventory() {
@@ -350,7 +371,7 @@ function InfraIncidents() {
   );
 }
 
-const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", unavailable: "Unavailable", loading: "Loading" };
+const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", "not-connected": "Not connected here", unavailable: "Unavailable", loading: "Loading" };
 const num = (n: number) => n.toLocaleString();
 
 function SiteTraffic() {
@@ -382,6 +403,26 @@ function SiteTraffic() {
   );
 }
 
+/**
+ * Health for modules whose building has no repository but which read their own live sources.
+ * A module listed here replaces the "no telemetry" line with what its sources actually returned.
+ */
+export const MODULE_HEALTH: Partial<Record<ModuleTypeId, ComponentType>> = {
+  "growth-marketing-studio": StudioHealthRow,
+};
+
+/** The Growth & Marketing Studio's health from its own sources, for its card and its map label. */
+export function useStudioHealth() {
+  const all = useAllPropertyData();
+  const { state } = useAgentReports(RESEARCH_AGENT);
+  return studioHealth(growthSites().map((p) => siteTraffic(p, all[p.id]?.site)), state);
+}
+
+function StudioHealthRow() {
+  const h = useStudioHealth();
+  return <dd data-state={h.state}><HealthBadge health={h.health} /> <span className="muted small">{h.summary}</span></dd>;
+}
+
 function ResearchBriefs() {
   const { select } = useAtlas();
   const { state, message, reports } = useAgentReports(RESEARCH_AGENT);
@@ -411,6 +452,119 @@ function ResearchBriefs() {
         Each month's top pick from the research agent's brief, with its own scorecard total. A pick stays a hypothesis until real signups, preorders or sales back it.{" "}
         <button className="text-btn small" onClick={() => select({ kind: "agent", id: RESEARCH_AGENT })}>Full reports</button>
       </p>
+    </details>
+  );
+}
+
+const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
+
+function PublishingPipeline() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const stages = useMemo(() => pipelineStages(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const n = pipelineCounts(stages);
+  const parts = [n.failing && `${n.failing} failing`, n.silent && `${n.silent} silent`, n.ok && `${n.ok} healthy`, n["not-running"] && `${n["not-running"]} not running`, n.unknown && `${n.unknown} unknown`].filter(Boolean);
+  return (
+    <details className="module-list" aria-label="Publishing pipeline" open={n.failing + n.silent > 0}>
+      <summary className="muted small">Publishing pipeline · {stages.length ? parts.join(", ") : "No commerce agents"}</summary>
+      {stages.length ? (
+        <ul>
+          {stages.map((s) => (
+            <li key={s.agent.id} data-state={s.state === "not-running" ? "none" : undefined}>
+              <span>{s.agent.name}</span>
+              <span className="muted small">
+                {s.state === "failing" || s.state === "silent" ? <span className="run-failure">{STAGE_LABEL[s.state]}</span> : STAGE_LABEL[s.state]}
+                {s.last?.at ? ` · ${relative(s.last.at)}` : ""}
+                {s.detail ? ` · ${s.detail}` : ""}
+                {s.last?.url ? <> · <a href={s.last.url} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No project in the catalog uses this module yet.</p>
+      )}
+      <p className="muted small">Every agent of the commerce projects, from observed runs only. Agents with alert rules follow them, so a stage switched off on purpose shows as not running, not failed. A stage with no run seen shows as unknown, never as healthy.</p>
+    </details>
+  );
+}
+
+const SIGNAL_LABEL: Record<SignalState, string> = { live: "Answering", stale: "Answered, but old", failing: "Failing", "not-set-up": "Not set up", off: "Not available here", loading: "Loading" };
+
+/** How old the newest GitHub fetch may be before the signal counts as stale: twice the refresh interval. */
+const GITHUB_STALE_FACTOR = 2;
+
+function ConnectedSignals() {
+  const { catalog, repos, settings, uncataloged } = useAtlas();
+  const live = useLiveStatus();
+  const intel = useIntel();
+  const usage = useUsageData({ push: false });
+  const n8n = useN8nRuns();
+  const security = useSecurityAlerts(useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]));
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const tracked = useMemo(() => [...new Set([...catalog.projects.map((p) => p.repository), ...catalog.agents.map((a) => a.repository), ...uncataloged])], [catalog, uncataloged]);
+  const rows = signalRows({
+    repos, tracked, staleAfterMs: settings.refreshMinutes * 60_000 * GITHUB_STALE_FACTOR, live,
+    intel: { available: intel.available, error: intel.error, loaded: intel.status !== null, keyPresent: intel.status ? intel.status.key_present : null },
+    usage: { firstLoad: usage.firstLoad, error: usage.error ?? null, records: usage.records.length },
+    n8n, security, now,
+  });
+  const n = signalCounts(rows);
+  const parts = [n.failing && `${n.failing} failing`, n.stale && `${n.stale} stale`, n.live && `${n.live} answering`, n["not-set-up"] && `${n["not-set-up"]} not set up`, n.off && `${n.off} not available here`, n.loading && `${n.loading} loading`].filter(Boolean);
+  return (
+    <details className="module-list" aria-label="Connected signals" open={n.failing > 0}>
+      <summary className="muted small">Connected signals · {parts.join(", ")}</summary>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.id} data-state={r.state === "off" || r.state === "not-set-up" ? "none" : undefined}>
+            <span>{r.label}</span>
+            <span className="muted small">
+              {r.state === "failing" || r.state === "stale" ? <span className="run-failure">{SIGNAL_LABEL[r.state]}</span> : SIGNAL_LABEL[r.state]}
+              {" · "}{r.detail}
+              {r.at ? ` · ${relative(r.at)}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">The feeds Atlas itself reads, from this session's own state: whether each one answers, when it last did, and why not when it doesn't. Metrics, logs and traces of the connected systems are not read yet.</p>
+    </details>
+  );
+}
+
+const DOC_KIND_LABEL = { repository: "Repository", website: "Website", link: "Link" } as const;
+
+function DocumentInventory() {
+  const { catalog, repos } = useAtlas();
+  const groups = useMemo(() => documentInventory(catalog, repos), [catalog, repos]);
+  const total = documentCount(groups);
+  return (
+    <details className="module-list" aria-label="Document inventory">
+      <summary className="muted small">Document inventory · {total} documents across {groups.length} projects</summary>
+      {groups.map((g) => (
+        <div key={g.projectId}>
+          <div className="small">{g.name}</div>
+          <ul>
+            {g.documents.map((d) => (
+              <li key={d.url}>
+                <a href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
+                <span className="muted small">{DOC_KIND_LABEL[d.kind]} · from {d.source === "manifest" ? "its manifest" : "GitHub"}{d.updated ? ` · pushed ${relative(d.updated)}` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p className="muted small">Each repository's page (where its README lives), the website it declares on GitHub, and the links each manifest declares. Atlas lists them; it doesn't read them, so there is no search yet.</p>
     </details>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
@@ -7,6 +7,7 @@ import { useAtlas } from "../state";
 import { POWER_MODES, setPowerMode, useOnBattery, usePowerMode, usePowerProfile } from "../lib/power";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { SCROLL_MODES, setNavigationPrefs, TRACKPAD_SPEEDS, useNavigationPrefs } from "../lib/navigation";
+import { commonZoneGroup, DEFAULT_TIME_ZONE, describeZone, filterZoneGroups, formatDateTime, formatTime, setTimeZone, useTimeZone, zoneGroups, zoneLabel } from "../lib/timezone";
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 import { SyncSettings } from "./SyncSettings";
@@ -33,6 +34,7 @@ export function SettingsView() {
         <UsageSetting usage={usage} />
       </section>
 
+      <TimeZoneSetting />
       <PowerSetting />
       <NavigationSetting />
 
@@ -126,7 +128,7 @@ export function SettingsView() {
 
 function UsageSetting({ usage }: { usage: ReturnType<typeof useAtlas>["usage"] }) {
   const rate = usage?.rate;
-  const resetsAt = rate && rate.reset * 1000 > Date.now() ? new Date(rate.reset * 1000).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : null;
+  const resetsAt = rate && rate.reset * 1000 > Date.now() ? formatTime(rate.reset * 1000, { hour: "numeric", minute: "2-digit" }) : null;
   const n = (v: number) => v.toLocaleString();
   return (
     <div className="setting">
@@ -339,6 +341,79 @@ function PowerSetting() {
           </select>
         </label>
       </div>
+    </section>
+  );
+}
+
+/** Which time zone every date and time in Atlas is shown in. */
+function TimeZoneSetting() {
+  const zone = useTimeZone();
+  const [query, setQuery] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  // Offsets change with daylight saving, so the list is worked out once per visit to Settings.
+  const groups = useMemo(() => zoneGroups(), []);
+  const common = useMemo(() => commonZoneGroup(), []);
+  const [showAll, setShowAll] = useState(false);
+  const total = groups.reduce((n, g) => n + g.zones.length, 0);
+  // Search always looks through every zone; with no search, the short list unless "Show all" is on.
+  const shown = query ? filterZoneGroups(groups, query) : showAll ? groups : [common];
+  const current = describeZone(zone);
+  const currentShown = shown.some((g) => g.zones.some((z) => z.zone === zone));
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <div className="card-head">
+        <h2 className="grow">Time zone</h2>
+        <span className="chip" title={formatDateTime(now, { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "long" })}>
+          <Icon name="clock" size={12} /> {formatTime(now, { hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
+        </span>
+      </div>
+      <div className="setting">
+        <div className="grow">
+          <div className="label">Show dates and times in</div>
+          <div className="muted small">
+            {zoneLabel(current)}. Daylight saving is handled for you. Every date and time in Atlas uses this zone{zone === DEFAULT_TIME_ZONE ? "" : "; the default is New York (Eastern Time)"}.
+          </div>
+        </div>
+      </div>
+      <div className="setting tz-picker">
+        <label className="field">
+          <Icon name="search" size={14} />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all time zones" aria-label="Search time zones" spellCheck={false} />
+        </label>
+        <label className="field grow">
+          <select value={zone} onChange={(e) => setTimeZone(e.target.value)} aria-label="Time zone">
+            {!currentShown && <option value={zone}>{zoneLabel(current)}</option>}
+            {shown.map((g) => (
+              <optgroup key={g.region} label={g.region}>
+                {g.zones.map((z) => (
+                  <option key={z.zone} value={z.zone}>
+                    {zoneLabel(z)}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+        {!query && (
+          <button className="btn" onClick={() => setShowAll((v) => !v)} aria-pressed={showAll}>
+            {showAll ? "Show common only" : `Show all ${total}`}
+          </button>
+        )}
+        {zone !== DEFAULT_TIME_ZONE && (
+          <button className="btn" onClick={() => setTimeZone(DEFAULT_TIME_ZONE)}>
+            Use Eastern Time
+          </button>
+        )}
+      </div>
+      {query && !shown.length && (
+        <div className="setting">
+          <div className="muted small">No time zone matches “{query}”. Try a nearby big city, like Chicago or London.</div>
+        </div>
+      )}
     </section>
   );
 }

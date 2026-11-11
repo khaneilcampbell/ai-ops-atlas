@@ -84,7 +84,10 @@ describe("buildScene", () => {
   it("builds hundreds of repositories quickly", () => {
     const layout = layoutMap(bigCatalog(300), Array.from({ length: 60 }, (_, i) => `me/stray-${i}`));
     // Best of three: a single timing fails when the machine is busy (the whole suite running in
-    // parallel, a preview build), which isn't the planners getting slower. About 0.5 s here.
+    // parallel, a preview build), which isn't the planners getting slower. About 0.5 s on a Mac.
+    // Shared CI runners are about three times slower with the whole suite running (1.51 s best of
+    // three was seen on GitHub Actions), so CI gets its own limit; both still catch a real regression.
+    const limit = process.env.CI ? 4000 : 1500;
     let best = Infinity;
     let s!: ReturnType<typeof buildScene>;
     for (let i = 0; i < 3; i++) {
@@ -92,7 +95,7 @@ describe("buildScene", () => {
       s = buildScene(layout);
       best = Math.min(best, performance.now() - t);
     }
-    expect(best).toBeLessThan(1500);
+    expect(best).toBeLessThan(limit);
     expect(s.towers).toHaveLength(300);
     expect(s.strays).toHaveLength(60);
   }, 20_000);

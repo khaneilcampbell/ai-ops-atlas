@@ -31,6 +31,7 @@ import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } fr
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 import { InstallHint } from "./components/InstallHint";
+import { formatDateTime, useTimeZone } from "./lib/timezone";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -52,6 +53,8 @@ export default function App() {
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
+  // Re-render every date and time when the zone changes in Settings.
+  useTimeZone();
   const alerts = useAlerts().open;
   useAlertNotifications(alerts);
   usePropertyPolling();
@@ -63,7 +66,7 @@ export default function App() {
   const { lastFetched, loaded: loadedRepositories } = sync;
   const syncFailing = !refreshing && sync.failing.length > 0;
   const syncTitle = [
-    lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
+    lastFetched ? `Latest successful repository fetch: ${formatDateTime(lastFetched)}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
     syncFailing ? `\n${sync.failing.length} of ${trackedRepositories.size} repositories failed their last sync, so they show saved data:\n${sync.reasons.map((r) => `• ${r}`).join("\n")}\nOpen Repositories for details, or check the GitHub token in Settings.` : "",
   ].join("");
   const ci = ciSummary([...trackedRepositories], repos);

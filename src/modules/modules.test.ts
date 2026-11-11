@@ -50,7 +50,7 @@ describe("module catalog", () => {
     expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
     expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("available");
     expect(MODULE_TYPES["finance-analytics-tower"].capabilities.find((c) => c.id === "caps")?.state).toBe("available");
-    expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
+    expect(moduleAvailability(MODULE_TYPES["model-intelligence-lab"])).toBe("planned");
     expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);
@@ -109,7 +109,8 @@ describe("building instances", () => {
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Planned modules are placed but switched off until they are built.
-    expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: false });
+    expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
+    expect(all.find((i) => i.id === "airport-building:cargo")).toMatchObject({ moduleType: "model-intelligence-lab", enabled: false });
     expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: true, organization: "Benjaire" });
   });
 

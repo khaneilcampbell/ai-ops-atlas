@@ -11,7 +11,7 @@ extend them.
 |---|---|---|---|
 | Module types | `src/modules/catalog.ts` | 16 generic modules: capabilities, connectors, views, actions | No. A test fails if one names a business |
 | Integration contracts | `src/modules/integrations.ts` | Every data source a module reads, and where its credentials live | No |
-| Workspace | `src/modules/workspace.ts` (`WORKSPACE`) | The workspace's name, its landmark building names, its entitlements | Yes |
+| Workspace | `catalog/workspace/workspace.yaml` (`workspace.ts`, `WORKSPACE`) | The workspace's name, which landmark houses which module, its entitlements | Yes |
 | Building instances | `catalog/*.yaml` (`project.module`) and `instances.ts` | Which building houses which module | Yes |
 | Building names | `catalog/*.yaml` (`project.name`) and `catalog/workspace/buildings.yaml` (`names.ts`) | What each building is called and which organization it belongs to | Yes |
 
@@ -51,11 +51,35 @@ Add `module: <module-type-id>` under `project:` in its manifest. The id, name, d
 position stay as they are. Unknown ids are reported as manifest issues and ignored.
 
 ### Put a module in a landmark the map draws itself
-Add `{ id, name, moduleType }` to `LANDMARK_MODULES` in `workspace.ts`. The `id` is the map's
-`service:<id>` selection key and `name` is the map's own name for it (its display name comes from
-`buildings.yaml`). Pick the module that matches what the building is for; a building whose function
-no module covers houses none rather than borrow an unrelated one. Add an assertion to `modules.test.ts` that ties the id and name to
-the map plan constant, so a rename on the map fails the test instead of drifting.
+Add an entry under `landmarks` in `catalog/workspace/workspace.yaml`, keyed by the map's
+`service:<id>` selection key, with `map_name` (the map's own name for it; its display name comes
+from `buildings.yaml`) and `module`. Pick the module that matches what the building is for; a
+building whose function no module covers houses none rather than borrow an unrelated one. Add an
+assertion to `modules.test.ts` that ties the key and `map_name` to the map plan constant, so a
+rename on the map fails the test instead of drifting.
+
+To run the landmark on a project's data, add `project: <catalog project id>`. The building then
+links that project's repository and the project's agents whose
+`workplace.building` is the landmark's `map_name`. The Growth & Marketing Studio uses this to run
+on benjaire.com (`benjaire-site`) and the Product Lab agents.
+
+### Add a workspace panel
+A module's **workspace** is what a building opens into: the lists under its module card, and the
+Atlas views its "Open … →" buttons lead to. It is defined once per module type, never per building,
+so the two finance towers show the same finance workspace and a new home for a module needs no new
+code. The definition lives in `WORKSPACE_PANELS` (`components/ModuleWorkspaceLists.tsx`), one row
+per module type, read through `modules/workspaces.ts`:
+
+```ts
+"finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+```
+
+`capability` names the catalog capability the panel is the evidence for; the panel shows only while
+that capability is `available`, so a planned capability can never show a live-looking list
+(`workspaces.test.tsx` checks every row). "Open Agents →" and "Open Automations →" from a building
+that is a catalog project open the directory filtered to that project's agents (`workspaceScope`);
+landmarks and every other view open unscoped. The map is never offered as a destination, because
+the building is already there.
 
 ### Add a module type
 Every module type in this workspace has at least one building, and `modules.test.ts` checks it,
@@ -72,10 +96,27 @@ environment variables. The desktop shell keeps them in the Keychain, and the sit
 server functions.
 
 ### Set up another workspace
-Make a new `AtlasWorkspace` with its own `id`, `name`, `landmarks` and `entitlements`, plus its own
-catalog manifests. Every instance function takes the workspace as an argument
-(`workspaceBuildings(catalog, workspace)`), so the same module types appear under the other
-workspace's building names.
+Edit `catalog/workspace/workspace.yaml`; no code changes. It holds the workspace's `id` and `name`,
+its `entitlements` (`all`, or a list of module type ids it may use) and, under `landmarks`, which
+map-drawn building houses which module:
+
+```yaml
+schema: atlas/workspace-v1
+workspace:
+  id: acme
+  name: Acme
+  entitlements: [business-operations-hq, finance-analytics-tower]
+landmarks:
+  "service:financial:banks":
+    map_name: Bayvale Bank          # the map's own name, tied to the map plan by a test
+    module: finance-analytics-tower
+```
+
+`src/modules/workspace.ts` parses it into `WORKSPACE`; problems are reported as manifest issues
+(`workspaceIssues`) and a bad landmark is skipped, never thrown. Display names stay in
+`buildings.yaml`, catalog project buildings keep `project.module` in their own manifest, and the
+module types stay generic. Every instance function also takes a workspace as an argument
+(`workspaceBuildings(catalog, workspace)`) for tests and for showing several workspaces at once.
 
 ### Live n8n runs
 The Automation Plant reads KC's n8n Cloud instance through the site (`server/n8n.ts`): the page asks
@@ -122,6 +163,23 @@ for that provider this calendar month (UTC). That is a lower bound, and the row 
 with the full figure. A cap whose calls Atlas can't see shows "Spend not visible to Atlas" instead
 of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
 cap changes on the provider's page, change its `limitUsd` here.
+
+### Publishing pipeline
+The Commerce & Product Marketplace lists every agent of the projects whose catalog file sets
+`module: commerce-product-marketplace` (today the Commerce Operations Center), worst first
+(`src/commerce/pipeline.ts` `pipelineStages`). An agent with an `alerts` block follows the alert
+rules, so a stage whose manifest says `not_running` shows "Not running" with that reason, never
+"Failed". Other agents show their newest finished run on the default branch. A stage with no run
+seen, or whose live feed isn't reaching this device, shows "Unknown", never "Healthy". Read only.
+### Connected signals and the document inventory
+The Observability Center's `signals` capability (`src/observability/signals.ts`) lists every
+integration contract with its state in this session: answering, stale, failing, not set up, not
+available on this platform, or loading. It is derived from state the clients already keep (the
+GitHub sync, live updates, Atlas Intel, usage sync, n8n, security alerts); nothing new is polled
+and no system's own metrics, logs or traces are read (those stay planned). The Knowledge
+Repository's `docs` capability (`src/knowledge/docs.ts`) lists, per project, each repository's
+page, the website it declares on GitHub and the links its manifests declare. Atlas lists these
+documents; it does not read them, so knowledge search stays planned.
 
 ### Site traffic and product research briefs
 The Growth & Marketing Studio shows two lists from data Atlas already reads (`src/growth/studio.ts`).
