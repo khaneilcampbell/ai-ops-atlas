@@ -50,3 +50,49 @@ buildings:
     display_name: Workflow Automation Hub
     organization: Atlas
     former_names: [Atlas Central Station]
+  # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
+  # module's name; landmarks without one get a plain name for what they are, never a module.
+  "service:financial:harbor-residence":
+    display_name: Guest Hospitality Center
+    organization: Camton Hotel
+    former_names: [Camton Hotel]
+  "service:financial:circa":
+    display_name: Team Residence Towers
+    organization: Ellipse Residences
+    former_names: [Ellipse Residences]
+  "service:financial:insurance":
+    display_name: Risk & Insurance Center
+    organization: Merrow Credit Union
+    former_names: [Merrow Credit Union]
+  "service:financial:business-finance":
+    display_name: Business Finance Center
+    organization: Corvane Capital
+    former_names: [Corvane Capital]
+  "service:atlas-galleria":
+    display_name: Retail & Amenities Center
+    organization: Atlas
+    former_names: [Atlas Galleria]
+  "service:skyline-stadium":
+    display_name: Team Events Arena
+    organization: Atlas
+    former_names: [Atlas Stadium]
+  "service:stadium-station":
+    display_name: Events Arena Station
+    organization: Atlas
+    former_names: [Stadium Station]
+  "service:airport-building:terminal":
+    display_name: Passenger Terminal
+    organization: Atlas Airport
+    former_names: [Atlas · Terminal]
+  "service:airport-building:tower":
+    display_name: Air Traffic Control
+    organization: Atlas Airport
+    former_names: [Atlas · Air Traffic]
+  "service:airport-building:cargo":
+    display_name: Model Intelligence Lab
+    organization: Atlas Airport
+    former_names: [Atlas · Cargo]
+  "service:airport-building:operations":
+    display_name: Observability Center
+    organization: Atlas Airport
+    former_names: [Atlas · Operations]

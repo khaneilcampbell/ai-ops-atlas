@@ -1,4 +1,4 @@
-import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
 import {MALL_KEY,MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
@@ -6,7 +6,7 @@ import {FINANCIAL_BUILDINGS} from "../views/map3d/financialPlan";
 import {AGENCY_KEY,AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
 import {DEALERSHIP_KEY} from "../views/map3d/dealershipPlan";
 import {buildingDisplayName,buildingOrganization,currentBuildingName,serviceKey} from "../modules/names";
-import {STADIUM_OFFICE_ID} from "../views/map3d/stadiumPlan";
+import {STADIUM_KEY,STADIUM_OFFICE_ID} from "../views/map3d/stadiumPlan";
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import { AgentOutput } from "./AgentOutput";
@@ -143,7 +143,7 @@ function ServiceDetail({id}:{id:string}) {
     </div>
   </>;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
     <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
       <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd></dl>
@@ -154,7 +154,7 @@ function ServiceDetail({id}:{id:string}) {
     <div className="panel-body selectable"><ModuleSection/><p>A four-story glass car showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>
   </>;
   if(id === "skyline-stadium") return <>
-    <Head eyebrow="Recreation district · Beside Development Hub" title="Atlas Stadium"><span className="chip">Planned · No live events</span><EnterBuildingButton id={STADIUM_OFFICE_ID}/></Head>
+    <Head eyebrow="Recreation district · Beside Development Hub" title="Atlas Stadium" building={STADIUM_KEY}><span className="chip">Planned · No live events</span><EnterBuildingButton id={STADIUM_OFFICE_ID}/></Head>
     <div className="panel-body selectable"><ModuleSection/><p>A sports and events venue: a steel-truss hall with a glass curtain wall over a white podium, under a thin sloping roof with curled eaves, white zig-zag bracing and tree columns, beside a lower practice hall. A wide straight stair climbs from the gate to the entrance deck, and the lawn round it is ringed by pools and palms. The gate meets the city roads, walks and Stadium Station.</p><section><div className="section-title">Inside</div><ul><li>Concourse: three gates, stair cores, escalators, food kiosks, the stadium shop, first aid and restrooms</li><li>Seating bowl: an octagonal bowl round one show court, two tiers with aisles, hospitality boxes and the exposed roof trusses</li></ul><p>A schematic of a planned venue. Nobody is shown inside, and no events, tickets or scores exist.</p></section><div className="section-title">Current scope</div><p>Visual infrastructure only. Events, ticketing, and venue operations are planned; this building does not indicate live business activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
   </>;
   if(id === "logistics-airport") return <>
