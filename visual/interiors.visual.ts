@@ -127,6 +127,6 @@ test("tool buildings show their purpose and workers before explicit entry",async
   await expect(page.getByRole("region",{name:"Design Studio interior"})).toHaveCount(0);
   await inspector.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
   await expect(page.getByRole("region",{name:"Design Studio interior"})).toBeVisible();
-  await page.getByRole("button",{name:"Exit Canva and return to city"}).click();await settle(page,2);
+  await page.getByRole("button",{name:"Exit Design Studio and return to city"}).click();await settle(page,2);
   await expect(inspector.getByRole("heading",{name:"Design Studio",exact:true})).toBeVisible();
 });
