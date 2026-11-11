@@ -57,6 +57,24 @@ Add `{ id, name, moduleType }` to `LANDMARK_MODULES` in `workspace.ts`. The `id`
 no module covers houses none rather than borrow an unrelated one. Add an assertion to `modules.test.ts` that ties the id and name to
 the map plan constant, so a rename on the map fails the test instead of drifting.
 
+### Add a workspace panel
+A module's **workspace** is what a building opens into: the lists under its module card, and the
+Atlas views its "Open … →" buttons lead to. It is defined once per module type, never per building,
+so the two finance towers show the same finance workspace and a new home for a module needs no new
+code. The definition lives in `WORKSPACE_PANELS` (`components/ModuleWorkspaceLists.tsx`), one row
+per module type, read through `modules/workspaces.ts`:
+
+```ts
+"finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+```
+
+`capability` names the catalog capability the panel is the evidence for; the panel shows only while
+that capability is `available`, so a planned capability can never show a live-looking list
+(`workspaces.test.tsx` checks every row). "Open Agents →" and "Open Automations →" from a building
+that is a catalog project open the directory filtered to that project's agents (`workspaceScope`);
+landmarks and every other view open unscoped. The map is never offered as a destination, because
+the building is already there.
+
 ### Add a module type
 Every module type in this workspace has at least one building, and `modules.test.ts` checks it,
 so a new type also needs a home: a project manifest's `module` field or a `LANDMARK_MODULES` entry.

@@ -7,8 +7,9 @@ import { ModuleSection } from "./ModuleSection";
 // No Atlas Intelligence on this device: the lists read telemetry as unavailable.
 vi.mock("../intel/state", () => ({ useIntel: () => ({ telemetry: null }) }));
 
+const noop = () => {};
 const render = (selection: unknown, repos: Record<string, unknown> = {}) =>
-  renderToStaticMarkup(<AtlasContext.Provider value={{ selection, catalog, repos, setView: () => {}, select: () => {} } as never}><ModuleSection /></AtlasContext.Provider>);
+  renderToStaticMarkup(<AtlasContext.Provider value={{ selection, catalog, repos, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection /></AtlasContext.Provider>);
 
 it("shows the module behind a building, keeping the building's own name out of the module", () => {
   const html = render({ kind: "project", id: "benjaire-site" });
@@ -62,4 +63,9 @@ it("lists the building's linked assets and the agents landmark's whole roster", 
   expect(agents).toContain("Agent Operations Center");
   expect(agents).toMatch(/\d+ agents/);
   expect(agents).toContain("Recent executions");
+});
+
+it("opens the Agents directory scoped to a project building, and unscoped from a landmark", () => {
+  expect(render({ kind: "project", id: "intelligence-hub" })).toContain("filtered to Agent Operations Center");
+  expect(render({ kind: "service", id: "benjaire-marketing" })).not.toContain("filtered to");
 });
