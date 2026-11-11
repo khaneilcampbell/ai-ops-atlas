@@ -7,6 +7,7 @@ import { relative } from "../lib/time";
 import { useAtlas } from "../state";
 import { useIntel } from "../intel/state";
 import { useActions } from "../actions/state";
+import { dayKey, formatDateTime, formatDay, formatTime, useTimeZone } from "../lib/timezone";
 
 const KINDS: { kind: EventKind; label: string; icon: IconName }[] = [
   { kind: "commit", label: "Commits", icon: "commit" },
@@ -25,17 +26,18 @@ const RANGES: { label: string; ms: number | null }[] = [
 const RESULT_LABEL: Record<EventResult, string> = { success: "Succeeded", failure: "Failed", running: "Running", other: "Other" };
 const PAGE = 80;
 
-function dayHeading(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  const yest = new Date(Date.now() - 86_400_000);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yest.toDateString()) return "Yesterday";
-  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+/** Today, Yesterday or the date, counted in the chosen time zone. */
+function dayHeading(iso: string, zone: string, now = Date.now()) {
+  const day = dayKey(iso, zone);
+  if (day === dayKey(now, zone)) return "Today";
+  if (day === dayKey(now - 86_400_000, zone)) return "Yesterday";
+  const sameYear = day.slice(0, 4) === dayKey(now, zone).slice(0, 4);
+  return formatDay(iso, { weekday: "long", month: "long", day: "numeric", year: sameYear ? undefined : "numeric" }, zone);
 }
 
 /** One timeline of everything Atlas has read: commits, CI results and agent runs, with filters. */
 export function ActivityView() {
+  const zone = useTimeZone();
   const { catalog, repos, uncataloged, select } = useAtlas();
   const [kinds, setKinds] = useState<EventKind[]>([]);
   const [project, setProject] = useState("");
@@ -61,12 +63,12 @@ export function ActivityView() {
   const groups = useMemo(() => {
     const out: { day: string; items: AtlasEvent[] }[] = [];
     for (const e of events.slice(0, shown)) {
-      const day = dayHeading(e.at);
+      const day = dayHeading(e.at, zone);
       if (out[out.length - 1]?.day !== day) out.push({ day, items: [] });
       out[out.length - 1].items.push(e);
     }
     return out;
-  }, [events, shown]);
+  }, [events, shown, zone]);
 
   const toggleKind = (k: EventKind) => setKinds((ks) => (ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]));
   const anyFilter = kinds.length || project || result || query;
@@ -151,8 +153,8 @@ export function ActivityView() {
               <ul className="feed-list">
                 {g.items.map((e) => (
                   <li key={e.id} className={`feed-row k-${e.kind}`}>
-                    <time dateTime={e.at} title={new Date(e.at).toLocaleString()}>
-                      {e.kind === "manifest" ? "" : new Date(e.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                    <time dateTime={e.at} title={formatDateTime(e.at)}>
+                      {e.kind === "manifest" ? "" : formatTime(e.at, { hour: "2-digit", minute: "2-digit" })}
                     </time>
                     <span className={`feed-icon ${e.result ?? ""}`} aria-hidden>
                       <Icon name={KINDS.find((k) => k.kind === e.kind)!.icon} size={12} />

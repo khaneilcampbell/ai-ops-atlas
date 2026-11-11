@@ -16,6 +16,7 @@ import { useAtlas } from "../../state";
 import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/agentJobs";
 import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
+import { formatDateTime } from "../../lib/timezone";
 
 type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
@@ -523,7 +524,7 @@ function OperationsTab({
                   {r.offMainline && <div className="muted small">Pull request branch, not counted in the status</div>}
                 </td>
                 <td className="small">{r.durationMs != null ? `${(r.durationMs / 1000).toFixed(0)} s` : "–"}</td>
-                <td className="small nowrap" title={new Date(r.at).toLocaleString()}>
+                <td className="small nowrap" title={formatDateTime(r.at)}>
                   {relative(r.at)}
                 </td>
               </tr>
