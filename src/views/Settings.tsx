@@ -7,7 +7,7 @@ import { useAtlas } from "../state";
 import { POWER_MODES, setPowerMode, useOnBattery, usePowerMode, usePowerProfile } from "../lib/power";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { SCROLL_MODES, setNavigationPrefs, TRACKPAD_SPEEDS, useNavigationPrefs } from "../lib/navigation";
-import { DEFAULT_TIME_ZONE, describeZone, filterZoneGroups, formatDateTime, formatTime, setTimeZone, useTimeZone, zoneGroups, zoneLabel } from "../lib/timezone";
+import { commonZoneGroup, DEFAULT_TIME_ZONE, describeZone, filterZoneGroups, formatDateTime, formatTime, setTimeZone, useTimeZone, zoneGroups, zoneLabel } from "../lib/timezone";
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 import { SyncSettings } from "./SyncSettings";
@@ -356,7 +356,11 @@ function TimeZoneSetting() {
   }, []);
   // Offsets change with daylight saving, so the list is worked out once per visit to Settings.
   const groups = useMemo(() => zoneGroups(), []);
-  const shown = filterZoneGroups(groups, query);
+  const common = useMemo(() => commonZoneGroup(), []);
+  const [showAll, setShowAll] = useState(false);
+  const total = groups.reduce((n, g) => n + g.zones.length, 0);
+  // Search always looks through every zone; with no search, the short list unless "Show all" is on.
+  const shown = query ? filterZoneGroups(groups, query) : showAll ? groups : [common];
   const current = describeZone(zone);
   const currentShown = shown.some((g) => g.zones.some((z) => z.zone === zone));
   return (
@@ -378,7 +382,7 @@ function TimeZoneSetting() {
       <div className="setting tz-picker">
         <label className="field">
           <Icon name="search" size={14} />
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search city or zone" aria-label="Search time zones" spellCheck={false} />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all time zones" aria-label="Search time zones" spellCheck={false} />
         </label>
         <label className="field grow">
           <select value={zone} onChange={(e) => setTimeZone(e.target.value)} aria-label="Time zone">
@@ -394,6 +398,11 @@ function TimeZoneSetting() {
             ))}
           </select>
         </label>
+        {!query && (
+          <button className="btn" onClick={() => setShowAll((v) => !v)} aria-pressed={showAll}>
+            {showAll ? "Show common only" : `Show all ${total}`}
+          </button>
+        )}
         {zone !== DEFAULT_TIME_ZONE && (
           <button className="btn" onClick={() => setTimeZone(DEFAULT_TIME_ZONE)}>
             Use Eastern Time

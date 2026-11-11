@@ -90,3 +90,15 @@ describe("zone picker data", () => {
     expect(tz.filterZoneGroups(groups, "  ")).toBe(groups);
   });
 });
+
+describe("common time zones", () => {
+  it("is a short list, west to east, that includes the default", () => {
+    const common = tz.commonZoneGroup(new Date("2026-01-15T12:00:00Z"));
+    const ids = common.zones.map((z) => z.zone);
+    expect(ids.length).toBeLessThanOrEqual(30);
+    expect(ids).toContain(tz.DEFAULT_TIME_ZONE);
+    const offsets = common.zones.map((z) => z.offsetMinutes);
+    expect(offsets).toEqual([...offsets].sort((a, b) => a - b));
+    expect(tz.allTimeZones().length).toBeGreaterThan(ids.length);
+  });
+});

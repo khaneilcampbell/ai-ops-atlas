@@ -177,6 +177,23 @@ export function filterZoneGroups(groups: ZoneGroup[], query: string): ZoneGroup[
     .filter((g) => g.zones.length);
 }
 
+/**
+ * The short list Settings shows by default: one well-known city per major zone, about two dozen
+ * in all. Every other zone is still there behind "Show all" and in search.
+ */
+export const COMMON_ZONES = [
+  "Pacific/Honolulu", "America/Anchorage", "America/Los_Angeles", "America/Denver", "America/Phoenix", "America/Chicago",
+  "America/New_York", "America/Jamaica", "America/Halifax", "America/Sao_Paulo",
+  "UTC", "Europe/London", "Europe/Paris", "Africa/Lagos", "Africa/Johannesburg", "Europe/Athens", "Africa/Nairobi", "Europe/Moscow",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Singapore", "Asia/Tokyo", "Australia/Sydney", "Pacific/Auckland",
+];
+
+/** The common zones as one group, west to east. Zones this browser doesn't know are left out. */
+export function commonZoneGroup(at = new Date()): ZoneGroup {
+  const zones = COMMON_ZONES.filter(isValidTimeZone).map((z) => describeZone(z, at));
+  return { region: "Common", zones: zones.sort((a, b) => a.offsetMinutes - b.offsetMinutes || a.city.localeCompare(b.city)) };
+}
+
 export function zoneLabel(z: ZoneOption): string {
   return z.name ? `${z.city} · ${z.name} (${z.offset})` : `${z.city} (${z.offset})`;
 }
