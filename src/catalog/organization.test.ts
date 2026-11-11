@@ -80,7 +80,12 @@ describe("automation categories", () => {
       security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
+        "benjaire-flow-digest",
+        "benjaire-flow-errors",
         "benjaire-flow-intake",
+        "benjaire-flow-missed-runs",
+        "benjaire-flow-reminders",
+        "benjaire-flow-status",
         "benjaire-inquiry-to-client",
         "benjaire-product-lab",
         "benjaire-product-lab-brief",
@@ -88,6 +93,8 @@ describe("automation categories", () => {
         "benjaire-product-lab-customers",
         "benjaire-product-lab-research",
         "benjaire-product-lab-scoring",
+        "benjaire-shop-delivery",
+        "benjaire-shop-follow-ups",
         "brand-strategist",
         "canva-mockups",
         "commerce-loop",
@@ -105,7 +112,7 @@ describe("automation categories", () => {
         "visual-director",
       ],
       monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "repo-intelligence"],
+      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
       maintenance: ["atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
     });
   });

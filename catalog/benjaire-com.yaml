@@ -573,3 +573,171 @@ agents:
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
+
+  - id: benjaire-flow-errors
+    name: Flow Error Alerts
+    purpose: >-
+      When any Benjaire Flow or Shop workflow fails, emails the ops address with the workflow, step, error and a link to the run.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Error trigger from any Flow or Shop workflow
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/F4A9rMTqPZunNoqb
+    registry:
+      title: Flow Error Alerts
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow F4A9rMTqPZunNoqb, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: event
+        environment: n8n
+
+  - id: benjaire-flow-status
+    name: Flow Status Updates
+    purpose: >-
+      Owner status links from the intake alert: confirm page, verified status change, audit event, and a welcome and onboarding email to the client on a first win.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Status link clicked in an owner alert
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/7ccL2o9ta9CNY3gj
+    registry:
+      title: Flow Status Updates
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow 7ccL2o9ta9CNY3gj, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: event
+        environment: n8n
+
+  - id: benjaire-flow-reminders
+    name: Flow Reply Reminders
+    purpose: >-
+      Emails the owner once about any inquiry still unanswered after its reply target.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Weekdays at 9am, 1pm and 5pm ET
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/FXEm2O630Yw6h1iw
+    registry:
+      title: Flow Reply Reminders
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow FXEm2O630Yw6h1iw, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+
+  - id: benjaire-flow-digest
+    name: Flow Monday Digest
+    purpose: >-
+      Emails the owner new inquiries, wins, response time and who is still waiting.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Mondays at 8am ET
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/WWLpiSncbo2SLS5M
+    registry:
+      title: Flow Monday Digest
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow WWLpiSncbo2SLS5M, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+
+  - id: benjaire-flow-missed-runs
+    name: Flow Missed Run Check
+    purpose: >-
+      Emails ops when Shop follow ups, Reply reminders or the Monday digest have not run on time. No AI.
+    framework: n8n
+    runtime: n8n Cloud
+    status: paused
+    trigger: Daily at 11am ET once switched on
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/u3B7KFesmHzyEimO
+    registry:
+      title: Flow Missed Run Check
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow u3B7KFesmHzyEimO, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+
+  - id: benjaire-shop-delivery
+    name: Shop Starter Delivery
+    purpose: >-
+      Verifies each Stripe checkout against Stripe, saves the order, emails the buyer a private expiring download link and serves the kit zip.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Stripe checkout.session.completed webhook
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/pjj7ORgRjeGGTIFL
+    registry:
+      title: Shop Starter Delivery
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow pjj7ORgRjeGGTIFL, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: event
+        environment: n8n
+
+  - id: benjaire-shop-follow-ups
+    name: Shop Buyer Follow Ups
+    purpose: >-
+      Sends the day 2 setup check and the day 12 help window email, once per order.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: Every 4 hours
+    last_run: null
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/1QdoYrF1XVxT4Xyu
+    registry:
+      title: Shop Buyer Follow Ups
+      category: business
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: Live n8n workflow 1QdoYrF1XVxT4Xyu, checked read-only on 2026-11-11 (no model step)
+      execution:
+        trigger_type: scheduled
+        environment: n8n
