@@ -1,3 +1,4 @@
+import type { Health } from "../lib/derive";
 import type { Loaded } from "../properties/state";
 import type { SiteSnapshot, TrafficInfo } from "../properties/types";
 import { PROPERTIES, type WebProperty } from "../properties/registry";
@@ -15,7 +16,7 @@ export const GROWTH_SITES: readonly string[] = ["benjaire-com"];
 /** This workspace's product research agent (src/reports/productLab.ts). */
 export const RESEARCH_AGENT = PRODUCT_LAB_AGENT;
 
-export type TrafficState = "counted" | "not-proxied" | "not-set-up" | "unavailable" | "loading";
+export type TrafficState = "counted" | "not-proxied" | "not-set-up" | "not-connected" | "unavailable" | "loading";
 
 export interface SiteTraffic {
   site: Pick<WebProperty, "id" | "domain" | "url">;
@@ -38,7 +39,9 @@ export function siteTraffic(site: WebProperty, snap: Loaded<SiteSnapshot> | unde
   const s = snap?.value;
   if (!s) {
     if (snap?.state === "error") return { ...base, state: "unavailable", note: snap.message };
-    if (snap?.state === "off") return { ...base, state: "unavailable", note: snap.message ?? "Site checks aren't connected here" };
+    // "off" means this copy of Atlas has no site to ask (a plain local preview, or a Mac without
+    // website sync). Nothing failed, so it is not "unavailable".
+    if (snap?.state === "off") return { ...base, state: "not-connected", note: snap.message ?? "Site checks aren't connected here" };
     return { ...base, state: "loading" };
   }
   const t = s.checks.traffic;
@@ -85,4 +88,38 @@ export function researchBriefs(reports: readonly StoredReport[], limit = 4): Res
       runnersUp: body.runners_up.map((p) => p.title),
       notionUrl: body.notion_url,
     }));
+}
+
+/** How the research briefs answered (src/reports/client.ts ReportsState.state). */
+export type BriefsState = "off" | "loading" | "ready" | "error";
+
+export interface StudioHealth {
+  health: Health;
+  state: "loading" | "ok" | "partial" | "none";
+  summary: string;
+}
+
+const TRAFFIC_WORD: Record<TrafficState, string> = {
+  counted: "counted", "not-proxied": "not counted (DNS only)", "not-set-up": "not set up", "not-connected": "not connected here",
+  unavailable: "unavailable", loading: "loading",
+};
+const BRIEFS_WORD: Record<BriefsState, string> = { ready: "read from the site", off: "not connected here", error: "unavailable", loading: "loading" };
+
+/**
+ * The studio's health, from its own two sources rather than a repository's CI (the building has
+ * none). Live only when real data came back from both: Cloudflare counted the site's traffic and
+ * the site answered with the research agent's briefs. One of two is "needs a look"; none is
+ * "not verified". Nothing here is ever green because a source is quiet or missing.
+ */
+export function studioHealth(traffic: readonly SiteTraffic[], briefs: BriefsState): StudioHealth {
+  const trafficLive = traffic.length > 0 && traffic.every((t) => t.state === "counted");
+  const briefsLive = briefs === "ready";
+  const trafficState: TrafficState = trafficLive ? "counted" : (traffic.find((t) => t.state !== "counted")?.state ?? "not-set-up");
+  const parts = `Site traffic ${TRAFFIC_WORD[trafficState]} · briefs ${BRIEFS_WORD[briefs]}`;
+  if (trafficState === "loading" || briefs === "loading") {
+    if (!trafficLive && !briefsLive) return { health: "unknown", state: "loading", summary: "Checking the site…" };
+  }
+  if (trafficLive && briefsLive) return { health: "good", state: "ok", summary: `Live · ${parts}` };
+  if (trafficLive || briefsLive) return { health: "warn", state: "partial", summary: `Partly live · ${parts}` };
+  return { health: "unknown", state: "none", summary: parts };
 }

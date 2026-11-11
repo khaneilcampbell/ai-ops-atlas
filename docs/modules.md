@@ -58,6 +58,11 @@ building whose function no module covers houses none rather than borrow an unrel
 assertion to `modules.test.ts` that ties the key and `map_name` to the map plan constant, so a
 rename on the map fails the test instead of drifting.
 
+To run the landmark on a project's data, add `project: <catalog project id>`. The building then
+links that project's repository and the project's agents whose
+`workplace.building` is the landmark's `map_name`. The Growth & Marketing Studio uses this to run
+on benjaire.com (`benjaire-site`) and the Product Lab agents.
+
 ### Add a workspace panel
 A module's **workspace** is what a building opens into: the lists under its module card, and the
 Atlas views its "Open … →" buttons lead to. It is defined once per module type, never per building,
@@ -166,6 +171,16 @@ The Commerce & Product Marketplace lists every agent of the projects whose catal
 rules, so a stage whose manifest says `not_running` shows "Not running" with that reason, never
 "Failed". Other agents show their newest finished run on the default branch. A stage with no run
 seen, or whose live feed isn't reaching this device, shows "Unknown", never "Healthy". Read only.
+### Connected signals and the document inventory
+The Observability Center's `signals` capability (`src/observability/signals.ts`) lists every
+integration contract with its state in this session: answering, stale, failing, not set up, not
+available on this platform, or loading. It is derived from state the clients already keep (the
+GitHub sync, live updates, Atlas Intel, usage sync, n8n, security alerts); nothing new is polled
+and no system's own metrics, logs or traces are read (those stay planned). The Knowledge
+Repository's `docs` capability (`src/knowledge/docs.ts`) lists, per project, each repository's
+page, the website it declares on GitHub and the links its manifests declare. Atlas lists these
+documents; it does not read them, so knowledge search stays planned.
+
 ### Site traffic and product research briefs
 The Growth & Marketing Studio shows two lists from data Atlas already reads (`src/growth/studio.ts`).
 **Site traffic** takes the last 24 hours of Cloudflare analytics from the site checks the website

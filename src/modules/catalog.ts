@@ -155,14 +155,14 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "knowledge-repository", version: V, name: "Knowledge Repository", productDistrict: "data-intelligence",
     description: "Documentation and knowledge bases the workspace relies on.",
-    capabilities: [later("docs", "Document inventory"), later("search", "Knowledge search")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [on("docs", "Document inventory", "src/knowledge/docs.ts documentInventory"), later("search", "Knowledge search")],
+    connectors: ["github"], views: ["repos"], actions: [], permissions: [],
   },
   {
     id: "observability-center", version: V, name: "Observability Center", productDistrict: "data-intelligence",
     description: "Logs, metrics and traces from connected systems.",
-    capabilities: [later("metrics", "Metrics"), later("logs", "Logs"), later("traces", "Traces")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [on("signals", "Connected signal health", "src/observability/signals.ts signalRows"), later("metrics", "Metrics"), later("logs", "Logs"), later("traces", "Traces")],
+    connectors: ["github", "live-feed", "agent-feed", "atlas-intel", "usage-sync", "n8n", "github-security"], views: ["activity"], actions: [], permissions: [],
   },
   {
     id: "integration-exchange", version: V, name: "Integration Exchange", productDistrict: "data-intelligence",
