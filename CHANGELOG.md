@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-11 · The Growth & Marketing Studio is now linked to the benjaire.com repository: its panel lists that repository and the marketing agents that work in the building, and its Health still comes from the site's own traffic and research briefs (#357)
 - 2026-11-11 · The Growth & Marketing Studio's Health now comes from its own site traffic and Product Lab briefs: "Live" only when both return real data, "Partly live" when one does, "Not verified" otherwise. A preview with no site to ask now says "Not connected here" instead of "Unavailable" (#354)
 - 2026-11-11 · Two more buildings now show real data: Atlas · Operations (Observability Center) lists whether each feed Atlas reads is answering, and the Knowledge & Research Center lists the repositories, websites and declared docs of every project. The Atlas · Operations header no longer says "No live operations" (#353)
 - 2026-11-11 · The workspace setup (who uses Atlas, which modules are switched on, which landmark building houses which module) now lives in one YAML file, catalog/workspace/workspace.yaml, so a new workspace needs no code change. Nothing on screen changes (#PR)

@@ -40,9 +40,10 @@ export function ModuleSection() {
   const available = type.capabilities.filter((c) => c.state === "available");
   const planned = type.capabilities.filter((c) => c.state === "planned");
   const views = workspaceViews(type);
-  // A building with no repository has no CI to read; a module that reads its own live sources
-  // reports those instead (only while entitled and built, so a planned module never reads live).
-  const OwnHealth = !assets.repositories.length && entitled && availability !== "planned" ? MODULE_HEALTH[type.id] : undefined;
+  // A building with no repository has no CI to read, and a landmark's linked repository is where its
+  // data comes from, not what it does; a module that reads its own live sources reports those
+  // instead (only while entitled and built, so a planned module never reads live).
+  const OwnHealth = (!assets.repositories.length || building.projectId === null) && entitled && availability !== "planned" ? MODULE_HEALTH[type.id] : undefined;
   // Open a workspace view on this building's own agents when the view can be scoped to them.
   const open = (v: ModuleView) => {
     const scope = workspaceScope(v, building.projectId);

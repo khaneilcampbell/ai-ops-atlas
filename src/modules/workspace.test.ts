@@ -6,6 +6,7 @@ import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
+import { catalog } from "../catalog";
 import { LANDMARK_MODULES, WORKSPACE, WORKSPACE_SCHEMA, parseWorkspace, workspaceIssues } from "./workspace";
 
 /** Every landmark id the map draws itself and that workspace.yaml may give a module. */
@@ -25,6 +26,18 @@ describe("workspace file", () => {
     expect(LANDMARK_MODULES.length).toBeGreaterThanOrEqual(12);
     for (const l of LANDMARK_MODULES) expect(MAP_KEYS.has(`service:${l.id}`), l.id).toBe(true);
     expect(new Set(LANDMARK_MODULES.map((l) => l.id)).size).toBe(LANDMARK_MODULES.length);
+    // A landmark's data project must be a real catalog project.
+    for (const l of LANDMARK_MODULES.filter((x) => x.project)) expect(catalog.projects.some((p) => p.id === l.project), l.id).toBe(true);
+    expect(LANDMARK_MODULES.find((l) => l.id === "benjaire-marketing")?.project).toBe("benjaire-site");
+  });
+
+  it("links a landmark to a catalog project's data, and reports a bad project id", () => {
+    const ok = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: acme-site }\n`);
+    expect(ok.issues).toEqual([]);
+    expect(ok.ws.landmarks[0]).toMatchObject({ project: "acme-site" });
+    const bad = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: Bad Id }\n`);
+    expect(bad.issues).toEqual(['landmarks.service:financial:banks.project: use a catalog project id such as "benjaire-site"']);
+    expect(bad.ws.landmarks).toEqual([]);
   });
 
   it("sets up another workspace from a file alone, with its own entitlements", () => {

@@ -35,6 +35,14 @@ export function buildingAssets(building: BuildingInstance | LandmarkInstance, ca
     const mine = catalog.agents.filter((a) => a.projectId === project.id);
     return { projects: [project.id], repositories: projectRepositories(project, catalog.agents), agents: mine.filter(isAiAgent), automations: mine.filter((a) => !isAiAgent(a)) };
   }
+  const linked = "linked" in building ? building.linked : undefined;
+  const linkedProject = linked ? catalog.projects.find((p) => p.id === linked.projectId) : undefined;
+  if (linked && linkedProject && !scope) {
+    // A landmark that operates with a project's repository: that repository, and only the project's
+    // agents that work in this building (not everything else the project runs).
+    const here = catalog.agents.filter((a) => a.projectId === linkedProject.id && a.workplace?.building === linked.workplace && a.status !== "retired");
+    return { projects: [linkedProject.id], repositories: [linkedProject.repository], agents: here.filter(isAiAgent), automations: here.filter((a) => !isAiAgent(a)) };
+  }
   if (!scope) return { projects: [], repositories: [], agents: [], automations: [] };
   const items = catalog.agents.filter((a) => a.status !== "retired" && (scope === "agents" ? isAiAgent(a) : !isAiAgent(a)));
   return {
