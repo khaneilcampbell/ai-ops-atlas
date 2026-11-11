@@ -52,8 +52,11 @@ buildings:
     former_names: [Atlas Central Station]
   # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
   # module's name; landmarks without one get a plain name for what they are, never a module.
+  # Client Success Center and Vendor & Supplier Hub are named for planned modules (client
+  # onboarding and follow-up; vendors, suppliers and contracts). Neither module exists yet, so
+  # neither building houses one.
   "service:financial:harbor-residence":
-    display_name: Guest Hospitality Center
+    display_name: Client Success Center
     organization: Camton Hotel
     former_names: [Camton Hotel]
   "service:financial:circa":
@@ -69,7 +72,7 @@ buildings:
     organization: Corvane Capital
     former_names: [Corvane Capital]
   "service:atlas-galleria":
-    display_name: Retail & Amenities Center
+    display_name: Vendor & Supplier Hub
     organization: Atlas
     former_names: [Atlas Galleria]
   "service:skyline-stadium":

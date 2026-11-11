@@ -8,7 +8,7 @@ names, vehicles and liveries). Atlas Stadium is handled by the stadium rebuild (
 Screenshots: `docs/screenshots/building-names/` (before/after, day, night and phone).
 
 > **Current names (Nov 2026):** the map now shows operational names (Atlas Command Center,
-> Financial Operations Tower, Guest Hospitality Center and so on). Those are set in
+> Financial Operations Tower, Client Success Center and so on). Those are set in
 > `catalog/workspace/buildings.yaml` (map-drawn buildings) and `project.name` (catalog buildings).
 > The trademark-free names below stay as each building's `organization` and as search aliases.
 

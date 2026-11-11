@@ -6,7 +6,7 @@ import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
  * NAMES_SHOT_DIR saves before/after screenshots; the name checks always run.
  */
 const dir=process.env.NAMES_SHOT_DIR;
-const RENAMED=['Financial Operations Tower','Integration Exchange','Risk & Insurance Center','Data Intelligence Center','Guest Hospitality Center','Governance & Compliance Center','Ravelle Advisors','Team Residence Towers','Infrastructure Operations Hub'];
+const RENAMED=['Financial Operations Tower','Integration Exchange','Risk & Insurance Center','Data Intelligence Center','Client Success Center','Governance & Compliance Center','Knowledge & Research Center','Team Residence Towers','Infrastructure Operations Hub'];
 const OLD=['Chase','Robinhood','Navy Federal','Experian','Ritz-Carlton','Wells Fargo','Vanguard','Circa','BMW','OpenAI','Anthropic','GitHub Profile'];
 const shot=async(page:import('@playwright/test').Page,name:string)=>{if(dir){mkdirSync(dir,{recursive:true});await page.screenshot({path:`${dir}/${name}.png`});}};
 for(const light of ['day','night'] as const)test(`renamed buildings, ${light}`,async({page})=>{
