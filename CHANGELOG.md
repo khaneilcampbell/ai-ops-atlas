@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-11 · Atlas Command Center now sits in the central project district, with wider Command Center, Business HQ and Commerce buildings and clear traffic routes (#363)
+- 2026-11-11 · Atlas Command Center now sits in the central project district, with wider headquarters including Portfolio, Development Hub and Security Operations and clear traffic routes (#363)
 - 2026-11-10 · Behind the scenes, the Inside view's screenshot check finds Atlas Command Center by its new name, and the map screenshots are refreshed for the new building names. Nothing on screen changes (#326)
 - 2026-11-11 · Settings has a Time zone picker, set to New York (Eastern Time). It opens on a short list of common zones, with every other zone under Show all and in search. Every date and time in Atlas follows it (#356)
 - 2026-11-11 · Buildings like the Growth & Marketing Studio now show a green dot by their name on the map once their telemetry is connected and healthy (amber when partly live, red when failing). Buildings with nothing connected keep the dashed planned dot (#359)

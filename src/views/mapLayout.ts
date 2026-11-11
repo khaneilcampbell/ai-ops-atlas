@@ -224,7 +224,7 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
  * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
 export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
-const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site"]);
+const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
@@ -400,8 +400,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const m = n ? ringFor(n) : 2;
       const operationsWidth = districtSize(0, "intelligence-hub") * .34;
       const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
-      // Give the wider central hub a front approach clear of its existing tool offices.
-      const hqSetback = project.id === "ai-ops-atlas" ? .35 : 0;
+      // Keep widened headquarters clear of the existing front approaches. The three
+      // standard towers use a .92 scene footprint: half their added rendered depth is .46.
+      const hqSetback = project.id === "ai-ops-atlas" ? .35 : ["portfolio-site", "github-profile", "soc-lab"].includes(project.id) ? (hqSize - (n ? size * .26 : size * .34)) * .46 : 0;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
