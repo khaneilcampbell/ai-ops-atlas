@@ -45,7 +45,14 @@ export function intelResult(r: IntelRun): EventResult {
 export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = [], actionLog: AuditRecord[] = []): AtlasEvent[] {
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
-  const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
+  // Consolidated repositories serve several projects. Never let catalog order choose ownership.
+  const projectByRepo = new Map<string, Catalog["projects"][number]>();
+  for (const repo of new Set(catalog.projects.map(p => p.repository))) {
+    const owners = catalog.projects.filter(p => p.repository === repo);
+    const owner = owners.length === 1 ? owners[0] : owners.find(p => p.id === repo.split("/").pop());
+    if (owner) projectByRepo.set(repo, owner);
+  }
+  const projectNames = new Map(catalog.projects.map(p => [p.id, p.name]));
   const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   const label = (repo: string) => projectByRepo.get(repo)?.name ?? repo;
 
@@ -62,7 +69,7 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
         kind: "agent",
         result: runResult(r),
         title: `${a.name}: ${r.name}`,
-        detail: `${label(a.repository)} · ${r.event} on ${r.branch}`,
+        detail: `${projectNames.get(a.projectId) ?? a.repository} · ${r.event} on ${r.branch}`,
         repo: a.repository,
         projectId: a.projectId,
         agentId: a.id,

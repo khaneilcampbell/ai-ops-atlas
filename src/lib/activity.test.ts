@@ -87,3 +87,22 @@ describe("approval-required actions", () => {
     expect(events[1].detail).toContain("CI #7");
   });
 });
+
+
+describe("consolidated repository attribution", () => {
+ it("uses agent ownership and the repository's own project regardless of catalog order", () => {
+  const primary={...catalog.projects[0],id:"p",name:"Command Center"};
+  const skyline={...primary,id:"skyline",name:"Skyline"};
+  for(const projects of [[primary,skyline],[skyline,primary]]) {
+   const events=workspaceEvents({...catalog,projects},repos);
+   expect(events.find(e=>e.kind==="agent")).toMatchObject({projectId:"p",detail:"Command Center · push on main"});
+   expect(events.find(e=>e.kind==="commit")).toMatchObject({projectId:"p",detail:"Command Center · kc · abcdef1"});
+  }
+ });
+ it("keeps ambiguous shared repository events unassigned instead of guessing", () => {
+  const projects=[{...catalog.projects[0],id:"one"},{...catalog.projects[0],id:"two"}];
+  const events=workspaceEvents({...catalog,projects},repos);
+  expect(events.find(e=>e.kind==="commit")).toMatchObject({detail:"me/p · kc · abcdef1"});
+  expect(events.find(e=>e.kind==="commit")?.projectId).toBeUndefined();
+ });
+});
