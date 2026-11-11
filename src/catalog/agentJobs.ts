@@ -3,6 +3,7 @@ import { tierOf, type Decided } from "./organization";
 import { TIER_INFO } from "./taxonomy";
 import type { Agent, Catalog } from "./types";
 import type { TriggerType } from "../registry/types";
+import { buildingDisplayName } from "../modules/names";
 
 // Each AI agent's job: a role, an owner, a home, a workplace, a shift, a budget and the output it
 // owes at the end of the day. Everything is read from the agent's manifest or worked out by the
@@ -84,7 +85,7 @@ export function apartments(ids: string[]): Map<string, AgentJob["home"]> {
   [...ids].sort().forEach((id, i) => {
     const tower = R.towers[Math.floor(i / perTower) % R.towers.length], k = i % perTower;
     const unit = `${R.firstFloor + Math.floor(k / R.unitsPerFloor)}${"ABCD"[k % R.unitsPerFloor]}`;
-    out.set(id, { building: R.id, unit, label: `${R.name} ${tower}, apartment ${unit}` });
+    out.set(id, { building: R.id, unit, label: `${buildingDisplayName("service:financial:circa", R.name)} ${tower}, apartment ${unit}` });
   });
   return out;
 }

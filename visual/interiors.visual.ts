@@ -40,6 +40,8 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
 // The shared business interior (airport offices and other planned workspaces). It was shown on
 // Skyline until that district was removed (KC, 2026-11-08).
 const BUSINESS="Atlas · Operations";
+/** The name the interior shows for it (catalog/workspace/buildings.yaml). */
+const BUSINESS_NAME="Observability Center";
 async function enterBusiness(page:import("@playwright/test").Page){
   await page.evaluate(async(b)=>{const m=await import("/src/views/office/store.ts" as string);m.enterBuilding(`skyline-business:${b}`,true);},BUSINESS);
 }
@@ -49,7 +51,7 @@ test("business night interior: shared navigation and exterior clearance",async({
   await openAtlas(page,{light:"night"});
   await enterBusiness(page);await settle(page,4);
   await expect(page.locator(".skyline-interior.night")).toBeVisible();
-  const nav=page.getByRole("navigation",{name:`Choose ${BUSINESS} floor`});
+  const nav=page.getByRole("navigation",{name:`Choose ${BUSINESS_NAME} floor`});
   await expect(nav.getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
   await waitForFloorMarkers(page,5);
   await shot(page,"interior-business-night-all");
@@ -59,7 +61,7 @@ test("business night interior: shared navigation and exterior clearance",async({
   for(let i=0;i<12&&!(await page.getByRole("button",{name:/Suite 201/}).count());i++){await page.waitForTimeout(150);await settle(page,2);}
   await shot(page,"interior-business-night-floor2");
   await expect(page.getByRole("button",{name:/Suite 201/})).toBeVisible();
-  await page.getByRole("button",{name:`Exit ${BUSINESS} and return to city`}).click();await settle(page,2);
+  await page.getByRole("button",{name:`Exit ${BUSINESS_NAME} and return to city`}).click();await settle(page,2);
   await expect(page.locator(".skyline-interior")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -108,7 +110,7 @@ test("floor switching preserves the renderer in project and business buildings",
       expect(await canvas!.evaluate((original,current)=>original===current,current)).toBe(true);
       expect(await canvas!.evaluate(node=>(node as HTMLCanvasElement).getContext("webgl2")?.isContextLost())).toBe(false);
     }
-    await region.getByRole("button",{name:kind==="office"?"Exit building":`Exit ${BUSINESS} and return to city`,exact:true}).click();await settle(page,3);
+    await region.getByRole("button",{name:kind==="office"?"Exit building":`Exit ${BUSINESS_NAME} and return to city`,exact:true}).click();await settle(page,3);
     await expect(region).toHaveCount(0);
     if(kind==="office"){await enterBusiness(page);await settle(page,2);}
   }
