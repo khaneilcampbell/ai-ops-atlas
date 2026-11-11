@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-11 · Two more buildings now show real data: Atlas · Operations (Observability Center) lists whether each feed Atlas reads is answering, and the Knowledge & Research Center lists the repositories, websites and declared docs of every project (#PR)
 - 2026-11-11 · The workspace setup (who uses Atlas, which modules are switched on, which landmark building houses which module) now lives in one YAML file, catalog/workspace/workspace.yaml, so a new workspace needs no code change. Nothing on screen changes (#PR)
 - 2026-11-11 · Every building with a module now opens into the same shared workspace for that module (one definition per module, not per building). "Open Agents" from a project building shows just that project's agents, and pressing Escape in the search box no longer closes the building panel too (#PR)
 - 2026-11-10 · The Product Marketplace and Commerce Operations Center now list every step of the commerce pipeline with its latest run, failures first. Steps that are off while the pipeline moves to the Oracle VM say "Not running" and why, instead of looking broken (#333)
