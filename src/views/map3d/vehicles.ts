@@ -125,7 +125,7 @@ export function drivingGraph(scene: Scene3D): { nodes: Pt3[]; next: number[][]; 
     return -dz * cx + dx * cz > 0 ? 0 : 2 * LANE_OFF;
   };
   // A street whose lanes would brush a tower or its entrance stairs is left to pedestrians.
-  const towerHit = (x: number, z: number) => scene.towers.some(w => Math.abs(x - w.x) < w.size / 2 + 0.1 && z > w.z - w.size / 2 - 0.1 && z < w.z + w.size / 2 + 0.24 + 0.1);
+  const towerHit = (x: number, z: number) => scene.towers.some(w => Math.abs(x - w.x) < w.size / 2 + 0.1 && z > w.z - w.size / 2 - 0.1 && z < w.z + w.size / 2 + 0.24 + 0.1) || scene.kiosks.some(k => Math.abs(x - k.x) < k.size / 2 + 0.2 && Math.abs(z - k.z) < k.size / 2 + 0.2);
   const brushes = (i: number, j: number) => {
     const a = g.nodes[i], b = g.nodes[j], l = flatLen(a, b) || 1, nx = -(b[2] - a[2]) / l, nz = (b[0] - a[0]) / l;
     const off = lane(i, j), steps = Math.ceil(l / 0.05);

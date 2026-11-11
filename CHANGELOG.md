@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-11 · Atlas Command Center now sits in the central project district, with wider headquarters including Portfolio, Development Hub and Security Operations and clear traffic routes (#363)
 - 2026-11-11 · Every Financial District building now belongs to Benjaire, and its sign says so (Benjaire over what the building does). Integration Exchange is now the Investment Operations Center, ready for the agentic trading account. Selecting a building shows a "Benjaire finance" section listing the business data it will hold (accounts, cash flow, invoices, budgets, tax, insurance and more). Each item says Not connected until real data arrives, so nothing shows a made-up number. Old brand names still work in search (#355)
 - 2026-11-10 · Behind the scenes, the Inside view's screenshot check finds Atlas Command Center by its new name, and the map screenshots are refreshed for the new building names. Nothing on screen changes (#326)
 - 2026-11-11 · Settings has a Time zone picker, set to New York (Eastern Time). It opens on a short list of common zones, with every other zone under Show all and in search. Every date and time in Atlas follows it (#356)
