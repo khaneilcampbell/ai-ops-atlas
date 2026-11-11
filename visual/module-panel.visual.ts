@@ -16,7 +16,7 @@ test('Module panel on a phone: Benjaire HQ',async({page})=>{
  await selectBuilding(page,'Business Operations HQ');await settle(page,2);
  await page.screenshot({path:`${out}/benjaire-hq-phone.png`});
 });
-for(const [file,name,module] of [['operations','Atlas · Operations','Observability'],['cargo','Atlas · Cargo','Model Intelligence Lab']])test(`Module panel: ${name} (airport)`,async({page})=>{
+for(const [file,name,module] of [['operations','Observability Center','Observability'],['cargo','Model Intelligence Lab','Model Intelligence Lab']])test(`Module panel: ${name} (airport)`,async({page})=>{
  test.setTimeout(300_000);mkdirSync(out,{recursive:true});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,'Atlas Airport');await page.getByRole('button',{name:`${name} →`}).click();await settle(page,2);
