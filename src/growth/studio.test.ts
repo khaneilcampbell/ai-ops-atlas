@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Loaded } from "../properties/state";
 import type { SiteSnapshot } from "../properties/types";
 import type { StoredReport } from "../reports/model";
-import { growthSites, researchBriefs, siteTraffic } from "./studio";
+import { growthSites, researchBriefs, siteTraffic, studioHealth, type SiteTraffic } from "./studio";
 
 const AT = "2026-11-10T12:00:00.000Z";
 const ok = <T,>(data: T) => ({ state: "ok" as const, source: "test", checkedAt: AT, data });
@@ -43,6 +43,8 @@ describe("Growth & Marketing Studio site traffic", () => {
     expect(siteTraffic(SITE, { state: "error", message: "The site answered 502", value: null, at: null })).toMatchObject({ state: "unavailable", note: "The site answered 502" });
     expect(siteTraffic(SITE, { state: "loading", message: null, value: null, at: null }).state).toBe("loading");
     expect(siteTraffic(SITE, undefined).state).toBe("loading");
+    // No site to ask (plain local preview) is "not connected here", not a failure.
+    expect(siteTraffic(SITE, { state: "off", message: "Site checks run on the hosted site and in the Mac app.", value: null, at: null })).toMatchObject({ state: "not-connected", data: null });
   });
 });
 
@@ -62,5 +64,28 @@ describe("Growth & Marketing Studio research briefs", () => {
   it("leaves out other agents' reports", () => {
     const scout = { id: 9, at: AT, body: { ...lab(), agent: "github-opportunity-scout" } } as unknown as StoredReport;
     expect(researchBriefs([scout])).toEqual([]);
+  });
+});
+
+describe("Growth & Marketing Studio health", () => {
+  const counted = siteTraffic(SITE, snap(ok({ requests24h: 5120, visits24h: 812, threats24h: 0 })));
+  const t = (state: SiteTraffic["state"]): SiteTraffic => ({ ...counted, state, data: null });
+
+  it("is live only when traffic was counted and the briefs came back", () => {
+    expect(studioHealth([counted], "ready")).toMatchObject({ health: "good", state: "ok" });
+    expect(studioHealth([counted], "ready").summary).toMatch(/^Live/);
+  });
+
+  it("needs a look when only one source returned data", () => {
+    expect(studioHealth([t("not-set-up")], "ready")).toMatchObject({ health: "warn", state: "partial" });
+    expect(studioHealth([counted], "error")).toMatchObject({ health: "warn", summary: "Partly live · Site traffic counted · briefs unavailable" });
+    expect(studioHealth([t("not-proxied")], "ready").health).toBe("warn");
+  });
+
+  it("is never green when nothing came back", () => {
+    expect(studioHealth([t("not-connected")], "off")).toEqual({ health: "unknown", state: "none", summary: "Site traffic not connected here · briefs not connected here" });
+    expect(studioHealth([t("unavailable")], "error").health).toBe("unknown");
+    expect(studioHealth([t("loading")], "loading")).toMatchObject({ health: "unknown", state: "loading" });
+    expect(studioHealth([], "ready").health).toBe("warn");
   });
 });
