@@ -3,6 +3,7 @@ import type { AuditRecord, ActionsStatus } from "../../actions/types";
 import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
 import { mainline } from "../../registry/telemetry";
+import { formatDateTime } from "../../lib/timezone";
 
 /**
  * The data behind a virtual office: which project and building it belongs to, one workstation
@@ -129,7 +130,7 @@ export function actionExecutions(action: string, audit: AuditRecord[]): Executio
 /** The longest a run can really be in progress (GitHub's job limit). */
 const MAX_RUN_MS = 6 * 3_600_000;
 
-const when = (at: string) => new Date(at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const when = (at: string) => formatDateTime(at, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /**
  * What an agent is doing, from verified data only. Being registered or enabled never counts as

@@ -33,6 +33,7 @@ import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
+import { formatDateTime } from "../lib/timezone";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
 export function DetailPanel({ docked = false }: { docked?: boolean }) {
@@ -413,7 +414,7 @@ function RepoDetail({ name }: { name: string }) {
                       <ExternalLink href={r.url}>{r.name}</ExternalLink>
                       <span className="muted"> · {r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion}</span>
                     </span>
-                    <span className="muted small" title={new Date(r.createdAt).toLocaleString()}>
+                    <span className="muted small" title={formatDateTime(r.createdAt)}>
                       {relative(r.createdAt)}
                     </span>
                     <RerunButton repo={name} run={r} />
@@ -535,7 +536,7 @@ function RepoDetail({ name }: { name: string }) {
                   {history.slice(0, more ? 20 : 6).map((h) => (
                     <li key={h.id} className={`k-${h.kind}`}>
                       <div className="small">{h.url ? <ExternalLink href={h.url}>{h.title}</ExternalLink> : h.title}</div>
-                      <div className="muted small" title={new Date(h.at).toLocaleString()}>
+                      <div className="muted small" title={formatDateTime(h.at)}>
                         {relative(h.at)} · {h.subtitle}
                       </div>
                     </li>
