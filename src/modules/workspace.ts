@@ -20,6 +20,8 @@ export interface LandmarkAssignment {
   id: string;
   name: string;
   moduleType: ModuleTypeId;
+  /** The catalog project whose repository and workplace agents this building operates with. */
+  project?: string;
 }
 
 /**
@@ -90,7 +92,9 @@ export function parseWorkspace(file: string, text: string, issues: ManifestIssue
       const mapName = str(o.map_name);
       if (!mapName) { fail(`landmarks.${key}.map_name: is required (the map's own name for the building)`); continue; }
       if (!isModuleType(o.module)) { fail(`landmarks.${key}.module: "${String(o.module ?? "")}" is not a module type`); continue; }
-      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module });
+      const project = o.project === undefined ? undefined : str(o.project);
+      if (o.project !== undefined && (!project || !ID_RE.test(project))) { fail(`landmarks.${key}.project: use a catalog project id such as "benjaire-site"`); continue; }
+      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}) });
     }
   }
   return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements };
@@ -110,4 +114,9 @@ export function isEntitled(workspace: Pick<AtlasWorkspace, "entitlements">, type
   return !!type && (workspace.entitlements === "all" || workspace.entitlements.includes(type));
 }
 
-export type LandmarkInstance = Omit<BuildingInstance, "districtId" | "projectId"> & { districtId: null; projectId: null };
+export type LandmarkInstance = Omit<BuildingInstance, "districtId" | "projectId"> & {
+  districtId: null;
+  projectId: null;
+  /** The catalog project this landmark operates with, and the workplace name its agents sit in. */
+  linked?: { projectId: string; workplace: string };
+};

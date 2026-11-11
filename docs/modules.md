@@ -58,6 +58,11 @@ building whose function no module covers houses none rather than borrow an unrel
 assertion to `modules.test.ts` that ties the key and `map_name` to the map plan constant, so a
 rename on the map fails the test instead of drifting.
 
+To run the landmark on a project's data, add `project: <catalog project id>`. The building then
+links that project's repository and the project's agents whose
+`workplace.building` is the landmark's `map_name`. The Growth & Marketing Studio uses this to run
+on benjaire.com (`benjaire-site`) and the Product Lab agents.
+
 ### Add a workspace panel
 A module's **workspace** is what a building opens into: the lists under its module card, and the
 Atlas views its "Open … →" buttons lead to. It is defined once per module type, never per building,

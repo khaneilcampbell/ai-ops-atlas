@@ -10,6 +10,8 @@
 #     map_name              the map's own name for the building, which a test ties to the map
 #                           plan so a building renamed or moved on the map fails loudly
 #     module                a module type id from src/modules/catalog.ts
+#     project               optional: the catalog project whose repository and agents this building
+#                           operates with (its agents are the ones whose workplace is this building)
 # Each building houses the module that matches what it is for (KC, 2026-11-10). A module can have
 # more than one home when both buildings do that work. Buildings whose function no module covers
 # house none, rather than borrow an unrelated one; leave them out.
@@ -25,6 +27,7 @@ landmarks:
   "service:benjaire-marketing":
     map_name: Benjaire Marketing Agency
     module: growth-marketing-studio
+    project: benjaire-site
   "service:atlas-station":
     map_name: Atlas Central Station
     module: workflow-automation-plant
