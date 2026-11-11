@@ -11,7 +11,8 @@ import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
-import { money } from "../usage/model";
+import { compact, money, providerLabel } from "../usage/model";
+import { costPerModel, modelInventory, WINDOW_DAYS } from "../models/lab";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
 import { infraIncidents } from "../infra/incidents";
 import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
@@ -44,6 +45,7 @@ export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
     case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
     case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
     case "commerce-product-marketplace": return has(type, "pipeline") ? <PublishingPipeline /> : null;
+    case "model-intelligence-lab": return <>{has(type, "models") && <ModelInventory />}{has(type, "cost") && <ModelCost />}</>;
     case "growth-marketing-studio": return <>{has(type, "audience") && <SiteTraffic />}{has(type, "research") && <ResearchBriefs />}</>;
     default: return null;
   }
@@ -454,6 +456,62 @@ function PublishingPipeline() {
         <p className="muted small">No project in the catalog uses this module yet.</p>
       )}
       <p className="muted small">Every agent of the commerce projects, from observed runs only. Agents with alert rules follow them, so a stage switched off on purpose shows as not running, not failed. A stage with no run seen shows as unknown, never as healthy.</p>
+    </details>
+  );
+}
+
+function ModelInventory() {
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => modelInventory(usage.records), [usage.records]);
+  return (
+    <details className="module-list" aria-label="Model inventory">
+      <summary className="muted small">Model inventory · {usage.firstLoad ? "Loading" : rows.length ? `${rows.length} model${rows.length === 1 ? "" : "s"} in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} title={r.agents.join(", ")}>
+              <span>{r.model}<span className="muted small"> · {r.providers.map(providerLabel).join(", ")}</span></span>
+              <span className="muted small">{compact(r.requests)} calls · {r.agents.length} agent{r.agents.length === 1 ? "" : "s"} · last {relative(r.last)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">Every model a recorded call used in the last {WINDOW_DAYS} days, from the same records as API Usage. Hover a row for the agents that call it.</p>
+    </details>
+  );
+}
+
+function ModelCost() {
+  const { setView } = useAtlas();
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => costPerModel(usage.records), [usage.records]);
+  const total = rows.reduce((n, r) => n + r.costUsd, 0);
+  return (
+    <details className="module-list" aria-label="Cost per model">
+      <summary className="muted small">Cost per model · {usage.firstLoad ? "Loading" : rows.length ? `${money(total)} known in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} data-state={r.costUsd === 0 && !r.unpriced ? "none" : undefined}>
+              <span>{r.model}</span>
+              <span className="muted small">
+                {r.costUsd > 0 ? `${r.unpriced ? "at least " : ""}${money(r.costUsd)}${r.billedOnly ? " billed" : r.costUsd ? " estimated" : ""}` : r.plan ? "Covered by a plan" : "Cost unknown"}
+                {r.perRequestUsd !== null ? ` · ${money(r.perRequestUsd)} a call` : ""}
+                {r.unpriced ? ` · ${r.unpriced} call${r.unpriced === 1 ? "" : "s"} with no price set` : ""}
+                {r.plan && r.costUsd > 0 ? ` · ${r.plan} on a plan` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">
+        Estimated means reported tokens times the prices set in Atlas; billed is the provider's own figure. A model with no price set shows its cost as unknown, never $0.{" "}
+        <button className="text-btn small" onClick={() => setView("usage")}>API Usage</button>
+      </p>
     </details>
   );
 }

@@ -50,6 +50,14 @@ it("shows site traffic and research briefs in the Growth & Marketing Studio, loa
   expect(html).not.toContain("0 page views");
 });
 
+it("shows the model inventory and cost per model in the Model Intelligence Lab", () => {
+  const html = render({ kind: "service", id: "airport-building:cargo" });
+  expect(html).toContain("Model Intelligence Lab");
+  expect(html).toContain('aria-label="Model inventory"');
+  expect(html).toContain('aria-label="Cost per model"');
+  expect(html).not.toContain("$0.00 known");
+});
+
 it("renders nothing for buildings without a module", () => {
   expect(render({ kind: "project", id: "portfolio-site" })).toBe("");
   expect(render({ kind: "service", id: "financial-park" })).toBe("");
