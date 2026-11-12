@@ -1,9 +1,10 @@
-import { isAiAgent } from "../catalog/roles";
+import { directoryItems } from "../catalog/roles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { relative, formatDate } from "../lib/time";
 import { load, save } from "../lib/storage";
 import { useIntel } from "../intel/state";
+import { ownership, rollupHealth } from "../catalog/ownership";
 import { buildRegistry, filterEntries, GROUP_LABEL, groupEntries, runtimeOf, SORT_LABEL, sortEntries, summarize, type GroupKey, type RegistryEntry, type SortKey } from "../registry/registry";
 import { OPERATIONAL_LABEL } from "../registry/telemetry";
 import { CATEGORIES, CATEGORY_LABEL, CLASSIFICATION_INFO, CLASSIFICATIONS, type Operational } from "../registry/types";
@@ -39,7 +40,7 @@ const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", c
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
   const { catalog: allCatalog, repos, filters, setFilters, select, selection } = useAtlas();
   const title = kind === "automations" ? "Automations" : "Agents";
-  const catalog = useMemo(() => ({ ...allCatalog, agents: allCatalog.agents.filter(a => kind === "agents" ? isAiAgent(a) : !isAiAgent(a)) }), [allCatalog, kind]);
+  const catalog = useMemo(() => ({ ...allCatalog, agents: directoryItems(allCatalog.agents, kind) }), [allCatalog, kind]);
   const { telemetry: intel } = useIntel();
   const [prefs, setPrefs] = useState<Prefs>(() => {
     const saved = { ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) };
@@ -51,13 +52,23 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
   const list = useRef<HTMLDivElement>(null);
 
-  const entries = useMemo(() => buildRegistry(catalog, repos, intel), [catalog, repos, intel]);
+  const allEntries = useMemo(() => buildRegistry(allCatalog, repos, intel), [allCatalog, repos, intel]);
+  const entries = useMemo(() => allEntries.filter((e) => catalog.agents.some((a) => a.id === e.profile.id)), [allEntries, catalog]);
+  // Agents own goals; their automations are the fixed steps they run (catalog `owned_by`).
+  const owns = useMemo(() => ownership(allCatalog), [allCatalog]);
+  const byId = useMemo(() => new Map(allEntries.map((e) => [e.profile.id, e])), [allEntries]);
+  const owners = useMemo(() => {
+    const m = new Map<string, { id: string; title: string }>();
+    for (const [agentId, autos] of owns.owned) for (const a of autos) m.set(a.id, { id: agentId, title: byId.get(agentId)?.profile.title ?? agentId });
+    return m;
+  }, [owns, byId]);
+  const orphanIds = useMemo(() => new Set(owns.orphans.map((a) => a.id)), [owns]);
   const summary = useMemo(() => summarize(entries), [entries]);
   const rows = useMemo(
     () => sortEntries(filterEntries(entries, { query: filters.query, project: filters.project, category: prefs.category, classification: prefs.classification, operational: prefs.operational, runtime: prefs.runtime }), prefs.sort),
     [entries, filters.query, filters.project, prefs],
   );
-  const groups = useMemo(() => groupEntries(rows, prefs.group), [rows, prefs.group]);
+  const groups = useMemo(() => groupEntries(rows, prefs.group, owners), [rows, prefs.group, owners]);
   const flat = groups.flatMap((g) => g.entries);
   const current = (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
 
@@ -87,6 +98,11 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           <p className="lede">
             {summary.total} {kind === "automations" ? "automations, AI-assisted workflows, pipelines, and integrations" : "AI agents and planned agents"} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
+          {kind === "automations" && owns.orphans.length > 0 && (
+            <p className="orphan-note" role="note">
+              <Icon name="alert" size={13} /> {owns.orphans.length} {owns.orphans.length === 1 ? "automation has" : "automations have"} no owning agent yet. Each one is marked in the list; group by Owning agent to see them together.
+            </p>
+          )}
           <p className="muted">{kind === "agents" ? "Agents use model-driven reasoning; planned agents are labeled separately. Fixed workflows are listed under Automations." : "Predefined workflows, including those with AI steps. Listed here does not mean enabled or running."}</p>
           {kind === "agents" && <RegistryRefresh />}
         </div>
@@ -120,7 +136,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
               options={(Object.keys(OPERATIONAL_LABEL) as Operational[]).map((o) => ({ value: o, label: OPERATIONAL_LABEL[o] }))}
             />
             <Select label="Runtime" value={prefs.runtime} onChange={(v) => set({ runtime: v })} options={[...new Set(entries.map(runtimeOf))].sort().map((r) => ({ value: r, label: r }))} />
-            <Select label="Group" value={prefs.group} all={false} onChange={(v) => set({ group: v as GroupKey })} options={(Object.keys(GROUP_LABEL) as GroupKey[]).map((g) => ({ value: g, label: GROUP_LABEL[g] }))} />
+            <Select label="Group" value={prefs.group} all={false} onChange={(v) => set({ group: v as GroupKey })} options={(Object.keys(GROUP_LABEL) as GroupKey[]).filter((g) => g !== "owner" || kind === "automations").map((g) => ({ value: g, label: GROUP_LABEL[g] }))} />
             <Select label="Sort" value={prefs.sort} all={false} onChange={(v) => set({ sort: v as SortKey })} options={(Object.keys(SORT_LABEL) as SortKey[]).map((s) => ({ value: s, label: SORT_LABEL[s] }))} />
             {anyFilter && (
               <button
@@ -149,11 +165,34 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
                       </div>
                     )}
                     <ul>
-                      {g.entries.map((e) => (
-                        <li key={e.profile.id}>
-                          <Row e={e} on={e.profile.id === current?.profile.id} onClick={() => select({ kind: "agent", id: e.profile.id })} />
-                        </li>
-                      ))}
+                      {g.entries.map((e) => {
+                        const steps = (owns.owned.get(e.profile.id) ?? []).flatMap((a) => byId.get(a.id) ?? []);
+                        const pick = (id: string) => () => select({ kind: "agent", id });
+                        return (
+                          <li key={e.profile.id}>
+                            <Row
+                              e={e}
+                              on={e.profile.id === current?.profile.id}
+                              onClick={pick(e.profile.id)}
+                              group={steps.length ? rollupHealth([e.operational, ...steps.map((x) => x.operational)]) : undefined}
+                              owner={kind === "automations" ? (owners.get(e.profile.id)?.title ?? (orphanIds.has(e.profile.id) ? null : undefined)) : undefined}
+                            />
+                            {steps.length > 0 && (
+                              <ul className="reg-nested" aria-label={`Automations run by ${e.profile.title}`}>
+                                {steps.map((x) => (
+                                  <li key={x.profile.id}>
+                                    <button className={`reg-step ${x.profile.id === current?.profile.id ? "on" : ""}`} onClick={pick(x.profile.id)}>
+                                      <i className={`op-dot op-${x.operational}`} aria-hidden />
+                                      <span className="grow">{x.profile.title}</span>
+                                      <span className="muted small">{OPERATIONAL_LABEL[x.operational]}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </section>
                 ))}
@@ -167,7 +206,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   );
 }
 
-function Row({ e, on, onClick }: { e: RegistryEntry; on: boolean; onClick: () => void }) {
+/** `group`: rolled-up health of an agent and the automations it owns. `owner`: for an automation,
+ *  its owning agent's title, null when it has none (an orphan), undefined when not shown. */
+function Row({ e, on, onClick, group, owner }: { e: RegistryEntry; on: boolean; onClick: () => void; group?: Operational; owner?: string | null }) {
   const p = e.profile;
   const last = e.telemetry.lastVerifiedRun;
   return (
@@ -182,8 +223,15 @@ function Row({ e, on, onClick }: { e: RegistryEntry; on: boolean; onClick: () =>
           <ClassBadge c={p.classification} />
           <span className="muted small">{p.framework}</span>
         </span>
+        {owner === null && <span className="reg-row-owner"><span className="orphan-chip" title="No agent owns this automation yet">No owning agent</span></span>}
+        {owner && <span className="reg-row-owner muted small">Run by {owner}</span>}
       </span>
       <span className="right">
+        {group && (
+          <span className="group-health" title={`Agent and its automations: ${OPERATIONAL_LABEL[group]}`}>
+            <i className={`op-dot op-${group}`} aria-hidden /> Group: {OPERATIONAL_LABEL[group]}
+          </span>
+        )}
         <OperationalPill op={e.operational} />
         <span className="muted small" title={last ? formatDate(last.at) : undefined}>
           {last ? `Verified ${relative(last.at)}` : e.telemetry.source ? "No verified run" : "Not connected"}

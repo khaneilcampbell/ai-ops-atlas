@@ -1,6 +1,7 @@
 import {WORKPLACE_BUILDINGS,validWorkplaceRoom} from "./workplaces";
 import yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
+import { isAiAgent } from "./roles";
 import { REPO_RE, Reader, type Raw } from "./reader";
 import { DISTRICTS } from "./taxonomy";
 import { MODULE_TYPE_IDS } from "../modules/types";
@@ -100,6 +101,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
             }
           : undefined,
         alerts: alerts ? alertRules(r, alerts, `${path}.alerts`) : undefined,
+        ...ownedByOf(r, ao, path),
         projectId,
         repository: agentRepo,
       },
@@ -140,6 +142,12 @@ function optionalNames(r: Reader, p: Raw): Pick<Project, "organization" | "forme
   const organization = r.str(p, "organization", "project", false);
   const formerNames = r.list(p, "former_names", "project").filter((n): n is string => typeof n === "string" && !!n.trim()).map((n) => n.trim());
   return { ...(organization ? { organization } : {}), ...(formerNames.length ? { formerNames } : {}) };
+}
+
+/** The manifest's `owned_by` agent id, present only when set. Checked against the catalog in buildCatalog. */
+function ownedByOf(r: Reader, ao: Raw, path: string): Pick<Agent, "ownedBy"> {
+  const ownedBy = r.str(ao, "owned_by", path, false);
+  return ownedBy ? { ownedBy } : {};
 }
 
 /** Merges manifests and reports duplicate ids across files. */
@@ -191,6 +199,15 @@ export function buildCatalog(files: Record<string, string>): { catalog: Catalog;
     const key=`${a.workplace.building}/${a.workplace.room}`;
     if(workplaces.has(key))issues.push({file:catalog.projects.find(p=>p.id===a.projectId)?.file??a.projectId,message:`workplace ${key} is assigned to more than one worker`});
     workplaces.add(key);
+  }
+  // An owner link must name an AI agent in the catalog, and only automations have one.
+  for (const a of catalog.agents) {
+    if (!a.ownedBy) continue;
+    const file = catalog.projects.find((p) => p.id === a.projectId)?.file ?? a.projectId;
+    const owner = catalog.agents.find((o) => o.id === a.ownedBy);
+    if (isAiAgent(a)) issues.push({ file, message: `${a.id}.owned_by: only automations have an owning agent` });
+    else if (!owner) issues.push({ file, message: `${a.id}.owned_by: "${a.ownedBy}" is not an agent id` });
+    else if (!isAiAgent(owner)) issues.push({ file, message: `${a.id}.owned_by: "${a.ownedBy}" is an automation, not an AI agent` });
   }
   // A declared connection must point at something in the catalog; it is never guessed.
   for (const p of catalog.projects)
