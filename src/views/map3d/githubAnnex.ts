@@ -148,7 +148,26 @@ export function addGithubAnnex(scene:Scene3D){
  // keeps one at its top level, so features added later are respected too.
  for(const [key,v] of Object.entries(scene))if(!GROUND_KEYS.has(key)&&isRect(v))blocked.push(v);
  const lines=sceneLines(Object.fromEntries(Object.entries(scene).filter(([k])=>!GROUND_KEYS.has(k)||k==='paving')));
- const annex=planGithubAnnex({tower,terrace:own,blocked,lines});
+ // The standard multi-building parcel reserves the podium inside its own land.
+ const inset=3;
+ const candidates: [Side,Rect][]=[
+  ['+x',{x:tower.x+inset,z:own.z,w:own.x+own.w-tower.x-inset,d:own.d}],
+  ['-x',{x:own.x,z:own.z,w:tower.x-inset-own.x,d:own.d}],
+  ['+z',{x:own.x,z:tower.z+inset,w:own.w,d:own.z+own.d-tower.z-inset}],
+  ['-z',{x:own.x,z:own.z,w:own.w,d:tower.z-inset-own.z}],
+ ];
+ for(const [side,r] of [...candidates]){
+  const x=side.endsWith('x'),start=x?r.z:r.x,end=start+(x?r.d:r.w),bridge=x?tower.z:tower.x;
+  const hits=lines.flat().filter(p=>inside(r,p,.2)).map(p=>p[x?1:0]);
+  if(!hits.length)continue;
+  for(const [lo,hi] of [[start,Math.min(...hits)-.21],[Math.max(...hits)+.21,end]]){
+   if(hi-lo<3||bridge<lo+GITHUB_ANNEX.ends||bridge>hi-GITHUB_ANNEX.ends)continue;
+   candidates.push([side,x?{...r,z:lo,d:hi-lo}:{...r,x:lo,w:hi-lo}]);
+  }
+ }
+ const clear=candidates.find(([,r])=>Math.min(r.w,r.d)>2&&!blocked.some(b=>overlaps(r,b,-.05))&&!lines.some(l=>l.some(p=>inside(r,p,.2))));
+ const site=clear&&(clear[0].endsWith('x')?{...own,z:clear[1].z,d:clear[1].d}:{...own,x:clear[1].x,w:clear[1].w});
+ const annex=clear&&site?{side:clear[0],terrace:clear[1],land:clear[1],...podium(tower,site,clear[1],clear[0])}:undefined;
  if(!annex)return;
  scene.githubAnnex=annex;
  scene.terraces.push({id:GITHUB_TOWER.projectId,park:false,...annex.terrace});

@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-11 · Live project districts now use consistent single- or multi-building land sizes and one full-parcel selection outline (PR pending)
 - 2026-11-11 · Footpath railings now stop where a road crosses the path instead of running across the street, street lamps stand back from footpaths, and lamp light on the road at night fades out softly instead of showing as grey ovals (#310)
 - 2026-11-11 · The Model Intelligence Lab at the airport is switched on: it lists the AI models your agents used in the last 30 days, which agents call each one, and what each model cost, with unknown prices shown as unknown rather than $0 (#349)
 - 2026-11-11 · Building names on the map look calmer and more Atlas: dark glass nameplates with a thin gold edge, a gold line down to the roof when a name has to sit higher, a soft small dot for planned places instead of the dashed circle, and district names as quiet gold lettering instead of a second set of boxes, which also leaves room for a few more names (#362)

@@ -1,22 +1,19 @@
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
-import {buildScene} from './scene';
+import {buildScene,TERRACE_H} from './scene';
+import {planGalleria} from './galleriaPlan';
 import {CAR_SURFACE,GALLERIA_LIFE,carHeight,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
 import {insidePoly} from './galleriaPlan';
 import {along} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 const scene=buildScene(layoutMap(catalog,[],'district'));
-// Without Service Desk's land the lot behind the Marketplace is too shallow for the car park behind
-// the building. The fixture stands a Career Applications tower on its old lot (both towers are off
-// the map since 2026-11-09, and its manifest was removed 2026-11-10) so the lot keeps the shallow
-// shape this case covers.
-const at=catalog.projects.findIndex(p=>p.id==='benjaire-ops')+1;
-const careerTower={id:'career-tower-fixture',name:'Career Applications',summary:'',status:'active' as const,repository:'',tags:['claude','career','human-in-the-loop'],district:'career-portfolio' as const,links:[],agentIds:[]};
-const shallowProjects=catalog.projects.filter(p=>p.id!=='service-desk');
-shallowProjects.splice(at,0,careerTower);
-const shallow=buildScene(layoutMap({projects:shallowProjects,agents:catalog.agents},[],'district'));
+// A deliberately shallow 7.5-unit strip of the existing clear Galleria lot exercises
+// the street-court fallback independently of the city's changing district packing.
+const original=scene.galleria!.rect;
+const shallowLand={...original,z:original.z+original.d-7.5,d:7.5};
+const shallow={...scene,galleria:planGalleria(scene.mall!,[shallowLand],[],TERRACE_H)!};
 
 describe('life round Atlas Galleria',()=>{
  for(const [name,s] of [['sample',scene],['shallow lot',shallow]] as const)it(`walks, lights and drives round the building (${name} layout)`,()=>{

@@ -1143,7 +1143,9 @@ function World({
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   // An open building's outline hugs its office, not the shell that was cut away.
   const hl = (key: string | null) => {
+    // Project land uses one district rim for both building and ground selections.
     const a = key ? anchors.get(key) : undefined;
+    if (a?.project && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
   };
   const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);

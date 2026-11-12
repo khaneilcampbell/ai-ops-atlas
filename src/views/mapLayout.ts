@@ -108,6 +108,13 @@ const RETIRED_LOTS: { after: string; project: Project }[] = [
       agentIds: [],
     },
   },
+  // Keep the single-building slot if repository filtering temporarily removes Portfolio.
+  // Repacking this gap can otherwise remove the shared Galleria's access land.
+  { after: "career-optimizer", project: {
+    id: "portfolio-site", name: "Portfolio Web Studio", summary: "Reserved project parcel",
+    status: "active", repository: "", tags: ["portfolio", "static-site", "github-pages", "claude"],
+    district: "career-portfolio", links: [], agentIds: [],
+  } },
 ];
 
 /**
@@ -202,10 +209,14 @@ function ringFor(count: number) {
   return m;
 }
 
-/** A district is sized for the houses and kiosks around its headquarters, so small projects stay compact. */
+/** Standard parcel classes; attached podiums count as part of a multi-building site. */
+export const DISTRICT_SIZE = { single: 5, multiple: 10 } as const;
+/** Legacy building dimensions stay independent from the standardized land parcel. */
+function buildingParcelSize(lotCount: number, projectId?: string) {
+  return Math.max(lotCount === 0 ? 5 : ringFor(lotCount) * 2.5, (projectId && DISTRICT_MIN_SIZE[projectId]) || 0);
+}
 export function districtSize(lotCount: number, projectId?: string) {
-  const fit = lotCount === 0 ? 5 : ringFor(lotCount) * 2.5;
-  return Math.max(fit, (projectId && DISTRICT_MIN_SIZE[projectId]) || 0);
+  return lotCount > 0 || projectId === "github-profile" ? DISTRICT_SIZE.multiple : DISTRICT_SIZE.single;
 }
 
 /**
@@ -304,7 +315,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   const buckets = new Map<string, { label: string; rank: number; projects: Project[] }>();
   // Off-map projects have no building (see OFF_MAP_PROJECTS). A removed tower keeps its land as a
   // vacant lot in every grouping, so the rest of the city, its roads and its traffic stay as they were.
-  const vacant = (p: Project) => VACANT_LOTS.has(p.id);
+  const vacant = (p: Project) => VACANT_LOTS.has(p.id) || (p.id === "portfolio-site" && !catalog.projects.some(project => project.id === p.id));
   const kept = (p: Project) => !OFF_MAP_PROJECTS.has(p.id) || vacant(p) || CLEARED_LOTS.has(p.id);
   const projects = withRetiredLots(catalog.projects);
   for (const p of projects.filter(kept)) {
@@ -321,7 +332,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       .map((project): Item & { fit: number } => {
         const r = residents(agentsByProject.get(project.id) ?? []);
         const s = districtSize(r.houses.length + r.services.length, project.id);
-        const fit = districtSize(r.houses.length + r.services.length);
+        const fit = buildingParcelSize(r.houses.length + r.services.length);
         return vacant(project) ? { vacant: project.id, w: s, h: s, fit } : { project, w: s, h: s, fit };
       })
       // Largest first packs tighter; ties keep catalog order. A widened district keeps the place its
@@ -397,13 +408,14 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const { crew, houses, services } = residents(agents);
       const n = houses.length + services.length;
       const size = it.w;
+      const buildingSize = buildingParcelSize(n, project.id);
       const m = n ? ringFor(n) : 2;
-      const operationsWidth = districtSize(0, "intelligence-hub") * .34;
-      const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
+      const operationsWidth = buildingParcelSize(0, "intelligence-hub") * .34;
+      const hqSize = Math.max(n ? buildingSize * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : buildingSize * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
       // Keep widened headquarters clear of the existing front approaches. The three
       // standard towers use a .92 scene footprint: half their added rendered depth is .46.
-      const hqSetback = project.id === "ai-ops-atlas" ? .35 : ["portfolio-site", "github-profile", "soc-lab"].includes(project.id) ? (hqSize - (n ? size * .26 : size * .34)) * .46 : 0;
-      const lotSize = (size / m) * 0.52;
+      const hqSetback = project.id === "ai-ops-atlas" ? .35 : ["portfolio-site", "github-profile", "soc-lab"].includes(project.id) ? (hqSize - (n ? buildingSize * .26 : buildingSize * .34)) * .46 : 0;
+      const lotSize = (buildingSize / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
         project,

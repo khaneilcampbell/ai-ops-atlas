@@ -232,7 +232,7 @@ describe("keepRemovedLots", () => {
     expect(catalog.projects.some(p => p.id === "career-optimizer" || p.repository === "khaneilcampbell/career-application-system")).toBe(false);
     expect(catalog.agents.some(a => a.projectId === "career-optimizer")).toBe(false);
     const lot = layoutMap(catalog, [], "district").parks.find(p => p.id === "park:vacant:career-optimizer");
-    expect(lot && [lot.ox, lot.oy, lot.w, lot.h]).toEqual([9.75, 22, 5, 5]);
+    expect(lot && [lot.ox, lot.oy, lot.w, lot.h]).toEqual([12.25, 24.5, 5, 5]);
   });
   it("leaves a catalog alone when nothing was dropped", () => {
     expect(keepRemovedLots(catalog, catalog)).toBe(catalog);

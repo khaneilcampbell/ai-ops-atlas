@@ -1,4 +1,5 @@
 import type {DistrictConnection} from './connections';
+import {routeAround} from './routing';
 import {pathClear,ROAD_W,type Box,type Pt} from './roads';
 
 /**
@@ -31,14 +32,18 @@ export function planRingRoad(links:DistrictConnection[],financialStreet:Pt[]|und
  const southStart=east.filter(p=>Math.abs(p[1]-southZ)<1e-6).sort((a,b)=>a[0]-b[0])[0];
  if(!southStart||bmw.every(p=>Math.abs(p[1]-northZ)>1e-6))return [];
  // Only where the west road reaches down close to the boulevard's south arm (the by-district city).
- const southOk=Math.abs(westEnd[1]-southZ)<1&&westEnd[1]>northZ;
+ const southOk=westEnd[1]>northZ&&westX<eastX;
  const pieces:{id:string;road:Pt[]}[]=[
   // North-east: from the end of BMW's spur down to the boulevard's north arm.
   {id:`${RING_ROAD_ID}:north-east`,road:[[bmwX,northZ],[bmwX,eastNorthZ]]},
   // South: from the boulevard's south-west end west to the west road, joining it end to end.
   ...(southOk?[{id:`${RING_ROAD_ID}:south`,road:[southStart,[westX,southZ],...(Math.abs(westEnd[1]-southZ)>1e-6?[westEnd]:[])] as Pt[]}]:[]),
  ];
+ // Repacking can lengthen the south link or put a parcel on its direct path.
+ for(const p of pieces)if(!pathClear(p.road,obstacles,RING_CLEAR)){
+  p.road=routeAround(p.road[0],p.road[p.road.length-1],obstacles,RING_CLEAR)??[];
+ }
  // All or nothing: a ring that cannot close adds no stubs.
- const ok=southOk&&eastNorthZ>northZ&&pieces.every(p=>p.road.every(q=>Number.isFinite(q[0])&&Number.isFinite(q[1]))&&pathClear(p.road,obstacles,RING_CLEAR));
+ const ok=southOk&&eastNorthZ>northZ&&pieces.every(p=>p.road.length>1&&p.road.every(q=>Number.isFinite(q[0])&&Number.isFinite(q[1]))&&pathClear(p.road,obstacles,RING_CLEAR));
  return ok?pieces.map(p=>({...p,walk:[]})):[];
 }
