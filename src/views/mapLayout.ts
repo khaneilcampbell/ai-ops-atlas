@@ -1,3 +1,5 @@
+import {towerRing} from "./map3d/roads";
+import {CITY_SCALE} from "./map3d/cityScale";
 import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
@@ -446,6 +448,13 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         if (rect) { rect.x += x; rect.y += y; }
       };
       move(hub, dx, dy); move(center, -dx, -dy);
+      // Align the actual north road centerlines, including each building's plaza and setback.
+      const northRoad = (d: District) => towerRing({
+        x: d.hq.gx + d.hq.size / 2, z: d.hq.gy + d.hq.size / 2,
+        size: d.hq.size * (d.project.id === "ai-ops-atlas" ? 1.02 : .92) * CITY_SCALE.hq.footprint,
+      }, d.hq.size * 1.25 + 1)!.z0;
+      const commerce = districts.find(d => d.project.id === "commerce-pipeline");
+      if (commerce) move(hub, 0, northRoad(commerce) - northRoad(hub));
       const heading = neighborhoods.find(n => n.key === hub.group);
       if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
     }

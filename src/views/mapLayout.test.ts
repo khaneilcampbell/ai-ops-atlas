@@ -193,7 +193,7 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
     // Every other building stands exactly where it stood while the two towers were drawn.
     const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
     const expected=at(without);
-    if(group==="district")expected["ai-ops-atlas"]=[old.ox,old.oy,old.size];
+    if(group==="district")expected["ai-ops-atlas"]=[old.ox,12.244500000000002,old.size];
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();
     expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:service-desk"]);

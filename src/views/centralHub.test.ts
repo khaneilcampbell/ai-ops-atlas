@@ -2,13 +2,17 @@ import {describe,it,expect} from 'vitest';
 import {catalog} from '../catalog';
 import {layoutMap} from './mapLayout';
 import {buildScene} from './map3d/scene';
+import {towerRing} from './map3d/roads';
 describe('central command district',()=>{
  const layout=layoutMap(catalog,[],'district'),scene=buildScene(layout);
- it('reuses the central cleared parcel without resizing the hub',()=>{
+ it('keeps the hub size and aligns its frontage with Commerce',()=>{
   const hub=layout.districts.find(d=>d.project.id==='ai-ops-atlas')!;
-  expect(hub).toMatchObject({ox:19.5,oy:14.75,size:5});
+  expect(hub).toMatchObject({ox:19.5,size:5});
   expect(layout.cleared?.find(d=>d.project.id==='benjaire-ops')).toMatchObject({ox:0,oy:14.75,size:5});
-  expect(scene.towers.find(t=>t.projectId==='ai-ops-atlas')).toMatchObject({x:22,z:16.9});
+  expect(scene.towers.find(t=>t.projectId==='ai-ops-atlas')!.z).toBeCloseTo(14.3945,9);
+  const commerce=layout.districts.find(d=>d.project.id==='commerce-pipeline')!;
+  const road=(id:string)=>{const d=layout.districts.find(d=>d.project.id===id)!,t=scene.towers.find(t=>t.projectId===id)!;return towerRing(t,d.hq.size*1.25+1)!.z0;};
+  expect(road(hub.project.id)).toBeCloseTo(road(commerce.project.id),9);
   expect(hub.crew.map(a=>a.id)).toEqual(catalog.agents.filter(a=>a.projectId==='ai-ops-atlas').map(a=>a.id));
  });
  it('preserves Marketplace, Galleria and marketing studio anchors',()=>{
