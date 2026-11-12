@@ -120,3 +120,66 @@ agents:
         improvements:
           - Compare rendered documents with the committed ones
         last_review: 2026-10-28
+
+  - id: agent-registry-sync
+    name: Agent Registry Sync
+    purpose: >-
+      n8n workflow that keeps the Atlas Agent Registry Google Sheet in the Benjaire Drive current:
+      one row per agent and n8n workflow, with building, where it runs, status, schedule, last run,
+      health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
+    framework: n8n
+    runtime: n8n Cloud
+    status: paused
+    trigger: Schedule (draft, not published yet)
+    last_run: null
+    history:
+      - at: 2026-11-12
+        event: Built as an unpublished n8n draft; first real run filled the sheet with 71 rows
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/JCjTTvb7qZLpVXhs
+      - label: Registry sheet
+        url: https://docs.google.com/spreadsheets/d/1knZMDtCn63phhyFvOBQG7nJP2OS7AIo6rwhNSqJYFaI/edit
+    permissions:
+      - 'GitHub: public reads of catalog/*.yaml, no key'
+      - 'n8n API key (read only): workflows and recent executions'
+      - 'Atlas sync key (read only): GET /api/hooks/feed'
+      - 'Google Sheets: reads and writes the Atlas Agent Registry sheet only'
+    registry:
+      title: Agent Registry Clerk
+      category: engineering
+      subcategory: Workflow automation
+      classification:
+        type: C
+        confidence: verified
+        evidence: The n8n workflow reads the catalog, n8n and the Atlas feed, compares rows in plain code and upserts changed rows by agent_id; no AI model
+      mission:
+        problem: There was no single list of every agent and automation with its status, schedule, health and links.
+        outcomes:
+          - Every agent in the Atlas catalog and every n8n workflow has one current row in the registry sheet
+        beneficiaries: [Khaneil]
+      responsibilities:
+        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date]
+        # Framework and runtime say n8n. The tools list leaves the vendor name out on purpose: naming it
+        # here would add an Automation Works kiosk to this district and reshape its land (Khaneil chose
+        # to keep the map as it is, 2026-11-12).
+        tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
+        inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
+        outputs: [Rows in the Atlas Agent Registry sheet]
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only to its own Google Sheet; read-only toward Atlas and n8n.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials)
+        risk: low
+        audit_log: n8n executions and the sheet's version history
+      cost:
+        budget: No model spending; n8n executions only
+      docs:
+        known_issues:
+          - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
+          - The workflow finds the sheet's tab by its name, Untitled
+        last_review: 2026-11-12
