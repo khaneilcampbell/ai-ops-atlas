@@ -1,3 +1,4 @@
+import { OFF_MAP_PROJECTS } from "../catalog/projects";
 import { useMemo, useState } from "react";
 import { Icon, type IconName } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
@@ -92,7 +93,7 @@ export function ActivityView() {
           <span>Project</span>
           <select value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">All</option>
-            {catalog.projects.map((p) => (
+            {catalog.projects.filter((p) => !OFF_MAP_PROJECTS.has(p.id)).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>

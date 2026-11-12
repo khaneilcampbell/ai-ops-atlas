@@ -7,6 +7,9 @@ import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from
 import { integrationLabel } from "../modules/integrations";
 import { WORKSPACE, isEntitled } from "../modules/workspace";
 import { workspaceScope, workspaceViews } from "../modules/workspaces";
+import { useAlerts } from "../alerts/state";
+import { STATE_LABEL } from "../alerts/alerts";
+import { feedHealth } from "../modules/feedHealth";
 import { HealthBadge } from "./bits";
 import { MODULE_HEALTH, ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
 
@@ -22,11 +25,13 @@ const AVAILABILITY_LABEL: Record<ModuleAvailability, string> = { available: "Ava
 
 /**
  * The building's Atlas module, shown in the inspector for every building that houses one.
- * Health comes only from an observed signal (the project repository's GitHub CI); a landmark
- * building has no telemetry yet, so its health is shown as not verified rather than guessed.
+ * Health comes only from an observed signal: the live reports of the agents that operate the
+ * building when it has watched ones, otherwise its own sources or its repositories' GitHub CI. A
+ * building with none of these is shown as not verified rather than guessed.
  */
 export function ModuleSection() {
   const { selection, catalog, repos, setView, select, setFilters, clearFilters } = useAtlas();
+  const { watches } = useAlerts();
   const building = buildingForSelection(selection, catalog);
   const type = moduleType(building?.moduleType);
   if (!building || !type) return null;
@@ -37,6 +42,8 @@ export function ModuleSection() {
   const items = [...assets.agents, ...assets.automations];
   const runs = executionHistory(items, repos);
   const watched = observable(items);
+  // Landmarks only: a project building keeps its own CI line for the whole project.
+  const feed = building.projectId === null ? feedHealth(items.map((a) => a.id), watches) : null;
   const available = type.capabilities.filter((c) => c.state === "available");
   const planned = type.capabilities.filter((c) => c.state === "planned");
   const views = workspaceViews(type);
@@ -65,7 +72,19 @@ export function ModuleSection() {
         <p className="muted small">{type.description} {PRODUCT_DISTRICT_LABEL[type.productDistrict]} module.</p>
         <dl className="kv">
           <dt>Health</dt>
-          {OwnHealth ? <OwnHealth /> : <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}</span></dd>}
+          {feed ? (
+            <dd data-state={feed.state} aria-label="Live feed">
+              <HealthBadge health={feed.health} /> <span className="muted small">{feed.summary}</span>
+              <ul className="module-feed">
+                {feed.watches.map((w) => (
+                  <li key={w.agent.id} className="muted small">
+                    <button className="linklike" onClick={() => select({ kind: "agent", id: w.agent.id })}>{w.agent.name}</button>
+                    {` · ${STATE_LABEL[w.state]}`}{w.last ? <> · {relative(w.last.at)} · {w.last.label}</> : null}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          ) : OwnHealth ? <OwnHealth /> : <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}{agg.lastRun && <> · last run <a href={agg.lastRun.url} target="_blank" rel="noreferrer">{relative(agg.lastRun.at)}</a></>}</span></dd>}
           <dt>Linked assets</dt>
           <dd>{assets.repositories.length || items.length ? [
             count(assets.projects.length, "project"), count(assets.repositories.length, "repository", "repositories"),
@@ -93,7 +112,7 @@ export function ModuleSection() {
             <ModuleWorkspaceLists type={type} />
           </>
         )}
-        {items.length > 0 && (
+        {items.length > 0 && !feed && (
           <div className="module-runs" aria-label="Recent executions">
             <div className="muted small">Recent executions{watched ? ` · GitHub Actions, ${watched} of ${items.length} watched` : ""}</div>
             {runs.length ? (
