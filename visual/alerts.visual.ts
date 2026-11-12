@@ -24,8 +24,8 @@ test("a reported failure raises an alert until it is dismissed", async ({ page }
   await goTo(page, "Mission");
   const card = page.locator("#agent-alerts");
   await expect(card.locator(".watch.failing")).toContainText("Flow forward timed out after 3 tries");
-  // The commerce agents are off on purpose, so they never alert.
-  await expect(card.locator(".watch.not-running")).toHaveCount(4);
+  // The commerce pipeline runs on n8n and emails its own failures, so Atlas watches none of it.
+  await expect(card.locator(".watch.not-running")).toHaveCount(0);
   // This browser isn't reading the live feed, so the intake's state is unknown, not healthy.
   await expect(card.locator(".watch.no-source")).toHaveCount(1);
   await shot(page, "1-mission");
