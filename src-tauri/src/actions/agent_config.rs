@@ -1,6 +1,6 @@
 //! Manage agents: change an allow-listed agent's schedule or monthly cap. Never a commit to
 //! main: Atlas opens a pull request that changes exactly one line, the workflow's `cron:` or
-//! the one cap key in the agent's policy JSON, and KC merges it like any other.
+//! the one cap key in the agent's policy JSON, and Khaneil merges it like any other.
 //!
 //! The page sends an agent id, which field, and the new value. The file, the key and the
 //! limits come from the allow-list compiled into the app. The value is checked here (cron

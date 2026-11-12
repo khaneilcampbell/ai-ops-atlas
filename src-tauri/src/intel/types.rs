@@ -190,7 +190,7 @@ impl Default for ReviewConfig {
         Self {
             depth: Depth::Standard,
             max_run_usd: 0.60,
-            // Weekly, Monday 08:00, off until KC turns it on.
+            // Weekly, Monday 08:00, off until Khaneil turns it on.
             schedule: Schedule {
                 days: vec![0],
                 ..Schedule::default()

@@ -83,7 +83,7 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
  useEffect(()=>()=>trainGlass.dispose(),[trainGlass]);
  const stationGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.42,depthWrite:false,roughness:.15,metalness:.3,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.25:0}),[night]);
  useEffect(()=>()=>stationGlass.dispose(),[stationGlass]);
- // Every perimeter loop stop wears the Dubai-style shell and glazed skybridge from #158 (KC, 2026-11-07).
+ // Every perimeter loop stop wears the Dubai-style shell and glazed skybridge from #158 (Khaneil, 2026-11-07).
  const station=useMemo(()=>{if(!p)return undefined;if(!p.loop)return parkStationParts(p.financial,TERRACE_H);const local=parkStationParts([0,0],TERRACE_H);return mergeStationParts(p.loop.stops.map(stop=>placeParkStation(local,stop)));},[p]);
  const palette=useCommunityPalette();
  const parts=useMemo(()=>{const solid:Inst[]=[],lights:Inst[]=[],platforms:Inst[]=[],paths:Inst[]=[],stationKeys:string[]=[];if(!p)return {solid,lights,platforms,paths,stationKeys};
@@ -128,13 +128,13 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
   }
 
  }
- // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (KC, 2026-11-08).
+ // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (Khaneil, 2026-11-08).
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0){
   paths.push(...openWalk([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',[...roads,...clearRoads],TRANSPORT.cityWidth/2+.06,TERRACE_H));
  }
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])])){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.061,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,clearRoads,keepClear,night,palette,deck]);
- // Simulated people, all drawn as two instanced meshes (bodies and heads): KC's twelve rail
+ // Simulated people, all drawn as two instanced meshes (bodies and heads): Khaneil's twelve rail
  // commuters first, then the AI agents walking between their Circa apartments and workplaces
  // (agentCommutes.ts, always drawn), then Financial District people riding to Hills places and
  // office workers walking the sidewalk between towers, interleaved so a smaller crowd keeps both kinds.

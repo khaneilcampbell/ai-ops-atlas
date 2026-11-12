@@ -5,8 +5,8 @@
 // Every source here is public and needs no account: RDAP for the registration, Cloudflare's
 // DNS-over-HTTPS resolver for records, Certificate Transparency logs (crt.sh) for the
 // certificate, one HTTPS request for reachability, and Google PageSpeed Insights for speed (an
-// optional key only raises its quota). Cloudflare analytics and audit events need KC's read-only
-// token (server/cloudflare.ts); Uptime Kuma history stays "not configured" until KC supplies it.
+// optional key only raises its quota). Cloudflare analytics and audit events need Khaneil's read-only
+// token (server/cloudflare.ts); Uptime Kuma history stays "not configured" until Khaneil supplies it.
 //
 // Answers are cached per check (Cache API on Pages), so opening a building or polling from both
 // devices costs at most one upstream request per check per window.
@@ -21,7 +21,7 @@ export interface PropertyEnv {
   PAGESPEED_API_KEY?: string;
   /** Read-only Cloudflare API token: Zone Read, Zone Analytics Read, Account Settings Read (audit log). */
   CLOUDFLARE_API_TOKEN?: string;
-  /** Base URL of KC's Uptime Kuma, e.g. https://status.example.com. Not wired yet. */
+  /** Base URL of Khaneil's Uptime Kuma, e.g. https://status.example.com. Not wired yet. */
   UPTIME_KUMA_URL?: string;
   /** The Mac app's sync key, for /api/hooks/properties. */
   USAGE_SYNC_TOKEN?: string;
@@ -306,7 +306,7 @@ export async function snapshot(domain: string, env: PropertyEnv, cache: CheckCac
       uptime: {
         state: "not-configured",
         source: SOURCES.uptime,
-        need: env.UPTIME_KUMA_URL ? "The Kuma URL is set on the site; reading it ships in the next pull request." : "The address of KC's Uptime Kuma and a public status page with a monitor for this site (UPTIME_KUMA_URL).",
+        need: env.UPTIME_KUMA_URL ? "The Kuma URL is set on the site; reading it ships in the next pull request." : "The address of Khaneil's Uptime Kuma and a public status page with a monitor for this site (UPTIME_KUMA_URL).",
       },
     },
   };

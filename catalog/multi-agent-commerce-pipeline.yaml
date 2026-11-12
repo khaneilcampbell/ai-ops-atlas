@@ -8,7 +8,7 @@ project:
   former_names: [Commerce Pipeline]
   summary: >-
     Product pipeline on n8n Cloud: Claude turns each idea into a Canva template
-    and listing images, KC approves it, Stripe sells it on the shop page and
+    and listing images, Khaneil approves it, Stripe sells it on the shop page and
     buyers get their template link by email.
   status: active
   repository: khaneilcampbell/multi-agent-commerce-pipeline
@@ -25,7 +25,7 @@ agents:
     name: Design Run
     purpose: >-
       n8n workflow that takes the next product idea, has Claude write the listing and a design brief,
-      then has Claude make the product and six listing images in Canva and emails KC an approval link.
+      then has Claude make the product and six listing images in Canva and emails Khaneil an approval link.
     framework: n8n
     model: claude-sonnet-5-5
     runtime: n8n Cloud
@@ -42,8 +42,8 @@ agents:
         url: https://khancam15.app.n8n.cloud/form/commerce-idea
     permissions:
       - Anthropic, through the n8n credential on Claude Writes Brief and Claude Sonnet
-      - 'Canva, through the Canva node and the Canva MCP connector: creates designs in KC''s account'
-      - 'Resend API: approval and failure emails to KC only'
+      - 'Canva, through the Canva node and the Canva MCP connector: creates designs in Khaneil''s account'
+      - 'Resend API: approval and failure emails to Khaneil only'
       - 'n8n data table commerce_products: reads ideas, writes drafts'
     registry:
       title: Commerce Operations Coordinator
@@ -58,14 +58,14 @@ agents:
         problem: Turning a product idea into a finished Canva template and listing images takes hours by hand.
         outcomes:
           - Each idea becomes a Canva product, six listing images and a draft listing
-          - KC approves every product before it goes on sale
+          - Khaneil approves every product before it goes on sale
       responsibilities:
-        tasks: [Pick the oldest idea or a retry, Write the listing and Canva brief with Claude, Make the product and six listing images in Canva, Save the draft, Email KC an approval link, Email KC when a run fails]
+        tasks: [Pick the oldest idea or a retry, Write the listing and Canva brief with Claude, Make the product and six listing images in Canva, Save the draft, Email Khaneil an approval link, Email Khaneil when a run fails]
         tools: [n8n Cloud, Claude (claude-sonnet-5-5), Canva, n8n data tables, Resend]
         inputs: [Ideas from the Add product idea form]
         outputs: [Canva product and listing images, Draft row in commerce_products, Approval email]
       goals:
-        objective: Turn each idea into a product ready for KC's review.
+        objective: Turn each idea into a product ready for Khaneil's review.
         kpis:
           - name: New designs per week
             kind: throughput
@@ -78,9 +78,9 @@ agents:
         stages: [Pick idea, Claude brief, Canva design, Save draft, Approval email]
       governance:
         autonomy: 2
-        autonomy_note: Makes designs and drafts on its own; nothing goes on sale until KC approves on the approve page. A failed idea is retried up to 3 times and KC gets an email each time.
+        autonomy_note: Makes designs and drafts on its own; nothing goes on sale until Khaneil approves on the approve page. A failed idea is retried up to 3 times and Khaneil gets an email each time.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: medium
         audit_log: n8n executions and the commerce_products data table
       docs:
@@ -522,12 +522,12 @@ agents:
   - id: shopify-publisher
     name: Approve and Publish
     purpose: >-
-      n8n approval form. When KC approves a drafted product and pastes its Canva template link,
+      n8n approval form. When Khaneil approves a drafted product and pastes its Canva template link,
       it creates the Stripe product, price and payment link and puts the product on the shop page.
     framework: n8n
     runtime: n8n Cloud
     status: active
-    trigger: KC submits the approve form from the approval email
+    trigger: Khaneil submits the approve form from the approval email
     observe:
       agent_feed: true
     # Writes to Stripe, but only after Khaneil's approval form. Each publish reports to Atlas, and a
@@ -559,7 +559,7 @@ agents:
       responsibilities:
         tasks: [Check the private approve token, Check the Canva template link, Create the Stripe product, price and payment link, Mark the product live]
         tools: [n8n Cloud, Stripe, n8n data tables]
-        inputs: [Approve form from KC]
+        inputs: [Approve form from Khaneil]
         outputs: [Stripe product, price and payment link, Live row in commerce_products]
         dependencies: [commerce-loop]
       execution:
@@ -567,9 +567,9 @@ agents:
         environment: n8n
       governance:
         autonomy: 1
-        autonomy_note: Runs only when KC approves a product.
+        autonomy_note: Runs only when Khaneil approves a product.
         data_sensitivity: confidential
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: medium
         audit_log: n8n executions and the commerce_products data table
       docs:
@@ -724,7 +724,7 @@ agents:
         confidence: verified
         evidence: The n8n workflow reads the paid checkout and sends a fixed email with the template link; no AI model
       mission:
-        problem: A buyer must get their template link soon after paying, without KC sending it.
+        problem: A buyer must get their template link soon after paying, without Khaneil sending it.
         outcomes:
           - Every paid order is emailed its Canva template link once
       responsibilities:
@@ -737,9 +737,9 @@ agents:
         environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: Emails buyers without approval, only for paid orders and only the link KC approved.
+        autonomy_note: Emails buyers without approval, only for paid orders and only the link Khaneil approved.
         data_sensitivity: confidential
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: medium
         audit_log: n8n executions
       docs:
@@ -748,7 +748,7 @@ agents:
   - id: sales-sync
     name: Shop Page and Weekly Sales
     purpose: >-
-      n8n workflow that serves the shop page of live products and emails KC a sales summary every Monday.
+      n8n workflow that serves the shop page of live products and emails Khaneil a sales summary every Monday.
     framework: n8n
     runtime: n8n Cloud
     status: active
@@ -764,7 +764,7 @@ agents:
         url: https://khancam15.app.n8n.cloud/webhook/benjaire-shop
     permissions:
       - 'Stripe restricted key: reads checkout sessions'
-      - 'Resend API: weekly email to KC only'
+      - 'Resend API: weekly email to Khaneil only'
       - 'n8n data table commerce_products: reads live products'
     registry:
       title: Sales Reporting Specialist
@@ -775,12 +775,12 @@ agents:
         confidence: verified
         evidence: The n8n workflow renders live products from a data table and totals Stripe checkouts for a weekly email; no AI model
       mission:
-        problem: Buyers need one page listing what is on sale, and KC needs a weekly sales number without opening Stripe.
+        problem: Buyers need one page listing what is on sale, and Khaneil needs a weekly sales number without opening Stripe.
         outcomes:
           - The shop page shows every live product
-          - One sales email to KC each Monday
+          - One sales email to Khaneil each Monday
       responsibilities:
-        tasks: [Serve the shop page, Total last week's paid checkouts, Email KC the summary]
+        tasks: [Serve the shop page, Total last week's paid checkouts, Email Khaneil the summary]
         tools: [n8n Cloud, Stripe, Resend, n8n data tables]
         inputs: [commerce_products, Stripe checkout sessions]
         outputs: [Shop page, Monday sales email]
@@ -790,9 +790,9 @@ agents:
         environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: Read-only apart from the email to KC.
+        autonomy_note: Read-only apart from the email to Khaneil.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
         audit_log: n8n executions
       docs:
@@ -800,7 +800,7 @@ agents:
 
   - id: email-digest
     name: Daily Email Digest
-    purpose: Emails KC a daily summary of publishes, failures, queue state and sales.
+    purpose: Emails Khaneil a daily summary of publishes, failures, queue state and sales.
     framework: Python script
     runtime: Not deployed
     status: retired
@@ -822,10 +822,10 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/email_digest.py builds an HTML summary from SQLite and sends it to KC; no AI model
+        evidence: scripts/email_digest.py builds an HTML summary from SQLite and sends it to Khaneil; no AI model
       mission:
-        problem: KC needs one daily email with product ideas to design, the brand summary, pipeline health, queue state and sales.
-        outcomes: [One email to KC each day]
+        problem: Khaneil needs one daily email with product ideas to design, the brand summary, pipeline health, queue state and sales.
+        outcomes: [One email to Khaneil each day]
       responsibilities:
         tasks:
           - Collect product ideas from outputs/master.txt
@@ -834,14 +834,14 @@ agents:
           - Send the email
         tools: [SQLite, SMTP]
         inputs: [outputs/master.txt, outputs/brand_guide.md, outputs/pipeline.db]
-        outputs: [Daily email to KC]
+        outputs: [Daily email to Khaneil]
       execution:
         trigger_type: scheduled
         schedule: Once per UTC day from loop.sh
         environment: Not deployed
       governance:
         autonomy: 1
-        autonomy_note: Reports to KC only; changes nothing.
+        autonomy_note: Reports to Khaneil only; changes nothing.
         data_sensitivity: internal
         credential_owner: Khaneil (retired, no live credentials)
         risk: low
@@ -935,7 +935,7 @@ agents:
       mission:
         problem: Keeps the pipeline scripts from breaking before they are merged.
         outcomes: ["Every pull request is linted and tested before merge"]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Compile the scripts, Lint with ruff, Check shell scripts parse, Run pytest]
         tools: [GitHub Actions, ruff, pytest]
@@ -956,7 +956,7 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
       docs:
         technical: README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#pipeline-tests

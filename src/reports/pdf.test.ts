@@ -25,7 +25,7 @@ describe("report PDF", () => {
     const pdf = text(opportunityPdf(report(), "2026-10-30T12:00:05.000Z"));
     expect(pdf).toContain("(1. Audit service \\(score 4.2 of 5\\)) Tj");
     expect(pdf).toContain("Agent spec: Audit Seller");
-    expect(pdf).toContain("KC approves every offer before it is sent");
+    expect(pdf).toContain("Khaneil approves every offer before it is sent");
     expect(pdf).toContain("Checks");
   });
 

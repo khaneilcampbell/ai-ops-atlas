@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** BMW beside the Financial District, and the Hills train stop in Financial Park (KC, 2026-10-31). */
+/** BMW beside the Financial District, and the Hills train stop in Financial Park (Khaneil, 2026-10-31). */
 const out=process.env.SHOT_DIR??'artifacts/bmw-park-station';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){

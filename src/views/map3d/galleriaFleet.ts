@@ -2,8 +2,8 @@ import {MODELS,SCALE,type Part} from './vehicleModels';
 import type {Pt} from './roads';
 
 /**
- * The Galleria car park's fleet (KC, 2026-11-09): executive coupes and saloons, boxy luxury SUVs,
- * wedge supercars, pickups, taxis, a stretch limo and a concept truck. Styled after the cars KC
+ * The Galleria car park's fleet (Khaneil, 2026-11-09): executive coupes and saloons, boxy luxury SUVs,
+ * wedge supercars, pickups, taxis, a stretch limo and a concept truck. Styled after the cars Khaneil
  * named, with no badges or names on them. Built from the map's own vehicle parts, so parked and
  * moving cars match the traffic on the streets.
  */

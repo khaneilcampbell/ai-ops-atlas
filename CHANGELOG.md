@@ -2,7 +2,8 @@
 
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
-shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+shown in the Mac app's **Update available** button, so write them for Khaneil, not for a reviewer.
+- 2026-11-12 · Atlas, its agent prompts and customer emails now call you Khaneil instead of KC (#376)
 - 2026-11-12 · README brought up to date: operational building names, building modules, agent counts, n8n alerts and the time zone setting (#394)
 - 2026-11-12 · The Product Marketplace now describes what it's for today: where Benjaire's products are sold (the n8n, Canva and Stripe pipeline) and where Atlas releases are checked by the Marketplace Steward (#386)
 - 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)

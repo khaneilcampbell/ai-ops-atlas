@@ -89,7 +89,7 @@ agents:
       mission:
         problem: Proves every project's Markdown still renders to DOCX before it is merged.
         outcomes: ["Every pull request renders all documents before merge"]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Lint build_docs.py, Check project.json and the five sources, Render every project to DOCX, Optional DOCX download on manual dispatch]
         tools: [GitHub Actions, pandoc, python-docx, ruff]
@@ -110,7 +110,7 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
       docs:
         technical: docs/intelligence-hub/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#hub-ci

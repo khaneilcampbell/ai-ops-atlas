@@ -12,7 +12,7 @@ describe('square city with three-stop passenger rail',()=>{
  for(const group of ['none','district','status','tag'] as GroupBy[])it(`preserves clear, connected infrastructure: ${group}`,()=>{
   const original=JSON.stringify(catalog),s=buildScene(layoutMap(catalog,[],group)),r=s.communityRail!,e=cityEnvelope(s.land)!;
   expect(JSON.stringify(catalog)).toBe(original);expect(s.hills).toBeUndefined();
-  expect(s.freight,'no freight trunk road (KC, 2026-11-07)').toBeUndefined();
+  expect(s.freight,'no freight trunk road (Khaneil, 2026-11-07)').toBeUndefined();
   expect(e.w).toBeCloseTo(e.d,6);
   // The outer land itself is filled, not merely a square enclosing road. Original core canals stay.
   const core=cityEnvelope(s.coreLand!)!;

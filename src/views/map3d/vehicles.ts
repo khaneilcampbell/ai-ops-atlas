@@ -67,7 +67,7 @@ export const JUNCTION_STOP = 0.8;
 const STOP_BACK = 0.48;
 
 /**
- * City traffic as a street system (KC, 2026-11-08): every vehicle drives a closed loop on the street
+ * City traffic as a street system (Khaneil, 2026-11-08): every vehicle drives a closed loop on the street
  * network, so none ever turns round in the road. Dead-end spurs are left out of the network first
  * (a car would have to U-turn at the end), so every remaining street leads on to another. Each loop
  * keeps to the lane on the right of the centre line all the way round, stops at the stop line

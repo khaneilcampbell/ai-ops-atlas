@@ -1,4 +1,4 @@
-/** Atlas HQ's colours, used by the airport so the two landmarks read as one family (KC, 2026-10-31).
+/** Atlas HQ's colours, used by the airport so the two landmarks read as one family (Khaneil, 2026-10-31).
  * Values match the HQ tower: blue glass, a gold wing, cool white metal and grey roofs. */
 export const ATLAS_HQ_COLORS = {
   /** Blue glass, from light to deep. */

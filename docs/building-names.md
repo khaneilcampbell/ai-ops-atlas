@@ -1,8 +1,8 @@
 # Building names without trademarks
 
-Status: **partly applied (2026-11-07, PR #257).** KC approved the names below, changing two of them
+Status: **partly applied (2026-11-07, PR #257).** Khaneil approved the names below, changing two of them
 (Robin Exchange, Camton Hotel). Rows marked **Done** are renamed in the app. Rows marked **Open** are
-still proposals awaiting KC (American Express, the four Skyline restaurants and shop, the airport
+still proposals awaiting Khaneil (American Express, the four Skyline restaurants and shop, the airport
 names, vehicles and liveries). Atlas Stadium is handled by the stadium rebuild (PR #263).
 
 Screenshots: `docs/screenshots/building-names/` (before/after, day, night and phone).
@@ -28,9 +28,9 @@ trademark-searched; step 1 of the prompt screens them before anything ships.
 ## Naming rule
 
 1. **Owned names only.** A building name may contain only:
-   - `Atlas` (KC's app and its civic places: HQ, Airport, Marketplace, Hills, stations, stadium),
-   - `Benjaire` (KC's company: HQ, Dashboard, Finance, Marketing Agency),
-   - KC's own project names from `catalog/*.yaml` (Skyline, SOC Lab, Commerce Pipeline, and so on),
+   - `Atlas` (Khaneil's app and its civic places: HQ, Airport, Marketplace, Hills, stations, stadium),
+   - `Benjaire` (Khaneil's company: HQ, Dashboard, Finance, Marketing Agency),
+   - Khaneil's own project names from `catalog/*.yaml` (Skyline, SOC Lab, Commerce Pipeline, and so on),
    - an **original fictional business name** from the word bank below, for private businesses in
      the city (banks, hotel, shops, dealership).
    Never a real company, product, person, or real building, and never a lookalike spelling of one.
@@ -54,7 +54,7 @@ Aldren, Camton, Ravelle, Ellery, Vantor, Ellipse.
 
 ## Proposed names
 
-**Done** = renamed in the app. **Open** = proposed, waiting for KC. **Keep** = already owned and
+**Done** = renamed in the app. **Open** = proposed, waiting for Khaneil. **Keep** = already owned and
 consistent. Ids in `code` are stable and stay as
 they are.
 
@@ -81,11 +81,11 @@ they are.
 | Chase | Bayvale Bank | Banking records review | `banks` | Done |
 | Wells Fargo | Halden Trust | Bills and records bank tower | `records` | Done |
 | American Express | Ellery Budget Center | Life management: spending, budget and bills review; plum Art Deco tower | `budget` | Done |
-| Robinhood | Robin Exchange (KC's pick) | Investment records (no trading) | `investments` | Done |
+| Robinhood | Robin Exchange (Khaneil's pick) | Investment records (no trading) | `investments` | Done |
 | Navy Federal Credit Union | Merrow Credit Union | Member services and records | `insurance` | Done |
 | Experian | Aldren Insights | Credit and data insights offices | `residence` | Done |
 | Vanguard | Ravelle Advisors | Financial planning headquarters | `financial-planning` | Done |
-| The Ritz-Carlton | Camton Hotel (KC's pick) | Waterfront luxury hotel | `harbor-residence` | Done |
+| The Ritz-Carlton | Camton Hotel (Khaneil's pick) | Waterfront luxury hotel | `harbor-residence` | Done |
 | Circa | Ellipse Residences | Twin-tower residence and pool deck | `circa` | Done |
 | Benjaire Finance | Corvane Capital | Business finance house; original drawn logo (ring and rising bars badge), teal and copper | `business-finance` | Done |
 | Financial District | Financial District | District nameplate | `FINANCIAL_KEY` | Keep |
@@ -164,12 +164,12 @@ they are.
 
 ## Senior engineer prompt
 
-For the **Open** rows, paste this into a new engineering session once KC approves them.
+For the **Open** rows, paste this into a new engineering session once Khaneil approves them.
 
 ```text
 You are a senior engineer on Atlas (Tauri Mac app + the same React app on Cloudflare Pages,
 repo khaneilcampbell/ai-ops-atlas). Read CLAUDE.md first; every merge to main is a production
-release. Never merge; KC merges.
+release. Never merge; Khaneil merges.
 
 Goal: apply the approved building names in docs/building-names.md so no building, sign, vehicle
 or livery uses a real company's name, logo or signature colours. Display names change; stable ids,
@@ -193,7 +193,7 @@ selection keys, interior routes and saved state do not.
       octagon, feather and experian symbols; use one generic monogram drawn from the new name),
       circaPlan.ts / CircaTowers.tsx / office Circa* labels, Dealership.tsx (no roundel, no BMW
       lettering), the plaque in Map3D.tsx, towerPlan.ts, catalog/buildings.ts, DetailPanel.tsx.
-      Keep each old name as a search-only alias (the existing legacyName mechanism) so KC's
+      Keep each old name as a search-only alias (the existing legacyName mechanism) so Khaneil's
       searches still work; never display it.
    b. Skyline storefronts + tool offices + Profile Tower: give each Skyline tenant in scene.ts a
       stable id and build `retail:` and `skylineBuildingKey` keys from that id, not the name, so
@@ -223,11 +223,11 @@ selection keys, interior routes and saved state do not.
    baselines through the visual workflow's update run, not by hand. No Rust changes are expected;
    if src-tauri changes, run the macOS build by hand.
 
-7. Each PR: fill .github/pull_request_template.md, add one CHANGELOG line for KC
+7. Each PR: fill .github/pull_request_template.md, add one CHANGELOG line for Khaneil
    (e.g. "- YYYY-MM-DD · Financial District banks and hotel now use original Atlas names (#PR)"),
    and say in the PR which names changed and that stable ids and saved selections are unchanged.
 
 Done means: no real company name, logo or signature colour on any building, sign, vehicle or
-plane; every plaque follows the rule in docs/building-names.md; all checks green; KC has
+plane; every plaque follows the rule in docs/building-names.md; all checks green; Khaneil has
 reviewed screenshots.
 ```

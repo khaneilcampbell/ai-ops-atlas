@@ -193,7 +193,7 @@ export function recFixRequest(rec: Actionable, repo: string, source: string, lin
 
 /**
  * "Open issue": a plain new-issue page in the repository itself, with no label, so no automation
- * picks it up. Opening it sends nothing; KC reads it and presses Create.
+ * picks it up. Opening it sends nothing; Khaneil reads it and presses Create.
  */
 export const openIssueTitle = (req: Pick<FixRequest, "title">) => req.title.replace(/\s+/g, " ").trim().slice(0, 120);
 

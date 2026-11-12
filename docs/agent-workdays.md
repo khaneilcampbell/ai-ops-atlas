@@ -1,6 +1,6 @@
 # Agent workdays: roles, homes, shifts and commutes
 
-KC, 2026-11-01: give each AI agent a home and a work building, a schedule, a budget and an owner,
+Khaneil, 2026-11-01: give each AI agent a home and a work building, a schedule, a budget and an owner,
 so it has a real workday with a clear output, and after the workday it travels back to its
 apartment.
 
@@ -30,7 +30,7 @@ later phases is in [`ops/agent-workdays/prompt.md`](../ops/agent-workdays/prompt
 | Field | Source today (phase 1) | Declared later (phase 2, `job:` block) |
 |---|---|---|
 | `role` | Tier label from `tierOf` (Central Operations, Department Coordinator, Specialized Agent) | `job.role` |
-| `owner` | Name before the brackets in `governance.credential_owner`; else KC (every catalog project is KC's) | `job.owner` |
+| `owner` | Name before the brackets in `governance.credential_owner`; else Khaneil (every catalog project is Khaneil's) | `job.owner` |
 | `home` | Circa apartment, assigned in agent-id order: West tower, floors 12 to 31, units A to D | `job.home: {building, unit}` |
 | `work` | Declared `workplace` (for example OpenAI suite 401), else its project's headquarters | unchanged |
 | `shift` | Default hours by trigger type (scheduled 8 to 16, manual 9 to 17, event 10 to 18, continuous 7 to 19), staggered up to an hour by a stable hash of the id | `job.shift: "09:00-17:00"` |

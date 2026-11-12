@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 /**
  * "Fix with Claude" for one item. A plain link to a pre-filled, labeled GitHub issue: nothing is
- * sent until KC presses Create in the browser, and Claude Code picks the issue up from there
+ * sent until Khaneil presses Create in the browser, and Claude Code picks the issue up from there
  * (ops/fix-with-claude/README.md). Holds no token, so it works the same on the web and iPhone.
  */
 export function FixWithClaude({ request }: { request: FixRequest }) {

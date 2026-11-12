@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * The Intelligence Hub rebuilt as a ribbed corner building with planted loggia bays (KC, 2026-11-08).
+ * The Intelligence Hub rebuilt as a ribbed corner building with planted loggia bays (Khaneil, 2026-11-08).
  * Writes day/night camera views around it when INTELLIGENCE_HUB_SHOTS=1.
  */
 const out=process.env.SHOT_DIR??'artifacts/intelligence-hub';

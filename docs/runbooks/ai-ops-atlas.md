@@ -4,7 +4,7 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 
 ## Atlas CI
 
-`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Validated pushes to `main` build the app, then require KC to approve the protected signing job before a separate job publishes it to the rolling `main-build` release that installed copies update from.
+`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Validated pushes to `main` build the app, then require Khaneil to approve the protected signing job before a separate job publishes it to the rolling `main-build` release that installed copies update from.
 
 - **Healthy:** the latest run on `main` is green in Actions, and the signing deployment has been approved before Atlas offers the new build.
 - **Run it:** push or open a pull request. To build the Mac app from a branch, run the workflow by hand with **macos** ticked.

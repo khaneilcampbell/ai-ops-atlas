@@ -11,7 +11,7 @@ import {TRANSPORT} from './transportScale';
 import type {BuildingStyle} from './identity';
 
 /**
- * Street architecture for the district roads (KC, 2026-11-08): a raised sidewalk along both sides of
+ * Street architecture for the district roads (Khaneil, 2026-11-08): a raised sidewalk along both sides of
  * every road on land, square paved corners where roads meet, zebra crossings on each arm of a
  * junction, and each tower's plaza paved in stone that matches its building. All flat boxes, so the
  * whole city adds a few thousand instances to two existing instanced meshes. World units.

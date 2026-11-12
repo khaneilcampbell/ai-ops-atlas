@@ -1,7 +1,7 @@
 import {AGENCY_ROOMS,EAST_EDGE,INTERIOR,SLOT_DOOR_Z,WEST_EDGE,around,entranceX,flight,flightEnd,landing,rim,slotX,type AgencyRoom,type P3} from './agencyInteriorPlan';
 
 /**
- * People in the Benjaire Marketing Agency (KC, 2026-10-31): scripted, looping movement, no AI and
+ * People in the Benjaire Marketing Agency (Khaneil, 2026-10-31): scripted, looping movement, no AI and
  * no model calls. Every person is a closed path of points with a pause at each, so a pose is a
  * pure function of time: nothing is simulated, stored or sent anywhere. Desk workers and the hall
  * audience sit, visitors wander, a few people use the stair, and a presenter paces the stage.

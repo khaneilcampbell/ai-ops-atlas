@@ -21,7 +21,7 @@ agents:
   - id: site-builder
     name: Claude Site Assistant
     purpose: >-
-      Drafts page copy, design changes and pull requests that KC reviews
+      Drafts page copy, design changes and pull requests that Khaneil reviews
       before merging.
     framework: Claude Code
     model: Claude
@@ -35,7 +35,7 @@ agents:
       - at: 2026-10-24
         event: Rewrote home, About, Work and Contact copy (#36 to #43)
     permissions:
-      - 'GitHub: push branches and open pull requests through Claude Code; only KC merges'
+      - 'GitHub: push branches and open pull requests through Claude Code; only Khaneil merges'
     registry:
       title: Portfolio Web Developer
       category: engineering
@@ -43,25 +43,25 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that KC merges
+        evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that Khaneil merges
       mission:
         problem: Keeps the portfolio site current without hand-editing every page.
         outcomes: ["Reviewed pull requests for copy, design and link changes"]
-        beneficiaries: [KC, Site visitors]
+        beneficiaries: [Khaneil, Site visitors]
       responsibilities:
         tasks: [Draft page copy and design changes, Open pull requests for review]
         tools: [Claude Code, Git, GitHub]
-        inputs: [KC's request]
+        inputs: [Khaneil's request]
         outputs: [Pull requests]
       execution:
         trigger_type: manual
         environment: Claude Code sessions
       governance:
         autonomy: 2
-        autonomy_note: Changes reach the live site only after KC merges the pull request.
-        approval: KC reviews and merges every pull request
+        autonomy_note: Changes reach the live site only after Khaneil merges the pull request.
+        approval: Khaneil reviews and merges every pull request
         data_sensitivity: public
-        credential_owner: KC (Claude's GitHub access to the repository)
+        credential_owner: Khaneil (Claude's GitHub access to the repository)
         risk: low
         audit_log: Pull request history on GitHub
       docs:
@@ -170,7 +170,7 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: public
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
       docs:
@@ -212,7 +212,7 @@ agents:
       mission:
         problem: Keeps headers, accessibility basics and internal links correct on every change.
         outcomes: ["Every pull request passes the site audit before merge"]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Run the site audit, Build the page inventory, Lint the Python scripts, Optional site bundle on manual dispatch]
         tools: [GitHub Actions, Python, ruff]
@@ -233,7 +233,7 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
       docs:
         technical: README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#site-ci

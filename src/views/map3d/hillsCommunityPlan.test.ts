@@ -16,7 +16,7 @@ describe('Hills community and elevated service',()=>{
  const airport=airportFootprint(s.airport!);expect(pathClear(r.route,[{x:airport.x+airport.w/2,z:airport.z+airport.d/2,w:airport.w,d:airport.d}],1),'rail avoids the airport parcel').toBe(true);
  expect(pathClear(r.route,[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),.6)).toBe(true);
  expect(r.route[0]).toEqual(r.hills);expect(r.route[r.route.length-1]).toEqual(r.financial);const park=f.park,stop=r.financial;
- // KC, 2026-10-31: the stop is in Financial Park, and the line reaches it behind (north of, on the
+ // Khaneil, 2026-10-31: the stop is in Financial Park, and the line reaches it behind (north of, on the
  // water side of) the BMW showroom and every district tower.
  expect(stop[0]-f.x).toBeGreaterThan(park.x+3.4);expect(stop[0]-f.x).toBeLessThan(park.x+park.w-1);expect(stop[1]).toBeLessThan(f.z);
  const d=s.dealership!,north=Math.min(d.lot.z,...f.buildings.map(b=>f.z+b.z-financialDimensions(b.id).d/2));

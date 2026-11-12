@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /**
- * Night screenshots of the buildings that used to stay dark after sunset (KC, 2026-10-31): the
+ * Night screenshots of the buildings that used to stay dark after sunset (Khaneil, 2026-10-31): the
  * stadium, BMW, the Hills garage and the airport service building, plus four
  * overviews. Screenshots only, written when SHOT_DIR is set; no baseline comparison.
  */

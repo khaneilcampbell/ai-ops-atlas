@@ -52,7 +52,7 @@
     "purpose": "Drafts site audit offers",
     "trigger": "Weekly",
     "schedule": "Mon 09:00 UTC",
-    "approval_point": "KC approves every offer before it is sent",
+    "approval_point": "Khaneil approves every offer before it is sent",
     "inputs": [
       "Site audit report"
     ],

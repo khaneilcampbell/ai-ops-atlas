@@ -1,6 +1,6 @@
 // The Benjaire email design for replies written from Atlas. It is the same look as the automatic
 // "We received your message" email (header banner, white card, grey footer), ported from the
-// n8n Flow intake so a reply KC sends from Gmail matches it. Pure string building, no network:
+// n8n Flow intake so a reply Khaneil sends from Gmail matches it. Pure string building, no network:
 // the banner is an image on benjaire.com that Gmail fetches when the message is opened.
 
 const IMG = "https://benjaire.com/brand/email/";

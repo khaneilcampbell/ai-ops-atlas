@@ -1,7 +1,7 @@
 import type {Inst} from "./models";
 
 /**
- * A palm in plain boxes (KC, 2026-11-07: "use palm tree around the stadium"): the Financial
+ * A palm in plain boxes (Khaneil, 2026-11-07: "use palm tree around the stadium"): the Financial
  * District's palm, a ringed two-step trunk under a crown of drooping fronds with a few coconuts,
  * drawn with boxes only so it joins a building's plain instanced set at no extra draw.
  */

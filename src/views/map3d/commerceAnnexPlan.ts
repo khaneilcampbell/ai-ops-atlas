@@ -3,7 +3,7 @@ import {teardrop} from './commerceTowerPlan';
 
 /**
  * The Commerce district's tool offices (Canva, Serper, Stripe, ...) as smaller members of the
- * Commerce Pipeline family (KC, 2026-11-01): the same teardrop plan, silver fin curtain wall and
+ * Commerce Pipeline family (Khaneil, 2026-11-01): the same teardrop plan, silver fin curtain wall and
  * gold glass, each turned so its point faces the main tower and twisting a little as it rises.
  * They use their whole tool lot (about 1.25, see scene.ts). Numbers are for a 0.9 lot and scale with it. Original stylized design; brand colour only
  * on each building's own name sign.

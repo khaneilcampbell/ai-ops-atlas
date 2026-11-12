@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Benjaire HQ rebuilt as the ribbon tower (KC, 2026-10-31). Writes day/night camera views around it. */
+/** Benjaire HQ rebuilt as the ribbon tower (Khaneil, 2026-10-31). Writes day/night camera views around it. */
 const out=process.env.SHOT_DIR??'artifacts/benjaire-hq';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){

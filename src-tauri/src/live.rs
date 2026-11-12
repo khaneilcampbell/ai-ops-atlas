@@ -267,7 +267,7 @@ pub async fn live_security(
 }
 
 /// Sends one reviewed reply to a website inquiry as the designed Benjaire email (the site looks the
-/// address up from the stored inquiry and copies KC). Only runs when KC presses Send in Atlas.
+/// address up from the stored inquiry and copies Khaneil). Only runs when Khaneil presses Send in Atlas.
 #[tauri::command]
 pub async fn live_inquiry_reply(
     id: String,

@@ -21,7 +21,7 @@ function wordmark(text:string,color:string){
 }
 
 /**
- * Atlas HQ, the map's centerpiece, after the curving-glass tower design (KC, 2026-10-31). All
+ * Atlas HQ, the map's centerpiece, after the curving-glass tower design (Khaneil, 2026-10-31). All
  * static merged meshes plus instanced ribs and trees: about a dozen draw calls, no lights of
  * its own. Night raises the glass glow the way the other towers light their windows.
  */

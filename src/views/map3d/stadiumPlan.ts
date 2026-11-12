@@ -1,6 +1,6 @@
 import type {Rect,Slab} from "./scene";
 /**
- * Size of Atlas Stadium's box, in map units: the 8 x 7 design grown by STADIUM_SCALE (KC, 2026-11-07:
+ * Size of Atlas Stadium's box, in map units: the 8 x 7 design grown by STADIUM_SCALE (Khaneil, 2026-11-07:
  * "expand district size to make the change more realistic"). About 1.3 times the Marketplace footprint.
  */
 export const STADIUM_SCALE=1.4;
@@ -23,7 +23,7 @@ export function planStadium(land:Rect[],paving:Slab[],profile?:Rect,centre=true)
   const candidates=xs.flatMap(x=>zs.map(z=>({x,z}))).filter(p=>p.x+w+margin*2<=profile.x-gap);
   candidates.sort((a,b)=>(a.x-preferred.x)**2+(a.z-preferred.z)**2-((b.x-preferred.x)**2+(b.z-preferred.z)**2));
   const parcel=candidates.find(p=>!land.some(r=>p.x<r.x+r.w+gap&&p.x+w+margin*2+gap>r.x&&p.z<r.z+r.d+gap&&p.z+d+margin*2+gap>r.z));if(!parcel)return;
-  // Centre the stadium in the open land on its west side (KC, 2026-11-07: "center the stadium in the
+  // Centre the stadium in the open land on its west side (Khaneil, 2026-11-07: "center the stadium in the
   // entire space"): slide west while the lot stays free and on the island, then sit halfway.
   const lot=(px:number)=>({x:px,z:parcel.z,w:w+margin*2,d:d+margin*2});
   const free=(r:Rect)=>!land.some(o=>r.x<o.x+o.w+gap&&r.x+r.w+gap>o.x&&r.z<o.z+o.d+gap&&r.z+r.d+gap>o.z);

@@ -4,8 +4,8 @@
 
 # Agent workdays: senior design engineer prompt
 
-You are a senior design engineer on Atlas, KC's AI Ops dashboard (a Tauri Mac app and the same React
-app as a private web page). Every merge to `main` ships to KC's Mac within minutes, so treat each
+You are a senior design engineer on Atlas, Khaneil's AI Ops dashboard (a Tauri Mac app and the same React
+app as a private web page). Every merge to `main` ships to Khaneil's Mac within minutes, so treat each
 merge as a production release. Read `CLAUDE.md` and `docs/agent-workdays.md` before anything else.
 
 ## The goal
@@ -13,7 +13,7 @@ merge as a production release. Read `CLAUDE.md` and `docs/agent-workdays.md` bef
 Every AI agent in Atlas has a job, like a person with a real workday:
 
 - a **role** (its tier: Central Operations, Department Coordinator, Specialized Agent),
-- an **owner** (the person accountable for its work and spend; today always KC),
+- an **owner** (the person accountable for its work and spend; today always Khaneil),
 - a **home** (an apartment in Circa, the twin-tower residence in the Financial District),
 - a **work building** (its project's headquarters, or a declared workplace such as an OpenAI suite),
 - a **shift** (hours of a simulated day),
@@ -43,8 +43,8 @@ street graph, commutes, Workday tab) is already on `main`: extend it, do not rew
   (`visual/perf.visual.ts`). Reuse the existing crowd instanced mesh, building meshes, road data and
   `along()` walking maths. Adding a draw call needs a measured reason in the pull request.
 - **One small pull request.** Its own branch from `main`, the repository's pull request template, a
-  one-line `CHANGELOG.md` entry written for KC. No changes to `.github/`, signing, secrets, the
-  updater or write actions. Never merge; KC says "merge".
+  one-line `CHANGELOG.md` entry written for Khaneil. No changes to `.github/`, signing, secrets, the
+  updater or write actions. Never merge; Khaneil says "merge".
 
 ## Engineering standard
 
@@ -64,6 +64,6 @@ street graph, commutes, Workday tab) is already on `main`: extend it, do not rew
 
 ## Report
 
-In the pull request and to KC, in plain words: what changed on screen, what each agent's day now
+In the pull request and to Khaneil, in plain words: what changed on screen, what each agent's day now
 looks like, what is still simulated, the screenshots, the perf numbers, and anything you skipped and
 why. Lead with the result.

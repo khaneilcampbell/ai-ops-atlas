@@ -84,7 +84,7 @@ function box(b:Builder,x0:number,y0:number,z0:number,x1:number,y1:number,z1:numb
 export function entranceLocalX(){const [u0,u1]=sweepSpan();return u0+(u1-u0)*.42;}
 
 /**
- * The walk-in entrance (KC, 2026-10-31): a glass vestibule pushed out through the sweep's glazing,
+ * The walk-in entrance (Khaneil, 2026-10-31): a glass vestibule pushed out through the sweep's glazing,
  * a thin cream canopy with a curved copper fascia hung from the sweep on two copper rods, a stone
  * landing with a copper threshold, and glass-capped copper bollards along the causeway that glow
  * at night. All of it joins the three merged meshes, so it adds no draw calls and no lights.
@@ -155,7 +155,7 @@ export function agencyGeometry():AgencyGeometry{
   const xa=cutAt(zf)-cw,xb=cutAt(zf)+cw,ya=Math.min(hW,h+.02);
   copper.quad([xa,ya,zf],[xb,ya,zf],[cutAt(zg)+cw,ya,zg],[cutAt(zg)-cw,ya,zg],[0,-1,0]);
   // The side linings stand just inside the slot, clear of the cream slot walls: drawn on the same
-  // plane they fought the walls for the depth buffer and flickered cream and copper (KC, 2026-11-09).
+  // plane they fought the walls for the depth buffer and flickered cream and copper (Khaneil, 2026-11-09).
   const k=LINING_GAP;
   copper.quad([xa+k,0,zf],[xa+k,ya,zf],[cutAt(zg)-cw+k,ya,zg],[cutAt(zg)-cw+k,0,zg],[1,0,0]);
   copper.quad([xb-k,0,zf],[xb-k,ya,zf],[cutAt(zg)+cw-k,ya,zg],[cutAt(zg)+cw-k,0,zg],[-1,0,0]);

@@ -5,7 +5,7 @@ for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compa
  const s=buildScene(layoutMap(catalog,[],g)),f=s.financial!,r=s.communityRail!;
  expect(s.hills).toBeUndefined();expect(f.x).toBeGreaterThan(Math.min(...s.terraces.map(t=>t.x))-10);
  expect(f.buildings).toHaveLength(10);expect(s.community).toBeUndefined();expect(s.mall).toBeDefined();
- // The line now continues behind BMW and the towers to Financial Park (KC, 2026-10-31).
+ // The line now continues behind BMW and the towers to Financial Park (Khaneil, 2026-10-31).
  expect(r.length).toBeLessThan(previous[g].rail*.82);expect(s.freight).toBeUndefined();
  expect(s.transportConnections.map(c=>c.id)).toEqual(expect.arrayContaining(['marketplace-city-boulevard','financial-stadium-local','financial-district']));
  for(const a of s.neighborhoodLand!){for(const b of s.land)if(a!==b)expect(Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)>1e-8&&Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)>1e-8,`new terrain overlap: ${JSON.stringify({a,b,dx:Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),dz:Math.min(a.z+a.d,b.z+b.d)-Math.max(a.z,b.z)})}`).toBe(false);}
@@ -26,7 +26,7 @@ it('routes freight along an indented highway rather than cutting across its remo
  const loop:Pt[]=[[0,0],[10,0],[10,10],[5,10],[5,5],[0,5],[0,0]],arc=closedRoadArc(loop,[2,0],[5,8]);expect(arc[0]).toEqual([2,0]);expect(arc[arc.length-1]).toEqual([5,8]);expect(arc).toContainEqual([5,5]);for(let i=1;i<arc.length;i++)for(let t=0;t<=1;t+=.1)expect(distanceToRoad([arc[i-1][0]+(arc[i][0]-arc[i-1][0])*t,arc[i-1][1]+(arc[i][1]-arc[i-1][1])*t],loop)).toBeLessThan(.001);expect(closedRoadArc(loop,[2,2],[5,8])).toEqual([]);
 });
 for(const g of ['none','district','status','tag'] as GroupBy[])it(`runs the Marketplace boulevard without stepping back and forth round a building: ${g}`,()=>{
- // KC, 2026-11-08: the wider Intelligence Hub district put its tower across the boulevard's end, and the road jogged round it.
+ // Khaneil, 2026-11-08: the wider Intelligence Hub district put its tower across the boulevard's end, and the road jogged round it.
  const road=buildScene(layoutMap(catalog,[],g)).transportConnections.find(c=>c.id==='marketplace-city-boulevard')!.road;
  const pts=road.filter((p,i)=>!i||Math.hypot(p[0]-road[i-1][0],p[1]-road[i-1][1])>1e-9),zs:number[]=[];
  for(let i=1;i<pts.length;i++)if(Math.abs(pts[i][0]-pts[i-1][0])<1e-9)zs.push(pts[i][1]);

@@ -39,7 +39,7 @@ agents:
         problem: Finds security issues in the Python app and the workflows before they merge.
         outcomes:
           - Code scanning alerts for every pull request and weekly
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Analyze the Python code, Analyze the GitHub Actions workflows, Upload results to code scanning]
         tools: [GitHub Actions, CodeQL]
@@ -60,7 +60,7 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: public
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
       docs:

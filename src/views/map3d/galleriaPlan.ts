@@ -11,7 +11,7 @@ export const GALLERIA_NAME='Atlas Galleria';
 
 /**
  * Atlas Galleria: the three-storey shopping mall over a basement car park that replaced the
- * Marketplace Gardens (KC, 2026-11-07, from the Behance "Shopping Mall" reference by My Phuong
+ * Marketplace Gardens (Khaneil, 2026-11-07, from the Behance "Shopping Mall" reference by My Phuong
  * Nguyen). The plan is drawn in the reference's own metres on its 10 m grid, 80 m (grid 1 to 9,
  * west to east) by 60 m (grid A to G, south to north), and placed on the map at one uniform scale.
  *

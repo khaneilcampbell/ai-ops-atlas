@@ -12,7 +12,7 @@ export const RAIL_COMMUTERS={rest:8,paces:[.31,.36,.41,.46,.5,.55],laneWidth:.07
 /** Financial District tower ids: Ellipse Residences (twin towers), Ellery Budget Center and Camton Hotel. */
 export const COMMUTER_TOWERS={circa:'circa',amex:'budget',ritz:'harbor-residence'} as const;
 /**
- * KC, 2026-10-31: two groups of six. Each group rides one train together: two to Circa, two to
+ * Khaneil, 2026-10-31: two groups of six. Each group rides one train together: two to Circa, two to
  * Ellery Budget Center, two to Camton Hotel. Camton Hotel guests return to the Atlas Hills mansion,
  * and one Ellery Budget Center guest goes home to Vista House.
  */
@@ -21,7 +21,7 @@ export const COMMUTER_GROUPS=[
  [{home:'gym',work:'circa'},{home:'home-2',work:'amex'},{home:'mansion',work:'ritz'},{home:'social',work:'circa'},{home:'spa',work:'amex'},{home:'mansion',work:'ritz'}],
 ] as const;
 /**
- * KC, 2026-10-31: more people in the Financial District who take the train to Atlas Hills
+ * Khaneil, 2026-10-31: more people in the Financial District who take the train to Atlas Hills
  * businesses and the mansion. Each person here works in a Financial District office and spends
  * the time between trains at a Hills place: the café, shops, fitness, spa, social club,
  * clubhouse, golf clubhouse or the mansion. `work` names a Financial District building id.
@@ -98,7 +98,7 @@ export function planRailCommuters(c:CommunityPlan|undefined,f:FinancialPlan|unde
  const returnCycles=Math.max(1,...commuters.map(p=>Math.ceil(need(p.financial.length/p.pace,p.financialLead,p.alight)/cycle)));
  const homeCycles=Math.max(1,...commuters.map(p=>Math.ceil(need(p.hills.length/p.pace,p.hillsLead,p.alight)/cycle)));
  const periodCycles=returnCycles+1+homeCycles;
- // KC's two groups ride different trains, half a round of trips apart; the visitor groups fill
+ // Khaneil's two groups ride different trains, half a round of trips apart; the visitor groups fill
  // the trains in between, so most trains carry someone.
  commuters.forEach(p=>{p.offset=p.group<2?p.group*Math.max(1,Math.floor(periodCycles/2)):(p.group-2)*Math.max(1,Math.floor(periodCycles/VISITOR_GROUPS.length))+1;});
  return {travel,cycle,returnArrival,returnCycles,periodCycles,commuters};

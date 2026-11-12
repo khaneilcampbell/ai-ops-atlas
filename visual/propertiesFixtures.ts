@@ -76,7 +76,7 @@ export function sampleSite(domain: string, now: number) {
       ),
       uptime: none(
         "Uptime Kuma",
-        "The address of KC's Uptime Kuma and a public status page (UPTIME_KUMA_URL).",
+        "The address of Khaneil's Uptime Kuma and a public status page (UPTIME_KUMA_URL).",
       ),
     },
   };

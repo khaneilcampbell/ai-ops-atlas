@@ -1,7 +1,7 @@
 import {AGENCY,AGENCY_NAME,cutAt,sweepSpan} from '../map3d/marketingAgencyPlan';
 
 /**
- * Benjaire Marketing Agency interior (phase 2, KC approved the exterior 2026-10-31). Interior units
+ * Benjaire Marketing Agency interior (phase 2, Khaneil approved the exterior 2026-10-31). Interior units
  * are the map building at the cutaway scale used by CityOutside (4 interior units per map unit),
  * so the floors line up with the city seen outside: 38.4 by 19.2, origin at the building centre,
  * x east along the long side, z south toward the plaza and the copper sweep.
@@ -50,8 +50,8 @@ export const AGENCY_ROOMS:AgencyRoom[]=[
  // Floor 1: studios.
  room(1,'content','Content studio','studio',wx0,n0,wx1,-1.2,'Content Producer','Photo, video and copy production.'),
  room(1,'social','Social & community desk','desk',wx0,1.2,wx1,s1,'Customer Insight Researcher','Benjaire Product Lab (n8n): personas, buyer pains and the cheapest reach channels. Configured, not verified. No social accounts connected.'),
- room(1,'strategy','Strategy room','meeting',ex1-6,n0,ex1,-4,'Product Lab Lead','Benjaire Product Lab (n8n): runs the monthly next-product research and emails KC the brief. Configured, not verified.'),
- room(1,'review','Client review room','meeting',ex1-6,3.8,ex1,s1,'Product Brief Writer','Benjaire Product Lab (n8n): the decision-ready brief and 30-day validation plan for KC. Configured, not verified.'),
+ room(1,'strategy','Strategy room','meeting',ex1-6,n0,ex1,-4,'Product Lab Lead','Benjaire Product Lab (n8n): runs the monthly next-product research and emails Khaneil the brief. Configured, not verified.'),
+ room(1,'review','Client review room','meeting',ex1-6,3.8,ex1,s1,'Product Brief Writer','Benjaire Product Lab (n8n): the decision-ready brief and 30-day validation plan for Khaneil. Configured, not verified.'),
  room(1,'gallery','Campaign gallery','gallery',EAST_EDGE,4.4,ex1-6.6,s1,'Brand & Campaign Director','Current campaigns on show around the atrium.'),
  // Floor 2: galleries and research.
  room(2,'archive','Brand archive & library','archive',wx0,n0,wx1,-1.2,'Competitor Analyst','Benjaire Product Lab (n8n): who already sells each idea, prices and review complaints. Configured, not verified.'),
@@ -100,7 +100,7 @@ export function around(level:number,from:number,to:number):P3[]{
 }
 
 /**
- * The walk-through test route (KC, 2026-10-31): in from the plaza, round reception, up the atrium
+ * The walk-through test route (Khaneil, 2026-10-31): in from the plaza, round reception, up the atrium
  * stair to every floor, across the slot into the hall on floor 3, then back down and out the front
  * door. Points are [x, y, z] in interior units with y the floor height. A deterministic script, no
  * model calls; tests check that it reaches every floor, stays on floors or stairs, never crosses a

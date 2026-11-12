@@ -51,7 +51,7 @@ describe("Atlas Marketplace mall", () => {
 });
 
 describe("Atlas Marketplace scale", () => {
- it("is one step (0.8) smaller than its first size, on the same lot (KC, 2026-11-08)", async () => {
+ it("is one step (0.8) smaller than its first size, on the same lot (Khaneil, 2026-11-08)", async () => {
   const {HILLS}=await import("./hillsPlan");
   const m=buildScene(layoutMap(catalog,[],"district")).mall!;
   expect(MALL.size).toBeCloseTo(.8);

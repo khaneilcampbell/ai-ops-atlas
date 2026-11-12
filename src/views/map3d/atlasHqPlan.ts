@@ -118,7 +118,7 @@ export function footprint(k=1):Pt[]{
 }
 export const hqTop=(k=1,v=1)=>HQ.roofHigh*k*v;
 /**
- * How much taller than the reference drawing the tower and wing stand (KC, 2026-10-31: size the
+ * How much taller than the reference drawing the tower and wing stand (Khaneil, 2026-10-31: size the
  * HQs with the Financial District). The podium, lobby and canopy keep their height; the tower
  * gains storeys, it doesn't stretch them.
  */

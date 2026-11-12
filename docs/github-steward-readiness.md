@@ -38,7 +38,7 @@ The desktop app is the production target. The Steward runs in Atlas's Rust side 
 2. **Repository scope enforced only in web code.** *Fixed for the Steward:* the desktop check runs in Rust behind `policy::allowed`. The general `github_get` command still serves any repository read to the web view with the same read token. That is unchanged existing behavior.
 3. **The hosted web build could run only two of seven checks** while the docs said it worked. *Fixed:* the hosted build shows a desktop-only notice and never runs.
 4. **Scheduled checks ran anonymously after "Continue without keys".** (An earlier draft wrongly said Touch ID could pop up; `VaultGate` prevents that.) *Fixed:* scheduled runs wait without claiming the day until the vault is unlocked, and never prompt.
-5. **The read token's GitHub permissions are unverified.** *Open, needs KC.*
+5. **The read token's GitHub permissions are unverified.** *Open, needs Khaneil.*
 6. **History lived only in web view storage.** *Fixed:* durable files in the app data folder.
 7. **No release candidate.** *Open.*
 
@@ -50,7 +50,7 @@ The desktop app is the production target. The Steward runs in Atlas's Rust side 
 - [x] **Scope enforced outside the web view.** *Evidence:* `policy.rs` tests reject other repositories, forks, other endpoints, changed page sizes, traversal and absolute URLs. The Rust check test asserts every path it issues passes the policy, and a TypeScript test pins the browser runner to the same seven paths. The desktop run on Oct 29 issued exactly seven allowed reads.
 - [x] **Hosted web is honest.** The hosted build does not start a scheduler, the runner refuses, and the panel says desktop-only. The proxy was not widened. *Evidence:* store refusal test; hosted build compiles. A browser view of the notice is still to do.
 - [~] **No anonymous or prompted background runs.** *Evidence:* Rust `locked_keys_hold_the_scheduled_run_without_claiming_the_day`; `secrets::unlocked()` reads state without prompting. Pending a desktop run.
-- [ ] **Least-privilege read token.** Required read permissions for `khaneilcampbell/ai-ops-atlas`: Metadata, Contents, Actions, Dependabot alerts, Code scanning alerts. *Observed Oct 29:* the saved token reads metadata, contents and Actions, but gets 403 on Dependabot and code scanning alerts, which the panel correctly reports as not verified. *Needs KC:* add read-only Dependabot alerts and Code scanning alerts permissions, and confirm the token has no write permissions.
+- [ ] **Least-privilege read token.** Required read permissions for `khaneilcampbell/ai-ops-atlas`: Metadata, Contents, Actions, Dependabot alerts, Code scanning alerts. *Observed Oct 29:* the saved token reads metadata, contents and Actions, but gets 403 on Dependabot and code scanning alerts, which the panel correctly reports as not verified. *Needs Khaneil:* add read-only Dependabot alerts and Code scanning alerts permissions, and confirm the token has no write permissions.
 - [x] **Secrets and raw errors never recorded.** *Evidence:* Rust `network_errors_are_classified_without_their_text`, `denied_and_malformed_alerts_are_unknown_not_zero`; runs carry only fixed `errorClass` labels.
 
 ### P1: dependable execution
@@ -82,7 +82,7 @@ The desktop app is the production target. The Steward runs in Atlas's Rust side 
 - [x] Steward changes isolated on local branch `claude/github-steward-production`, one commit on `origin/main` (3aa99c3), built without touching the shared working tree. Only Steward hunks were taken from `src/App.tsx`, `src/views/Intelligence.tsx` and the catalog. Inventory tests were updated for the one new catalog entry (41 agents). On that branch: 256 Vitest tests, 150 Rust tests, tsc, eslint, clippy and `npm run build` pass. Not pushed.
 - [ ] Desktop verification with the real token: unlock, manual check, pause mid-run, quit mid-run then relaunch (expects "interrupted"), "Continue without keys" with daily monitoring on (expects waiting), history import from the preview.
 - [ ] Signing and update: confirm the release workflow builds and signs with the new Rust module. No changes were made to signing, updater or workflows.
-- [ ] Release notes with residual risks; KC approval before push, merge, tag or install.
+- [ ] Release notes with residual risks; Khaneil approval before push, merge, tag or install.
 
 ## Residual risks and unsupported scenarios
 

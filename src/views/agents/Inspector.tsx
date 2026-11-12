@@ -86,7 +86,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         </div>
       </header>
 
-      {/* The four sections KC wants most visible, always on screen above the tabs. */}
+      {/* The four sections Khaneil wants most visible, always on screen above the tabs. */}
       <div className="essentials selectable">
         <div className="ess">
           <div className="section-title">Mission</div>

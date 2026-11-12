@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * Every building appears in every map grouping (KC, 2026-11-01). The unit test
+ * Every building appears in every map grouping (Khaneil, 2026-11-01). The unit test
  * map3d/everyView.test.ts checks the full list; this opens the buildings that used to drop out from
  * their nameplates in each grouping, at desktop and phone width. Screenshots only when SHOT_DIR is set.
  */

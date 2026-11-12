@@ -48,7 +48,7 @@ export const TERRACE_M = 0.35;
 export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
 /**
- * Atlas stands on one ground plane (KC, 2026-11-07): open land is level with the district terraces,
+ * Atlas stands on one ground plane (Khaneil, 2026-11-07): open land is level with the district terraces,
  * streets, bridges' landings and stations, instead of a meadow 0.6 below them. It sits a hair under
  * TERRACE_H so a terrace, plaza or forecourt top never flickers against it. Only the canals and the
  * sea stay lower, and only bridges and the elevated railway stay higher.
@@ -187,7 +187,7 @@ export interface Scene3D {
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
   /**
-   * Canva's freight route to the airport. Not built since KC's 2026-11-07 road review: the Commerce
+   * Canva's freight route to the airport. Not built since Khaneil's 2026-11-07 road review: the Commerce
    * district keeps its own streets and grass, without a trunk road or truck lot cut through it.
    */
   freight?: FreightPlan;
@@ -287,7 +287,7 @@ function buildCity(layout: Layout): Scene3D {
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
-  // A cleared district (its tower removed, KC 2026-11-09) is laid out like the rest, streets,
+  // A cleared district (its tower removed, Khaneil 2026-11-09) is laid out like the rest, streets,
   // paving and bridges included, so the roads through it still join; only its building is dropped
   // from what the scene returns.
   const allDistricts = [...layout.districts, ...(layout.cleared ?? [])];
@@ -514,7 +514,7 @@ function buildCity(layout: Layout): Scene3D {
       for (const s of p.strays) strays.push({ key: `repo:${s.name}`, name: s.name, x: s.gx + s.size / 2, z: s.gy + s.size / 2, size: s.size * 1.2, height: 0.9 + hash(s.name) * 0.7 });
       continue;
     }
-    // The open lot is plain level lawn, ready for the next build (KC, 2026-11-08: the Skyline
+    // The open lot is plain level lawn, ready for the next build (Khaneil, 2026-11-08: the Skyline
     // residences, shops and wheel that stood here were removed to make space). The Marketplace, the
     // airport road and the railway still take their places from it.
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
@@ -706,7 +706,7 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
-    // Palms in a ring round the stadium (KC, 2026-11-07), drawn with the stadium's plain boxes.
+    // Palms in a ring round the stadium (Khaneil, 2026-11-07), drawn with the stadium's plain boxes.
     trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'palm' as TreeKind})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
@@ -862,7 +862,7 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
   }
   // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
-  // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).
+  // sidewalk or a link's walk, whichever planner put it there (Khaneil, 2026-11-09).
   const inStreet=streetHitTest([...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],STREET_CLEAR),onWalk=streetHitTest(connections.map(c=>c.walk),.24);
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inStreet(items[i].x,items[i].z)||onWalk(items[i].x,items[i].z))items.splice(i,1);
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);

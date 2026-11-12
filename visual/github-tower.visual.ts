@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * The GitHub HQ rebuilt as a stacked-slab tower with terrace stairs and trees (KC, 2026-10-31).
+ * The GitHub HQ rebuilt as a stacked-slab tower with terrace stairs and trees (Khaneil, 2026-10-31).
  * Writes day/night camera views around it when GITHUB_TOWER_SHOTS=1.
  */
 const out=process.env.SHOT_DIR??'artifacts/github-tower';

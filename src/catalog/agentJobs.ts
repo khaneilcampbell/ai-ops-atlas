@@ -10,7 +10,7 @@ import { buildingDisplayName } from "../modules/names";
 // fixed rules below, and every field says which (see docs/agent-workdays.md). No model is involved,
 // and nothing here starts an agent: the workday on the map is a simulation of the job as written.
 
-/** Agents live in Ellipse Residences (stable id circa), the twin-tower residence in the Financial District (KC, 2026-11-01). */
+/** Agents live in Ellipse Residences (stable id circa), the twin-tower residence in the Financial District (Khaneil, 2026-11-01). */
 export const AGENT_RESIDENCE = { id: "circa", name: "Ellipse Residences", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
 
 /** A simulated day on the map, in seconds. Shift hours below are hours of this day. */
@@ -58,12 +58,12 @@ function unit01(s: string) {
   return ((h >>> 0) % 10007) / 10007;
 }
 
-/** "KC (macOS Keychain)" → KC. Credential holders that are not people fall back to the catalog owner. */
+/** "Khaneil (macOS Keychain)" → Khaneil. Credential holders that are not people fall back to the catalog owner. */
 export function ownerOf(a: Agent): Decided<string> {
   const raw = a.registry?.governance?.credentialOwner?.trim();
   const name = raw?.split(" (")[0].trim();
   if (name && /^[A-Z][A-Za-z.' -]{0,40}$/.test(name) && !/^(None|GitHub|No|Not)\b/.test(name)) return declared(name, "governance.credential_owner in the manifest");
-  return inferred("KC", raw ? `credential holder is "${raw}", not a person; every catalog project belongs to KC` : "no credential owner written; every catalog project belongs to KC");
+  return inferred("Khaneil", raw ? `credential holder is "${raw}", not a person; every catalog project belongs to Khaneil` : "no credential owner written; every catalog project belongs to Khaneil");
 }
 
 function shiftOf(a: Agent): AgentJob["shift"] {

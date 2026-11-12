@@ -124,7 +124,7 @@ module types stay generic. Every instance function also takes a workspace as an 
 (`workspaceBuildings(catalog, workspace)`) for tests and for showing several workspaces at once.
 
 ### Live n8n runs
-The Automation Plant reads KC's n8n Cloud instance through the site (`server/n8n.ts`): the page asks
+The Automation Plant reads Khaneil's n8n Cloud instance through the site (`server/n8n.ts`): the page asks
 `/api/n8n` behind Access, the Mac app asks `/api/hooks/n8n` with its website sync key. The site
 holds the only copy of the n8n API key as the Pages secret `N8N_API_KEY` (create it in n8n under
 Settings → n8n API with the **Read only** scope). `N8N_BASE_URL` optionally points at another

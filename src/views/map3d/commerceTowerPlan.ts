@@ -1,7 +1,7 @@
 import type {Pt} from './roads';
 
 /**
- * Commerce Pipeline's headquarters, the teardrop tower (KC, 2026-11-01): a glass tower on a
+ * Commerce Pipeline's headquarters, the teardrop tower (Khaneil, 2026-11-01): a glass tower on a
  * teardrop plan, round at one end and drawn to a soft point at the other, that twists as it
  * rises. A silver curtain wall of vertical fins wraps it, and a warm gold glass ribbon winds up
  * one face in an S. The roof is cut on a slope, high at the point, and the fins run on past it
@@ -9,7 +9,7 @@ import type {Pt} from './roads';
  * concept's floor plans (podium about 72 x 50 m, tower 48 x 40 m on its round end): the podium
  * runs out past the tower toward the point, about half as wide again, with a gold glass lobby
  * under a sweeping canopy, and its roof beyond the tower is a garden with a pool and olive trees
- * (KC, 2026-11-01: "expand the lower end of the building ... to realistic width").
+ * (Khaneil, 2026-11-01: "expand the lower end of the building ... to realistic width").
  * An original stylized Atlas building after a Behance concept board: no reference signage.
  *
  * Plain numbers only, in coordinates local to the tower (x across, z toward the viewer, y up

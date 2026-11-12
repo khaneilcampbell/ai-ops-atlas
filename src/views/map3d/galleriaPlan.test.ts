@@ -73,7 +73,7 @@ describe('Atlas Galleria on the map',()=>{
   const a=gl.parking!.area;
   for(const q of gl.apron)expect(q[0]>a.x&&q[0]<a.x+a.w&&q[1]>a.z&&q[1]<a.z+a.d).toBe(false);
   for(const t of gl.trees.filter(t=>t.y===gl.y0))expect(insidePoly(gl.apron,[t.x,t.z])).toBe(false);
-  // No basement ramp in front of the car park (KC, 2026-11-09): nothing dark and walled between the building and the bays.
+  // No basement ramp in front of the car park (Khaneil, 2026-11-09): nothing dark and walled between the building and the bays.
   expect(gl.boxes.some(b=>b.c==='#2b302e')).toBe(false);
  });
  it('paves the car park in street asphalt with the street centre line down its aisle',()=>{

@@ -64,8 +64,8 @@ export function TrackingNote({ error }: { error: string | null | undefined }) {
 
 /**
  * Hand-off for one recommendation: "Fix with Claude" (the existing labeled-issue flow), a plain
- * "Open issue" in the repository, and "Copy Codex prompt" for KC to paste into Codex. Both are links to GitHub's new-issue page; nothing is sent or
- * changed until KC presses Create there.
+ * "Open issue" in the repository, and "Copy Codex prompt" for Khaneil to paste into Codex. Both are links to GitHub's new-issue page; nothing is sent or
+ * changed until Khaneil presses Create there.
  */
 export function RecActions({ requests, reason, tracked }: { requests: FixRequest[]; reason?: string; tracked?: Record<string, Tracked[]> }) {
   if (!requests.length) return reason ? <div className="muted small">{reason}</div> : null;

@@ -1,6 +1,6 @@
 # Merge Flow
 
-Merge Flow is the agent in the GitHub building (project `github-profile`, agent `github-merge-flow`). It looks at every open pull request across the repositories in `policy.json`, puts each one in a single lane, and names the next move that gets it merged to production sooner. It only recommends. KC still merges, by saying "merge" or with the Merge button in Atlas (`atlas-merge-pr`), and failed runs are still re-run through Re-run Failed Jobs (`atlas-rerun-failed`).
+Merge Flow is the agent in the GitHub building (project `github-profile`, agent `github-merge-flow`). It looks at every open pull request across the repositories in `policy.json`, puts each one in a single lane, and names the next move that gets it merged to production sooner. It only recommends. Khaneil still merges, by saying "merge" or with the Merge button in Atlas (`atlas-merge-pr`), and failed runs are still re-run through Re-run Failed Jobs (`atlas-rerun-failed`).
 
 ## How it runs
 

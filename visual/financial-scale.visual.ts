@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
-/** Financial District brought down to the city's scale (KC, 2026-11-09). Writes day/night camera views. */
+/** Financial District brought down to the city's scale (Khaneil, 2026-11-09). Writes day/night camera views. */
 // Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
 const out=process.env.SHOT_DIR;
 test.skip(!out,'Set SHOT_DIR to a folder to take Financial District scale screenshots.');

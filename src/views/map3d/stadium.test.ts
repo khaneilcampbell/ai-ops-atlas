@@ -41,7 +41,7 @@ describe("Atlas Stadium",()=>{
     expect(STADIUM_BOX.w).toBeCloseTo(box*STADIUM_SCALE);expect(STADIUM_BOX.d).toBeCloseTo(depth*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
   });
-  it("is a sloping steel-and-glass hall: low at the entrance, high at the far end, mirrored across its long axis (KC, 2026-11-07)",()=>{
+  it("is a sloping steel-and-glass hall: low at the entrance, high at the far end, mirrored across its long axis (Khaneil, 2026-11-07)",()=>{
     const H=S.hall,R=S.roof;
     expect(mainRoofAt(H.x0,0)).toBeGreaterThan(mainRoofAt(H.x1,0)+.5);
     expect(mainRoofAt(H.x1+R.over,0)).toBeGreaterThanOrEqual(R.low);expect(mainRoofAt(H.x1+R.over,0)).toBeLessThan(R.low+R.curl);
@@ -59,7 +59,7 @@ describe("Atlas Stadium",()=>{
     const xs=trussXs();for(let k=1;k<xs.length;k++)expect(xs[k]).toBeGreaterThan(xs[k-1]);
     const trees=treeColumns();expect(trees.length).toBe(6);
     for(const [x,z] of trees)expect(trees.some(([x2,z2])=>Math.abs(x2-x)<1e-9&&Math.abs(z2+z)<1e-9)).toBe(true);
-    // KC, 14:34: the diagonal stair crossed the pools onto the road. It is now one straight flight
+    // Khaneil, 14:34: the diagonal stair crossed the pools onto the road. It is now one straight flight
     // on the centre line, from the gate foot up to the entrance deck, inside the pools' gap.
     const st=stairLine();
     expect(st.foot).toEqual([S.gate.foot,0]);expect(st.top).toEqual([S.podium.x1,0]);expect(st.len).toBeGreaterThan(0);
@@ -147,13 +147,13 @@ describe("Atlas Stadium grounds",()=>{
   });
   for(const grouping of ["none","district","status","tag"] as GroupBy[])it(`sits in the middle of open lawn grounds, ringed by pools: ${grouping}`,()=>{
     const s=buildScene(layoutMap(catalog,[],grouping)),a=s.stadium!,g=s.stadiumSite!,lot={x:a.x-2,z:a.z-2,w:a.w+4,d:a.d+4},r=g.site,env=cityEnvelope(s.land)!;
-    // KC, 2026-11-07: use the whole space, with the stadium centred in it and the rest left as lawn.
+    // Khaneil, 2026-11-07: use the whole space, with the stadium centred in it and the rest left as lawn.
     const e=1e-6;expect(r.x).toBeLessThanOrEqual(lot.x+e);expect(r.z).toBeLessThanOrEqual(lot.z+e);expect(r.x+r.w).toBeGreaterThanOrEqual(lot.x+lot.w-e);expect(r.z+r.d).toBeGreaterThanOrEqual(lot.z+lot.d-e);
     expect(r.x).toBeGreaterThanOrEqual(env.x);expect(r.z).toBeGreaterThanOrEqual(env.z);expect(r.x+r.w).toBeLessThanOrEqual(env.x+env.w);expect(r.z+r.d).toBeLessThanOrEqual(env.z+env.d);
     expect(Math.abs((r.x+r.w/2)-(lot.x+lot.w/2))).toBeLessThan(1.5);
     expect(g.boxes.every(b=>b.c==='#5aaac0'||b.c==='#d9d2c4')).toBe(true);
     for(const t of s.trees)if(t.x>r.x&&t.x<r.x+r.w&&t.z>r.z&&t.z<r.z+r.d)expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
-    // Palms ring the plaza (KC, 2026-11-07), only on the stadium's lot, drawn by the stadium.
+    // Palms ring the plaza (Khaneil, 2026-11-07), only on the stadium's lot, drawn by the stadium.
     expect(g.palms!.length).toBeGreaterThanOrEqual(12);
     for(const t of s.trees.filter(t=>t.kind==='palm'))expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
     expect(readFileSync(join(__dirname,"models.tsx"),"utf8")).toMatch(/t\.kind === "palm"\) return/);

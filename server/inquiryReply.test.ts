@@ -47,7 +47,7 @@ describe("sending a reply from Atlas", () => {
     expect(validReply({ ...good, body: "x".repeat(10_001) })).toBe(false);
   });
 
-  it("sends the designed email to the stored address, with a copy to KC, and records it", async () => {
+  it("sends the designed email to the stored address, with a copy to Khaneil, and records it", async () => {
     const d = fakeD1();
     const f = okFetch();
     const r = await sendReply(post({ ...good, to: "attacker@evil.example" }), env(d.db), f, NOW);

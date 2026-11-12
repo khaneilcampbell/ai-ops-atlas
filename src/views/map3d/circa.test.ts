@@ -25,7 +25,7 @@ describe('Circa twin towers',()=>{
   expect(c.x+c.w).toBeCloseTo(f.x);expect(c.z).toBeCloseTo(f.z);expect(c.d).toBeCloseTo(f.d);
   // The only land under the parcel is the parcel itself.
   expect(s.land.filter(r=>overlaps(r,c))).toEqual([{x:c.x,z:c.z,w:c.w,d:c.d}]);
-  // No highway or freight road is built (KC, 2026-11-07), so nothing runs across the lot.
+  // No highway or freight road is built (Khaneil, 2026-11-07), so nothing runs across the lot.
   expect(s.freight).toBeUndefined();
   // The front walk reaches the shared north walk, and the street continues to the district street.
   expect(circa.approach.at(-1)).toEqual([f.x+circa.x,f.z+FINANCIAL.northWalkZ]);
