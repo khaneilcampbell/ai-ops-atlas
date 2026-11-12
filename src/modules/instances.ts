@@ -37,7 +37,7 @@ export function landmarkInstances(workspace: AtlasWorkspace = WORKSPACE): Landma
   return workspace.landmarks.map((l) => {
     const type = moduleType(l.moduleType)!;
     const organization = buildingOrganization(serviceKey(l.id));
-    return { id: l.id, projectId: null, name: buildingDisplayName(serviceKey(l.id), l.name), ...(organization ? { organization } : {}), districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned", health: "unknown" };
+    return { id: l.id, projectId: null, name: buildingDisplayName(serviceKey(l.id), l.name), ...(organization ? { organization } : {}), districtId: null, moduleType: type.id, moduleProvenance: "declared", enabled: isEntitled(workspace, type.id) && moduleAvailability(type) !== "planned", health: "unknown", ...(l.project ? { linked: { projectId: l.project, workplace: l.name, ...(l.agents ? { agents: l.agents } : {}) } } : {}) };
   });
 }
 

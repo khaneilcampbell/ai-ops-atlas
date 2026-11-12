@@ -1,7 +1,7 @@
 # Security hardening and rollout
 
-These files improve Atlas's CI and provide a commerce migration template. They do
-not establish that the VPS is secure or that remote GitHub settings are applied.
+These files improve Atlas's CI. They do not establish that remote GitHub settings
+are applied.
 Existing October 28 evidence is historical; the screenshot is an assessment, not
 proof of a credential leak. GitHub Actions secrets are encrypted settings, not
 plaintext repository content. If any key was committed, treat it as compromised.
@@ -45,44 +45,6 @@ missing CLI/auth, unsupported features and permission failures report unavailabl
 `--require-signing-environment` fails if protections cannot be verified.
 `--local` checks workflow invariants without accessing GitHub. The verifier is a
 regression guard, not a replacement for server-side rulesets or code review.
-
-## Commerce VPS migration
-
-The commerce source and live VPS are outside this checkout. Do not install the
-example unit unchanged or disable root SSH until a separate administrative login
-and recovery console have been tested.
-
-1. Inventory running services and credential consumers without printing values.
-   Back up service configuration and confirm pending orders can be reconciled.
-   Rotate any exposed/overbroad keys at their providers; deleting a file or Git
-   history does not revoke a key. Rotate an updater signing key only with a planned
-   trusted-client migration: installed clients trust the old public key.
-2. Create separate non-login service accounts for delivery, content/AI, and deploy.
-   Keep executable code and virtual environments root-owned and non-writable by
-   workers. Give each account only its own writable state directory. Use separate
-   restricted Stripe keys; delivery needs read access only to the objects it
-   actually uses. Keep storefront write/deploy credentials out of the worker.
-3. Store per-service credentials in root-owned directories mode 0700, files mode
-   0600. Adapt the application to read systemd credential files from
-   `$CREDENTIALS_DIRECTORY`, then adapt `commerce-worker.service.example` to its
-   real entry point. No shared `.env` holding every credential. Credential files
-   remain readable by that worker: this is isolation, not protection against a
-   compromised worker using its own permissions.
-4. Stage the unit, run `systemd-analyze verify` and `systemd-analyze security`,
-   test one canary order, retries, deduplication and restart recovery. Sandbox
-   directives depend on host support. Verify negative tests: worker cannot write
-   application code, read another service's keys, access `/root`, or deploy.
-5. Stop the old worker before starting the replacement to avoid duplicate emails.
-   Monitor failures and backlog. Rollback should restore the last tested unit with
-   the restricted credentials; never restore revoked keys or root execution.
-6. Add provider spend caps and per-day email/order caps with persistent counters,
-   idempotency keys and an operator kill switch. Publish redacted heartbeats with
-   last success, error counts and queue age to an authenticated private endpoint;
-   alert externally after two hours of silence. Do not send keys, buyer email
-   addresses or order payloads into telemetry. Check provider delivery failures.
-
-References: [GitHub environment protection](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments),
-[systemd isolation and credentials](https://freedesktop.org/software/systemd/man/latest/systemd.exec.html).
 
 ## Solo-owner configuration
 

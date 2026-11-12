@@ -22,7 +22,6 @@ describe("bundled catalog", () => {
     expect([...new Set(catalog.projects.map((p) => p.repository))].sort()).toEqual([
       "khaneilcampbell/ai-ops-atlas",
       "khaneilcampbell/benjaire.com",
-      "khaneilcampbell/career-application-system",
       "khaneilcampbell/khaneilcampbell",
       "khaneilcampbell/khaneilcampbell.com",
       "khaneilcampbell/multi-agent-commerce-pipeline",
@@ -31,10 +30,10 @@ describe("bundled catalog", () => {
   });
 
   it("preserves dashboard and documentation projects with real migrated sources", () => {
-    for (const id of ["benjaire-ops", "intelligence-hub"]) {
+    for (const id of ["intelligence-hub"]) {
       expect(catalog.projects.find(p => p.id === id)?.repository).toBe("khaneilcampbell/ai-ops-atlas");
     }
-    for (const id of ["benjaire-ops-ci", "hub-ci", "docs-builder"]) {
+    for (const id of ["hub-ci", "docs-builder"]) {
       const agent = catalog.agents.find(a => a.id === id);
       expect(agent).toBeDefined();
       expect(readFileSync(join(dir, "..", agent!.source!), "utf8").length).toBeGreaterThan(0);

@@ -8,6 +8,7 @@ import type { AgentStatus, Run } from "../intel/types";
 import { EngineeringReview } from "./EngineeringReview";
 import { GithubSteward } from "./GithubSteward";
 import { isReviewRun } from "../intel/ecosystem";
+import { formatTime } from "../lib/timezone";
 
 const TABS = [
   { id: "inspector", label: "Agent inspector" },
@@ -241,7 +242,7 @@ function Activity({ runs }: { runs: Run[] }) {
               </dd>
               <dt>Timing</dt>
               <dd>
-                Queued {formatDate(run.queued_at)} {new Date(run.queued_at).toLocaleTimeString()} · {duration(run.duration_ms)}
+                Queued {formatDate(run.queued_at)} {formatTime(run.queued_at)} · {duration(run.duration_ms)}
               </dd>
               <dt>Requests</dt>
               <dd>
@@ -281,7 +282,7 @@ function Activity({ runs }: { runs: Run[] }) {
                     <b>{s.step}</b> {s.detail}
                   </div>
                   <div className="muted small">
-                    {new Date(s.at).toLocaleTimeString()}
+                    {formatTime(s.at)}
                     {s.ms != null && ` · ${duration(s.ms)}`}
                   </div>
                 </li>

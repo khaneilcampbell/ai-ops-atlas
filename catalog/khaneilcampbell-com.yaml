@@ -4,7 +4,8 @@ schema: atlas/v2
 
 project:
   id: portfolio-site
-  name: Portfolio Site
+  name: Portfolio Web Studio
+  former_names: [Portfolio Site]
   summary: >-
     Static portfolio at khaneilcampbell.com, served by GitHub Pages and built
     with Claude as a working partner.
@@ -79,6 +80,7 @@ agents:
       Audits static HTML pages for security headers, accessibility and link
       hygiene.
     framework: Python script
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Local
     status: idle
     trigger: Manual, python scripts/site_audit.py
@@ -127,6 +129,7 @@ agents:
       Checks every page for a Content Security Policy and other HTML security
       rules on each push and pull request.
     framework: GitHub Actions
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted runner
     status: active
     trigger: Push or pull request to main
@@ -187,6 +190,7 @@ agents:
     name: Site CI
     purpose: Audits every page and the site scripts, and packages the site on request.
     framework: GitHub Actions
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual

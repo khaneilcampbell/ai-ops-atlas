@@ -48,9 +48,11 @@ describe("module catalog", () => {
     expect(moduleAvailability(MODULE_TYPES["agent-operations-center"])).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["workflow-automation-plant"])).toBe("available");
     expect(moduleAvailability(MODULE_TYPES["business-operations-hq"])).toBe("partial");
-    expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("partial");
+    expect(moduleAvailability(MODULE_TYPES["infrastructure-control-tower"])).toBe("available");
     expect(MODULE_TYPES["finance-analytics-tower"].capabilities.find((c) => c.id === "caps")?.state).toBe("available");
-    expect(moduleAvailability(MODULE_TYPES["observability-center"])).toBe("planned");
+    expect(moduleAvailability(MODULE_TYPES["model-intelligence-lab"])).toBe("partial");
+    // Every module now has at least one built capability; one with none still reads planned.
+    expect(moduleAvailability({ capabilities: [{ id: "evals", label: "Evaluations", state: "planned" }] })).toBe("planned");
     expect(moduleAvailability(MODULE_TYPES["security-operations-center"])).toBe("partial");
     expect(isModuleType("business-operations-hq")).toBe(true);
     expect(isModuleType("Benjaire HQ")).toBe(false);
@@ -99,17 +101,19 @@ describe("building instances", () => {
     expect(home("growth-marketing-studio")).toEqual(["Growth & Marketing Studio"]);
     expect(home("workflow-automation-plant")).toEqual(["Workflow Automation Hub"]);
     expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
-    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Corvane Capital"]);
+    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Business Finance Center"]);
     expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
     expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
-    expect(home("integration-exchange")).toEqual(["Integration Exchange"]);
-    expect(home("observability-center")).toEqual(["Atlas · Operations"]);
+    expect(home("integration-exchange")).toEqual(["Investment Operations Center", "Vendor & Supplier Hub"]);
+    expect(home("observability-center")).toEqual(["Observability Center"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    expect(home("model-intelligence-lab")).toEqual(["Atlas · Cargo"]);
+    expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
-    // Planned modules are placed but switched off until they are built.
-    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: false, organization: "Benjaire" });
+    // Modules are placed in their buildings and switched on once a capability is built.
+    expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
+    expect(all.find((i) => i.id === "airport-building:cargo")).toMatchObject({ moduleType: "model-intelligence-lab", enabled: true });
+    expect(all.find((i) => i.id === "benjaire-marketing")).toMatchObject({ moduleType: "growth-marketing-studio", enabled: true, organization: "Benjaire" });
   });
 
   it("ties each landmark to the map's own key and name, so a rename on the map fails here", () => {

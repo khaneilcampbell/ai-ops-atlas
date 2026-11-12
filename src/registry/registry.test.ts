@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 11 projects and 57 agents discoverable with no manifest problems", () => {
+  it("keeps all 8 projects and 54 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(11);
-    expect(entries).toHaveLength(57);
+    expect(catalog.projects).toHaveLength(8);
+    expect(entries).toHaveLength(54);
   });
 
 
@@ -58,7 +58,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 15, B: 13, C: 17, D: 10, E: 1, F: 1, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 15, B: 11, C: 16, D: 11, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -271,8 +271,8 @@ describe("directory", () => {
 
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
-    expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E", "F"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(57);
+    expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(54);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -284,12 +284,12 @@ describe("directory", () => {
 
   it("lists items that need review with a reason", () => {
     const s = summarize(entries);
-    const loop = s.needsReview.find((e) => e.profile.id === "commerce-loop");
-    expect(loop?.review).toContain("High risk");
+    const merge = s.needsReview.find((e) => e.profile.id === "atlas-merge-pr");
+    expect(merge?.review).toContain("High risk");
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(34);
+    expect(s.observable).toBe(33);
   });
 });
 

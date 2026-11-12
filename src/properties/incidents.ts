@@ -2,6 +2,7 @@ import { fixIssueUrl } from "../lib/fixWithClaude";
 import type { Deploy } from "./deploys";
 import type { WebProperty } from "./registry";
 import type { SiteSnapshot } from "./types";
+import { formatTime } from "../lib/timezone";
 
 // Incidents on a website building: something KC should act on, each with the links to act. They
 // come only from observed data (a failed build, an expiring certificate, a site that didn't
@@ -52,13 +53,16 @@ const days = (ms: number) => Math.max(0, Math.floor(ms / DAY));
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 const dateOnly = (iso: string) => iso.slice(0, 10);
 
-function fixLink(p: WebProperty, title: string, detail: string, evidence: IncidentAction[]): IncidentAction[] {
+/** What deploy incidents need to know about where they happened. */
+export type DeployTarget = Pick<WebProperty, "id" | "domain" | "repository" | "deployConsole">;
+
+function fixLink(p: Pick<WebProperty, "domain" | "repository">, title: string, detail: string, evidence: IncidentAction[]): IncidentAction[] {
   const url = fixIssueUrl({ kind: "Website incident", title: `${p.domain}: ${title}`, detail, repo: p.repository, links: evidence });
   return url ? [{ label: "Fix with Claude", url }] : [];
 }
 
 /** The newest finished deploy decides whether production is broken; an older failure followed by a success is history. */
-export function deployIncidents(p: WebProperty, deploys: Deploy[], now: number): Incident[] {
+export function deployIncidents(p: DeployTarget, deploys: Deploy[], now: number): Incident[] {
   const out: Incident[] = [];
   const finished = deploys.find((d) => d.state === "success" || d.state === "failure");
   if (finished?.state === "failure") {
@@ -88,7 +92,7 @@ export function siteIncidents(p: WebProperty, s: SiteSnapshot, now: number): Inc
   const { probe, dns, tls, domain, performance } = s.checks;
 
   if (probe.state === "ok" && probe.data.status >= 500) {
-    const detail = `${p.url} answered HTTP ${probe.data.status} when checked ${new Date(probe.checkedAt).toLocaleTimeString()}.`;
+    const detail = `${p.url} answered HTTP ${probe.data.status} when checked ${formatTime(probe.checkedAt)}.`;
     out.push({ key: `${p.id}:down:${dateOnly(probe.checkedAt)}`, propertyId: p.id, kind: "site-down", severity: "critical", title: "Site is returning errors", detail, since: probe.checkedAt, actions: [{ label: "Open the site", url: p.url }, p.deployConsole, ...fixLink(p, "Site is returning errors", detail, [])] });
   } else if (probe.state === "error" && dns.state === "ok") {
     // DNS answered but the site didn't: the site is down, not the checker.

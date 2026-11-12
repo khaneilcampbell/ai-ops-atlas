@@ -8,16 +8,18 @@ import {along} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 const scene=buildScene(layoutMap(catalog,[],'district'));
-// The installed app hides the deleted career-application-system repository.
-const app=buildScene(layoutMap({...catalog,projects:catalog.projects.filter(p=>p.repository!=='khaneilcampbell/career-application-system')},[],'district'));
 // Without Service Desk's land the lot behind the Marketplace is too shallow for the car park behind
-// the building. The fixture keeps a Career Applications tower standing (its id renamed, as both
-// towers are off the map since 2026-11-09) so the lot keeps the shallow shape this case covers.
-const tower=(id:string)=>id==='career-optimizer'?'career-tower-fixture':id;
-const shallow=buildScene(layoutMap({projects:catalog.projects.filter(p=>p.id!=='service-desk').map(p=>({...p,id:tower(p.id)})),agents:catalog.agents.map(a=>({...a,projectId:tower(a.projectId)}))},[],'district'));
+// the building. The fixture stands a Career Applications tower on its old lot (both towers are off
+// the map since 2026-11-09, and its manifest was removed 2026-11-10) so the lot keeps the shallow
+// shape this case covers.
+const at=catalog.projects.findIndex(p=>p.id==='benjaire-ops')+1;
+const careerTower={id:'career-tower-fixture',name:'Career Applications',summary:'',status:'active' as const,repository:'',tags:['claude','career','human-in-the-loop'],district:'career-portfolio' as const,links:[],agentIds:[]};
+const shallowProjects=catalog.projects.filter(p=>p.id!=='service-desk');
+shallowProjects.splice(at,0,careerTower);
+const shallow=buildScene(layoutMap({projects:shallowProjects,agents:catalog.agents},[],'district'));
 
 describe('life round Atlas Galleria',()=>{
- for(const [name,s] of [['sample',scene],['app',app],['shallow lot',shallow]] as const)it(`walks, lights and drives round the building (${name} layout)`,()=>{
+ for(const [name,s] of [['sample',scene],['shallow lot',shallow]] as const)it(`walks, lights and drives round the building (${name} layout)`,()=>{
   const life=planGalleriaLife(s)!,g=s.galleria!;expect(life).toBeDefined();
   // The entrance walk leaves the forecourt by the lot's east edge and ends on a street beyond the lot
   // (across the street from the Marketplace, it turns down the edge beside the car park first).
@@ -31,7 +33,7 @@ describe('life round Atlas Galleria',()=>{
   expect(life.walkers.length).toBe(GALLERIA_LIFE.shoppers+GALLERIA_LIFE.strollers);
   expect(life.drivers.length).toBeGreaterThan(0);
  });
- for(const [name,s] of [['sample',scene],['app',app],['shallow lot',shallow]] as const)it(`lets each driver walk out, drive off, come back and walk in again (${name} layout)`,()=>{
+ for(const [name,s] of [['sample',scene],['shallow lot',shallow]] as const)it(`lets each driver walk out, drive off, come back and walk in again (${name} layout)`,()=>{
   const life=planGalleriaLife(s)!;
   for(const d of life.drivers){
    let walked=false,droveOff=false,away=false,parkedEmpty=false;
@@ -53,7 +55,7 @@ describe('life round Atlas Galleria',()=>{
   expect(shallow.galleria!.parking).toBeUndefined();expect(life.court!.cars.length).toBeGreaterThan(0);
   for(const c of [...life.court!.cars,...life.drivers.map(d=>d.car)]){expect(Math.abs(c.z-end[1])).toBeGreaterThan(.4);expect(c.x).toBeLessThan(end[0]-.3);}
  });
- for(const [name,s] of [['sample',scene],['app',app],['shallow lot',shallow]] as const)it(`joins each car park to the street by a driveway the cars use (${name} layout)`,()=>{
+ for(const [name,s] of [['sample',scene],['shallow lot',shallow]] as const)it(`joins each car park to the street by a driveway the cars use (${name} layout)`,()=>{
   const life=planGalleriaLife(s)!,graph=buildStreetGraph(streetLines(s));
   expect(life.driveways.length).toBeGreaterThan(0);
   for(const d of life.driveways)expect(nearestStreet(graph,[d.b[0],0,d.b[1]]).d).toBeLessThan(1e-6);
@@ -63,7 +65,7 @@ describe('life round Atlas Galleria',()=>{
   for(const l of life.lamps)for(const d of life.driveways){const dx=d.b[0]-d.a[0],dz=d.b[1]-d.a[1],t=Math.max(0,Math.min(1,((l.x-d.a[0])*dx+(l.z-d.a[1])*dz)/(dx*dx+dz*dz)));
    expect(Math.hypot(l.x-d.a[0]-dx*t,l.z-d.a[1]-dz*t)).toBeGreaterThan(GALLERIA_LIFE.driveWidth/2);}
  });
- for(const [name,s] of [['sample',scene],['app',app],['shallow lot',shallow]] as const)it(`walks everyone round the fountain, in by the entry doors and out by the exit doors (${name} layout)`,()=>{
+ for(const [name,s] of [['sample',scene],['shallow lot',shallow]] as const)it(`walks everyone round the fountain, in by the entry doors and out by the exit doors (${name} layout)`,()=>{
   const life=planGalleriaLife(s)!,g=s.galleria!,F=g.fountain,keep=F.r+GALLERIA_LIFE.fountainClear-.05;
   // Sample every route finely: no one on foot comes within the clear distance of the fountain's rim.
   const routes=[...life.walkers.filter(w=>!w.loop).flatMap(w=>[w.route,w.back!]),...life.drivers.map(d=>d.walk)];

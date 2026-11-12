@@ -141,7 +141,7 @@ export function usePropertyPolling() {
 
 /** Every website's data, keyed by property id. */
 export function useAllPropertyData(): Readonly<Record<string, PropertyData>> {
-  return useSyncExternalStore(subscribe, () => data);
+  return useSyncExternalStore(subscribe, () => data, () => data);
 }
 
 export function usePropertyData(id: string): PropertyData | null {

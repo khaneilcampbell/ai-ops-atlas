@@ -1,4 +1,6 @@
-import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES, OFF_MAP_PROJECTS } from "../catalog/projects";
+import { towerRing } from "./map3d/roads";
+import { CITY_SCALE } from "./map3d/cityScale";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
 import { servicesOf, type ServiceUse } from "../catalog/roles";
@@ -9,6 +11,8 @@ export const TW = 48;
 export const TH = 24;
 /** Grid units between neighboring districts, and between neighborhoods. */
 export const GAP = 2.25;
+/** These project sites share Commerce-sized land and one district selection rim. */
+export const OPERATIONS_DISTRICTS = new Set(["intelligence-hub", "ai-ops-atlas", "commerce-pipeline"]);
 const GROUP_GAP = 4.5;
 /** Grid units per lot in the area for repositories without a manifest. */
 const STRAY_STEP = 3;
@@ -77,7 +81,7 @@ export interface Park {
  * and Benjaire Dashboard were removed on 2026-11-09, and each keeps its land, so every other
  * building, road and bridge keeps its place.
  */
-export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "service-desk", "career-optimizer", "benjaire-ops"]);
+export { OFF_MAP_PROJECTS } from "../catalog/projects";
 /** Removed towers on the city's edge: their land becomes a plain lawn lot. */
 const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimizer"]);
 /**
@@ -85,6 +89,59 @@ const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimi
  * through the lot, so it keeps its streets and paving and only the building goes.
  */
 export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
+
+/**
+ * Lots of removed towers whose manifest is gone too. Career Applications' repository
+ * (khaneilcampbell/career-application-system) was deleted on GitHub and its catalog file removed
+ * (KC, 2026-11-10), but its land stays a vacant lot so no other building moves. Each entry holds only
+ * what the layout reads: the lot's size comes from a district with nothing in it (5 across, as
+ * before), its groupings from the old manifest, and it goes right after `after` in catalog order.
+ */
+const RETIRED_LOTS: { after: string; project: Project }[] = [
+  {
+    // Benjaire Dashboard no longer exists (Khaneil, 2026-11-12). Its cleared lot keeps its streets.
+    after: "benjaire-site",
+    project: {
+      id: "benjaire-ops",
+      name: "Benjaire Dashboard",
+      summary: "Removed: the dashboard no longer exists.",
+      status: "active",
+      repository: "",
+      tags: ["benjaire", "cloudflare", "d1", "dashboard"],
+      district: "business-operations",
+      links: [],
+      agentIds: [],
+    },
+  },
+  {
+    after: "benjaire-ops",
+    project: {
+      id: "career-optimizer",
+      name: "Career Applications",
+      summary: "Removed: the repository was deleted on GitHub.",
+      status: "active",
+      repository: "",
+      tags: ["claude", "career", "human-in-the-loop"],
+      district: "career-portfolio",
+      links: [],
+      agentIds: [],
+    },
+  },
+];
+
+/**
+ * The catalog's projects with any missing {@link RETIRED_LOTS} put back in their old place. A project
+ * with the same id or name back in the catalog takes the land instead, so it is never laid out twice.
+ */
+function withRetiredLots(projects: Project[]): Project[] {
+  const out = [...projects];
+  for (const { after, project } of RETIRED_LOTS) {
+    if (out.some(p => p.id === project.id || p.name === project.name)) continue;
+    const at = out.findIndex(p => p.id === after);
+    out.splice(at < 0 ? out.length : at + 1, 0, project);
+  }
+  return out;
+}
 
 /**
  * Puts removed-tower lots back when the live catalog dropped them. A repository GitHub reports deleted
@@ -112,6 +169,8 @@ export interface Neighborhood {
   oy: number;
   w: number;
   h: number;
+  /** Where the group's name stands: the back edge of its back-most building's district, in grid units. */
+  anchor?: { x: number; y: number };
 }
 
 /** A walkway on the meadow between two neighboring islands, along one grid axis. */
@@ -185,7 +244,8 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
  * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
-export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.32 };
+export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
+const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
@@ -267,7 +327,8 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
   // vacant lot in every grouping, so the rest of the city, its roads and its traffic stay as they were.
   const vacant = (p: Project) => VACANT_LOTS.has(p.id);
   const kept = (p: Project) => !OFF_MAP_PROJECTS.has(p.id) || vacant(p) || CLEARED_LOTS.has(p.id);
-  for (const p of catalog.projects.filter(kept)) {
+  const projects = withRetiredLots(catalog.projects);
+  for (const p of projects.filter(kept)) {
     const g = groupOf(p, groupBy, catalog.agents);
     const b = buckets.get(g.key) ?? { label: g.label, rank: g.rank, projects: [] };
     b.projects.push(p);
@@ -288,7 +349,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       // houses and kiosks give it, so it grows where it stands and its neighbors step aside.
       .sort((a, c) => c.fit - a.fit);
     // An empty park keeps the "room for the next project" corner of the original map (the open lot).
-    if (blockIndex === ordered.length-1 && catalog.projects.length < 40) items.push({ park: true, w: 12, h: 9 });
+    if (blockIndex === ordered.length-1 && projects.length < 40) items.push({ park: true, w: 12, h: 9 });
     const inner = shelf(items, GAP);
     return { key, label: b.label, count: b.projects.filter(p => !OFF_MAP_PROJECTS.has(p.id)).length, inner, w: inner.w, h: inner.h };
   });
@@ -358,7 +419,11 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const n = houses.length + services.length;
       const size = it.w;
       const m = n ? ringFor(n) : 2;
-      const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
+      const operationsWidth = districtSize(0, "intelligence-hub") * .34;
+      const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
+      // Keep widened headquarters clear of the existing front approaches. The three
+      // standard towers use a .92 scene footprint: half their added rendered depth is .46.
+      const hqSetback = project.id === "ai-ops-atlas" ? .35 : ["portfolio-site", "github-profile", "soc-lab"].includes(project.id) ? (hqSize - (n ? size * .26 : size * .34)) * .46 : 0;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
@@ -368,7 +433,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2 - hqSetback, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,
@@ -387,7 +452,55 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     }
   }
 
-  if (joined) walks.push(...walkways(rects));
+  // Reuse the equal-sized cleared central parcel; keep the meadow grid and landmark anchors.
+  if (joined) {
+    const hub = districts.find(d => d.project.id === "ai-ops-atlas");
+    const center = cleared.find(d => d.project.id === "benjaire-ops");
+    const campusComplete = ["benjaire-site", "commerce-pipeline", "intelligence-hub", "soc-lab", "portfolio-site", "github-profile"].every(id => districts.some(d => d.project.id === id));
+    // Keep the proven fallback packing when repository filtering removes part of this campus.
+    if (hub && center && campusComplete && catalog.projects.some(p => p.id === "service-desk") && hub.size === center.size) {
+      const dx = center.ox - hub.ox, dy = center.oy - hub.oy;
+      const move = (d: District, x: number, y: number) => {
+        d.ox += x; d.oy += y; d.hq.gx += x; d.hq.gy += y;
+        for (const lot of [...d.lots, ...d.kiosks]) { lot.gx += x; lot.gy += y; }
+        const rect = rects.find(r => r.id === d.project.id);
+        if (rect) { rect.x += x; rect.y += y; }
+      };
+      move(hub, dx, dy); move(center, -dx, -dy);
+      const commerce = districts.find(d => d.project.id === "commerce-pipeline")!;
+      const operations = districts.find(d => d.project.id === "intelligence-hub")!;
+      // Retain the old public streets and Portfolio's bridge when their buildings move.
+      for (const d of [hub, operations]) {
+        const id = `street-reserve:${d.project.id}`;
+        cleared.push({ ...d, project: { ...d.project, id }, hq: { ...d.hq }, lots: [], crew: [], kiosks: [] });
+        rects.push({ id, x: d.ox, y: d.oy, w: d.size, h: d.size });
+      }
+      const resize = (d: District, x: number, y: number, cx: number, cz: number) => {
+        move(d, cx - (d.hq.gx + d.hq.size / 2), cz - (d.hq.gy + d.hq.size / 2));
+        d.ox = x; d.oy = y; d.size = commerce.size;
+        Object.assign(rects.find(r => r.id === d.project.id)!, { x, y, w: d.size, h: d.size });
+      };
+      const northRoad = (d: District) => towerRing({ x: d.hq.gx + d.hq.size / 2, z: d.hq.gy + d.hq.size / 2,
+        size: d.hq.size * (d.project.id === "ai-ops-atlas" ? 1.02 : .92) * CITY_SCALE.hq.footprint }, d.hq.size * 1.25 + 1)!;
+      // The existing east shoreline clears both Marketing and Galleria; keep Commerce in place.
+      const x = Math.max(...meadows.map(m => m.ox + m.w)) + .35, y = commerce.oy;
+      const hubLane = northRoad(hub), commerceLane = northRoad(commerce);
+      const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
+      resize(hub, x, y, x + commerce.size / 2, hubZ);
+      resize(operations, x + GAP, y + commerce.size + GAP, x + GAP + commerce.size / 2, y + commerce.size * 1.5 + GAP);
+    }
+  }
+
+  if (joined) {
+    const relocated = cleared.some(d => d.project.id === "street-reserve:ai-ops-atlas");
+    // Operations joins Command Center locally; a new cross-city bridge would occupy GitHub's podium.
+    walks.push(...walkways(rects.filter(r => !relocated || r.id !== "intelligence-hub")));
+    if (relocated) walks.push(...walkways(rects.filter(r => r.id === "ai-ops-atlas" || r.id === "intelligence-hub")));
+  }
+
+  // Districts can move after packing (Command Center to the centre, the equal operations parcels),
+  // so each group's outline and name follow where its buildings stand now, not the packed block.
+  if (joined) fitNeighborhoods(neighborhoods, districts);
 
   const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
@@ -504,6 +617,22 @@ export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
     }
   }
   return shown;
+}
+
+/**
+ * Fit each group to the districts that have a building in it: the outline is their bounding box and
+ * the name stands on the back edge of the back-most one, so it always sits over one of its own
+ * buildings. A group with no building (a vacant lot only) keeps its packed block.
+ */
+export function fitNeighborhoods(neighborhoods: Neighborhood[], districts: readonly Pick<District, "group" | "ox" | "oy" | "size">[]) {
+  for (const n of neighborhoods) {
+    const own = districts.filter((d) => d.group === n.key);
+    if (!own.length) continue;
+    const x0 = Math.min(...own.map((d) => d.ox)), y0 = Math.min(...own.map((d) => d.oy));
+    Object.assign(n, { ox: x0, oy: y0, w: Math.max(...own.map((d) => d.ox + d.size)) - x0, h: Math.max(...own.map((d) => d.oy + d.size)) - y0 });
+    const back = [...own].sort((a, b) => a.oy - b.oy || a.ox - b.ox)[0];
+    n.anchor = { x: back.ox + back.size / 2, y: back.oy };
+  }
 }
 
 /** Rough width of label text; good enough to keep pills from touching. */

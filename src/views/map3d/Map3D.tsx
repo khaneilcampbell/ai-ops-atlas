@@ -46,7 +46,7 @@ import type { Health, Verified } from "../../lib/derive";
 import { fogRange } from "./fogRange";
 import { MapRenderer, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
-import { placeLabels, type Layout } from "../mapLayout";
+import { OPERATIONS_DISTRICTS, placeLabels, type Layout } from "../mapLayout";
 import { measure, SANS, wrap } from "../mapText";
 import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
@@ -82,7 +82,7 @@ import { insideLimits, type InsideLimits } from "./inside";
 import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
-import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec } from "./plaques";
+import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 
@@ -129,6 +129,8 @@ interface Props {
   tipFor: (key: string) => { title: string; sub: string } | null;
   /** Verified repository health, for the discreet mark on each nameplate. */
   healthFor: (repository: string) => { kind: Verified; label: string; stale: boolean; health: Health };
+  /** Live status dots for landmark buildings whose telemetry answered, by selection key (landmarkMarks.ts). */
+  landmarkMarks?: Readonly<Record<string, PlaqueMark>>;
   /** Day or night lighting. */
   light: LightMode;
   /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
@@ -280,7 +282,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === "ai-ops-atlas" ? 1 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -361,17 +363,22 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
-    // Group names when the map is grouped, at the back corner of each landmass, one style for every
+    // Group names when the map is grouped, behind the back-most building of each group (see fitNeighborhoods), one style for every
     // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
     // groups give way to the project plaques.
     const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
     for (const g of groupLabels(props.displayNeighborhoods ?? layout.neighborhoods)) {
       const n = hoods.get(g.key)!;
-      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 28, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
+      const at = n.anchor ?? { x: n.ox + n.w / 2, y: n.oy };
+      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(at.x, 0.2, at.y - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 20, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
     }
     // Every other building and place uses the same nameplate (see plaques.tsx): one size, one
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
-    const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => out.push(buildingPlaque({ ...p, selKey, hover, onSelect: select }));
+    // A landmark whose telemetry answered shows its real status instead of the planned dot.
+    const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => {
+      const live = props.landmarkMarks?.[p.select];
+      out.push(buildingPlaque({ ...p, ...(live ? { mark: live, title: `${p.name} · ${live.label}` } : {}), selKey, hover, onSelect: select }));
+    };
     if(scene.financial){
       const f=scene.financial,top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
       plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:f.x+f.w/2,roof:top,z:f.z+f.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
@@ -389,7 +396,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -424,7 +431,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     out: () => setHover((h) => (h?.startsWith("district:") ? null : h)),
     click: (id, e) => {
       if (e.delta > 4 || id.startsWith("park:")) return;
-      props.onFocus(id);
+      if (OPERATIONS_DISTRICTS.has(id)) select(`project:${id}`);
+      else props.onFocus(id);
     },
   };
 
@@ -1138,6 +1146,7 @@ function World({
   // An open building's outline hugs its office, not the shell that was cut away.
   const hl = (key: string | null) => {
     const a = key ? anchors.get(key) : undefined;
+    if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
   };
   const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);

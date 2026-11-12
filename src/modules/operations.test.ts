@@ -35,8 +35,17 @@ describe("operational assets", () => {
     expect(plant.automations.some(isAiAgent)).toBe(false);
   });
 
+  it("gives a landmark linked to a project that repository and only the agents working in it", () => {
+    const studio = buildingAssets(landmark("benjaire-marketing"), catalog);
+    expect(studio.projects).toEqual(["benjaire-site"]);
+    expect(studio.repositories).toEqual(["khaneilcampbell/benjaire.com"]);
+    expect(studio.agents.map((a) => a.id)).toContain("benjaire-product-lab");
+    expect([...studio.agents, ...studio.automations].every((a) => a.workplace?.building === "Benjaire Marketing Agency")).toBe(true);
+    expect(studio.automations.map((a) => a.id)).not.toContain("benjaire-contact-worker");
+  });
+
   it("gives other landmarks nothing rather than borrowing another building's data", () => {
-    expect(buildingAssets(landmark("benjaire-marketing"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
+    expect(buildingAssets(landmark("bmw-dealership"), catalog)).toEqual({ projects: [], repositories: [], agents: [], automations: [] });
   });
 });
 
@@ -58,6 +67,19 @@ describe("health aggregation", () => {
     expect(stale).toMatchObject({ health: "good", state: "stale" });
     expect(stale.summary).toMatch(/last known/);
     expect(aggregateHealth(["a"], { a: ok(snap([])) })).toMatchObject({ health: "unknown", summary: "No CI workflows on this repository" });
+  });
+
+  it("reports the newest run GitHub returned, and none when nothing ran", () => {
+    const repos = { a: ok(snap([run("ci", "success", "2026-11-10T10:00:00Z")])), b: ok(snap([run("e2e", "success", "2026-11-11T08:00:00Z")])) };
+    expect(aggregateHealth(["a", "b"], repos).lastRun).toEqual({ at: "2026-11-11T08:00:00Z", url: "https://github.com/x/e2e" });
+    expect(aggregateHealth(["a"], { a: ok(snap([])) }).lastRun).toBeUndefined();
+    expect(aggregateHealth(["a"], { a: { kind: "loading" } }).lastRun).toBeUndefined();
+  });
+
+  it("reads the Atlas repository for Product Marketplace, Observability Center and Data Intelligence Center", () => {
+    for (const id of ["atlas-marketplace", "airport-building:operations", "financial:residence"]) {
+      expect(buildingAssets(landmark(id), catalog), id).toMatchObject({ projects: ["ai-ops-atlas"], repositories: ["khaneilcampbell/ai-ops-atlas"] });
+    }
   });
 });
 

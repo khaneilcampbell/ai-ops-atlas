@@ -7,6 +7,11 @@ names, vehicles and liveries). Atlas Stadium is handled by the stadium rebuild (
 
 Screenshots: `docs/screenshots/building-names/` (before/after, day, night and phone).
 
+> **Current names (Nov 2026):** the map now shows operational names (Atlas Command Center,
+> Financial Operations Tower, Client Success Center and so on). Those are set in
+> `catalog/workspace/buildings.yaml` (map-drawn buildings) and `project.name` (catalog buildings).
+> The trademark-free names below stay as each building's `organization` and as search aliases.
+
 ## Why
 
 Several map buildings use real company names, logos, signature colours or a real building's name
@@ -59,9 +64,9 @@ they are.
 |---|---|---|---|---|
 | Atlas HQ | Atlas HQ | Atlas app headquarters (`ai-ops-atlas`) | Atlas | Keep |
 | Benjaire HQ | Benjaire HQ | Company website and operations (`benjaire-com`) | Benjaire | Keep |
-| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Removed from the map 2026-11-09 (lot cleared, streets kept) |
+| Benjaire Dashboard | Benjaire Dashboard | Business dashboard (`benjaire-dashboard`) | Benjaire | Removed from the map 2026-11-09 (lot cleared, streets kept); removed from Atlas 2026-11-12 |
 | Commerce Pipeline | Commerce Pipeline | Multi-agent commerce (`multi-agent-commerce-pipeline`) | Commerce | Keep |
-| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant) |
+| Career Applications | Career Applications | Job application workflow (`job-applications-workflow`) | Career | Removed from the map 2026-11-09 (lot left vacant); repository deleted and catalog file removed 2026-11-10, the lot stays |
 | Portfolio Site | Portfolio Site | Personal website (`khaneilcampbell-com`) | Portfolio | Keep |
 | GitHub Profile | Profile Tower | GitHub profile README repo (`khaneilcampbell-profile`); GitHub wordmark sign removed | Portfolio | Done |
 | Intelligence Hub | Intelligence Hub | Project intelligence (`project-intelligence-hub`) | Intelligence | Keep |

@@ -25,12 +25,13 @@ import { LivePill } from "./components/LivePill";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
-import { useAlertNotifications, useAlerts } from "./alerts/state";
+import { publishWatches, useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
 import { StewardNotice } from "./steward/Notice";
 import { InstallHint } from "./components/InstallHint";
+import { formatDateTime, useTimeZone } from "./lib/timezone";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -52,8 +53,11 @@ export default function App() {
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
   useLiveFeed();
-  const alerts = useAlerts().open;
+  // Re-render every date and time when the zone changes in Settings.
+  useTimeZone();
+  const { open: alerts, watches } = useAlerts();
   useAlertNotifications(alerts);
+  useEffect(() => publishWatches(watches), [watches]);
   usePropertyPolling();
   usePropertyNotifications(usePropertyIncidents().open);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
@@ -63,7 +67,7 @@ export default function App() {
   const { lastFetched, loaded: loadedRepositories } = sync;
   const syncFailing = !refreshing && sync.failing.length > 0;
   const syncTitle = [
-    lastFetched ? `Latest successful repository fetch: ${new Date(lastFetched).toLocaleString()}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
+    lastFetched ? `Latest successful repository fetch: ${formatDateTime(lastFetched)}. Coverage is repositories with a saved snapshot; it does not mean every repository is current.` : "GitHub data not fetched yet",
     syncFailing ? `\n${sync.failing.length} of ${trackedRepositories.size} repositories failed their last sync, so they show saved data:\n${sync.reasons.map((r) => `• ${r}`).join("\n")}\nOpen Repositories for details, or check the GitHub token in Settings.` : "",
   ].join("");
   const ci = ciSummary([...trackedRepositories], repos);
