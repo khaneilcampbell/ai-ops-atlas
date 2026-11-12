@@ -13,7 +13,8 @@ and redeploys the web page. Treat every merge as a production release.
 - Add or update tests for new logic. Before pushing, run `npm run lint`, `npm run typecheck`,
   `npm test`, and `cargo test --manifest-path src-tauri/Cargo.toml` when Rust changed.
 - Anything on screen: `npm run visual` (see `docs/visual-testing.md`) and attach before/after
-  screenshots at desktop and iPhone width.
+  screenshots at desktop and iPhone width. CI screenshot checks only run on a pull request with the
+  `visual` label (and nightly on main): add the label when the map or layout changed.
 - Rust or Tauri changes: pull requests don't compile macOS. Run the CI workflow by hand on the branch
   with "Also build the macOS app" before asking to merge.
 - Never merge. KC merges, or says "merge" in the thread.

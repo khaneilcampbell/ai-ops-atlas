@@ -62,8 +62,10 @@ and that the inspector's copy button puts the repository name on the clipboard.
 
 ## In CI
 
-`.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
-touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
+`.github/workflows/visual.yml` is a separate, optional job. On a pull request it runs only when
+the pull request has the `visual` label and touches views, styles, components or `visual/`
+(later pushes re-run it while the label stays). It also runs every night on main and by hand
+from the Actions tab. It is not
 a required check. The specs run as 6 shards in parallel (`--shard=N/6`, split by spec
 file, 35 minutes each); one runner could no longer finish all of them in 45 minutes.
 Run one shard locally with `npx playwright test -c visual --shard=1/6`. Each shard uploads
