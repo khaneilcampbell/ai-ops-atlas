@@ -87,6 +87,7 @@ pub fn run() {
             local_usage::claude_code_usage,
             live::live_properties,
             live::live_n8n,
+            live::registry_refresh,
             live::live_security,
             live::live_inquiry_reply,
             export::save_pdf,

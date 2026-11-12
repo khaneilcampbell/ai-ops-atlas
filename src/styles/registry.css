@@ -145,6 +145,11 @@
   .manage .manage-detail .runs-table td, .manage .manage-detail .runs-table th { padding: 6px 8px; }
 }
 
+/* Refresh registry sheet (Agents page head) */
+.registry-refresh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: var(--text-sm); }
+.registry-refresh .text-btn { display: inline-flex; align-items: center; gap: 5px; }
+.registry-refresh .refresh-ok { color: var(--good); }
+.registry-refresh .refresh-failed { color: var(--bad); min-width: 0; overflow-wrap: anywhere; }
 /* Agents and the automations they own (catalog owned_by). */
 .op-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; border: 0; padding: 0; }
 .op-dot.op-verified { background: var(--good); }

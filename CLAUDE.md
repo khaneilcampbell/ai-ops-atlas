@@ -6,8 +6,10 @@ and redeploys the web page. Treat every merge as a production release.
 
 ## Every change
 - One small pull request per change, on its own branch. Fill in `.github/pull_request_template.md`.
-- Add one line at the top of `CHANGELOG.md`: `- YYYY-MM-DD · What changed, in plain words (#PR)`.
-  KC reads these in the Update button, so write for KC.
+- Add one changelog line in a new file `changelog.d/<your-branch-name>.md`:
+  `- YYYY-MM-DD · What changed, in plain words (#PR)`. Don't edit the top of `CHANGELOG.md`: every
+  pull request editing the same line made them conflict with each other. Khaneil reads these in
+  the Update button, so write for Khaneil.
 - Add or update tests for new logic. Before pushing, run `npm run lint`, `npm run typecheck`,
   `npm test`, and `cargo test --manifest-path src-tauri/Cargo.toml` when Rust changed.
 - Anything on screen: `npm run visual` (see `docs/visual-testing.md`) and attach before/after

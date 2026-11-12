@@ -26,4 +26,4 @@ The collector samples metadata, ten recent runs and twenty open alerts per secur
 
 Track confirmed findings, unavailable checks, duplicate proposals, default-branch CI success, incident recurrence, proposed savings versus measured savings, approval rejections and actual spend. Promote autonomy only after reliable evidence, no unauthorized actions and a verified stop mechanism.
 
-Reference: [OpenAI non-interactive execution guidance](https://learn.chatgpt.com/docs/non-interactive-mode). For unattended Codex execution, keep sandboxing and approvals enforced by the runtime. Repository-controlled code must never share a process environment containing model credentials.
+Reference: [Claude Code headless mode](https://code.claude.com/docs/en/headless). For unattended Claude Code execution, keep sandboxing and approvals enforced by the runtime. Repository-controlled code must never share a process environment containing model credentials.

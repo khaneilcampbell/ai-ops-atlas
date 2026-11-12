@@ -14,7 +14,7 @@ import { AgentOutput } from "./AgentOutput";
 import { BenjaireFinance } from "./BenjaireFinance";
 import { buildingFinance } from "../finance/benjaire";
 import { RepositoryNotice } from "./RepositoryNotice";
-import {CodexReviewHandoff} from "./CodexReviewHandoff";
+import {ClaudeReviewHandoff} from "./ClaudeReviewHandoff";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
 import { isAiAgent, residentsLabel, servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
@@ -256,7 +256,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
       <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
         {tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
-        <CodexReviewHandoff agent={agent}/>
+        <ClaudeReviewHandoff agent={agent}/>
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>
