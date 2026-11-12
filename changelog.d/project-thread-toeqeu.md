@@ -1,1 +1,1 @@
-- 2026-11-12 · Changelog lines now go in their own small file per change (changelog.d), so open changes no longer conflict with each other on CHANGELOG.md and wait less to merge (#PR)
+- 2026-11-12 · Changelog lines now go in their own small file per change (changelog.d), so open changes no longer conflict with each other on CHANGELOG.md and wait less to merge (#396)
