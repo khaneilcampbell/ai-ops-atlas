@@ -33,25 +33,47 @@ Engineering review), **API Usage** and **Settings**.
 
 The map is one landmass of districts joined by road bridges, with one road standard for every
 street, a highway, a train with stations and commuters, cars, boats, planes and people.
-Landmarks include Atlas HQ, Benjaire HQ, the GitHub tower, the Commerce Pipeline tower, the
-Financial District (Circa, Experian, BMW and others, with Financial Park), the Atlas Marketplace
-mall and gardens, the Benjaire Marketing Agency on the bay, Atlas Hills with the mansion and its
-community, a stadium and Atlas Airport with its terminal, ground crew and
-jets taking off.
+Buildings carry operational names for the work they do. Project buildings include Atlas Command
+Center, Business Operations HQ, Portfolio Web Studio, Development Hub, Commerce Operations Center,
+Agent Operations Center and Security Operations Center. The Financial District holds Benjaire's
+finance and operations buildings (Financial Operations Tower, Data Intelligence Center, Budget &
+Forecasting Center, Governance & Compliance Center, Investment Operations Center and others), and
+the landmarks include Atlas HQ, the Product Marketplace, the Growth & Marketing Studio on the bay,
+the Workflow Automation Hub, the Infrastructure Operations Hub, the Vendor & Supplier Hub, the Model
+Intelligence Lab, the Observability Center, the Team Events Arena, Atlas Hills and Atlas Airport with
+its terminal, ground crew and jets taking off. Display names live in
+[`catalog/workspace/buildings.yaml`](catalog/workspace/buildings.yaml), so a building is renamed
+without touching code, and district names follow the buildings in them.
+
+A building can house a **module** with live data from its own sources: n8n runs in the Workflow
+Automation Hub, open GitHub security alerts and incidents in the Security Operations Center, spend
+against caps in the Financial Operations Tower, hosting and deployments in the Infrastructure
+Operations Hub, the vendor catalog in the Vendor & Supplier Hub, models and cost per model in the
+Model Intelligence Lab, and more. A landmark shows a live status dot once its telemetry is healthy.
+See [docs/modules.md](docs/modules.md).
 
 **Enter building** in a building's panel opens its inside: a project's office with its agents at
-work, or a dedicated interior for Atlas HQ, the Marketplace, the Marketing Agency and the Circa
-lobby. If the 3D map ever fails to draw, the rest of the page stays and a
+work, or a dedicated interior for Atlas HQ, the Product Marketplace, the Growth & Marketing Studio and the
+Financial District lobbies. If the 3D map ever fails to draw, the rest of the page stays and a
 **Try again** button restarts it.
 
+**Settings → Time zone** sets the zone every time is shown in (New York by default),
 **Settings → Performance and battery** lowers the map's cost on battery, and **Settings → Map
 navigation** sets how the trackpad moves the map.
 
 ## Agents
 
 Agents are declared in [`catalog/`](catalog/README.md), one YAML file per project; `npm test`
-fails on a broken manifest. Statuses come from real runs where Atlas can see them; otherwise
-the manifest's value is shown as configured, not verified.
+fails on a broken manifest. Today the catalog lists 54 agents in 8 manifests: 27 active, 15 idle,
+1 paused and 11 retired. Retired agents are hidden from the Agents tab, and each automation sits
+under the AI agent that owns it (`owned_by`), with a check that flags automations nobody owns.
+Statuses come from real runs where Atlas can see them; otherwise the manifest's value is shown as
+configured, not verified.
+
+The commerce pipeline runs on n8n, and the Workflow Automation Hub shows its live runs. The two
+n8n agents that email buyers or write to Stripe (Order Delivery and Approve and Publish) are
+watched by Atlas alerts, so a failed send or publish shows up in Mission Control. The **Atlas
+Agent Registry** n8n workflow copies every agent into a Google Sheet every 4 hours.
 
 Agents that work on Atlas itself or its repositories:
 
@@ -64,6 +86,7 @@ Agents that work on Atlas itself or its repositories:
 | Opportunity Scout | Looks for revenue ideas in the agents Khaneil already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
 | Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
 | System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
+| Marketplace Steward, Signal Watch, Dataset Census | Building agents that report on the Product Marketplace, the Observability Center and the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
 | Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
 
 The Mac app's write actions are **Re-run failed jobs**, **Merge pull request** (only when GitHub
