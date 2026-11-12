@@ -14,7 +14,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, liveLandmarkConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
@@ -23,7 +23,7 @@ import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
-import { useLandmarkMarks } from "./map3d/landmarkMarks";
+import { landmarkMarksOf, useLiveLandmarks } from "./map3d/landmarkMarks";
 import {
   hash,
   TH,
@@ -476,7 +476,9 @@ export function MapView({active=true}:{active?:boolean}) {
     });
   const [linksMenu, setLinksMenu] = useState(false);
   const [linkSel, setLinkSel] = useState<string | null>(null);
-  const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
+  // Live landmarks drive both their status dots and their line to Atlas Command Center.
+  const live = useLiveLandmarks();
+  const connections = useMemo(() => [...buildConnections(catalog, repos), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
@@ -900,7 +902,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
-  const landmarkMarks = useLandmarkMarks();
+  const landmarkMarks = useMemo(() => landmarkMarksOf(live), [live]);
   const healthFor = useCallback(
     (repository: string) => ({ ...verifiedState(repos[repository]), health: overallHealth(repoHealth(repoData(repos[repository]), 0)) }),
     [repos],
