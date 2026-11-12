@@ -1,9 +1,8 @@
 # Changelog
 
-What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
-shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Claude Code is now the tool for the five manual review agents (System Improvements, UI Improvement Designer, Production Coordinator, Reliability and Performance Reviewers); the review button copies a Claude Code prompt and no longer reads "undefined · Floor undefined" (#390)
+What changed in Atlas, newest first. From 2026-11-12 new lines go in `changelog.d/` (one file per
+pull request, see `changelog.d/README.md`) so open pull requests don't conflict here. The update notes
+read both places. Older lines stay below; don't add new ones at the top of this file.
 - 2026-11-12 · README brought up to date: operational building names, building modules, agent counts, n8n alerts and the time zone setting (#394)
 - 2026-11-12 · The Product Marketplace now describes what it's for today: where Benjaire's products are sold (the n8n, Canva and Stripe pipeline) and where Atlas releases are checked by the Marketplace Steward (#386)
 - 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)

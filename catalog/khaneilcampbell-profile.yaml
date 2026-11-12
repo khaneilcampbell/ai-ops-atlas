@@ -269,3 +269,24 @@ agents:
         improvements:
           - Store each run's findings in Atlas's report store once agent reports are available
         last_review: 2026-10-30
+
+  - id: github-profile-manager
+    name: GitHub Profile Manager
+    purpose: >-
+      Draft n8n agent for managing the GitHub profile. Not published, so it does not run.
+    framework: n8n Agent
+    runtime: n8n Cloud
+    status: paused
+    trigger: None until it is published
+    last_run: null
+    registry:
+      title: GitHub Profile Manager
+      category: career
+      subcategory: Profile
+      classification:
+        type: A
+        confidence: verified
+        evidence: Unpublished n8n agent I4i0qQm5g0bfEID8, checked read-only on 2026-11-11
+      execution:
+        trigger_type: manual
+        environment: n8n
