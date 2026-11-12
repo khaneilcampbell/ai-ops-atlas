@@ -64,6 +64,8 @@ export interface AggregateHealth {
   total: number;
   failing: string[];
   summary: string;
+  /** Start of the newest workflow run GitHub reported across these repositories, if any. */
+  lastRun?: { at: string; url: string };
 }
 
 /**
@@ -89,7 +91,9 @@ export function aggregateHealth(repositories: string[], repos: Record<string, Re
   else if (checked) summary = `CI passing on ${checked} of ${total} checked`;
   else summary = total === 1 ? "No CI workflows on this repository" : `No CI workflows${of}`;
   if (stale && state !== "loading") summary += " · last known, refresh failed";
-  return { health, state, checked, total, failing, summary };
+  let lastRun: AggregateHealth["lastRun"];
+  for (const s of states) for (const r of repoData(s.raw)?.runs ?? []) if (!lastRun || r.createdAt > lastRun.at) lastRun = { at: r.createdAt, url: r.url };
+  return { health, state, checked, total, failing, summary, ...(lastRun ? { lastRun } : {}) };
 }
 
 const short = (repo: string) => repo.split("/").pop() ?? repo;

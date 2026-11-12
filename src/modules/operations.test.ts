@@ -68,6 +68,19 @@ describe("health aggregation", () => {
     expect(stale.summary).toMatch(/last known/);
     expect(aggregateHealth(["a"], { a: ok(snap([])) })).toMatchObject({ health: "unknown", summary: "No CI workflows on this repository" });
   });
+
+  it("reports the newest run GitHub returned, and none when nothing ran", () => {
+    const repos = { a: ok(snap([run("ci", "success", "2026-11-10T10:00:00Z")])), b: ok(snap([run("e2e", "success", "2026-11-11T08:00:00Z")])) };
+    expect(aggregateHealth(["a", "b"], repos).lastRun).toEqual({ at: "2026-11-11T08:00:00Z", url: "https://github.com/x/e2e" });
+    expect(aggregateHealth(["a"], { a: ok(snap([])) }).lastRun).toBeUndefined();
+    expect(aggregateHealth(["a"], { a: { kind: "loading" } }).lastRun).toBeUndefined();
+  });
+
+  it("reads the Atlas repository for Product Marketplace, Observability Center and Data Intelligence Center", () => {
+    for (const id of ["atlas-marketplace", "airport-building:operations", "financial:residence"]) {
+      expect(buildingAssets(landmark(id), catalog), id).toMatchObject({ projects: ["ai-ops-atlas"], repositories: ["khaneilcampbell/ai-ops-atlas"] });
+    }
+  });
 });
 
 describe("execution history", () => {

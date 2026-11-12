@@ -65,7 +65,7 @@ export function ModuleSection() {
         <p className="muted small">{type.description} {PRODUCT_DISTRICT_LABEL[type.productDistrict]} module.</p>
         <dl className="kv">
           <dt>Health</dt>
-          {OwnHealth ? <OwnHealth /> : <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}</span></dd>}
+          {OwnHealth ? <OwnHealth /> : <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}{agg.lastRun && <> · last run <a href={agg.lastRun.url} target="_blank" rel="noreferrer">{relative(agg.lastRun.at)}</a></>}</span></dd>}
           <dt>Linked assets</dt>
           <dd>{assets.repositories.length || items.length ? [
             count(assets.projects.length, "project"), count(assets.repositories.length, "repository", "repositories"),
