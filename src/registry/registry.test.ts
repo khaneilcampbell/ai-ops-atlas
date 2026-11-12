@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 10 projects and 52 agents discoverable with no manifest problems", () => {
+  it("keeps all 9 projects and 51 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(10);
-    expect(entries).toHaveLength(52);
+    expect(catalog.projects).toHaveLength(9);
+    expect(entries).toHaveLength(51);
   });
 
 
@@ -58,7 +58,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 15, B: 11, C: 15, D: 9, E: 1, F: 1, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 15, B: 11, C: 15, D: 9, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -271,8 +271,8 @@ describe("directory", () => {
 
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
-    expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E", "F"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(52);
+    expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(51);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {

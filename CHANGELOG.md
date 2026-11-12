@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Agents and Automations now list only what runs today. Retired commerce agents from the removed Linux server are gone from the lists, and Linux VPS is no longer a Runtime choice. Commerce runbooks now describe the n8n workflows (#379)
+- 2026-11-12 · Agents and Automations now list only what runs today. Retired commerce agents from the removed Linux server are gone from the lists, and Linux VPS is no longer a Runtime choice. Skyline and its Benjaire Inquiry Assistant are removed, and Marketplace rooms of retired agents now read as open studios. Commerce runbooks now describe the n8n workflows (#379)
 - 2026-11-12 · Activity's Project filter lists only the buildings on the map today. Removed buildings like Skyline no longer show as choices, but their past activity stays under All. Agent runs show the project the agent belongs to (#361)
 - 2026-11-12 · Three operations districts now share land dimensions and consistent selection boundaries (#375)
 - 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#374)

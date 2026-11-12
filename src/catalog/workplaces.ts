@@ -11,8 +11,9 @@ export const AGENCY_WORKPLACE_ROOMS=["1-content","1-social","1-strategy","1-revi
 export function projectOfficeAgents(agents:Agent[],projectId:string){
   return agents.filter(a=>a.projectId===projectId&&!a.workplace);
 }
+/** The current agent seated in a room. A retired agent no longer runs anywhere, so its room reads vacant. */
 export function workplaceAgent(agents:Agent[],building:string,floor:number,room:string){
-  return agents.find(a=>a.workplace?.building===building&&a.workplace.floor===floor&&a.workplace.room===room);
+  return agents.find(a=>a.status!=="retired"&&a.workplace?.building===building&&a.workplace.floor===floor&&a.workplace.room===room);
 }
 
 /** Marketplace has eight first-floor production units, the Agency uses its named rooms; other suites retain the established grid. */

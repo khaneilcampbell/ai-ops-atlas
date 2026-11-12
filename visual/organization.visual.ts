@@ -7,10 +7,10 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B'}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(10);
+ await expect(page.locator('.reg-row')).toHaveCount(9);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="github-merge-flow"]')).toHaveCount(0);
- await expect(page.locator('.reg-row[data-id="skyline-inquiry-assistant"]')).toHaveCount(1);
+ await expect(page.locator('.reg-row[data-id="skyline-inquiry-assistant"]')).toHaveCount(0);
  await expect(page.locator('.reg-row[data-id="niche-scout"]')).toHaveCount(0);
  mkdirSync('docs/agent-organization',{recursive:true});
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
