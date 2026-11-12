@@ -63,12 +63,11 @@ describe("projects and linked repository resources", () => {
   });
 });
 
-it("shares Atlas resources without duplicating Skyline or reviving a retired cached repository", () => {
-  const skyline = bundled.projects.find(p => p.id === "skyline")!;
-  expect(skyline.repository).toBe("khaneilcampbell/ai-ops-atlas");
-  expect(bundled.agents.find(a => a.id === "skyline-inquiry-assistant")).toMatchObject({projectId:"skyline", repository:skyline.repository, status:"idle"});
+it("lists the shared Atlas repository once, with Skyline removed, and never revives a retired cached repository", () => {
+  expect(bundled.projects.some(p => p.id === "skyline")).toBe(false);
+  expect(bundled.agents.some(a => a.id === "skyline-inquiry-assistant")).toBe(false);
   const rows = repoRows(bundled, {}, ["khaneilcampbell/skyline"]);
-  expect(rows.filter(r => r.name === skyline.repository)).toHaveLength(1);
-  expect(rows.find(r => r.name === skyline.repository)?.projects.map(p => p.id)).toEqual(expect.arrayContaining(["ai-ops-atlas", "skyline"]));
+  expect(rows.filter(r => r.name === "khaneilcampbell/ai-ops-atlas")).toHaveLength(1);
+  expect(rows.find(r => r.name === "khaneilcampbell/ai-ops-atlas")?.projects.map(p => p.id)).toContain("ai-ops-atlas");
   expect(rows.some(r => r.name === "khaneilcampbell/skyline")).toBe(false);
 });
