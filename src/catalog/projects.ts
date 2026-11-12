@@ -12,6 +12,12 @@ export const LANDMARK_REPOSITORIES: string[] = [];
 export const RETIRED_REPOSITORIES = ["khaneilcampbell/skyline", "khaneilcampbell/benjaire-dashboard", "khaneilcampbell/projects-intelligence-hub", "khaneilcampbell/service-desk-intelligence"];
 
 /**
+ * Projects kept in the catalog for ownership and history but no longer shown as city buildings.
+ * Skyline, Service Desk, Career Applications and Benjaire Dashboard were removed from the map.
+ */
+export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "service-desk", "career-optimizer", "benjaire-ops"]);
+
+/**
  * The project that owns each repository. Several projects can share one repository (Skyline,
  * Benjaire Ops and Atlas all live in ai-ops-atlas), so prefer the project named after the
  * repository, then the first one registered. Keys are lower case.
