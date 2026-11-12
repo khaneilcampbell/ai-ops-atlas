@@ -226,9 +226,13 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
 export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
 const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
 
-/** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
+/**
+ * What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per
+ * outside service. An agent that is off on purpose (`alerts.not_running`, such as a draft waiting
+ * for KC's OK) adds no kiosk, so registering it doesn't move the city; its kiosk appears once it runs.
+ */
 function residents(agents: Agent[]) {
-  return { crew: agents, houses: [] as Agent[], services: orderToolsForWorkflow(servicesOf(agents)) };
+  return { crew: agents, houses: [] as Agent[], services: orderToolsForWorkflow(servicesOf(agents.filter(a => !a.alerts?.notRunning))) };
 }
 
 interface Box {

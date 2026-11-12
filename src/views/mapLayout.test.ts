@@ -218,6 +218,14 @@ it("registers Skyline without giving it a district", () => {
   expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
 });
 
+it("adds no kiosk for an agent that is off on purpose, so a draft doesn't move the city", () => {
+  const draft = catalog.agents.find(a => a.id === "career-execution");
+  expect(draft?.alerts?.notRunning).toBeTruthy();
+  const without: Catalog = { ...catalog, agents: catalog.agents.filter(a => a !== draft) };
+  const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y},${r.w},${r.h}`).sort();
+  expect(where(layoutMap(catalog, [], "district"))).toEqual(where(layoutMap(without, [], "district")));
+});
+
 describe("keepRemovedLots", () => {
   it("keeps the city in place when a removed tower's repository is deleted on GitHub", () => {
     const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y}`).sort();

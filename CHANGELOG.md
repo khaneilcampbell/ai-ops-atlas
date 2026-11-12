@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-12 · Portfolio Web Studio has a new Career Execution Agent, marked Draft and not running: it turns a job link into a cited resume summary, cover note and recruiter message for you to review, and never applies or messages anyone (#371)
 - 2026-11-11 · The Commerce pipeline now shows how it really runs: on n8n, with a Design Run (Claude makes each product and its six listing images in Canva twice a week), Approve and Publish (your approval creates the Stripe link), Order Delivery and the Shop Page with a Monday sales email, each linking to its n8n workflow. The old VPS agents are marked retired (#367)
 - 2026-11-11 · Footpath railings now stop where a road crosses the path instead of running across the street, street lamps stand back from footpaths, and lamp light on the road at night fades out softly instead of showing as grey ovals (#310)
 - 2026-11-11 · The Model Intelligence Lab at the airport is switched on: it lists the AI models your agents used in the last 30 days, which agents call each one, and what each model cost, with unknown prices shown as unknown rather than $0 (#349)
