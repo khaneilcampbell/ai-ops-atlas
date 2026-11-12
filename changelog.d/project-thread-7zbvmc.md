@@ -1,1 +1,1 @@
-- 2026-11-12 · The Agent Registry Clerk now also ranks the top 10 agents worth building next, every 3 days, in a new Top 10 Agents tab of the registry sheet (#398)
+- 2026-11-12 · The Agent Registry Clerk now also ranks the top 10 agents worth building next, every Sunday at 9am, in a new Top 10 Agents tab of the registry sheet (#398)
