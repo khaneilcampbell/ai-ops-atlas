@@ -144,3 +144,19 @@
   .manage .manage-table > tbody > tr.manage-detail-row > td { padding: 4px 16px 14px; border-bottom: 1px solid var(--sage-100); }
   .manage .manage-detail .runs-table td, .manage .manage-detail .runs-table th { padding: 6px 8px; }
 }
+
+/* Agents and the automations they own (catalog owned_by). */
+.op-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; border: 0; padding: 0; }
+.op-dot.op-verified { background: var(--good); }
+.op-dot.op-failing { background: var(--bad); }
+.op-dot.op-configured { background: var(--sage-400); }
+.op-dot.op-planned { background: transparent; box-shadow: inset 0 0 0 1.5px var(--sage-400); }
+.op-dot.op-unknown { background: var(--ink-3); }
+.group-health { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+.reg-nested { list-style: none; margin: 0 0 4px 22px; padding: 0 0 0 10px; border-left: 1px solid var(--sage-300); }
+.reg-step { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 13px; color: var(--ink); text-align: left; cursor: pointer; }
+.reg-step:hover, .reg-step.on { background: var(--sage-100); }
+.reg-step .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orphan-chip { font-size: 11px; color: #7a5714; background: rgba(196, 140, 40, 0.14); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.orphan-note { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7a5714; margin: 6px 0 0; }
+.reg-row-owner { display: block; margin-top: 5px; }

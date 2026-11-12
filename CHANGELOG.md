@@ -3,6 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-12 · Agents now show the automations they run nested underneath, with one health dot for the whole group that only turns green when every part is verified. Senior Engineering Reviewer runs 4 automations and Portfolio Web Developer runs 3. Automations lists the ones with no owning agent yet (27 today), so you can give each an owner or retire it (#PR)
 - 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center each have their own agent now (Marketplace Steward, Signal Watch, Dataset Census). They run on a schedule with no AI calls and report to the live feed, and a building only goes green while its agent has reported a recent success (#372)
 - 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center now read the Atlas repository: their cards show its CI health and last run, and their map dots go green or red from real checks (#372)
 - 2026-11-12 · Activity's Project filter lists only the buildings on the map today. Removed buildings like Skyline no longer show as choices, but their past activity stays under All. Agent runs show the project the agent belongs to (#361)
