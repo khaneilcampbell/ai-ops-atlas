@@ -14,3 +14,5 @@ Blocking unit failures:
 - stationPlazaPlan.test.ts: no clear wheel/pavilion plaza found in district grouping (1 test).
 
 The full request is not complete and this branch is not ready to merge. Fix the five regressions before approval, then run applicable final checks and the map performance budget. Performance measurement and broader screenshot/CI completion are not claimed. Work stopped at the user's request to finish with minimal further usage. No merge, deployment, paid/model service, recurring task or parallel agent was used.
+
+At draft PR creation, main had advanced to c7d1396b53b738914c9053419bd3b0b881e953cc. This branch remains based on 1e50d65; refresh and revalidate the affected coverage before any merge. Draft PR #368.
