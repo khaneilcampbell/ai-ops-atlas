@@ -215,8 +215,8 @@ it("keeps one open lot in every map grouping",()=>{
   }
 });
 
-it("registers Skyline without giving it a district", () => {
-  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
+it("has no Skyline project or district, and no stray for its old repository", () => {
+  expect(catalog.projects.some(p => p.id === "skyline")).toBe(false);
   const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
   expect(layout.parks.filter(p => !p.strays.length && !p.vacant)).toHaveLength(1);

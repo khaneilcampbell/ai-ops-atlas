@@ -39,7 +39,7 @@ class Registry(unittest.TestCase):
         ids = {a["id"] for a in d["agents"]}
         self.assertIn("github-opportunity-scout", ids)
         self.assertIn("github-merge-flow", ids)
-        self.assertGreaterEqual(len(d["projects"]), 9)
+        self.assertGreaterEqual(len(d["projects"]), 8)
         for a in d["agents"]:
             self.assertEqual(set(a), {"id", "project", "name", "status", "type", "category", "framework", "purpose"})
             self.assertLessEqual(len(a["purpose"] or ""), POLICY["purposeChars"])

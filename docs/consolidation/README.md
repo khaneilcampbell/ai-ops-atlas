@@ -6,7 +6,7 @@ Prepared November 3, 2026. This migration adds source code to Atlas; it does not
 
 | Project | Atlas location | Source repository | Retirement state |
 | --- | --- | --- | --- |
-| Skyline | `docs/skyline/`, `ops/skyline/`, existing city components | `khaneilcampbell/skyline` | Migration #207 merged; production and integration retirement gates still apply |
+| Skyline | Removed from Atlas 2026-11-12 (project, Inquiry Assistant, docs and sandbox) | `khaneilcampbell/skyline` | Migration #207 merged; production and integration retirement gates still apply |
 | Career Applications | `ops/career/` in PR #211 | `khaneilcampbell/career-application-system` | PR #211 open; do not delete |
 | Benjaire Dashboard | Removed 2026-11-12; only the Flow files remain, in `apps/benjaire-flow/` | `khaneilcampbell/benjaire-dashboard` | The dashboard no longer exists (Khaneil, 2026-11-12) |
 | Intelligence Hub | `docs/intelligence-hub/` | `khaneilcampbell/projects-intelligence-hub` | This migration is prepared; do not delete |
