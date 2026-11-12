@@ -241,3 +241,29 @@ describe("keepRemovedLots", () => {
     expect(keepRemovedLots(catalog, catalog)).toBe(catalog);
   });
 });
+
+describe("group names follow their buildings", () => {
+  // Command Center and Operations move after packing (#363, #375); their group names must move with them.
+  const l = layoutMap(catalog, [], "district");
+  const inside = (x: number, y: number, d: { ox: number; oy: number; size: number }) => x > d.ox && x < d.ox + d.size && y > d.oy && y < d.oy + d.size;
+  for (const n of l.neighborhoods.filter((n) => l.districts.some((d) => d.group === n.key))) {
+    it(`${n.label} stands on its own district and nobody else's`, () => {
+      const own = l.districts.filter((d) => d.group === n.key);
+      for (const d of own) {
+        expect(d.ox).toBeGreaterThanOrEqual(n.ox - 1e-9);
+        expect(d.oy).toBeGreaterThanOrEqual(n.oy - 1e-9);
+        expect(d.ox + d.size).toBeLessThanOrEqual(n.ox + n.w + 1e-9);
+        expect(d.oy + d.size).toBeLessThanOrEqual(n.oy + n.h + 1e-9);
+      }
+      const a = n.anchor!;
+      expect(own.some((d) => a.x > d.ox && a.x < d.ox + d.size && a.y === d.oy)).toBe(true);
+      // The 3D name sits 1.2 behind that edge, in the street: never on another district or a cleared lot.
+      for (const d of [...l.districts, ...(l.cleared ?? [])]) expect(inside(a.x, a.y - 1.2, d)).toBe(false);
+    });
+  }
+  it("AI Engineering is named at the Operations tower, not its old cleared lot", () => {
+    const n = l.neighborhoods.find((n) => n.label === "AI Engineering")!;
+    const hub = l.districts.find((d) => d.project.id === "intelligence-hub")!;
+    expect(n.anchor).toEqual({ x: hub.ox + hub.size / 2, y: hub.oy });
+  });
+});
