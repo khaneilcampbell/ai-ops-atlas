@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#PR)
+- 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#374)
 - 2026-11-12 · The Security Operations Center now lists security incidents: exposed secrets and critical or high GitHub alerts, each with a link to fix it (#373)
 - 2026-11-12 · Vendor & Supplier Hub is now connected: select it to see each outside vendor your agents use (Stripe, n8n, Cloudflare, Canva, Splunk), how many workers use it, their health and last run. Bills, invoices and contracts show as Not connected (#370)
 - 2026-11-11 · The Commerce pipeline now shows how it really runs: on n8n, with a Design Run (Claude makes each product and its six listing images in Canva twice a week), Approve and Publish (your approval creates the Stripe link), Order Delivery and the Shop Page with a Monday sales email, each linking to its n8n workflow. The old VPS agents are marked retired (#367)
