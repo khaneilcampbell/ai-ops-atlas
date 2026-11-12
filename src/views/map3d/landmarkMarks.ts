@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useAtlas } from "../../state";
 import type { Health } from "../../lib/derive";
+import type { LiveLandmark } from "../../lib/connections";
 import { useStudioHealth } from "../../components/ModuleWorkspaceLists";
 import { landmarkInstances } from "../../modules/instances";
 import { serviceKey } from "../../modules/names";
@@ -21,19 +22,37 @@ export function landmarkMark(health: Health, summary: string): PlaqueMark | unde
   return health === "unknown" ? undefined : { kind: KIND[health], label: summary };
 }
 
-export function useLandmarkMarks(): Readonly<Record<string, PlaqueMark>> {
+/**
+ * Landmarks whose module is live: the health a module that reads its own live sources reports
+ * (MODULE_HEALTH), otherwise the CI of the building's linked repositories. Unknown is not live.
+ * The status dots and the Atlas Command Center connections both come from this one list.
+ */
+export function liveLandmarks<T extends { id: string; name: string; enabled: boolean; moduleType: ModuleTypeId | null }>(
+  instances: readonly T[],
+  healthOf: (l: T, type: ModuleTypeId) => { health: Health; summary: string },
+): LiveLandmark[] {
+  const out: LiveLandmark[] = [];
+  for (const l of instances) {
+    if (!l.enabled || !l.moduleType) continue;
+    const h = healthOf(l, l.moduleType);
+    if (h.health !== "unknown") out.push({ id: l.id, name: l.name, health: h.health, summary: h.summary });
+  }
+  return out;
+}
+
+export function useLiveLandmarks(): LiveLandmark[] {
   const { catalog, repos } = useAtlas();
   // One line per module that reads its own live sources (MODULE_HEALTH in ModuleWorkspaceLists).
   const studio = useStudioHealth();
   return useMemo(() => {
     const own: Partial<Record<ModuleTypeId, { health: Health; summary: string }>> = { "growth-marketing-studio": studio };
-    const marks: Record<string, PlaqueMark> = {};
-    for (const l of landmarkInstances()) {
-      if (!l.enabled || !l.moduleType) continue;
-      const h = own[l.moduleType] ?? aggregateHealth(buildingAssets(l, catalog).repositories, repos);
-      const mark = landmarkMark(h.health, h.summary);
-      if (mark) marks[serviceKey(l.id)] = mark;
-    }
-    return marks;
+    return liveLandmarks(landmarkInstances(), (l, type) => own[type] ?? aggregateHealth(buildingAssets(l, catalog).repositories, repos));
   }, [catalog, repos, studio]);
+}
+
+/** Status dots by selection key, for the landmarks in `live`. */
+export function landmarkMarksOf(live: readonly LiveLandmark[]): Readonly<Record<string, PlaqueMark>> {
+  const marks: Record<string, PlaqueMark> = {};
+  for (const l of live) marks[serviceKey(l.id)] = landmarkMark(l.health, l.summary)!;
+  return marks;
 }
