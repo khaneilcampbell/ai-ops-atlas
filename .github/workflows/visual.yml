@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       specs:
-        description: Only these spec files, space separated (e.g. "views.visual.ts header.visual.ts"). One runner instead of six; leave empty for the whole set
+        description: Only these spec files, space separated (e.g. "views.visual.ts header.visual.ts"). One runner instead of eight; leave empty for the whole set
         type: string
         default: ""
 
@@ -29,16 +29,17 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual checks (screenshots ${{ matrix.shard }}/6)
+    name: Visual checks (screenshots ${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
-    # The whole set (about 110 tests, software WebGL) no longer fits in 45 minutes on one runner,
-    # so it runs as 6 shards side by side, split by spec file. Each shard takes roughly a sixth.
+    # The whole set (about 275 tests, about 3 hours of software WebGL) runs as 8 shards side by side.
+    # visual/shards.mjs splits the spec files by measured time (visual/shard-times.json), about 22
+    # minutes each; Playwright's own --shard split by test count and put the slow files in one shard.
     # A shard that still hits 35 minutes is a real slowdown, not noise (the blank map after #148).
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6]') }}
+        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6, 7, 8]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -61,7 +62,7 @@ jobs:
           SPECS: ${{ inputs.specs }}
         run: |
           if [ -n "$SPECS" ]; then echo "args=$SPECS" >> "$GITHUB_OUTPUT";
-          else echo "args=--shard=${{ matrix.shard }}/6" >> "$GITHUB_OUTPUT"; fi
+          else echo "args=$(node visual/shards.mjs ${{ matrix.shard }} 8)" >> "$GITHUB_OUTPUT"; fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
         env:
