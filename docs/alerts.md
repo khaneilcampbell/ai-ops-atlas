@@ -53,15 +53,18 @@ An agent is watched when its manifest has an `alerts` block (see
 |---|---|---|---|
 | benjaire-contact-worker | yes | none (runs per form post) | watched |
 | benjaire-flow-intake | yes | none (runs per inquiry) | watched |
-| commerce-loop | yes | 8 days (maintain mode sleeps until Monday) | not running |
-| order-delivery | yes | 1 hour | not running |
-| seo-maintainer | yes | none | not running |
-| canva-mockups | yes | none | not running |
+| marketplace-steward | yes | 3 hours (runs hourly) | watched |
+| signal-watch | yes | 90 minutes (runs every 30 min) | watched |
+| dataset-census | yes | 7 hours (runs every 3 h) | watched |
 
-The commerce VPS was removed, so the commerce agents are marked `not_running` until the
-pipeline moves to the Oracle VM. When it is rehosted, delete the `not_running` lines in
-`catalog/multi-agent-commerce-pipeline.yaml`. Check then that the delivery check reports on
-every pass even when there are no orders; otherwise widen `report_within` for order-delivery.
+The last three are the building operators (`ops/building-agents/agents.py`, run by
+`.github/workflows/building-agents.yml`, no model calls). Each operates one landmark through
+`agents:` in `catalog/workspace/workspace.yaml`, and its state is that building's health on the
+map and in its module card: green only while it reports successes in time. They need the
+`ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN` repository secrets that the Opportunity Scout uses.
+
+The commerce pipeline now runs on n8n and has no `alerts` block: its n8n workflows email
+failures themselves. Add one again only when they report to the agent feed.
 
 The benjaire.com agents only show reports once their Worker and n8n workflow send them to
 `/api/hooks/agents` ([live-updates.md](live-updates.md#pipeline-runs-outside-atlas)). Until

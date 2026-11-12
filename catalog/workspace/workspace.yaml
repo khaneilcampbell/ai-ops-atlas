@@ -12,6 +12,8 @@
 #     module                a module type id from src/modules/catalog.ts
 #     project               optional: the catalog project whose repository and agents this building
 #                           operates with (its agents are the ones whose workplace is this building)
+#     agents                optional, with project: that project's agents that operate this building
+#                           without a desk in it; their live reports set the building's health
 # Each building houses the module that matches what it is for (KC, 2026-11-10). A module can have
 # more than one home when both buildings do that work. Buildings whose function no module covers
 # house none, rather than borrow an unrelated one; leave them out.
@@ -37,6 +39,8 @@ landmarks:
   "service:atlas-marketplace":
     map_name: Atlas Marketplace
     module: commerce-product-marketplace
+    project: ai-ops-atlas
+    agents: [marketplace-steward]
   "service:financial:banks":
     map_name: Bayvale Bank
     module: finance-analytics-tower
@@ -52,6 +56,8 @@ landmarks:
   "service:financial:residence":
     map_name: Aldren Insights
     module: data-intelligence-center
+    project: ai-ops-atlas
+    agents: [dataset-census]
   "service:financial:business-finance":
     map_name: Corvane Capital
     module: finance-analytics-tower
@@ -61,6 +67,8 @@ landmarks:
   "service:airport-building:operations":
     map_name: Atlas · Operations
     module: observability-center
+    project: ai-ops-atlas
+    agents: [signal-watch]
   "service:airport-building:cargo":
     map_name: Atlas · Cargo
     module: model-intelligence-lab
