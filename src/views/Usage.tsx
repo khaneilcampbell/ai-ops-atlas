@@ -1,3 +1,4 @@
+import { projectByRepository } from "../catalog/projects";
 import { useMemo, useRef, useState } from "react";
 import { useUsageData, type ImportStore } from "../usage/data";
 import { Icon } from "../components/Icon";
@@ -42,8 +43,8 @@ export function UsageView() {
   const advice = useMemo(() => findings(workflows), [workflows]);
   const t = summary.totals;
   const projectName = useMemo(() => {
-    const byRepo = new Map(catalog.projects.map((p) => [p.repository.toLowerCase(), p.name]));
-    return (repo: string) => byRepo.get(repo.toLowerCase()) ?? null;
+    const byRepo = projectByRepository(catalog.projects);
+    return (repo: string) => byRepo.get(repo.toLowerCase())?.name ?? null;
   }, [catalog.projects]);
 
   const hasAny = data.records.length > 0;

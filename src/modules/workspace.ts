@@ -22,6 +22,8 @@ export interface LandmarkAssignment {
   moduleType: ModuleTypeId;
   /** The catalog project whose repository and workplace agents this building operates with. */
   project?: string;
+  /** That project's agents that operate this building without a desk in it (catalog agent ids). */
+  agents?: string[];
 }
 
 /**
@@ -94,7 +96,9 @@ export function parseWorkspace(file: string, text: string, issues: ManifestIssue
       if (!isModuleType(o.module)) { fail(`landmarks.${key}.module: "${String(o.module ?? "")}" is not a module type`); continue; }
       const project = o.project === undefined ? undefined : str(o.project);
       if (o.project !== undefined && (!project || !ID_RE.test(project))) { fail(`landmarks.${key}.project: use a catalog project id such as "benjaire-site"`); continue; }
-      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}) });
+      const agents = o.agents === undefined ? undefined : Array.isArray(o.agents) ? o.agents.map(str) : null;
+      if (agents !== undefined && (!project || !agents || !agents.length || !agents.every((a) => a && ID_RE.test(a)))) { fail(`landmarks.${key}.agents: list the catalog agent ids of its project that operate it, and set project`); continue; }
+      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}), ...(agents?.length ? { agents: agents as string[] } : {}) });
     }
   }
   return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements };
@@ -118,5 +122,5 @@ export type LandmarkInstance = Omit<BuildingInstance, "districtId" | "projectId"
   districtId: null;
   projectId: null;
   /** The catalog project this landmark operates with, and the workplace name its agents sit in. */
-  linked?: { projectId: string; workplace: string };
+  linked?: { projectId: string; workplace: string; agents?: string[] };
 };

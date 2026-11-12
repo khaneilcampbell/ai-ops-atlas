@@ -159,6 +159,13 @@ or location. Each feed reports one of four states: counted, switched off for the
 readable with the token, or unavailable. A repository shows no open alerts only when all three
 feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
 
+Its **Incidents** list is raised from those same counts (`src/security/incidents.ts`), so nothing new
+is fetched: any open secret scanning alert is critical (a leaked secret has no severity and must be
+rotated), critical Dependabot or code scanning alerts are critical, and high ones are warnings.
+Medium and low alerts stay in the alerts list. A feed that couldn't be read raises nothing, and the
+list says how many repositories were not fully read. Each incident links to the matching GitHub
+security page; Atlas cannot dismiss or fix an alert.
+
 ### Spend caps
 The Financial Operations Tower compares this month's spend with each spend cap the workspace has
 set (`src/finance/caps.ts` `SPEND_CAPS`). The Atlas agents' budget is read from Atlas's own settings

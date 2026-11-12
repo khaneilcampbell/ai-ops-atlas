@@ -1,13 +1,9 @@
-# Atlas handoff — 2026-11-11
+# Atlas handoff — 2026-11-12
 
-Objective complete: sign-only change on Growth & Marketing Studio. Façade reads BENJAIRE / DIGITAL STUDIO. Building name, inspector label, IDs, workplace assignments and geometry unchanged. User explicitly clarified this is not a building rename; Portfolio remains unchanged in this task.
-
-Workspace: /private/tmp/atlas-digital-studio-sign. Branch: codex/digital-studio-sign. Based on main 1e50d65d77f2780e7e8fe5ead4b5dd4a5e1a00f3.
-Draft PR: https://github.com/khaneilcampbell/ai-ops-atlas/pull/366. No merge or deployment. Next action: review draft; KC decides whether to merge.
-Preview: http://127.0.0.1:5227/ (verified HTTP 200), sign-only branch from main. Not the installed desktop app or production.
-Tested source: eb56ed0. Later commits add evidence, handoff and PR number only; runtime unchanged.
-Validation: lint/typecheck passed. npm test -- --maxWorkers=1: 197 files, 1,348 tests passed. Final dedicated-port visual run: 3 passed, desktop day/night and 390×844 phone close-ups manually reviewed. Fixture data and Chromium/SwiftShader; no baseline comparison. Initial after run reused an older preview and was discarded; final captures from this branch used ATLAS_VISUAL_PORT=4181. Evidence: docs/digital-studio-sign/validation.md. No Rust changes, no blockers, no additional rendering parts/lights.
-
-Separate earlier work: draft PR #365 on codex/portfolio-district-size in /private/tmp/atlas-portfolio-size, preview 5226. Includes Portfolio district/height changes and brown-wall alignment. Last tested source 68aeeaf; lint/types, 1,354 unit tests and 3 affected visual checks passed. Its existing selection-test limitation is documented there. This sign-only branch does not include those unmerged changes; neither PR was merged by this task.
-
-Original workspace /Users/khaneil/Documents/ChatGPT/AI Ops Atlas contains extensive unrelated dirty changes. Do not reset/clean or use it as production evidence. This task only updates its handoff. Prior /private/tmp/atlas-central-hub and preview 5225 are stale. Advisory minimal-usage notes remain local in the original workspace.
+Objective implemented and locally validated: Commerce-sized district land and consistent hover/selection/ground bounds for the three target projects in the complete By district campus. Building designs, Development Hub, other parcels and shared landmark anchors preserved; original public street grid retained and Command–Commerce through-street straight.
+Workspace: /private/tmp/atlas-equal-operations. Branch: codex/equal-operations-districts. Refreshed onto main d440f93; changelog conflict resolved preserving both entries.
+Draft PR: https://github.com/khaneilcampbell/ai-ops-atlas/pull/375. Preview: http://127.0.0.1:5231/. No merge, approval, auto-merge or production deployment.
+Tested commit: bba71f7e4c6db2fe3f50d66fc2682d114116f054. Final lint/typecheck and 200 files / 1,360 tests passed. Existing desktop and 390×844 iPhone selection evidence reused: map/visual-spec files unchanged by refresh, main's activity-label addition does not affect map rendering. Later commits only update evidence/handoff.
+Full after map-performance/leak check PASSED with unchanged limits: 689 calls, 882,082 triangles, 68 programs, 6.2 MB, one live context; extra buffers -6, textures 0, programs -2. Before GPU-only baseline: 692 calls, 869,606 triangles, 68 programs, 6.1 MB. Earlier performance blocker resolved. Evidence: docs/equal-operations-districts/validation.md and paired desktop/iPhone images. Rust unchanged; no guards/baselines loosened.
+Next: KC reviews latest PR checks and merges. No known local blocker. Remote check status must be assessed on the final pushed head; no GitHub Actions runs were returned before refresh, and old-head Cloudflare Pages was successful.
+Original dirty workspace preserved except this handoff. Blocked #368 was not reused; #369 remains separate. Other groupings and filtered fallback retain existing packing.

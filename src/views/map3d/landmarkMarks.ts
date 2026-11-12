@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useAtlas } from "../../state";
 import type { Health } from "../../lib/derive";
 import { useStudioHealth } from "../../components/ModuleWorkspaceLists";
+import { useSharedWatches } from "../../alerts/state";
+import { feedHealth } from "../../modules/feedHealth";
 import { landmarkInstances } from "../../modules/instances";
 import { serviceKey } from "../../modules/names";
 import { aggregateHealth, buildingAssets } from "../../modules/operations";
@@ -25,15 +27,18 @@ export function useLandmarkMarks(): Readonly<Record<string, PlaqueMark>> {
   const { catalog, repos } = useAtlas();
   // One line per module that reads its own live sources (MODULE_HEALTH in ModuleWorkspaceLists).
   const studio = useStudioHealth();
+  const watches = useSharedWatches();
   return useMemo(() => {
     const own: Partial<Record<ModuleTypeId, { health: Health; summary: string }>> = { "growth-marketing-studio": studio };
     const marks: Record<string, PlaqueMark> = {};
     for (const l of landmarkInstances()) {
       if (!l.enabled || !l.moduleType) continue;
-      const h = own[l.moduleType] ?? aggregateHealth(buildingAssets(l, catalog).repositories, repos);
+      const assets = buildingAssets(l, catalog);
+      // The operating agents' live reports come first: CI alone never turns a building green here.
+      const h = feedHealth([...assets.agents, ...assets.automations].map((a) => a.id), watches) ?? own[l.moduleType] ?? aggregateHealth(assets.repositories, repos);
       const mark = landmarkMark(h.health, h.summary);
       if (mark) marks[serviceKey(l.id)] = mark;
     }
     return marks;
-  }, [catalog, repos, studio]);
+  }, [catalog, repos, studio, watches]);
 }

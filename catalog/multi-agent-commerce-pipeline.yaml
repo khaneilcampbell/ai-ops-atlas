@@ -7,12 +7,12 @@ project:
   name: Commerce Operations Center
   former_names: [Commerce Pipeline]
   summary: >-
-    Autonomous pipeline that researches a niche, builds digital products with
-    Canva, sells them through Stripe on a static storefront, emails buyers
-    their templates, syncs sales and keeps listing SEO fresh.
+    Product pipeline on n8n Cloud: Claude turns each idea into a Canva template
+    and listing images, KC approves it, Stripe sells it on the shop page and
+    buyers get their template link by email.
   status: active
   repository: khaneilcampbell/multi-agent-commerce-pipeline
-  tags: [crewai, claude, stripe, canva, automation]
+  tags: [claude, stripe, canva, n8n, automation]
   district: business-operations
   module: commerce-product-marketplace
   links:
@@ -22,86 +22,74 @@ project:
 agents:
   - id: commerce-loop
     workplace: {building: Atlas Marketplace, floor: 1, room: "102"}
-    name: Autonomous Loop
+    name: Design Run
     purpose: >-
-      Orchestrates each cycle in build, design or maintain mode, running the phases below on a Linux VPS under the commerce-pipeline systemd service.
-    framework: Shell + systemd
-    runtime: Linux VPS
+      n8n workflow that takes the next product idea, has Claude write the listing and a design brief,
+      then has Claude make the product and six listing images in Canva and emails KC an approval link.
+    framework: n8n
+    model: claude-sonnet-5-5
+    runtime: n8n Cloud
     status: active
-    trigger: loop.sh (systemd, hourly cycle)
-    source: loop.sh
-    observe:
-      agent_feed: true
-    # Reports at least once a week even in maintain mode (sleeps until Monday 00:00 UTC).
-    alerts:
-      failures: true
-      report_within: 8d
-      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
+    trigger: Monday and Thursday 10am, at most 2 new designs per 7 days
     last_run: null
     history:
-      - at: 2026-10-12
-        event: Service paths aligned with the project rename
+      - at: 2026-11-11
+        event: Moved to n8n Cloud
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/Pu57gD8f9Dz9gIbq
+      - label: Add a product idea
+        url: https://khancam15.app.n8n.cloud/form/commerce-idea
     permissions:
-      - 'Every credential in .env on the VPS: Anthropic, Serper, Canva, Stripe and SMTP'
-      - Storefront deploy key with write access to the storefront repository
-      - Runs as root in the documented setup
+      - Anthropic, through the n8n credential on Claude Writes Brief and Claude Sonnet
+      - 'Canva, through the Canva node and the Canva MCP connector: creates designs in KC''s account'
+      - 'Resend API: approval and failure emails to KC only'
+      - 'n8n data table commerce_products: reads ideas, writes drafts'
     registry:
       title: Commerce Operations Coordinator
-      category: infrastructure
+      tier: coordinator
+      category: business
       subcategory: Workflow orchestration
       classification:
-        type: C
+        type: B
         confidence: verified
-        evidence: loop.sh is a Bash loop that picks build, design or maintain mode from counters and runs each phase script
+        evidence: The n8n workflow is a fixed schedule with two Claude steps (claude-sonnet-5-5), one writing the brief and one agent step limited to two Canva tools
       mission:
-        problem: Runs the commerce pipeline unattended on a VPS.
-        outcomes: [Each cycle runs the right phases for the week's publish budget]
+        problem: Turning a product idea into a finished Canva template and listing images takes hours by hand.
+        outcomes:
+          - Each idea becomes a Canva product, six listing images and a draft listing
+          - KC approves every product before it goes on sale
       responsibilities:
-        tasks: [Preflight credential check, "Choose build, design or maintain mode", Run phases 1 to 7, Log failures]
-        tools: [Bash, systemd]
-        inputs: [.env settings, SQLite queue, outputs folder]
-        outputs: [logs/loop.log, logs/loop_errors.log]
-        dependencies: [niche-scout, canva-mockups, shopify-publisher, seo-maintainer, order-delivery, health-report]
+        tasks: [Pick the oldest idea or a retry, Write the listing and Canva brief with Claude, Make the product and six listing images in Canva, Save the draft, Email KC an approval link, Email KC when a run fails]
+        tools: [n8n Cloud, Claude (claude-sonnet-5-5), Canva, n8n data tables, Resend]
+        inputs: [Ideas from the Add product idea form]
+        outputs: [Canva product and listing images, Draft row in commerce_products, Approval email]
       goals:
-        objective: Publish within the weekly limit and keep listings maintained.
+        objective: Turn each idea into a product ready for KC's review.
         kpis:
-          - name: Listings published per week
+          - name: New designs per week
             kind: throughput
-            target: At most 5
-            basis: WEEKLY_PUBLISH_LIMIT default in loop.sh
-          - name: Hours between publishes
-            kind: other
-            target: At least 24
-            basis: PUBLISH_COOLDOWN_HOURS default in loop.sh
+            target: At most 2
+            basis: WEEKLY_CAP in the Pick Next Idea step
       execution:
-        trigger_type: continuous
-        schedule: Hourly cycle (SLEEP 3600); maintain mode sleeps until Monday 00:00 UTC
-        environment: Linux VPS (systemd commerce-pipeline service)
-        stages: [Preflight, Phase 1 brand (weekly), Phase 2 listings (weekly), Phase 3 design, Phase 5 publish, Phase 6 SEO, Phase 7 health]
+        trigger_type: scheduled
+        schedule: Monday and Thursday 10am
+        environment: n8n
+        stages: [Pick idea, Claude brief, Canva design, Save draft, Approval email]
       governance:
-        autonomy: 3
-        autonomy_note: >-
-          Runs every phase unattended. New products are saved as drafts and go live only after
-          ./run.sh approve (STORE_PUBLISH_STATUS=draft, the default since 2026-10-28); SEO edits,
-          storefront deploys and buyer emails run without approval. Bounded by the weekly limit,
-          the cooldown and a product being dropped after 3 failed attempts.
-        data_sensitivity: confidential
-        credential_owner: KC (.env on the VPS)
-        risk: high
-        audit_log: logs/loop.log and the SQLite run_log on the VPS (not connected to Atlas)
+        autonomy: 2
+        autonomy_note: Makes designs and drafts on its own; nothing goes on sale until KC approves on the approve page. A failed idea is retried up to 3 times and KC gets an email each time.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
+        risk: medium
+        audit_log: n8n executions and the commerce_products data table
       docs:
-        technical: docs/threat-model.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#autonomous-loop
         known_issues:
-          - The manifest named the old shopify-pipeline service; the unit is commerce-pipeline.service
-          - Runs as root in the documented setup
-          - Backups stay on the same VPS
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Atlas has no live data for it yet; results stay in n8n executions
+          - Canva returns short links without thumbnails, so the approval email often has no previews
         improvements:
-          - Run under a dedicated user, as the service file recommends
-          - Copy backups off the VPS
-          - Send phase results to Atlas
-        last_review: 2026-10-28
+          - Connect n8n executions to Atlas
+        last_review: 2026-11-11
 
   - id: niche-scout
     name: Shopify Niche Scout
@@ -110,13 +98,16 @@ agents:
       store from market size, competition, buyer intent and profit potential.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Serper search (SERPER_API_KEY)
@@ -144,19 +135,19 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
           - The catalog name still says Shopify; the pipeline sells through Stripe since commit 0f38931
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -171,13 +162,16 @@ agents:
       language and keyword whitespace for the chosen niche.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Serper search (SERPER_API_KEY)
@@ -205,18 +199,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -231,13 +225,16 @@ agents:
       positioning statement and brand tone.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
@@ -263,18 +260,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -287,13 +284,16 @@ agents:
       Recommends the palette, type pairing and logo direction for the brand.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
@@ -320,18 +320,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -346,13 +346,16 @@ agents:
       and Shopify SEO tags.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
@@ -379,18 +382,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -404,13 +407,16 @@ agents:
       listings and social traffic.
     framework: CrewAI
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 1, at most every 7 days
     source: scripts/brand_crew.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Writes outputs/brand_guide.md
@@ -436,18 +442,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Writes only the local brand guide that later phases read.
         data_sensitivity: internal
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#brand-builder-crew
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - Runs only with the whole crew (./run.sh phase1)
           - No KPI is defined yet
         improvements:
@@ -462,16 +468,16 @@ agents:
       the Canva remote MCP server and queues the product for build.
     framework: Anthropic API + MCP
     model: Claude (Anthropic API)
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 3, every build or design cycle
     source: scripts/canva_image_generator.py
     observe:
       agent_feed: true
-    alerts:
-      failures: true
-      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Anthropic API (ANTHROPIC_API_KEY)
       - Canva account through the Canva MCP server (CANVA_MCP_TOKEN)
@@ -496,39 +502,42 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 3, every build or design cycle
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 3
         autonomy_note: Creates designs in the connected Canva account.
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: medium
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#canva-mockup-generator
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
           - Creates designs in the connected Canva account with no review step
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - No KPI is defined yet
         improvements:
           - Send results to Atlas
         last_review: 2026-10-28
 
   - id: shopify-publisher
-    name: Stripe Publisher
+    name: Approve and Publish
     purpose: >-
-      Creates the Stripe product and price for each staged listing and saves it
-      as a draft for KC to review, gated by the weekly publish limit and cooldown.
-    framework: Python script
-    runtime: Linux VPS
-    status: idle
-    trigger: Phase 5, gated by WEEKLY_PUBLISH_LIMIT
-    source: scripts/stripe_publisher.py
-    observe:
-      agent_feed: true
+      n8n approval form. When KC approves a drafted product and pastes its Canva template link,
+      it creates the Stripe product, price and payment link and puts the product on the shop page.
+    framework: n8n
+    runtime: n8n Cloud
+    status: active
+    trigger: KC submits the approve form from the approval email
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Moved to n8n Cloud
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/nbjCeZ80noaGMzXr
     permissions:
-      - 'Stripe secret key (STRIPE_SECRET_KEY): products, prices and payment links'
-      - Writes listings and run_log in SQLite
+      - 'Stripe restricted key: write access to products, prices and payment links only'
+      - 'n8n data tables: writes commerce_products and shop_settings'
     registry:
       title: Product Publishing Coordinator
       category: business
@@ -536,41 +545,29 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/stripe_publisher.py creates a Stripe product and price and records a draft listing; scripts/approve_listing.py makes it live; no AI model
+        evidence: The n8n workflow is a form followed by fixed Stripe API calls with idempotency keys; no AI model
       mission:
-        problem: Creating each Stripe product, price and listing by hand is slow and easy to get wrong.
+        problem: Creating each Stripe product, price and payment link by hand is slow and easy to get wrong.
         outcomes:
-          - Each ready product saved in Stripe as a draft for KC's review
+          - Each approved product is on sale with one Stripe payment link
       responsibilities:
-        tasks: [Load the ready listing, Refuse to publish without a template link, Create the Stripe product and price, Save storefront images, Record a draft listing in SQLite]
-        tools: [Stripe API, SQLite]
-        inputs: [listing.json and images in 04_Assets/ReadyToUpload]
-        outputs: [Draft listing with a Stripe product and price, run_log and listings rows]
-        limitations: ["With STORE_PUBLISH_STATUS=active it also creates the payment link and the product goes live without review"]
-        dependencies: [canva-mockups]
+        tasks: [Check the private approve token, Check the Canva template link, Create the Stripe product, price and payment link, Mark the product live]
+        tools: [n8n Cloud, Stripe, n8n data tables]
+        inputs: [Approve form from KC]
+        outputs: [Stripe product, price and payment link, Live row in commerce_products]
+        dependencies: [commerce-loop]
       execution:
-        trigger_type: scheduled
-        schedule: Phase 5, gated by WEEKLY_PUBLISH_LIMIT and PUBLISH_COOLDOWN_HOURS
-        environment: Linux VPS
+        trigger_type: manual
+        environment: n8n
       governance:
-        autonomy: 2
-        autonomy_note: >-
-          Prepares each product as a draft with no payment link; KC makes it live with
-          ./run.sh approve. Level 2 only while the VPS keeps STORE_PUBLISH_STATUS=draft.
-        approval: KC runs ./run.sh approve "<product>" after previewing the draft
+        autonomy: 1
+        autonomy_note: Runs only when KC approves a product.
         data_sensitivity: confidential
-        credential_owner: KC (STRIPE_SECRET_KEY in .env on the VPS)
+        credential_owner: KC (n8n credentials)
         risk: medium
+        audit_log: n8n executions and the commerce_products data table
       docs:
-        technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#stripe-publisher
-        known_issues:
-          - The agent id still says shopify-publisher
-          - The threat model notes a full sk_live_ key gives wide account access
-          - No KPI is defined yet
-        improvements:
-          - Use a restricted Stripe key, as the threat model recommends
-        last_review: 2026-10-28
+        last_review: 2026-11-11
 
   - id: seo-maintainer
     name: SEO Maintainer
@@ -578,16 +575,16 @@ agents:
       Compares a listing's tags with competitor keywords and saves an optimised
       tag set, SEO title and meta description for the next storefront build.
     framework: Python script
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 6, every maintain cycle
     source: scripts/seo_analyzer.py
     observe:
       agent_feed: true
-    alerts:
-      failures: true
-      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Serper API (SERPER_API_KEY)
       - Writes listing tags and seo_review rows in SQLite
@@ -612,21 +609,21 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 6, every maintain cycle
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 3
         autonomy_note: >-
           Changes storefront search text automatically unless run with --analyze-only. Each
           deploy is a commit on the storefront's gh-pages branch, so a change can be reverted.
         data_sensitivity: confidential
-        credential_owner: KC (.env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: medium
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#seo-maintainer
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
           - Without SERPER_API_KEY it skips competitor research
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - No KPI is defined yet
         improvements:
           - A daily cap on listings changed, with a change log, before it runs at level 3 for good
@@ -638,13 +635,16 @@ agents:
       Daily summary of publishes, failure rate, run duration and stuck queue
       rows. Picked up by an n8n daily summary workflow.
     framework: Python + n8n
-    runtime: Linux VPS
-    status: idle
+    runtime: Not deployed
+    status: retired
     trigger: Phase 7, daily via n8n
     source: scripts/health_dashboard.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Reads outputs/pipeline.db; writes nothing
     registry:
@@ -666,7 +666,7 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Phase 7, daily via an n8n summary workflow
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 0
         data_sensitivity: internal
@@ -674,7 +674,7 @@ agents:
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#health-dashboard-report
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
           - The n8n daily summary workflow that captures it is not in the repository
           - No KPI is defined yet
@@ -685,26 +685,23 @@ agents:
   - id: order-delivery
     name: Order Delivery
     purpose: >-
-      Emails each buyer of a paid Stripe checkout the Canva template link for
-      what they bought. It is the only way buyers receive their product.
-    framework: Python script
-    runtime: Linux VPS
+      n8n workflow that emails each buyer the Canva template link for what they bought. It is the
+      only way buyers receive their product.
+    framework: n8n
+    runtime: n8n Cloud
     status: active
-    trigger: Every loop cycle and every 10 minutes while the loop sleeps
-    source: scripts/order_delivery.py
-    observe:
-      agent_feed: true
-    # Emails buyers their files. The window assumes the delivery check reports on every pass,
-    # even with no orders; confirm that when the pipeline is rehosted.
-    alerts:
-      failures: true
-      report_within: 1h
-      not_running: The commerce VPS was removed. The pipeline is off until it moves to the Oracle VM, so silence here is expected.
+    trigger: Each paid Stripe checkout
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Moved to n8n Cloud
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/pjj7ORgRjeGGTIFL
     permissions:
-      - 'Stripe secret key: reads checkout sessions'
-      - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
-      - Writes deliveries rows in SQLite
+      - 'Stripe: reads checkout sessions'
+      - 'Resend API: buyer emails on benjaire.com'
+      - 'n8n data tables: reads shop_settings, writes orders'
     registry:
       title: Digital Fulfillment Coordinator
       category: business
@@ -712,56 +709,50 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/order_delivery.py reads paid checkouts from Stripe and sends email over SMTP; no AI model
+        evidence: The n8n workflow reads the paid checkout and sends a fixed email with the template link; no AI model
       mission:
         problem: A buyer must get their template link soon after paying, without KC sending it.
         outcomes:
-          - Every paid checkout line is emailed once
+          - Every paid order is emailed its Canva template link once
       responsibilities:
-        tasks: [Find paid checkouts from the last 7 days, Group undelivered products per checkout, Email the buyer the template links, Record each delivery]
-        tools: [Stripe API, SMTP, SQLite]
-        inputs: [Paid Stripe checkout sessions, listings with template links]
-        outputs: [Buyer email, deliveries row]
-        dependencies: [shopify-publisher]
-        limitations: [Template links are private; a wrong link sent cannot be recalled]
+        tasks: [Read the paid checkout, Find the product's Canva template link, Email the buyer]
+        tools: [n8n Cloud, Stripe, Resend, n8n data tables]
+        inputs: [Paid Stripe checkout]
+        outputs: [Buyer email with the template link]
       execution:
-        trigger_type: continuous
-        schedule: Every cycle in every mode, and every DELIVERY_INTERVAL (600 s) while idle
-        environment: Linux VPS
+        trigger_type: event
+        environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: >-
-          Sends buyer emails without approval, because a paid order must not wait for a
-          person. Each checkout line is delivered once (deliveries table); failed sends retry.
+        autonomy_note: Emails buyers without approval, only for paid orders and only the link KC approved.
         data_sensitivity: confidential
-        credential_owner: KC (STRIPE_SECRET_KEY and SMTP password in .env on the VPS)
+        credential_owner: KC (n8n credentials)
         risk: medium
-        audit_log: deliveries table in outputs/pipeline.db on the VPS (not connected to Atlas)
+        audit_log: n8n executions
       docs:
-        technical: docs/threat-model.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#order-delivery
-        known_issues:
-          - If email fails, a buyer who has paid waits until the next successful run
-          - A buyer can forward their template link; Canva links can't be limited to one person
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
-        improvements:
-          - Report deliveries to Atlas so an undelivered order shows on the overview
-        last_review: 2026-10-28
+        last_review: 2026-11-11
 
   - id: sales-sync
-    name: Sales Sync
-    purpose: Pulls paid Stripe checkouts into the local sales table once a day.
-    framework: Python script
-    runtime: Linux VPS
+    name: Shop Page and Weekly Sales
+    purpose: >-
+      n8n workflow that serves the shop page of live products and emails KC a sales summary every Monday.
+    framework: n8n
+    runtime: n8n Cloud
     status: active
-    trigger: Daily, first cycle of the UTC day
-    source: scripts/sales_tracker.py
-    observe:
-      agent_feed: true
+    trigger: Shop page visits, and Monday 9am for the sales email
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Moved to n8n Cloud
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/ORa0g93GhM4CdKTu
+      - label: Shop page
+        url: https://khancam15.app.n8n.cloud/webhook/benjaire-shop
     permissions:
-      - 'Stripe secret key: reads checkout sessions'
-      - Writes sales rows in SQLite
+      - 'Stripe restricted key: reads checkout sessions'
+      - 'Resend API: weekly email to KC only'
+      - 'n8n data table commerce_products: reads live products'
     registry:
       title: Sales Reporting Specialist
       category: business
@@ -769,49 +760,45 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: scripts/sales_tracker.py reads Stripe checkout sessions into SQLite; no AI model
+        evidence: The n8n workflow renders live products from a data table and totals Stripe checkouts for a weekly email; no AI model
       mission:
-        problem: Revenue lives in Stripe; the digest and dashboard need it in the local database.
+        problem: Buyers need one page listing what is on sale, and KC needs a weekly sales number without opening Stripe.
         outcomes:
-          - Every paid checkout line in the sales table with its net revenue
+          - The shop page shows every live product
+          - One sales email to KC each Monday
       responsibilities:
-        tasks:
-          - Read paid Stripe checkout sessions
-          - Match line items to listings
-          - Store revenue with the actual Stripe fee when known
-        tools: [Stripe API, SQLite]
-        inputs: [Paid Stripe checkout sessions, listings table]
-        outputs: [sales rows in outputs/pipeline.db]
+        tasks: [Serve the shop page, Total last week's paid checkouts, Email KC the summary]
+        tools: [n8n Cloud, Stripe, Resend, n8n data tables]
+        inputs: [commerce_products, Stripe checkout sessions]
+        outputs: [Shop page, Monday sales email]
       execution:
         trigger_type: scheduled
-        schedule: Once per UTC day from loop.sh
-        environment: Linux VPS
+        schedule: Monday 9am
+        environment: n8n
       governance:
-        autonomy: 0
-        data_sensitivity: confidential
-        credential_owner: KC (STRIPE_SECRET_KEY in .env on the VPS)
+        autonomy: 3
+        autonomy_note: Read-only apart from the email to KC.
+        data_sensitivity: internal
+        credential_owner: KC (n8n credentials)
         risk: low
+        audit_log: n8n executions
       docs:
-        technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
-        known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
-          - No KPI is defined yet
-        improvements:
-          - Send results to Atlas
-        last_review: 2026-10-28
+        last_review: 2026-11-11
 
   - id: email-digest
     name: Daily Email Digest
     purpose: Emails KC a daily summary of publishes, failures, queue state and sales.
     framework: Python script
-    runtime: Linux VPS
-    status: active
+    runtime: Not deployed
+    status: retired
     trigger: Daily, first cycle of the UTC day
     source: scripts/email_digest.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Reads outputs/pipeline.db
       - SMTP account (EMAIL_FROM, EMAIL_SMTP_PASS)
@@ -824,7 +811,7 @@ agents:
         confidence: verified
         evidence: scripts/email_digest.py builds an HTML summary from SQLite and sends it to KC; no AI model
       mission:
-        problem: KC needs one daily email with product ideas to design, the brand summary, pipeline health, queue state and sales, without logging in to the VPS.
+        problem: KC needs one daily email with product ideas to design, the brand summary, pipeline health, queue state and sales.
         outcomes: [One email to KC each day]
       responsibilities:
         tasks:
@@ -838,18 +825,18 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Once per UTC day from loop.sh
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 1
         autonomy_note: Reports to KC only; changes nothing.
         data_sensitivity: internal
-        credential_owner: KC (SMTP password in .env on the VPS)
+        credential_owner: Khaneil (retired, no live credentials)
         risk: low
       docs:
         technical: README.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
           - No KPI is defined yet
         improvements:
           - Send results to Atlas
@@ -859,13 +846,16 @@ agents:
     name: Database Backup
     purpose: Copies the pipeline database to a dated backup once a day.
     framework: Python script
-    runtime: Linux VPS
-    status: active
+    runtime: Not deployed
+    status: retired
     trigger: Daily, first cycle of the UTC day
     source: scripts/backup_db.py
     observe:
       agent_feed: true
     last_run: null
+    history:
+      - at: 2026-11-11
+        event: Retired; the n8n pipeline on n8n Cloud replaced it
     permissions:
       - Reads outputs/pipeline.db
       - Writes and deletes dated copies in backups/
@@ -891,7 +881,7 @@ agents:
       execution:
         trigger_type: scheduled
         schedule: Once per UTC day from loop.sh
-        environment: Linux VPS
+        environment: Not deployed
       governance:
         autonomy: 0
         data_sensitivity: confidential
@@ -899,12 +889,11 @@ agents:
         risk: low
       docs:
         technical: docs/threat-model.md
-        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#sales-sync-daily-email-digest-and-database-backup
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#retired-agents
         known_issues:
-          - Backups stay on the same VPS (14 days kept)
-          - Atlas has no live data for it; results stay in logs/loop.log and the SQLite run_log on the VPS
+          - Retired; Atlas has no live data for it
         improvements:
-          - Copy backups off the VPS
+          - None while retired; n8n data tables replaced the SQLite database
         last_review: 2026-10-28
 
   - id: commerce-tests
@@ -931,7 +920,7 @@ agents:
         confidence: verified
         evidence: .github/workflows/tests.yml runs compileall, ruff, bash -n and pytest; no AI model
       mission:
-        problem: Keeps the pipeline scripts from breaking before they reach the VPS.
+        problem: Keeps the pipeline scripts from breaking before they are merged.
         outcomes: ["Every pull request is linted and tested before merge"]
         beneficiaries: [KC]
       responsibilities:
