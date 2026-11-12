@@ -26,7 +26,7 @@ agents:
     purpose: What this agent is for.
     framework: CrewAI              # free text; drives filters and map colors
     model: Claude (Anthropic API)  # optional
-    runtime: Linux VPS             # optional: where it runs
+    runtime: n8n Cloud             # optional: where it runs
     status: idle                   # same values as project.status
     trigger: Phase 1, weekly       # optional: what starts it
     source: scripts/crew.py        # optional: path in the repository, linked on GitHub
