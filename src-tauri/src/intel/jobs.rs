@@ -1829,8 +1829,10 @@ pub mod tests {
     async fn runs_the_app_quit_on_before_claude_run_again_on_launch() {
         let dir = tempfile::tempdir().unwrap();
         let store = Store::new(dir.path().to_path_buf()).unwrap();
-        let mut c = AgentConfig::default();
-        c.assigned = vec!["o/r".into(), "o/billed".into()];
+        let mut c = AgentConfig {
+            assigned: vec!["o/r".into(), "o/billed".into()],
+            ..Default::default()
+        };
         c.schedule.enabled = true;
         c.schedule.days = (0..7).collect();
         c.schedule.at = "00:00".into();
