@@ -20,6 +20,7 @@ import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
+import { securityIncidents } from "../security/incidents";
 import { buildRegistry } from "../registry/registry";
 import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
 import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, studioHealth, type TrafficState } from "../growth/studio";
@@ -53,7 +54,10 @@ export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePa
     { capability: "hosts", label: "Hosting inventory", component: Hosting },
     { capability: "deploys", label: "Deployment overview", component: DeployOverview },
   ],
-  "security-operations-center": [{ capability: "scanning", label: "Security alerts", component: SecurityAlerts }],
+  "security-operations-center": [
+    { capability: "incidents", label: "Security incidents", component: SecurityIncidents },
+    { capability: "scanning", label: "Security alerts", component: SecurityAlerts },
+  ],
   "commerce-product-marketplace": [{ capability: "pipeline", label: "Publishing pipeline", component: PublishingPipeline }],
   "model-intelligence-lab": [
     { capability: "models", label: "Model inventory", component: ModelInventory },
@@ -306,6 +310,45 @@ function SecurityAlerts() {
           {snap?.state === "not-configured" ? `Atlas needs ${snap.need.charAt(0).toLowerCase()}${snap.need.slice(1)}` : alerts.message ?? "Loading security alerts"}
         </p>
       )}
+    </details>
+  );
+}
+
+function SecurityIncidents() {
+  const { catalog } = useAtlas();
+  const repos = useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]);
+  const alerts = useSecurityAlerts(repos);
+  const snap = alerts.value;
+  const list = useMemo(() => securityIncidents(snap), [snap]);
+  const critical = list.filter((i) => i.severity === "critical").length;
+  const unread = snap?.state === "ok" ? snap.repos.filter((r) => repoSecurity(r) === "unknown").length : 0;
+  const summary =
+    snap?.state === "ok" ? (list.length ? `${list.length} open${critical ? `, ${critical} critical` : ""}` : "None open")
+    : snap?.state === "not-configured" ? "Not set up"
+    : alerts.state === "loading" ? "Checking" : alerts.state === "error" ? "Unavailable" : "Not connected here";
+  return (
+    <details className="module-list" aria-label="Security incidents" open={list.length > 0}>
+      <summary className="muted small">Incidents · {summary}</summary>
+      {list.length ? (
+        <ul>
+          {list.map((i) => (
+            <li key={i.key}>
+              <span>{i.severity === "critical" ? <span className="run-failure">{i.title}</span> : i.title}</span>
+              <span className="muted small">
+                {i.detail} · <a href={i.url} target="_blank" rel="noreferrer">Open on GitHub</a>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">
+          {snap?.state === "ok" ? "No exposed secrets and no critical or high alerts seen." : snap?.state === "not-configured" ? "Needs the site's GitHub token, as for Security alerts." : alerts.message ?? "Reading GitHub security alerts."}
+        </p>
+      )}
+      <p className="muted small">
+        Raised from the Security alerts counts: any open secret scanning alert is critical, critical Dependabot or code scanning alerts are critical, high ones are warnings. Medium and low stay in the alerts list.
+        {unread ? ` ${unread} ${unread === 1 ? "repository was" : "repositories were"} not fully read, so ${unread === 1 ? "it" : "they"} may hide incidents.` : ""}
+      </p>
     </details>
   );
 }
