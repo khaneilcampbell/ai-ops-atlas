@@ -363,13 +363,14 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: text,
       });
     }
-    // Group names when the map is grouped, at the back corner of each landmass, one style for every
+    // Group names when the map is grouped, behind the back-most building of each group (see fitNeighborhoods), one style for every
     // grouping (see groupLabels). Districts are a fixed set and outrank project names; tag and status
     // groups give way to the project plaques.
     const hoods = new Map(layout.neighborhoods.map((n) => [n.key, n]));
     for (const g of groupLabels(props.displayNeighborhoods ?? layout.neighborhoods)) {
       const n = hoods.get(g.key)!;
-      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(n.ox + n.w / 2, 0.2, n.oy - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 20, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
+      const at = n.anchor ?? { x: n.ox + n.w / 2, y: n.oy };
+      out.push({ id: `nb:${g.key}`, key: g.key, pos: new THREE.Vector3(at.x, 0.2, at.y - 1.2), w: measure(g.text, 11.5, SANS, 500) + 34, h: 20, priority: g.district ? 1.5 : 4, className: "m3-pill hood district", node: g.text, title: g.title });
     }
     // Every other building and place uses the same nameplate (see plaques.tsx): one size, one
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
