@@ -1,0 +1,9 @@
+# Atlas handoff — 2026-11-12
+
+Objective implemented and locally validated: Commerce-sized district land and consistent hover/selection/ground bounds for the three target projects in the complete By district campus. Building designs, Development Hub, other parcels and shared landmark anchors preserved; original public street grid retained and Command–Commerce through-street straight.
+Workspace: /private/tmp/atlas-equal-operations. Branch: codex/equal-operations-districts. Refreshed onto main d440f93; changelog conflict resolved preserving both entries.
+Draft PR: https://github.com/khaneilcampbell/ai-ops-atlas/pull/375. Preview: http://127.0.0.1:5231/. No merge, approval, auto-merge or production deployment.
+Tested commit: bba71f7e4c6db2fe3f50d66fc2682d114116f054. Final lint/typecheck and 200 files / 1,360 tests passed. Existing desktop and 390×844 iPhone selection evidence reused: map/visual-spec files unchanged by refresh, main's activity-label addition does not affect map rendering. Later commits only update evidence/handoff.
+Full after map-performance/leak check PASSED with unchanged limits: 689 calls, 882,082 triangles, 68 programs, 6.2 MB, one live context; extra buffers -6, textures 0, programs -2. Before GPU-only baseline: 692 calls, 869,606 triangles, 68 programs, 6.1 MB. Earlier performance blocker resolved. Evidence: docs/equal-operations-districts/validation.md and paired desktop/iPhone images. Rust unchanged; no guards/baselines loosened.
+Next: KC reviews latest PR checks and merges. No known local blocker. Remote check status must be assessed on the final pushed head; no GitHub Actions runs were returned before refresh, and old-head Cloudflare Pages was successful.
+Original dirty workspace preserved except this handoff. Blocked #368 was not reused; #369 remains separate. Other groupings and filtered fallback retain existing packing.

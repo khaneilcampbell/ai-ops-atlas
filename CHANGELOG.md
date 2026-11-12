@@ -5,6 +5,7 @@ top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newe
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center each have their own agent now (Marketplace Steward, Signal Watch, Dataset Census). They run on a schedule with no AI calls and report to the live feed, and a building only goes green while its agent has reported a recent success (#372)
 - 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center now read the Atlas repository: their cards show its CI health and last run, and their map dots go green or red from real checks (#372)
+- 2026-11-12 · Three operations districts now share land dimensions and consistent selection boundaries (#375)
 - 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#374)
 - 2026-11-12 · The Security Operations Center now lists security incidents: exposed secrets and critical or high GitHub alerts, each with a link to fix it (#373)
 - 2026-11-12 · Vendor & Supplier Hub is now connected: select it to see each outside vendor your agents use (Stripe, n8n, Cloudflare, Canva, Splunk), how many workers use it, their health and last run. Bills, invoices and contracts show as Not connected (#370)
