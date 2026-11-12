@@ -25,7 +25,9 @@ test("a reported failure raises an alert until it is dismissed", async ({ page }
   const card = page.locator("#agent-alerts");
   await expect(card.locator(".watch.failing")).toContainText("Flow forward timed out after 3 tries");
   // The commerce pipeline runs on n8n and emails its own failures, so Atlas watches none of it.
-  await expect(card.locator(".watch.not-running")).toHaveCount(0);
+  // The only "not running" row is the Career Execution Agent, an unpublished n8n draft.
+  await expect(card.locator(".watch.not-running")).toHaveCount(1);
+  await expect(card.locator(".watch.not-running")).toContainText("Unpublished in n8n");
   // This browser isn't reading the live feed, so the intake's state is unknown, not healthy.
   await expect(card.locator(".watch.no-source")).toHaveCount(1);
   await shot(page, "1-mission");
