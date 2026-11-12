@@ -26,7 +26,7 @@ agents:
     purpose: What this agent is for.
     framework: CrewAI              # free text; drives filters and map colors
     model: Claude (Anthropic API)  # optional
-    runtime: Linux VPS             # optional: where it runs
+    runtime: n8n Cloud             # optional: where it runs
     status: idle                   # same values as project.status
     trigger: Phase 1, weekly       # optional: what starts it
     source: scripts/crew.py        # optional: path in the repository, linked on GitHub
@@ -41,6 +41,8 @@ agents:
       atlas_intel: true            # or: the app's own run log, for agents that run inside Atlas
       atlas_intel_runs: ecosystem  # optional with atlas_intel: which runs count (repository, the default, or ecosystem)
       agent_feed: true             # or: phase results its pipeline reports to /api/hooks/agents (docs/live-updates.md)
+    owned_by: product-lead         # optional, automations only: the AI agent that runs this as one of its fixed steps.
+                                   # Never guessed; an automation without it is listed by the orphan check (npm test)
     alerts:                        # optional: watch an unattended agent (docs/alerts.md)
       failures: true               # a failed run raises an alert (default true)
       report_within: 2h            # optional: silent after this long without a report (m, h or d)
