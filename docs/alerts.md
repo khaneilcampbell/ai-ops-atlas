@@ -53,6 +53,15 @@ An agent is watched when its manifest has an `alerts` block (see
 |---|---|---|---|
 | benjaire-contact-worker | yes | none (runs per form post) | watched |
 | benjaire-flow-intake | yes | none (runs per inquiry) | watched |
+| marketplace-steward | yes | 3 hours (runs hourly) | watched |
+| signal-watch | yes | 90 minutes (runs every 30 min) | watched |
+| dataset-census | yes | 7 hours (runs every 3 h) | watched |
+
+The last three are the building operators (`ops/building-agents/agents.py`, run by
+`.github/workflows/building-agents.yml`, no model calls). Each operates one landmark through
+`agents:` in `catalog/workspace/workspace.yaml`, and its state is that building's health on the
+map and in its module card: green only while it reports successes in time. They need the
+`ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN` repository secrets that the Opportunity Scout uses.
 
 The commerce pipeline now runs on n8n and has no `alerts` block: its n8n workflows email
 failures themselves. Add one again only when they report to the agent feed.

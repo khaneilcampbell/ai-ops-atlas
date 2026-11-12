@@ -111,7 +111,7 @@ agents:
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
     const watched = catalog.agents.filter((a) => a.alerts);
-    expect(watched.map((a) => a.id).sort()).toEqual(["benjaire-contact-worker", "benjaire-flow-intake"]);
+    expect(watched.map((a) => a.id).sort()).toEqual(["benjaire-contact-worker", "benjaire-flow-intake", "dataset-census", "marketplace-steward", "signal-watch"]);
     for (const a of watched) {
       expect(a.observe?.agentFeed).toBe(true);
       expect(a.alerts!.notRunning).toBeNull();

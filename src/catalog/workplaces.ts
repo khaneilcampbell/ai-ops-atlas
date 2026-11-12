@@ -1,4 +1,5 @@
 import type {Agent} from "./types";
+import {WORKSPACE} from "../modules/workspace";
 
 /** Buildings an agent can be assigned a room in. The Skyline buildings left with the district (2026-11-08). */
 export const WORKPLACE_BUILDINGS=["Atlas Marketplace","Benjaire Marketing Agency"] as const;
@@ -8,8 +9,10 @@ export const WORKPLACE_BUILDINGS=["Atlas Marketplace","Benjaire Marketing Agency
  * import view code; a test checks the two stay in step.
  */
 export const AGENCY_WORKPLACE_ROOMS=["1-content","1-social","1-strategy","1-review","1-gallery","2-archive","2-insights","2-exhibition","2-workshop","3-hall","3-foyer","3-green"] as const;
+/** Agents that operate a landmark building (workspace.yaml `agents`) work there, so they get no headquarters desk. */
+const LANDMARK_AGENTS=new Set(WORKSPACE.landmarks.flatMap(l=>l.agents??[]));
 export function projectOfficeAgents(agents:Agent[],projectId:string){
-  return agents.filter(a=>a.projectId===projectId&&!a.workplace);
+  return agents.filter(a=>a.projectId===projectId&&!a.workplace&&!LANDMARK_AGENTS.has(a.id));
 }
 /** The current agent seated in a room. A retired agent no longer runs anywhere, so its room reads vacant. */
 export function workplaceAgent(agents:Agent[],building:string,floor:number,room:string){
