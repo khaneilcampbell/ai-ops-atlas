@@ -122,7 +122,9 @@ function AgencyAgents(){
 }
 
 /** The airport building's module when it already shows real data; undefined while everything in it is planned. */
-function airportLiveModule(id:string){const m=landmarkModuleStatus(`airport-building:${id}`);return m&&m.availability!=="planned"?m:undefined;}
+/** A landmark's module when it already shows real data; undefined while everything in it is planned. */
+function liveLandmarkModule(landmarkId:string){const m=landmarkModuleStatus(landmarkId);return m&&m.availability!=="planned"?m:undefined;}
+function airportLiveModule(id:string){return liveLandmarkModule(`airport-building:${id}`);}
 function AirportBuildingDetail({id}:{id:string}) {
  const b=airportBuilding(id);
  if(!b)return <Head eyebrow="Airport building" title="Not found"/>;
@@ -151,11 +153,12 @@ function ServiceDetail({id}:{id:string}) {
       <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
     </div>
   </>;
+  const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
     <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
-      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd></dl>
+      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>

@@ -55,9 +55,9 @@ buildings:
     former_names: [Atlas Central Station]
   # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
   # module's name; landmarks without one get a plain name for what they are, never a module.
-  # Client Success Center and Vendor & Supplier Hub are named for planned modules (client
-  # onboarding and follow-up; vendors, suppliers and contracts). Neither module exists yet, so
-  # neither building houses one.
+  # Client Success Center is named for a planned module (client onboarding and follow-up) that
+  # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
+  # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
   "service:financial:harbor-residence":
     display_name: Client Success Center
     organization: Benjaire

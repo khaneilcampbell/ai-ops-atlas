@@ -7,8 +7,8 @@ import { layoutMap } from "./mapLayout";
 describe("workflow tool placement", () => {
   it("places research before design before publishing in the commerce workflow", () => {
     const tools = servicesOf(catalog.agents.filter(a => a.projectId === "commerce-pipeline"));
-    expect(orderToolsForWorkflow(tools).map(t => t.id)).toEqual(["serper", "canva", "stripe"]);
-    expect(orderToolsForWorkflow([...tools].reverse()).map(t => t.id)).toEqual(["serper", "canva", "stripe"]);
+    expect(orderToolsForWorkflow(tools).map(t => t.id)).toEqual(["serper", "canva", "n8n", "stripe"]);
+    expect(orderToolsForWorkflow([...tools].reverse()).map(t => t.id)).toEqual(["serper", "canva", "n8n", "stripe"]);
   });
   it("keeps every tool in a distinct perimeter slot clear of its project tower", () => {
     const layout = layoutMap(catalog);

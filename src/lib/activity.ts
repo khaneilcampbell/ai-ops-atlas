@@ -1,4 +1,4 @@
-import { projectRepositories } from "../catalog/projects";
+import { projectByRepository, projectRepositories } from "../catalog/projects";
 import type { Catalog } from "../catalog/types";
 import type { RepoState, WorkflowRun } from "../github/types";
 import { repoData } from "./derive";
@@ -45,9 +45,11 @@ export function intelResult(r: IntelRun): EventResult {
 export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoState>, uncataloged: string[] = [], intelRuns: IntelRun[] = [], actionLog: AuditRecord[] = []): AtlasEvent[] {
   const out: AtlasEvent[] = [];
   const seen = new Set<string>();
-  const projectByRepo = new Map(catalog.projects.map((p) => [p.repository, p]));
+  const owners = projectByRepository(catalog.projects);
+  const projectByRepo = { get: (repo: string) => owners.get(repo.toLowerCase()) };
   const names = [...new Set(catalog.projects.flatMap((p) => projectRepositories(p, catalog.agents)).concat(catalog.agents.map((a) => a.repository), uncataloged))];
   const label = (repo: string) => projectByRepo.get(repo)?.name ?? repo;
+  const projectNames = new Map(catalog.projects.map((p) => [p.id, p.name]));
 
   // Agent-attributed runs first, so a run that is also in the repository list keeps the agent.
   for (const a of catalog.agents) {
@@ -62,7 +64,7 @@ export function workspaceEvents(catalog: Catalog, repos: Record<string, RepoStat
         kind: "agent",
         result: runResult(r),
         title: `${a.name}: ${r.name}`,
-        detail: `${label(a.repository)} · ${r.event} on ${r.branch}`,
+        detail: `${projectNames.get(a.projectId) ?? label(a.repository)} · ${r.event} on ${r.branch}`,
         repo: a.repository,
         projectId: a.projectId,
         agentId: a.id,

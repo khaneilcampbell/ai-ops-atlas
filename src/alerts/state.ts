@@ -51,7 +51,7 @@ export function useAlerts(): { watches: Watch[]; open: Watch[] } {
   const { catalog, repos } = useAtlas();
   const { telemetry } = useIntel();
   const feedLive = useLiveStatus().state === "live";
-  const seen = useSyncExternalStore(subscribe, () => dismissed);
+  const seen = useSyncExternalStore(subscribe, () => dismissed, () => dismissed);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), TICK_MS);
@@ -62,6 +62,30 @@ export function useAlerts(): { watches: Watch[]; open: Watch[] } {
   const watches = useMemo(() => watchAgents(watched, entries, now, feedLive), [watched, entries, now, feedLive]);
   const open = useMemo(() => openAlerts(watches, seen), [watches, seen]);
   return { watches, open };
+}
+
+// The latest watches, shared with views that only need them when something visible changes (the
+// map's building dots). App publishes them; the snapshot keeps the same array until an agent's
+// state, detail or last report changes, so the map doesn't re-render on every minute tick.
+let shared: Watch[] = [];
+let sharedKey = "";
+const sharedWatchers = new Set<() => void>();
+const subscribeShared = (w: () => void) => {
+  sharedWatchers.add(w);
+  return () => sharedWatchers.delete(w);
+};
+
+export function publishWatches(watches: Watch[]) {
+  const key = JSON.stringify(watches.map((w) => [w.agent.id, w.agent.name, w.state, w.detail, w.last?.at ?? null]));
+  if (key === sharedKey) return;
+  sharedKey = key;
+  shared = watches;
+  sharedWatchers.forEach((w) => w());
+}
+
+/** The watches App last published, stable between real changes. */
+export function useSharedWatches(): Watch[] {
+  return useSyncExternalStore(subscribeShared, () => shared, () => shared);
 }
 
 /** Pops one system notification per new alert while notifications are on. Mount once. */
