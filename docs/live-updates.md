@@ -50,8 +50,8 @@ The Mac app uses the website sync URL and key it already has; nothing to set the
 
 Pipelines that run elsewhere report each phase result to `POST /api/hooks/agents`, and Atlas
 shows them as the run history of the catalog agents whose manifest has
-`observe: { agent_feed: true }`. The commerce pipeline used it before it moved to n8n; its
-n8n workflows do not post to this feed yet, so Atlas shows no runs for them.
+`observe: { agent_feed: true }`. On n8n, Order Delivery and Approve and Publish post here
+(project `commerce-pipeline`); see [alerts.md](alerts.md#which-agents-are-watched).
 
 One report is one JSON object, at most 4 KB:
 

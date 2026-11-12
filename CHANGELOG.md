@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for Khaneil, not for a reviewer.
 - 2026-11-12 · Atlas, its agent prompts and customer emails now call you Khaneil instead of KC (#376)
+- 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)
 - 2026-11-12 · Removed Benjaire Dashboard from Atlas: its catalog entry, Dashboard CI agent, runbook and app code are gone. The map is unchanged (its cleared lot stays), and the Flow intake files moved to apps/benjaire-flow (#377)
 - 2026-11-12 · The Agent Operations Center now lists the Agent Registry Sync, the n8n workflow that keeps your agent registry Google Sheet up to date (#377)
 - 2026-11-12 · District names on the map (AI Engineering, Career & Portfolio, Business Operations and the rest) now sit at the buildings they belong to, and follow them whenever a building moves (#380)
