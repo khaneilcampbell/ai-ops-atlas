@@ -215,6 +215,22 @@ describe("telemetry", () => {
     expect(observeKpi({ name: "d", kind: "quality", target: null, targetValue: null, direction: null, basis: null, measure: "avg_duration_minutes" }, t)?.display).toBe("1.5 min");
   });
 
+  it("doesn't count runs cut off by the app closing as failures", () => {
+    const intelAgent = { ...ciAgent, observe: { atlasIntel: true } } as Agent;
+    const base = { started_at: null, duration_ms: null, cost_usd: null, trigger: "scheduled", model: "m" };
+    const runs = [
+      { ...base, status: "interrupted", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:03:19Z", repo: "me/a" },
+      { ...base, status: "succeeded", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:03:01Z", duration_ms: 25_000, repo: "me/b" },
+      { ...base, status: "failed", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:02:36Z", repo: "me/gone" },
+    ] as Run[];
+    const t = telemetryFor(intelAgent, undefined, runs);
+    expect(t.executions.map((e) => e.result)).toEqual(["other", "success", "failure"]);
+    expect(t.executions[0].label).toContain("interrupted");
+    expect(t.failures).toBe(1);
+    expect(t.successRate).toBe(0.5);
+    expect(operationalState({ classification: "A" }, t)).toBe("verified");
+  });
+
   it("only reports observed KPI values that telemetry supplies", () => {
     const empty = telemetryFor(ciAgent, undefined, null);
     const kpi = { name: "Success", kind: "reliability" as const, target: "≥ 90%", targetValue: 90, direction: "min" as const, basis: null, measure: "run_success_rate" as const };

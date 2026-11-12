@@ -166,6 +166,13 @@ fn clean_context(ctx: RepoContext) -> RepoContext {
     }
 }
 
+/// Whether a run uses up its schedule slot. A run the app quit on before it got as far as
+/// Claude (the cost estimate is saved just before the request) cost nothing, so the
+/// scheduler tries it again on the next launch instead of skipping a week.
+fn counts_as_attempt(r: &Run) -> bool {
+    !(r.status == RunStatus::Interrupted && r.attempts == 0 && r.estimate.is_none())
+}
+
 struct Outcome {
     status: RunStatus,
     error: Option<RunError>,
@@ -202,6 +209,7 @@ impl Outcome {
 struct Job {
     run_id: String,
     repo: String,
+    trigger: Trigger,
     depth: Depth,
     model: String,
     force: bool,
@@ -280,6 +288,18 @@ impl Agent {
         self.lock().config = next.clone();
         (self.notify)();
         Ok(next)
+    }
+
+    /// Takes a repository off the scheduled list. Returns whether it was on it.
+    fn unassign(&self, repo: &str) -> bool {
+        let mut g = self.lock();
+        let before = g.config.assigned.len();
+        g.config.assigned.retain(|r| !r.eq_ignore_ascii_case(repo));
+        if g.config.assigned.len() == before {
+            return false;
+        }
+        self.store.save_config(&g.config).ok();
+        true
     }
 
     /// Worst-case cost of one run at the given depth, from configuration alone.
@@ -411,6 +431,7 @@ impl Agent {
             let job = Job {
                 run_id,
                 repo: key.to_string(),
+                trigger,
                 depth,
                 model,
                 force,
@@ -568,7 +589,15 @@ impl Agent {
         let collected = match collected {
             Ok(c) => c,
             Err(e) => {
-                let err = e.to_run_error();
+                let mut err = e.to_run_error();
+                // A deleted or renamed repository would fail every scheduled run, so a
+                // scheduled run takes it off the list. Analyzing it by hand assigns it again.
+                if e == collect::CollectError::NotFound
+                    && job.trigger == Trigger::Scheduled
+                    && self.unassign(&job.repo)
+                {
+                    err.message += " Removed it from the scheduled list.";
+                }
                 step(
                     trace,
                     "collect",
@@ -1216,6 +1245,7 @@ impl Agent {
         g.runs
             .iter()
             .filter(|r| r.kind == RunKind::Ecosystem)
+            .filter(|r| counts_as_attempt(r))
             .filter_map(|r| DateTime::parse_from_rfc3339(&r.queued_at).ok())
             .max()
             .map_or(true, |t| t.with_timezone(&Utc) < slot)
@@ -1241,11 +1271,13 @@ impl Agent {
             .filter(|repo| !g.active.iter().any(|a| a.repo.eq_ignore_ascii_case(repo)))
             .filter(|repo| {
                 // Any attempt since the latest slot counts, so a failing repository waits for
-                // the next slot. A slot missed while the app was closed runs once on launch.
+                // the next slot. A slot missed while the app was closed runs once on launch,
+                // and so does a run the app quit on before it reached Claude.
                 let last = g
                     .runs
                     .iter()
                     .filter(|r| r.repo.eq_ignore_ascii_case(repo))
+                    .filter(|r| counts_as_attempt(r))
                     .filter_map(|r| DateTime::parse_from_rfc3339(&r.queued_at).ok())
                     .max();
                 last.map_or(true, |t| t.with_timezone(&Utc) < slot)
@@ -1735,6 +1767,125 @@ pub mod tests {
         let later = Utc::now() + chrono::Duration::days(8);
         assert_eq!(r.agent.due(later), vec!["o/r".to_string()]);
         assert_eq!(last(&r.agent).trigger, Trigger::Scheduled);
+    }
+
+    fn scheduled_rig(gh: FakeGithub, model: FakeModel, repos: &[&str]) -> Rig {
+        let r = rig_with(gh, model, true, None);
+        let mut c = r.agent.status().config;
+        c.assigned = repos.iter().map(|s| s.to_string()).collect();
+        c.schedule.enabled = true;
+        c.schedule.consent_at = Some(now_iso());
+        r.agent.set_config(c).unwrap();
+        r
+    }
+
+    #[tokio::test]
+    async fn scheduled_run_drops_a_repository_github_cannot_find() {
+        // o/gone answers 404 everywhere, like a deleted repository.
+        let r = scheduled_rig(
+            FakeGithub::healthy("o/r"),
+            FakeModel::new(vec![good()]),
+            &["o/gone", "o/r"],
+        );
+        assert_eq!(r.agent.schedule_tick(Utc::now()).len(), 2);
+        idle(&r.agent).await;
+        let runs = r.agent.status().runs;
+        let gone = runs.iter().find(|x| x.repo == "o/gone").unwrap();
+        assert_eq!(gone.status, RunStatus::Failed);
+        let err = gone.error.as_ref().unwrap();
+        assert_eq!(err.kind, "github_not_found");
+        assert!(err.message.contains("Removed it from the scheduled list"));
+        assert_eq!(r.agent.status().config.assigned, vec!["o/r".to_string()]);
+        assert_eq!(
+            r.model.calls(),
+            1,
+            "only the real repository reached Claude"
+        );
+        // Saved, so the next launch doesn't bring it back.
+        assert_eq!(
+            r.agent.store.load_config().assigned,
+            vec!["o/r".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn manual_run_on_a_missing_repository_keeps_the_list() {
+        let r = scheduled_rig(FakeGithub::new(), FakeModel::new(vec![]), &["o/gone"]);
+        r.agent
+            .enqueue(
+                "o/gone",
+                Trigger::Manual,
+                None,
+                false,
+                RepoContext::default(),
+            )
+            .unwrap();
+        idle(&r.agent).await;
+        assert_eq!(last(&r.agent).status, RunStatus::Failed);
+        assert_eq!(r.agent.status().config.assigned, vec!["o/gone".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn runs_the_app_quit_on_before_claude_run_again_on_launch() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(dir.path().to_path_buf()).unwrap();
+        let mut c = AgentConfig::default();
+        c.assigned = vec!["o/r".into(), "o/billed".into()];
+        c.schedule.enabled = true;
+        c.schedule.days = (0..7).collect();
+        c.schedule.at = "00:00".into();
+        c.schedule.consent_at = Some(now_iso());
+        store.save_config(&c).unwrap();
+        let base = Run {
+            id: "run_a".into(),
+            kind: RunKind::Repository,
+            repo: "o/r".into(),
+            trigger: Trigger::Scheduled,
+            depth: Depth::Standard,
+            model: "m".into(),
+            force: false,
+            status: RunStatus::Queued,
+            queued_at: now_iso(),
+            started_at: None,
+            finished_at: None,
+            duration_ms: None,
+            error: None,
+            attempts: 0,
+            github_requests: 0,
+            usage: None,
+            estimate: None,
+            cost_usd: None,
+            trace: vec![],
+        };
+        // The second one had its cost checked, so a Claude request may have been billed.
+        let mut billed = base.clone();
+        billed.id = "run_b".into();
+        billed.repo = "o/billed".into();
+        billed.status = RunStatus::Running;
+        billed.estimate = Some(CostEstimate {
+            model: "m".into(),
+            input_tokens_est: 1,
+            max_output_tokens: 1,
+            worst_case_usd: 0.01,
+            month_spent_usd: 0.0,
+            max_run_usd: 0.4,
+            monthly_budget_usd: 5.0,
+        });
+        store.save_runs(&[base, billed]).unwrap();
+        // Relaunch: both are closed as interrupted, only the free one is due again.
+        let r = rig_with(
+            FakeGithub::healthy("o/r"),
+            FakeModel::new(vec![]),
+            true,
+            Some(dir),
+        );
+        assert!(r
+            .agent
+            .status()
+            .runs
+            .iter()
+            .all(|x| x.status == RunStatus::Interrupted));
+        assert_eq!(r.agent.due(Utc::now()), vec!["o/r".to_string()]);
     }
 
     #[test]

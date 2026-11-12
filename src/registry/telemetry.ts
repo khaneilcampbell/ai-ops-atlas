@@ -12,9 +12,11 @@ const DAY = 86_400_000;
 /** The runs that decide status: everything except GitHub runs on non-default branches. */
 export const mainline = (xs: ExecutionRecord[]) => xs.filter((e) => !e.offMainline);
 
+/** A run cut off because the app closed is not a failure of the agent, so it doesn't count
+ * against the success rate or the "Latest run failed" status. The scheduler runs it again. */
 function intelResult(r: Run): ExecutionRecord["result"] {
   if (r.status === "succeeded" || r.status === "reused") return "success";
-  if (r.status === "failed" || r.status === "interrupted") return "failure";
+  if (r.status === "failed") return "failure";
   if (r.status === "queued" || r.status === "running") return "running";
   return "other";
 }
@@ -60,7 +62,7 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
     executions = (intelRuns ?? []).filter((r) => (r.kind ?? "repository") === kind).map((r) => ({
       at: r.finished_at ?? r.started_at ?? r.queued_at,
       result: intelResult(r),
-      label: `${kind === "ecosystem" ? "All catalog repositories" : r.repo} · ${r.trigger} · ${r.model}`,
+      label: `${kind === "ecosystem" ? "All catalog repositories" : r.repo} · ${r.trigger} · ${r.model}${r.status === "interrupted" ? " · interrupted, app closed" : ""}`,
       durationMs: r.duration_ms,
       costUsd: r.cost_usd,
       source: "atlas-intel" as const,
