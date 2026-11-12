@@ -23,7 +23,8 @@ n8n workflow [Commerce · Design product](https://khancam15.app.n8n.cloud/workfl
 n8n workflow [Commerce · Approve product](https://khancam15.app.n8n.cloud/workflow/nbjCeZ80noaGMzXr), reached only from the approval email.
 
 - **Healthy:** an approved product gets a Stripe product, price and payment link, and a `shop_settings` row.
-- **When it fails:** retries are safe; Stripe calls use idempotency keys.
+- **When it fails:** retries are safe; Stripe calls use idempotency keys. "Flow · 0 Error alerts" emails the failed step.
+- **Atlas:** each publish reports to Atlas as Approve and Publish.
 - **Stop it:** switch the workflow to inactive. To take a live product down, see [stop-and-rollback.md](stop-and-rollback.md).
 
 ## Shop Page and Weekly Sales
@@ -39,6 +40,14 @@ n8n workflow [Shop · Flow Starter delivery](https://khancam15.app.n8n.cloud/wor
 - **Healthy:** every paid checkout has an execution and an order row.
 - **When it fails:** "Flow · 0 Error alerts" emails the failed step. Fix it, then rerun the execution from n8n.
 - **Stop it:** switching it to inactive stops buyer emails, so paying buyers wait. Prefer fixing the failed step. Roll back with the workflow's version history in n8n.
+- **Atlas:** each delivery email reports to Atlas as Order Delivery; a failed send raises an alert.
+
+## Buyer Follow Ups
+
+n8n workflow [Shop · Flow follow ups](https://khancam15.app.n8n.cloud/workflow/1QdoYrF1XVxT4Xyu), every 4 hours: the day 2 setup check, the day 12 help reminder and one download reminder per order.
+
+- **Approval gate:** if more emails are due in one run than `followup_max_per_run` in `shop_settings` (5 when empty), none in that batch are sent. Atlas shows a failed Order Delivery report with the count, and "Flow · 0 Error alerts" emails you. If the batch is expected, raise `followup_max_per_run`; it sends on the next run.
+- **Healthy:** each send batch posts one ok report to Atlas.
 
 ## Pipeline Tests
 
