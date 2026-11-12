@@ -127,12 +127,17 @@ agents:
       n8n workflow that keeps the Atlas Agent Registry Google Sheet in the Benjaire Drive current:
       one row per agent and n8n workflow, with building, where it runs, status, schedule, last run,
       health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
+      Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
+      building next in the sheet's Top 10 Agents tab, with one capped Claude call.
     framework: n8n
+    model: claude-opus-5-5 for the weekly Sunday ranking only ($3 per 30 days); the registry sync uses no model
     runtime: n8n Cloud
     status: paused
     trigger: Schedule (draft, not published yet)
     last_run: null
     history:
+      - at: 2026-11-12
+        event: Added the Top 10 Agent Ideas workflow (Sundays 9am, one capped Claude call) at Khaneil's request
       - at: 2026-11-12
         event: Built as an unpublished n8n draft; first real run filled the sheet with 71 rows
     links:
@@ -140,32 +145,37 @@ agents:
         url: https://khancam15.app.n8n.cloud/workflow/JCjTTvb7qZLpVXhs
       - label: Registry sheet
         url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
+      - label: Top 10 Agent Ideas workflow
+        url: https://khancam15.app.n8n.cloud/workflow/bgebM33jnVhLPSTF
     permissions:
       - 'GitHub: public reads of catalog/*.yaml, no key'
       - 'n8n API key (read only): workflows and recent executions'
       - 'Atlas sync key (read only): GET /api/hooks/feed'
       - 'Google Sheets: reads and writes the Atlas Agent Registry sheet only'
+      - 'Anthropic API: one Claude call a week for the Top 10 ranking, capped at $3 per 30 days'
     registry:
       title: Agent Registry Clerk
       category: engineering
       subcategory: Workflow automation
+      automation_category: maintenance       # B since the Top 10 ranking step; keeps its place beside the registry sync's other upkeep
       classification:
-        type: C
+        type: B
         confidence: verified
-        evidence: The n8n workflow reads the catalog, n8n and the Atlas feed, compares rows in plain code and upserts changed rows by agent_id; no AI model
+        evidence: The registry workflow compares rows in plain code with no AI model; the Top 10 Agent Ideas workflow builds its brief in plain code and makes one Claude call to rank the ideas
       mission:
         problem: There was no single list of every agent and automation with its status, schedule, health and links.
         outcomes:
           - Every agent in the Atlas catalog and every n8n workflow has one current row in the registry sheet
+          - A ranked list of the 10 agents most worth building next, refreshed every Sunday
         beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date]
+        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date, Rank the top 10 agents to build every Sunday]
         # Framework and runtime say n8n. The tools list leaves the vendor name out on purpose: naming it
         # here would add an Automation Works kiosk to this district and reshape its land (Khaneil chose
         # to keep the map as it is, 2026-11-12).
         tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
         inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
-        outputs: [Rows in the Atlas Agent Registry sheet]
+        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet]
       execution:
         trigger_type: scheduled
         environment: n8n
@@ -177,7 +187,7 @@ agents:
         risk: low
         audit_log: n8n executions and the sheet's version history
       cost:
-        budget: No model spending; n8n executions only
+        budget: "Registry sync: no model spending. Top 10 ranking: Claude Opus 5.5, $3 and 12 runs per 30 days, checked before each call (n8n table agent_ideas_runs)"
       docs:
         known_issues:
           - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
