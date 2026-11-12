@@ -34,6 +34,13 @@ it("shows the publishing pipeline in the Product Marketplace, with stages switch
   expect(html).not.toContain("No commerce agents");
 });
 
+it("reads Product Marketplace health from its operating agent's live reports, never CI alone", () => {
+  const html = render({ kind: "service", id: "atlas-marketplace" });
+  expect(html).toContain('aria-label="Live feed"');
+  expect(html).toContain("Marketplace Steward");
+  expect(html).not.toContain("Healthy");
+});
+
 it("shows site traffic and research briefs in the Growth & Marketing Studio, loading until data arrives", () => {
   const html = render({ kind: "service", id: "benjaire-marketing" });
   expect(html).toContain("Growth &amp; Marketing Studio");
