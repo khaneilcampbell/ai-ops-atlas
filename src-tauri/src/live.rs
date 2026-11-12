@@ -15,6 +15,7 @@ pub const AGENT_USAGE_PATH: &str = "/api/hooks/usage";
 pub const INQUIRY_REPLY_PATH: &str = "/api/hooks/inquiries/reply";
 pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 pub const N8N_PATH: &str = "/api/hooks/n8n";
+pub const REGISTRY_REFRESH_PATH: &str = "/api/hooks/registry-refresh";
 pub const SECURITY_PATH: &str = "/api/hooks/security";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
@@ -208,6 +209,39 @@ pub async fn live_n8n(
             .map(Some)
             .map_err(|e| format!("The site's n8n runs weren't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Refresh registry sheet (server/registryRefresh.ts): the site runs the n8n Agent Registry workflow
+/// and answers when it finishes, or `None` when website sync isn't set up. The webhook URL stays on
+/// the site; the app only sends its sync key. The site allows one run per minute and explains a
+/// refusal in its JSON answer, which is passed back to the page as is.
+#[tauri::command]
+pub async fn registry_refresh(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    let sent = sync
+        .http()
+        .post(format!("{url}{REGISTRY_REFRESH_PATH}"))
+        .bearer_auth(key)
+        .json(&serde_json::json!({}))
+        .timeout(std::time::Duration::from_secs(100))
+        .send()
+        .await;
+    match sent {
+        Ok(r) => {
+            let code = r.status().as_u16();
+            match r.json::<serde_json::Value>().await {
+                Ok(v) if v.get("state").is_some() => Ok(Some(v)),
+                _ if code == 404 => Err("The site doesn't have the registry refresh yet. Update the site, then try again.".into()),
+                _ => Err(format!("The site answered {code}.")),
+            }
+        }
+        Err(e) if e.is_timeout() => Err("The site didn't answer within 100 s. The run may still finish; check the sheet in a minute.".into()),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
 }
