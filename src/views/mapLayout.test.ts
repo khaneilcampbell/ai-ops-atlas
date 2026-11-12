@@ -194,8 +194,8 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
     const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
     const expected=at(without);
     if(group==="district") {
-      expected["ai-ops-atlas"]=[24.25,12,10];
-      expected["intelligence-hub"]=[36.5,12,10];
+      expected["ai-ops-atlas"]=[35.725,9.75,10];
+      expected["intelligence-hub"]=[37.975,22,10];
     }
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();

@@ -5,7 +5,7 @@ async function view(page:Page,phone:boolean,point?:[number,number,number]){
  return page.evaluate(async({phone,point})=>{
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,state=fiber._roots.get(canvas)!.store.getState();
-  state.setFrameloop('never');state.camera.position.set(25,phone?90:39,19.76);state.camera.lookAt(25,0,19.75);state.camera.updateMatrixWorld();state.gl.render(state.scene,state.camera);
+  state.setFrameloop('never');state.camera.position.set(26.5,phone?130:65,10.51);state.camera.lookAt(26.5,0,10.5);state.camera.updateMatrixWorld();state.gl.render(state.scene,state.camera);
   const r=canvas.getBoundingClientRect(),p=point?state.camera.position.clone().set(...point).project(state.camera):undefined;
   return {png:canvas.toDataURL('image/png'),point:p?{x:r.x+(p.x+1)*r.width/2,y:r.y+(1-p.y)*r.height/2}:undefined};
  },{phone,point});

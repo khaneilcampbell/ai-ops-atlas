@@ -452,9 +452,12 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       move(hub, dx, dy); move(center, -dx, -dy);
       const commerce = districts.find(d => d.project.id === "commerce-pipeline")!;
       const operations = districts.find(d => d.project.id === "intelligence-hub")!;
-      const portfolio = districts.find(d => d.project.id === "portfolio-site")!;
-      // Reuse the existing shelf and building dimensions. Only these two parcels move/expand;
-      // the east side clears Portfolio and the Marketing promenade without repacking neighbors.
+      // Retain the old public streets and Portfolio's bridge when their buildings move.
+      for (const d of [hub, operations]) {
+        const id = `street-reserve:${d.project.id}`;
+        cleared.push({ ...d, project: { ...d.project, id }, hq: { ...d.hq }, lots: [], crew: [], kiosks: [] });
+        rects.push({ id, x: d.ox, y: d.oy, w: d.size, h: d.size });
+      }
       const resize = (d: District, x: number, y: number, cx: number, cz: number) => {
         move(d, cx - (d.hq.gx + d.hq.size / 2), cz - (d.hq.gy + d.hq.size / 2));
         d.ox = x; d.oy = y; d.size = commerce.size;
@@ -462,17 +465,23 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       };
       const northRoad = (d: District) => towerRing({ x: d.hq.gx + d.hq.size / 2, z: d.hq.gy + d.hq.size / 2,
         size: d.hq.size * (d.project.id === "ai-ops-atlas" ? 1.02 : .92) * CITY_SCALE.hq.footprint }, d.hq.size * 1.25 + 1)!;
-      const x = portfolio.ox + portfolio.size + GAP, y = commerce.oy + GAP;
+      // The existing east shoreline clears both Marketing and Galleria; keep Commerce in place.
+      const x = Math.max(...meadows.map(m => m.ox + m.w)) + .35, y = commerce.oy;
       const hubLane = northRoad(hub), commerceLane = northRoad(commerce);
       const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
       resize(hub, x, y, x + commerce.size / 2, hubZ);
-      resize(operations, x + commerce.size + GAP, y, x + commerce.size * 1.5 + GAP, y + commerce.size / 2);
+      resize(operations, x + GAP, y + commerce.size + GAP, x + GAP + commerce.size / 2, y + commerce.size * 1.5 + GAP);
       const heading = neighborhoods.find(n => n.key === hub.group);
       if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
     }
   }
 
-  if (joined) walks.push(...walkways(rects));
+  if (joined) {
+    const relocated = cleared.some(d => d.project.id === "street-reserve:ai-ops-atlas");
+    // Operations joins Command Center locally; a new cross-city bridge would occupy GitHub's podium.
+    walks.push(...walkways(rects.filter(r => !relocated || r.id !== "intelligence-hub")));
+    if (relocated) walks.push(...walkways(rects.filter(r => r.id === "ai-ops-atlas" || r.id === "intelligence-hub")));
+  }
 
   const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
