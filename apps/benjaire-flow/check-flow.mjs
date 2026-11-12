@@ -1,14 +1,17 @@
-// Checks the n8n workflow exports under products/flow before they are committed
+// Checks the n8n workflow exports in this folder before they are committed
 // or shipped: valid JSON, no pinned or static run data (it can hold customer
 // inquiries), HTTP nodes authenticate through an n8n credential rather than a
 // header typed into the node, and the kit sold to buyers carries no Benjaire
-// credential ids. Usage: node scripts/check-flow.mjs
+// credential ids. Usage: node apps/benjaire-flow/check-flow.mjs
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 const SETS = [
-  { dir: 'products/flow/kit/3-workflows', shipped: true },
-  { dir: 'products/flow/live-ops/workflows', shipped: false },
+  { dir: join(HERE, 'kit/3-workflows'), shipped: true },
+  { dir: join(HERE, 'live-ops/workflows'), shipped: false },
 ];
 const AUTH_HEADER = /^(authorization|x-api-key|x-flow-key|api-key)$/i;
 

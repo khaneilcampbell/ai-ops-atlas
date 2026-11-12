@@ -4,6 +4,8 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-12 · Agents has a Refresh registry sheet button: it runs the Agent Registry workflow in n8n now instead of waiting up to 4 hours, shows when the sheet was updated or why it wasn't, allows one refresh a minute, and links to the sheet (#383)
+- 2026-11-12 · Removed Benjaire Dashboard from Atlas: its catalog entry, Dashboard CI agent, runbook and app code are gone. The map is unchanged (its cleared lot stays), and the Flow intake files moved to apps/benjaire-flow (#377)
+- 2026-11-12 · The Agent Operations Center now lists the Agent Registry Sync, the n8n workflow that keeps your agent registry Google Sheet up to date (#377)
 - 2026-11-12 · District names on the map (AI Engineering, Career & Portfolio, Business Operations and the rest) now sit at the buildings they belong to, and follow them whenever a building moves (#380)
 - 2026-11-12 · Every building that goes live now shows its connection line to Atlas Command Center, starting with Growth & Marketing Studio. Buildings that are not live show no line (#378)
 - 2026-11-12 · Agents now show the automations they run nested underneath, with one health dot for the whole group that only turns green when every part is verified. Senior Engineering Reviewer runs 4 automations and Portfolio Web Developer runs 3. Automations lists the ones with no owning agent yet (27 today), so you can give each an owner or retire it (#382)
