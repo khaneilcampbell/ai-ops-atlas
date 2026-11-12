@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import type { ManifestIssue } from "../catalog/types";
 
 // Building display names for the buildings the map draws itself (landmarks, Financial District
@@ -27,7 +27,7 @@ export function parseBuildingNames(file: string, text: string, issues: ManifestI
   const fail = (message: string) => issues.push({ file, message });
   let doc: unknown;
   try {
-    doc = yaml.load(text, { schema: yaml.DEFAULT_SCHEMA });
+    doc = yaml.load(text, { schema: yaml.CORE_SCHEMA });
   } catch (e) {
     fail(`file: invalid YAML (${(e as Error).message.split("\n")[0]})`);
     return {};

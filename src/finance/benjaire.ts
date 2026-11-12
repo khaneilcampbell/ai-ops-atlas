@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import type { ManifestIssue } from "../catalog/types";
 import { WORKSPACE } from "../modules/workspace";
 
@@ -63,7 +63,7 @@ export function parseFinancePlan(file: string, text: string, issues: ManifestIss
   const empty: FinancePlan = { buildings: {} };
   let doc: unknown;
   try {
-    doc = yaml.load(text, { schema: yaml.DEFAULT_SCHEMA });
+    doc = yaml.load(text, { schema: yaml.CORE_SCHEMA });
   } catch (e) {
     fail(`file: invalid YAML (${(e as Error).message.split("\n")[0]})`);
     return empty;
