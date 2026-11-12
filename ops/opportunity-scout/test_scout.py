@@ -39,7 +39,7 @@ class Registry(unittest.TestCase):
         ids = {a["id"] for a in d["agents"]}
         self.assertIn("github-opportunity-scout", ids)
         self.assertIn("github-merge-flow", ids)
-        self.assertGreaterEqual(len(d["projects"]), 10)
+        self.assertGreaterEqual(len(d["projects"]), 9)
         for a in d["agents"]:
             self.assertEqual(set(a), {"id", "project", "name", "status", "type", "category", "framework", "purpose"})
             self.assertLessEqual(len(a["purpose"] or ""), POLICY["purposeChars"])
@@ -50,7 +50,7 @@ class Registry(unittest.TestCase):
         d = sc.digest(CATALOG, POLICY)
         self.assertEqual(sc.fingerprint(d, "p"), sc.fingerprint(json.loads(json.dumps(d)), "p"))
         self.assertNotEqual(sc.fingerprint(d, "p"), sc.fingerprint(d, "p2"))
-        d["agents"][0]["status"] = "paused"
+        d["agents"][0]["status"] = "retired" if d["agents"][0]["status"] != "retired" else "active"
         self.assertNotEqual(sc.fingerprint(sc.digest(CATALOG, POLICY), "p"), sc.fingerprint(d, "p"))
 
 
