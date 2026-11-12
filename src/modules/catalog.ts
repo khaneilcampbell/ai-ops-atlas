@@ -166,9 +166,9 @@ const TYPES: AtlasModuleType[] = [
   },
   {
     id: "integration-exchange", version: V, name: "Integration Exchange", productDistrict: "data-intelligence",
-    description: "Connector catalog and integration contracts.",
-    capabilities: [later("catalog", "Connector catalog"), on("contracts", "Integration contracts", "src/modules/integrations.ts")],
-    connectors: [], views: [], actions: [], permissions: [],
+    description: "Vendors and suppliers in use, and integration contracts.",
+    capabilities: [on("catalog", "Vendor and supplier catalog", "src/vendors/suppliers.ts supplierRows"), on("contracts", "Integration contracts", "src/modules/integrations.ts")],
+    connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
   },
 ];
 

@@ -27,6 +27,7 @@ import { useAgentReports } from "../reports/client";
 import { HealthBadge } from "./bits";
 import { signalCounts, signalRows, type SignalState } from "../observability/signals";
 import { documentCount, documentInventory } from "../knowledge/docs";
+import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
@@ -64,6 +65,7 @@ export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePa
   ],
   "observability-center": [{ capability: "signals", label: "Connected signals", component: ConnectedSignals }],
   "knowledge-repository": [{ capability: "docs", label: "Document inventory", component: DocumentInventory }],
+  "integration-exchange": [{ capability: "catalog", label: "Vendors and suppliers", component: Suppliers }],
 };
 
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
@@ -462,6 +464,51 @@ function ResearchBriefs() {
 }
 
 const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
+
+function Suppliers() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const rows = useMemo(() => supplierRows(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const failing = rows.filter((r) => r.state === "failing" || r.state === "silent").length;
+  return (
+    <details className="module-list" aria-label="Vendors and suppliers" open={failing > 0}>
+      <summary className="muted small">Vendors and suppliers · {rows.length ? `${rows.length} in use${failing ? `, ${failing} with failing workers` : ""}` : "None named in manifests"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.id} data-state={r.state === "not-running" ? "none" : undefined}>
+              <span>{r.vendor} · {r.role}</span>
+              <span className="muted small">
+                {r.state === "failing" || r.state === "silent" ? <span className="run-failure">{STAGE_LABEL[r.state]}</span> : STAGE_LABEL[r.state]}
+                {` · ${r.workers} ${r.workers === 1 ? "worker" : "workers"} · ${r.projects.join(", ")}`}
+                {r.lastRunAt ? ` · last run ${relative(r.lastRunAt)}` : " · no run seen"}
+                {r.lastRunUrl ? <> · <a href={r.lastRunUrl} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No agent or automation manifest names an outside vendor yet.</p>
+      )}
+      <ul aria-label="Vendor data sources">
+        {SUPPLIER_SOURCES.map((s) => (
+          <li key={s.id} data-state={s.state === "connected" ? undefined : "none"}>
+            <span>{s.label}</span>
+            <span className="muted small">{s.state === "connected" ? "Connected" : "Not connected"} · {s.detail}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">Health is the worst observed state of the workers that use each vendor. A vendor whose workers have no run seen shows as unknown, never healthy.</p>
+    </details>
+  );
+}
 
 function PublishingPipeline() {
   const { catalog, repos } = useAtlas();
