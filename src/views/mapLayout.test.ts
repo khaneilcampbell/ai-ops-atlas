@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { GAP, OFF_MAP_PROJECTS, keepRemovedLots, layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { DISTRICT_MIN_SIZE, GAP, OFF_MAP_PROJECTS, keepRemovedLots, layoutMap, placeLabels, type Layout } from "./mapLayout";
 import { districtHeadings } from "./mapPresentation";
 
 function rects(layout: Layout) {
@@ -242,13 +242,15 @@ describe("keepRemovedLots", () => {
   });
 });
 
-// The district and building footprints match in every supported grouping.
+// Portfolio's building matches the Operations Center in every grouping, and its land matches the
+// Operations Center's own 7.5 parcel. In the complete By district campus the Operations Center moves
+// to the Commerce-sized east parcel (#375); Portfolio keeps 7.5 there so GitHub's podium keeps its land.
 for(const grouping of ['none','district','status','tag'] as const){
  it(`matches Portfolio and Operations Center footprints (${grouping})`,()=>{
   const districts=layoutMap(catalog,[],grouping).districts;
   const portfolio=districts.find(d=>d.project.id==='portfolio-site')!;
   const operations=districts.find(d=>d.project.id==='intelligence-hub')!;
-  expect(portfolio.size).toBe(operations.size);
+  expect(portfolio.size).toBe(grouping==='district'?DISTRICT_MIN_SIZE['intelligence-hub']:operations.size);
   expect(portfolio.hq.size).toBeCloseTo(operations.hq.size);
  });
 }

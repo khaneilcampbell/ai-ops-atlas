@@ -34,7 +34,7 @@ describe('Commerce-sized operations campus',()=>{
   for(const id of OPERATIONS_DISTRICTS)expect(scene.carBridges.some(b=>b.ends.includes(id))).toBe(true);
  });
  it('preserves other parcels, Development Hub and building dimensions',()=>{
-  expect(district('portfolio-site')).toMatchObject({ox:17,oy:22,size:5});
+  expect(district('portfolio-site')).toMatchObject({ox:17,oy:22,size:7.5});
   expect(district('github-profile')).toMatchObject({ox:9.75,oy:29.25,size:5});
   expect(district('benjaire-site')).toMatchObject({ox:7.25,oy:0,size:7.5});
   expect(district('soc-lab')).toMatchObject({ox:0,oy:30.75,size:7.5});
