@@ -56,6 +56,15 @@ describe("workspaceEvents", () => {
   });
 });
 
+describe("shared repositories", () => {
+  it("labels a shared repository with the project named after it, not the last one registered", () => {
+    const shared: Catalog = { ...catalog, projects: [{ ...catalog.projects[0], id: "p", name: "Command Center" }, { ...catalog.projects[0], id: "skyline", name: "Skyline", agentIds: [] }] };
+    const details = workspaceEvents(shared, repos).filter((e) => e.repo === "me/p" && e.kind !== "manifest").map((e) => e.detail);
+    expect(details.length).toBeGreaterThan(0);
+    for (const d of details) expect(d.startsWith("Command Center · ")).toBe(true);
+  });
+});
+
 describe("intelligence runs", () => {
   it("adds repository intelligence runs with their result and cost", () => {
     const run = {
