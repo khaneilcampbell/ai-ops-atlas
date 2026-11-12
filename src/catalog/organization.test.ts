@@ -25,7 +25,6 @@ describe("districts", () => {
     expect(Object.fromEntries(Object.entries(by).map(([k, d]) => [k, d!.value]))).toEqual({
       "ai-ops-atlas": "ai-operations",
       "benjaire-site": "business-operations",
-      "benjaire-ops": "business-operations",
       "commerce-pipeline": "business-operations",
       "intelligence-hub": "ai-engineering",
       "soc-lab": "security-infrastructure",
@@ -75,7 +74,7 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-ops-ci", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
+      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
@@ -111,7 +110,7 @@ describe("automation categories", () => {
       ],
       monitoring: ["health-report"],
       intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
-      maintenance: ["atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
+      maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
 
