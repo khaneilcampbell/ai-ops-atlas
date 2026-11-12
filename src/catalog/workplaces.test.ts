@@ -2,6 +2,10 @@ import {expect,it} from "vitest";
 import {catalog} from "./index";
 import {buildCatalog} from "./parse";
 import {projectOfficeAgents,workplaceAgent} from "./workplaces";
+import {WORKSPACE} from "../modules/workspace";
+
+// Agents that operate a landmark building (workspace.yaml `agents`) are placed there, not at headquarters.
+const operators=()=>catalog.agents.filter(a=>WORKSPACE.landmarks.some(l=>l.agents?.includes(a.id)));
 
 it("moves the Model Lab agents to Atlas HQ when Skyline is removed, keeping repo ownership",()=>{
   for(const id of ["atlas-system-improvements","atlas-ui-improvement-designer"]){
@@ -10,7 +14,7 @@ it("moves the Model Lab agents to Atlas HQ when Skyline is removed, keeping repo
     expect(agent.repository).toBe("khaneilcampbell/ai-ops-atlas");
     expect(projectOfficeAgents(catalog.agents,"ai-ops-atlas")).toContain(agent);
   }
-  const placed=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+  const placed=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace),...operators()];
   expect(placed.map(a=>a.id).sort()).toEqual(catalog.agents.map(a=>a.id).sort());
 });
 
@@ -51,7 +55,7 @@ it('assigns Marketplace workers once, preserving their Commerce ownership and ru
   expect(a.workplace?.floor).toBe(1);expect(a.workplace?.building).toBe('Atlas Marketplace');
   expect(projectOfficeAgents(catalog.agents,a.projectId).some(x=>x.id===a.id)).toBe(false);
  }
- const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+ const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace),...operators()];
  expect(new Set(placements.map(a=>a.id)).size).toBe(catalog.agents.length);
  expect(placements).toHaveLength(catalog.agents.length);
 });
