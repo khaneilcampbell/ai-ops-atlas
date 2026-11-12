@@ -51,7 +51,7 @@ export function useAlerts(): { watches: Watch[]; open: Watch[] } {
   const { catalog, repos } = useAtlas();
   const { telemetry } = useIntel();
   const feedLive = useLiveStatus().state === "live";
-  const seen = useSyncExternalStore(subscribe, () => dismissed);
+  const seen = useSyncExternalStore(subscribe, () => dismissed, () => dismissed);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), TICK_MS);

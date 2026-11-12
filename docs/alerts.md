@@ -57,6 +57,15 @@ An agent is watched when its manifest has an `alerts` block (see
 | order-delivery | yes | 1 hour | not running |
 | seo-maintainer | yes | none | not running |
 | canva-mockups | yes | none | not running |
+| marketplace-steward | yes | 3 hours (runs hourly) | watched |
+| signal-watch | yes | 90 minutes (runs every 30 min) | watched |
+| dataset-census | yes | 7 hours (runs every 3 h) | watched |
+
+The last three are the building operators (`ops/building-agents/agents.py`, run by
+`.github/workflows/building-agents.yml`, no model calls). Each operates one landmark through
+`agents:` in `catalog/workspace/workspace.yaml`, and its state is that building's health on the
+map and in its module card: green only while it reports successes in time. They need the
+`ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN` repository secrets that the Opportunity Scout uses.
 
 The commerce VPS was removed, so the commerce agents are marked `not_running` until the
 pipeline moves to the Oracle VM. When it is rehosted, delete the `not_running` lines in

@@ -38,6 +38,10 @@ describe("workspace file", () => {
     expect(ok.ws.landmarks[0]).toMatchObject({ project: "acme-site" });
     const bad = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: Bad Id }\n`);
     expect(bad.issues).toEqual(['landmarks.service:financial:banks.project: use a catalog project id such as "benjaire-site"']);
+    const withAgents = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: acme-site, agents: [acme-watch] }\n`);
+    expect(withAgents.ws.landmarks[0]).toMatchObject({ project: "acme-site", agents: ["acme-watch"] });
+    const noProject = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, agents: [acme-watch] }\n`);
+    expect(noProject.issues).toEqual(["landmarks.service:financial:banks.agents: list the catalog agent ids of its project that operate it, and set project"]);
     expect(bad.ws.landmarks).toEqual([]);
   });
 
