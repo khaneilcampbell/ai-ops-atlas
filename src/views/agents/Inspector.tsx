@@ -1,6 +1,6 @@
 import { isAiAgent } from "../../catalog/roles";
 import { AgentOutput } from "../../components/AgentOutput";
-import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
+import {ClaudeReviewHandoff} from "../../components/ClaudeReviewHandoff";
 import { useMemo, useState } from "react";
 import { AgentReports } from "../../components/AgentReports";
 import { Icon } from "../../components/Icon";
@@ -151,7 +151,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
         {tab === "report" && reports && <AgentReports agent={reports} />}
 
-        {tab !== "output" && <CodexReviewHandoff agent={agent}/>}
+        {tab !== "output" && <ClaudeReviewHandoff agent={agent}/>}
         {tab === "output" && <AgentOutput agent={agent}/>}
         {tab === "overview" && (
           <div className="reg-cols">

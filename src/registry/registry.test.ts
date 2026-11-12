@@ -45,7 +45,7 @@ describe("bundled registry", () => {
   });
 
 
-  it("registers the improvement analyst as observable automation with manual Codex and model-free automatic reporting", () => {
+  it("registers the improvement analyst as observable automation with manual Claude Code and model-free automatic reporting", () => {
     const agent=catalog.agents.find(a=>a.id==="atlas-system-improvements")!;
     expect(agent.projectId).toBe("ai-ops-atlas");
     expect(agent.registry?.classification?.type).toBe("B");
