@@ -141,7 +141,7 @@ const TYPES: AtlasModuleType[] = [
   },
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
-    description: "Products, orders and the pipelines that publish them.",
+    description: "Products and releases, the pipelines that publish them, and later the catalog and orders.",
     capabilities: [later("catalog", "Product catalog"), later("orders", "Orders"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
     connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
   },
