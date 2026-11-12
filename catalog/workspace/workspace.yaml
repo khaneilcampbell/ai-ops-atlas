@@ -46,6 +46,9 @@ landmarks:
   "service:financial:investments":
     map_name: Robin Exchange
     module: integration-exchange
+  "service:atlas-galleria":
+    map_name: Atlas Galleria
+    module: integration-exchange
   "service:financial:residence":
     map_name: Aldren Insights
     module: data-intelligence-center
