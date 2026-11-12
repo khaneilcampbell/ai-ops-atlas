@@ -30,6 +30,7 @@ import {
   iso,
   layoutMap,
   keepRemovedLots,
+  OPERATIONS_DISTRICTS,
   placeLabels,
   treeSpots,
   TW,
@@ -1064,7 +1065,7 @@ export function MapView({active=true}:{active?:boolean}) {
                     selected={isSelected("project", d.project.id) || (selection?.kind === "agent" && [...d.crew, ...d.lots.map((l) => l.agent)].some((a) => a.id === selection.id))}
                     hovered={!!hover && (hover === `district:${d.project.id}` || where.get(hover)?.district === d.project.id)}
                     detail={detail}
-                    onFocus={() => setFocus(d.project.id)}
+                    onFocus={() => { setFocus(d.project.id); if (OPERATIONS_DISTRICTS.has(d.project.id)) select({ kind: "project", id: d.project.id }); }}
                     onEnter={() => setHover(`district:${d.project.id}`)}
                     onLeave={() => setHover((h) => (h === `district:${d.project.id}` ? null : h))}
                   />
