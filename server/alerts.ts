@@ -1,4 +1,4 @@
-// Email alerts for pipeline runs, sent by the site the moment a failure is reported, so KC
+// Email alerts for pipeline runs, sent by the site the moment a failure is reported, so Khaneil
 // hears about it with Atlas closed. Off until RESEND_API_KEY, ALERT_EMAIL_TO and
 // ALERT_EMAIL_FROM are all set. Same rhythm as the commerce pipeline's own alerts.py: one email
 // when an agent starts failing, a reminder at most every 12 hours while it keeps failing, and a

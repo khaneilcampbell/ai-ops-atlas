@@ -28,12 +28,12 @@ const RATING_CLASS: Record<Rating, string> = { good: "h-good", fair: "h-warn", p
 const SEV_CLASS: Record<Severity, string> = { critical: "high", high: "high", medium: "medium", low: "low", info: "low" };
 const PRIO_CLASS = { now: "p-high", next: "p-medium", later: "" } as const;
 
-/** Who should carry out a recommendation: a catalog agent (opens it), KC, or unknown with the reason. */
+/** Who should carry out a recommendation: a catalog agent (opens it), Khaneil, or unknown with the reason. */
 export function RecOwner({ owner, report }: { owner?: string | null; report: EcoReport }) {
   const { select } = useAtlas();
   if (!owner)
     return <span title="The review didn't name an owner, or named one that isn't in the catalog, so Atlas doesn't guess.">Owner unknown: the review didn't name one</span>;
-  if (owner === "KC") return <span title="Needs your own hands: accounts, billing, settings or approvals.">Owner: KC</span>;
+  if (owner === "Khaneil" || owner === "KC") return <span title="Needs your own hands: accounts, billing, settings or approvals.">Owner: Khaneil</span>;
   const agent = report.context.agents.find((a) => a.id === owner);
   return (
     <span>

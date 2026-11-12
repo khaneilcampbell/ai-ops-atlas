@@ -1,8 +1,8 @@
-// Cloudflare traffic and change events for the website dashboards, read with KC's read-only API
+// Cloudflare traffic and change events for the website dashboards, read with Khaneil's read-only API
 // token (CLOUDFLARE_API_TOKEN on the site). Nothing here writes: zone lookup, the GraphQL
 // analytics API and the account audit log are all GET-style reads.
 //
-// A domain whose DNS isn't in KC's Cloudflare account (for example a GitHub Pages site on
+// A domain whose DNS isn't in Khaneil's Cloudflare account (for example a GitHub Pages site on
 // another registrar's nameservers) has no zone, so its traffic and events say "not in your
 // Cloudflare account" rather than zero.
 

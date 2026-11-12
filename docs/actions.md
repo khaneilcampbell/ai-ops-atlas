@@ -1,6 +1,6 @@
 # Approval-required actions
 
-Atlas is read-only with two exceptions: **Re-run failed jobs** on a failed GitHub Actions run, and **Merge pull request** on a pull request GitHub reports ready. Both are autonomy level 2 (approval required): Atlas prepares the action and KC approves each one. Both ship switched off, and both exist only in the Mac app; the website and iPhone build stay GET-only.
+Atlas is read-only with two exceptions: **Re-run failed jobs** on a failed GitHub Actions run, and **Merge pull request** on a pull request GitHub reports ready. Both are autonomy level 2 (approval required): Atlas prepares the action and Khaneil approves each one. Both ship switched off, and both exist only in the Mac app; the website and iPhone build stay GET-only.
 
 ## How a re-run happens
 
@@ -101,6 +101,6 @@ Any one of these stops merging: untick **Merge pull requests**, untick the repos
 
 Mission Control's **Fix with Claude** button is a link, not an action: it opens a pre-filled issue in
 `khaneilcampbell/ai-ops-atlas` labeled `claude-fix`, in the browser. Atlas holds no token for it and
-sends nothing. Pressing **Create** on GitHub is the approval; a Claude Code scheduled task on KC's
-account then follows `ops/fix-with-claude/prompt.md` and opens one pull request for KC to merge. See
+sends nothing. Pressing **Create** on GitHub is the approval; a Claude Code scheduled task on Khaneil's
+account then follows `ops/fix-with-claude/prompt.md` and opens one pull request for Khaneil to merge. See
 [ops/fix-with-claude/README.md](../ops/fix-with-claude/README.md).

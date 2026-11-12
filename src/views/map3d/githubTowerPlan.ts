@@ -6,7 +6,7 @@ import {headquartersEnvelope} from './financialPlan';
  * concrete boxes wrapped around floor-to-ceiling dark glass, stacked and offset left and right,
  * with open terraces between them where a staircase with yellow-cushioned steps climbs from one
  * box's roof to the next and a tree grows in a planter. It stands on a stepped, glazed podium and
- * ends in a roof garden. Design reference: KC's MAHAK Residential Towers screenshots, 2026-10-31.
+ * ends in a roof garden. Design reference: Khaneil's MAHAK Residential Towers screenshots, 2026-10-31.
  *
  * Everything here is plain data in the tower's own frame: x across, y up from the plinth top
  * (FLOOR_BASE), z toward the front. Horizontal sizes are fractions of the tower's footprint `k`;

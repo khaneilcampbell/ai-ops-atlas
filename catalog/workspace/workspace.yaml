@@ -12,7 +12,7 @@
 #     module                a module type id from src/modules/catalog.ts
 #     project               optional: the catalog project whose repository and agents this building
 #                           operates with (its agents are the ones whose workplace is this building)
-# Each building houses the module that matches what it is for (KC, 2026-11-10). A module can have
+# Each building houses the module that matches what it is for (Khaneil, 2026-11-10). A module can have
 # more than one home when both buildings do that work. Buildings whose function no module covers
 # house none, rather than borrow an unrelated one; leave them out.
 # Format: docs/modules.md, "Set up another workspace".

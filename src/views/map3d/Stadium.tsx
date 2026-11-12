@@ -35,7 +35,7 @@ export function Stadium({plan:a,site,g,m,pick,night=false,building=true}:{night?
     glass:focusable(new THREE.MeshStandardMaterial({color:"#b4c8d3",roughness:.1,metalness:.3,emissive:"#ffcf8f",emissiveIntensity:0})),
     podium:focusable(new THREE.MeshStandardMaterial({color:"#d9d9d4",roughness:.82})),
   }),[sheet]);
-  // Warm and calm at night: no real-time lights, no colour cycling (KC, 2026-10-31: buildings show lights at night).
+  // Warm and calm at night: no real-time lights, no colour cycling (Khaneil, 2026-10-31: buildings show lights at night).
   useEffect(()=>{mats.glass.emissiveIntensity=night?.9:0;mats.soffit.emissiveIntensity=night?.45:0;},[mats,night]);
   useEffect(()=>()=>{for(const v of Object.values(mats))v.dispose();},[mats]);
   const handlers=useMemo(()=>({

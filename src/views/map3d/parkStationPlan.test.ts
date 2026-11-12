@@ -44,7 +44,7 @@ describe('Shell stations on the perimeter loop',()=>{
  });
 });
 
-describe('every perimeter stop wears the shell (KC, 2026-11-07)',()=>{
+describe('every perimeter stop wears the shell (Khaneil, 2026-11-07)',()=>{
  for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps every station shell clear of buildings and the runway: ${grouping}`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),loop=s.communityRail!.loop!,local=parkStationParts([0,0],0);
   const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));

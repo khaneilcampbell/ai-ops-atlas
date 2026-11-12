@@ -47,7 +47,7 @@ sec-01 SOC Automation and Detection Engineering Lab/
 
 ## Document format: DOCX (decided 2026-10-26)
 
-The documents are DOCX, not .pages. KC chose this on 2026-10-26 after Pages Creator Studio 15.4 could not be scripted reliably. DOCX opens in Pages, Word, Preview and Google Docs, and Claude can rebuild it directly.
+The documents are DOCX, not .pages. Khaneil chose this on 2026-10-26 after Pages Creator Studio 15.4 could not be scripted reliably. DOCX opens in Pages, Word, Preview and Google Docs, and Claude can rebuild it directly.
 
 - Read the documents in any app. If you edit one in Pages, Pages will offer to save a .pages copy; your edits then live only in that copy, so tell Claude what to change in `Source/` instead.
 - The Markdown in `Source/` stays the source of truth; the DOCX files are generated from it.

@@ -3,7 +3,7 @@ import type {Inst} from './models';
 /**
  * One scale table for the city's buildings, set against the Atlas Marketplace mall (about 12 x 11.6
  * map units and 6.4 tall: four 1.6 storeys, twice the Atlas Hills mansion). Before this, a project
- * headquarters was 1.6 wide and 4.5 tall, so next to the mall it read as a toy (KC, 2026-10-31).
+ * headquarters was 1.6 wide and 4.5 tall, so next to the mall it read as a toy (Khaneil, 2026-10-31).
  *
  * Each class keeps its own design; only its size changes, so a change here is the whole edit.
  * - Project headquarters: storeys 1.5x taller (0.32 to 0.48), so a 14-storey HQ (6.7) tops the
@@ -11,7 +11,7 @@ import type {Inst} from './models';
  *   puts cars inside the walls.
  * - The Financial District keeps rising with the headquarters (its HQ-relative rule), so it still
  *   stands above them.
- * - The Financial District comes down to the rest of the map (KC, 2026-11-09): about a quarter
+ * - The Financial District comes down to the rest of the map (Khaneil, 2026-11-09): about a quarter
  *   fewer storeys (storeys stay 0.42, so doors and signs keep their human scale) and footprints
  *   a fifth narrower, so its towers sit with the larger HQs (Commerce 2.9 wide, the Intelligence
  *   Hub 2.3) instead of towering over them. Positions, lots and interiors stay as they are.

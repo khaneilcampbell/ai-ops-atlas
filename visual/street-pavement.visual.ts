@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /**
- * Street sidewalks, junction zebras and building-matched plazas (KC, 2026-11-08): a close view over
+ * Street sidewalks, junction zebras and building-matched plazas (Khaneil, 2026-11-08): a close view over
  * the central districts and the whole island, day and night. SHOT_DIR picks the output folder.
  */
 const out=process.env.SHOT_DIR??'artifacts/street-pavement';

@@ -143,7 +143,7 @@ async function measure(page: Page) {
   };
 }
 
-/** Selects Atlas HQ and zooms in on it, as close as KC would look into its office. */
+/** Selects Atlas HQ and zooms in on it, as close as Khaneil would look into its office. */
 async function closeOnAtlasHq(page: Page) {
   await page.locator('.m3-plaque[title^="Atlas Command Center"]').first().dispatchEvent("click");
   await page.clock.runFor(1500);

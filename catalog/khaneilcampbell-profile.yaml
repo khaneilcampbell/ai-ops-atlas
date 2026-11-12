@@ -19,7 +19,7 @@ project:
 agents:
   - id: github-merge-flow
     name: Merge Flow
-    purpose: Sorts every open pull request across KC's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; KC still says "merge".
+    purpose: Sorts every open pull request across Khaneil's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; Khaneil still says "merge".
     framework: GitHub Actions + Claude
     model: Claude Opus 5.5 (Anthropic API), only when the triage changed
     runtime: GitHub-hosted runner
@@ -53,7 +53,7 @@ agents:
       mission:
         problem: Finished pull requests wait for days because nobody sees that they are ready, behind their base, or blocked on one failing check.
         outcomes: [Ready pull requests are named the moment they are ready, Each blocked pull request has one concrete next move, Time to merge is measured instead of guessed]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Read open pull requests and their merge state in one request, Sort them into lanes, Skip everything else when nothing changed, Ask Claude for a short brief when something needs action, Report counts publicly and details only in Atlas]
         tools: [GitHub GraphQL API (read), Anthropic Messages API, GitHub Actions cache for the last fingerprint]
@@ -75,7 +75,7 @@ agents:
           - name: Median time to merge
             kind: throughput
             target: Under 24 hours, from the run summary
-            basis: Most of KC's pull requests are small and reviewed the same day
+            basis: Most of Khaneil's pull requests are small and reviewed the same day
       execution:
         trigger_type: event
         schedule: Every 4 hours at :23, plus each completed pull-request CI run in ai-ops-atlas
@@ -83,10 +83,10 @@ agents:
         stages: [Restore last fingerprint, One GraphQL read, Sort into lanes, Stop when unchanged, Brief within caps, Report, Save fingerprint]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and decides what is worth saying, but only recommends. Merges stay with KC and the Merge Pull Request action; re-runs stay with Re-run Failed Jobs.
+        autonomy_note: Runs on its own and decides what is worth saying, but only recommends. Merges stay with Khaneil and the Merge Pull Request action; re-runs stay with Re-run Failed Jobs.
         data_sensitivity: internal
-        approval: None needed to run; every change to a repository stays with KC
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: None needed to run; every change to a repository stays with Khaneil
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history and job summaries; optional live feed reports
       cost:
@@ -98,11 +98,11 @@ agents:
         known_issues:
           - Without MERGE_FLOW_TOKEN only public repositories are readable
         improvements:
-          - Bring behind branches up to date automatically, once KC approves that level 3 step
+          - Bring behind branches up to date automatically, once Khaneil approves that level 3 step
         last_review: 2026-10-30
   - id: github-opportunity-scout
     name: Opportunity Scout
-    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories KC already has, plus a build-ready spec for the best one. Recommend-only; KC decides what gets built.
+    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories Khaneil already has, plus a build-ready spec for the best one. Recommend-only; Khaneil decides what gets built.
     framework: GitHub Actions + Claude
     model: Claude Opus 5.5 (Anthropic API), only when the registry changed
     runtime: GitHub-hosted runner
@@ -132,11 +132,11 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or KC asks for a fresh look
+        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or Khaneil asks for a fresh look
       mission:
         problem: Atlas holds dozens of working agents, but nobody regularly asks which of them could earn money and what small agent would turn that into revenue.
         outcomes: [Each registry change yields at most 3 ranked money ideas, The best idea arrives as a spec that can be built without another planning round, Every idea and spec keeps a human approval point]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Read the registry from catalog files, Stop when nothing changed, Ask Claude for scored ideas and one spec, Rank and check them against the registry, Report in the job summary and Atlas's feed]
         tools: [Anthropic Messages API with structured output, GitHub Actions cache for the last fingerprint and spend]
@@ -157,7 +157,7 @@ agents:
             measure: run_success_rate
           - name: Ideas built
             kind: other
-            target: At least one spec a quarter that KC approves for building
+            target: At least one spec a quarter that Khaneil approves for building
             basis: Ideas only matter when one turns into an agent
       execution:
         trigger_type: event
@@ -166,10 +166,10 @@ agents:
         stages: [Restore last fingerprint, Read registry, Stop when unchanged, Ideas within caps, Rank and check, Report, Save fingerprint]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with KC.
+        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with Khaneil.
         data_sensitivity: internal
-        approval: None needed to run; KC approves any spec before it is built
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: None needed to run; Khaneil approves any spec before it is built
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history and job summaries; optional live feed reports
       cost:
@@ -181,11 +181,11 @@ agents:
         known_issues:
           - Without ANTHROPIC_API_KEY it only reports that the registry changed
         improvements:
-          - Add a small, terms-respecting market signal once KC picks a niche
+          - Add a small, terms-respecting market signal once Khaneil picks a niche
         last_review: 2026-10-30
   - id: github-design-consistency
     name: Design Consistency
-    purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; KC says "merge".
+    purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; Khaneil says "merge".
     framework: GitHub Actions + Claude
     model: Claude Opus 5.5 (Anthropic API), only for findings that need judgment
     runtime: GitHub-hosted runner
@@ -222,7 +222,7 @@ agents:
       mission:
         problem: Atlas's look drifts as features land, with colors from the old palette and one-off sizes, and nobody checks every stylesheet against the theme.
         outcomes: [Every stylesheet uses the Atlas tokens or says why not, New drift is flagged on the pull request that adds it, Each fix arrives as one reviewable pull request with screenshots]
-        beneficiaries: [KC, Atlas users]
+        beneficiaries: [Khaneil, Atlas users]
       responsibilities:
         tasks: [Check stylesheets and names against the tokens, Mark drift above the baseline as new, Swap exact token matches in code, Ask Claude for judgment calls within caps, Open one fix pull request with before and after screenshots, Report in the job summary and Atlas's feed]
         tools: [Anthropic Messages API with structured output, Playwright screenshots, GitHub pull requests API, GitHub Actions cache for spend and caps]
@@ -231,7 +231,7 @@ agents:
         dependencies: [github-merge-flow]
         limitations: [Never merges or approves, The 3D map and office scenes are art and are not checked, Screenshots cover Mission Control Agents and Repositories, Without DESIGN_FIX_TOKEN its pull requests need CI started by hand]
       goals:
-        objective: Keep Atlas on one design system without KC having to police it.
+        objective: Keep Atlas on one design system without Khaneil having to police it.
         review_frequency: Monthly
         kpis:
           - name: Run success rate
@@ -252,10 +252,10 @@ agents:
         stages: [Check against tokens, Stop when nothing to fix or a fix PR is open, Code swaps or one Claude call within caps, Verify each edit, Screenshots before and after, Open pull request, Report]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and proposes fixes as pull requests, one at a time. Merging stays with KC.
+        autonomy_note: Runs on its own and proposes fixes as pull requests, one at a time. Merging stays with Khaneil.
         data_sensitivity: internal
-        approval: KC reviews and merges every fix pull request
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: Khaneil reviews and merges every fix pull request
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history, job summaries and the fix pull requests
       cost:

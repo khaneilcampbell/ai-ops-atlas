@@ -1,5 +1,5 @@
 // Live n8n runs for the Workflow Automation Plant. The signed-in page asks GET /api/n8n, the Mac
-// app GET /api/hooks/n8n with its sync key. The site reads KC's n8n Cloud instance with a read-only
+// app GET /api/hooks/n8n with its sync key. The site reads Khaneil's n8n Cloud instance with a read-only
 // API key (N8N_API_KEY, a Pages secret) and returns only a summary: workflow names, whether each is
 // switched on, and its recent runs' status and times. No run data, inputs or credentials leave n8n,
 // and nothing here can start, edit or stop a workflow (only GET requests are made).
@@ -11,7 +11,7 @@ import type { CheckCache } from "./properties";
 export interface N8nEnv {
   /** Read-only n8n API key (n8n Settings → n8n API, scope "Read only"). */
   N8N_API_KEY?: string;
-  /** The n8n instance, e.g. https://example.app.n8n.cloud. Defaults to KC's instance. */
+  /** The n8n instance, e.g. https://example.app.n8n.cloud. Defaults to Khaneil's instance. */
   N8N_BASE_URL?: string;
   /** The Mac app's sync key, for /api/hooks/n8n. */
   USAGE_SYNC_TOKEN?: string;

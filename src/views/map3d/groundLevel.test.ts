@@ -3,7 +3,7 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,LAND_TOP,TERRACE_H} from './scene';
 
-// One ground plane (KC, 2026-11-07): open land is level with the terraces, streets and stations.
+// One ground plane (Khaneil, 2026-11-07): open land is level with the terraces, streets and stations.
 it('keeps open land a hair under the terrace tops, so they meet without a step or flicker',()=>{
  expect(TERRACE_H-LAND_TOP).toBeGreaterThan(0);expect(TERRACE_H-LAND_TOP).toBeLessThan(.01);
 });

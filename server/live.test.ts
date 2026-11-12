@@ -97,9 +97,9 @@ describe("live hooks", () => {
     const c = compactGithub("push", {
       ref: "refs/heads/main",
       repository: { full_name: "o/r", default_branch: "main" },
-      commits: [{ id: "abc", message: "Fix it\n\nlong body", author: { name: "KC", email: "kc@example.com" }, timestamp: "t", url: "u", added: ["x"] }],
+      commits: [{ id: "abc", message: "Fix it\n\nlong body", author: { name: "Khaneil", email: "kc@example.com" }, timestamp: "t", url: "u", added: ["x"] }],
     });
-    expect(c).toEqual({ kind: "push", repo: "o/r", body: { ref: "refs/heads/main", branch: "main", default_branch: "main", deleted: false, commits: [{ sha: "abc", message: "Fix it", author: "KC", date: "t", url: "u" }] } });
+    expect(c).toEqual({ kind: "push", repo: "o/r", body: { ref: "refs/heads/main", branch: "main", default_branch: "main", deleted: false, commits: [{ sha: "abc", message: "Fix it", author: "Khaneil", date: "t", url: "u" }] } });
   });
 
   it("takes the Mac app's agent runs with its sync key", async () => {

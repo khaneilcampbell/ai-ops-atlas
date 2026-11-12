@@ -4,7 +4,7 @@ import type { RepoState, WorkflowRun } from "../github/types";
 import { latestPerWorkflow, repoData } from "../lib/derive";
 
 /**
- * Proposed actions waiting for KC's approval (autonomy level 2: the agent prepares, a person
+ * Proposed actions waiting for Khaneil's approval (autonomy level 2: the agent prepares, a person
  * decides). Derived from verified data only, never stored: a proposal exists while the facts
  * behind it hold, and disappears when they change (the run is fixed, re-run, or too old).
  * Approving still goes through the desktop app's own checks, native dialog and audit log.
@@ -24,14 +24,14 @@ export interface Proposal {
 
 /**
  * Which agent proposes each action. Merging pull requests is deliberately absent: a merge
- * can't be undone, so it is never proposed, queued or approved from here, only pressed by KC.
+ * can't be undone, so it is never proposed, queued or approved from here, only pressed by Khaneil.
  */
 export const PROPOSER: Record<Proposal["action"], string> = { rerun_failed_jobs: "atlas-rerun-failed" };
 
 /**
  * One proposal per workflow whose latest default-branch run failed, on a repository where the
  * re-run action is switched on and usable, unless that attempt was already re-run or tried from
- * Atlas, or KC dismissed it.
+ * Atlas, or Khaneil dismissed it.
  */
 export function proposals(repos: Record<string, RepoState>, status: ActionsStatus | null, audit: AuditRecord[], dismissed: ReadonlySet<string>, now = Date.now()): Proposal[] {
   if (!status?.config.rerun_failed_jobs.enabled) return [];

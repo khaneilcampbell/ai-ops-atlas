@@ -32,7 +32,7 @@ agents:
     source: site/worker/index.ts
     observe:
       agent_feed: true
-    # Customer-facing and unattended: a failed request alerts KC. It only runs when someone
+    # Customer-facing and unattended: a failed request alerts Khaneil. It only runs when someone
     # posts the form, so a quiet stretch is normal and there is no silence window.
     alerts:
       failures: true
@@ -53,7 +53,7 @@ agents:
       mission:
         problem: Receives website inquiries and checkout requests safely without a separate backend.
         outcomes: [Valid inquiries reach the right inbox and Benjaire Flow, Spam and abuse are rejected]
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks: [Check origin and rate limit, Verify Turnstile, Email the inquiry to the category recipient, Forward the inquiry to Benjaire Flow, Create Stripe checkout sessions]
         tools: [Cloudflare Workers, Cloudflare Turnstile, Cloudflare Email, Stripe API, n8n webhook]
@@ -67,7 +67,7 @@ agents:
         autonomy: 3
         autonomy_note: Acts on each request within fixed rules (rate limit, allowed hosts, configured price tiers).
         data_sensitivity: confidential
-        credential_owner: KC (Worker secrets in the Cloudflare dashboard)
+        credential_owner: Khaneil (Worker secrets in the Cloudflare dashboard)
         risk: medium
       docs:
         technical: site/README.md
@@ -92,7 +92,7 @@ agents:
     trigger: Webhook from the contact Worker
     observe:
       agent_feed: true
-    # Customer-facing and unattended: a failed intake alerts KC. Runs per inquiry, so no
+    # Customer-facing and unattended: a failed intake alerts Khaneil. Runs per inquiry, so no
     # silence window.
     alerts:
       failures: true
@@ -117,7 +117,7 @@ agents:
         outcomes:
           - Every valid inquiry is saved and the owner alerted
           - The sender gets an acknowledgement
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks:
           - Check the x-flow-key
@@ -137,7 +137,7 @@ agents:
         autonomy: 3
         autonomy_note: 'Emails the owner and the sender without approval, within fixed rules: key check, validation, honeypot, and spam marked only at confidence 0.7 or more and never answered.'
         data_sensitivity: confidential
-        credential_owner: KC (n8n credentials and the flow_settings table)
+        credential_owner: Khaneil (n8n credentials and the flow_settings table)
         risk: medium
         audit_log: flow_events data table in n8n
       cost:
@@ -159,7 +159,7 @@ agents:
   - id: benjaire-inquiry-to-client
     name: Inquiry to Client
     purpose: >-
-      Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds KC to follow up on day 3 and day 7. KC sends every message from their own mail app.
+      Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds Khaneil to follow up on day 3 and day 7. Khaneil sends every message from their own mail app.
     framework: Atlas (plain code, no model)
     runtime: AI Ops Atlas site (Cloudflare Pages + D1) and app
     status: idle
@@ -182,25 +182,25 @@ agents:
         outcomes:
           - Every inquiry gets a reply within a day
           - Quiet leads get two follow-ups, then close
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks:
           - Store each inquiry once (retried copies are ignored)
           - Show what needs a reply or a follow-up
           - Draft the reply and follow-ups from templates
-          - Open the draft in KC's mail app
+          - Open the draft in Khaneil's mail app
         tools: [Cloudflare D1, Atlas Mission Control]
         inputs: [Inquiry from the contact Worker]
-        outputs: [Mission Control inbox, Reply and follow-up drafts in KC's mail app]
+        outputs: [Mission Control inbox, Reply and follow-up drafts in Khaneil's mail app]
         dependencies: [benjaire-contact-worker]
       execution:
         trigger_type: event
         environment: AI Ops Atlas
       governance:
         autonomy: 1
-        autonomy_note: Prepares drafts only. Nothing is sent from Atlas; KC reads, edits and sends each message from their own mail app.
+        autonomy_note: Prepares drafts only. Nothing is sent from Atlas; Khaneil reads, edits and sends each message from their own mail app.
         data_sensitivity: confidential
-        credential_owner: KC (AGENT_FEED_TOKEN on the site and ATLAS_FEED_TOKEN on the Worker)
+        credential_owner: Khaneil (AGENT_FEED_TOKEN on the site and ATLAS_FEED_TOKEN on the Worker)
         risk: low
       cost:
         notes: No model calls. Runs inside the existing Pages site and D1 free tier, so $0 a month.
@@ -256,7 +256,7 @@ agents:
       governance:
         autonomy: 0
         data_sensitivity: public
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
       docs:
@@ -276,7 +276,7 @@ agents:
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}
     name: Benjaire Product Lab
     purpose: >-
-      n8n agent that researches, scores and recommends the next best product for Benjaire each month, running five research roles in order and emailing KC the brief.
+      n8n agent that researches, scores and recommends the next best product for Benjaire each month, running five research roles in order and emailing Khaneil the brief.
     framework: n8n Agent
     model: claude-sonnet-5-5
     runtime: n8n Cloud
@@ -300,14 +300,14 @@ agents:
         outcomes:
           - One top recommendation and two runners-up each month, with sources
           - Ideas are called hypotheses until real demand evidence exists
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks:
           - Run Market Research, Competitor Analysis, Customer Insight, Product Scoring and Product Brief in order
           - Note what changed since last month's pick
-          - Email KC the brief and save it to Notion
+          - Email Khaneil the brief and save it to Notion
         tools: [n8n Agent, Claude (claude-sonnet-5-5), Anthropic web search, Gmail, Notion MCP]
-        inputs: [Monthly schedule, A topic from KC in chat]
+        inputs: [Monthly schedule, A topic from Khaneil in chat]
         outputs: [Monthly next-product brief by email, Notion page]
         dependencies: [benjaire-product-lab-research, benjaire-product-lab-competitors, benjaire-product-lab-customers, benjaire-product-lab-scoring, benjaire-product-lab-brief]
       execution:
@@ -316,9 +316,9 @@ agents:
         environment: n8n
       governance:
         autonomy: 1
-        autonomy_note: Recommends only. It emails KC and writes Notion pages without approval, never contacts anyone else and changes nothing outside KC's own inbox and Notion.
+        autonomy_note: Recommends only. It emails Khaneil and writes Notion pages without approval, never contacts anyone else and changes nothing outside Khaneil's own inbox and Notion.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials for Anthropic, Gmail and Notion)
+        credential_owner: Khaneil (n8n credentials for Anthropic, Gmail and Notion)
         risk: low
       cost:
         notes: One run a month on Sonnet 5.5 with reasoning high, up to 5 web searches and n8n memory. Not measured yet; Atlas makes no model calls for it.
@@ -340,7 +340,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -360,7 +360,7 @@ agents:
             - 'Drop ideas needing heavy inventory, regulatory approval or patents'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Topic from KC or the monthly task'
+            - 'Topic from Khaneil or the monthly task'
             - 'Web search'
         outputs:
             - 'Long list of 6 to 10 ideas with source links'
@@ -373,7 +373,7 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
@@ -388,7 +388,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -422,7 +422,7 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
@@ -437,7 +437,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -471,7 +471,7 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
@@ -486,7 +486,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -519,7 +519,7 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
@@ -534,7 +534,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -551,14 +551,14 @@ agents:
             - 'Write the brief sections from recommendation to success metrics'
             - 'Lay out a week-by-week 30-day validation plan'
             - 'Set numeric success metrics'
-            - 'Save to Notion and email KC when asked'
+            - 'Save to Notion and email Khaneil when asked'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
             - 'Scorecard and supporting research'
         outputs:
             - 'Product brief'
             - 'Notion page Product Lab – <topic> – <date>'
-            - 'Email to KC'
+            - 'Email to Khaneil'
         dependencies: [benjaire-product-lab]
       execution:
         trigger_type: scheduled
@@ -568,7 +568,7 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud

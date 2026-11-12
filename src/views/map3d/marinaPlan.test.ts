@@ -9,7 +9,7 @@ const supports=(loop:{route:[number,number][];lengths:number[];length:number},ke
  const out:{x:number;z:number}[]=[];for(let d=3;d<loop.length;d+=PERIMETER_RAIL.supportSpacing){const q=supportPoint(loop,d,keep);if(q)out.push(q);}return out;
 };
 
-describe('harbour marina and rail viaduct (KC, 2026-11-07: pole on the boardwalk dock)',()=>{
+describe('harbour marina and rail viaduct (Khaneil, 2026-11-07: pole on the boardwalk dock)',()=>{
  it('had a viaduct support standing on the marina before supports kept clear',()=>{
   const s=buildScene(layoutMap(catalog,[],'district')),area=marinaFootprint(marinaSite(s,TERRACE_H));
   expect(supports(s.communityRail!.loop!,[]).some(q=>blocksArea([area],q.x,q.z,SUPPORT_HALF,SUPPORT_HALF))).toBe(true);

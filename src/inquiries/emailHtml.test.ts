@@ -10,9 +10,9 @@ describe("brandedEmailHtml", () => {
   });
 
   it("turns blank lines into paragraphs and single line breaks into <br>", () => {
-    const html = brandedEmailHtml("Hi Bill,\n\nBest,\nKC");
+    const html = brandedEmailHtml("Hi Bill,\n\nBest,\nKhaneil");
     expect(html).toContain('<p style="margin:0 0 14px">Hi Bill,</p>');
-    expect(html).toContain('<p style="margin:0 0 14px">Best,<br>KC</p>');
+    expect(html).toContain('<p style="margin:0 0 14px">Best,<br>Khaneil</p>');
   });
 
   it("escapes anything a customer could have put in the draft", () => {

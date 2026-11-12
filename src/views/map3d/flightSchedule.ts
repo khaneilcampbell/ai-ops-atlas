@@ -2,7 +2,7 @@ import {AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from '.
 import {ARRIVAL,CIRCUIT_PACE,DEPARTURE_ORIGIN,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
 import {roundedRoad} from './highway';
 /**
- * One departure every 45 simulation seconds (KC, 2026-11-07), from a single jet holding short.
+ * One departure every 45 simulation seconds (Khaneil, 2026-11-07), from a single jet holding short.
  * Five jets fly a closed loop: take off from runway 1, circle the city, land on the landing runway, park at the
  * arrivals stand, push back and taxi back to the hold. Every jet is slot 0 shifted by `interval`.
  */

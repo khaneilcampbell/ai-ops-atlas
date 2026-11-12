@@ -13,7 +13,7 @@ When there is something to fix and no fix PR is open, it prepares one batch:
 - anything that needs judgment (a near-miss color, an off-scale size, a name) goes to Claude in
   one small call, within a daily and monthly cap. Claude answers with a closed schema, and every
   edit is checked again before it is kept.
-It never merges. The workflow opens the PR with before and after screenshots; KC says "merge".
+It never merges. The workflow opens the PR with before and after screenshots; Khaneil says "merge".
 
   python3 ops/design-consistency/design.py scan               # findings and what a fix run would do
   python3 ops/design-consistency/design.py fix                # edit the working tree (needs `anthropic` for judgment batches)
@@ -712,7 +712,7 @@ SETTINGS_URL = "https://github.com/{repo}/settings/actions"
 
 
 def pr_refused_help(err, repo):
-    """Plain steps for KC when GitHub refuses to let the workflow open the fix PR."""
+    """Plain steps for Khaneil when GitHub refuses to let the workflow open the fix PR."""
     if err.status == 403 and "not permitted to create" in err.message.lower():
         return ("GitHub does not let this workflow open pull requests. Turn on "
                 "\"Allow GitHub Actions to create and approve pull requests\" under Workflow permissions at "
@@ -863,7 +863,7 @@ def cmd_pr(args, now=None):
     write_summary(f'\nOpened fix pull request #{pr["number"]}: {pr["html_url"]}\n')
     work = json.loads(Path(args.work).read_text()) if Path(args.work).exists() else {"counts": {"total": 0, "new": 0}}
     post_feed(f'{work["counts"]["total"]} design findings, {work["counts"]["new"]} new. Fix PR #{pr["number"]}: '
-              f'{len(result["applied"])} changes, {len(result["kept"])} kept. Waiting for KC.', "ok", now)
+              f'{len(result["applied"])} changes, {len(result["kept"])} kept. Waiting for Khaneil.', "ok", now)
     return pr
 
 

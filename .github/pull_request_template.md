@@ -1,5 +1,5 @@
-## What changes for KC
-<!-- One or two plain sentences: what KC will see or be able to do after this merges. -->
+## What changes for Khaneil
+<!-- One or two plain sentences: what Khaneil will see or be able to do after this merges. -->
 
 ## Changelog line
 <!-- Also added at the top of CHANGELOG.md. The newest five show in the Mac app's Update button. -->

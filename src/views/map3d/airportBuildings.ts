@@ -1,9 +1,9 @@
 /** Airport-local, non-overlapping building parcels; ownership roles are prepared, not live jobs. */
 /** Airport storeys are 1.5x the old 0.32-unit floor, the same rule the city uses for its headquarters
  * (CITY_SCALE.hq.storey), so the campus stands with the Financial District, the Marketplace and the
- * Marketing Agency (KC, 2026-10-31). Footprints and the airfield stay put; only heights grow. */
+ * Marketing Agency (Khaneil, 2026-10-31). Footprints and the airfield stay put; only heights grow. */
 export const AIRPORT_STOREY_SCALE=1.5;
-// Passenger Services, Logistics and Administration were removed from the north row (KC, 2026-11-08);
+// Passenger Services, Logistics and Administration were removed from the north row (Khaneil, 2026-11-08);
 // Operations stays as the one airport office.
 const PARCELS=[
  {id:'terminal',name:'Atlas · Terminal',agent:'Airport Operations Coordinator',x:1.5,z:6,w:3.8,d:10.5,h:2.6,kind:'terminal',rooms:['Check-in operations','Passenger lounge','Gate coordination','Terminal review']},

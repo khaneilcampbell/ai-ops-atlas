@@ -1,6 +1,6 @@
 import type {Inst} from './models';
 import {HILLS} from './hillsPlan';
-/** Hills mansion, first draft (KC, 2026-10-31): stacked white slabs, dark timber, clear black-framed glass, a roof helipad and a warm clay interior.
+/** Hills mansion, first draft (Khaneil, 2026-10-31): stacked white slabs, dark timber, clear black-framed glass, a roof helipad and a warm clay interior.
  * Positions are local to the estate parcel with y measured from the terrace top; boxes are base-anchored. */
 export const MANSION_COLORS={concrete:'#f2f1ec',stone:'#a39d90',timber:'#5a3f2c',frame:'#1f2326',rail:'#cfe2e4',pad:'#2f3437',green:'#5d8a4f',pink:'#e07fb0'} as const;
 /** Warm clay interior palette (travertine, plaster, cream boucle, terracotta, timber lattice). */
@@ -38,7 +38,7 @@ export function mansionParts():MansionParts{
  solid.push(b(14,3.2,9.9,5.4,.12,4.4,C.concrete),b(14,3.32,9.9,2.6,.03,2.6,C.pad));
  solid.push(b(13.6,3.35,9.9,.12,.01,.9,C.concrete),b(14.4,3.35,9.9,.12,.01,.9,C.concrete),b(14,3.35,9.9,.8,.01,.12,C.concrete));
  for(const [x,z]of [[12.8,8.7],[15.2,8.7],[12.8,11.1],[15.2,11.1],[14,8.7],[14,11.1],[12.8,9.9],[15.2,9.9]])lights.push(b(x,3.32,z,.08,.04,.08));
- // Interior (KC's warm clay hotel references): travertine floors, plaster walls, timber lattice, arched niches,
+ // Interior (Khaneil's warm clay hotel references): travertine floors, plaster walls, timber lattice, arched niches,
  // cream rounded sofas on round rugs, clay drum counter and clay pendants. Seen through the clear glass; no lights.
  const I=INTERIOR,round:Inst[]=[];
  glow.push(b(13,.15,10.8,8.2,.012,2.4,I.floor),b(11.8,1.34,10.4,5.8,.012,3,I.floor),b(14,2.48,10.3,4.2,.012,2.8,I.floor));

@@ -8,7 +8,7 @@ const sample=(path:Pt[],step=.15)=>path.slice(1).flatMap((b,i)=>{const a=path[i]
 describe('shared transportation plan',()=>{
  for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps routes connected and clear in ${grouping} view`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),a=s.airport!;
-  // No freight trunk road or truck lot cuts through the Commerce district (KC, 2026-11-07).
+  // No freight trunk road or truck lot cuts through the Commerce district (Khaneil, 2026-11-07).
   expect(s.freight).toBeUndefined();
   expect(s.land).toContainEqual(airportFootprint(a));
   const stadium=s.stadium!,parcel={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};

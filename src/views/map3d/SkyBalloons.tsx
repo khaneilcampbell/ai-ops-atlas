@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
 import {TERRACE_H,type Scene3D} from './scene';
 import {flightClearance,decorativeAerialHeights} from './flightClearance';
-/** Decorative Atlas airship. No relationship to live worker activity. The hot air balloons were removed at KC's request. */
+/** Decorative Atlas airship. No relationship to live worker activity. The hot air balloons were removed at Khaneil's request. */
 export function SkyBalloons({scene,g,m,moving}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;moving:boolean}){
  const blimp=useRef<THREE.Group>(null),clock=useRef(0);
  const safeHeights=useMemo(()=>decorativeAerialHeights(flightClearance(scene).altitude),[scene]);

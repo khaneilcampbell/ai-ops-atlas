@@ -1,8 +1,8 @@
 # Benjaire Product Lab in Atlas
 
-Benjaire Product Lab is KC's n8n agent (`Benjaire Product Lab`, id `ruOvE7nfE713WDUL` on
+Benjaire Product Lab is Khaneil's n8n agent (`Benjaire Product Lab`, id `ruOvE7nfE713WDUL` on
 https://khancam15.app.n8n.cloud). It works out the next best product for Benjaire to launch. Once a month
-it runs five research roles in order, then emails KC a brief and saves it to Notion. Atlas only shows it:
+it runs five research roles in order, then emails Khaneil a brief and saves it to Notion. Atlas only shows it:
 desks in the Benjaire Marketing Agency, entries in the Agents list, and its brief once the agent posts
 one. **Atlas never runs the agent and makes no model calls for it.**
 
@@ -68,9 +68,9 @@ Note: the example table in the agent's "Benjaire Product Scoring" skill gives th
 Its scores actually add up to 3.00. Atlas would refuse that row, so the agent must compute totals with
 the weights, not copy the example.
 
-## Connecting it (KC, in n8n)
+## Connecting it (Khaneil, in n8n)
 
-Nothing in this repo changes the n8n agent. KC adds one tool there:
+Nothing in this repo changes the n8n agent. Khaneil adds one tool there:
 
 1. Copy the site's `AGENT_FEED_TOKEN`. Cloudflare Pages → ai-ops-atlas → Settings → Variables and
    Secrets:

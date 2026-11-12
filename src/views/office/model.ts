@@ -166,7 +166,7 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   const latest = executions[0];
   // GitHub stops any job after 6 hours, so a run "in progress" older than that is a stale record.
   if (latest?.result === "running" && now - Date.parse(latest.at) < MAX_RUN_MS) return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
-  // Proposed actions waiting for a person outrank the last result: the agent is blocked on KC.
+  // Proposed actions waiting for a person outrank the last result: the agent is blocked on Khaneil.
   if (pending > 0) return { state: "awaiting", reason: `${pending} proposed ${pending === 1 ? "action is" : "actions are"} waiting for your approval.`, basis: latest ?? null, source };
   if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };
   const done = executions.find((e) => e.result === "success" || e.result === "failure");

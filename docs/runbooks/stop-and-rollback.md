@@ -9,7 +9,7 @@ One page for the agents that email people or change what the public sees. Use it
 | SEO Maintainer (Phase 6) | Storefront titles, meta and tags | `./run.sh pause` | Restore tags from `seo_review`, redeploy |
 | Storefront deploy | `gh-pages` site | `./run.sh pause` | Push an earlier site commit |
 | Order Delivery | Buyer emails | `MAX_EMAILS_PER_DAY=0` in `.env` | Not reversible; follow up by hand |
-| Daily Email Digest | Email to KC | `./run.sh pause` | Nothing to undo |
+| Daily Email Digest | Email to Khaneil | `./run.sh pause` | Nothing to undo |
 | Benjaire Flow Intake | Owner alert, sender acknowledgement | Deactivate "Flow · 1 Intake" in n8n | Not reversible; the Worker still emails `CONTACT_TO` |
 | Contact Form Worker | Email to Benjaire, n8n webhook | Roll back the Worker deployment in Cloudflare | Same page, earlier deployment |
 

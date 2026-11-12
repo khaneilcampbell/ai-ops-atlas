@@ -1,4 +1,4 @@
-# Changes to these paths need a review from KC before they merge, once the
+# Changes to these paths need a review from Khaneil before they merge, once the
 # default-branch ruleset has "Require review from Code Owners" switched on.
 # They cover what ships a signed update to the Mac, and what can write to GitHub.
 

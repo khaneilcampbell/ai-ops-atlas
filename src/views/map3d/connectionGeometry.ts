@@ -50,7 +50,7 @@ export function clipConnectionRails(items:Inst[],openings:Pt[],radius:number):In
 
 /**
  * One straight stretch of raised walk from a to b, opened wherever a road or drive crosses it, so a raised path never
- * stands across a carriageway like a wall (KC, 2026-11-08). `y` is the slab's base above the terrace and `h` its depth.
+ * stands across a carriageway like a wall (Khaneil, 2026-11-08). `y` is the slab's base above the terrace and `h` its depth.
  */
 export function openWalk(a:Pt,b:Pt,width:number,y:number,h:number,c:string,roads:Pt[][],radius:number,base:number):Inst[]{
  const len=Math.hypot(b[0]-a[0],b[1]-a[1]);

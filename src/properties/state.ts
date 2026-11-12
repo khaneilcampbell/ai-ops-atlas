@@ -163,7 +163,7 @@ export function usePropertyIncidents(): { all: Incident[]; open: Incident[] } {
   }, [all, seen, now]);
 }
 
-/** One system notification per new critical incident, when KC has notifications on. Mount once. */
+/** One system notification per new critical incident, when Khaneil has notifications on. Mount once. */
 export function usePropertyNotifications(open: Incident[]) {
   const on = useNotifyOn();
   useEffect(() => {

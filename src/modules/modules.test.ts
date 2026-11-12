@@ -129,7 +129,7 @@ describe("building instances", () => {
 });
 
 describe("workspace configuration", () => {
-  it("gives every module type at least one building in this workspace (KC, 2026-11-10)", () => {
+  it("gives every module type at least one building in this workspace (Khaneil, 2026-11-10)", () => {
     const housed = new Set(workspaceBuildings(catalog).map((b) => b.moduleType));
     expect(MODULE_TYPE_LIST.filter((t) => !housed.has(t.id)).map((t) => t.id)).toEqual([]);
   });

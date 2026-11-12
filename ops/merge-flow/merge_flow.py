@@ -1,4 +1,4 @@
-"""Merge Flow: sort KC's open pull requests into lanes so ready work reaches production sooner.
+"""Merge Flow: sort Khaneil's open pull requests into lanes so ready work reaches production sooner.
 
 A few small GraphQL reads per run (a handful of repositories each) cover every allowlisted repository. Nothing else happens when the
 triage is unchanged: no Claude call, no report, no writes. Claude writes a short brief only when the
@@ -388,7 +388,7 @@ def cmd_triage(args, now=None):
         if not gateway_down(e):
             raise
         # GitHub's own gateway, not this agent: skip quietly and let the next run triage. Failing here
-        # only sent KC a failure email for something nobody can fix.
+        # only sent Khaneil a failure email for something nobody can fix.
         print(f"::warning::GitHub's GraphQL gateway did not answer after retries ({e}). Skipping this run; the next one will triage.")
         write_summary("Skipped: GitHub's GraphQL gateway did not answer after retries. The next run will triage.\n")
         set_output("brief", "false")

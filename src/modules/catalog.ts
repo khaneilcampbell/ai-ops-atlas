@@ -2,7 +2,7 @@ import { MODULE_TYPE_IDS, type AtlasModuleType, type ModuleAvailability, type Mo
 
 // The platform module catalog. Every capability is "planned" unless Atlas already does it today,
 // and an available one names the code that does it (checked by catalog.test.ts). Nothing here
-// names a workspace or a business: Benjaire, KC's sites and the rest are instances (./instances.ts).
+// names a workspace or a business: Benjaire, Khaneil's sites and the rest are instances (./instances.ts).
 
 const on = (id: string, label: string, evidence: string): ModuleCapability => ({ id, label, state: "available", evidence });
 const later = (id: string, label: string): ModuleCapability => ({ id, label, state: "planned" });

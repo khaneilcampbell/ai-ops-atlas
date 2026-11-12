@@ -1,18 +1,18 @@
 # Website property dashboards
 
-KC, 2026-11-03 (senior engineer prompt, item 3, Domain and Website Operations): turn the
+Khaneil, 2026-11-03 (senior engineer prompt, item 3, Domain and Website Operations): turn the
 benjaire.com and khaneilcampbell.com buildings into live property dashboards with domain
 expiration, DNS, SSL, uptime, deployments, Cloudflare events, performance and traffic where data
 is available. A failed deployment surfaces as an actionable incident on the building.
 
 **Status:** built in this pull request. Everything that needs no new credential is live.
-Cloudflare traffic and change events read KC's read-only token once it is saved on the site
-(KC created it on Nov 3). Uptime Kuma history shows "Not connected" until KC supplies its address
-(see [What KC supplies](#what-kc-supplies)).
+Cloudflare traffic and change events read Khaneil's read-only token once it is saved on the site
+(Khaneil created it on Nov 3). Uptime Kuma history shows "Not connected" until Khaneil supplies its address
+(see [What Khaneil supplies](#what-kc-supplies)).
 
 ## Where it shows
 
-| Place | What KC sees |
+| Place | What Khaneil sees |
 |---|---|
 | Mission Control → Website management | One "Live site" dashboard per website: open incidents with links to act, then one tile per signal. The count of open incidents sits in the section's header |
 | System notifications | One notification per new critical incident, when "Notify me on this device" is on (the same switch as agent alerts) |
@@ -20,7 +20,7 @@ Cloudflare traffic and change events read KC's read-only token once it is saved 
 This follows the command center design (`docs/command-center.md`, draft #210): a website is a
 **resource** of the place that runs it (Benjaire HQ becomes the Sales Office), and its incidents
 are exactly what the Control Room's "Failed or silent" list will gather in phase 4. Until then,
-they live in Mission Control. (Nov 3: KC moved them there from the building panels and removed the
+they live in Mission Control. (Nov 3: Khaneil moved them there from the building panels and removed the
 header pill, which made the header wider than the screen.)
 
 ## Signals and sources
@@ -75,7 +75,7 @@ flowchart LR
   allowlist gains `commits/{sha}/check-runs`, `deployments` and `deployments/{id}/statuses`.
 - `src/properties/incidents.ts`: turns observed data into incidents.
 - `src/properties/state.ts`: one store and poller, only while the window is visible. No model
-  calls and no agent loop (KC's Oct 31 token rule).
+  calls and no agent loop (Khaneil's Oct 31 token rule).
 
 ## Incidents
 
@@ -92,9 +92,9 @@ flowchart LR
 Each incident has a key for this occurrence (for example the failed build's id), so **Dismiss**
 hides it on this device until the next occurrence. **Fix with Claude** is the existing link
 (`ops/fix-with-claude/`): it opens a prefilled `claude-fix` issue; nothing is sent until
-KC presses Create.
+Khaneil presses Create.
 
-## What KC supplies
+## What Khaneil supplies
 
 Nothing is needed for what shipped here. For the remaining tiles:
 
@@ -111,13 +111,13 @@ Nothing is needed for what shipped here. For the remaining tiles:
    same Pages settings. Kuma's status page API needs no key.
 3. Optional: a Google API key restricted to the PageSpeed Insights API, as `PAGESPEED_API_KEY`,
    if the free anonymous quota runs out.
-4. Optional: in the "KC Atlas Live" GitHub App, subscribe to **Check run** events so a Workers
+4. Optional: in the "Khaneil Atlas Live" GitHub App, subscribe to **Check run** events so a Workers
    Builds failure reaches Atlas within seconds instead of on the next 5-minute check.
 
 ## Next steps
 
 1. Confirm the Cloudflare tiles on the deployed site once the token is saved. Both domains are
-   zones in KC's account. khaneilcampbell.com is served by GitHub Pages: if its records are DNS
+   zones in Khaneil's account. khaneilcampbell.com is served by GitHub Pages: if its records are DNS
    only (grey cloud), Cloudflare sees no requests and the Traffic tile says "Not proxied", not zero.
    A domain outside the account shows "not in your Cloudflare account".
 2. Wire Uptime Kuma (`/api/status-page/{slug}` and `/api/status-page/heartbeat/{slug}`), and

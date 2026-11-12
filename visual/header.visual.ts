@@ -10,7 +10,7 @@ async function desktopChrome(page: Page, mac = true) {
   await page.evaluate((mac) => {
     if (mac) document.documentElement.classList.add("mac-app");
     const header = document.querySelector(".header")!;
-    // The Mac app shows no platform label: "Desktop" told KC nothing they did not know.
+    // The Mac app shows no platform label: "Desktop" told Khaneil nothing they did not know.
     const platform = header.querySelector(".platform-label");
     const live = document.createElement("span");
     live.className = "live-pill live";

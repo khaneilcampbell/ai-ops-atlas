@@ -34,7 +34,7 @@ export interface FinancialPark extends Rect {
  rings:{x:number;z:number;r:number}[];beds:(Rect&{c:string})[];shrubs:[number,number,number][];plazas:Rect[];sculptures:Pt[];
 }
 /**
- * Financial Park, after a downtown central green (KC, 2026-10-31): a stepped fountain runs down the
+ * Financial Park, after a downtown central green (Khaneil, 2026-10-31): a stepped fountain runs down the
  * middle between two promenades, the station plaza is the head of the axis, and sculpture-garden
  * rings, flower beds and shrubs fill the lawns either side. The east promenade (x 21.8) is the
  * station path, so the stairs still land on it.
@@ -91,7 +91,7 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  blocks.push(...towerBoxes);
  // Join the nearest original local street, rather than a long stadium-side detour.
  // Of the northmost street points, prefer one where a north-south street ends, so the district road
- // carries that avenue straight on instead of jogging over to a tower's driveway (KC, 2026-11-08).
+ // carries that avenue straight on instead of jogging over to a tower's driveway (Khaneil, 2026-11-08).
  const streets=s.carBridges.flatMap(b=>b.roads).flat().sort((a,b)=>a[1]-b[1]);
  const avenueEnds=s.carBridges.flatMap(b=>b.roads).flatMap(r=>r.slice(1).flatMap((q,i)=>Math.abs(q[0]-r[i][0])<1e-6&&Math.abs(q[1]-r[i][1])>1e-6?[q[1]<r[i][1]?q:r[i]]:[]));
  const north=streets[0]?.[1];

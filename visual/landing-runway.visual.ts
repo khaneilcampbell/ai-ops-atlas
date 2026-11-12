@@ -2,7 +2,7 @@ import { test, type Page } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
-/** Landing runway and arrivals (KC, 2026-11-07). Writes screenshots to SHOT_DIR; no baseline compare.
+/** Landing runway and arrivals (Khaneil, 2026-11-07). Writes screenshots to SHOT_DIR; no baseline compare.
  * Reduced motion keeps the airport clock still, so each shot sets that clock (the Airport component's first
  * ref) to the moment slot 0 reaches a stage of its landing, lets the frame loop pose the jets, then renders
  * cameras given relative to that jet, in airport-local coordinates (mirror applied for west airports). */

@@ -21,7 +21,7 @@ describe('rail commuters',()=>{
    expect(people.filter(p=>p.work===COMMUTER_TOWERS.ritz)).toHaveLength(2);
   }
   expect(plan.commuters[0].offset).not.toBe(plan.commuters[6].offset);
-  // KC, 2026-10-31: Financial District people ride out to every Hills business and the mansion.
+  // Khaneil, 2026-10-31: Financial District people ride out to every Hills business and the mansion.
   const visitors=plan.commuters.slice(12),places=new Set(visitors.map(p=>p.home));
   expect(places).toEqual(new Set(['marketplace']));
   expect(new Set(visitors.map(p=>p.work)).size,'from many towers').toBeGreaterThanOrEqual(6);

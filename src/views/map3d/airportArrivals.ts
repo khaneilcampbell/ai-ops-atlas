@@ -2,7 +2,7 @@ import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_REMOTE_STANDS,AIRPORT_LAYOUT,DEFAULT
 import {roundedRoad} from './highway';
 
 /**
- * Arrivals (KC, 2026-11-07): every departure comes back. It leaves the city circuit on a smooth descending turn,
+ * Arrivals (Khaneil, 2026-11-07): every departure comes back. It leaves the city circuit on a smooth descending turn,
  * flies a straight final onto the landing runway, flares, touches down, rolls out, takes the taxi lane north of
  * runway 1 to the arrivals stand, pushes back and taxis down the parallel taxiway to the hold.
  *

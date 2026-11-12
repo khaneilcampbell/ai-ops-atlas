@@ -107,7 +107,7 @@ describe('Benjaire Marketing Agency',()=>{
   for(const t of v.towers)expect(overlap({x:b.x,z:b.z,w:b.w,d:b.d},{x:t.x-t.size/2,z:t.z-t.size/2,w:t.size,d:t.size})).toBe(false);
  });
  it('never draws two materials on the same plane, so nothing flickers in the depth buffer',()=>{
-  // KC, 2026-11-09: the slot's copper linings sat exactly on its cream walls and shimmered.
+  // Khaneil, 2026-11-09: the slot's copper linings sat exactly on its cream walls and shimmered.
   const tris=(g:THREE.BufferGeometry)=>{const p=g.getAttribute('position'),out:THREE.Triangle[]=[];for(let i=0;i<p.count;i+=3){const t=new THREE.Triangle(new THREE.Vector3().fromBufferAttribute(p,i),new THREE.Vector3().fromBufferAttribute(p,i+1),new THREE.Vector3().fromBufferAttribute(p,i+2));if(t.getArea()>1e-6)out.push(t);}return out;};
   const geo=agencyGeometry(),names=['shell','copper','glass'] as const,hits:string[]=[],plane=new THREE.Plane(),n=new THREE.Vector3(),c=new THREE.Vector3(),q=new THREE.Vector3();
   for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){const A=tris(geo[names[i]]);

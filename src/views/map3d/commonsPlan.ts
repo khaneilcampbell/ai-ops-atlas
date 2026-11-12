@@ -6,7 +6,7 @@ export const COMMONS={pathWidth:.48,bridgeWidth:.55,edgeClearance:.6,pavilionRad
 export interface CommonsPlan {rect:Rect;pond:Pt[];loop:Pt[];paths:Pt[][];bridges:[Pt,Pt][];pavilion:Pt;amphitheater:Pt;trees:Pt[];benches:Pt[];benchRotations:number[];lights:Pt[];access:{service:Pt;marketplace:Pt}}
 /** One bounded park in the existing meadow; no headquarters or transport coordinates move. */
 export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportConnections'>&{parks?:Pick<Scene3D,'parks'>['parks']}):CommonsPlan|undefined{
- // The Service Desk tower was removed (KC, 2026-11-09); its vacant lot stays where it stood, so the
+ // The Service Desk tower was removed (Khaneil, 2026-11-09); its vacant lot stays where it stood, so the
  // park keeps the same west anchor from the middle of that lot.
  const lot=s.parks?.find(p=>p.id==='park:vacant:service-desk');
  const mall=s.mall,desk=s.towers.find(t=>t.projectId==='service-desk')??(lot&&{x:lot.x+lot.w/2,z:lot.z+lot.d/2,size:0}),profile=s.towers.find(t=>t.projectId==='github-profile');

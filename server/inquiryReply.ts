@@ -1,5 +1,5 @@
 // Send a reply to a website inquiry from Atlas, as the designed Benjaire email, with a copy to
-// KC's Gmail. KC reviews the text in Atlas and presses Send; nothing here sends on its own.
+// Khaneil's Gmail. Khaneil reviews the text in Atlas and presses Send; nothing here sends on its own.
 // Two entry points with the same body: /api/inquiries/reply (signed-in page, behind Access) and
 // /api/hooks/inquiries/reply (Mac app, sync key). The recipient is read from the stored inquiry,
 // never from the request, so the endpoint can only answer people who wrote in. Off until
@@ -12,7 +12,7 @@ import { bearerOk, type D1, type LiveEnv } from "./live";
 export interface ReplyEnv {
   /** Sender on a domain verified in Resend, for example "Benjaire <contact@benjaire.com>". */
   REPLY_FROM?: string;
-  /** Where KC's copy goes (the Gmail inbox). */
+  /** Where Khaneil's copy goes (the Gmail inbox). */
   REPLY_BCC?: string;
   /** Where the customer's answer should land. Defaults to the sender. */
   REPLY_REPLY_TO?: string;

@@ -18,7 +18,7 @@ export function unionRect(rs:Rect[]):Rect|undefined{
 /**
  * One project, one district: every terrace carrying the project's id, as one rectangle. The
  * GitHub tower's podium adds a second terrace with Profile Tower's id beside the first
- * (githubAnnex.ts), so taking only the first one lit half of the district (KC, 2026-11-09:
+ * (githubAnnex.ts), so taking only the first one lit half of the district (Khaneil, 2026-11-09:
  * "that entire building is a part of one district").
  */
 export function districtRect(scene:Pick<Scene3D,'terraces'>,id:string):Rect|undefined{
