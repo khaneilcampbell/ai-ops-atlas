@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Repository Intelligence: a run cut off because Atlas closed no longer shows as a failure, and the scheduler runs it again on the next launch instead of waiting a week. A scheduled run on a repository GitHub can't find (deleted or renamed) takes it off the scheduled list, so it stops failing every week (#PR)
+- 2026-11-12 · Repository Intelligence: a run cut off because Atlas closed no longer shows as a failure, and the scheduler runs it again on the next launch instead of waiting a week. A scheduled run on a repository GitHub can't find (deleted or renamed) takes it off the scheduled list, so it stops failing every week (#395)
 - 2026-11-12 · Removed Benjaire Dashboard from Atlas: its catalog entry, Dashboard CI agent, runbook and app code are gone. The map is unchanged (its cleared lot stays), and the Flow intake files moved to apps/benjaire-flow (#377)
 - 2026-11-12 · The Agent Operations Center now lists the Agent Registry Sync, the n8n workflow that keeps your agent registry Google Sheet up to date (#377)
 - 2026-11-12 · District names on the map (AI Engineering, Career & Portfolio, Business Operations and the rest) now sit at the buildings they belong to, and follow them whenever a building moves (#380)
