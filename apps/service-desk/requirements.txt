@@ -22,7 +22,7 @@ plotly==7.1.0
 protobuf==7.36.2
 pyarrow==26.0.0
 pydeck==0.9.3
-python-dateutil==3.0.0
+python-dateutil==4.0.0
 python-multipart==0.0.33
 referencing==0.37.0
 requests==2.34.2
