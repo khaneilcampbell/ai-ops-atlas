@@ -528,6 +528,12 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: KC submits the approve form from the approval email
+    observe:
+      agent_feed: true
+    # Writes to Stripe, but only after Khaneil's approval form. Each publish reports to Atlas, and a
+    # failed one raises an alert. It runs only when Khaneil approves, so there is no silence window.
+    alerts:
+      failures: true
     last_run: null
     history:
       - at: 2026-11-11
@@ -691,6 +697,13 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Each paid Stripe checkout
+    observe:
+      agent_feed: true
+    # Customer-facing and unattended: each buyer email (delivery, and the follow ups from
+    # "Shop · Flow follow ups") reports to Atlas, and a failed send raises an alert. It runs per
+    # order, so a quiet stretch is normal and there is no silence window.
+    alerts:
+      failures: true
     last_run: null
     history:
       - at: 2026-11-11
