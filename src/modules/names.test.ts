@@ -7,11 +7,14 @@ import { MALL_KEY } from "../views/map3d/mallPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
+import { GALLERIA_KEY } from "../views/map3d/galleriaPlan";
+import { STADIUM_KEY } from "../views/map3d/stadiumPlan";
+import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
 import { financialBuildingMatches, landmarkMatches } from "../lib/financialSearch";
 import { BUILDING_NAMES, buildingAliases, buildingDisplayName, buildingNameIssues, buildingOrganization, currentBuildingName, parseBuildingNames } from "./names";
 
 /** Every building id the map draws itself and can be renamed in catalog/workspace/buildings.yaml. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id)]);
+const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 describe("workspace building names", () => {
   it("loads without problems and only names buildings that exist on the map", () => {
@@ -22,14 +25,25 @@ describe("workspace building names", () => {
   it("applies KC's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
       [AGENCY_KEY, "Growth & Marketing Studio", "Benjaire"],
-      [financialKey("residence"), "Data Intelligence Center", "Aldren Insights"],
-      [financialKey("banks"), "Financial Operations Tower", "Bayvale Bank"],
-      [financialKey("budget"), "Budget & Forecasting Center", "Ellery Budget Center"],
-      [financialKey("records"), "Governance & Compliance Center", "Halden Trust"],
+      [financialKey("residence"), "Data Intelligence Center", "Benjaire"],
+      [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
+      [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
+      [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
       [DEALERSHIP_KEY, "Infrastructure Operations Hub", "Vantor Motors"],
-      [financialKey("investments"), "Integration Exchange", "Robin Exchange"],
+      [financialKey("investments"), "Investment Operations Center", "Benjaire"],
       [MALL_KEY, "Product Marketplace", "Atlas"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
+      [financialKey("harbor-residence"), "Client Success Center", "Benjaire"],
+      [financialKey("circa"), "Team Residence Towers", "Benjaire"],
+      [financialKey("insurance"), "Risk & Insurance Center", "Benjaire"],
+      [financialKey("business-finance"), "Business Finance Center", "Benjaire"],
+      ["service:atlas-galleria", "Vendor & Supplier Hub", "Atlas"],
+      ["service:skyline-stadium", "Team Events Arena", "Atlas"],
+      ["service:stadium-station", "Events Arena Station", "Atlas"],
+      ["service:airport-building:terminal", "Passenger Terminal", "Atlas Airport"],
+      ["service:airport-building:tower", "Air Traffic Control", "Atlas Airport"],
+      ["service:airport-building:cargo", "Model Intelligence Lab", "Atlas Airport"],
+      ["service:airport-building:operations", "Observability Center", "Atlas Airport"],
     ];
     for (const [key, name, org] of want) {
       expect(buildingDisplayName(key, "fallback"), key).toBe(name);
@@ -44,6 +58,7 @@ describe("workspace building names", () => {
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
       ["commerce-pipeline", "Commerce Operations Center", undefined, "Commerce Pipeline"],
       ["soc-lab", "Security Operations Center", undefined, "SOC Lab"],
+      ["portfolio-site", "Portfolio Web Studio", undefined, "Portfolio Site"],
     ];
     for (const [id, name, organization, former] of want) {
       const p = catalog.projects.find((p) => p.id === id)!;
@@ -52,9 +67,9 @@ describe("workspace building names", () => {
   });
 
   it("leaves unconfigured buildings exactly as the map names them", () => {
-    expect(buildingDisplayName("service:skyline-stadium", "Atlas Stadium")).toBe("Atlas Stadium");
-    expect(buildingDisplayName(financialKey("circa"), "Ellipse Residences")).toBe("Ellipse Residences");
-    expect(buildingOrganization("service:skyline-stadium")).toBeUndefined();
+    expect(buildingDisplayName("service:financial-park", "Financial Park")).toBe("Financial Park");
+    expect(buildingDisplayName("service:atlas-commons", "Atlas Commons")).toBe("Atlas Commons");
+    expect(buildingOrganization("service:financial-park")).toBeUndefined();
     expect(currentBuildingName("Atlas Marketplace")).toBe("Product Marketplace");
     expect(currentBuildingName("Financial District")).toBe("Financial District");
   });

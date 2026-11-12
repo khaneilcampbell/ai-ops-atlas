@@ -12,13 +12,15 @@ import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
-import { money } from "../usage/model";
+import { compact, money, providerLabel } from "../usage/model";
+import { costPerModel, modelInventory, WINDOW_DAYS } from "../models/lab";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
 import { infraIncidents } from "../infra/incidents";
 import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
+import { securityIncidents } from "../security/incidents";
 import { buildRegistry } from "../registry/registry";
 import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
 import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, studioHealth, type TrafficState } from "../growth/studio";
@@ -26,6 +28,7 @@ import { useAgentReports } from "../reports/client";
 import { HealthBadge } from "./bits";
 import { signalCounts, signalRows, type SignalState } from "../observability/signals";
 import { documentCount, documentInventory } from "../knowledge/docs";
+import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
@@ -51,14 +54,22 @@ export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePa
     { capability: "hosts", label: "Hosting inventory", component: Hosting },
     { capability: "deploys", label: "Deployment overview", component: DeployOverview },
   ],
-  "security-operations-center": [{ capability: "scanning", label: "Security alerts", component: SecurityAlerts }],
+  "security-operations-center": [
+    { capability: "incidents", label: "Security incidents", component: SecurityIncidents },
+    { capability: "scanning", label: "Security alerts", component: SecurityAlerts },
+  ],
   "commerce-product-marketplace": [{ capability: "pipeline", label: "Publishing pipeline", component: PublishingPipeline }],
+  "model-intelligence-lab": [
+    { capability: "models", label: "Model inventory", component: ModelInventory },
+    { capability: "cost", label: "Cost per model", component: ModelCost },
+  ],
   "growth-marketing-studio": [
     { capability: "audience", label: "Site traffic", component: SiteTraffic },
     { capability: "research", label: "Product research briefs", component: ResearchBriefs },
   ],
   "observability-center": [{ capability: "signals", label: "Connected signals", component: ConnectedSignals }],
   "knowledge-repository": [{ capability: "docs", label: "Document inventory", component: DocumentInventory }],
+  "integration-exchange": [{ capability: "catalog", label: "Vendors and suppliers", component: Suppliers }],
 };
 
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
@@ -303,6 +314,45 @@ function SecurityAlerts() {
   );
 }
 
+function SecurityIncidents() {
+  const { catalog } = useAtlas();
+  const repos = useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]);
+  const alerts = useSecurityAlerts(repos);
+  const snap = alerts.value;
+  const list = useMemo(() => securityIncidents(snap), [snap]);
+  const critical = list.filter((i) => i.severity === "critical").length;
+  const unread = snap?.state === "ok" ? snap.repos.filter((r) => repoSecurity(r) === "unknown").length : 0;
+  const summary =
+    snap?.state === "ok" ? (list.length ? `${list.length} open${critical ? `, ${critical} critical` : ""}` : "None open")
+    : snap?.state === "not-configured" ? "Not set up"
+    : alerts.state === "loading" ? "Checking" : alerts.state === "error" ? "Unavailable" : "Not connected here";
+  return (
+    <details className="module-list" aria-label="Security incidents" open={list.length > 0}>
+      <summary className="muted small">Incidents · {summary}</summary>
+      {list.length ? (
+        <ul>
+          {list.map((i) => (
+            <li key={i.key}>
+              <span>{i.severity === "critical" ? <span className="run-failure">{i.title}</span> : i.title}</span>
+              <span className="muted small">
+                {i.detail} · <a href={i.url} target="_blank" rel="noreferrer">Open on GitHub</a>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">
+          {snap?.state === "ok" ? "No exposed secrets and no critical or high alerts seen." : snap?.state === "not-configured" ? "Needs the site's GitHub token, as for Security alerts." : alerts.message ?? "Reading GitHub security alerts."}
+        </p>
+      )}
+      <p className="muted small">
+        Raised from the Security alerts counts: any open secret scanning alert is critical, critical Dependabot or code scanning alerts are critical, high ones are warnings. Medium and low stay in the alerts list.
+        {unread ? ` ${unread} ${unread === 1 ? "repository was" : "repositories were"} not fully read, so ${unread === 1 ? "it" : "they"} may hide incidents.` : ""}
+      </p>
+    </details>
+  );
+}
+
 const CAP_LABEL: Record<CapState, string> = { ok: "Under the cap", near: "Nearly used", over: "Cap reached", unseen: "Spend not visible to Atlas" };
 
 function SpendCaps() {
@@ -458,6 +508,51 @@ function ResearchBriefs() {
 
 const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
 
+function Suppliers() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const rows = useMemo(() => supplierRows(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const failing = rows.filter((r) => r.state === "failing" || r.state === "silent").length;
+  return (
+    <details className="module-list" aria-label="Vendors and suppliers" open={failing > 0}>
+      <summary className="muted small">Vendors and suppliers · {rows.length ? `${rows.length} in use${failing ? `, ${failing} with failing workers` : ""}` : "None named in manifests"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.id} data-state={r.state === "not-running" ? "none" : undefined}>
+              <span>{r.vendor} · {r.role}</span>
+              <span className="muted small">
+                {r.state === "failing" || r.state === "silent" ? <span className="run-failure">{STAGE_LABEL[r.state]}</span> : STAGE_LABEL[r.state]}
+                {` · ${r.workers} ${r.workers === 1 ? "worker" : "workers"} · ${r.projects.join(", ")}`}
+                {r.lastRunAt ? ` · last run ${relative(r.lastRunAt)}` : " · no run seen"}
+                {r.lastRunUrl ? <> · <a href={r.lastRunUrl} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No agent or automation manifest names an outside vendor yet.</p>
+      )}
+      <ul aria-label="Vendor data sources">
+        {SUPPLIER_SOURCES.map((s) => (
+          <li key={s.id} data-state={s.state === "connected" ? undefined : "none"}>
+            <span>{s.label}</span>
+            <span className="muted small">{s.state === "connected" ? "Connected" : "Not connected"} · {s.detail}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">Health is the worst observed state of the workers that use each vendor. A vendor whose workers have no run seen shows as unknown, never healthy.</p>
+    </details>
+  );
+}
+
 function PublishingPipeline() {
   const { catalog, repos } = useAtlas();
   const { telemetry } = useIntel();
@@ -565,6 +660,62 @@ function DocumentInventory() {
         </div>
       ))}
       <p className="muted small">Each repository's page (where its README lives), the website it declares on GitHub, and the links each manifest declares. Atlas lists them; it doesn't read them, so there is no search yet.</p>
+    </details>
+  );
+}
+
+function ModelInventory() {
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => modelInventory(usage.records), [usage.records]);
+  return (
+    <details className="module-list" aria-label="Model inventory">
+      <summary className="muted small">Model inventory · {usage.firstLoad ? "Loading" : rows.length ? `${rows.length} model${rows.length === 1 ? "" : "s"} in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} title={r.agents.join(", ")}>
+              <span>{r.model}<span className="muted small"> · {r.providers.map(providerLabel).join(", ")}</span></span>
+              <span className="muted small">{compact(r.requests)} calls · {r.agents.length} agent{r.agents.length === 1 ? "" : "s"} · last {relative(r.last)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">Every model a recorded call used in the last {WINDOW_DAYS} days, from the same records as API Usage. Hover a row for the agents that call it.</p>
+    </details>
+  );
+}
+
+function ModelCost() {
+  const { setView } = useAtlas();
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => costPerModel(usage.records), [usage.records]);
+  const total = rows.reduce((n, r) => n + r.costUsd, 0);
+  return (
+    <details className="module-list" aria-label="Cost per model">
+      <summary className="muted small">Cost per model · {usage.firstLoad ? "Loading" : rows.length ? `${money(total)} known in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} data-state={r.costUsd === 0 && !r.unpriced ? "none" : undefined}>
+              <span>{r.model}</span>
+              <span className="muted small">
+                {r.costUsd > 0 ? `${r.unpriced ? "at least " : ""}${money(r.costUsd)}${r.billedOnly ? " billed" : r.costUsd ? " estimated" : ""}` : r.plan ? "Covered by a plan" : "Cost unknown"}
+                {r.perRequestUsd !== null ? ` · ${money(r.perRequestUsd)} a call` : ""}
+                {r.unpriced ? ` · ${r.unpriced} call${r.unpriced === 1 ? "" : "s"} with no price set` : ""}
+                {r.plan && r.costUsd > 0 ? ` · ${r.plan} on a plan` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">
+        Estimated means reported tokens times the prices set in Atlas; billed is the provider's own figure. A model with no price set shows its cost as unknown, never $0.{" "}
+        <button className="text-btn small" onClick={() => setView("usage")}>API Usage</button>
+      </p>
     </details>
   );
 }

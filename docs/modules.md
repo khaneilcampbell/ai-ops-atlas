@@ -28,6 +28,11 @@ repositories, agents or integrations, and the earlier name keeps working in sear
 
 ## Extension points
 
+### Benjaire finance data
+
+What Benjaire business data each Financial District building holds, and where an import or
+agent writes it: [benjaire-finance.md](benjaire-finance.md).
+
 ### Rename a building
 - A catalog building: set `name` in its manifest, keep the old name in `former_names`, and put who
   it belongs to in `organization`.
@@ -154,6 +159,13 @@ or location. Each feed reports one of four states: counted, switched off for the
 readable with the token, or unavailable. A repository shows no open alerts only when all three
 feeds were counted. Answers are cached for ten minutes (one minute when a read failed).
 
+Its **Incidents** list is raised from those same counts (`src/security/incidents.ts`), so nothing new
+is fetched: any open secret scanning alert is critical (a leaked secret has no severity and must be
+rotated), critical Dependabot or code scanning alerts are critical, and high ones are warnings.
+Medium and low alerts stay in the alerts list. A feed that couldn't be read raises nothing, and the
+list says how many repositories were not fully read. Each incident links to the matching GitHub
+security page; Atlas cannot dismiss or fix an alert.
+
 ### Spend caps
 The Financial Operations Tower compares this month's spend with each spend cap the workspace has
 set (`src/finance/caps.ts` `SPEND_CAPS`). The Atlas agents' budget is read from Atlas's own settings
@@ -190,6 +202,14 @@ instead of a zero, and a check that isn't set up or failed says so. **Product re
 lists the newest monthly briefs the research agent posted to the site (`src/reports`), one per
 month, with the top pick, its scorecard total and whether real demand has validated it. No new
 credentials, and nothing calls a model.
+
+### Model inventory and cost per model
+The Model Intelligence Lab at the airport lists every model a recorded call used in the last 30
+days, with its provider, calls and the agents that call it (`src/models/lab.ts` `modelInventory`),
+and the same models ranked by known cost (`costPerModel`). Both read the API Usage records, so they
+count only what Atlas logged or imported. A model with no price set shows "Cost unknown" or "at
+least" its priced part, never $0; subscription calls show "Covered by a plan". Evaluations stay
+planned.
 
 ## Entitlements are not security
 `entitlements` decides which modules the page shows as switched on. A module the workspace isn't

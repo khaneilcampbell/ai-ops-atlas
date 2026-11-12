@@ -58,7 +58,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 17, B: 10, C: 23, D: 9, E: 1, F: 1, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 17, B: 11, C: 22, D: 9, E: 1, F: 1, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -284,12 +284,12 @@ describe("directory", () => {
 
   it("lists items that need review with a reason", () => {
     const s = summarize(entries);
-    const loop = s.needsReview.find((e) => e.profile.id === "commerce-loop");
-    expect(loop?.review).toContain("High risk");
+    const merge = s.needsReview.find((e) => e.profile.id === "atlas-merge-pr");
+    expect(merge?.review).toContain("High risk");
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(33);
+    expect(s.observable).toBe(29);
   });
 });
 

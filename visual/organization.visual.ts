@@ -7,7 +7,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B'}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(16);
+ await expect(page.locator('.reg-row')).toHaveCount(18);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="github-merge-flow"]')).toHaveCount(0);
  await expect(page.locator('.reg-row[data-id="skyline-inquiry-assistant"]')).toHaveCount(1);
@@ -15,7 +15,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(36);
+ await expect(page.locator('.reg-row')).toHaveCount(43);
  for(const id of ['github-merge-flow','atlas-ci','atlas-production-coordinator','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="atlas-production-coordinator"]').click();await settle(page,1);

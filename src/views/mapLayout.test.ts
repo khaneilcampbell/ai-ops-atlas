@@ -187,10 +187,14 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
     // laid out as a cleared district, in the same place, with no building.
     expect(layout.districts.map(d=>d.project.id)).not.toContain("benjaire-ops");
     const lot=layout.cleared!.find(d=>d.project.id==="benjaire-ops")!,old=without.districts.find(d=>d.project.id==="was-benjaire-ops")!;
-    expect([lot.ox,lot.oy,lot.size]).toEqual([old.ox,old.oy,old.size]);
+    const oldHub=without.districts.find(d=>d.project.id==="ai-ops-atlas")!;
+    const expectedLot=group==="district"?oldHub:old;
+    expect([lot.ox,lot.oy,lot.size]).toEqual([expectedLot.ox,expectedLot.oy,expectedLot.size]);
     // Every other building stands exactly where it stood while the two towers were drawn.
     const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
-    expect(at(layout)).toEqual(at(without));
+    const expected=at(without);
+    if(group==="district")expected["ai-ops-atlas"]=[old.ox,old.oy,old.size];
+    expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();
     expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:service-desk"]);
     // A group left with only a vacant lot gets no heading.
