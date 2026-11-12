@@ -3,7 +3,7 @@ import { useAtlas } from "../state";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
-import { workspaceBuildings } from "../modules/instances";
+import { instancesOf, workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
 import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
@@ -29,6 +29,9 @@ import { HealthBadge } from "./bits";
 import { signalCounts, signalRows, type SignalState } from "../observability/signals";
 import { documentCount, documentInventory } from "../knowledge/docs";
 import { assignmentCounts, automationAssignments, type AssignmentState } from "../business/assignments";
+import { businessKpis, type KpiState } from "../business/kpis";
+import { aggregateHealth, buildingAssets } from "../modules/operations";
+import { PROPERTIES } from "../properties/registry";
 import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
 
 /**
@@ -43,7 +46,10 @@ import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
  */
 export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePanel<ComponentType>[]>> = {
   "atlas-command-center": [{ capability: "inventory", label: "Module inventory", component: Inventory }],
-  "business-operations-hq": [{ capability: "assignments", label: "Automation assignments", component: Assignments }],
+  "business-operations-hq": [
+    { capability: "kpis", label: "Operational KPIs", component: BusinessKpis },
+    { capability: "assignments", label: "Automation assignments", component: Assignments },
+  ],
   "development-repository-hub": [{ capability: "dependencies", label: "Project dependencies", component: Dependencies }],
   "workflow-automation-plant": [
     { capability: "n8n", label: "Live n8n runs", component: N8nRuns },
@@ -752,6 +758,46 @@ function Assignments() {
         </div>
       ))}
       <p className="muted small">Every agent and automation that works for this business, from its manifest. The last run comes from live n8n or GitHub Actions; an item that reports nowhere Atlas reads is never shown as healthy. Hover a row for what starts it.</p>
+    </details>
+  );
+}
+
+const KPI_MARK: Record<KpiState, string> = { good: "Good", warn: "Watch", bad: "Needs attention", unknown: "No data" };
+
+function BusinessKpis() {
+  const { catalog, repos } = useAtlas();
+  const n8n = useN8nRuns();
+  const props = useAllPropertyData();
+  const groups = useMemo(() => {
+    const assignments = automationAssignments(catalog, n8n.value, repos);
+    return instancesOf(workspaceBuildings(catalog), "business-operations-hq").flatMap((b) => {
+      if (!b.projectId) return [];
+      const assets = buildingAssets(b, catalog);
+      const sites = PROPERTIES.filter((p) => p.projectId === b.projectId).map((property) => ({ property, snap: props[property.id]?.site }));
+      const mine = assignments.filter((g) => g.projectId === b.projectId);
+      return [{ id: b.projectId, business: b.organization ?? b.name, kpis: businessKpis({ sites, ci: aggregateHealth(assets.repositories, repos), automations: assignmentCounts(mine) }) }];
+    });
+  }, [catalog, n8n.value, repos, props]);
+  const all = groups.flatMap((g) => g.kpis);
+  const bad = all.filter((k) => k.state === "bad").length;
+  const known = all.filter((k) => k.state !== "unknown").length;
+  return (
+    <details className="module-list" aria-label="Operational KPIs">
+      <summary className="muted small">Operational KPIs · {bad ? `${bad} need attention` : `${known} of ${all.length} reporting`}</summary>
+      {groups.map((g) => (
+        <div key={g.id}>
+          {groups.length > 1 && <div className="small">{g.business}</div>}
+          <ul>
+            {g.kpis.map((k) => (
+              <li key={k.id} data-state={k.state === "unknown" ? "none" : undefined}>
+                <span>{k.label}<span className="muted small"> · {k.state === "bad" ? <span className="run-failure">{KPI_MARK[k.state]}</span> : KPI_MARK[k.state]}</span></span>
+                <span className="muted small">{k.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p className="muted small">From the site probe, the uptime page, GitHub CI and the automation runs Atlas already reads. A KPI with nothing to read says so instead of showing as good.</p>
     </details>
   );
 }

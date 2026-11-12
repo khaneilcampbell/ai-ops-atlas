@@ -112,7 +112,7 @@ const TYPES: AtlasModuleType[] = [
       on("agents", "Related agents", "src/catalog/workplaces.ts projectOfficeAgents"),
       later("overview", "Business workspace overview"),
       on("assignments", "Automation assignments", "src/business/assignments.ts automationAssignments"),
-      later("kpis", "Operational KPIs"),
+      on("kpis", "Operational KPIs", "src/business/kpis.ts businessKpis"),
       later("config", "Business-specific configuration"),
     ],
     connectors: ["github"], views: ["map"], actions: [], permissions: [],
