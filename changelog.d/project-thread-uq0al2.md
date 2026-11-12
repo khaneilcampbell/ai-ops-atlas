@@ -1,1 +1,1 @@
-- 2026-11-12 · Removed everything about Service Desk from Atlas: its app, catalog entry, security scan, CI, runbooks and notes. Its old empty lot stays so nothing else on the map moves (#PR)
+- 2026-11-12 · Removed everything about Service Desk from Atlas: its app, catalog entry, security scan, CI, runbooks and notes. Its old empty lot stays so nothing else on the map moves (#399)
