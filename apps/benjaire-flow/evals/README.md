@@ -22,17 +22,17 @@ Spam cases are scored on the spam flag only.
 
 ## Run it
 
-From `apps/benjaire-dashboard`:
+From `apps/benjaire-flow`:
 
 ```bash
 # Live run against the Anthropic API (about 60 short Haiku calls)
-ANTHROPIC_API_KEY=sk-ant-... python3 -I products/flow/evals/run_evals.py --save-responses /tmp/flow-raw.jsonl
+ANTHROPIC_API_KEY=sk-ant-... python3 -I evals/run_evals.py --save-responses /tmp/flow-raw.jsonl
 
 # Re-score saved output without calling the API, for example after changing a label
-python3 -I products/flow/evals/run_evals.py --responses /tmp/flow-raw.jsonl
+python3 -I evals/run_evals.py --responses /tmp/flow-raw.jsonl
 
 # Unit tests for the harness itself (no API, runs in CI)
-python3 -m unittest discover -s products/flow/evals -p 'test_*.py'
+python3 -m unittest discover -s evals -p 'test_*.py'
 ```
 
 A run writes `results.md` (scores, the urgency confusion matrix and every failure with the reason) and `results.json` next to this file. It exits 1 when any metric is below its minimum, so it can block a prompt change. Commit `results.md` after a run you want to keep, so the latest score is visible in the repository.

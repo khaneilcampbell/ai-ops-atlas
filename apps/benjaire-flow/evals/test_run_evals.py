@@ -1,7 +1,7 @@
 """Offline tests for the Flow eval harness. No API calls.
 
-Run from apps/benjaire-dashboard:
-    python3 -m unittest discover -s products/flow/evals -p 'test_*.py'
+Run from apps/benjaire-flow:
+    python3 -m unittest discover -s evals -p 'test_*.py'
 """
 import json
 import tempfile

@@ -4,9 +4,9 @@ Runs the exact classification prompt shipped in kit/3-workflows/1-intake.json
 against a labeled set of inquiries (dataset.jsonl), applies the same rules the
 Build Inquiry Record node applies, and scores each field.
 
-Usage (from apps/benjaire-dashboard):
-    ANTHROPIC_API_KEY=... python3 -I products/flow/evals/run_evals.py
-    python3 -I products/flow/evals/run_evals.py --responses saved.jsonl   # score saved model output, no API calls
+Usage (from apps/benjaire-flow):
+    ANTHROPIC_API_KEY=... python3 -I evals/run_evals.py
+    python3 -I evals/run_evals.py --responses saved.jsonl   # score saved model output, no API calls
 
 Writes results.md and results.json next to this file. Exits 1 when a score is
 below its threshold in THRESHOLDS, so it can gate a prompt change in CI.
