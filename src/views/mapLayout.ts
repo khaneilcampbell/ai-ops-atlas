@@ -223,7 +223,8 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
  * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
-export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.32 };
+export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
+const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
 
 /** What stands in a district: AI agents inside the headquarters, a house per automation, a kiosk per outside service. */
 function residents(agents: Agent[]) {
@@ -397,7 +398,11 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const n = houses.length + services.length;
       const size = it.w;
       const m = n ? ringFor(n) : 2;
-      const hqSize = n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34;
+      const operationsWidth = districtSize(0, "intelligence-hub") * .34;
+      const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
+      // Keep widened headquarters clear of the existing front approaches. The three
+      // standard towers use a .92 scene footprint: half their added rendered depth is .46.
+      const hqSetback = project.id === "ai-ops-atlas" ? .35 : ["portfolio-site", "github-profile", "soc-lab"].includes(project.id) ? (hqSize - (n ? size * .26 : size * .34)) * .46 : 0;
       const lotSize = (size / m) * 0.52;
       const spots = n ? workflowToolSpots(n, size) : [];
       (CLEARED_LOTS.has(project.id) ? cleared : districts).push({
@@ -407,7 +412,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         oy,
         size,
         // Taller towers for busier projects, from the real agent count.
-        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
+        hq: { gx: ox + size / 2 - hqSize / 2, gy: oy + size / 2 - hqSize / 2 - hqSetback, size: hqSize, height: ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(project.id) ? 112 : 64 + Math.min(agents.length, 12) * 3 },
         lots: houses.map((a, k) => ({
           agent: a,
           gx: ox + spots[k].gx - lotSize / 2,
@@ -423,6 +428,26 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
           return { service, gx: ox + s.gx - ks / 2, gy: oy + s.gy - ks / 2, size: ks };
         }),
       });
+    }
+  }
+
+  // Reuse the equal-sized cleared central parcel; keep the meadow grid and landmark anchors.
+  if (joined) {
+    const hub = districts.find(d => d.project.id === "ai-ops-atlas");
+    const center = cleared.find(d => d.project.id === "benjaire-ops");
+    const campusComplete = ["benjaire-site", "commerce-pipeline", "intelligence-hub", "soc-lab", "portfolio-site", "github-profile"].every(id => districts.some(d => d.project.id === id));
+    // Keep the proven fallback packing when repository filtering removes part of this campus.
+    if (hub && center && campusComplete && catalog.projects.some(p => p.id === "service-desk") && hub.size === center.size) {
+      const dx = center.ox - hub.ox, dy = center.oy - hub.oy;
+      const move = (d: District, x: number, y: number) => {
+        d.ox += x; d.oy += y; d.hq.gx += x; d.hq.gy += y;
+        for (const lot of [...d.lots, ...d.kiosks]) { lot.gx += x; lot.gy += y; }
+        const rect = rects.find(r => r.id === d.project.id);
+        if (rect) { rect.x += x; rect.y += y; }
+      };
+      move(hub, dx, dy); move(center, -dx, -dy);
+      const heading = neighborhoods.find(n => n.key === hub.group);
+      if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
     }
   }
 

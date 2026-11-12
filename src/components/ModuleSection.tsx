@@ -6,8 +6,9 @@ import { aggregateHealth, buildingAssets, executionHistory, observable } from ".
 import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from "../modules/types";
 import { integrationLabel } from "../modules/integrations";
 import { WORKSPACE, isEntitled } from "../modules/workspace";
+import { workspaceScope, workspaceViews } from "../modules/workspaces";
 import { HealthBadge } from "./bits";
-import { ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
+import { MODULE_HEALTH, ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
 
 /** Labels match the app's navigation (App.tsx NAV). */
 const VIEW_LABEL: Record<ModuleView, string> = {
@@ -25,7 +26,7 @@ const AVAILABILITY_LABEL: Record<ModuleAvailability, string> = { available: "Ava
  * building has no telemetry yet, so its health is shown as not verified rather than guessed.
  */
 export function ModuleSection() {
-  const { selection, catalog, repos, setView, select } = useAtlas();
+  const { selection, catalog, repos, setView, select, setFilters, clearFilters } = useAtlas();
   const building = buildingForSelection(selection, catalog);
   const type = moduleType(building?.moduleType);
   if (!building || !type) return null;
@@ -38,6 +39,20 @@ export function ModuleSection() {
   const watched = observable(items);
   const available = type.capabilities.filter((c) => c.state === "available");
   const planned = type.capabilities.filter((c) => c.state === "planned");
+  const views = workspaceViews(type);
+  // A building with no repository has no CI to read, and a landmark's linked repository is where its
+  // data comes from, not what it does; a module that reads its own live sources reports those
+  // instead (only while entitled and built, so a planned module never reads live).
+  const OwnHealth = (!assets.repositories.length || building.projectId === null) && entitled && availability !== "planned" ? MODULE_HEALTH[type.id] : undefined;
+  // Open a workspace view on this building's own agents when the view can be scoped to them.
+  const open = (v: ModuleView) => {
+    const scope = workspaceScope(v, building.projectId);
+    if (scope) {
+      clearFilters();
+      setFilters(scope);
+    }
+    setView(v);
+  };
 
   return (
     <section className="module-section" aria-label="Atlas module" data-module={type.id}>
@@ -50,7 +65,7 @@ export function ModuleSection() {
         <p className="muted small">{type.description} {PRODUCT_DISTRICT_LABEL[type.productDistrict]} module.</p>
         <dl className="kv">
           <dt>Health</dt>
-          <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}</span></dd>
+          {OwnHealth ? <OwnHealth /> : <dd data-state={agg.state}><HealthBadge health={agg.health} /> <span className="muted small">{agg.summary}</span></dd>}
           <dt>Linked assets</dt>
           <dd>{assets.repositories.length || items.length ? [
             count(assets.projects.length, "project"), count(assets.repositories.length, "repository", "repositories"),
@@ -65,10 +80,10 @@ export function ModuleSection() {
           <p className="muted small">This module is planned. None of its capabilities are built yet, so nothing here is live.</p>
         ) : (
           <>
-            {type.views.filter((v) => v !== "map").length > 0 && (
+            {views.length > 0 && (
               <div className="chips">
-                {type.views.filter((v) => v !== "map").map((v) => (
-                  <button key={v} className="chip" onClick={() => setView(v)}>Open {VIEW_LABEL[v]} →</button>
+                {views.map((v) => (
+                  <button key={v} className="chip" onClick={() => open(v)} title={workspaceScope(v, building.projectId) ? `${VIEW_LABEL[v]}, filtered to ${building.name}` : VIEW_LABEL[v]}>Open {VIEW_LABEL[v]} →</button>
                 ))}
               </div>
             )}

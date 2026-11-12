@@ -6,16 +6,17 @@ async function sceneState(page:Page,advance=false){return page.evaluate(async(ad
   state.gl.render=()=>{};state.internal.subscribers=subscribers.filter(s=>s.priority<=0);
   try{for(let i=1;i<=120;i++)fiber.advance(i/30,false,manual);}finally{state.internal.subscribers=subscribers;state.gl.render=render;render(state.scene,state.camera);state.setFrameloop(mode);}
  }
- return {night:materials.night.value,cars:!!state.scene.getObjectByName('atlas-road-traffic'),truck:state.scene.getObjectByName('atlas-freight-truck')?.visible,roads:!!state.scene.getObjectByName('atlas-road-infrastructure')};
+ // The freight truck and its road were taken off the map on 2026-11-07 (see Scene3D.freight).
+ return {night:materials.night.value,cars:!!state.scene.getObjectByName('atlas-road-traffic')};
 },advance);}
 for(const reduced of [false,true])test(`Map buttons respond to clicks (${reduced?'reduced':'normal'} motion)`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});await openAtlas(page,{light:'day',storage:{powerMode:reduced?'saver':'balanced'}});await waitForScene(page);
  const night=page.getByRole('button',{name:'Night mode',exact:true}),traffic=page.getByRole('button',{name:'Traffic',exact:true});
- expect(await sceneState(page)).toMatchObject({night:0,cars:true,truck:true,roads:true});
+ expect(await sceneState(page)).toMatchObject({night:0,cars:true});
  await night.click();await expect(night).toHaveAttribute('aria-pressed','true');await settle(page,1);expect((await sceneState(page,true)).night).toBe(1);
  await page.screenshot({path:`artifacts/map-controls/night-${reduced?'reduced':'normal'}.png`});
  await night.click();await expect(night).toHaveAttribute('aria-pressed','false');await settle(page,1);expect((await sceneState(page,true)).night).toBe(0);
- await traffic.click();await expect(traffic).toHaveAttribute('aria-pressed','false');await settle(page,1);expect(await sceneState(page)).toMatchObject({cars:false,truck:false,roads:true});
+ await traffic.click();await expect(traffic).toHaveAttribute('aria-pressed','false');await settle(page,1);expect(await sceneState(page)).toMatchObject({cars:false});
  await page.screenshot({path:`artifacts/map-controls/traffic-off-${reduced?'reduced':'normal'}.png`});
- await traffic.click();await expect(traffic).toHaveAttribute('aria-pressed','true');await settle(page,1);expect(await sceneState(page)).toMatchObject({cars:true,truck:true,roads:true});expect(errors).toEqual([]);
+ await traffic.click();await expect(traffic).toHaveAttribute('aria-pressed','true');await settle(page,1);expect(await sceneState(page)).toMatchObject({cars:true});expect(errors).toEqual([]);
 });

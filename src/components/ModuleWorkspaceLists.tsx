@@ -1,49 +1,81 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useAtlas } from "../state";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
 import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
-import type { AtlasModuleType } from "../modules/types";
+import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
+import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
 import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
 import { useUsageData } from "../usage/data";
-import { money } from "../usage/model";
+import { compact, money, providerLabel } from "../usage/model";
+import { costPerModel, modelInventory, WINDOW_DAYS } from "../models/lab";
 import { HOSTS, hostStatus, recentDeploys, type HostHealth } from "../infra/hosts";
 import { infraIncidents } from "../infra/incidents";
 import { useAllPropertyData, usePropertyIncidents } from "../properties/state";
 import type { DeployState } from "../properties/deploys";
 import { feedNote, repoSecurity, repoTotals, securityRepos, severityText, useSecurityAlerts } from "../security/alerts";
 import { ALERT_KINDS, ALERT_LABEL } from "../security/types";
-import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, type TrafficState } from "../growth/studio";
+import { securityIncidents } from "../security/incidents";
+import { buildRegistry } from "../registry/registry";
+import { pipelineCounts, pipelineStages, type StageState } from "../commerce/pipeline";
+import { growthSites, RESEARCH_AGENT, researchBriefs, siteTraffic, studioHealth, type TrafficState } from "../growth/studio";
 import { useAgentReports } from "../reports/client";
-
-const has = (type: AtlasModuleType, id: string) => type.capabilities.some((c) => c.id === id && c.state === "available");
+import { HealthBadge } from "./bits";
+import { signalCounts, signalRows, type SignalState } from "../observability/signals";
+import { documentCount, documentInventory } from "../knowledge/docs";
+import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
 
 /**
  * The workspace-wide lists a module's available capabilities promise: the module inventory in the
  * Command Center, declared project dependencies in the Repository Hub, the workflow map in the
  * Automation Plant (with live n8n runs), the dataset inventory in Data Intelligence, open GitHub
- * security alerts in the Security Operations Center, hosting and deploys in Infrastructure and
- * spend against caps in Finance.
- * Closed by default so the panel
- * stays short; every row comes from a manifest line or an observed sync.
+ * security alerts in the Security Operations Center, hosting and deploys in Infrastructure, spend
+ * against caps in Finance, the publishing pipeline in Commerce and traffic and briefs in Growth.
+ * Closed by default so the panel stays short; every row comes from a manifest line or an observed
+ * sync. The table is the whole workspace definition: one row per module type, and every building
+ * that houses the module shows the same panels (modules/workspaces.ts).
  */
+export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePanel<ComponentType>[]>> = {
+  "atlas-command-center": [{ capability: "inventory", label: "Module inventory", component: Inventory }],
+  "development-repository-hub": [{ capability: "dependencies", label: "Project dependencies", component: Dependencies }],
+  "workflow-automation-plant": [
+    { capability: "n8n", label: "Live n8n runs", component: N8nRuns },
+    { capability: "dependencies", label: "Workflow map", component: WorkflowMap },
+  ],
+  "data-intelligence-center": [{ capability: "datasets", label: "Dataset inventory", component: Datasets }],
+  "finance-analytics-tower": [{ capability: "caps", label: "Spend against caps", component: SpendCaps }],
+  "infrastructure-control-tower": [
+    { capability: "incidents", label: "Infrastructure incidents", component: InfraIncidents },
+    { capability: "hosts", label: "Hosting inventory", component: Hosting },
+    { capability: "deploys", label: "Deployment overview", component: DeployOverview },
+  ],
+  "security-operations-center": [
+    { capability: "incidents", label: "Security incidents", component: SecurityIncidents },
+    { capability: "scanning", label: "Security alerts", component: SecurityAlerts },
+  ],
+  "commerce-product-marketplace": [{ capability: "pipeline", label: "Publishing pipeline", component: PublishingPipeline }],
+  "model-intelligence-lab": [
+    { capability: "models", label: "Model inventory", component: ModelInventory },
+    { capability: "cost", label: "Cost per model", component: ModelCost },
+  ],
+  "growth-marketing-studio": [
+    { capability: "audience", label: "Site traffic", component: SiteTraffic },
+    { capability: "research", label: "Product research briefs", component: ResearchBriefs },
+  ],
+  "observability-center": [{ capability: "signals", label: "Connected signals", component: ConnectedSignals }],
+  "knowledge-repository": [{ capability: "docs", label: "Document inventory", component: DocumentInventory }],
+  "integration-exchange": [{ capability: "catalog", label: "Vendors and suppliers", component: Suppliers }],
+};
+
 export function ModuleWorkspaceLists({ type }: { type: AtlasModuleType }) {
-  switch (type.id) {
-    case "atlas-command-center": return has(type, "inventory") ? <Inventory /> : null;
-    case "development-repository-hub": return has(type, "dependencies") ? <Dependencies /> : null;
-    case "workflow-automation-plant": return <>{has(type, "n8n") && <N8nRuns />}{has(type, "dependencies") && <WorkflowMap />}</>;
-    case "data-intelligence-center": return has(type, "datasets") ? <Datasets /> : null;
-    case "finance-analytics-tower": return has(type, "caps") ? <SpendCaps /> : null;
-    case "infrastructure-control-tower": return <>{has(type, "incidents") && <InfraIncidents />}{has(type, "hosts") && <Hosting />}{has(type, "deploys") && <DeployOverview />}</>;
-    case "security-operations-center": return has(type, "scanning") ? <SecurityAlerts /> : null;
-    case "growth-marketing-studio": return <>{has(type, "audience") && <SiteTraffic />}{has(type, "research") && <ResearchBriefs />}</>;
-    default: return null;
-  }
+  const panels = panelsFor(type, WORKSPACE_PANELS);
+  if (!panels.length) return null;
+  return <>{panels.map((p) => <p.component key={p.capability} />)}</>;
 }
 
 function Inventory() {
@@ -282,6 +314,45 @@ function SecurityAlerts() {
   );
 }
 
+function SecurityIncidents() {
+  const { catalog } = useAtlas();
+  const repos = useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]);
+  const alerts = useSecurityAlerts(repos);
+  const snap = alerts.value;
+  const list = useMemo(() => securityIncidents(snap), [snap]);
+  const critical = list.filter((i) => i.severity === "critical").length;
+  const unread = snap?.state === "ok" ? snap.repos.filter((r) => repoSecurity(r) === "unknown").length : 0;
+  const summary =
+    snap?.state === "ok" ? (list.length ? `${list.length} open${critical ? `, ${critical} critical` : ""}` : "None open")
+    : snap?.state === "not-configured" ? "Not set up"
+    : alerts.state === "loading" ? "Checking" : alerts.state === "error" ? "Unavailable" : "Not connected here";
+  return (
+    <details className="module-list" aria-label="Security incidents" open={list.length > 0}>
+      <summary className="muted small">Incidents · {summary}</summary>
+      {list.length ? (
+        <ul>
+          {list.map((i) => (
+            <li key={i.key}>
+              <span>{i.severity === "critical" ? <span className="run-failure">{i.title}</span> : i.title}</span>
+              <span className="muted small">
+                {i.detail} · <a href={i.url} target="_blank" rel="noreferrer">Open on GitHub</a>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">
+          {snap?.state === "ok" ? "No exposed secrets and no critical or high alerts seen." : snap?.state === "not-configured" ? "Needs the site's GitHub token, as for Security alerts." : alerts.message ?? "Reading GitHub security alerts."}
+        </p>
+      )}
+      <p className="muted small">
+        Raised from the Security alerts counts: any open secret scanning alert is critical, critical Dependabot or code scanning alerts are critical, high ones are warnings. Medium and low stay in the alerts list.
+        {unread ? ` ${unread} ${unread === 1 ? "repository was" : "repositories were"} not fully read, so ${unread === 1 ? "it" : "they"} may hide incidents.` : ""}
+      </p>
+    </details>
+  );
+}
+
 const CAP_LABEL: Record<CapState, string> = { ok: "Under the cap", near: "Nearly used", over: "Cap reached", unseen: "Spend not visible to Atlas" };
 
 function SpendCaps() {
@@ -350,7 +421,7 @@ function InfraIncidents() {
   );
 }
 
-const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", unavailable: "Unavailable", loading: "Loading" };
+const TRAFFIC_LABEL: Record<TrafficState, string> = { counted: "Counted", "not-proxied": "Not proxied", "not-set-up": "Not set up", "not-connected": "Not connected here", unavailable: "Unavailable", loading: "Loading" };
 const num = (n: number) => n.toLocaleString();
 
 function SiteTraffic() {
@@ -382,6 +453,26 @@ function SiteTraffic() {
   );
 }
 
+/**
+ * Health for modules whose building has no repository but which read their own live sources.
+ * A module listed here replaces the "no telemetry" line with what its sources actually returned.
+ */
+export const MODULE_HEALTH: Partial<Record<ModuleTypeId, ComponentType>> = {
+  "growth-marketing-studio": StudioHealthRow,
+};
+
+/** The Growth & Marketing Studio's health from its own sources, for its card and its map label. */
+export function useStudioHealth() {
+  const all = useAllPropertyData();
+  const { state } = useAgentReports(RESEARCH_AGENT);
+  return studioHealth(growthSites().map((p) => siteTraffic(p, all[p.id]?.site)), state);
+}
+
+function StudioHealthRow() {
+  const h = useStudioHealth();
+  return <dd data-state={h.state}><HealthBadge health={h.health} /> <span className="muted small">{h.summary}</span></dd>;
+}
+
 function ResearchBriefs() {
   const { select } = useAtlas();
   const { state, message, reports } = useAgentReports(RESEARCH_AGENT);
@@ -410,6 +501,220 @@ function ResearchBriefs() {
       <p className="muted small">
         Each month's top pick from the research agent's brief, with its own scorecard total. A pick stays a hypothesis until real signups, preorders or sales back it.{" "}
         <button className="text-btn small" onClick={() => select({ kind: "agent", id: RESEARCH_AGENT })}>Full reports</button>
+      </p>
+    </details>
+  );
+}
+
+const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
+
+function Suppliers() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const rows = useMemo(() => supplierRows(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const failing = rows.filter((r) => r.state === "failing" || r.state === "silent").length;
+  return (
+    <details className="module-list" aria-label="Vendors and suppliers" open={failing > 0}>
+      <summary className="muted small">Vendors and suppliers · {rows.length ? `${rows.length} in use${failing ? `, ${failing} with failing workers` : ""}` : "None named in manifests"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.id} data-state={r.state === "not-running" ? "none" : undefined}>
+              <span>{r.vendor} · {r.role}</span>
+              <span className="muted small">
+                {r.state === "failing" || r.state === "silent" ? <span className="run-failure">{STAGE_LABEL[r.state]}</span> : STAGE_LABEL[r.state]}
+                {` · ${r.workers} ${r.workers === 1 ? "worker" : "workers"} · ${r.projects.join(", ")}`}
+                {r.lastRunAt ? ` · last run ${relative(r.lastRunAt)}` : " · no run seen"}
+                {r.lastRunUrl ? <> · <a href={r.lastRunUrl} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No agent or automation manifest names an outside vendor yet.</p>
+      )}
+      <ul aria-label="Vendor data sources">
+        {SUPPLIER_SOURCES.map((s) => (
+          <li key={s.id} data-state={s.state === "connected" ? undefined : "none"}>
+            <span>{s.label}</span>
+            <span className="muted small">{s.state === "connected" ? "Connected" : "Not connected"} · {s.detail}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">Health is the worst observed state of the workers that use each vendor. A vendor whose workers have no run seen shows as unknown, never healthy.</p>
+    </details>
+  );
+}
+
+function PublishingPipeline() {
+  const { catalog, repos } = useAtlas();
+  const { telemetry } = useIntel();
+  const feedLive = useLiveStatus().state === "live";
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const entries = useMemo(() => buildRegistry(catalog, repos, telemetry), [catalog, repos, telemetry]);
+  const stages = useMemo(() => pipelineStages(catalog.projects, catalog.agents, entries, now, feedLive), [catalog, entries, now, feedLive]);
+  const n = pipelineCounts(stages);
+  const parts = [n.failing && `${n.failing} failing`, n.silent && `${n.silent} silent`, n.ok && `${n.ok} healthy`, n["not-running"] && `${n["not-running"]} not running`, n.unknown && `${n.unknown} unknown`].filter(Boolean);
+  return (
+    <details className="module-list" aria-label="Publishing pipeline" open={n.failing + n.silent > 0}>
+      <summary className="muted small">Publishing pipeline · {stages.length ? parts.join(", ") : "No commerce agents"}</summary>
+      {stages.length ? (
+        <ul>
+          {stages.map((s) => (
+            <li key={s.agent.id} data-state={s.state === "not-running" ? "none" : undefined}>
+              <span>{s.agent.name}</span>
+              <span className="muted small">
+                {s.state === "failing" || s.state === "silent" ? <span className="run-failure">{STAGE_LABEL[s.state]}</span> : STAGE_LABEL[s.state]}
+                {s.last?.at ? ` · ${relative(s.last.at)}` : ""}
+                {s.detail ? ` · ${s.detail}` : ""}
+                {s.last?.url ? <> · <a href={s.last.url} target="_blank" rel="noreferrer">Open run</a></> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">No project in the catalog uses this module yet.</p>
+      )}
+      <p className="muted small">Every agent of the commerce projects, from observed runs only. Agents with alert rules follow them, so a stage switched off on purpose shows as not running, not failed. A stage with no run seen shows as unknown, never as healthy.</p>
+    </details>
+  );
+}
+
+const SIGNAL_LABEL: Record<SignalState, string> = { live: "Answering", stale: "Answered, but old", failing: "Failing", "not-set-up": "Not set up", off: "Not available here", loading: "Loading" };
+
+/** How old the newest GitHub fetch may be before the signal counts as stale: twice the refresh interval. */
+const GITHUB_STALE_FACTOR = 2;
+
+function ConnectedSignals() {
+  const { catalog, repos, settings, uncataloged } = useAtlas();
+  const live = useLiveStatus();
+  const intel = useIntel();
+  const usage = useUsageData({ push: false });
+  const n8n = useN8nRuns();
+  const security = useSecurityAlerts(useMemo(() => securityRepos(catalog.projects.map((p) => p.repository)), [catalog]));
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const tracked = useMemo(() => [...new Set([...catalog.projects.map((p) => p.repository), ...catalog.agents.map((a) => a.repository), ...uncataloged])], [catalog, uncataloged]);
+  const rows = signalRows({
+    repos, tracked, staleAfterMs: settings.refreshMinutes * 60_000 * GITHUB_STALE_FACTOR, live,
+    intel: { available: intel.available, error: intel.error, loaded: intel.status !== null, keyPresent: intel.status ? intel.status.key_present : null },
+    usage: { firstLoad: usage.firstLoad, error: usage.error ?? null, records: usage.records.length },
+    n8n, security, now,
+  });
+  const n = signalCounts(rows);
+  const parts = [n.failing && `${n.failing} failing`, n.stale && `${n.stale} stale`, n.live && `${n.live} answering`, n["not-set-up"] && `${n["not-set-up"]} not set up`, n.off && `${n.off} not available here`, n.loading && `${n.loading} loading`].filter(Boolean);
+  return (
+    <details className="module-list" aria-label="Connected signals" open={n.failing > 0}>
+      <summary className="muted small">Connected signals · {parts.join(", ")}</summary>
+      <ul>
+        {rows.map((r) => (
+          <li key={r.id} data-state={r.state === "off" || r.state === "not-set-up" ? "none" : undefined}>
+            <span>{r.label}</span>
+            <span className="muted small">
+              {r.state === "failing" || r.state === "stale" ? <span className="run-failure">{SIGNAL_LABEL[r.state]}</span> : SIGNAL_LABEL[r.state]}
+              {" · "}{r.detail}
+              {r.at ? ` · ${relative(r.at)}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">The feeds Atlas itself reads, from this session's own state: whether each one answers, when it last did, and why not when it doesn't. Metrics, logs and traces of the connected systems are not read yet.</p>
+    </details>
+  );
+}
+
+const DOC_KIND_LABEL = { repository: "Repository", website: "Website", link: "Link" } as const;
+
+function DocumentInventory() {
+  const { catalog, repos } = useAtlas();
+  const groups = useMemo(() => documentInventory(catalog, repos), [catalog, repos]);
+  const total = documentCount(groups);
+  return (
+    <details className="module-list" aria-label="Document inventory">
+      <summary className="muted small">Document inventory · {total} documents across {groups.length} projects</summary>
+      {groups.map((g) => (
+        <div key={g.projectId}>
+          <div className="small">{g.name}</div>
+          <ul>
+            {g.documents.map((d) => (
+              <li key={d.url}>
+                <a href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
+                <span className="muted small">{DOC_KIND_LABEL[d.kind]} · from {d.source === "manifest" ? "its manifest" : "GitHub"}{d.updated ? ` · pushed ${relative(d.updated)}` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <p className="muted small">Each repository's page (where its README lives), the website it declares on GitHub, and the links each manifest declares. Atlas lists them; it doesn't read them, so there is no search yet.</p>
+    </details>
+  );
+}
+
+function ModelInventory() {
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => modelInventory(usage.records), [usage.records]);
+  return (
+    <details className="module-list" aria-label="Model inventory">
+      <summary className="muted small">Model inventory · {usage.firstLoad ? "Loading" : rows.length ? `${rows.length} model${rows.length === 1 ? "" : "s"} in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} title={r.agents.join(", ")}>
+              <span>{r.model}<span className="muted small"> · {r.providers.map(providerLabel).join(", ")}</span></span>
+              <span className="muted small">{compact(r.requests)} calls · {r.agents.length} agent{r.agents.length === 1 ? "" : "s"} · last {relative(r.last)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">Every model a recorded call used in the last {WINDOW_DAYS} days, from the same records as API Usage. Hover a row for the agents that call it.</p>
+    </details>
+  );
+}
+
+function ModelCost() {
+  const { setView } = useAtlas();
+  const usage = useUsageData({ push: false });
+  const rows = useMemo(() => costPerModel(usage.records), [usage.records]);
+  const total = rows.reduce((n, r) => n + r.costUsd, 0);
+  return (
+    <details className="module-list" aria-label="Cost per model">
+      <summary className="muted small">Cost per model · {usage.firstLoad ? "Loading" : rows.length ? `${money(total)} known in ${WINDOW_DAYS} days` : "None seen"}</summary>
+      {rows.length ? (
+        <ul>
+          {rows.map((r) => (
+            <li key={r.model} data-state={r.costUsd === 0 && !r.unpriced ? "none" : undefined}>
+              <span>{r.model}</span>
+              <span className="muted small">
+                {r.costUsd > 0 ? `${r.unpriced ? "at least " : ""}${money(r.costUsd)}${r.billedOnly ? " billed" : r.costUsd ? " estimated" : ""}` : r.plan ? "Covered by a plan" : "Cost unknown"}
+                {r.perRequestUsd !== null ? ` · ${money(r.perRequestUsd)} a call` : ""}
+                {r.unpriced ? ` · ${r.unpriced} call${r.unpriced === 1 ? "" : "s"} with no price set` : ""}
+                {r.plan && r.costUsd > 0 ? ` · ${r.plan} on a plan` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
+      )}
+      <p className="muted small">
+        Estimated means reported tokens times the prices set in Atlas; billed is the provider's own figure. A model with no price set shows its cost as unknown, never $0.{" "}
+        <button className="text-btn small" onClick={() => setView("usage")}>API Usage</button>
       </p>
     </details>
   );

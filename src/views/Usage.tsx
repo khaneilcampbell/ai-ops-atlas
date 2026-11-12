@@ -1,3 +1,4 @@
+import { projectByRepository } from "../catalog/projects";
 import { useMemo, useRef, useState } from "react";
 import { useUsageData, type ImportStore } from "../usage/data";
 import { Icon } from "../components/Icon";
@@ -24,6 +25,7 @@ import {
   type UsageRecord,
 } from "../usage/model";
 import "../styles/usage.css";
+import { formatDateTime, formatDay } from "../lib/timezone";
 
 const KNOWN_PROVIDERS = ["anthropic", "openai"];
 
@@ -41,8 +43,8 @@ export function UsageView() {
   const advice = useMemo(() => findings(workflows), [workflows]);
   const t = summary.totals;
   const projectName = useMemo(() => {
-    const byRepo = new Map(catalog.projects.map((p) => [p.repository.toLowerCase(), p.name]));
-    return (repo: string) => byRepo.get(repo.toLowerCase()) ?? null;
+    const byRepo = projectByRepository(catalog.projects);
+    return (repo: string) => byRepo.get(repo.toLowerCase())?.name ?? null;
   }, [catalog.projects]);
 
   const hasAny = data.records.length > 0;
@@ -74,9 +76,9 @@ export function UsageView() {
       </div>
       {(hasAny || data.available) && (
         <div className="usage-meta small muted">
-          {data.updatedAt ? <>Last updated {new Date(data.updatedAt).toLocaleString()} · </> : null}
+          {data.updatedAt ? <>Last updated {formatDateTime(data.updatedAt)} · </> : null}
           Showing the {span}
-          {data.oldestRun && <> · Atlas records go back to {new Date(data.oldestRun).toLocaleDateString()}</>}
+          {data.oldestRun && <> · Atlas records go back to {formatDay(data.oldestRun)}</>}
           {data.snapshot?.pushedAt && <> · Synced from your Mac {relative(data.snapshot.pushedAt)}</>}
           {data.agentUsage?.configured && <> · {data.agentUsage.records.length.toLocaleString()} calls reported by GitHub agents</>}
           {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}

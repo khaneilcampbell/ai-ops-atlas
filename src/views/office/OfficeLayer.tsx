@@ -23,6 +23,7 @@ import { officeRows, type OfficeRow } from "./officeRows";
 import { leaveBuilding, useOffice } from "./store";
 import { STATE_COLOR } from "./textures";
 import "../../styles/office.css";
+import { formatDateTime } from "../../lib/timezone";
 
 type Row = OfficeRow;
 
@@ -281,7 +282,7 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
                     {e.url ? <ExternalLink href={e.url}>{e.label}</ExternalLink> : e.label}
                     <span className="muted"> · {RESULT_LABEL[e.result]}</span>
                   </span>
-                  <span className="muted small" title={new Date(e.at).toLocaleString()}>
+                  <span className="muted small" title={formatDateTime(e.at)}>
                     {relative(e.at)}
                   </span>
                 </li>

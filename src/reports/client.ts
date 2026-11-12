@@ -55,7 +55,7 @@ export function useAgentReports(agent: ReportAgent): ReportsState {
     fetchReports(agent)
       .then((page) => {
         if (!alive) return;
-        if (!page) setS({ state: "off", message: "Reports need website sync (Settings → Website sync).", reports: [] });
+        if (!page) setS({ state: "off", message: isTauri() ? "Reports need website sync (Settings → Website sync)." : "Reports are read on the hosted site and in the Mac app, not in a local preview.", reports: [] });
         else if (!page.configured) setS({ state: "off", message: "Reports aren't set up on the site yet.", reports: [] });
         else setS({ state: "ready", message: null, reports: cleanReports(page) });
       })

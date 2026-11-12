@@ -295,6 +295,10 @@ table.table { width: 100%; border-collapse: collapse; }
 .setting:first-of-type { border-top: 0; }
 .setting .grow { flex: 1; }
 .setting .label { font-weight: 500; }
+.tz-picker { flex-wrap: wrap; }
+.tz-picker .field input { width: 200px; }
+.tz-picker .field.grow { min-width: 0; }
+.tz-picker .field select { max-width: none; width: 100%; }
 .toggle { appearance: none; -webkit-appearance: none; width: 38px; height: 22px; border-radius: 999px; background: var(--sage-300); position: relative; cursor: pointer; transition: background 0.15s; flex: none; }
 .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform 0.15s; }
 .toggle:checked { background: var(--forest-600); }
@@ -383,6 +387,15 @@ table.table { width: 100%; border-collapse: collapse; }
 .module-list li { display: flex; flex-direction: column; gap: 1px; }
 .module-list li > span:first-child { color: var(--ink); }
 .module-list .run-failure { color: var(--bad); }
+/* Benjaire finance section of a Financial District building (components/BenjaireFinance.tsx). */
+.finance-datasets { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; }
+.finance-datasets li { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid var(--sage-200); }
+.finance-datasets li[data-status="live"] { border-left-color: var(--good); }
+.finance-datasets li[data-status="imported"] { border-left-color: var(--gold-deep); }
+.finance-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); }
+.chip.finance-status.not-connected { background: transparent; color: var(--ink-3); }
+.chip.finance-status.imported { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
+.chip.finance-status.live { background: rgba(74, 122, 84, 0.12); border-color: rgba(74, 122, 84, 0.3); color: var(--good, #3f6b48); }
 .module-list li[data-state="none"] > span:first-child { color: var(--ink-3); }
 .health-badge.hb-warn { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
 .runs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
@@ -882,3 +895,17 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 /* The live event text gives way before the search box does. */
 .header .live-pill{max-width:260px}
 @media(max-width:1600px){.header .live-last{display:none}}
+
+/* Atlas nameplates (map label polish): dark navy-green glass with a gold hairline, a gold leader
+   line to the roof when a plaque is lifted clear of a neighbor, a faint dot for planned places
+   instead of the dashed ring, and group names as quiet gold lettering instead of a second pill.
+   Sizes are unchanged, so PLAQUE in plaques.tsx still matches. */
+.m3-plaque.compact{background:rgba(14,28,30,.74);-webkit-backdrop-filter:blur(6px) saturate(1.15);backdrop-filter:blur(6px) saturate(1.15);border-color:rgba(201,163,90,.3);color:#f4efe1;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px rgba(6,12,14,.3)}
+.m3-plaque.compact .t{letter-spacing:.015em}
+.m3-plaque.compact::after{border-top-color:rgba(14,28,30,.74)}
+.m3-plaque.compact::before{top:calc(100% + 4px);background:linear-gradient(rgba(201,163,90,.75),rgba(201,163,90,.15))}
+.m3-plaque.compact.hover{background:rgba(22,42,40,.9);border-color:var(--gold);box-shadow:0 0 0 1px rgba(201,163,90,.25),0 6px 16px rgba(6,12,14,.35)}
+.m3-plaque.compact.selected{box-shadow:0 0 0 2px rgba(201,163,90,.4),0 0 18px rgba(201,163,90,.22),0 6px 16px rgba(6,12,14,.35)}
+.m3-plaque .hm-unverified{width:6px;height:6px;margin-right:1px;border:0;background:rgba(201,190,160,.4)}
+.m3-labels > div.dim{opacity:.28}
+.m3-pill.hood.district{height:20px;line-height:20px;padding:0 14px;border-radius:0;background:linear-gradient(90deg,rgba(8,16,18,0),rgba(8,16,18,.66) 16%,rgba(8,16,18,.66) 84%,rgba(8,16,18,0));border:0;color:#e2c27a;font-size:9.5px;font-weight:600;letter-spacing:.24em;text-shadow:0 1px 2px rgba(0,0,0,.8);box-shadow:none}

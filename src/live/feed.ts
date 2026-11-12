@@ -66,6 +66,7 @@ export function useLiveStatus(): LiveStatus {
       return () => watchers.delete(w);
     },
     () => status,
+    () => status,
   );
 }
 
