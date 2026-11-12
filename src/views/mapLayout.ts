@@ -169,6 +169,8 @@ export interface Neighborhood {
   oy: number;
   w: number;
   h: number;
+  /** Where the group's name stands: the back edge of its back-most building's district, in grid units. */
+  anchor?: { x: number; y: number };
 }
 
 /** A walkway on the meadow between two neighboring islands, along one grid axis. */
@@ -486,8 +488,6 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
       resize(hub, x, y, x + commerce.size / 2, hubZ);
       resize(operations, x + GAP, y + commerce.size + GAP, x + GAP + commerce.size / 2, y + commerce.size * 1.5 + GAP);
-      const heading = neighborhoods.find(n => n.key === hub.group);
-      if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
     }
   }
 
@@ -497,6 +497,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     walks.push(...walkways(rects.filter(r => !relocated || r.id !== "intelligence-hub")));
     if (relocated) walks.push(...walkways(rects.filter(r => r.id === "ai-ops-atlas" || r.id === "intelligence-hub")));
   }
+
+  // Districts can move after packing (Command Center to the centre, the equal operations parcels),
+  // so each group's outline and name follow where its buildings stand now, not the packed block.
+  if (joined) fitNeighborhoods(neighborhoods, districts);
 
   const boxes = [...[...districts, ...cleared].map((d) => ({ ox: d.ox, oy: d.oy, w: d.size, h: d.size })), ...parks, ...meadows];
   const corners = boxes.flatMap((d) => [iso(d.ox, d.oy), iso(d.ox + d.w, d.oy), iso(d.ox, d.oy + d.h), iso(d.ox + d.w, d.oy + d.h)]);
@@ -613,6 +617,22 @@ export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
     }
   }
   return shown;
+}
+
+/**
+ * Fit each group to the districts that have a building in it: the outline is their bounding box and
+ * the name stands on the back edge of the back-most one, so it always sits over one of its own
+ * buildings. A group with no building (a vacant lot only) keeps its packed block.
+ */
+export function fitNeighborhoods(neighborhoods: Neighborhood[], districts: readonly Pick<District, "group" | "ox" | "oy" | "size">[]) {
+  for (const n of neighborhoods) {
+    const own = districts.filter((d) => d.group === n.key);
+    if (!own.length) continue;
+    const x0 = Math.min(...own.map((d) => d.ox)), y0 = Math.min(...own.map((d) => d.oy));
+    Object.assign(n, { ox: x0, oy: y0, w: Math.max(...own.map((d) => d.ox + d.size)) - x0, h: Math.max(...own.map((d) => d.oy + d.size)) - y0 });
+    const back = [...own].sort((a, b) => a.oy - b.oy || a.ox - b.ox)[0];
+    n.anchor = { x: back.ox + back.size / 2, y: back.oy };
+  }
 }
 
 /** Rough width of label text; good enough to keep pills from touching. */
