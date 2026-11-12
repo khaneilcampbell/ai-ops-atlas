@@ -378,6 +378,8 @@ table.table { width: 100%; border-collapse: collapse; }
 .module-runs ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
 .module-runs li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: 10px; }
 .module-runs .linklike { all: unset; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.module-feed { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.module-feed .linklike { all: unset; cursor: pointer; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .module-runs .linklike:hover, .module-runs .linklike:focus-visible { text-decoration: underline; }
 .module-runs .run-success { color: #2f5b33; }
 .module-runs .run-failure { color: var(--bad); }

@@ -80,6 +80,7 @@ agents:
       Audits static HTML pages for security headers, accessibility and link
       hygiene.
     framework: Python script
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Local
     status: idle
     trigger: Manual, python scripts/site_audit.py
@@ -128,6 +129,7 @@ agents:
       Checks every page for a Content Security Policy and other HTML security
       rules on each push and pull request.
     framework: GitHub Actions
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted runner
     status: active
     trigger: Push or pull request to main
@@ -188,6 +190,7 @@ agents:
     name: Site CI
     purpose: Audits every page and the site scripts, and packages the site on request.
     framework: GitHub Actions
+    owned_by: site-builder            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -244,7 +247,7 @@ agents:
     name: Career Execution Agent
     purpose: >-
       n8n workflow that turns a job link or pasted job description into a resume summary, cover note and
-      recruiter message built only from KC's confirmed facts, then emails KC the drafts to review.
+      recruiter message built only from Khaneil's confirmed facts, then emails Khaneil the drafts to review.
       It never applies or messages anyone.
     framework: n8n
     model: claude-opus-5-5 (drafts), claude-haiku-5-5 (requirements)
@@ -252,7 +255,7 @@ agents:
     status: paused
     trigger: Job form, plus a Monday 9am summary and a daily 10am review nudge
     alerts:
-      not_running: Draft. Unpublished in n8n until KC confirms the facts table and approves publishing
+      not_running: Draft. Unpublished in n8n until Khaneil confirms the facts table and approves publishing
     last_run: null
     history:
       - at: 2026-11-12
@@ -264,7 +267,7 @@ agents:
         url: https://khancam15.app.n8n.cloud/projects/qhAhqRqO8TimFtxs/datatables/hFhMgfm236UyA8ii
     permissions:
       - Anthropic, through the n8n credential on Extract Requirements and Draft Application
-      - 'Resend API: review, failure, weekly summary and nudge emails to KC only'
+      - 'Resend API: review, failure, weekly summary and nudge emails to Khaneil only'
       - 'n8n data tables: writes career_applications, reads career_verified_facts'
       - Reads public job pages with a plain GET; no logins
     registry:
@@ -281,9 +284,9 @@ agents:
         outcomes:
           - Each job gets a cited draft to review, with unsupported sentences marked Unverified
           - Nothing is sent to a company or recruiter
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Read the job page or pasted description, Extract requirements, Pick the 1 to 3 strongest projects, Draft resume summary cover note and recruiter message, List missing requirements and one interview question, Save a Draft row and email KC for review]
+        tasks: [Read the job page or pasted description, Extract requirements, Pick the 1 to 3 strongest projects, Draft resume summary cover note and recruiter message, List missing requirements and one interview question, Save a Draft row and email Khaneil for review]
         tools: [n8n Cloud, Claude (claude-haiku-5-5 and claude-opus-5-5), n8n data tables, Resend]
         inputs: [Job form, Confirmed rows in career_verified_facts]
         outputs: [Draft row in career_applications, Review email with a .md attachment]
@@ -296,28 +299,28 @@ agents:
             basis: Tracker status Reviewed or Submitted, in the Monday summary email
           - name: Applications submitted
             kind: throughput
-            basis: Tracker status Submitted, set by KC after applying
+            basis: Tracker status Submitted, set by Khaneil after applying
           - name: Tailoring minutes
             kind: other
-            basis: tailoring_minutes column, filled in by KC
+            basis: tailoring_minutes column, filled in by Khaneil
           - name: Interview stories practiced
             kind: other
-            basis: stories_practiced column, filled in by KC
+            basis: stories_practiced column, filled in by Khaneil
       execution:
         trigger_type: event
         environment: n8n
         stages: [Spend check, Read job, Extract requirements, Match projects, Draft, Check citations, Save draft, Review email]
       governance:
         autonomy: 1
-        autonomy_note: Drafts only. KC reviews every draft and applies by hand. Spend cap $3 a month checked before any AI call, each step retries at most 3 times, and failures email KC.
-        approval: KC reviews each draft; publishing the workflow needs KC's OK
+        autonomy_note: Drafts only. Khaneil reviews every draft and applies by hand. Spend cap $3 a month checked before any AI call, each step retries at most 3 times, and failures email Khaneil.
+        approval: Khaneil reviews each draft; publishing the workflow needs Khaneil's OK
         data_sensitivity: confidential
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
         audit_log: n8n executions and the career_applications data table
       docs:
         known_issues:
-          - Draft until KC confirms the facts in career_verified_facts and approves publishing
+          - Draft until Khaneil confirms the facts in career_verified_facts and approves publishing
           - Atlas has no live data for it yet; results stay in n8n
         improvements:
           - Connect n8n executions to Atlas

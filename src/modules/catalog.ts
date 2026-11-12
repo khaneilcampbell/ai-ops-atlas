@@ -99,7 +99,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "security-operations-center", version: V, name: "Security Operations Center", productDistrict: "infrastructure-engineering",
     description: "Detections, security scanning and incident response.",
-    capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), later("incidents", "Security incidents")],
+    capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), on("incidents", "Security incidents", "src/security/incidents.ts securityIncidents")],
     connectors: ["github-security"], views: [], actions: [], permissions: [],
   },
   // Business Operations
@@ -141,7 +141,7 @@ const TYPES: AtlasModuleType[] = [
   },
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
-    description: "Products, orders and the pipelines that publish them.",
+    description: "Products and releases, the pipelines that publish them, and later the catalog and orders.",
     capabilities: [later("catalog", "Product catalog"), later("orders", "Orders"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
     connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
   },
@@ -166,9 +166,9 @@ const TYPES: AtlasModuleType[] = [
   },
   {
     id: "integration-exchange", version: V, name: "Integration Exchange", productDistrict: "data-intelligence",
-    description: "Connector catalog and integration contracts.",
-    capabilities: [later("catalog", "Connector catalog"), on("contracts", "Integration contracts", "src/modules/integrations.ts")],
-    connectors: [], views: [], actions: [], permissions: [],
+    description: "Vendors and suppliers in use, and integration contracts.",
+    capabilities: [on("catalog", "Vendor and supplier catalog", "src/vendors/suppliers.ts supplierRows"), on("contracts", "Integration contracts", "src/modules/integrations.ts")],
+    connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
   },
 ];
 

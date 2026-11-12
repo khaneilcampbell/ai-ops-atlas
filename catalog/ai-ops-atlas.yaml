@@ -340,6 +340,7 @@ agents:
     name: GitHub Steward
     purpose: "GitHub Steward: Collects bounded read-only observations for Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
     framework: Atlas read-only workflow
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
@@ -398,6 +399,7 @@ agents:
     model: Automatic reports use no model; manual reviews use an explicitly selected Codex model
     purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Codex reviews are available on request from Atlas HQ.
     framework: GitHub Actions + Codex (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted Python reports; local Codex CLI for manual reviews
     status: idle
     trigger: After main-branch push CI completes, or manually from GitHub Actions on main
@@ -538,6 +540,7 @@ agents:
     office_floor: 3
     model: No automatic model calls; manual Codex review only
     framework: Codex (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
@@ -572,6 +575,7 @@ agents:
     office_floor: 3
     model: No automatic model calls; manual Codex review only
     framework: Codex (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
@@ -599,3 +603,111 @@ agents:
         risk: low
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
+
+  # Building operators (2026-11-12): one scheduled, model-free check per building that reports to
+  # the live feed. Their reports are what turn Product Marketplace, Observability Center and Data
+  # Intelligence Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
+  - id: marketplace-steward
+    name: Marketplace Steward
+    purpose: Checks that Atlas, the product, is published. Reads the main-build release and its latest.json (version, date, signed Mac update) and reports it to the live feed for the Product Marketplace.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every hour, or by hand
+    source: ops/building-agents/agents.py
+    observe:
+      agent_feed: true
+    alerts:
+      failures: true
+      report_within: 3h
+    last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: contents read (release metadata)'
+      - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
+    registry:
+      title: Marketplace Steward
+      category: infrastructure
+      subcategory: Product publishing
+      classification:
+        type: D
+        confidence: verified
+        evidence: ops/building-agents/agents.py marketplace; no AI model
+      execution:
+        trigger_type: scheduled
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls. GitHub Actions minutes on a public repository.
+
+  - id: signal-watch
+    name: Signal Watch
+    purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every 30 minutes, or by hand
+    source: ops/building-agents/agents.py
+    observe:
+      agent_feed: true
+    alerts:
+      failures: true
+      report_within: 90m
+    last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: actions read (workflow runs)'
+      - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
+    registry:
+      title: Signal Watch
+      category: infrastructure
+      subcategory: Observability
+      classification:
+        type: D
+        confidence: verified
+        evidence: ops/building-agents/agents.py signals; no AI model
+      execution:
+        trigger_type: scheduled
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls. GitHub Actions minutes on a public repository.
+
+  - id: dataset-census
+    name: Dataset Census
+    purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
+    framework: GitHub Actions (Python, standard library)
+    runtime: GitHub-hosted runner
+    status: active
+    trigger: Every 3 hours, or by hand
+    source: ops/building-agents/agents.py
+    observe:
+      agent_feed: true
+    alerts:
+      failures: true
+      report_within: 7h
+    last_run: null
+    permissions:
+      - 'GITHUB_TOKEN: public repository metadata read'
+      - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
+    registry:
+      title: Dataset Census
+      category: data
+      subcategory: Data inventory
+      classification:
+        type: D
+        confidence: verified
+        evidence: ops/building-agents/agents.py census; no AI model
+      execution:
+        trigger_type: scheduled
+        environment: GitHub-hosted runner
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls. GitHub Actions minutes on a public repository.

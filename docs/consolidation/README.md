@@ -6,9 +6,9 @@ Prepared November 3, 2026. This migration adds source code to Atlas; it does not
 
 | Project | Atlas location | Source repository | Retirement state |
 | --- | --- | --- | --- |
-| Skyline | `docs/skyline/`, `ops/skyline/`, existing city components | `khaneilcampbell/skyline` | Migration #207 merged; production and integration retirement gates still apply |
+| Skyline | Removed from Atlas 2026-11-12 (project, Inquiry Assistant, docs and sandbox) | `khaneilcampbell/skyline` | Migration #207 merged; production and integration retirement gates still apply |
 | Career Applications | `ops/career/` in PR #211 | `khaneilcampbell/career-application-system` | PR #211 open; do not delete |
-| Benjaire Dashboard | `apps/benjaire-dashboard/` | `khaneilcampbell/benjaire-dashboard` | This migration is prepared; do not delete |
+| Benjaire Dashboard | Removed 2026-11-12; only the Flow files remain, in `apps/benjaire-flow/` | `khaneilcampbell/benjaire-dashboard` | The dashboard no longer exists (Khaneil, 2026-11-12) |
 | Intelligence Hub | `docs/intelligence-hub/` | `khaneilcampbell/projects-intelligence-hub` | This migration is prepared; do not delete |
 
 Service Desk is also consolidated in `apps/service-desk` via merged PR #213; its separate retirement gates are in `docs/service-desk-migration.md`.
@@ -27,8 +27,6 @@ Both newly imported repositories were public before migration. Their main trees 
 
 ## Run locally
 
-Dashboard: run `npm ci` and `npm run ci` from `apps/benjaire-dashboard`. Its frontend, Worker and D1 migration files remain a separate application. Follow that app's `docs/SETUP.md`; do not run production migrations or deploy during consolidation. Finance records remain outside Git.
-
 Hub: run the existing builder from `docs/intelligence-hub`, using a project folder containing `Source/project.json`. Its original hierarchy and committed DOCX files remain intact. Root Hub CI validates and renders sources in a disposable checkout, with optional seven-day DOCX downloads on manual dispatch. Rendering does not prove committed DOCX files are fresh.
 
 ## Recoverable backups
@@ -46,7 +44,7 @@ Common credential-pattern scans covered 138 Dashboard and 142 Hub history blobs 
 
 1. Merge the corresponding reviewed migration PR with passing required checks and a merge commit. Career #211 is separate from this PR; reconcile shared catalog, CI and retirement-list changes when merging both. Service Desk #213 has already been integrated here, preserving its retirement alias, tests and dependency monitoring.
 2. Verify Atlas's deployed/released version: selection, linked Atlas repository, building entry, lobby, floor switching, all-floor view and exit. A local screenshot alone is insufficient.
-3. For Dashboard, confirm Cloudflare Git integration now targets Atlas with build root `apps/benjaire-dashboard`; verify existing Worker name, D1 binding, Access policy, secrets and application health. Export/verify D1 data separately before any service changes. Keep source repo until this is completed with separate production authorization.
+3. Benjaire Dashboard was removed from Atlas on 2026-11-12. Any Cloudflare Worker or D1 database it left behind is outside this repository and needs its own owner approval to delete.
 4. Review n8n workflow references, release/download URLs and external integrations. Preserve actual live n8n state and credentials in their existing secure storage. Imported JSON exports are not activated. For Career, preserve ignored personal workspaces separately and update any runner paths only after review. For Hub, redirect document links and optional artifact consumers.
 5. Recheck source refs and metadata against the backup; capture and test any changes made since November 3. Copy any relevant release assets and discussions not covered by the backup. Check installed GitHub Apps where access is unavailable.
 6. Get explicit owner approval naming the exact repository to delete. Archiving first is a reversible alternative after dependencies are removed.

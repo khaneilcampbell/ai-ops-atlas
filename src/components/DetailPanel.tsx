@@ -122,7 +122,9 @@ function AgencyAgents(){
 }
 
 /** The airport building's module when it already shows real data; undefined while everything in it is planned. */
-function airportLiveModule(id:string){const m=landmarkModuleStatus(`airport-building:${id}`);return m&&m.availability!=="planned"?m:undefined;}
+/** A landmark's module when it already shows real data; undefined while everything in it is planned. */
+function liveLandmarkModule(landmarkId:string){const m=landmarkModuleStatus(landmarkId);return m&&m.availability!=="planned"?m:undefined;}
+function airportLiveModule(id:string){return liveLandmarkModule(`airport-building:${id}`);}
 function AirportBuildingDetail({id}:{id:string}) {
  const b=airportBuilding(id);
  if(!b)return <Head eyebrow="Airport building" title="Not found"/>;
@@ -145,17 +147,18 @@ function ServiceDetail({id}:{id:string}) {
  if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>khaneilcampbell/benjaire.com (site traffic and research briefs) · Benjaire Product Lab, an n8n agent</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
-    <Head eyebrow="Client services" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
-    <div className="panel-body selectable"><ModuleSection/><p>A four-floor wave-style Marketplace with planned client services and Benjaire product workspaces. Existing Commerce workers are referenced without starting new workflows. Curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
+    <Head eyebrow="Products · Benjaire and Atlas" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
+    <div className="panel-body selectable"><ModuleSection/><p>Where Benjaire's products are sold and Atlas itself is shipped. The Commerce Operations Center pipeline on n8n turns each approved idea into a Canva template that Stripe sells on the shop page, and the Marketplace Steward checks every hour that the latest signed Atlas build is published. A four-floor wave-style building: curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
-      <dl className="kv"><dt>Owning agent</dt><dd>Commerce Operations Coordinator · Assigned workspace; existing Commerce worker</dd><dt>Live sales</dt><dd>None. No shop is selling or connected to payments yet.</dd><dt>Model usage</dt><dd>None</dd></dl>
+      <dl className="kv"><dt>Operating agent</dt><dd>Marketplace Steward · Hourly release check, no model calls</dd><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
     </div>
   </>;
+  const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
     <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
-      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd></dl>
+      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>
