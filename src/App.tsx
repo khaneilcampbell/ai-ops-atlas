@@ -25,7 +25,7 @@ import { LivePill } from "./components/LivePill";
 import { UpdateButton } from "./components/UpdateButton";
 import { VaultLockedPill } from "./components/VaultGate";
 import { PHONE_QUERY, useMedia } from "./lib/media";
-import { useAlertNotifications, useAlerts } from "./alerts/state";
+import { publishWatches, useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { startStewardScheduler } from "./steward/store";
@@ -55,8 +55,9 @@ export default function App() {
   useLiveFeed();
   // Re-render every date and time when the zone changes in Settings.
   useTimeZone();
-  const alerts = useAlerts().open;
+  const { open: alerts, watches } = useAlerts();
   useAlertNotifications(alerts);
+  useEffect(() => publishWatches(watches), [watches]);
   usePropertyPolling();
   usePropertyNotifications(usePropertyIncidents().open);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
