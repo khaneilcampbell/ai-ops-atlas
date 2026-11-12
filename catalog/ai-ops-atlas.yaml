@@ -396,18 +396,18 @@ agents:
 
   - id: atlas-system-improvements
     name: Atlas System Improvements
-    model: Automatic reports use no model; manual reviews use an explicitly selected Codex model
-    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Codex reviews are available on request from Atlas HQ.
-    framework: GitHub Actions + Codex (manual)
+    model: Automatic reports use no model; manual reviews use an explicitly selected Claude model
+    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Claude Code reviews are available on request from Atlas HQ.
+    framework: GitHub Actions + Claude Code (manual)
     owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
-    runtime: GitHub-hosted Python reports; local Codex CLI for manual reviews
+    runtime: GitHub-hosted Python reports; local Claude Code CLI for manual reviews
     status: idle
     trigger: After main-branch push CI completes, or manually from GitHub Actions on main
     source: ops/system-improvements/report.py
     observe:
       github_workflow: system-improvements.yml
     last_run: null
-    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Codex reads supplied source excerpts only]
+    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Claude Code reads supplied source excerpts only]
     registry:
       title: AI Production Improvement Analyst
       version: 1.1.0
@@ -418,7 +418,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: Automatic reporting uses fixed checks; ops/system-improvements/codex_review.py adds a separately requested, read-only Codex review. Manual review has not been run.
+        evidence: Automatic reporting uses fixed checks; ops/system-improvements/claude_review.py adds a separately requested, read-only Claude Code review. Manual review has not been run.
       mission:
         problem: Atlas needs reviewable system improvement candidates without recurring model usage or repeated full builds.
         outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero automatic model calls]
@@ -428,12 +428,12 @@ agents:
         tools: [Python standard library, GitHub read-only REST API, GitHub Actions summary and artifact]
         inputs: [Completed main-branch CI push run or manual request, Exact assessed commit]
         outputs: [Markdown run summary, JSON and Markdown report artifact retained 14 days]
-        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Codex review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
+        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Claude Code review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
       goals:
         objective: Surface small evidence-backed improvements while minimizing usage.
       execution:
         trigger_type: event
-        environment: GitHub Actions for automatic reports; local Codex for requested reviews
+        environment: GitHub Actions for automatic reports; local Claude Code for requested reviews
         stages: [Read bounded source evidence, Read two bounded GitHub endpoints, Rank improvement candidates, Publish report]
       governance:
         autonomy: 1
@@ -444,7 +444,7 @@ agents:
         risk: low
         audit_log: GitHub Actions run summary and report artifact
       cost:
-        budget: Automatic reports use zero model tokens; manual Codex review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
+        budget: Automatic reports use zero model tokens; manual Claude Code review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
       docs:
         technical: docs/system-improvements.md
         runbook: docs/system-improvements.md
@@ -452,10 +452,10 @@ agents:
 
   - id: atlas-ui-improvement-designer
     name: AI UI Improvement Designer
-    model: No automatic model calls; manual Codex review only
+    model: No automatic model calls; manual Claude Code review only
     purpose: Reviews Atlas city maps, building interiors, labels, navigation, accessibility, and responsive layouts. Reuses existing CI reports and user-supplied screenshots to suggest at most three small design improvements. Reports only; no automatic edits or model runs.
-    framework: Codex (manual review)
-    runtime: Manually requested Codex session
+    framework: Claude Code (manual review)
+    runtime: Manually requested Claude Code session
     status: idle
     trigger: Explicit maintainer request only; no schedule
     source: ops/system-improvements/ui-design-prompt.md
@@ -477,22 +477,22 @@ agents:
         beneficiaries: [KC, Atlas users]
       responsibilities:
         tasks: [Review label clarity and visual hierarchy, Check building and path clearance, Assess floor navigation and entrances, Review accessibility and day-night contrast, Propose small prioritized improvements]
-        tools: [Manually requested Codex review, Existing CI report, User-supplied screenshots]
+        tools: [Manually requested Claude Code review, Existing CI report, User-supplied screenshots]
         inputs: [Explicit review request, Current screenshots, Focused source excerpts, Existing CI evidence]
         outputs: [Compact design report with evidence and a next validation step]
         limitations: [No scheduled model runs, No automatic code edits or deployments, No visual claims without screenshots, At most three recommendations, Reuses existing reports rather than rerunning CI]
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex session
+        environment: Maintainer-started Claude Code session
         stages: [Review supplied evidence, Identify confirmed UI issues, Rank three or fewer improvements, Return review for approval]
       governance:
         autonomy: 1
         autonomy_note: Reports only. Implementation requires a separate user request.
         data_sensitivity: internal
-        approval: Explicit user request starts each Codex review.
+        approval: Explicit user request starts each Claude Code review.
         risk: low
       cost:
-        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Codex allowance only when requested.
+        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Claude Code allowance only when requested.
       docs:
         technical: docs/ui-improvement-designer.md
         runbook: docs/ui-improvement-designer.md
@@ -503,7 +503,7 @@ agents:
     purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation. The hosted workflow is fixture-only; external creation is not invoked.
     office_floor: 3
     model: No runner model calls; paid creation remains disabled
-    framework: Manual Python handoff + Codex review on request
+    framework: Manual Python handoff + Claude Code review on request
     runtime: Local deterministic runner; manually dispatched fixture on GitHub Actions
     status: idle
     trigger: Explicit user request only; no schedule
@@ -538,8 +538,8 @@ agents:
     name: Atlas Reliability Reviewer
     purpose: Reviews existing test failures, building transitions, navigation, and error reports for reproducible reliability issues. Manual reports only, using existing evidence and at most three findings.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
+    model: No automatic model calls; manual Claude Code review only
+    framework: Claude Code (manual)
     owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
@@ -560,7 +560,7 @@ agents:
         evidence: Catalog role and manual review instructions only; no autonomous runner.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
+        environment: Maintainer-started Claude Code review
         stages: [Read existing evidence, Return three or fewer prioritized findings]
       governance:
         autonomy: 1
@@ -573,8 +573,8 @@ agents:
     name: Atlas Performance Reviewer
     purpose: Reviews supplied rendering and usage evidence for focused performance improvements without repeated builds or model loops. Manual reports only, using existing evidence and at most three findings.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
+    model: No automatic model calls; manual Claude Code review only
+    framework: Claude Code (manual)
     owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
@@ -595,7 +595,7 @@ agents:
         evidence: Catalog role and manual review instructions only; no autonomous runner.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
+        environment: Maintainer-started Claude Code review
         stages: [Read existing evidence, Return three or fewer prioritized findings]
       governance:
         autonomy: 1
