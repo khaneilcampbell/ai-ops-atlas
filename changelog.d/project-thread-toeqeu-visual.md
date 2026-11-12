@@ -1,1 +1,1 @@
-- 2026-11-12 · Screenshot checks on pull requests now run only when a PR has the "visual" label, plus every night on main, so they stop holding up every other check (#PR)
+- 2026-11-12 · Screenshot checks on pull requests now run only when a PR has the "visual" label, plus every night on main, so they stop holding up every other check (#397)
