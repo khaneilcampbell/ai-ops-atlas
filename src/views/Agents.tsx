@@ -1,4 +1,4 @@
-import { isAiAgent } from "../catalog/roles";
+import { directoryItems } from "../catalog/roles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { relative, formatDate } from "../lib/time";
@@ -38,7 +38,7 @@ const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", c
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
   const { catalog: allCatalog, repos, filters, setFilters, select, selection } = useAtlas();
   const title = kind === "automations" ? "Automations" : "Agents";
-  const catalog = useMemo(() => ({ ...allCatalog, agents: allCatalog.agents.filter(a => kind === "agents" ? isAiAgent(a) : !isAiAgent(a)) }), [allCatalog, kind]);
+  const catalog = useMemo(() => ({ ...allCatalog, agents: directoryItems(allCatalog.agents, kind) }), [allCatalog, kind]);
   const { telemetry: intel } = useIntel();
   const [prefs, setPrefs] = useState<Prefs>(() => {
     const saved = { ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) };

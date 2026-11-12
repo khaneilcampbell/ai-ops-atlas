@@ -45,7 +45,9 @@ describe("agent jobs", () => {
     expect(jobs.every((j) => j.shift.provenance === "inferred")).toBe(true);
   });
   it("keeps planned agents home", () => {
-    expect(jobs.find((j) => j.agentId === "skyline-inquiry-assistant")!.offDuty).toBe("planned");
+    const base = catalog.agents.find((a) => a.id === "repo-intelligence")!;
+    const planned: Agent = { ...base, id: "planned-agent", registry: { ...base.registry, classification: { type: "F", confidence: "verified" } } };
+    expect(agentJobs({ ...catalog, agents: [planned] })[0].offDuty).toBe("planned");
   });
   it("reads a person from the credential owner, and falls back to Khaneil otherwise", () => {
     const with_ = (credentialOwner: string) => ({ registry: { governance: { credentialOwner } } }) as unknown as Agent;

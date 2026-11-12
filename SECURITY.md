@@ -20,4 +20,4 @@ Please report vulnerabilities privately through [GitHub's private vulnerability 
 Desktop builds run without signing keys; a separate main-only signing job uses
 the macos-signing environment, and only an artifact publishing job has write
 permissions. See [CI signing](docs/ci-signing-security.md) and the
-[security rollout guide](ops/security/README.md) for configuration and VPS isolation.
+[security rollout guide](ops/security/README.md) for configuration.
