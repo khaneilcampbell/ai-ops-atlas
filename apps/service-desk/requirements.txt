@@ -20,7 +20,7 @@ pandas==3.1.0
 pillow==13.0.0
 plotly==7.1.0
 protobuf==7.36.2
-pyarrow==26.0.0
+pyarrow==26.0.1
 pydeck==0.9.3
 python-dateutil==3.0.0
 python-multipart==0.0.33
