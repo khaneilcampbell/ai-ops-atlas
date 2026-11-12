@@ -1,8 +1,8 @@
 import { validReport } from "../src/production/model";
 // Live activity for the app and the hosted web build. GitHub sends workflow and push events to
 // /api/hooks/github (signed with GITHUB_WEBHOOK_SECRET); the Mac app adds its own agents' runs
-// at /api/hooks/atlas (USAGE_SYNC_TOKEN), and pipelines outside Atlas (the commerce loop on its
-// VPS) report their phases at /api/hooks/agents (AGENT_FEED_TOKEN). All land in one D1 table, and clients read whatever
+// at /api/hooks/atlas (USAGE_SYNC_TOKEN), and pipelines outside Atlas
+// report their phases at /api/hooks/agents (AGENT_FEED_TOKEN). All land in one D1 table, and clients read whatever
 // is newer than the last event they saw: the signed-in page at /api/events, the Mac app at
 // /api/hooks/feed with its sync key.
 //
@@ -33,7 +33,7 @@ export interface LiveEnv extends AlertEnv {
   /** The Mac app's sync key, shared with usage sync. */
   USAGE_SYNC_TOKEN?: string;
   /** The key outside pipelines use to report runs. Separate from the sync key, so a leaked
-   *  VPS .env can only add run records, never read the feed. */
+   *  pipeline key can only add run records, never read the feed. */
   AGENT_FEED_TOKEN?: string;
 }
 

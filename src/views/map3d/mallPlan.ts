@@ -15,7 +15,7 @@ export const MALL={levels:4,floor:1.28,size:.8,slab:.1,gap:.35,openingHalf:.78,s
 /** One planned shop per sellable service. Status is never shown as live until the service is. */
 export interface MallShop {id:string;name:string;status:'planned'|'vacant';offer:string;doc?:string}
 export const MALL_SHOPS:MallShop[]=[
- {id:'skyline-inquiry-assistant',name:'Skyline Inquiry Assistant',status:'planned',offer:'Website form to inbox, inquiry log and owner alerts. Proposed pilot: $750 setup, $149/month.',doc:'docs/skyline-inquiry-assistant.md'},
+ {id:'unit-1',name:'Unit 1',status:'vacant',offer:'Open for the next sellable agent.'},
  {id:'unit-2',name:'Unit 2',status:'vacant',offer:'Open for the next sellable agent.'},
  {id:'unit-3',name:'Unit 3',status:'vacant',offer:'Open for the next sellable agent.'},
  {id:'unit-4',name:'Unit 4',status:'vacant',offer:'Open for the next sellable agent.'},
