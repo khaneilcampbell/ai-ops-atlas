@@ -1,9 +1,5 @@
 # Changelog
 
-What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
-top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
-shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Agents has a Refresh registry sheet button: it runs the Agent Registry workflow in n8n now instead of waiting up to 4 hours, shows when the sheet was updated or why it wasn't, allows one refresh a minute, and links to the sheet (#383)
 What changed in Atlas, newest first. From 2026-11-12 new lines go in `changelog.d/` (one file per
 pull request, see `changelog.d/README.md`) so open pull requests don't conflict here. The update notes
 read both places. Older lines stay below; don't add new ones at the top of this file.
