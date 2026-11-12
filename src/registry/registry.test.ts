@@ -38,9 +38,9 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 9 projects and 54 agents discoverable with no manifest problems", () => {
+  it("keeps all 8 projects and 54 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(9);
+    expect(catalog.projects).toHaveLength(8);
     expect(entries).toHaveLength(54);
   });
 
@@ -58,7 +58,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 15, B: 11, C: 15, D: 12, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 15, B: 11, C: 16, D: 11, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -289,7 +289,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(32);
+    expect(s.observable).toBe(31);
   });
 });
 

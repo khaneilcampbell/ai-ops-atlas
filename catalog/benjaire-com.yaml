@@ -111,7 +111,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: The export in benjaire-dashboard (products/flow/live-ops/workflows/1-intake.json) is a fixed n8n workflow with one Claude step (claude-haiku-5-5) that classifies the inquiry
+        evidence: The export in apps/benjaire-flow (live-ops/workflows/1-intake.json) is a fixed n8n workflow with one Claude step (claude-haiku-5-5) that classifies the inquiry
       mission:
         problem: Website inquiries need sorting, an owner alert and a reply to the sender without someone triaging each one.
         outcomes:
@@ -143,10 +143,10 @@ agents:
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
       docs:
-        technical: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/apps/benjaire-dashboard/products/flow/live-ops/README.md
+        technical: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/apps/benjaire-flow/live-ops/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#benjaire-flow-intake
         known_issues:
-          - The export in benjaire-dashboard is updated by hand, so it can drift from the live workflow
+          - The export in apps/benjaire-flow is updated by hand, so it can drift from the live workflow
           - The webhook has no rate limit of its own; it relies on the Worker in front
           - Status tokens never expire
           - No retention period is set for personal data in flow_inquiries

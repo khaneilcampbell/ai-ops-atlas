@@ -99,6 +99,21 @@ export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
  */
 const RETIRED_LOTS: { after: string; project: Project }[] = [
   {
+    // Benjaire Dashboard no longer exists (Khaneil, 2026-11-12). Its cleared lot keeps its streets.
+    after: "benjaire-site",
+    project: {
+      id: "benjaire-ops",
+      name: "Benjaire Dashboard",
+      summary: "Removed: the dashboard no longer exists.",
+      status: "active",
+      repository: "",
+      tags: ["benjaire", "cloudflare", "d1", "dashboard"],
+      district: "business-operations",
+      links: [],
+      agentIds: [],
+    },
+  },
+  {
     after: "benjaire-ops",
     project: {
       id: "career-optimizer",

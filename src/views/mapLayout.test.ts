@@ -175,9 +175,11 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
     // The same catalog with the removed projects renamed, so they are still drawn as towers. Career
-    // Applications has no manifest any more (2026-11-10), so its tower is put back on its old slot.
+    // Applications (2026-11-10) and Benjaire Dashboard (2026-11-12) have no manifest any more, so their
+    // towers are put back on their old slots.
     const was=(id:string)=>["service-desk","benjaire-ops"].includes(id)?`was-${id}`:id;
     const projects=catalog.projects.map(p=>({...p,id:was(p.id)}));
+    projects.splice(projects.findIndex(p=>p.id==="benjaire-site")+1,0,{id:"was-benjaire-ops",name:"Benjaire Dashboard",summary:"",status:"active",repository:"",tags:["benjaire","cloudflare","d1","dashboard"],district:"business-operations",links:[],agentIds:[]});
     projects.splice(projects.findIndex(p=>p.id==="was-benjaire-ops")+1,0,{id:"was-career-optimizer",name:"Career Applications",summary:"",status:"active",repository:"",tags:["claude","career","human-in-the-loop"],district:"career-portfolio",links:[],agentIds:[]});
     const without=layoutMap({projects,agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
     expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(3);
