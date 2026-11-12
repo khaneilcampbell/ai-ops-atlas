@@ -27,7 +27,7 @@ export function planShards(files, times, total) {
 
 /** Anchored filters, so "trackpad" does not also pick up "interior-trackpad". */
 export function filtersFor(files) {
-  return files.map((f) => `/${f.replace(/\./g, "\\.")}$`);
+  return files.map((f) => `/${f.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")}$`);
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));

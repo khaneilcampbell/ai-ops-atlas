@@ -36,3 +36,11 @@ describe("visual CI shards", () => {
     expect(longest).toBeLessThan(28 * 60);
   });
 });
+
+describe("visual CI shard filters", () => {
+  it("escapes every regular expression character in a file name", () => {
+    const [filter] = filtersFor(["a+b(c)\\d.visual.ts"]);
+    expect(new RegExp(filter).test("/repo/visual/a+b(c)\\d.visual.ts")).toBe(true);
+    expect(new RegExp(filter).test("/repo/visual/aab(c)\\d.visual.ts")).toBe(false);
+  });
+});
