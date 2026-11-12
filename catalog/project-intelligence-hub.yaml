@@ -139,7 +139,7 @@ agents:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/JCjTTvb7qZLpVXhs
       - label: Registry sheet
-        url: https://docs.google.com/spreadsheets/d/19q7nq0v8aYyyaMAw0dmbpyKiZWu7bA4szGvMKn4FDK8/edit
+        url: https://docs.google.com/spreadsheets/d/1zl8hUoIRy-OH1gVoU-PdiC1mM3KLMmiirPj8k8L-MkU/edit
     permissions:
       - 'GitHub: public reads of catalog/*.yaml, no key'
       - 'n8n API key (read only): workflows and recent executions'
