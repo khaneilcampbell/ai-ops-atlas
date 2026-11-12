@@ -340,6 +340,7 @@ agents:
     name: GitHub Steward
     purpose: "GitHub Steward: Collects bounded read-only observations for Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
     framework: Atlas read-only workflow
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
@@ -398,6 +399,7 @@ agents:
     model: Automatic reports use no model; manual reviews use an explicitly selected Claude model
     purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Claude Code reviews are available on request from Atlas HQ.
     framework: GitHub Actions + Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: GitHub-hosted Python reports; local Claude Code CLI for manual reviews
     status: idle
     trigger: After main-branch push CI completes, or manually from GitHub Actions on main
@@ -538,6 +540,7 @@ agents:
     office_floor: 3
     model: No automatic model calls; manual Claude Code review only
     framework: Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
@@ -572,6 +575,7 @@ agents:
     office_floor: 3
     model: No automatic model calls; manual Claude Code review only
     framework: Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
