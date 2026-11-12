@@ -604,6 +604,31 @@ agents:
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
 
+  - id: atlas-release-coordinator
+    name: Atlas Release Coordinator
+    purpose: >-
+      n8n chat agent KC asks about Atlas releases. Chat only, no tools, capped at $1 a month.
+    framework: n8n Agent
+    runtime: n8n Cloud
+    status: active
+    trigger: KC asks it in n8n chat
+    last_run: null
+    registry:
+      title: Release Coordinator
+      category: engineering
+      subcategory: Release
+      tier: specialized
+      automation_category: intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: Published n8n agent xwPwuboturejm9hz, checked read-only on 2026-11-11
+      execution:
+        trigger_type: manual
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Answers in chat only; it has no tools and changes nothing.
   # Building operators (2026-11-12): one scheduled, model-free check per building that reports to
   # the live feed. Their reports are what turn Product Marketplace, Observability Center and Data
   # Intelligence Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
