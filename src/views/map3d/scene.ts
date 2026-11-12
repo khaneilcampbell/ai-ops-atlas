@@ -32,7 +32,7 @@ import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airpo
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
-import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
+import { OPERATIONS_DISTRICTS, DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
@@ -302,7 +302,7 @@ function buildCity(layout: Layout): Scene3D {
     const identity = identityFor(d.project);
     // The landmark stands tallest; timber labs stay low and broad; the others grow with their agents.
     const floors = ["benjaire-site", "github-profile", "intelligence-hub", "benjaire-ops", "soc-lab", "portfolio-site"].includes(d.project.id) ? 14 : identity.landmark ? 15 : Math.min(identity.style === "timber" ? 9 : 18, 6 + Math.min(agents, 12));
-    const size = d.hq.size * (identity.landmark ? 1.02 : 0.92) * CITY_SCALE.hq.footprint;
+    const size = d.hq.size * (identity.landmark || d.project.id === "street-reserve:ai-ops-atlas" ? 1.02 : 0.92) * CITY_SCALE.hq.footprint;
     const cx = d.hq.gx + d.hq.size / 2;
     const cz = d.hq.gy + d.hq.size / 2;
     towers.push({
@@ -732,9 +732,18 @@ function buildCity(layout: Layout): Scene3D {
   const dealership=planDealership({financial});
   if(dealership)land.push(dealership.lot);
   const connections=districtConnections(airport,stadium,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
+  if (cleared.has("street-reserve:ai-ops-atlas")) {
+    const ring = (id: string) => { const t = towers.find(t => t.projectId === id)!; return towerRing(t, byId.get(id)!.hq.size * 1.25 + 1)!; };
+    const a = ring("commerce-pipeline"), b = ring("ai-ops-atlas");
+    connections.push({ id: "operations-through-street", road: [[a.x1, a.z0], [b.x0, a.z0]],
+      walk: [[a.x1, a.z0 + .65], [b.x0, a.z0 + .65]] });
+  }
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
-  const neighborhood=planNeighborhoodLinks({airport,marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
+  // Keep the established Marketplace boulevard attached to the retained public street grid.
+  const accessBridges = cleared.has("street-reserve:ai-ops-atlas")
+    ? carBridges.filter(b => !b.ends.some(id => id === "ai-ops-atlas" || id === "intelligence-hub")) : carBridges;
+  const neighborhood=planNeighborhoodLinks({airport,marketplace:marketplaceSite,hills,financial,stadium,parks,land,carBridges:accessBridges,paving,coreLand:cityLand,links:connections,obstacles:[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[])]});
   connections.push(...neighborhood.links);land.push(...neighborhood.land);
   // One street per corridor: links routed side by side share one carriageway, walks move off it.
   const streetBoxes=[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?[airportTrafficKeepOut(airport)]:[])];
@@ -768,6 +777,8 @@ function buildCity(layout: Layout): Scene3D {
   // Plain meadow filling the island out to a square; the stadium grounds may build on it. It is laid
   // before the Galleria, whose lot behind the Marketplace can reach onto it when a smaller catalog
   // moves the Marketplace toward the island's edge.
+  // Fill only new project ground before closing the existing square shoreline.
+  for (const t of terraces.filter(t => OPERATIONS_DISTRICTS.has(t.id))) land.push(...uncoveredLand(t, land));
   const meadowLand=compactSquareLand(land,cityLand);
   land.push(...meadowLand);
   let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top,{roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk)}):undefined;
