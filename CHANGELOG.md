@@ -109,6 +109,7 @@ shown in the Mac app's **Update available** button, so write them for KC, not fo
 - 2026-11-07 · Remove Atlas Hills and the highway, compact the city and connect five stations with one perimeter train (#256)
 - 2026-11-07 · Closed a security alert in a developer tool (minimatch); nothing changes in the app (#254)
 - 2026-11-05 · Agent keys pasted with a stray space, line break, quotes or an extra "Bearer" are no longer refused, so the Product Lab brief and other agent reports can reach Atlas (#253)
+- 2026-11-05 · Linked the Production Coordinator profile to its verified n8n advisor configuration, with clear reporting and live-budget gaps (#252).
 - 2026-11-04 · Atlas can now show your Product Lab's monthly brief (top pick, runners-up, scorecard, 30-day plan) in the Agents list and in the Marketing Agency, once you add one step in n8n that posts it. Atlas checks every score itself and never runs the agent (#249)
 - 2026-11-04 · Inside the Benjaire Marketing Agency, the six Product Lab agents now sit at desks in gold. Tap one, or its room label, to open the agent. The building panel lists them too (#248)
 - 2026-11-04 · Your n8n Benjaire Product Lab is now in the Agents list: the lead plus its five research roles, each assigned a room in the Benjaire Marketing Agency. They show as "Configured, not verified" until Atlas sees a real run (#247)
