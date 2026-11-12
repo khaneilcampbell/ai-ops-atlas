@@ -13,6 +13,7 @@ import { Inspector } from "./agents/Inspector";
 import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
+import { RegistryRefresh } from "./agents/RegistryRefresh";
 import "../styles/registry.css";
 
 type Sub = "directory" | "portfolio" | "goals" | "manage";
@@ -87,6 +88,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
             {summary.total} {kind === "automations" ? "automations, AI-assisted workflows, pipelines, and integrations" : "AI agents and planned agents"} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
           <p className="muted">{kind === "agents" ? "Agents use model-driven reasoning; planned agents are labeled separately. Fixed workflows are listed under Automations." : "Predefined workflows, including those with AI steps. Listed here does not mean enabled or running."}</p>
+          {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
           {SUBS.filter((s) => s.id !== "manage" || kind === "agents").map((s) => (

@@ -144,3 +144,9 @@
   .manage .manage-table > tbody > tr.manage-detail-row > td { padding: 4px 16px 14px; border-bottom: 1px solid var(--sage-100); }
   .manage .manage-detail .runs-table td, .manage .manage-detail .runs-table th { padding: 6px 8px; }
 }
+
+/* Refresh registry sheet (Agents page head) */
+.registry-refresh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; font-size: var(--text-sm); }
+.registry-refresh .text-btn { display: inline-flex; align-items: center; gap: 5px; }
+.registry-refresh .refresh-ok { color: var(--good); }
+.registry-refresh .refresh-failed { color: var(--bad); min-width: 0; overflow-wrap: anywhere; }
