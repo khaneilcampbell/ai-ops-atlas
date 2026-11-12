@@ -131,16 +131,25 @@ def census() -> str:
     return f"{projects} projects, {agents} agents, {len(repos)} repositories: " + ", ".join(p for p in parts if p)
 
 
-def report(check: str, status: str, detail: str, dry: bool) -> None:
+def report(check: str, status: str, detail: str, dry: bool) -> bool:
+    """Prints the report and sends it. False only when sending was tried and failed."""
     body = {"project": "ai-ops-atlas", "agents": [AGENT[check]], "phase": PHASE[check], "status": status, "detail": detail[:300], "at": now().isoformat()}
     url, token = os.environ.get("ATLAS_FEED_URL"), os.environ.get("ATLAS_FEED_TOKEN")
     print(json.dumps(body))
     if dry or not url or not token:
         print("Not sent: dry run or ATLAS_FEED_URL / ATLAS_FEED_TOKEN not set.", file=sys.stderr)
-        return
+        return True
     req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST", headers={"content-type": "application/json", "authorization": f"Bearer {token}", "user-agent": "atlas-building-agents"})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        print(f"Atlas accepted the report ({r.status}).")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            print(f"Atlas accepted the report ({r.status}).")
+        return True
+    except urllib.error.HTTPError as e:
+        hint = " ATLAS_FEED_TOKEN doesn't match the site's AGENT_FEED_TOKEN." if e.code == 401 else ""
+        print(f"::error::Atlas refused the {check} report ({e.code}).{hint}", file=sys.stderr)
+    except OSError as e:
+        print(f"::error::Couldn't reach Atlas to send the {check} report: {e}", file=sys.stderr)
+    return False
 
 
 def main() -> int:
@@ -156,7 +165,9 @@ def main() -> int:
             status, detail, failed = "failed", str(e), True
         except Exception as e:  # the check itself broke: still tell Atlas, so the building goes red
             status, detail, failed = "failed", f"Check could not run: {e.__class__.__name__}: {e}"[:300], True
-        report(check, status, detail, args.dry_run)
+        # A report Atlas refused fails the run too, so a broken feed never looks fine.
+        if not report(check, status, detail, args.dry_run):
+            failed = True
     return 1 if failed else 0
 
 
