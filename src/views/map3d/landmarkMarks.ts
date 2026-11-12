@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAtlas } from "../../state";
 import type { Health } from "../../lib/derive";
 import { useStudioHealth } from "../../components/ModuleWorkspaceLists";
-import { useAlerts } from "../../alerts/state";
+import { useSharedWatches } from "../../alerts/state";
 import { feedHealth } from "../../modules/feedHealth";
 import { landmarkInstances } from "../../modules/instances";
 import { serviceKey } from "../../modules/names";
@@ -27,7 +27,7 @@ export function useLandmarkMarks(): Readonly<Record<string, PlaqueMark>> {
   const { catalog, repos } = useAtlas();
   // One line per module that reads its own live sources (MODULE_HEALTH in ModuleWorkspaceLists).
   const studio = useStudioHealth();
-  const { watches } = useAlerts();
+  const watches = useSharedWatches();
   return useMemo(() => {
     const own: Partial<Record<ModuleTypeId, { health: Health; summary: string }>> = { "growth-marketing-studio": studio };
     const marks: Record<string, PlaqueMark> = {};
