@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ManifestIssue } from "../catalog/types";
 import { AGENCY_KEY } from "../views/map3d/marketingAgencyPlan";
 import { MALL_KEY } from "../views/map3d/mallPlan";
+import { GALLERIA_KEY } from "../views/map3d/galleriaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
@@ -10,7 +11,7 @@ import { catalog } from "../catalog";
 import { LANDMARK_MODULES, WORKSPACE, WORKSPACE_SCHEMA, parseWorkspace, workspaceIssues } from "./workspace";
 
 /** Every landmark id the map draws itself and that workspace.yaml may give a module. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, GALLERIA_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 const parse = (text: string) => {
   const issues: ManifestIssue[] = [];
@@ -37,6 +38,10 @@ describe("workspace file", () => {
     expect(ok.ws.landmarks[0]).toMatchObject({ project: "acme-site" });
     const bad = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: Bad Id }\n`);
     expect(bad.issues).toEqual(['landmarks.service:financial:banks.project: use a catalog project id such as "benjaire-site"']);
+    const withAgents = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, project: acme-site, agents: [acme-watch] }\n`);
+    expect(withAgents.ws.landmarks[0]).toMatchObject({ project: "acme-site", agents: ["acme-watch"] });
+    const noProject = parse(`schema: ${WORKSPACE_SCHEMA}\nworkspace: { id: a, name: A }\nlandmarks:\n  "service:financial:banks": { map_name: Bayvale Bank, module: finance-analytics-tower, agents: [acme-watch] }\n`);
+    expect(noProject.issues).toEqual(["landmarks.service:financial:banks.agents: list the catalog agent ids of its project that operate it, and set project"]);
     expect(bad.ws.landmarks).toEqual([]);
   });
 

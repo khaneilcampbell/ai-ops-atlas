@@ -193,7 +193,10 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
     // Every other building stands exactly where it stood while the two towers were drawn.
     const at=(l:typeof layout)=>Object.fromEntries(l.districts.filter(d=>!d.project.id.startsWith("was-")).map(d=>[d.project.id,[d.ox,d.oy,d.size]]));
     const expected=at(without);
-    if(group==="district")expected["ai-ops-atlas"]=[old.ox,old.oy,old.size];
+    if(group==="district") {
+      expected["ai-ops-atlas"]=[35.725,9.75,10];
+      expected["intelligence-hub"]=[37.975,22,10];
+    }
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();
     expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:service-desk"]);
@@ -210,8 +213,8 @@ it("keeps one open lot in every map grouping",()=>{
   }
 });
 
-it("registers Skyline without giving it a district", () => {
-  expect(catalog.projects.find(p => p.id === "skyline")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
+it("has no Skyline project or district, and no stray for its old repository", () => {
+  expect(catalog.projects.some(p => p.id === "skyline")).toBe(false);
   const layout = layoutMap(catalog, ["khaneilcampbell/skyline"]);
   expect(layout.districts.some(d => d.project.id === "skyline")).toBe(false);
   expect(layout.parks.filter(p => !p.strays.length && !p.vacant)).toHaveLength(1);

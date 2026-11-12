@@ -2,6 +2,10 @@ import {expect,it} from "vitest";
 import {catalog} from "./index";
 import {buildCatalog} from "./parse";
 import {projectOfficeAgents,workplaceAgent} from "./workplaces";
+import {WORKSPACE} from "../modules/workspace";
+
+// Agents that operate a landmark building (workspace.yaml `agents`) are placed there, not at headquarters.
+const operators=()=>catalog.agents.filter(a=>WORKSPACE.landmarks.some(l=>l.agents?.includes(a.id)));
 
 it("moves the Model Lab agents to Atlas HQ when Skyline is removed, keeping repo ownership",()=>{
   for(const id of ["atlas-system-improvements","atlas-ui-improvement-designer"]){
@@ -10,7 +14,7 @@ it("moves the Model Lab agents to Atlas HQ when Skyline is removed, keeping repo
     expect(agent.repository).toBe("khaneilcampbell/ai-ops-atlas");
     expect(projectOfficeAgents(catalog.agents,"ai-ops-atlas")).toContain(agent);
   }
-  const placed=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+  const placed=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace),...operators()];
   expect(placed.map(a=>a.id).sort()).toEqual(catalog.agents.map(a=>a.id).sort());
 });
 
@@ -45,13 +49,14 @@ it("assigns the manual production team only to Atlas Floor 3 and rejects invalid
 it('assigns Marketplace workers once, preserving their Commerce ownership and runtime',async()=>{
  const {MARKETPLACE_WORKSPACES,marketplaceAssignedAgent}=await import('../views/office/marketplaceWorkspaces');
  for(const w of MARKETPLACE_WORKSPACES){
+  if(catalog.agents.find(x=>x.id===w.agentId)?.status==='retired'){expect(marketplaceAssignedAgent(w.unitId,catalog.agents)).toBeUndefined();continue;}
   const a=marketplaceAssignedAgent(w.unitId,catalog.agents)!;
   expect(a.id).toBe(w.agentId);expect(a.projectId).toBe('commerce-pipeline');
   expect(a.repository).toBe('khaneilcampbell/multi-agent-commerce-pipeline');
   expect(a.workplace?.floor).toBe(1);expect(a.workplace?.building).toBe('Atlas Marketplace');
   expect(projectOfficeAgents(catalog.agents,a.projectId).some(x=>x.id===a.id)).toBe(false);
  }
- const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace)];
+ const placements=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace),...operators()];
  expect(new Set(placements.map(a=>a.id)).size).toBe(catalog.agents.length);
  expect(placements).toHaveLength(catalog.agents.length);
 });
@@ -60,10 +65,15 @@ it('validates Marketplace rooms without allowing unsupported suites elsewhere',(
  for(const w of ['{building: Atlas Marketplace, floor: 2, room: "208"}','{building: Model Lab, floor: 1, room: "108"}'])expect(buildCatalog({'a.yaml':manifest(w)}).issues.length).toBeGreaterThan(0);
 });
 
-it("moves the Inquiry Assistant to Marketplace Unit 101 with its original ownership",()=>{
- const a=workplaceAgent(catalog.agents,"Atlas Marketplace",1,"101")!;
- expect(a.id).toBe("skyline-inquiry-assistant");expect(a.projectId).toBe("skyline");
- expect(projectOfficeAgents(catalog.agents,"skyline")).not.toContain(a);
+it("leaves rooms of retired agents vacant",()=>{
+ const retired=catalog.agents.filter(a=>a.status==="retired"&&a.workplace);
+ expect(retired.length).toBeGreaterThan(0);
+ for(const a of retired)expect(workplaceAgent(catalog.agents,a.workplace!.building,a.workplace!.floor,a.workplace!.room)).toBeUndefined();
+});
+
+it("leaves Marketplace Unit 101 empty now the Skyline Inquiry Assistant is removed",()=>{
+ expect(workplaceAgent(catalog.agents,"Atlas Marketplace",1,"101")).toBeUndefined();
+ expect(projectOfficeAgents(catalog.agents,"skyline")).toEqual([]);
 });
 
 it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the interior plan",async()=>{

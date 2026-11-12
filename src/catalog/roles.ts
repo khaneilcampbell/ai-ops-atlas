@@ -11,6 +11,12 @@ export function isAiAgent(a: Pick<Agent, "registry">) {
   return !!t && AI_TYPES.has(t);
 }
 
+/** What the Agents or Automations directory lists: current items of that kind. Retired items stay in
+ *  their manifests as history but no longer run anywhere, so the directories leave them out. */
+export function directoryItems<T extends Pick<Agent, "registry" | "status">>(agents: T[], kind: "agents" | "automations"): T[] {
+  return agents.filter((a) => a.status !== "retired" && (kind === "agents" ? isAiAgent(a) : !isAiAgent(a)));
+}
+
 /** Items with no classification in their manifest; the map treats them as automations. */
 export function unclassified(agents: Pick<Agent, "id" | "registry">[]) {
   return agents.filter((a) => !a.registry?.classification?.type || a.registry.classification.type === "unclassified");
