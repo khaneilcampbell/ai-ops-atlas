@@ -90,6 +90,7 @@ describe("automation categories", () => {
         "benjaire-product-lab-scoring",
         "brand-strategist",
         "canva-mockups",
+        "career-execution",
         "commerce-loop",
         "copy-strategist",
         "email-digest",

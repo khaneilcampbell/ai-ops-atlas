@@ -110,7 +110,9 @@ agents:
   it("watches the customer-facing agents; the n8n commerce pipeline emails its own failures", () => {
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
-    const watched = catalog.agents.filter((a) => a.alerts);
+    // The Career Execution Agent is a draft, off on purpose until KC publishes it: no alerts.
+    expect(catalog.agents.filter((a) => a.alerts?.notRunning).map((a) => a.id)).toEqual(["career-execution"]);
+    const watched = catalog.agents.filter((a) => a.alerts && !a.alerts.notRunning);
     expect(watched.map((a) => a.id).sort()).toEqual(["benjaire-contact-worker", "benjaire-flow-intake"]);
     for (const a of watched) {
       expect(a.observe?.agentFeed).toBe(true);

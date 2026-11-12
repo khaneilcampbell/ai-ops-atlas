@@ -239,3 +239,86 @@ agents:
         improvements:
           - Pin actions to commit SHAs and let Dependabot bump them
         last_review: 2026-10-28
+
+  - id: career-execution
+    name: Career Execution Agent
+    purpose: >-
+      n8n workflow that turns a job link or pasted job description into a resume summary, cover note and
+      recruiter message built only from KC's confirmed facts, then emails KC the drafts to review.
+      It never applies or messages anyone.
+    framework: n8n
+    model: claude-opus-5-5 (drafts), claude-haiku-5-5 (requirements)
+    runtime: n8n Cloud
+    status: paused
+    trigger: Job form, plus a Monday 9am summary and a daily 10am review nudge
+    alerts:
+      not_running: Draft. Unpublished in n8n until KC confirms the facts table and approves publishing
+    last_run: null
+    history:
+      - at: 2026-11-12
+        event: Built as an unpublished n8n draft; test run on a sample job post passed with no real sending
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/Zd379gPsiCcBQfwo
+      - label: Tracker
+        url: https://khancam15.app.n8n.cloud/projects/qhAhqRqO8TimFtxs/datatables/hFhMgfm236UyA8ii
+    permissions:
+      - Anthropic, through the n8n credential on Extract Requirements and Draft Application
+      - 'Resend API: review, failure, weekly summary and nudge emails to KC only'
+      - 'n8n data tables: writes career_applications, reads career_verified_facts'
+      - Reads public job pages with a plain GET; no logins
+    registry:
+      title: Career Application Coordinator
+      tier: specialized
+      category: business
+      subcategory: Career applications
+      classification:
+        type: B
+        confidence: verified
+        evidence: Fixed n8n workflow with one Haiku extraction call and one Opus drafting call; project matching and citation checks are plain code
+      mission:
+        problem: Tailoring each application by hand takes time and invites claims that can't be backed up.
+        outcomes:
+          - Each job gets a cited draft to review, with unsupported sentences marked Unverified
+          - Nothing is sent to a company or recruiter
+        beneficiaries: [KC]
+      responsibilities:
+        tasks: [Read the job page or pasted description, Extract requirements, Pick the 1 to 3 strongest projects, Draft resume summary cover note and recruiter message, List missing requirements and one interview question, Save a Draft row and email KC for review]
+        tools: [n8n Cloud, Claude (claude-haiku-5-5 and claude-opus-5-5), n8n data tables, Resend]
+        inputs: [Job form, Confirmed rows in career_verified_facts]
+        outputs: [Draft row in career_applications, Review email with a .md attachment]
+        limitations: [Only confirmed facts are used, Job pages that need a login need the description pasted]
+      goals:
+        objective: Cut tailoring time without inventing experience.
+        kpis:
+          - name: Applications reviewed
+            kind: throughput
+            basis: Tracker status Reviewed or Submitted, in the Monday summary email
+          - name: Applications submitted
+            kind: throughput
+            basis: Tracker status Submitted, set by KC after applying
+          - name: Tailoring minutes
+            kind: other
+            basis: tailoring_minutes column, filled in by KC
+          - name: Interview stories practiced
+            kind: other
+            basis: stories_practiced column, filled in by KC
+      execution:
+        trigger_type: event
+        environment: n8n
+        stages: [Spend check, Read job, Extract requirements, Match projects, Draft, Check citations, Save draft, Review email]
+      governance:
+        autonomy: 1
+        autonomy_note: Drafts only. KC reviews every draft and applies by hand. Spend cap $3 a month checked before any AI call, each step retries at most 3 times, and failures email KC.
+        approval: KC reviews each draft; publishing the workflow needs KC's OK
+        data_sensitivity: confidential
+        credential_owner: KC (n8n credentials)
+        risk: low
+        audit_log: n8n executions and the career_applications data table
+      docs:
+        known_issues:
+          - Draft until KC confirms the facts in career_verified_facts and approves publishing
+          - Atlas has no live data for it yet; results stay in n8n
+        improvements:
+          - Connect n8n executions to Atlas
+        last_review: 2026-11-12
