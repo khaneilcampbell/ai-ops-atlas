@@ -29,6 +29,7 @@ it("reports health as not verified when CI has not loaded, and names the source"
 it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
   const html = render({ kind: "service", id: "atlas-marketplace" });
   expect(html).toContain("Commerce &amp; Product Marketplace");
+  expect(html).toContain("Products and releases, the pipelines that publish them");
   expect(html).toContain('aria-label="Publishing pipeline"');
   expect(html).toContain("not running");
   expect(html).not.toContain("No commerce agents");
