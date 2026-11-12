@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
 - 2026-11-12 · README brought up to date: operational building names, building modules, agent counts, n8n alerts and the time zone setting (#394)
+- 2026-11-12 · The Product Marketplace now describes what it's for today: where Benjaire's products are sold (the n8n, Canva and Stripe pipeline) and where Atlas releases are checked by the Marketplace Steward (#386)
 - 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)
 - 2026-11-12 · Removed Benjaire Dashboard from Atlas: its catalog entry, Dashboard CI agent, runbook and app code are gone. The map is unchanged (its cleared lot stays), and the Flow intake files moved to apps/benjaire-flow (#377)
 - 2026-11-12 · The Agent Operations Center now lists the Agent Registry Sync, the n8n workflow that keeps your agent registry Google Sheet up to date (#377)
