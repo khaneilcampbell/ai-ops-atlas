@@ -130,7 +130,7 @@ agents:
       Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
       building next in the sheet's Top 10 Agents tab, with one capped Claude call.
     framework: n8n
-    model: claude-opus-5-5 for the every-3-days ranking only ($3 per 30 days); the registry sync uses no model
+    model: claude-opus-5-5 for the weekly Sunday ranking only ($3 per 30 days); the registry sync uses no model
     runtime: n8n Cloud
     status: paused
     trigger: Schedule (draft, not published yet)
