@@ -4,6 +4,7 @@ What changed in Atlas, newest first. Every pull request that changes the app add
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for Khaneil, not for a reviewer.
 - 2026-11-12 · Atlas, its agent prompts and customer emails now call you Khaneil instead of KC (#376)
+- 2026-11-12 · Activity's Project filter lists only the buildings on the map today. Removed buildings like Skyline no longer show as choices, but their past activity stays under All. Agent runs show the project the agent belongs to (#361)
 - 2026-11-12 · Three operations districts now share land dimensions and consistent selection boundaries (#375)
 - 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#374)
 - 2026-11-12 · The Security Operations Center now lists security incidents: exposed secrets and critical or high GitHub alerts, each with a link to fix it (#373)

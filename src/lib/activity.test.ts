@@ -96,3 +96,17 @@ describe("approval-required actions", () => {
     expect(events[1].detail).toContain("CI #7");
   });
 });
+
+
+describe("agents in a shared repository", () => {
+  it("labels an agent run with the project the agent belongs to", () => {
+    const projects = [
+      { ...catalog.projects[0], id: "p", name: "Command Center", agentIds: [] },
+      { ...catalog.projects[0], id: "ops", name: "Ops" },
+    ];
+    const agents = [{ ...catalog.agents[0], projectId: "ops" }];
+    const events = workspaceEvents({ projects, agents }, repos);
+    expect(events.find((e) => e.kind === "agent")).toMatchObject({ projectId: "ops", detail: "Ops · push on main" });
+    expect(events.find((e) => e.kind === "commit")?.detail).toBe("Command Center · kc · abcdef1");
+  });
+});

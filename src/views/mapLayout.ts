@@ -1,4 +1,4 @@
-import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
+import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES, OFF_MAP_PROJECTS } from "../catalog/projects";
 import { towerRing } from "./map3d/roads";
 import { CITY_SCALE } from "./map3d/cityScale";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
@@ -81,7 +81,7 @@ export interface Park {
  * and Benjaire Dashboard were removed on 2026-11-09, and each keeps its land, so every other
  * building, road and bridge keeps its place.
  */
-export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "service-desk", "career-optimizer", "benjaire-ops"]);
+export { OFF_MAP_PROJECTS } from "../catalog/projects";
 /** Removed towers on the city's edge: their land becomes a plain lawn lot. */
 const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimizer"]);
 /**
