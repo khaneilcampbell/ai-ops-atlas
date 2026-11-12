@@ -3,7 +3,7 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
-- 2026-11-12 · Screenshot checks on pull requests run as 8 evenly timed groups, so they no longer stop at the 35 minute limit (#389)
+- 2026-11-12 · Screenshot checks on pull requests run as 10 evenly timed groups, so they no longer stop at the 35 minute limit (#389)
 - 2026-11-12 · Agents now show the automations they run nested underneath, with one health dot for the whole group that only turns green when every part is verified. Senior Engineering Reviewer runs 4 automations and Portfolio Web Developer runs 3. Automations lists the ones with no owning agent yet (27 today), so you can give each an owner or retire it (#382)
 - 2026-11-12 · Agents and Automations now list only what runs today. Retired commerce agents from the removed Linux server are gone from the lists, and Linux VPS is no longer a Runtime choice. Skyline and its Benjaire Inquiry Assistant are removed, and Marketplace rooms of retired agents now read as open studios. Commerce runbooks now describe the n8n workflows (#379)
 - 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center each have their own agent now (Marketplace Steward, Signal Watch, Dataset Census). They run on a schedule with no AI calls and report to the live feed, and a building only goes green while its agent has reported a recent success (#372)

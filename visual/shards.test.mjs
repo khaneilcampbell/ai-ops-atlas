@@ -31,9 +31,9 @@ describe("visual CI shards", () => {
     const dir = new URL(".", import.meta.url);
     const files = readdirSync(dir).filter((f) => f.endsWith(".visual.ts"));
     const times = JSON.parse(readFileSync(new URL("shard-times.json", dir), "utf8"));
-    const longest = Math.max(...planShards(files, times, 8).map((s) => s.seconds));
-    // Leave room for install and start-up inside the 35 minute job limit.
-    expect(longest).toBeLessThan(28 * 60);
+    const longest = Math.max(...planShards(files, times, 10).map((s) => s.seconds));
+    // Runners vary by about 15% between runs; leave that plus install time inside the 35 minute limit.
+    expect(longest).toBeLessThan(24 * 60);
   });
 });
 

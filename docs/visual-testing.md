@@ -64,12 +64,13 @@ and that the inspector's copy button puts the repository name on the clipboard.
 
 `.github/workflows/visual.yml` is a separate, optional job. It runs on pull requests that
 touch views, styles, components or `visual/`, and by hand from the Actions tab. It is not
-a required check. The specs run as 8 shards in parallel, 35 minutes each. `visual/shards.mjs`
+a required check. The specs run as 10 shards in parallel, 35 minutes each. `visual/shards.mjs`
 gives each shard a set of spec files of about equal running time, using the seconds per file in
 `visual/shard-times.json` (a new file counts as 90 seconds until that file is updated from a CI
-run). Playwright's own `--shard` splits by test count, which put the slow map files that sit next
+run). A spec file should stay well under 20 minutes on CI, so a long set of map tests is split
+across files, like `module-lists-1` and `module-lists-2`. Playwright's own `--shard` splits by test count, which put the slow map files that sit next
 to each other alphabetically into one shard and cut it off at 35 minutes.
-Run one shard locally with `npx playwright test -c visual $(node visual/shards.mjs 1 8)`. Each shard uploads
+Run one shard locally with `npx playwright test -c visual $(node visual/shards.mjs 1 10)`. Each shard uploads
 its screenshots, diffs and report as a `visual-results-N` artifact. Until `visual/baselines/ci/` exists it only records screenshots.
 To set or accept CI baselines, run the workflow by hand with **update** ticked: it pushes
 the new PNGs to a `visual-baselines/run-<id>` branch to open a pull request from.
