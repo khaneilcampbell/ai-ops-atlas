@@ -36,7 +36,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
  const {writeFileSync}=await import('node:fs');
  for(const s of shots)writeFileSync(`${out}/${tag}-${s.name}-${light}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  // Old and new plaques share the title ending, so the same spec shoots before and after.
- await page.locator('.m3-plaque[title$="Stadium · Planned venue"]').first().dispatchEvent('click');await settle(page,4);
+ await page.locator('.m3-plaque[title$="Team Events Arena · Planned venue"]').first().dispatchEvent('click');await settle(page,4);
  if(light==='day')await page.screenshot({path:`${out}/${tag}-selected-${light}.png`});
  // The interior, where the build has one: the open cutaway, then each view.
  const enter=page.getByRole('button',{name:'Enter building'});

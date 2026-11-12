@@ -56,6 +56,15 @@ describe("workspaceEvents", () => {
   });
 });
 
+describe("shared repositories", () => {
+  it("labels a shared repository with the project named after it, not the last one registered", () => {
+    const shared: Catalog = { ...catalog, projects: [{ ...catalog.projects[0], id: "p", name: "Command Center" }, { ...catalog.projects[0], id: "skyline", name: "Skyline", agentIds: [] }] };
+    const details = workspaceEvents(shared, repos).filter((e) => e.repo === "me/p" && e.kind !== "manifest").map((e) => e.detail);
+    expect(details.length).toBeGreaterThan(0);
+    for (const d of details) expect(d.startsWith("Command Center · ")).toBe(true);
+  });
+});
+
 describe("intelligence runs", () => {
   it("adds repository intelligence runs with their result and cost", () => {
     const run = {
@@ -89,20 +98,15 @@ describe("approval-required actions", () => {
 });
 
 
-describe("consolidated repository attribution", () => {
- it("uses agent ownership and the repository's own project regardless of catalog order", () => {
-  const primary={...catalog.projects[0],id:"p",name:"Command Center"};
-  const skyline={...primary,id:"skyline",name:"Skyline"};
-  for(const projects of [[primary,skyline],[skyline,primary]]) {
-   const events=workspaceEvents({...catalog,projects},repos);
-   expect(events.find(e=>e.kind==="agent")).toMatchObject({projectId:"p",detail:"Command Center · push on main"});
-   expect(events.find(e=>e.kind==="commit")).toMatchObject({projectId:"p",detail:"Command Center · kc · abcdef1"});
-  }
- });
- it("keeps ambiguous shared repository events unassigned instead of guessing", () => {
-  const projects=[{...catalog.projects[0],id:"one"},{...catalog.projects[0],id:"two"}];
-  const events=workspaceEvents({...catalog,projects},repos);
-  expect(events.find(e=>e.kind==="commit")).toMatchObject({detail:"me/p · kc · abcdef1"});
-  expect(events.find(e=>e.kind==="commit")?.projectId).toBeUndefined();
- });
+describe("agents in a shared repository", () => {
+  it("labels an agent run with the project the agent belongs to", () => {
+    const projects = [
+      { ...catalog.projects[0], id: "p", name: "Command Center", agentIds: [] },
+      { ...catalog.projects[0], id: "ops", name: "Ops" },
+    ];
+    const agents = [{ ...catalog.agents[0], projectId: "ops" }];
+    const events = workspaceEvents({ projects, agents }, repos);
+    expect(events.find((e) => e.kind === "agent")).toMatchObject({ projectId: "ops", detail: "Ops · push on main" });
+    expect(events.find((e) => e.kind === "commit")?.detail).toBe("Command Center · kc · abcdef1");
+  });
 });

@@ -9,7 +9,7 @@ import {type LightMode} from '../map3d/living';
 import {night as cityNight} from '../map3d/materials';
 import type {Pt} from '../map3d/roads';
 import {slabGeometry,wallGeometry} from '../map3d/Galleria';
-import {GALLERIA_ATRIUM_LINE,GALLERIA_BASEMENT,GALLERIA_FLOORS,GALLERIA_NAME,GALLERIA_UNITS,GALLERIA,glassOutline,insidePoly,slabOutline,type GalleriaKind,type GalleriaUnit} from '../map3d/galleriaPlan';
+import {GALLERIA_ATRIUM_LINE,GALLERIA_BASEMENT,GALLERIA_FLOORS,GALLERIA_KEY,GALLERIA_NAME,GALLERIA_UNITS,GALLERIA,glassOutline,insidePoly,slabOutline,type GalleriaKind,type GalleriaUnit} from '../map3d/galleriaPlan';
 import CityOutside from './CityOutside';
 import AgencyCrowd from './AgencyCrowd';
 import type {CrowdPerson} from './agencyCrowdPlan';
@@ -17,6 +17,9 @@ import {useReducedMotion} from '../../lib/motion';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
 import '../../styles/skyline.css';
+import {buildingDisplayName} from '../../modules/names';
+/** The name shown inside; GALLERIA_NAME stays the map key. */
+const shown=()=>buildingDisplayName(GALLERIA_KEY,GALLERIA_NAME);
 
 /** Interior units per plan metre: the 80 m building is about 34 units across. */
 export const GALLERIA_IN={k:.42,heights:[3,4,3.6,3.2] as readonly number[]} as const;
@@ -245,7 +248,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const info=GALLERIA_FLOORS.find(f=>f.floor===mode);
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
- return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${GALLERIA_NAME} interior`}>
+ return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
   <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
@@ -263,8 +266,8 @@ export default function GalleriaInterior({light}:{light:LightMode}){
    {mode!==0&&<Atrium top={BASE[3]+GALLERIA_IN.heights[3]+.6} night={isNight} shift={mode===ALL?0:BASE[mode]} ceiling={mode===ALL?undefined:GALLERIA_IN.heights[mode]-.05}/>}
    <Fins floors={floors} stacked={mode===ALL}/>
   </Canvas>
-  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${GALLERIA_NAME} and return to city`}>← Exit building</button><div><small>ATLAS GALLERIA · SHOPPING MALL</small><h2>{title}</h2></div><span/></header>
-  <nav className="skyline-floor-picker" aria-label={`Choose ${GALLERIA_NAME} floor`}><strong>Floor navigation</strong>
+  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to city`}>← Exit building</button><div><small>{shown().toUpperCase()} · SHOPPING MALL</small><h2>{title}</h2></div><span/></header>
+  <nav className="skyline-floor-picker" aria-label={`Choose ${shown()} floor`}><strong>Floor navigation</strong>
    {[ALL,3,2,1,0].map(n=><button key={n} aria-pressed={mode===n} onClick={()=>{setMode(n);setPicked(null);}}>{n===ALL?'All floors':GALLERIA_FLOORS[n].label}</button>)}</nav>
   <aside className="skyline-interior-note">{picked?<>{picked.name}<span>{picked.note}</span></>:mode===ALL?<>Basement car park and three shopping floors round a funnel atrium · {lookHint()}<span>Planned building · Visual only · No shop is selling or connected.</span></>:<>{info!.summary}<span>Planned building · Select a unit to see what it is for.</span></>}</aside>
  </section>;

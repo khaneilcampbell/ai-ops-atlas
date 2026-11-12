@@ -29,7 +29,7 @@ for(const light of ['day','night'] as const)test(`Portfolio Site, ${light}`,asyn
 });
 test('Portfolio Site nameplate still opens its panel',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- await selectBuilding(page,'Portfolio Site');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Portfolio Site',exact:true})).toBeVisible();
+ await selectBuilding(page,'Portfolio Web Studio');await settle(page,2);await expect(page.getByRole('complementary',{name:'Inspector'}).getByRole('heading',{name:'Portfolio Web Studio',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/selected.png`});
 });
 test('Portfolio Site on a phone',async({page})=>{

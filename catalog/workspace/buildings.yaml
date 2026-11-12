@@ -14,34 +14,37 @@ buildings:
     display_name: Growth & Marketing Studio
     organization: Benjaire
     former_names: [Benjaire Marketing Agency]
+  # Nov 11: every Financial District building belongs to Benjaire. Each is one of Benjaire's
+  # finance and operations buildings; the fictional brands they used to carry stay in former_names
+  # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
     display_name: Data Intelligence Center
-    organization: Aldren Insights
+    organization: Benjaire
     former_names: [Aldren Insights]
   "service:financial:banks":
     display_name: Financial Operations Tower
-    organization: Bayvale Bank
+    organization: Benjaire
     former_names: [Bayvale Bank]
   "service:financial:financial-planning":
     display_name: Knowledge & Research Center
-    organization: Ravelle Advisors
+    organization: Benjaire
     former_names: [Ravelle Advisors]
   "service:financial:budget":
     display_name: Budget & Forecasting Center
-    organization: Ellery Budget Center
+    organization: Benjaire
     former_names: [Ellery Budget Center]
   "service:financial:records":
     display_name: Governance & Compliance Center
-    organization: Halden Trust
+    organization: Benjaire
     former_names: [Halden Trust]
   "service:bmw-dealership":
     display_name: Infrastructure Operations Hub
     organization: Vantor Motors
     former_names: [Vantor Motors]
   "service:financial:investments":
-    display_name: Integration Exchange
-    organization: Robin Exchange
-    former_names: [Robin Exchange]
+    display_name: Investment Operations Center
+    organization: Benjaire
+    former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
     display_name: Product Marketplace
     organization: Atlas
@@ -50,3 +53,52 @@ buildings:
     display_name: Workflow Automation Hub
     organization: Atlas
     former_names: [Atlas Central Station]
+  # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
+  # module's name; landmarks without one get a plain name for what they are, never a module.
+  # Client Success Center is named for a planned module (client onboarding and follow-up) that
+  # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
+  # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
+  "service:financial:harbor-residence":
+    display_name: Client Success Center
+    organization: Benjaire
+    former_names: [Camton Hotel]
+  "service:financial:circa":
+    display_name: Team Residence Towers
+    organization: Benjaire
+    former_names: [Ellipse Residences]
+  "service:financial:insurance":
+    display_name: Risk & Insurance Center
+    organization: Benjaire
+    former_names: [Merrow Credit Union]
+  "service:financial:business-finance":
+    display_name: Business Finance Center
+    organization: Benjaire
+    former_names: [Corvane Capital]
+  "service:atlas-galleria":
+    display_name: Vendor & Supplier Hub
+    organization: Atlas
+    former_names: [Atlas Galleria]
+  "service:skyline-stadium":
+    display_name: Team Events Arena
+    organization: Atlas
+    former_names: [Atlas Stadium]
+  "service:stadium-station":
+    display_name: Events Arena Station
+    organization: Atlas
+    former_names: [Stadium Station]
+  "service:airport-building:terminal":
+    display_name: Passenger Terminal
+    organization: Atlas Airport
+    former_names: [Atlas · Terminal]
+  "service:airport-building:tower":
+    display_name: Air Traffic Control
+    organization: Atlas Airport
+    former_names: [Atlas · Air Traffic]
+  "service:airport-building:cargo":
+    display_name: Model Intelligence Lab
+    organization: Atlas Airport
+    former_names: [Atlas · Cargo]
+  "service:airport-building:operations":
+    display_name: Observability Center
+    organization: Atlas Airport
+    former_names: [Atlas · Operations]

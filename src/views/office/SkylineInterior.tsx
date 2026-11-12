@@ -1,5 +1,5 @@
 import {financialInteriorBrand} from '../map3d/financialBrands';
-import {buildingDisplayName} from "../../modules/names";
+import {buildingDisplayName,currentBuildingName} from "../../modules/names";
 import {FINANCIAL_BUILDINGS} from "../map3d/financialPlan";
 import {WorkplaceInspector} from './WorkplaceInspector';
 import {workplaceAgent} from "../../catalog/workplaces";
@@ -103,7 +103,7 @@ function SkylineCamera({allFloors,floor,maxFloor,spread=1}:{allFloors:boolean;fl
   return <OrbitControls ref={controls} makeDefault minDistance={10} maxDistance={60*spread} maxPolarAngle={Math.PI/2.3}/>;
 }
 export default function SkylineInterior({building,light,maxFloor=4}:{building:string;light:LightMode;maxFloor?:number}) {
-  const identity=financialInteriorBrand(building),displayName=identity?.name??building,shownName=identity?buildingDisplayName(`service:financial:${identity.id}`,displayName):displayName,circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
+  const identity=financialInteriorBrand(building),displayName=identity?.name??building,shownName=identity?buildingDisplayName(`service:financial:${identity.id}`,displayName):currentBuildingName(displayName),circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   // The Financial District interiors (Circa and the others) have walking residents and staff, so they animate.
   const tower=towerSpec(building),spread=circa?1.75:tower?1.25:1;

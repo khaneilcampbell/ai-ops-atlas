@@ -40,6 +40,9 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
   const walkPaths=connectionSpans(paths.map(l=>l.walk));
   // Every street a walk can run beside: district roads, their frontage streets and the bridge streets.
   const roadSpans=connectionSpans([...paths.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...(scene.carBridges??[]).flatMap(br=>br.roads)]);
+  // A walk's railing stops wherever any road crosses it, the Galleria's drives included: the walk
+  // itself already opens there, so a rail left standing would run across the carriageway (KC, 2026-11-09).
+  const railBreaks=[...paths.map(l=>l.road),...clearRoads];
   for(const span of walkPaths){const link={walk:[span.a,span.b]};
    for(let i=1;i<link.walk.length;i++){
     const a=link.walk[i-1],b=link.walk[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.02)continue;
@@ -58,7 +61,7 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
      for(let t=.2;t<len-.15;t+=.4){
       const px=a[0]+(b[0]-a[0])*t/len,pz=a[1]+(b[1]-a[1])*t/len;
       if(scene.land.some(l=>px>l.x+.08&&px<l.x+l.w-.08&&pz>l.z+.08&&pz<l.z+l.d-.08))continue;
-      if(paths.some(l=>distanceToRoad([px,pz],l.road)<ROAD_W/2+.12)||walkPaths.some(other=>other!==span&&distanceToRoad([px,pz],[other.a,other.b])<TRANSPORT.walkWidth/2+.08))continue;
+      if(railBreaks.some(road=>distanceToRoad([px,pz],road)<ROAD_W/2+.12)||walkPaths.some(other=>other!==span&&distanceToRoad([px,pz],[other.a,other.b])<TRANSPORT.walkWidth/2+.08))continue;
       solid.push({p:[px+Math.cos(r)*side*(TRANSPORT.walkWidth/2-.015),TERRACE_H+.23,pz-Math.sin(r)*side*(TRANSPORT.walkWidth/2-.015)],s:[.025,.025,Math.min(.42,len-t-.1)],r,c:'#294237'}, {p:[px+Math.cos(r)*side*(TRANSPORT.walkWidth/2-.015),TERRACE_H+.08,pz-Math.sin(r)*side*(TRANSPORT.walkWidth/2-.015)],s:[.025,.16,.025],c:'#294237'});
      }
     }

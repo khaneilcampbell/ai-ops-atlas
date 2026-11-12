@@ -39,12 +39,12 @@ export function pipelineStage(agent: Agent, entry: RegistryEntry | undefined, no
 
 const ORDER: Record<StageState, number> = { failing: 0, silent: 1, unknown: 2, ok: 3, "not-running": 4 };
 
-/** Every stage of the commerce projects, problems first. */
+/** Every working stage of the commerce projects, problems first. Retired agents are not stages. */
 export function pipelineStages(projects: readonly Project[], agents: readonly Agent[], entries: readonly RegistryEntry[], now: number, feedLive: boolean): PipelineStage[] {
   const ids = new Set(commerceProjects(projects).map((p) => p.id));
   const byId = new Map(entries.map((e) => [e.profile.id, e]));
   return agents
-    .filter((a) => ids.has(a.projectId))
+    .filter((a) => ids.has(a.projectId) && a.status !== "retired")
     .map((a) => pipelineStage(a, byId.get(a.id), now, feedLive))
     .sort((a, b) => ORDER[a.state] - ORDER[b.state] || a.agent.name.localeCompare(b.agent.name));
 }

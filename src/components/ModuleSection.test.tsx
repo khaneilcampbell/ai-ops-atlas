@@ -26,14 +26,6 @@ it("reports health as not verified when CI has not loaded, and names the source"
   expect(html).toContain("Open Mission →");
 });
 
-it("marks a planned landmark module as not live and offers no navigation", () => {
-  const html = render({ kind: "service", id: "airport-building:cargo" });
-  expect(html).toContain("Model Intelligence Lab");
-  expect(html).toContain("Planned · Not connected");
-  expect(html).toContain("No telemetry connected");
-  expect(html).not.toContain("Open ");
-});
-
 it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
   const html = render({ kind: "service", id: "atlas-marketplace" });
   expect(html).toContain("Commerce &amp; Product Marketplace");
@@ -53,6 +45,14 @@ it("shows site traffic and research briefs in the Growth & Marketing Studio, loa
   expect(html).not.toContain("No telemetry connected");
   expect(html).toContain("Checking the site");
   expect(html).not.toContain("Healthy");
+});
+
+it("shows the model inventory and cost per model in the Model Intelligence Lab", () => {
+  const html = render({ kind: "service", id: "airport-building:cargo" });
+  expect(html).toContain("Model Intelligence Lab");
+  expect(html).toContain('aria-label="Model inventory"');
+  expect(html).toContain('aria-label="Cost per model"');
+  expect(html).not.toContain("$0.00 known");
 });
 
 it("renders nothing for buildings without a module", () => {
