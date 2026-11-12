@@ -8,13 +8,14 @@ import {along} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 const scene=buildScene(layoutMap(catalog,[],'district'));
-// Without Service Desk's land the lot behind the Marketplace is too shallow for the car park behind
-// the building. The fixture stands a Career Applications tower on its old lot (both towers are off
-// the map since 2026-11-09, and its manifest was removed 2026-11-10) so the lot keeps the shallow
-// shape this case covers.
+// Without the west vacant lot's land the lot behind the Marketplace is too shallow for the car park
+// behind the building. The fixture takes that land away (a stand-in with the lot's name stops the
+// layout putting it back, and an off-map id keeps the stand-in off the map) and stands a Career
+// Applications tower on its old lot, so the lot keeps the shallow shape this case covers.
 const at=catalog.projects.findIndex(p=>p.id==='benjaire-ops')+1;
 const careerTower={id:'career-tower-fixture',name:'Career Applications',summary:'',status:'active' as const,repository:'',tags:['claude','career','human-in-the-loop'],district:'career-portfolio' as const,links:[],agentIds:[]};
-const shallowProjects=catalog.projects.filter(p=>p.id!=='service-desk');
+const noLot={...careerTower,id:'skyline',name:'Vacant lot',district:'security-infrastructure' as const};
+const shallowProjects=[...catalog.projects,noLot];
 shallowProjects.splice(at,0,careerTower);
 const shallow=buildScene(layoutMap({projects:shallowProjects,agents:catalog.agents},[],'district'));
 
