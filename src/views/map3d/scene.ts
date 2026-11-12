@@ -32,7 +32,7 @@ import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airpo
 import { toolWorkflowRoads } from "../toolWorkflowLayout";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Status } from "../../catalog/types";
-import { DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
+import { OPERATIONS_DISTRICTS, DISTRICT_MIN_SIZE, hash, treeSpots, type Layout } from "../mapLayout";
 import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
@@ -265,6 +265,12 @@ export function districtGrove(d: { ox: number; oy: number; size: number; hq: { s
 export function buildScene(layout: Layout): Scene3D {
   const scene = buildCity(layout);
   addGithubAnnex(scene);
+  // New east-side parcel ground must not redefine the established landmark shoreline.
+  for (const t of scene.terraces.filter(t => OPERATIONS_DISTRICTS.has(t.id))) {
+    scene.land.push(...uncoveredLand(t, scene.land));
+    scene.bounds.x0 = Math.min(scene.bounds.x0, t.x); scene.bounds.x1 = Math.max(scene.bounds.x1, t.x + t.w);
+    scene.bounds.z0 = Math.min(scene.bounds.z0, t.z); scene.bounds.z1 = Math.max(scene.bounds.z1, t.z + t.d);
+  }
   return scene;
 }
 

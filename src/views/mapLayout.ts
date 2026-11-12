@@ -1,4 +1,6 @@
 import { projectRepositories, LANDMARK_REPOSITORIES, RETIRED_REPOSITORIES } from "../catalog/projects";
+import { towerRing } from "./map3d/roads";
+import { CITY_SCALE } from "./map3d/cityScale";
 import { orderToolsForWorkflow, workflowToolSpots } from "./toolWorkflowLayout";
 import { districtLabel, districtOf, districtRank } from "../catalog/organization";
 import { servicesOf, type ServiceUse } from "../catalog/roles";
@@ -9,6 +11,8 @@ export const TW = 48;
 export const TH = 24;
 /** Grid units between neighboring districts, and between neighborhoods. */
 export const GAP = 2.25;
+/** These project sites share Commerce-sized land and one district selection rim. */
+export const OPERATIONS_DISTRICTS = new Set(["intelligence-hub", "ai-ops-atlas", "commerce-pipeline"]);
 const GROUP_GAP = 4.5;
 /** Grid units per lot in the area for repositories without a manifest. */
 const STRAY_STEP = 3;
@@ -446,6 +450,23 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
         if (rect) { rect.x += x; rect.y += y; }
       };
       move(hub, dx, dy); move(center, -dx, -dy);
+      const commerce = districts.find(d => d.project.id === "commerce-pipeline")!;
+      const operations = districts.find(d => d.project.id === "intelligence-hub")!;
+      const portfolio = districts.find(d => d.project.id === "portfolio-site")!;
+      // Reuse the existing shelf and building dimensions. Only these two parcels move/expand;
+      // the east side clears Portfolio and the Marketing promenade without repacking neighbors.
+      const resize = (d: District, x: number, y: number, cx: number, cz: number) => {
+        move(d, cx - (d.hq.gx + d.hq.size / 2), cz - (d.hq.gy + d.hq.size / 2));
+        d.ox = x; d.oy = y; d.size = commerce.size;
+        Object.assign(rects.find(r => r.id === d.project.id)!, { x, y, w: d.size, h: d.size });
+      };
+      const northRoad = (d: District) => towerRing({ x: d.hq.gx + d.hq.size / 2, z: d.hq.gy + d.hq.size / 2,
+        size: d.hq.size * (d.project.id === "ai-ops-atlas" ? 1.02 : .92) * CITY_SCALE.hq.footprint }, d.hq.size * 1.25 + 1)!;
+      const x = portfolio.ox + portfolio.size + GAP, y = commerce.oy + GAP;
+      const hubLane = northRoad(hub), commerceLane = northRoad(commerce);
+      const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
+      resize(hub, x, y, x + commerce.size / 2, hubZ);
+      resize(operations, x + commerce.size + GAP, y, x + commerce.size * 1.5 + GAP, y + commerce.size / 2);
       const heading = neighborhoods.find(n => n.key === hub.group);
       if (heading && heading.count === 1) { heading.ox = hub.ox; heading.oy = hub.oy; heading.w = hub.size; heading.h = hub.size; }
     }

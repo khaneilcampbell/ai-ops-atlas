@@ -46,7 +46,7 @@ import type { Health, Verified } from "../../lib/derive";
 import { fogRange } from "./fogRange";
 import { MapRenderer, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
-import { placeLabels, type Layout } from "../mapLayout";
+import { OPERATIONS_DISTRICTS, placeLabels, type Layout } from "../mapLayout";
 import { measure, SANS, wrap } from "../mapText";
 import type { ConnectionStatus } from "../../lib/connections";
 import type { ConnectionType } from "../../catalog/types";
@@ -430,7 +430,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     out: () => setHover((h) => (h?.startsWith("district:") ? null : h)),
     click: (id, e) => {
       if (e.delta > 4 || id.startsWith("park:")) return;
-      props.onFocus(id);
+      if (OPERATIONS_DISTRICTS.has(id)) select(`project:${id}`);
+      else props.onFocus(id);
     },
   };
 
@@ -1144,6 +1145,7 @@ function World({
   // An open building's outline hugs its office, not the shell that was cut away.
   const hl = (key: string | null) => {
     const a = key ? anchors.get(key) : undefined;
+    if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
   };
   const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);
