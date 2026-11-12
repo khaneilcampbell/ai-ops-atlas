@@ -10,7 +10,7 @@ test("reports-only improvement analyst is discoverable",async({page})=>{
   await expect(row).toBeVisible();
   await expect(row).toContainText("AI Production Improvement Analyst");
   await row.click();await settle(page,1);
-  await expect(page.getByRole("button",{name:"Copy Codex review prompt",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Copy Claude Code review prompt",exact:true})).toBeVisible();
   await page.getByRole("tab",{name:"Governance",exact:true}).click();
   await expect(page.getByText("Reports only. Does not open issues or pull requests, rerun CI, merge, deploy, or change credentials.",{exact:true})).toBeVisible();
 });
