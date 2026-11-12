@@ -1,11 +1,12 @@
 import {test,expect,type Page} from '@playwright/test';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {openAtlas,waitForScene} from './atlas';
+test.use({deviceScaleFactor:1});
 async function view(page:Page,phone:boolean,point?:[number,number,number]){
  return page.evaluate(async({phone,point})=>{
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,state=fiber._roots.get(canvas)!.store.getState();
-  state.setFrameloop('never');state.camera.position.set(26.5,phone?130:65,10.51);state.camera.lookAt(26.5,0,10.5);state.camera.updateMatrixWorld();state.gl.render(state.scene,state.camera);
+  state.setFrameloop('never');state.camera.position.set(27.6,phone?145:65,20.885);state.camera.lookAt(27.6,0,20.875);state.camera.updateMatrixWorld();state.gl.render(state.scene,state.camera);
   const r=canvas.getBoundingClientRect(),p=point?state.camera.position.clone().set(...point).project(state.camera):undefined;
   return {png:canvas.toDataURL('image/png'),point:p?{x:r.x+(p.x+1)*r.width/2,y:r.y+(1-p.y)*r.height/2}:undefined};
  },{phone,point});
@@ -28,7 +29,11 @@ for(const phone of [false,true])test(`Equal operations districts ${phone?'phone'
    const close=()=>page.getByRole('button',{name:'Close details',exact:true}).click();
    // Building geometry, nameplate and empty district ground use the real selection handlers.
    for(const point of [s.roof,s.ground]){
-    const {point:p}=await view(page,phone,point as [number,number,number]);await page.mouse.click(p!.x,p!.y);await check();await close();
+    const {point:p}=await view(page,phone,point as [number,number,number]);
+    // The fixed diagnostic camera leaves DOM labels at their old projection; test canvas picking directly.
+    const canvas=page.locator('canvas'),event={clientX:p!.x,clientY:p!.y,pointerId:1,pointerType:'mouse',button:0};
+    await canvas.dispatchEvent('pointerdown',{...event,buttons:1});await canvas.dispatchEvent('pointerup',{...event,buttons:0});
+    await canvas.dispatchEvent('click',event);await check();await close();
    }
    await page.locator('.m3-labels [role="button"]').filter({hasText:s.name}).first().dispatchEvent('click');await check();
    await shot(s.id);await close();
