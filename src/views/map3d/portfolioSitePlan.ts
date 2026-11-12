@@ -1,4 +1,6 @@
 import type {Tower} from './scene';
+import {headquartersEnvelope} from './financialPlan';
+import {intelligenceHubHeight} from './intelligenceHubPlan';
 
 /**
  * The Portfolio Site as a slim apartment tower, after KC's reference (the G+M+8 apartment
@@ -44,11 +46,12 @@ export const isPortfolioSite=(projectId:string)=>projectId===PORTFOLIO_SITE.proj
 
 /** Roof slab top above the plinth, and the building's highest point (the canopy). */
 export const portfolioSiteRoof=()=>PORTFOLIO_SITE.ground+PORTFOLIO_SITE.floors*PORTFOLIO_SITE.storey;
-export const portfolioSiteTop=()=>portfolioSiteRoof()+PORTFOLIO_SITE.canopy.lift+PORTFOLIO_SITE.canopy.h;
+export const portfolioSiteTop=(roof=portfolioSiteRoof())=>roof+PORTFOLIO_SITE.canopy.lift+PORTFOLIO_SITE.canopy.h;
 
-/** The Portfolio Site's height comes from its floor count, not the generic tower's. */
+/** Match the Operations Center roof with Portfolio's canopy, preserving its twelve floors. */
 export function sizePortfolioSite(towers:Tower[]){
- for(const t of towers)if(isPortfolioSite(t.projectId))t.customHeight=portfolioSiteRoof();
+ const roof=intelligenceHubHeight(headquartersEnvelope(towers))-PORTFOLIO_SITE.canopy.lift-PORTFOLIO_SITE.canopy.h;
+ for(const t of towers)if(isPortfolioSite(t.projectId))t.customHeight=roof;
 }
 
 /** What a part is made of: each kind is one material in the renderer. */
@@ -61,15 +64,15 @@ export interface Plant {kind:'shrub'|'trail'|'tree';x:number;y:number;z:number;s
 export interface PortfolioSitePlan {lines:number[];roof:number;top:number;boxes:Box[];panels:Panel[];plants:Plant[]}
 
 /** Lay out every part of the building. */
-export function planPortfolioSite():PortfolioSitePlan{
- const P=PORTFOLIO_SITE,C=P.core,S=P.storey,G=P.ground,roof=portfolioSiteRoof(),top=portfolioSiteTop();
+export function planPortfolioSite(roof=portfolioSiteRoof()):PortfolioSitePlan{
+ const P=PORTFOLIO_SITE,C=P.core,G=P.ground,S=(roof-G)/P.floors,top=portfolioSiteTop(roof);
  const lines=Array.from({length:P.floors+1},(_,i)=>G+i*S);
  const boxes:Box[]=[],panels:Panel[]=[],plants:Plant[]=[];
  const box=(kind:Kind,x0:number,x1:number,y0:number,y1:number,z0:number,z1:number)=>boxes.push({kind,x0,x1,y0,y1,z0,z1});
 
  // The white body over the ground floor, with brick and timber on the left side and back.
  box('white',C.x0,C.x1,G-P.slab,roof,C.z0,C.z1);
- box('slats',C.x0-P.skin,C.x0,G-P.slab,roof+P.parapet,C.z0-P.skin,C.z1);
+ box('slats',C.x0-P.skin,C.x0,G-P.slab,roof,C.z0-P.skin,C.z1);
  box('slats',C.x0,C.x1,G-P.slab,roof,C.z0-P.skin,C.z0);
  // The right-hand pier, from the ground up to the roof canopy it holds.
  box('white',P.pier.x0,P.pier.x1,0,top,C.z1,P.pier.z1);
