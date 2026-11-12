@@ -3,6 +3,19 @@
 What changed in Atlas, newest first. Every pull request that changes the app adds one line at the
 top of the list: `- YYYY-MM-DD · What changed, in plain words (#201)`. The newest five lines are
 shown in the Mac app's **Update available** button, so write them for KC, not for a reviewer.
+- 2026-11-12 · README brought up to date: operational building names, building modules, agent counts, n8n alerts and the time zone setting (#394)
+- 2026-11-12 · The Product Marketplace now describes what it's for today: where Benjaire's products are sold (the n8n, Canva and Stripe pipeline) and where Atlas releases are checked by the Marketplace Steward (#386)
+- 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)
+- 2026-11-12 · Removed Benjaire Dashboard from Atlas: its catalog entry, Dashboard CI agent, runbook and app code are gone. The map is unchanged (its cleared lot stays), and the Flow intake files moved to apps/benjaire-flow (#377)
+- 2026-11-12 · The Agent Operations Center now lists the Agent Registry Sync, the n8n workflow that keeps your agent registry Google Sheet up to date (#377)
+- 2026-11-12 · District names on the map (AI Engineering, Career & Portfolio, Business Operations and the rest) now sit at the buildings they belong to, and follow them whenever a building moves (#380)
+- 2026-11-12 · Every building that goes live now shows its connection line to Atlas Command Center, starting with Growth & Marketing Studio. Buildings that are not live show no line (#378)
+- 2026-11-12 · Agents now show the automations they run nested underneath, with one health dot for the whole group that only turns green when every part is verified. Senior Engineering Reviewer runs 4 automations and Portfolio Web Developer runs 3. Automations lists the ones with no owning agent yet (27 today), so you can give each an owner or retire it (#382)
+- 2026-11-12 · Agents and Automations now list only what runs today. Retired commerce agents from the removed Linux server are gone from the lists, and Linux VPS is no longer a Runtime choice. Skyline and its Benjaire Inquiry Assistant are removed, and Marketplace rooms of retired agents now read as open studios. Commerce runbooks now describe the n8n workflows (#379)
+- 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center each have their own agent now (Marketplace Steward, Signal Watch, Dataset Census). They run on a schedule with no AI calls and report to the live feed, and a building only goes green while its agent has reported a recent success (#372)
+- 2026-11-12 · Product Marketplace, Observability Center and Data Intelligence Center now read the Atlas repository: their cards show its CI health and last run, and their map dots go green or red from real checks (#372)
+- 2026-11-12 · Activity's Project filter lists only the buildings on the map today. Removed buildings like Skyline no longer show as choices, but their past activity stays under All. Agent runs show the project the agent belongs to (#361)
+- 2026-11-12 · Three operations districts now share land dimensions and consistent selection boundaries (#375)
 - 2026-11-12 · Activity and API Usage now label runs and commits from the Atlas repository as Atlas Command Center instead of Skyline (#374)
 - 2026-11-12 · The Security Operations Center now lists security incidents: exposed secrets and critical or high GitHub alerts, each with a link to fix it (#373)
 - 2026-11-12 · Vendor & Supplier Hub is now connected: select it to see each outside vendor your agents use (Stripe, n8n, Cloudflare, Canva, Splunk), how many workers use it, their health and last run. Bills, invoices and contracts show as Not connected (#370)
