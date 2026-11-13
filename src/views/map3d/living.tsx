@@ -12,7 +12,7 @@ import { Instanced, type Inst, type useGeometries, type useMaterials } from "./m
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
 import { trafficFlow } from "./trafficFlow";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY } from "./vehicles";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -306,7 +306,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
   const plans = useMemo(() => [...planVehicles(scene),...planDealershipTraffic(scene),...planHighwayTraffic(scene)], [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
   // Shared car following (trafficFlow.ts): each vehicle's own progress along its route.
-  const flow = useMemo(() => trafficFlow(plans), [plans]);
+  const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene)), [plans, scene]);
   const mats = useMemo(
     () => ({
       head: focusable(new THREE.MeshStandardMaterial({ color: "#f3ead4", emissive: "#fff1d2", emissiveIntensity: 0, roughness: 0.4 })),

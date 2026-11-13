@@ -424,3 +424,14 @@ export const VEHICLE_LIVERY:Partial<Record<VehicleKind,{text:string;ink:string}>
  parcel:{text:"ATLAS",ink:"#e5bd62"},
  bus:{text:"ATLAS TRANSIT",ink:"#1f3b4d"},
 };
+
+/** Where three or more street arms meet in the driving graph (one-way arms included): junctions traffic takes turns through. */
+export function trafficJunctions(scene: Scene3D): [number, number][] {
+  const g = drivingGraph(scene);
+  if (!g) return [];
+  const out: [number, number][] = [];
+  const around = g.nodes.map(() => new Set<number>());
+  g.next.forEach((ns, i) => ns.forEach(j => { around[i].add(j); around[j].add(i); }));
+  g.nodes.forEach((p, i) => { if (around[i].size >= 3 && !out.some(q => Math.hypot(q[0] - p[0], q[1] - p[2]) < 0.3)) out.push([p[0], p[2]]); });
+  return out;
+}

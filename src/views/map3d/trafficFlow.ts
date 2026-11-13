@@ -3,17 +3,17 @@ import {vehicleBounds} from './vehicleModels';
 
 /**
  * Car following for the decorative fleet (Khaneil, 2026-11-13: "make sure no vehicles collide, operate like real
- * human traffic"). Every vehicle keeps its route; what changes is how far along it is. Each step a vehicle checks
+ * human traffic"). Junctions take turns, first come first served, and every vehicle keeps its route; what changes is how far along it is. Each step a vehicle checks
  * where its own footprint will be a moment ahead on its route, through turns and junctions alike: if that would
  * touch another vehicle it stops, if a longer look ahead would it slows, otherwise it eases back to cruising. Two vehicles that
  * block each other (a junction stand-off) are settled by giving way to the lower index; anyone held for long gives
  * way to nobody for a moment, so traffic can never lock up. No allocation in step() beyond vehicleAt's pose.
  */
-export const TRAFFIC={gap:.05,near:1,far:2,height:.2,accel:4,stuck:6,release:1,warmup:6} as const;
+export const TRAFFIC={box:.55,gap:.05,near:1,far:2,height:.2,accel:4,stuck:6,release:1,warmup:6} as const;
 
 export interface TrafficFlow {times:Float64Array;step(dt:number):void}
 
-export function trafficFlow(plans:VehiclePlan[]):TrafficFlow{
+export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[]):TrafficFlow{
  const n=plans.length,times=new Float64Array(n),speed=new Float64Array(n).fill(1),held=new Float64Array(n),free=new Float64Array(n);
  const x=new Float64Array(n),z=new Float64Array(n),y=new Float64Array(n),dx=new Float64Array(n).fill(1),dz=new Float64Array(n),on=new Uint8Array(n);
  const half=Float64Array.from(plans,v=>{const b=vehicleBounds(v.kind);return (b.front-b.rear)/2;}),width=Float64Array.from(plans,v=>vehicleBounds(v.kind).halfWidth);
@@ -28,7 +28,7 @@ export function trafficFlow(plans:VehiclePlan[]):TrafficFlow{
  const nearX=new Float64Array(n),nearZ=new Float64Array(n),nearU=new Float64Array(n),nearV=new Float64Array(n),farX=new Float64Array(n),farZ=new Float64Array(n),farU=new Float64Array(n),farV=new Float64Array(n);
  // Heading from the route; at a junction stop the direction shrinks to nothing, so the last good heading holds.
  const pose=(i:number,t:number,o:Float64Array[],k:number)=>{const a=vehicleAt(plans[i],t),l=Math.hypot(a.dx,a.dz);o[0][k]=a.x;o[1][k]=a.z;if(l>.2){o[2][k]=a.dx/l;o[3][k]=a.dz/l;}else if(o[2]!==dx){o[2][k]=dx[k];o[3][k]=dz[k];}return a;};
- const hard=new Uint8Array(n),level=new Float64Array(n),midX=new Float64Array(n),midZ=new Float64Array(n),midU=new Float64Array(n),midV=new Float64Array(n);
+ const at=new Int32Array(n),inBox=new Uint8Array(n),dist=new Float64Array(n),hard=new Uint8Array(n),level=new Float64Array(n),midX=new Float64Array(n),midZ=new Float64Array(n),midU=new Float64Array(n),midV=new Float64Array(n);
  const step=(dt:number)=>{
   for(let i=0;i<n;i++){const a=pose(i,times[i],[x,z,dx,dz],i);y[i]=a.y;on[i]=vehicleVisible(plans[i],times[i])?1:0;pose(i,times[i]+TRAFFIC.near/2,[midX,midZ,midU,midV],i);pose(i,times[i]+TRAFFIC.near,[nearX,nearZ,nearU,nearV],i);pose(i,times[i]+TRAFFIC.far,[farX,farZ,farU,farV],i);}
   for(let i=0;i<n;i++){
@@ -44,6 +44,12 @@ export function trafficFlow(plans:VehiclePlan[]):TrafficFlow{
     if(level[i]>.4&&hit(farX[i],farZ[i],farU[i],farV[i],l,w,x[j],z[j],dx[j],dz[j],lj,wj)){level[i]=.4;blocker[i]=j;}
    }
   }
+  // Junctions take turns (first come, first served): find each vehicle's junction ahead and whether it is in it.
+  for(let i=0;i<n;i++){at[i]=-1;if(!on[i])continue;for(let k=0;k<junctions.length;k++){const [jx,jz]=junctions[k];
+   const dNow=Math.hypot(x[i]-jx,z[i]-jz),dNear=Math.hypot(nearX[i]-jx,nearZ[i]-jz);if(dNow<TRAFFIC.box||dNear<TRAFFIC.box){at[i]=k;inBox[i]=dNow<TRAFFIC.box?1:0;dist[i]=dNow;break;}}}
+  for(let i=0;i<n;i++){if(at[i]<0||inBox[i])continue;
+   for(let j=0;j<n;j++){if(j===i||at[j]!==at[i]||Math.abs(dx[i]*dx[j]+dz[i]*dz[j])>.9&&dx[i]*dx[j]+dz[i]*dz[j]>0)continue;
+    if(inBox[j]||dist[j]<dist[i]-1e-6||(Math.abs(dist[j]-dist[i])<=1e-6&&j<i)){level[i]=0;if(blocker[i]<0)blocker[i]=j;break;}}}
   for(let i=0;i<n;i++){
    const j=blocker[i];let target=level[i];
    // Stand-off (both would meet): the one already further in (the other barely ahead of it) goes; ties by index.

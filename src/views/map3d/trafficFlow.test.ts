@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
-import {planDealershipTraffic,planHighwayTraffic,planVehicles,vehicleAt,vehicleVisible} from './vehicles';
+import {planDealershipTraffic,planHighwayTraffic,planVehicles,trafficJunctions,vehicleAt,vehicleVisible} from './vehicles';
 import {vehicleBounds} from './vehicleModels';
 import {TRAFFIC,trafficFlow} from './trafficFlow';
 
@@ -21,7 +21,7 @@ const overlap=(a:Box,b:Box)=>{
 for(const g of ['district','tag'] as const)describe(`traffic flow, ${g} grouping`,()=>{
  it('keeps every vehicle clear of the others and moving',()=>{
   const s=buildScene(layoutMap(catalog,[],g)),plans=[...planVehicles(s),...planDealershipTraffic(s),...planHighwayTraffic(s)];
-  const flow=trafficFlow(plans),dims=plans.map(v=>{const b=vehicleBounds(v.kind);return {l:(b.front-b.rear)/2,w:b.halfWidth};});
+  const flow=trafficFlow(plans,trafficJunctions(s)),dims=plans.map(v=>{const b=vehicleBounds(v.kind);return {l:(b.front-b.rear)/2,w:b.halfWidth};});
   const hits=new Set<string>(),still=new Float64Array(plans.length),heading=plans.map(()=>[1,0]);let longest=0;
   for(let k=0;k<1200;k++){
    const before=Float64Array.from(flow.times);flow.step(.1);
@@ -29,9 +29,9 @@ for(const g of ['district','tag'] as const)describe(`traffic flow, ${g} grouping
    for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];if(a&&b&&overlap(a,b))hits.add(`${plans[i].id}/${plans[j].id}`);}
    for(let i=0;i<plans.length;i++){still[i]=flow.times[i]-before[i]<1e-4?still[i]+.1:0;longest=Math.max(longest,still[i]);}
   }
-  // Known limits, a lane-geometry follow-up: a few corner contacts where turning lanes cross in the tag layout, and
-  // one bus/car junction contact in the district layout (a long bus crossing in front of a car at its stop line).
-  expect(hits.size).toBeLessThanOrEqual(g==='district'?1:4);
+  // District (the default view) is contact-free. The tag layout keeps up to three brief corner contacts where one car
+  // turns in behind another on a rounded corner (boxes swing wide mid-turn): a turning-lane geometry follow-up.
+  if(g==='district')expect([...hits].slice(0,6)).toEqual([]);else expect(hits.size).toBeLessThanOrEqual(3);
   expect(longest).toBeLessThan(TRAFFIC.stuck+1);
  });
 });
