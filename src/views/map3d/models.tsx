@@ -627,7 +627,7 @@ function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
 export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet; night?: boolean }) {
   const items = useMemo(() => {
     const y = TERRACE_H + 0.03;
-    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], skyWindows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
+    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], skyWindows: Inst[] = [], planters: Inst[] = [], flowers: Inst[] = [], strips: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
     const one = (k: Kiosk) => {
       const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
       const brand = toolBrand(k.name), w = k.size, d = w * 0.8, f = brand.facade;
@@ -649,6 +649,24 @@ export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[];
           panes.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: glassSide });
         }
       }
+      // Planted ledges on every third floor and the roof, each lit from below by a blue strip (the SOC's terraces in miniature).
+      if (f?.garden) {
+        const greens = ["#5f8f4a", "#6f9c50", "#557f43", "#7aa35a"], blooms = ["#f2a7c3", "#ffffff", "#f6d36b", "#e98fb0", "#c9a6f0"];
+        for (let floor = 2; floor < floorCount; floor += 3) {
+          const ly = y + 0.48 + floor * floorSpacing;
+          strips.push({ p: [k.x, ly - 0.03, k.z], s: [w * 1.05, 0.025, d * 1.06] });
+          planters.push({ p: [k.x, ly + 0.035, k.z + d / 2 + 0.035], s: [w * 0.94, 0.07, 0.06], c: greens[floor % greens.length] });
+          planters.push({ p: [k.x + w / 2 + 0.035, ly + 0.035, k.z], s: [0.06, 0.07, d * 0.94], c: greens[(floor + 1) % greens.length] });
+          for (let i = 0; i < 5; i++) {
+            const t = (i - 2) / 2.4;
+            flowers.push({ p: [k.x + t * w * 0.45, ly + 0.11, k.z + d / 2 + 0.035], s: [0.035, 0.03, 0.035], c: blooms[(i + floor) % blooms.length] });
+            flowers.push({ p: [k.x + w / 2 + 0.035, ly + 0.11, k.z + t * d * 0.45], s: [0.035, 0.03, 0.035], c: blooms[(i + floor + 2) % blooms.length] });
+          }
+        }
+        strips.push({ p: [k.x, y + OFFICE_H - 0.03, k.z], s: [w * 1.09, 0.025, d * 1.13] });
+        planters.push({ p: [k.x + w * 0.3, y + OFFICE_H + 0.1, k.z + d * 0.3], s: [w * 0.3, 0.08, d * 0.3], c: "#5f8f4a" });
+        for (let i = 0; i < 6; i++) flowers.push({ p: [k.x + w * (0.2 + (i % 3) * 0.1), y + OFFICE_H + 0.2, k.z + d * (0.22 + Math.floor(i / 3) * 0.14)], s: [0.05, 0.045, 0.05], c: i % 2 ? blooms[i % blooms.length] : greens[i % greens.length] });
+      }
       // Slim corner columns and a recessed rooftop plant room give the offices a corporate silhouette.
       for (const side of [-1, 1]) {
         accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: trim });
@@ -662,18 +680,22 @@ export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[];
       if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: f ? brand.wall : brand.secondary });
     };
     for (const k of kiosks) one(k);
-    return { walls, slabs, accents, windows, skyWindows, domes, pediments, doors };
+    return { walls, slabs, accents, windows, skyWindows, planters, flowers, strips, domes, pediments, doors };
   }, [kiosks]);
   // Sky glass by day; at night it glows warm white like the Security Operations Center next door.
   const skyGlass = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#ffe9c4", emissiveIntensity: 0, roughness: 0.18, metalness: 0.15 }), []);
-  useEffect(() => { skyGlass.emissiveIntensity = night ? 0.85 : 0; }, [skyGlass, night]);
-  useEffect(() => () => skyGlass.dispose(), [skyGlass]);
+  const cyan = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8fd3df", emissive: "#2ad8ff", emissiveIntensity: 0.35, roughness: 0.3, toneMapped: false }), []);
+  useEffect(() => { skyGlass.emissiveIntensity = night ? 0.85 : 0; cyan.emissiveIntensity = night ? 2.2 : 0.35; }, [skyGlass, cyan, night]);
+  useEffect(() => () => { skyGlass.dispose(); cyan.dispose(); }, [skyGlass, cyan]);
   return <group>
     <Instanced items={items.walls} geometry={g.box} material={m.plain} pick={pick.of(kiosks.map(k => k.key))} />
     <Instanced items={items.slabs} geometry={g.box} material={m.plain} />
     <Instanced items={items.accents} geometry={g.box} material={m.plain} />
     <Instanced items={items.windows} geometry={g.box} material={m.glass} />
     {items.skyWindows.length > 0 && <Instanced items={items.skyWindows} geometry={g.box} material={skyGlass} />}
+    {items.strips.length > 0 && <Instanced items={items.strips} geometry={g.box} material={cyan} shadow={false} />}
+    {items.planters.length > 0 && <Instanced items={items.planters} geometry={g.box} material={m.foliage} shadow={false} />}
+    {items.flowers.length > 0 && <Instanced items={items.flowers} geometry={g.blob} material={m.foliage} shadow={false} />}
     <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />
