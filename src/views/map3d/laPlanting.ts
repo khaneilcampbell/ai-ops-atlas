@@ -46,7 +46,7 @@ export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
 
 export const LA_COLORS={
  fanFrond:['#7a9a45','#88a650','#6f8d3d'],dateFrond:['#4e7a37','#5b8a3f','#46703a'],
- bulb:'#fff6e0',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
+ bulb:'#fff6e0',halo:'#ffc566',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
  ficus:['#3f7a3a','#4a8642','#386f35','#438040'],olive:['#7f9270','#8a9c7a','#75876a','#93a483'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
  hedge:['#3f6e36','#47783c'],agave:'#86a59a',paradiseLeaf:'#3f7448',paradiseFlower:'#f08a24',bougainvillea:['#d63f8f','#e2589f','#c93583'],
 } as const;
@@ -87,7 +87,7 @@ export function wrapLights(o:LaParts,x:number,y:number,z:number,h:number,width:n
  const {turns,perTurn,from,to,bulb,gap}=PALM_LIGHTS,n=turns*perTurn;
  // The glow of the whole wrap: a sleeve over the lit part of the trunk (from `from` to `to` of its height).
  const [hx,hy,hz]=trunkTop(x,y,z,h*from,lean,yaw);
- o.halos.push({p:[hx,hy,hz],s:[width*PALM_LIGHTS.halo,h*(to-from),width*PALM_LIGHTS.halo],r:yaw,rx:lean,c:LA_COLORS.bulb});
+ o.halos.push({p:[hx,hy,hz],s:[width*PALM_LIGHTS.halo,h*(to-from),width*PALM_LIGHTS.halo],r:yaw,rx:lean,c:LA_COLORS.halo});
  for(let i=0;i<=n;i++){const t=i/n,a=yaw+t*turns*Math.PI*2,k=from+(to-from)*t,r=width*(.5-.15*k)+gap;
   const [ax,ay,az]=trunkTop(x,y,z,h*k,lean,yaw);
   o.bulbs.push({p:[ax+Math.sin(a)*r,ay,az+Math.cos(a)*r],s:[bulb,bulb,bulb],r:a,c:LA_COLORS.bulb});}
