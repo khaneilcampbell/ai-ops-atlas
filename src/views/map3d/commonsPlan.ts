@@ -44,6 +44,9 @@ export function commonsPlanting(p:CommonsPlan,y:number){
  const cx=p.pond.reduce((a,q)=>a+q[0],0)/p.pond.length,cz=p.pond.reduce((a,q)=>a+q[1],0)/p.pond.length;
  for(const i of COMMONS_PLANTING.loopPalms){const [x,z]=p.loop[i],dx=x-cx,dz=z-cz,len=Math.hypot(dx,dz);trees.push({x:x+dx/len*COMMONS_PLANTING.loopOffset,y,z:z+dz/len*COMMONS_PLANTING.loopOffset,s:COMMONS_PLANTING.palm,kind:'avenue',lit:true});}
  const bushes:Point[]=[];
+ // The south lawn reads like the city's lawns: two olives, each with a pair of shrubs, clear of the paths.
+ const {x:rx,z:rz,w:rw,d:rd}=p.rect;
+ for(const f of [.42,.86]){const x=rx+rw*f,z=rz+rd-.9;trees.push({x,y,z,s:COMMONS_PLANTING.olive,kind:'round',la:'olive'});bushes.push({x:x-.45,y,z:z+.1,s:COMMONS_PLANTING.shrub},{x:x+.45,y,z:z-.05,s:COMMONS_PLANTING.shrub});}
  // Low planted shoreline below the promenade, leaving every bridge mouth open.
  for(let i=0;i<48;i+=2){const [x,z]=p.pond[i];if(p.bridges.some(([a])=>Math.abs(x-a[0])<.45))continue;bushes.push({x,y,z,s:COMMONS_PLANTING.shrub});}
  return {trees,bushes};

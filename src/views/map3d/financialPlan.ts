@@ -113,6 +113,7 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
 export function financialParkPlanting(a:Pick<FinancialPlan,'x'|'z'|'park'>,y:number):{trees:Tree[];bushes:Point[]}{
  return {
   trees:a.park.trees.map(([x,z])=>({x:a.x+x,y,z:a.z+z,s:.26,kind:'avenue',lit:true})),
-  bushes:a.park.shrubs.map(([x,z,r])=>({x:a.x+x,y,z:a.z+z,s:r*.7})),
+  // Only the shrubs inside the park loop, beside the benches; the loose ones on the north lawn read as scattered.
+  bushes:a.park.shrubs.filter(([,z])=>z>4.55).map(([x,z,r])=>({x:a.x+x,y,z:a.z+z,s:r*.7})),
  };
 }
