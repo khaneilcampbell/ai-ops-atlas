@@ -13,7 +13,8 @@ import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
 import { trafficFlow } from "./trafficFlow";
 import { harbourLoop, yachtBerth } from "./yachtPlan";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions } from "./vehicles";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
+import { travelPlan, TRAVEL_CLOCK } from "./travelLoops";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -294,10 +295,11 @@ export function MapRenderer() {
  * project data or agent activity. Frozen in place when motion is off.
  */
 export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
-  const plans = useMemo(() => [...planVehicles(scene),...planDealershipTraffic(scene),...planHighwayTraffic(scene)], [scene]);
+  // Three of the city's cars run the travel loops' shuttle rounds (travelLoops.ts), so the fleet stays the same size.
+  const plans = useMemo(() => { const shuttles = travelPlan(scene)?.shuttles.map((s) => s.plan) ?? []; return [...planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), ...shuttles, ...planDealershipTraffic(scene), ...planHighwayTraffic(scene)]; }, [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
   // Shared car following (trafficFlow.ts): each vehicle's own progress along its route.
-  const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene)), [plans, scene]);
+  const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene), () => (TRAVEL_CLOCK.live ? TRAVEL_CLOCK.t : undefined)), [plans, scene]);
   const mats = useMemo(
     () => ({
       head: focusable(new THREE.MeshStandardMaterial({ color: "#f3ead4", emissive: "#fff1d2", emissiveIntensity: 0, roughness: 0.4 })),

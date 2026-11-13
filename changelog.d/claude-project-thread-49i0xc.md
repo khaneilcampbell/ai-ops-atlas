@@ -1,0 +1,1 @@
+- 2026-11-13 · Travel loops on the map: people from Team Residence Towers take the train and shuttle cars to the airport, the arena, the Vendor & Supplier Hub and the Atlas yacht, which then sails out and is back within a minute
