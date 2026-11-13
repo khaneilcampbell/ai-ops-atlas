@@ -13,7 +13,7 @@ import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_PARKED_STANDS, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -233,7 +233,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
     {/* The north remote stand is kept free for arrivals; the south one keeps its parked jet. */}
-    {[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
+    {AIRPORT_PARKED_STANDS.map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
