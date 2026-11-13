@@ -85,14 +85,16 @@ export async function validSignature(secret: string, body: string, header: strin
 const pick = (o: J | undefined, keys: string[]) => (o ? Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]])) : undefined);
 
 const RUN_KEYS = ["id", "run_attempt", "name", "display_title", "path", "status", "conclusion", "head_branch", "head_sha", "event", "created_at", "updated_at", "run_started_at", "html_url"];
-const JOB_KEYS = ["id", "run_id", "run_attempt", "name", "workflow_name", "status", "conclusion", "head_branch", "started_at", "completed_at", "html_url"];
 
 /** The parts of a GitHub event Atlas shows. Anything else is dropped, `null` means ignore. */
 export function compactGithub(event: string, p: J): { kind: string; repo: string; body: J } | null {
   const repo = p.repository?.full_name;
   if (typeof repo !== "string") return null;
-  if (event === "workflow_run" && p.workflow_run) return { kind: "workflow_run", repo, body: { action: p.action, run: pick(p.workflow_run, RUN_KEYS) } };
-  if (event === "workflow_job" && p.workflow_job) return { kind: "workflow_job", repo, body: { action: p.action, job: pick(p.workflow_job, JOB_KEYS) } };
+  // Each stored event costs D1 rows written (the row plus two indexes, then the prune later), and the
+  // free tier allows 100,000 a day. Job events were about 70% of the volume and only fed a "Job
+  // running" header label, so they are dropped; a run's "requested" step adds nothing that
+  // in_progress and completed don't already show.
+  if (event === "workflow_run" && p.workflow_run) return p.action === "requested" ? null : { kind: "workflow_run", repo, body: { action: p.action, run: pick(p.workflow_run, RUN_KEYS) } };
   if (event === "push" && typeof p.ref === "string") {
     const commits = (Array.isArray(p.commits) ? p.commits : []).slice(-10).map((c: J) => ({
       sha: c.id,
