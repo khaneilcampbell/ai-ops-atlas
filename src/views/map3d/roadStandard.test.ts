@@ -3,6 +3,7 @@ import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {highwayShare} from './highway';
+import {VEHICLE_LIVERY} from './vehicles';
 import {vehicleBounds} from './vehicleModels';
 import {ROAD,TRANSPORT as T} from './transportScale';
 import {straightenJogs} from './routing';
@@ -18,7 +19,7 @@ describe('Atlas road standard',()=>{
   expect(T.highwayShoulder,'edge lines sit inside it').toBeLessThan(T.highwayWidth/2);
  });
  it('fits two opposing vehicles of every kind in a city lane pair and a highway lane pair',()=>{
-  for(const kind of ['sedan','sports','bmw','gwagon','pickup','bus','semi','taxi','amazon','ups'] as const){
+  for(const kind of ['sedan','sports','bmw','gwagon','pickup','bus','semi','taxi','delivery','parcel'] as const){
    const b=vehicleBounds(kind);
    expect(T.cityLaneOffset-b.halfWidth,`${kind}: opposing city lanes do not overlap`).toBeGreaterThan(0);
    expect(T.cityLaneOffset+b.halfWidth,`${kind}: stays on the street`).toBeLessThan(T.cityWidth/2);
@@ -56,5 +57,13 @@ describe('district streets carry on over their bridges',()=>{
    const level=asphalt.find(d=>!d.rx)!,mid=dashes.find(d=>!d.rx);
    if(mid)expect(mid.p[1],`${br.key}: center line sits on the asphalt`).toBeGreaterThan(level.p[1]+level.s[1]);
   }
+ });
+});
+
+describe('commercial vehicle liveries',()=>{
+ it('letters the fleet as Atlas, with no real brand names left',()=>{
+  const texts=Object.values(VEHICLE_LIVERY).map(l=>l!.text);
+  expect(texts.length).toBeGreaterThan(0);
+  for(const t of texts){expect(t.startsWith('ATLAS')).toBe(true);expect(t).not.toMatch(/ups|amazon|fedex|dhl|usps|mta|uber|lyft/i);}
  });
 });

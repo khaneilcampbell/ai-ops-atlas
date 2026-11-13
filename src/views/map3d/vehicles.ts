@@ -9,7 +9,7 @@ import type { Scene3D } from "./scene";
 // in the right-hand lane with a stop before every junction. Pure data, so the routes can be checked
 // against the map without rendering anything.
 
-export type VehicleKind = "sedan" | "van" | "service" | "sports" | "amazon" | "ups" | "bus" | "taxi" | "pickup" | "semi" | "gwagon" | "bmw" | "convertible";
+export type VehicleKind = "sedan" | "van" | "service" | "sports" | "delivery" | "parcel" | "bus" | "taxi" | "pickup" | "semi" | "gwagon" | "bmw" | "convertible";
 
 export type { Pt };
 
@@ -47,8 +47,8 @@ const FLEET: { kind: VehicleKind; color: string }[] = [
   { kind: "gwagon", color: "#161e24" },
   { kind: "bmw", color: "#3577c4" },
   { kind: "convertible", color: "#b94034" },
-  { kind: "amazon", color: "#294657" },
-  { kind: "ups", color: "#553722" },
+  { kind: "delivery", color: "#294657" },
+  { kind: "parcel", color: "#1f3b4d" },
   { kind: "bus", color: "#f1eee1" },
   { kind: "van", color: "#ece3cc" },
   { kind: "service", color: "#8fa58a" },
@@ -56,9 +56,9 @@ const FLEET: { kind: VehicleKind; color: string }[] = [
   { kind: "van", color: "#8fa58a" },
   { kind: "sports", color: "#a63836" },
   { kind: "sedan", color: "#c5ced6" },
-  { kind: "amazon", color: "#294657" },
+  { kind: "delivery", color: "#294657" },
   { kind: "van", color: "#d9b971" },
-  { kind: "ups", color: "#553722" },
+  { kind: "parcel", color: "#1f3b4d" },
 ];
 
 /** Seconds a vehicle waits at the stop line before driving into a junction. */
@@ -414,3 +414,13 @@ export function planHighwayTraffic(scene:Pick<Scene3D,'freight'>):VehiclePlan[]{
   return {id:`highway-${i}-${kind}`,kind,color:['#d7aa43','#172326','#e5dfcf','#2163ad','#91a4ac','#813f38'][i%6],...lane,offset:lane.period*(slot+.25+(i%2)*.35)/(HIGHWAY_TRAFFIC_COUNT/2)};
  });
 }
+
+/**
+ * Side lettering for the commercial fleet (Khaneil, 2026-11-13: "relabel trucks ... make it an Atlas delivery truck
+ * with Atlas written on it, follow same suit for other commercial vehicles"). Atlas's own fleet only, no real brands.
+ */
+export const VEHICLE_LIVERY:Partial<Record<VehicleKind,{text:string;ink:string}>>={
+ delivery:{text:"ATLAS",ink:"#ffffff"},
+ parcel:{text:"ATLAS",ink:"#e5bd62"},
+ bus:{text:"ATLAS TRANSIT",ink:"#1f3b4d"},
+};

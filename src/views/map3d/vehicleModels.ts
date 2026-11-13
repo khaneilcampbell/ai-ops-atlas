@@ -28,8 +28,8 @@ const BASE_MODELS: Record<Exclude<VehicleKind,"taxi"|"pickup"|"semi"|"gwagon"|"b
       {at:[0,0.012,0.055],size:[0.2,0.008,0.008],color:TIRE}],
     nose:0.118,lightY:0.03
   },
-  amazon: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.11,0.106],color:null},{at:[0.097,0.07,0],size:[0.055,0.043,0.11],color:GLASS},{at:[-0.035,0.054,0],size:[0.13,0.012,0.11],color:"#55bde7"}],nose:0.125,lightY:0.04},
-  ups: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.12,0.106],color:null},{at:[0.1,0.075,0],size:[0.052,0.045,0.11],color:GLASS},{at:[-0.03,0.068,0],size:[0.14,0.014,0.11],color:"#dcaf4d"}],nose:0.125,lightY:0.04},
+  delivery: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.11,0.106],color:null},{at:[0.097,0.07,0],size:[0.055,0.043,0.11],color:GLASS},{at:[-0.035,0.054,0],size:[0.13,0.012,0.11],color:"#55bde7"}],nose:0.125,lightY:0.04},
+  parcel: {parts:[...wheels(0.08),{at:[0,0.014,0],size:[0.25,0.12,0.106],color:null},{at:[0.1,0.075,0],size:[0.052,0.045,0.11],color:GLASS},{at:[-0.03,0.068,0],size:[0.14,0.014,0.11],color:"#dcaf4d"}],nose:0.125,lightY:0.04},
   bus: {parts:[...wheels(0.13),{at:[0,0.014,0],size:[0.35,0.12,0.108],color:null},{at:[0,0.07,0],size:[0.32,0.045,0.112],color:GLASS},{at:[0,0.052,0],size:[0.35,0.014,0.113],color:"#2473b9"},...[-0.1,-0.04,0.02,0.08,0.14].map(x=>({at:[x,0.07,0] as [number,number,number],size:[0.009,0.045,0.114] as [number,number,number],color:TRIM}))],nose:0.175,lightY:0.04},
   sedan: {
     parts: [

@@ -11,7 +11,7 @@ import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -506,17 +506,21 @@ function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) 
   return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
 }
 
+/** One lettering material per livery and body colour, shared by every vehicle that wears it. */
+const BADGES=new Map<string,THREE.MeshBasicMaterial>();
+function badgeMaterial(text:string,ink:string,body:string){
+  const key=`${text}|${ink}|${body}`;let material=BADGES.get(key);if(material)return material;
+  const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
+  ctx.fillStyle=body;ctx.fillRect(0,0,256,96);ctx.fillStyle=ink;ctx.font=`bold ${text.length>6?40:64}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,128,50,245);
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  material=new THREE.MeshBasicMaterial({map:texture});BADGES.set(key,material);return material;
+}
+
 function VehicleBadge({plan,moving}:{plan:ReturnType<typeof planVehicles>[number];moving:boolean}) {
   const ref=useRef<THREE.Group>(null),clock=useRef(0);
-  const label=({amazon:"amazon",ups:"UPS",bus:"MTA"} as Record<string,string>)[plan.kind];
-  const badge=useMemo(()=>{
-    const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
-    ctx.fillStyle=plan.color;ctx.fillRect(0,0,256,96);ctx.fillStyle=plan.kind==="ups"?"#e5bd62":"#ffffff";ctx.font="bold 64px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label??"",128,50,245);
-    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-    return {texture,material:new THREE.MeshBasicMaterial({map:texture})};
-  },[label,plan.color,plan.kind]);
-  useEffect(()=>()=>{badge.texture.dispose();badge.material.dispose();},[badge]);
+  const livery=VEHICLE_LIVERY[plan.kind],label=livery?.text;
+  const badge=useMemo(()=>badgeMaterial(label??"",livery?.ink??"#ffffff",plan.color),[label,livery,plan.color]);
   useFrame((_,dt)=>{if(moving)clock.current+=Math.min(dt,0.1);if(!ref.current)return;const a=vehicleAt(plan,clock.current);ref.current.position.set(a.x,TERRACE_H+0.03+a.y,a.z);ref.current.rotation.y=Math.atan2(-a.dz,a.dx);});
   if(!label)return null;
-  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge.material} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
+  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
 }
