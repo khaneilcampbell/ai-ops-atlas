@@ -25,6 +25,7 @@ import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { MAP_FLEET } from "../views/map3d/mapFleet";
 import { buildScene, type Scene3D } from "../views/map3d/scene";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
+import { YACHT_KEY, YACHT_NAME } from "../views/map3d/yachtPlan";
 import { planStreetLights } from "../views/map3d/streetLighting";
 import { planDealershipTraffic, planHighwayTraffic, planVehicles, type VehicleKind } from "../views/map3d/vehicles";
 
@@ -173,6 +174,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.commons) add({ id: COMMONS_KEY, name: COMMONS_NAME, kind: "Public space", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/commonsPlan.ts" });
   if (scene.galleria) add({ id: GALLERIA_KEY, name: GALLERIA_NAME, kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/galleriaPlan.ts" });
   if (scene.stadium) add({ id: STADIUM_KEY, name: STADIUM_NAME, kind: "Landmark", area: "Stadium", status: PLANNED, project: "", source: "src/views/map3d/stadiumPlan.ts" });
+  // The Atlas yacht is berthed at the marina whenever the map has its harbour (Map3D anchorsOf).
+  add({ id: YACHT_KEY, name: YACHT_NAME, kind: "Landmark", area: "Marina", status: PLANNED, project: "", source: "src/views/map3d/yachtPlan.ts" });
   if (scene.hills) add({ id: HILLS_KEY, name: "Atlas Hills", kind: "Landmark", area: "Atlas Hills", status: PLANNED, project: "", source: "src/views/map3d/hillsPlan.ts" });
   if (scene.airport) {
     add({ id: AIRPORT_KEY, name: "Atlas Airport", kind: "Landmark", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/airport.ts" });
@@ -250,6 +253,7 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   }
   add({ category: "Aircraft", kind: "Jet flying over the city", count: MAP_FLEET.flyoverJets, area: "Sky", moves: true, source: "src/views/map3d/living.tsx CityFlyover" });
   add({ category: "Aircraft", kind: "Atlas airship", count: MAP_FLEET.airships, area: "Sky", moves: true, source: "src/views/map3d/SkyBalloons.tsx" });
+  add({ category: "Boats", kind: "Atlas yacht (berthed)", count: 1, area: "Marina", moves: false, source: "src/views/map3d/yachtPlan.ts" });
   add({ category: "Boats", kind: "Boat", count: MAP_FLEET.boats, area: "Bay", moves: true, source: "src/views/map3d/living.tsx" });
 
   const rail = scene.communityRail;
