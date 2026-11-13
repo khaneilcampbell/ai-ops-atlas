@@ -69,12 +69,14 @@ export interface LaParts{
  flowers:Inst[];
  /** g.box, warm white glow at night (plain by day), no shadow: string-light bulbs wound round lit palm trunks. */
  bulbs:Inst[];
+ /** g.trunk, night only, additive warm haze: the soft glow of a wrapped trunk, which still reads when the bulbs are a pixel across. */
+ halos:Inst[];
 }
 
-export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[],bulbs:[]});
+export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[],bulbs:[],halos:[]});
 
 /** String lights: a tight, even spiral of tiny bulbs up the upper trunk of a lit palm (Khaneil, 2026-11-13). */
-export const PALM_LIGHTS={turns:5,perTurn:6,from:.2,to:.92,bulb:.045,gap:.016} as const;
+export const PALM_LIGHTS={turns:5,perTurn:6,from:.2,to:.92,bulb:.045,gap:.016,halo:2.4} as const;
 
 /**
  * Wind string lights round a trunk of height h (g.trunk tapers from radius .5 to .35 of its width). A leaning trunk
@@ -83,6 +85,9 @@ export const PALM_LIGHTS={turns:5,perTurn:6,from:.2,to:.92,bulb:.045,gap:.016} a
  */
 export function wrapLights(o:LaParts,x:number,y:number,z:number,h:number,width:number,yaw:number,lean=0){
  const {turns,perTurn,from,to,bulb,gap}=PALM_LIGHTS,n=turns*perTurn;
+ // The glow of the whole wrap: a sleeve over the lit part of the trunk (from `from` to `to` of its height).
+ const [hx,hy,hz]=trunkTop(x,y,z,h*from,lean,yaw);
+ o.halos.push({p:[hx,hy,hz],s:[width*PALM_LIGHTS.halo,h*(to-from),width*PALM_LIGHTS.halo],r:yaw,rx:lean,c:LA_COLORS.bulb});
  for(let i=0;i<=n;i++){const t=i/n,a=yaw+t*turns*Math.PI*2,k=from+(to-from)*t,r=width*(.5-.15*k)+gap;
   const [ax,ay,az]=trunkTop(x,y,z,h*k,lean,yaw);
   o.bulbs.push({p:[ax+Math.sin(a)*r,ay,az+Math.cos(a)*r],s:[bulb,bulb,bulb],r:a,c:LA_COLORS.bulb});}

@@ -487,6 +487,9 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 
 // ── Landscaping ─────────────────────────────────────
 
+/** Warm haze round a string-lit palm trunk at night: additive and see-through, so the bulbs still show inside it. */
+const palmHalo = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+
 /** The lawn trees (palms only inside the palm zones), less any standing in a palm avenue's row, plus the avenues and the airport's sidewalk palms. */
 function avenuePlanting(scene: Scene3D) {
   const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])];
@@ -496,13 +499,13 @@ function avenuePlanting(scene: Scene3D) {
 export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G; m: M; night?: boolean }) {
   const items = useMemo(() => {
     // Los Angeles planting: mostly palms, with dry-garden shrubs (laPlanting.ts).
-    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs } = laPlanting(avenuePlanting(scene), scene.bushes);
+    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs, halos } = laPlanting(avenuePlanting(scene), scene.bushes);
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     // Low path lights, and pools of light on the ground that fade in at night.
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs, rocks, bollards, caps, pools };
+    return { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs, halos, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
@@ -516,6 +519,8 @@ export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       {/* Palm string lights: tiny warm-white bulbs by day, glowing at night. */}
       <Instanced items={items.bulbs} geometry={g.box} material={night ? m.glow : m.plain} shadow={false} />
+      {/* At night each wrapped trunk also gives off a soft warm haze, so the lights read from the normal map zoom. */}
+      {night && <Instanced items={items.halos} geometry={g.trunk} material={palmHalo} shadow={false} />}
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
       <Instanced items={items.caps} geometry={g.ball} material={m.lamp} shadow={false} />
