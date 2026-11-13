@@ -6,9 +6,11 @@ import {headquartersEnvelope} from './financialPlan';
  * - a blue glass curtain-wall core with thin vertical mullions;
  * - one full-height steel spine on the side the map looks at (+x), its face an exposed frame of
  *   columns, ties and zigzag diagonal braces;
- * - three terraces cantilevered out of the front (+z), each a three-storey glass band with a cyan
- *   light strip along its top and bottom edges, and a green roof on top: lawn, hedges, a couple
- *   of trees and one small lit glass pavilion;
+ * - a full-height glass front, flush with the spine, so both faces the map shows line up (Khaneil,
+ *   2026-11-13; it used to step back halfway between the terraces);
+ * - three terraces standing out of that front (+z) as planted balconies, each a three-storey glass
+ *   band with a cyan light strip along its top and bottom edges, and a green roof on top: lawn,
+ *   a hedge along the edge, flowering shrubs and two small trees;
  * - a glass lobby podium at the foot of the front with a canopy over the entrance;
  * - a round flat disc crown on the roof with a cyan rim.
  *
@@ -27,12 +29,14 @@ export const SOC_LAB={
  storey:.48,
  /** The glass core and the steel spine beside it, in plan. */
  core:{x0:-.4,x1:.16,z0:-.42,z1:.02},
+ /** The glass front fills the core forward to here (the spine's glass line), from the lobby roof up. */
+ front:.4,
  spine:{x0:.16,x1:.4,z0:-.42,z1:.42,over:.18},
  /** Steel members: columns and ties this thick (world units), a diagonal brace every `bay` up. */
  member:.06,
  bay:1.1,
  /** The terraces: their bottoms as shares of the roof height, storeys tall, plan, and the green roof. */
- terraces:{at:[.3,.52,.74],storeys:3,x0:-.47,x1:.16,z1:.5,deck:.05,strip:.045},
+ terraces:{at:[.3,.52,.74],storeys:3,x0:-.47,x1:.16,z1:.51,deck:.05,strip:.045},
  /** The lobby podium and its canopy. */
  lobby:{h:.95,x0:-.44,x1:.14,z1:.46,canopy:{x0:-.3,x1:-.02,out:.52,y:.62}},
  /** The disc crown: a drum then a flat disc, centred over the core. */
@@ -96,8 +100,11 @@ export function planSocLab(height:number):SocLabPlan{
   const up=i%2===0;
   braces.push({x:fx,z0:up?zA:zB,y0:i*bay,z1:up?zB:zA,y1:(i+1)*bay});
  }
- // The roof: a plain parapet slab over the core.
- box('slab',C.x0-.01,C.x1,height,height+.06,C.z0-.01,C.z1+.01);
+ // The full-height glass front, flush with the spine, from the lobby roof up.
+ const F=S.front;
+ box('curtain',C.x0,C.x1,L.h,height,C.z1,F);
+ // The roof: a plain parapet slab over the core and its front.
+ box('slab',C.x0-.01,C.x1,height,height+.06,C.z0-.01,F+.01);
 
  // Lobby podium: warm glass, a white frame along its top and corners, a canopy over the door.
  box('lobby',L.x0,L.x1,0,L.h,C.z1,L.z1);
@@ -109,27 +116,25 @@ export function planSocLab(height:number):SocLabPlan{
  // The terraces.
  const terraces=T.at.map(a=>Math.round(height*a/storey)*storey);
  for(const y0 of terraces){
-  const y1=y0+T.storeys*storey,deck=y1+T.deck;
-  box('curtain',T.x0,T.x1,y0,y1,C.z1,T.z1);
+  const y1=y0+T.storeys*storey,deck=y1+T.deck,back=F-.06;
+  // The band starts a little inside the front, so its side shows where it wraps the corner.
+  box('curtain',T.x0,T.x1,y0,y1,back,T.z1);
   // Floor slab edges at each storey of the band, the way the reference shows its floors.
   for(let s=1;s<T.storeys;s++)box('slab',T.x0-.005,T.x1,y0+s*storey-.015,y0+s*storey+.015,T.z1-.004,T.z1+.005);
-  box('slab',T.x0-.01,T.x1,y1,deck,C.z1,T.z1+.01);
+  box('slab',T.x0-.01,T.x1,y1,deck,back,T.z1+.01);
   // Cyan light strips along the front and the open side, at the band's top and bottom.
   const st=T.strip;
   for(const y of [y0,y1-st]){
    box('cyan',T.x0-.012,T.x1,y,y+st,T.z1+.005,T.z1+.018);
-   box('cyan',T.x0-.018,T.x0-.005,y,y+st,C.z1,T.z1+.018);
+   box('cyan',T.x0-.018,T.x0-.005,y,y+st,back,T.z1+.018);
   }
-  // The green roof: lawn, hedge rows, a glass pavilion against the core, and two trees.
-  box('lawn',T.x0+.03,T.x1-.02,deck,deck+.03,C.z1+.02,T.z1-.03);
-  box('hedge',T.x0+.04,T.x1-.04,deck,deck+.08,T.z1-.06,T.z1-.025);
-  box('hedge',T.x0+.025,T.x0+.06,deck,deck+.08,C.z1+.04,T.z1-.06);
-  box('hedge',-.08,.1,deck,deck+.06,.3,.34);
-  box('pavilion',-.3,-.1,deck,deck+.3,C.z1+.01,C.z1+.14);
-  box('slab',-.31,-.09,deck+.3,deck+.33,C.z1,C.z1+.15);
-  plants.push({kind:'tree',x:-.38,y:deck+.03,z:.26,s:.9});
-  plants.push({kind:'tree',x:.04,y:deck+.03,z:.2,s:.8});
-  for(const [x,z] of [[-.2,.3],[-.02,.4],[.1,.25]] as const)plants.push({kind:'shrub',x,y:deck+.03,z,s:.045});
+  // The planted balcony on top: lawn, a hedge along the edge, flowering shrubs and two small trees.
+  box('lawn',T.x0+.02,T.x1-.02,deck,deck+.03,F,T.z1-.015);
+  box('hedge',T.x0+.03,T.x1-.03,deck,deck+.07,T.z1-.045,T.z1-.02);
+  box('hedge',T.x0+.02,T.x0+.05,deck,deck+.07,back,T.z1-.045);
+  plants.push({kind:'tree',x:-.43,y:deck+.03,z:F+.05,s:.6});
+  plants.push({kind:'tree',x:.11,y:deck+.03,z:F+.05,s:.55});
+  for(const x of [-.33,-.22,-.11,0])plants.push({kind:'shrub',x,y:deck+.03,z:F+.05,s:.04});
  }
 
  // The disc crown.
