@@ -490,20 +490,6 @@
    "automations": 0
   },
   {
-   "id": "service:airport-station",
-   "name": "Airport Station",
-   "kind": "Train station",
-   "area": "Perimeter rail loop",
-   "status": "Planned",
-   "project": "",
-   "source": "src/views/map3d/perimeterRailPlan.ts",
-   "organization": "",
-   "module": "",
-   "agent_ids": [],
-   "ai_agents": 0,
-   "automations": 0
-  },
-  {
    "id": "service:bmw-dealership",
    "name": "Infrastructure Operations Hub",
    "kind": "Landmark",
@@ -2043,7 +2029,7 @@
   {
    "category": "People",
    "kind": "Train passenger",
-   "count": 8,
+   "count": 6,
    "area": "Perimeter rail loop",
    "moves": true,
    "source": "src/views/map3d/loopPassengers.ts"
@@ -2102,6 +2088,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T19:47:19.907Z",
- "commit": "e98a8f1e7b6efad5ba6af473acd31ae63d4f2897"
+ "generated_at": "2026-11-13T20:07:26.717Z",
+ "commit": "1bb7cb3deee4f15df25dc5bef05b144156e7fca0"
 }
