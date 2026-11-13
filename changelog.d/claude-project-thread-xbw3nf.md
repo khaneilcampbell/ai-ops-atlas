@@ -1,1 +1,2 @@
 - 2026-11-13 · Behind the scenes: test files are now type checked on every pull request (11 hidden mismatches fixed) and the web API shares one reply helper; nothing on screen changes (#415)
+- 2026-11-13 · Behind the scenes: refreshed 10 out-of-date reference screenshots (map, office, inside view, phone) so the automatic visual check passes again; nothing in Atlas changes (#417)
