@@ -178,10 +178,10 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
     cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
     // A taxiway stands 6 mm proud of the runway and service-road paving it meets, so the joins never flicker.
-    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(11.5+x1)/2,y+.07,z+t.z,x1-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z,.035,.012,t.d,"#d6bd6e"));
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(11.5+x1-.45)/2,y+.07,z+t.z,x1-.45-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z+(t.z<7.5?-.22:.22),.035,.012,t.d-.45,"#d6bd6e"));
      // A hold-short marking (two solid bars) across the taxiway just before the runway edge.
-     // A widened mouth where the taxiway meets the runway, and the lead-in turning on to the runway centre line inward.
-     if(lane){const inward=t.z<L.z?1:-1;cubes.push(box(x+x1-.3,y+.02,z+t.z,.6,.046,t.d+.5,"#777f7f"),box(x+(x1+L.x)/2,y+.061,z+t.z,L.x-x1,.008,.035,"#d6bd6e"),box(x+L.x,y+.061,z+t.z+inward*.25,.035,.008,.5,"#d6bd6e"));for(let k=0;k<2;k++)cubes.push(box(x+x1-.18-k*.08,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));}
+     // A widened mouth where the taxiway meets the runway; the yellow centre line stops short of the hold bars, off the runway.
+     if(lane){cubes.push(box(x+x1-.3,y+.02,z+t.z,.6,.046,t.d+.5,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+x1-.18-k*.08,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));}
      else{const toRunway=t.z<7.5?1:-1,hz=t.z+toRunway*(t.d/2-.18);cubes.push(box(x+t.x,y+.02,z+t.z+toRunway*(t.d/2-.2),t.w+.5,.046,.4,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+t.x,y+.07,z+hz-toRunway*k*.08,t.w-.1,.012,.03,"#d6bd6e"));}}
     const [northBar,southBar]=AIRPORT_THRESHOLDS.landing;
     for(let zz=northBar+1;zz<southBar-.6;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
