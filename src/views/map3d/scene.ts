@@ -2,6 +2,7 @@ import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
+import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
@@ -788,18 +789,31 @@ function buildCity(layout: Layout): Scene3D {
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
   // Close the ring road round the city, clear of every building, the Marketplace and its Galleria.
-  const ring=planRingRoad(connections,financial?.street,[
+  const ringObstacles=[
     ...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...houses.map(h=>({x:h.x,z:h.z,w:h.w,d:h.d})),
     ...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),
     ...(mall?[{x:mall.x+mall.w/2,z:mall.z+mall.d/2,w:mall.w,d:mall.d}]:[]),...(galleria?[{x:galleria.rect.x+galleria.rect.w/2,z:galleria.rect.z+galleria.rect.d/2,w:galleria.rect.w,d:galleria.rect.d}]:[]),
     ...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),
     // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
-    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
+    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])];
+  const ring=planRingRoad(connections,financial?.street,ringObstacles);
   connections.push(...ring);
+
   if(ring.length)connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership});
+  // New York style avenues: join the north-south streets into through avenues (nycGrid.ts), clear
+  // of every building and of the station walks and stairs, so they are laid after the rail.
+  const stationKeepOut=(communityRail?.loop?.stops??[]).flatMap(st=>st.walk.slice(1).map(([x,,z],i)=>{const [px,,pz]=st.walk[i];return {x:(x+px)/2,z:(z+pz)/2,w:Math.abs(x-px)+.48,d:Math.abs(z-pz)+.48};}));
+  const grid=planGridAvenues({links:connections,bridgeRoads:carBridges.flatMap(b=>b.roads),land,financialStreet:financial?.street,obstacles:[...ringObstacles,...stationKeepOut,
+    ...(agency?[{x:agency.cx,z:agency.cz,w:agency.w,d:agency.d}]:[]),...(airport?[airportTrafficKeepOut(airport)]:[]),
+    ...(financial?[{x:financial.x+financial.w/2,z:financial.z+financial.d/2,w:financial.w,d:financial.d}]:[])]});
+  if(grid.length){
+    connections.push(...grid);
+    connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(grid.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
+  }
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);

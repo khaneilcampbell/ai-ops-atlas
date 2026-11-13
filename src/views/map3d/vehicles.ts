@@ -91,9 +91,11 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     const length = loop.reduce((n, a, i) => n + flatLen(nodes[a], nodes[loop[(i + 1) % loop.length]]), 0);
     const districts = new Set(loop.map(i => inDistrict(nodes[i])).filter(Boolean));
     if (length < 18 || districts.size < 3 || loops.some(l => keyOf(l) === keyOf(loop) && l[0] === loop[0] && l[1] === loop[1])) continue;
-    // Only loops a twin can drive the other way, so every street carries traffic both ways.
+    // A loop a twin can drive the other way gets one, so two-way streets carry traffic both ways;
+    // a loop on a one-way street drives it only its signed way.
     const back = [...loop].reverse();
     if (canDrive(back)) loops.push(loop, back);
+    else loops.push(loop);
   }
   // Fewer distinct loops than vehicles (a small city): more cars share them, spaced round the loop.
   return Array.from({ length: loops.length ? MAX_VEHICLES : 0 }, (_, k) => {
@@ -112,7 +114,7 @@ const flatLen = (a: Pt3, b: Pt3) => Math.hypot(b[0] - a[0], b[2] - a[2]);
  * on a street; on a headquarters plaza lane, which is drawn hugging the tower, the car on the
  * tower side keeps to the plaza line and the other passes outside it.
  */
-export function drivingGraph(scene: Scene3D): { nodes: Pt3[]; next: number[][]; lane: (a: number, b: number) => number } | undefined {
+export function drivingGraph(scene: Scene3D): { nodes: Pt3[]; next: number[][]; lane: (a: number, b: number) => number; oneWay: OneWayStreet[] } | undefined {
   const g = buildStreetGraph(withCrossings(streetLines(scene, { drive: true })));
   const rings = [...plazaRings(scene).values()];
   const on = (p: Pt3, x: number | null, z: number | null) => (x === null || Math.abs(p[0] - x) < 1e-6) && (z === null || Math.abs(p[2] - z) < 1e-6);
@@ -132,15 +134,101 @@ export function drivingGraph(scene: Scene3D): { nodes: Pt3[]; next: number[][]; 
     for (let s = 0; s <= steps; s++) { const f = s / steps; if (towerHit(a[0] + (b[0] - a[0]) * f + nx * off, a[2] + (b[2] - a[2]) * f + nz * off)) return true; }
     return false;
   };
-  const next = g.edges.map((list, i) => [...new Set(list.map(e => e.to))].filter(j => !brushes(i, j) && !brushes(j, i)));
-  const alive = next.map(list => list.length > 0);
-  // Peel off ends until every street that is left joins something at both ends.
+  const both = g.edges.map((list, i) => [...new Set(list.map(e => e.to))].filter(j => !brushes(i, j) && !brushes(j, i)));
+  // New York style one-way cross streets: drive each east-west street only its signed way, as long
+  // as every junction can still reach every other (a street that would strand a corner of the
+  // city, as in the smaller groupings, stays two-way).
+  const isPlaza = (i: number, j: number) => !!ringOf(g.nodes[i], g.nodes[j]);
+  const directed = (streets: OneWayStreet[]) => both.map((list, i) => list.filter(j => {
+    const a = g.nodes[i], b = g.nodes[j];
+    if (Math.abs(a[2] - b[2]) > 1e-6 || isPlaza(i, j)) return true;
+    const street = streets.find(s => s.zs.some(z => Math.abs(z - a[2]) < ONE_WAY_Z));
+    return !street || Math.sign(b[0] - a[0]) === street.dir;
+  }));
+  const base = leadOn(both), city = base.flatMap((l, i) => (l.length ? [i] : []));
+  let oneWay: OneWayStreet[] = [], kept = base;
+  // Alternate block by block: each street tries the other way from the one before it first.
+  for (const zs of oneWayStreets(g.nodes, both, isPlaza)) {
+    const prefer = (oneWay.length ? -oneWay[oneWay.length - 1].dir : 1) as 1 | -1;
+    for (const dir of [prefer, -prefer as 1 | -1]) {
+      const tryWith = [...oneWay, { zs, dir }], graph = leadOn(directed(tryWith));
+      if (stronglyConnected(graph, city)) { oneWay = tryWith; kept = graph; break; }
+    }
+  }
+  return kept.some(l => l.length) ? { nodes: g.nodes, next: kept, lane, oneWay } : undefined;
+}
+
+/** A one-way cross street: the z of each of its runs (it may step to meet a bridge), and +1 for eastbound or -1 for westbound. */
+export interface OneWayStreet { zs: number[]; dir: 1 | -1 }
+
+/**
+ * Peel off ends until every street that is left leads on: each junction has a way in and a way
+ * out, and joins at least two others, so no street ends in a U-turn; and no car drives into a
+ * junction whose only way on is straight back (where a one-way street meets it head on).
+ */
+function leadOn(lists: number[][]): number[][] {
+  const next = lists.map(l => [...l]), alive = next.map(l => l.length > 0);
   for (let changed = true; changed; ) {
     changed = false;
-    next.forEach((list, i) => { if (alive[i] && list.filter(j => alive[j]).length < 2) { alive[i] = false; changed = true; } });
+    const into = next.map(() => new Set<number>());
+    next.forEach((list, i) => { if (alive[i]) for (const j of list) if (alive[j]) into[j].add(i); });
+    next.forEach((list, i) => {
+      if (!alive[i]) return;
+      const out = list.filter(j => alive[j]);
+      if (!out.length || !into[i].size || new Set([...out, ...into[i]]).size < 2) { alive[i] = false; changed = true; }
+    });
+    next.forEach((list, i) => {
+      if (!alive[i]) return;
+      for (let k = list.length - 1; k >= 0; k--) {
+        const j = list[k];
+        if (alive[j] && !next[j].some(n => n !== i && alive[n])) { list.splice(k, 1); changed = true; }
+      }
+    });
   }
-  const kept = next.map((list, i) => (alive[i] ? list.filter(j => alive[j]) : []));
-  return kept.some(l => l.length) ? { nodes: g.nodes, next: kept, lane } : undefined;
+  return next.map((list, i) => (alive[i] ? list.filter(j => alive[j]) : []));
+}
+
+/** Can every junction in `nodes` be driven to from every other in this graph? */
+function stronglyConnected(next: number[][], nodes: number[]): boolean {
+  if (!nodes.length) return true;
+  if (nodes.some(i => !next[i].length)) return false;
+  const reach = (lists: number[][]) => { const seen = new Set([nodes[0]]), todo = [nodes[0]]; while (todo.length) for (const j of lists[todo.pop()!]) if (!seen.has(j)) { seen.add(j); todo.push(j); } return seen; };
+  const back = next.map(() => [] as number[]);
+  next.forEach((list, i) => list.forEach(j => back[j].push(i)));
+  const fwd = reach(next), rev = reach(back);
+  return nodes.every(i => fwd.has(i) && rev.has(i));
+}
+
+/** Points on an east-west street this close in z belong to it. */
+const ONE_WAY_Z = 0.05;
+/** Only a street at least this long counts as a cross street; shorter runs are links and stay two-way. */
+export const CROSS_STREET_MIN = 9;
+/** East-west runs closer together than this are one cross street that steps (to meet a bridge, say). */
+const CORRIDOR = 1.5;
+
+/**
+ * The candidate one-way cross streets (Khaneil, 2026-11-13, "set up like New York city streets"),
+ * north to south, as the z of each street's runs: the east-west streets between the north and
+ * south boulevards. drivingGraph signs them eastbound and westbound in turn, as Manhattan's are.
+ * The boulevards (the northernmost and southernmost cross streets), the avenues (north-south) and
+ * the plaza lanes stay two-way.
+ */
+export function oneWayStreets(nodes: Pt3[], next: number[][], isPlaza: (i: number, j: number) => boolean): number[][] {
+  const runs = new Map<number, number>();
+  next.forEach((list, i) => list.forEach(j => {
+    const a = nodes[i], b = nodes[j];
+    if (j < i || Math.abs(a[2] - b[2]) > 1e-6 || isPlaza(i, j)) return;
+    const z = [...runs.keys()].find(k => Math.abs(k - a[2]) < ONE_WAY_Z) ?? a[2];
+    runs.set(z, (runs.get(z) ?? 0) + Math.abs(b[0] - a[0]));
+  }));
+  // Runs a few metres apart are one corridor (a street that steps to meet a bridge): one direction.
+  const corridors: { zs: number[]; len: number }[] = [];
+  for (const [z, len] of [...runs].sort((a, b) => a[0] - b[0])) {
+    const last = corridors[corridors.length - 1];
+    if (last && z - last.zs[last.zs.length - 1] < CORRIDOR) { last.zs.push(z); last.len += len; } else corridors.push({ zs: [z], len });
+  }
+  const streets = corridors.filter(c => c.len >= CROSS_STREET_MIN);
+  return streets.slice(1, -1).map(c => c.zs);
 }
 
 /** Adds a point wherever two streets cross mid-way, so the crossing is a junction in the graph. */

@@ -1,0 +1,1 @@
+- 2026-11-13 · The map's streets now work like New York's: three new avenue stretches join the north-south streets into through avenues (west by Atlas Commons, middle by the Development Hub, east along the shore by the AI Engineering tower), and the cross streets in between are one-way, so traffic drives round the city in loops without passing through any building
