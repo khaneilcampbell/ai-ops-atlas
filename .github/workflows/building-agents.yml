@@ -1,11 +1,10 @@
 # Building operators (ops/building-agents): one model-free check per building, reported to Atlas's
-# live feed so Product Marketplace, Observability Center and Data Intelligence Center show a real
+# live feed so Product Marketplace and Data Intelligence Center show a real
 # live status. GET requests only; the feed token can only add reports. No model calls, no spend.
 name: Building agents
 
 on:
   schedule:
-    - cron: "15,45 * * * *"  # signals: Signal Watch, Observability Center
     - cron: "5 * * * *"      # marketplace: Marketplace Steward, Product Marketplace
     - cron: "10 */3 * * *"   # census: Dataset Census, Data Intelligence Center
   workflow_dispatch:
@@ -13,9 +12,9 @@ on:
       check:
         description: Which building agent to run
         type: choice
-        options: [all, marketplace, signals, census]
+        options: [all, marketplace, census]
         default: all
-  # A pull request that changes the agents runs all three once and reports the real result.
+  # A pull request that changes the agents runs both once and reports the real result.
   pull_request:
     paths: [ops/building-agents/**, .github/workflows/building-agents.yml]
 
@@ -41,8 +40,7 @@ jobs:
           ATLAS_FEED_URL: ${{ secrets.ATLAS_FEED_URL }}
           ATLAS_FEED_TOKEN: ${{ secrets.ATLAS_FEED_TOKEN }}
           CHECK: >-
-            ${{ github.event.schedule == '15,45 * * * *' && 'signals'
-            || github.event.schedule == '5 * * * *' && 'marketplace'
+            ${{ github.event.schedule == '5 * * * *' && 'marketplace'
             || github.event.schedule == '10 */3 * * *' && 'census'
             || inputs.check || 'all' }}
         run: python3 ops/building-agents/agents.py "$CHECK"

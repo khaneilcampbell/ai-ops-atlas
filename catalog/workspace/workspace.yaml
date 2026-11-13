@@ -68,7 +68,6 @@ landmarks:
     map_name: Atlas · Operations
     module: observability-center
     project: ai-ops-atlas
-    agents: [signal-watch]
   "service:airport-building:cargo":
     map_name: Atlas · Cargo
     module: model-intelligence-lab

@@ -54,7 +54,6 @@ An agent is watched when its manifest has an `alerts` block (see
 | benjaire-contact-worker | yes | none (runs per form post) | watched |
 | benjaire-flow-intake | yes | none (runs per inquiry) | watched |
 | marketplace-steward | yes | 3 hours (runs hourly) | watched |
-| signal-watch | yes | 90 minutes (runs every 30 min) | watched |
 | dataset-census | yes | 7 hours (runs every 3 h) | watched |
 | order-delivery | yes | none (runs per order) | watched once n8n reports |
 | shopify-publisher | yes | none (runs per approval) | watched once n8n reports |

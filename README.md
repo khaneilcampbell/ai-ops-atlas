@@ -86,7 +86,7 @@ Agents that work on Atlas itself or its repositories:
 | Opportunity Scout | Looks for revenue ideas in the agents Khaneil already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
 | Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
 | System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
-| Marketplace Steward, Signal Watch, Dataset Census | Building agents that report on the Product Marketplace, the Observability Center and the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
+| Marketplace Steward, Dataset Census | Building agents that report on the Product Marketplace and the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
 | Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
 
 The Mac app's write actions are **Re-run failed jobs**, **Merge pull request** (only when GitHub
