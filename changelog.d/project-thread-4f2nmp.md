@@ -1,0 +1,1 @@
+- 2026-11-13 · The airport's landing runway moved in from the river edge to the grass beside the main runway, and the line of round bushes there is gone. Planes land, taxi and take off exactly as before (#PR)

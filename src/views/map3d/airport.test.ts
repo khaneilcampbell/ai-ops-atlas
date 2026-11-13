@@ -135,7 +135,7 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   expect(c.x-c.w/2>=AL2.landX&&c.z-c.d/2>=AL2.landZ).toBe(true);
   expect(clearOf(corners(c.x,c.z,c.w,c.d),.36+.18)).toBe(true);
   const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
-  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
+  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:LR.x,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
  });
  it('opens both ends of the service building on the gated street, which runs through the passage',()=>{
   const P=AIRPORT_SERVICE_DOOR.passage,G=AIRPORT_SERVICE_GATE;
@@ -152,5 +152,16 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   expect(streets.some(r=>distanceToRoad(world(G.x,(G.drive.z0+G.drive.z1)/2),r)<.05)).toBe(true);
   // Booth and fence ends stand off every carriageway.
   expect(clearOf([[G.x+.1,G.drive.z0-.42],[G.x,G.drive.z1+1.2],[G.x,G.drive.z0-1.6]],.36)).toBe(true);
+ });
+});
+
+describe('landing runway position (Khaneil, 2026-11-13)',()=>{
+ it('sits on the grass between runway 1 and the service road, with clear room either side',()=>{
+  const r1East=AL2.runwayX+AL2.runwayWidth/2,serviceRoadWest=22.3-.32;
+  expect(LR.x-LR.width/2-r1East).toBeGreaterThan(1.8);
+  expect(serviceRoadWest-(LR.x+LR.width/2)).toBeGreaterThan(1.2);
+ });
+ it('keeps every runway-end taxiway flush with the moved runway edge',()=>{
+  for(const t of AIRPORT_END_TAXIWAYS.slice(0,2))expect(t.x+t.w/2).toBeCloseTo(LR.x-LR.width/2,6);
  });
 });
