@@ -2,12 +2,15 @@ import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
+import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
 import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
 import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
-import {alignStreets} from './streetAlign';
+import {alignStreets,joinStreetEnds} from './streetAlign';
+import {marinaSite} from './marinaPlan';
+import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
@@ -25,7 +28,7 @@ import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
-import {distanceToRoad} from "./highway";
+import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_CLEAR,streetHitTest} from "./streetAlign";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airportTrafficKeepOut, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
@@ -768,12 +771,6 @@ function buildCity(layout: Layout): Scene3D {
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
   const mall=planMall({parks,land,towers,kiosks,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road)]});
   if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
-  if(mall){
-    const edge=mall.plaza.z+mall.plaza.d+.3,side=mall.x+mall.w+.4;
-    const path:[[number,number],[number,number],[number,number]]=[[mall.cx,edge],[side,edge],[side,edge-2.5]];
-    for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
-    walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
-  }
   // Plain meadow filling the island out to a square; the stadium grounds may build on it. It is laid
   // before the Galleria, whose lot behind the Marketplace can reach onto it when a smaller catalog
   // moves the Marketplace toward the island's edge.
@@ -788,18 +785,56 @@ function buildCity(layout: Layout): Scene3D {
     trees.push(...galleria.trees);bushes.push(...galleria.bushes);
   }
   // Close the ring road round the city, clear of every building, the Marketplace and its Galleria.
-  const ring=planRingRoad(connections,financial?.street,[
+  const ringObstacles=[
     ...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...houses.map(h=>({x:h.x,z:h.z,w:h.w,d:h.d})),
     ...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),
     ...(mall?[{x:mall.x+mall.w/2,z:mall.z+mall.d/2,w:mall.w,d:mall.d}]:[]),...(galleria?[{x:galleria.rect.x+galleria.rect.w/2,z:galleria.rect.z+galleria.rect.d/2,w:galleria.rect.w,d:galleria.rect.d}]:[]),
     ...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),
     // BMW: its showroom and the cars on display; the drive aisle in front is already a street.
-    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])]);
+    ...(dealership?[{x:dealership.showroom.cx,z:dealership.showroom.cz,w:dealership.showroom.w,d:dealership.showroom.d},...dealership.cars.map(c=>({x:c.x,z:c.z,w:.6,d:.6}))]:[])];
+  const ring=planRingRoad(connections,financial?.street,ringObstacles);
   connections.push(...ring);
+
   if(ring.length)connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(ring.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   const communityRail=mall&&financial?planMarketplaceRail(mall,financial,land,airport,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),{x:mall.cx,z:mall.cz,w:mall.w,d:mall.d},...(stadium?[{x:stadium.x+stadium.w/2,z:stadium.z+stadium.d/2,w:stadium.w,d:stadium.d}]:[]),...(airport?(()=>{const r=airportFootprint(airport);return [{x:r.x+r.w/2,z:r.z+r.d/2,w:r.w,d:r.d}];})():[])]):planCommunityRail(community,financial,dealership?.lot);
-  if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership});
+  if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership,roads:connections.map(c=>c.road)});
+  // New York style avenues: join the north-south streets into through avenues (nycGrid.ts), clear
+  // of every building and of the station walks and stairs, so they are laid after the rail.
+  // A station's stair and its landing are far wider than a walk: avenues keep a street's half-width and sidewalk
+  // clear of them too (Khaneil, 2026-11-13), so no stair lands on a street corner.
+  const stationKeepOut=(communityRail?.loop?.stops??[]).flatMap(st=>st.walk.slice(1).map(([x,y,z],i)=>{const [px,py,pz]=st.walk[i],m=y>0||py>0?3:.48;return {x:(x+px)/2,z:(z+pz)/2,w:Math.abs(x-px)+m,d:Math.abs(z-pz)+m};}));
+  const grid=planGridAvenues({links:connections,bridgeRoads:carBridges.flatMap(b=>b.roads),land,financialStreet:financial?.street,obstacles:[...ringObstacles,...stationKeepOut,
+    ...(agency?[{x:agency.cx,z:agency.cz,w:agency.w,d:agency.d}]:[]),...(airport?[airportTrafficKeepOut(airport)]:[]),
+    ...(financial?[{x:financial.x+financial.w/2,z:financial.z+financial.d/2,w:financial.w,d:financial.d}]:[])]});
+  if(grid.length){
+    connections.push(...grid);
+    connections.splice(0,connections.length,...alignStreets(connections,streetBoxes,true));
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(grid.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
+  }
+  // Every street end meets the street it runs into, square, once the street plan is final.
+  joinStreetEnds([...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)],[...connections.map(c=>c.walk),...(financial?[financial.road,...(financial.circa?[financial.circa.street]:[])]:[]),
+    ...[...plazaRings({towers,paving}).values()].map((g):[number,number][]=>[[g.x0,g.z0],[g.x1,g.z0],[g.x1,g.z1],[g.x0,g.z1],[g.x0,g.z0]])]);
+  if(mall){
+    // One forecourt (Khaneil, 2026-11-13: "fix sidewalk pavement design"): the plaza paving runs on, square, to the
+    // sidewalk of an east-west street close in front, instead of an L of strips stopping short in the grass.
+    const end=mall.plaza.z+mall.plaza.d+.3,front=connections.flatMap(c=>c.road.slice(1).map((b,i)=>[c.road[i],b] as const))
+      .filter(([a,b])=>Math.abs(a[1]-b[1])<1e-6&&a[1]>end&&a[1]-end<3&&Math.min(Math.max(a[0],b[0]),mall.plaza.x+mall.plaza.w)-Math.max(Math.min(a[0],b[0]),mall.plaza.x)>mall.plaza.w/2).map(([a])=>a[1]);
+    if(front.length)mall.forecourtZ1=Math.min(...front)-ROAD_W/2-.18;
+    const z1=mall.forecourtZ1??end;
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.plaza.x-.2&&items[i].x<mall.plaza.x+mall.plaza.w+.2&&items[i].z>mall.plaza.z&&items[i].z<z1+.2)items.splice(i,1);
+    walks.push({x0:mall.cx,z0:mall.plaza.z+mall.plaza.d,x1:mall.cx,z1,y:top+.08});
+  }
+  // Footpath paving laid before the street plan was final never lies on a carriageway (Khaneil, 2026-11-13: "remove
+  // pavement that's in the street"): narrow strips are trimmed back from every street piece, half a road past its
+  // ends. Road-width slabs are the streets' own surface and plazas are wide, so both are left alone.
+  {const half=ROAD_W/2,rects=[...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)]
+    .flatMap(r=>r.slice(1).map((b,i)=>{const a=r[i];return {x:Math.min(a[0],b[0])-half,z:Math.min(a[1],b[1])-half,w:Math.abs(b[0]-a[0])+2*half,d:Math.abs(b[1]-a[1])+2*half};}));
+   const minus=(p:Slab,c:{x:number;z:number;w:number;d:number}):Slab[]=>{const x0=Math.max(p.x,c.x),x1=Math.min(p.x+p.w,c.x+c.w),z0=Math.max(p.z,c.z),z1=Math.min(p.z+p.d,c.z+c.d);
+     if(x1-x0<1e-6||z1-z0<1e-6)return [p];
+     return [{...p,w:x0-p.x},{...p,x:x1,w:p.x+p.w-x1},{...p,x:x0,w:x1-x0,d:z0-p.z},{...p,x:x0,z:z1,w:x1-x0,d:p.z+p.d-z1}].filter(q=>q.w>.05&&q.d>.05);};
+   for(let i=paving.length-1;i>=0;i--){const p=paving[i];if(p.y<top-1e-6||Math.min(p.w,p.d)>.5)continue;
+     let parts=[p];for(const c of rects)parts=parts.flatMap(q=>minus(q,c));paving.splice(i,1,...parts);}}
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
@@ -860,6 +895,15 @@ function buildCity(layout: Layout): Scene3D {
     // One paved forecourt under the wheel and pavilion, joined to the station stair by the walks.
     paving.push({...stationPlaza.bounds,y:top,h:.03});
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+    // The forecourt's front walk runs on along the shore to the harbour marina's stair, so the
+    // station plaza joins the boat dock (Khaneil, 2026-11-13). Only on open land and clear of streets.
+    const harbor=marinaSite({terraces,land,paving,bounds:{x0:0,z0:0,x1:0,z1:0}},top),front=stationPlaza.walk[1];
+    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,harbor.shoreZ-.2]];
+    const onLand=(x:number,z:number)=>land.some(l=>inRect(l,x,z));
+    if(harbor.x>front[0]&&dock.every(([x,z])=>onLand(x,z))&&dock.slice(1).every((b,i)=>connections.every(c=>[c.road,...(c.frontage?[c.frontage]:[])].every(r=>roadIntersections([dock[i],b],r).length===0&&distanceToRoad(b,r)>STREET_CLEAR)))){
+      for(let i=1;i<dock.length;i++){const a=dock[i-1],b=dock[i];if(Math.hypot(b[0]-a[0],b[1]-a[1])<.05)continue;paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+      for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(dock.slice(1).some((b,k)=>distanceToRoad([items[i].x,items[i].z],[dock[k],b])<.45))items.splice(i,1);
+    }
   }
   // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
   // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).

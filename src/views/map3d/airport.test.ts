@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {AIRPORT_LAYOUT as AL2,AIRPORT_REMOTE_STANDS,AIRPORT_SERVICE_DOOR,AIRPORT_SERVICE_GATE,airportPoint} from './airport';
+import {AIRPORT_BUILDINGS} from './airportBuildings';
+import {buildScene} from './scene';
+import {layoutMap} from '../mapLayout';
+import {catalog} from '../../catalog';
+import {distanceToRoad} from './highway';
+import {AIRPORT_END_TAXIWAYS,AIRPORT_LANDING_RUNWAY as LR,AIRPORT_LANDING_SOUTH_PAD,AIRPORT_THRESHOLDS} from './airport';
 import { planAirport,airportFootprint,pathCrossesRect } from "./airport";
 it("reserves space beyond every existing land parcel with a connected paved approach",()=>{
  const land=[{x:0,z:0,w:5,d:8},{x:8,z:3,w:6,d:8}];
@@ -92,4 +99,58 @@ describe('airport forecourt', () => {
     expect(pathCrossesRect([[0, 0], [4, 0]], {x: 1, z: -1, w: 1, d: 2})).toBe(true);
     expect(pathCrossesRect([[0, 3], [4, 3]], {x: 1, z: -1, w: 1, d: 2})).toBe(false);
   });
+});
+
+// Runway ends are joined like a real airfield's (Khaneil, 2026-11-13): a taxiway meets every runway end, past its
+// threshold bars, and every end taxiway runs from the parallel taxiway (x 11.5, z -7.8 to 23) to paved runway.
+describe('runway-end taxiways',()=>{
+ const runways=[{x:15,w:2.2,z0:-3,z1:18,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
+ const touches=(t:{x:number;z:number;w:number;d:number},r:{x0:number;x1:number;z0:number;z1:number})=>t.x-t.w/2<=r.x1+1e-6&&t.x+t.w/2>=r.x0-1e-6&&t.z-t.d/2<=r.z1+1e-6&&t.z+t.d/2>=r.z0-1e-6;
+ const paved=[{x0:11.075,x1:11.925,z0:-7.8,z1:23},...runways.map(r=>({x0:r.x-r.w/2,x1:r.x+r.w/2,z0:r.z0,z1:r.z1}))];
+ it('joins both ends of every runway to a taxiway',()=>{
+  for(const r of runways)for(const end of [r.z0,r.z1])expect(AIRPORT_END_TAXIWAYS.some(t=>Math.abs(t.x-r.x)<=r.w/2+t.w/2+1e-6&&Math.abs(t.z-end)<=t.d/2+1e-6+(t.w>t.d?1.2:0)),`${r.x} @ ${end}`).toBe(true);
+ });
+ it('never paves a taxiway over a runway',()=>{
+  for(const r of runways)expect(AIRPORT_END_TAXIWAYS.filter(t=>Math.min(t.x+t.w/2,r.x+r.w/2)-Math.max(t.x-t.w/2,r.x-r.w/2)>1e-6&&Math.min(t.z+t.d/2,r.z1)-Math.max(t.z-t.d/2,r.z0)>1e-6)).toEqual([]);
+ });
+ it('keeps every threshold bar off the taxiways',()=>{
+  for(const r of runways)for(const bar of r.bars)expect(AIRPORT_END_TAXIWAYS.filter(t=>Math.abs(t.x-r.x)<r.w/2+t.w/2&&Math.abs(t.z-bar)<t.d/2+.33)).toEqual([]);
+ });
+ it('ends no taxiway on the grass: both ends of each one are paved',()=>{
+  for(const t of AIRPORT_END_TAXIWAYS){
+   const ends=t.w>t.d?[{...t,x:t.x-t.w/2,w:0},{...t,x:t.x+t.w/2,w:0}]:[{...t,z:t.z-t.d/2,d:0},{...t,z:t.z+t.d/2,d:0}];
+   for(const e of ends)expect(paved.some(p=>touches(e,p))||AIRPORT_END_TAXIWAYS.some(o=>o!==t&&touches(e,{x0:o.x-o.w/2,x1:o.x+o.w/2,z0:o.z-o.d/2,z1:o.z+o.d/2})),JSON.stringify(e)).toBe(true);
+  }
+ });
+});
+
+describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
+ const scene=buildScene(layoutMap(catalog,[],'district'));const a=scene.airport!;
+ const streets=scene.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]);
+ const world=(x:number,z:number)=>airportPoint(a,x,z);
+ const corners=(x:number,z:number,w:number,d:number)=>[[x-w/2,z-d/2],[x+w/2,z-d/2],[x+w/2,z+d/2],[x-w/2,z+d/2],[x,z]] as [number,number][];
+ const clearOf=(pts:[number,number][],m:number)=>pts.every(([x,z])=>streets.every(r=>distanceToRoad(world(x,z),r)>m));
+ it('stands on airport land, clear of streets and their sidewalks, stands, taxiway and runways',()=>{
+  const c=AIRPORT_BUILDINGS.find(b=>b.id==='cargo')!;
+  expect(c.x-c.w/2>=AL2.landX&&c.z-c.d/2>=AL2.landZ).toBe(true);
+  expect(clearOf(corners(c.x,c.z,c.w,c.d),.36+.18)).toBe(true);
+  const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
+  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
+ });
+ it('opens both ends of the service building on the gated street, which runs through the passage',()=>{
+  const P=AIRPORT_SERVICE_DOOR.passage,G=AIRPORT_SERVICE_GATE;
+  expect(P.x1).toBe(G.building.x1);expect(P.x0).toBeLessThan(P.x1);
+  // Both openings span the street's two lanes, and the street's centre line runs the passage end to end.
+  expect(P.z0<=G.drive.z0&&P.z1>=G.drive.z1).toBe(true);
+  for(const px of [P.x0-.1,(P.x0+P.x1)/2,P.x1+.1])expect(streets.some(r=>distanceToRoad(world(px,(G.drive.z0+G.drive.z1)/2),r)<.05)).toBe(true);
+ });
+ it('puts the gate across the street where it reaches the service building',()=>{
+  const G=AIRPORT_SERVICE_GATE;
+  // Across the street's last stretch, between the building's east face and the corner where the street turns.
+  expect(G.x>G.building.x1+.3&&G.x<G.drive.x1-.5).toBe(true);
+  // The street there: its centre line runs mid-gate, across both barrier lanes.
+  expect(streets.some(r=>distanceToRoad(world(G.x,(G.drive.z0+G.drive.z1)/2),r)<.05)).toBe(true);
+  // Booth and fence ends stand off every carriageway.
+  expect(clearOf([[G.x+.1,G.drive.z0-.42],[G.x,G.drive.z1+1.2],[G.x,G.drive.z0-1.6]],.36)).toBe(true);
+ });
 });

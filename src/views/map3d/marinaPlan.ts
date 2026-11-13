@@ -7,8 +7,10 @@ export interface Area {x:number;z:number;w:number;d:number}
 
 export function marinaSite(scene:Pick<Scene3D,'terraces'|'land'|'paving'|'bounds'>,terraceTop:number):MarinaSite{
  const b=scene.bounds,shore=scene.terraces.reduce<(typeof scene.terraces)[number]|undefined>((best,p)=>!best||p.z+p.d>best.z+best.d?p:best,undefined);
- const x=shore?shore.x+shore.w/2:(b.x0+b.x1)/2,shoreZ=shore?shore.z+shore.d:b.z1;
- const coastZ=Math.max(shoreZ,...scene.land.filter(r=>x>=r.x&&x<=r.x+r.w).map(r=>r.z+r.d));
+ const x=shore?shore.x+shore.w/2:(b.x0+b.x1)/2;
+ // The shore is the coast itself: open land may reach well past the terrace, and a promenade judged
+ // from the terrace edge ran the pier walk across that land and over its streets (Khaneil, 2026-11-13).
+ const shoreZ=Math.max(shore?shore.z+shore.d:b.z1,...scene.land.filter(r=>x>=r.x&&x<=r.x+r.w).map(r=>r.z+r.d)),coastZ=shoreZ;
  // Join the actual district promenade, rather than stopping at the cliff edge.
  const walks=scene.paving.filter(r=>x>=r.x&&x<=r.x+r.w&&r.z<shoreZ&&r.z+r.d>shoreZ-2&&r.y>=terraceTop);
  const cityWalkZ=walks.length?Math.max(...walks.map(r=>Math.min(shoreZ-0.2,r.z+r.d/2))):shoreZ-0.8;

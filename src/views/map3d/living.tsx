@@ -12,8 +12,9 @@ import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
+import { trafficFlow } from "./trafficFlow";
 import { harbourLoop, yachtBerth } from "./yachtPlan";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -297,6 +298,8 @@ export function MapRenderer() {
 export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
   const plans = useMemo(() => [...planVehicles(scene),...planDealershipTraffic(scene),...planHighwayTraffic(scene)], [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
+  // Shared car following (trafficFlow.ts): each vehicle's own progress along its route.
+  const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene)), [plans, scene]);
   const mats = useMemo(
     () => ({
       head: focusable(new THREE.MeshStandardMaterial({ color: "#f3ead4", emissive: "#fff1d2", emissiveIntensity: 0, roughness: 0.4 })),
@@ -310,7 +313,6 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
   const tails = useRef<THREE.InstancedMesh>(null);
   const pools = useRef<THREE.InstancedMesh>(null);
   const tmp = useMemo(() => ({ base: new THREE.Matrix4(), part: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(0, 0, 0, "YZX"), p: new THREE.Vector3(), s: new THREE.Vector3(), one: new THREE.Quaternion() }), []);
-  const clock = useRef(0);
   const yaw = useRef<number[]>([]);
   const pitch = useRef<number[]>([]);
   const y0 = TERRACE_H + 0.03;
@@ -328,11 +330,11 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
       return cur + diff * (1 - Math.exp(-dt * rate));
     };
     const pose = plans.map((v, i) => {
-      const at = vehicleAt(v, clock.current);
+      const at = vehicleAt(v, flow.times[i]);
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
-      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,clock.current)?1:0));
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,flow.times[i])?1:0));
     });
     // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
@@ -370,14 +372,14 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     mats.tail.emissiveIntensity = k * 1.3;
     if (!moving) return;
     const dt = Math.min(delta, 0.1);
-    clock.current += dt;
+    flow.step(dt);
     place(dt);
   });
 
   if (!plans.length) return null;
   return (
     <group name="atlas-road-traffic">
-      {plans.map(v=><VehicleBadge key={v.id} plan={v} moving={moving} />)}
+      {plans.map((v,i)=><VehicleBadge key={v.id} plan={v} time={()=>flow.times[i]} />)}
       <instancedMesh ref={body} args={[g.box, m.plain, parts.length]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={heads} args={[g.ball, mats.head, plans.length * 2]} frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={tails} args={[g.box, mats.tail, plans.length * 2]} frustumCulled={false} raycast={() => null} />
@@ -499,17 +501,21 @@ function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) 
   return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
 }
 
-function VehicleBadge({plan,moving}:{plan:ReturnType<typeof planVehicles>[number];moving:boolean}) {
-  const ref=useRef<THREE.Group>(null),clock=useRef(0);
-  const label=({amazon:"amazon",ups:"UPS",bus:"MTA"} as Record<string,string>)[plan.kind];
-  const badge=useMemo(()=>{
-    const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
-    ctx.fillStyle=plan.color;ctx.fillRect(0,0,256,96);ctx.fillStyle=plan.kind==="ups"?"#e5bd62":"#ffffff";ctx.font="bold 64px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label??"",128,50,245);
-    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-    return {texture,material:new THREE.MeshBasicMaterial({map:texture})};
-  },[label,plan.color,plan.kind]);
-  useEffect(()=>()=>{badge.texture.dispose();badge.material.dispose();},[badge]);
-  useFrame((_,dt)=>{if(moving)clock.current+=Math.min(dt,0.1);if(!ref.current)return;const a=vehicleAt(plan,clock.current);ref.current.position.set(a.x,TERRACE_H+0.03+a.y,a.z);ref.current.rotation.y=Math.atan2(-a.dz,a.dx);});
+/** One lettering material per livery and body colour, shared by every vehicle that wears it. */
+const BADGES=new Map<string,THREE.MeshBasicMaterial>();
+function badgeMaterial(text:string,ink:string,body:string){
+  const key=`${text}|${ink}|${body}`;let material=BADGES.get(key);if(material)return material;
+  const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
+  ctx.fillStyle=body;ctx.fillRect(0,0,256,96);ctx.fillStyle=ink;ctx.font=`bold ${text.length>6?40:64}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,128,50,245);
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  material=new THREE.MeshBasicMaterial({map:texture});BADGES.set(key,material);return material;
+}
+
+function VehicleBadge({plan,time}:{plan:ReturnType<typeof planVehicles>[number];time:()=>number}) {
+  const ref=useRef<THREE.Group>(null);
+  const livery=VEHICLE_LIVERY[plan.kind],label=livery?.text;
+  const badge=useMemo(()=>badgeMaterial(label??"",livery?.ink??"#ffffff",plan.color),[label,livery,plan.color]);
+  useFrame(()=>{if(!ref.current)return;const a=vehicleAt(plan,time());ref.current.position.set(a.x,TERRACE_H+0.03+a.y,a.z);ref.current.rotation.y=Math.atan2(-a.dz,a.dx);});
   if(!label)return null;
-  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge.material} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
+  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
 }
