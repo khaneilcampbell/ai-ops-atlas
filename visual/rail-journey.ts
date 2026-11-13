@@ -16,7 +16,8 @@ export async function railJourney(page:Page){
   const train=state.scene.getObjectByName('atlas-passenger-train');if(!train)throw new Error('Passenger train missing');
   const [data,layout,planner,passengers]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/travelLoops.ts'].map(u=>import(u)));
   const scene=planner.buildScene(layout.layoutMap(data.catalog,[],'district')),loop=scene.communityRail.loop,riders=passengers.planTravel(scene).travellers;
-  const mesh=state.scene.getObjectByName('rail-commuters') as import('three').InstancedMesh;if(!mesh)throw new Error('Commuter mesh missing');
+  // Travellers' torsos are drawn by the glowing-shirt mesh (HillsCommunity.tsx), in the same order as planTravel's list.
+  const mesh=state.scene.getObjectByName('travel-glow-shirts') as import('three').InstancedMesh;if(!mesh)throw new Error('Traveller mesh missing');
   state.setFrameloop('never');const render=state.gl.render;state.gl.render=()=>{};
   const visited=new Set<number>(),faults:string[]=[];let walking=0,last:number[][]=[];
   try{for(let t=.1;t<loop.period+1;t+=.1){fiber.advance(t,false,store.getState());if(train.userData.station>=0)visited.add(train.userData.station);
