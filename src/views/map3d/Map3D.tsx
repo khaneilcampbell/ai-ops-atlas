@@ -1,6 +1,7 @@
 import {StationFerrisWheel} from "./StationFerrisWheel";
 import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
+import Gardens from './Gardens';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
 import {YACHT_KEY,YACHT_NAME,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
@@ -1175,6 +1176,7 @@ function World({
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
       {detailsReady && <AtlasYacht berth={berth} marina={marina} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&office.phase===null} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && <Gardens gardens={scene.gardens} g={g} m={m}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}

@@ -1,6 +1,7 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
+import {planGardens,gardenRect,type Garden} from './gardenPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -191,6 +192,8 @@ export interface Scene3D {
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   commons?:CommonsPlan;
+  /** Topiary gardens on open lawn (gardenPlan.ts). */
+  gardens?:Garden[];
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -919,9 +922,24 @@ function buildCity(layout: Layout): Scene3D {
   // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).
   const inStreet=streetHitTest([...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],STREET_CLEAR),onWalk=streetHitTest(connections.map(c=>c.walk),.24);
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inStreet(items[i].x,items[i].z)||onWalk(items[i].x,items[i].z))items.splice(i,1);
+  // Topiary gardens (Khaneil, 2026-11-13): a few on open lawn, clear of every lot, street and path; the lawn's loose planting gives way.
+  const box=(b:{x:number;z:number;size:number}):Rect=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size});
+  const gardens=planGardens({
+    ground:[...land,...terraces],
+    obstacles:[...[...towers,...kiosks].map(box),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving,...brooks,...bridges,...parks,
+      ...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...safeFountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)})),
+      ...(mall?[mall,mall.plaza]:[]),...(galleria?[galleria.rect]:[]),...(commons?[commons.rect]:[]),...(stationPlaza?[stationPlaza.bounds]:[]),...(stadiumSite?[stadiumSite.site]:[]),
+      ...(stadium?[{x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4}]:[]),...(airport?[airportFootprint(airport)]:[]),...forecourtLand,...(financial?[financial,financial.park,...(financial.circa?[financial.circa]:[])]:[]),...(dealership?[dealership,dealership.lot]:[]),
+      ...(agency?agency.plinth:[]),...(communityRail?.loop?.stops??[]).map(st=>({x:st.point[0]-4,z:st.point[1]-4,w:8,d:8}))],
+    paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
+      ...walks.map((w):[number,number][]=>w.route?w.route.map(r=>[r.gx,r.gy]):[[w.x0,w.z0],[w.x1,w.z1]]),...(communityRail?[communityRail.route,...(communityRail.loop?[communityRail.loop.route]:[])]:[]),
+      ...(financial?[financial.road,financial.walk,financial.street,financial.sidewalk,...(financial.circa?[financial.circa.street,financial.circa.sidewalk]:[]),...financial.buildings.map(b=>b.approach)]:[]),...(dealership?[dealership.road,dealership.walk,dealership.service,dealership.drive,dealership.promenade]:[])],
+  });
+  for(const g of gardens){const r=gardenRect(g);for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(r,items[i].x,items[i].z,.35))items.splice(i,1);}
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
+    gardens,
     financial,
     stationPlaza,
     community,

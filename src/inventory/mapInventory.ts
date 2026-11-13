@@ -272,6 +272,7 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   add({ category: "Water features", kind: "Fountain", count: scene.fountains.length, area: "City", moves: false, source: "src/views/map3d/scene.ts" });
   add({ category: "Bridges", kind: "Road bridge", count: scene.carBridges.length, area: "City", moves: false, source: "src/views/map3d/roads.ts" });
   add({ category: "Parks", kind: "Park", count: scene.parks.length, area: "City", moves: false, source: "src/views/map3d/scene.ts" });
+  add({ category: "Parks", kind: "Topiary garden", count: scene.gardens?.length ?? 0, area: "Open lawns round the city", moves: false, source: "src/views/map3d/gardenPlan.ts" });
   notes.push("Trees, benches and paving are scenery and are left out on purpose.");
   notes.push("Agents walking to work only appear in the app when live job data is loaded, so they are not counted here.");
   return { objects, notes };
