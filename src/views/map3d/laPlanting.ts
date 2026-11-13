@@ -46,7 +46,7 @@ export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
 
 export const LA_COLORS={
  fanFrond:['#7a9a45','#88a650','#6f8d3d'],dateFrond:['#4e7a37','#5b8a3f','#46703a'],
- bulb:'#fff6e0',halo:'#ffc566',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
+ bulb:'#ffd47e',halo:'#ffb347',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
  ficus:['#3f7a3a','#4a8642','#386f35','#438040'],olive:['#7f9270','#8a9c7a','#75876a','#93a483'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
  hedge:['#3f6e36','#47783c'],agave:'#86a59a',paradiseLeaf:'#3f7448',paradiseFlower:'#f08a24',bougainvillea:['#d63f8f','#e2589f','#c93583'],
 } as const;
@@ -76,7 +76,11 @@ export interface LaParts{
 export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[],bulbs:[],halos:[]});
 
 /** String lights: a tight, even spiral of tiny bulbs up the upper trunk of a lit palm (Khaneil, 2026-11-13). */
-export const PALM_LIGHTS={turns:5,perTurn:6,from:.2,to:.92,bulb:.045,gap:.016,halo:2.4} as const;
+/**
+ * Rodeo Drive style (Khaneil's photo, 2026-11-13): warm gold fairy lights wound tightly round the whole trunk, base
+ * to crown, so each palm reads as a glowing column, with the bulbs still visible up close.
+ */
+export const PALM_LIGHTS={turns:16,perTurn:8,from:.02,to:.95,bulb:.028,gap:.01,halo:2.2} as const;
 
 /**
  * Wind string lights round a trunk of height h (g.trunk tapers from radius .5 to .35 of its width). A leaning trunk
