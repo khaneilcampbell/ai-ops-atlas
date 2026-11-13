@@ -16,8 +16,7 @@ export default function Commons({plan:p,g,m,pick,night}:{plan?:CommonsPlan;g:Ret
   const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[x,TERRACE_H+y,z],s:[w,h,d],c});
   const strip=(a:Pt,b:Pt,width:number,y:number,h:number,c:string)=>{const len=Math.hypot(b[0]-a[0],b[1]-a[1]);return {...box((a[0]+b[0])/2,y,(a[1]+b[1])/2,width,h,len+.015,c),r:Math.atan2(b[0]-a[0],b[1]-a[1])};};
   for(const path of p.paths)for(let i=1;i<path.length;i++)solid.push(strip(path[i-1],path[i],COMMONS.pathWidth,.04,.035,'#e6d6b4'));
-  // Low planted shoreline stays below the promenade and leaves every bridge mouth open.
-  for(let i=0;i<48;i+=2){const [x,z]=p.pond[i];if(p.bridges.some(([a])=>Math.abs(x-a[0])<.45))continue;plants.push(box(x,.035,z,.16,.12,.16,'#719d77'));}
+  // The shoreline shrubs and the park's trees are the city's planting, drawn by Landscape (commonsPlanting).
   for(const [a,b]of p.bridges){
    solid.push(strip(a,b,COMMONS.bridgeWidth,.045,.06,'#b68c60'));
    for(const side of [-1,1]){
@@ -41,7 +40,6 @@ export default function Commons({plan:p,g,m,pick,night}:{plan?:CommonsPlan;g:Ret
    const a=Math.PI/2+i/12*Math.PI,b=Math.PI/2+(i+1)/12*Math.PI,r=.5+row*.23;
    solid.push(strip([p.amphitheater[0]+r*Math.cos(a),p.amphitheater[1]+r*Math.sin(a)],[p.amphitheater[0]+r*Math.cos(b),p.amphitheater[1]+r*Math.sin(b)],.23,.04+row*.09,.08,'#d9ceb4'));
   }
-  for(const [i,[x,z]]of p.trees.entries()){trunks.push(box(x,.05,z,.08,.65,.08,'#786f53'));plants.push(box(x,.75,z,i%3===0?.65:.5,.55,i%3===0?.65:.5,'#719d77'));}
   for(const [i,[x,z]]of p.benches.entries()){
    const r=p.benchRotations[i],part=(dx:number,y:number,dz:number,w:number,h:number,d:number,c:string)=>({...box(x+dx*Math.cos(r)+dz*Math.sin(r),y,z-dx*Math.sin(r)+dz*Math.cos(r),w,h,d,c),r});
    solid.push(part(0,.2,0,.65,.06,.25,'#b68c60'),part(0,.26,.1,.65,.25,.04,'#b68c60'));
@@ -51,5 +49,5 @@ export default function Commons({plan:p,g,m,pick,night}:{plan?:CommonsPlan;g:Ret
   return {solid,plants,trunks,panes,lamps};
  },[p]);
  if(!p||!water)return null;
- return <group name="atlas-commons"><Instanced items={[{p:[p.rect.x+p.rect.w/2,TERRACE_H+.012,p.rect.z+p.rect.d/2],s:[p.rect.w,.012,p.rect.d],c:'#86b958'}]} geometry={g.box} material={m.plain} pick={pick}/><mesh geometry={water} material={m.brook} raycast={()=>null}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.trunks} geometry={g.cyl} material={m.plain}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.panes} geometry={g.box} material={glass} shadow={false}/><Instanced items={parts.lamps} geometry={g.bead} material={night?m.lamp:m.plain} shadow={false}/></group>;
+ return <group name="atlas-commons"><Instanced items={[{p:[p.rect.x+p.rect.w/2,TERRACE_H+.012,p.rect.z+p.rect.d/2],s:[p.rect.w,.012,p.rect.d]}]} geometry={g.box} material={m.terrace} pick={pick}/><mesh geometry={water} material={m.brook} raycast={()=>null}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.trunks} geometry={g.cyl} material={m.plain}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.panes} geometry={g.box} material={glass} shadow={false}/><Instanced items={parts.lamps} geometry={g.bead} material={night?m.lamp:m.plain} shadow={false}/></group>;
 }
