@@ -15,20 +15,27 @@ const noRaycast=()=>null;
 const PANE=.16,PANES=4;
 
 /**
- * Blue curtain-wall glass: four tall panes per tile with thin silver mullions and a floor line
- * every storey. At night about half the panes glow a cool white, the rest stay dark.
+ * Light stone curtain wall that matches the neighbouring apartments and campus: cream frames, a
+ * cream spandrel band every storey, thin pale fins, and pale grey-blue glass recessed in the frame.
+ * At night about half the panes glow a warm white, the rest stay dim.
  */
 function curtainTextures(){
  const make=(lit:boolean)=>{
   const c=document.createElement('canvas');c.width=128;c.height=128;const g=c.getContext('2d')!,w=c.width/PANES,h=c.height/2;
+  // Stone frame everywhere (black in the glow map, so frames never light up).
+  g.fillStyle=lit?'#000':'#e6e0d3';g.fillRect(0,0,c.width,c.height);
+  const band=12,side=5;
   for(let row=0;row<2;row++)for(let i=0;i<PANES;i++){
-   if(lit)g.fillStyle=[1,0,1,1,0,1,0,0][row*PANES+i]?'#e9f4ff':'#0a0f14';
-   else{const grad=g.createLinearGradient(i*w,row*h,i*w+w,row*h+h);grad.addColorStop(0,'#7f9db4');grad.addColorStop(.5,'#3f5f78');grad.addColorStop(1,'#5d7f98');g.fillStyle=grad;}
-   g.fillRect(i*w,row*h,w,h);
+   const x=i*w+side,y=row*h+band,pw=w-side*2,ph=h-band-3;
+   if(lit)g.fillStyle=[1,0,1,1,0,1,0,0][row*PANES+i]?'#fff1d6':'#000';
+   else{const grad=g.createLinearGradient(x,y,x+pw,y+ph);grad.addColorStop(0,'#c9d4da');grad.addColorStop(.55,'#9fb0ba');grad.addColorStop(1,'#b7c4cb');g.fillStyle=grad;}
+   g.fillRect(x,y,pw,ph);
+   if(!lit){g.fillStyle='#8d9aa1';g.fillRect(x,y,pw,2);g.fillStyle='#f3efe6';g.fillRect(x+pw/2-1,y,2,ph);}
   }
-  g.fillStyle=lit?'#000':'#c7ced4';
-  for(let i=0;i<PANES;i++)g.fillRect(i*w,0,2,c.height);
-  for(let row=0;row<2;row++)g.fillRect(0,row*h,c.width,5);
+  if(!lit){
+   // A slightly darker shadow line under each spandrel band, so the floors read like balconies.
+   g.fillStyle='#cfc7b6';for(let row=0;row<2;row++)g.fillRect(0,row*h+band-2,c.width,2);
+  }
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t;
  };
  return {map:make(false),glow:make(true)};
@@ -48,7 +55,7 @@ function worldBox(w:number,h:number,d:number,x:number,y:number,z:number){
 const TINT:Partial<Record<Kind,string>>={steel:'#c3c9cf',brace:'#dde1e5',slab:'#e8eaeb'};
 
 /**
- * The SOC Lab as a glass and steel tower with three cantilevered green terraces (see socLabPlan).
+ * The SOC Lab as a light stone and glass tower with three cantilevered green terraces (see socLabPlan).
  * The glass is one merged mesh; every other part is an instance of the shared unit box, plane or
  * cylinder. No lights: the cyan strips and the lit glass are emissive, brighter at night.
  */
@@ -69,14 +76,14 @@ export function SocLab({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:num
   for(const x of [glass.map,glass.glow])x.repeat.set(1/(PANE*PANES),1/(plan.storey*2));
   return {
    textures:[glass.map,glass.glow],
-   curtain:focusable(new THREE.MeshStandardMaterial({map:glass.map,emissiveMap:glass.glow,emissive:'#ffffff',emissiveIntensity:0,roughness:.12,metalness:.5})),
+   curtain:focusable(new THREE.MeshStandardMaterial({map:glass.map,emissiveMap:glass.glow,emissive:'#ffffff',emissiveIntensity:0,roughness:.55,metalness:.08})),
    steel:focusable(new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.45,metalness:.35})),
-   cyan:focusable(new THREE.MeshStandardMaterial({color:'#4fe3ff',emissive:'#2ad8ff',emissiveIntensity:.5,roughness:.3,toneMapped:false})),
-   lobby:focusable(new THREE.MeshStandardMaterial({color:'#8aa3b3',roughness:.15,metalness:.45,emissive:'#ffd7a0',emissiveIntensity:0})),
+   cyan:focusable(new THREE.MeshStandardMaterial({color:'#8fd3df',emissive:'#2ad8ff',emissiveIntensity:.5,roughness:.3,toneMapped:false})),
+   lobby:focusable(new THREE.MeshStandardMaterial({color:'#b3c1c9',roughness:.35,metalness:.15,emissive:'#ffd7a0',emissiveIntensity:0})),
   };
  },[plan.storey]);
  useEffect(()=>{
-  mats.curtain.emissiveIntensity=night?.55:0;mats.cyan.emissiveIntensity=night?2.2:1.1;mats.lobby.emissiveIntensity=night?.8:.04;
+  mats.curtain.emissiveIntensity=night?.5:0;mats.cyan.emissiveIntensity=night?2.2:.35;mats.lobby.emissiveIntensity=night?.8:.04;
  },[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const x of mats.textures)x.dispose();},[mats]);
  // The shield badge the generic tower showed, and the project-workers badge, on the lobby.

@@ -1,0 +1,1 @@
+- 2026-11-13 · The Security Operations Center now has light stone frames and pale glass windows, so it matches the Career & Portfolio and Vendor & Supplier Hub buildings beside it
