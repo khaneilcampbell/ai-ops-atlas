@@ -1797,7 +1797,7 @@
   {
    "category": "Road vehicles",
    "kind": "SUV",
-   "count": 2,
+   "count": 1,
    "area": "City streets",
    "moves": true,
    "source": "src/views/map3d/vehicles.ts planVehicles"
@@ -1805,7 +1805,7 @@
   {
    "category": "Road vehicles",
    "kind": "Atlas sedan",
-   "count": 2,
+   "count": 1,
    "area": "City streets",
    "moves": true,
    "source": "src/views/map3d/vehicles.ts planVehicles"
@@ -1813,7 +1813,7 @@
   {
    "category": "Road vehicles",
    "kind": "Convertible",
-   "count": 2,
+   "count": 1,
    "area": "City streets",
    "moves": true,
    "source": "src/views/map3d/vehicles.ts planVehicles"
@@ -1873,6 +1873,30 @@
    "area": "City streets",
    "moves": true,
    "source": "src/views/map3d/vehicles.ts planVehicles"
+  },
+  {
+   "category": "Road vehicles",
+   "kind": "Taxi",
+   "count": 1,
+   "area": "Travel loop shuttles",
+   "moves": true,
+   "source": "src/views/map3d/travelLoops.ts planShuttle"
+  },
+  {
+   "category": "Road vehicles",
+   "kind": "Van",
+   "count": 1,
+   "area": "Travel loop shuttles",
+   "moves": true,
+   "source": "src/views/map3d/travelLoops.ts planShuttle"
+  },
+  {
+   "category": "Road vehicles",
+   "kind": "Sedan",
+   "count": 1,
+   "area": "Travel loop shuttles",
+   "moves": true,
+   "source": "src/views/map3d/travelLoops.ts planShuttle"
   },
   {
    "category": "Road vehicles",
@@ -2004,11 +2028,11 @@
   },
   {
    "category": "Boats",
-   "kind": "Atlas yacht (berthed)",
+   "kind": "Atlas yacht (cruises out to sea and back in under 3 minutes)",
    "count": 1,
    "area": "Marina",
-   "moves": false,
-   "source": "src/views/map3d/yachtPlan.ts"
+   "moves": true,
+   "source": "src/views/map3d/travelLoops.ts"
   },
   {
    "category": "Boats",
@@ -2028,16 +2052,16 @@
   },
   {
    "category": "People",
-   "kind": "Train passenger",
-   "count": 6,
+   "kind": "Traveller (train, shuttle car and yacht loops)",
+   "count": 18,
    "area": "Perimeter rail loop",
    "moves": true,
-   "source": "src/views/map3d/loopPassengers.ts"
+   "source": "src/views/map3d/travelLoops.ts"
   },
   {
    "category": "People",
    "kind": "Office walker",
-   "count": 24,
+   "count": 18,
    "area": "Financial District",
    "moves": true,
    "source": "src/views/map3d/districtWalkers.ts"
@@ -2088,6 +2112,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T20:49:13.609Z",
- "commit": "c917b4f102f35a5bb6b47c1746b3b0da6288654e"
+ "generated_at": "2026-11-13T22:28:26.393Z",
+ "commit": "e2671b72b05e28dacf9b8dee5e9d56e7e6e79275"
 }
