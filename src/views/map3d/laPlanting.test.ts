@@ -78,8 +78,8 @@ describe('palm string lights',()=>{
  it('light only a chosen few palms, with an even spiral of bulbs on each lit trunk',()=>{
   const s=buildScene(layoutMap(catalog,[],'district')),street=planStreetPalms(s),arena=s.trees.filter(t=>t.kind==='palm');
   const share=(ts:{lit?:boolean}[])=>ts.filter(t=>t.lit).length/ts.length;
-  expect(share(street)).toBeGreaterThan(.1);expect(share(street)).toBeLessThan(.25);
-  expect(share(arena)).toBeGreaterThan(.3);expect(share(arena)).toBeLessThan(.7);
+  expect(share(street)).toBeGreaterThan(.25);expect(share(street)).toBeLessThan(.45);
+  expect(share(arena)).toBeGreaterThan(.55);expect(share(arena)).toBeLessThan(.8);
   const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true,true);
   expect(o.bulbs.length).toBe(PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1);
   const top=Math.max(...o.bulbs.map(b=>b.p[1]));expect(top).toBeLessThan(STREET_PALMS.size*7.6);

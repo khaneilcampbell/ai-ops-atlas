@@ -715,8 +715,8 @@ function buildCity(layout: Layout): Scene3D {
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
     // Palms in a ring round the stadium, grown as the city's avenue palm at the avenue size (Khaneil, 2026-11-13);
-    // every other one wears string lights.
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26,kind:'palm' as TreeKind,lit:i%2===0})));
+    // two in three wear string lights.
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26,kind:'palm' as TreeKind,lit:i%3!==2})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
