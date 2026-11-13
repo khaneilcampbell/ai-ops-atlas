@@ -813,7 +813,7 @@ function buildCity(layout: Layout): Scene3D {
     ...(financial?[{x:financial.x+financial.w/2,z:financial.z+financial.d/2,w:financial.w,d:financial.d}]:[])]});
   if(grid.length){
     connections.push(...grid);
-    connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
+    connections.splice(0,connections.length,...alignStreets(connections,streetBoxes,true));
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(grid.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   }
   // Every street end meets the street it runs into, square, once the street plan is final.
