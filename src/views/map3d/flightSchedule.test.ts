@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {fleetPose,flightPhase,loopTiming,TAKEOFF_QUEUE,FLIGHT_SCHEDULE as f} from './flightSchedule';
 import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_LAYOUT as l} from './airport';
-import {ARRIVAL,ARRIVAL_STAND,LOOP,ROLL_START_Z} from './airportArrivals';
+import {ARRIVAL,ARRIVAL_GATES,ARRIVAL_STAND,LOOP,ROLL_START_Z} from './airportArrivals';
 // The circuit the map uses for the sample catalog (airport-local, mirror already applied).
 const CITY={x:-27.35,z:.86,rx:46.35,rz:57.9,altitude:18.16};
 const CIRCUITS=[undefined,CITY];
@@ -10,7 +10,8 @@ const fleet=(t:number,c?:typeof CITY)=>Array.from({length:f.count},(_,i)=>fleetP
 it('releases one departure every 45 seconds, including cycle wrap',()=>{
  expect(f.interval).toBe(45);
  expect(f.count*f.interval).toBe(f.cycle);
- for(let slot=1;slot<f.count;slot++)for(const t of [0,20,50,90,150,200])expect(fleetPose(t+slot*f.interval,slot)).toEqual(fleetPose(t+(slot-1)*f.interval,slot-1));
+ // Jets alternate between two gates, so every other slot repeats the same path two intervals later.
+ for(let slot=2;slot<f.count;slot++)for(const t of [0,20,50,90,150,200])expect(fleetPose(t+slot*f.interval,slot)).toEqual(fleetPose(t+(slot-2)*f.interval,slot-2));
  expect(fleetPose(f.cycle,0)).toEqual(fleetPose(0,0));
 });
 
@@ -85,6 +86,16 @@ it('never rolls over runway 1 on the ground except to take off',()=>{
   const onRunway=Math.abs(p.x-l.runwayX)<l.runwayWidth/2+1.35&&p.z>l.runwayZ-l.runwayLength/2+.5&&p.z<l.runwayZ+l.runwayLength/2+1.35;
   // Taxiing jets cross it only on the end lanes.
   if(onRunway&&!onLane(p.z))expect(p.x,`t=${t}`).toBe(l.runwayX);
+ }
+});
+
+it('uses both empty gates in turn, reaching the hold at the same moment from either (Khaneil, 2026-11-13)',()=>{
+ for(const c of CIRCUITS){
+  const gates=new Set<number>();
+  for(let slot=0;slot<2;slot++)for(let t=0;t<f.cycle;t+=.25){const p=fleetPose(t,slot,c);if(p.y===0&&p.x===ARRIVAL_GATES[slot].x&&p.z===ARRIVAL_GATES[slot].z)gates.add(slot);}
+  expect([...gates].sort()).toEqual([0,1]);
+  // Same release time from either gate: slot 1's jet holds exactly one interval after slot 0's.
+  expect(fleetPose(f.interval-f.start,1,c)).toEqual(fleetPose(-f.start,0,c));
  }
 });
 

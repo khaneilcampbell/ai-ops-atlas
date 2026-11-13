@@ -1,5 +1,5 @@
 import {AIRPORT_LANDING_RUNWAY,AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from './airport';
-import {ROLL_START_Z,ARRIVAL,CIRCUIT_PACE,departureToLocal,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
+import {ROLL_START_Z,ARRIVAL,CIRCUIT_PACE,departureToLocal,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalGate,arrivalPose,exitTime,legsTotal} from './airportArrivals';
 import {roundedRoad} from './highway';
 /**
  * One departure every 45 simulation seconds (KC, 2026-11-07), from a single jet holding short.
@@ -40,5 +40,5 @@ export function fleetPose(seconds:number,slot:number,circuit?:FlightCircuit){
   const q=departureToLocal(p);
   return {...q,y:p.y-.28,yaw:phase<f.taxi+3?Math.PI:q.yaw,visible:true};
  }
- return arrivalPose(phase-leave,approach,dwell);
+ return arrivalPose(phase-leave,approach,dwell,arrivalGate(slot));
 }

@@ -236,7 +236,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
     {/* The south remote stand is kept free for arrivals; the north one keeps a parked jet. */}
-    {[AIRPORT_REMOTE_STANDS[0],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
+    {[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>

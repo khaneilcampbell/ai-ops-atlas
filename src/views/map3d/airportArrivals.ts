@@ -37,15 +37,18 @@ export const ARRIVAL={
  * meets the previous jet pushing back; the circuit exit is chosen to land the hold time inside its window. */
 /** standExtra: when the best circuit exit comes back early, the jet waits up to this much longer at the stand rather
  * than queueing at the hold (the stand is clear long before the next arrival needs it). */
-export const LOOP={interval:45,count:5,taxi:6,holdMin:10,holdMax:38,standExtra:12} as const;
+/** Six jets (Khaneil, 2026-11-13: the parked jet at the north remote stand joins the loop). Arrivals alternate
+ * between two gates, so each gate turns a jet round every 90 s and the stand time can stretch (standExtra). */
+export const LOOP={interval:45,count:6,taxi:6,holdMin:10,holdMax:38,standExtra:57} as const;
 export const LOOP_CYCLE=LOOP.interval*LOOP.count;
-/** Landed jets taxi to the terminal and park nose-in at the free gate (gate 2, between the two parked jets), then
- * push back from it and taxi up to the takeoff hold (Khaneil, 2026-11-13). */
-export const ARRIVAL_STAND={x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[2]} as const;
+/** Landed jets taxi to the terminal and park nose-in at a free gate, then push back from it and taxi up to the
+ * takeoff hold (Khaneil, 2026-11-13). Jets alternate between the two empty gates: even slots use gate 2 (the
+ * reference timing), odd slots gate 1, the second stand circle. */
+export const ARRIVAL_GATES=[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[2]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[1]}] as const;
+export const ARRIVAL_STAND=ARRIVAL_GATES[0];
+export const arrivalGate=(slot:number)=>((slot%2)+2)%2;
 /** The hold is on the taxiway by runway 1's north end (TAKEOFF_QUEUE), facing north. */
 const HOLD={x:AIRPORT_LAYOUT.taxiX,z:0} as const;
-/** Pushback ends on the taxiway just south of the gate, nose north, ready to taxi up to the hold. */
-const PUSH_END={x:AIRPORT_LAYOUT.taxiX,z:ARRIVAL_STAND.z+1.2} as const;
 type Pt=[number,number];
 type XZ={x:number;z:number};
 export interface GroundPose {x:number;y:number;z:number;yaw:number;pitch:number;roll:number;gear:number;visible:boolean}
@@ -73,16 +76,20 @@ function trapezoid(length:number,v:number,accel:number,brake:number){
  return {duration,at};
 }
 
-const groundIn:Pt[]=roundedRoad([[R.x,R.touchdownZ],[R.x,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,ARRIVAL_STAND.z],[ARRIVAL_STAND.x,ARRIVAL_STAND.z]],.9);
-const groundInLengths=measure(groundIn);
-const pushRoute:Pt[]=roundedRoad([[ARRIVAL_STAND.x,ARRIVAL_STAND.z],[PUSH_END.x,ARRIVAL_STAND.z],[PUSH_END.x,PUSH_END.z]],.6);
-const pushLengths=measure(pushRoute);
-const taxiOut:Pt[]=[[PUSH_END.x,PUSH_END.z],[HOLD.x,HOLD.z]];
-const taxiOutLengths=measure(taxiOut);
-
+/** Ground legs for one gate: rollout and taxi in, pushback (ending on the taxiway just south of the gate, nose
+ * north), then taxi up to the hold. */
+function gateRoutes(stand:XZ){
+ const pushEnd={x:AIRPORT_LAYOUT.taxiX,z:stand.z+1.2};
+ const groundIn:Pt[]=roundedRoad([[R.x,R.touchdownZ],[R.x,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,stand.z],[stand.x,stand.z]],.9);
+ const pushRoute:Pt[]=roundedRoad([[stand.x,stand.z],[pushEnd.x,stand.z],[pushEnd.x,pushEnd.z]],.6);
+ const taxiOut:Pt[]=[[pushEnd.x,pushEnd.z],[HOLD.x,HOLD.z]];
+ const inLengths=measure(groundIn),pushLengths=measure(pushRoute),outLengths=measure(taxiOut);
+ const roll=rollout(inLengths[inLengths.length-1]),push=trapezoid(pushLengths[pushLengths.length-1],ARRIVAL.pushSpeed,2,2),out=trapezoid(outLengths[outLengths.length-1],ARRIVAL.taxiSpeed,1.5,2.5);
+ return {groundIn,inLengths,pushRoute,pushLengths,taxiOut,outLengths,roll,push,out,moving:roll.duration+push.duration+out.duration};
+}
 /** Rollout: touch down at approach speed, brake to taxi speed, taxi, then stop at the stand. */
-function rollout(){
- const A=ARRIVAL,L=groundInLengths[groundInLengths.length-1],t1=(A.speed-A.taxiSpeed)/A.rolloutDecel,s1=A.speed*t1-A.rolloutDecel*t1*t1/2;
+function rollout(L:number){
+ const A=ARRIVAL,t1=(A.speed-A.taxiSpeed)/A.rolloutDecel,s1=A.speed*t1-A.rolloutDecel*t1*t1/2;
  const cruise=(L-s1-A.taxiSpeed*A.stopTime/2)/A.taxiSpeed,duration=t1+cruise+A.stopTime;
  const at=(t:number)=>{
   if(t<=0)return 0;if(t>=duration)return L;
@@ -92,9 +99,8 @@ function rollout(){
  };
  return {duration,at};
 }
-const ROLLOUT=rollout();
-const PUSH=trapezoid(pushLengths[pushLengths.length-1],ARRIVAL.pushSpeed,2,2);
-const TAXI_OUT=trapezoid(taxiOutLengths[taxiOutLengths.length-1],ARRIVAL.taxiSpeed,1.5,2.5);
+const GATES=ARRIVAL_GATES.map(gateRoutes);
+const {roll:ROLLOUT,push:PUSH,out:TAXI_OUT}=GATES[0];
 
 /** Final approach in airport-local coordinates: straight in on a constant glide angle, touching down at the aiming
  * point. Its length is the longest of FINAL_LENGTHS whose straight leg clears every obstacle, so when the Team Events
@@ -214,18 +220,21 @@ export const legsTotal=(p:Approach)=>Object.values(arrivalLegs(p)).reduce((a,b)=
 
 const AIRBORNE_PITCH=.03,FLARE_PITCH=.09,MAX_BANK=.42;
 /** Pose `t` real seconds after leaving the circuit. Past the end of taxi-out the aircraft holds short. */
-export function arrivalPose(t:number,p:Approach,dwell:number=ARRIVAL.dwell):GroundPose{
+export function arrivalPose(t:number,p:Approach,dwell:number=ARRIVAL.dwell,gate=0):GroundPose{
  const ground=(x:number,z:number,yaw:number,pitch=0):GroundPose=>({x,y:0,z,yaw,pitch,roll:0,gear:1,visible:true});
  if(t<p.duration+p.final.time)return airPose(t,p);
+ const G=GATES[gate]??GATES[0];
+ // Every gate reaches the hold at the same moment: the stand time absorbs the difference in taxi distance.
+ dwell+=GATES[0].moving-G.moving;
  let r=t-p.duration-p.final.time;
- if(r<ROLLOUT.duration){const q=along(groundIn,groundInLengths,ROLLOUT.at(r));return ground(q.x,q.z,q.yaw,FLARE_PITCH*(1-smooth(r/1.4)));}
- r-=ROLLOUT.duration;
- if(r<dwell){const q=along(groundIn,groundInLengths,Infinity);return ground(q.x,q.z,q.yaw);}
+ if(r<G.roll.duration){const q=along(G.groundIn,G.inLengths,G.roll.at(r));return ground(q.x,q.z,q.yaw,FLARE_PITCH*(1-smooth(r/1.4)));}
+ r-=G.roll.duration;
+ if(r<dwell){const q=along(G.groundIn,G.inLengths,Infinity);return ground(q.x,q.z,q.yaw);}
  r-=dwell;
  // Pushback: the tug moves the jet tail first, so it faces opposite to its direction of travel.
- if(r<PUSH.duration+ARRIVAL.pause){const q=along(pushRoute,pushLengths,PUSH.at(r));return ground(q.x,q.z,q.yaw+Math.PI);}
- r-=PUSH.duration+ARRIVAL.pause;
- const q=along(taxiOut,taxiOutLengths,TAXI_OUT.at(r));return ground(q.x,q.z,q.yaw);
+ if(r<G.push.duration+ARRIVAL.pause){const q=along(G.pushRoute,G.pushLengths,G.push.at(r));return ground(q.x,q.z,q.yaw+Math.PI);}
+ r-=G.push.duration+ARRIVAL.pause;
+ const q=along(G.taxiOut,G.outLengths,G.out.at(r));return ground(q.x,q.z,q.yaw);
 }
 function airPose(t:number,p:Approach):GroundPose{
  const at=(time:number)=>{
