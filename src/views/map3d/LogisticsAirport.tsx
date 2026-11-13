@@ -132,18 +132,23 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
-      box(x+2,y+.05,z+18,2.2,1.05,2,HQ.white),
-      box(x+2,y+1.1,z+18,2.5,.12,2.3,HQ.glassDeep),
+      // Service building as a drive-through (Khaneil, 2026-11-13): a south wing, the gated street running through
+      // an open passage along its north side under a louvred roof (AIRPORT_SERVICE_DOOR.passage).
+      box(x+2,y+.05,z+18.425,2.2,1.05,1.15,HQ.white),
+      box(x+2,y+1.1,z+18.5,2.5,.12,1.3,HQ.glassDeep),
+      box(x+2,y+1.22,z+17.875,2.5,.06,.05,HQ.gold),box(x+2,y+1.22,z+19.125,2.5,.06,.05,HQ.gold),box(x+.775,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),box(x+3.225,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),
     ];
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
     // Airside service building: a window band on every side, lit with the terminal glazing at night.
-    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
-    // Its east face, where the gated street arrives, opens on a roll-up loading door (Khaneil, 2026-11-13: "the building
-    // does not have an opening"): a dark bay as wide as the street's carriageway, slatted shutter half up, gold frame.
-    {const D=AIRPORT_SERVICE_DOOR,dz=D.z,dw=D.w,fx=x+D.x+.02;
-     cubes.push(box(fx,y+.05,z+dz,.04,D.h,dw,'#1d2528'),box(fx+.15,y+.97,z+dz,.3,.04,dw+.3,HQ.glassDeep));
-     for(let k=0;k<4;k++)cubes.push(box(fx+.01,y+.55+k*.075,z+dz,.035,.06,dw-.04,'#b9c0bf'));
-     cubes.push(box(fx+.015,y+.85,z+dz,.05,.06,dw+.16,HQ.gold),...[-1,1].map(sd=>box(fx+.015,y+.05,z+dz+sd*(dw/2+.05),.05,.86,.06,HQ.gold)));}
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18.425+side*.59,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18.425,.025,.4,.95,'#ffffff'));
+    // The passage: a portal at each end (white columns, gold lintel, slate canopy), louvres over the road so it and
+    // its traffic show through from above, and three loading docks along the south wall.
+    {const P=AIRPORT_SERVICE_DOOR.passage,pz=(P.z0+P.z1)/2,pd=P.z1-P.z0;
+     for(const [px,out] of [[P.x0,-1],[P.x1,1]] as const){
+      cubes.push(box(x+px,y+.05,z+P.z0+.05,.1,1.05,.1,HQ.white),box(x+px,y+.98,z+pz,.12,.1,pd,HQ.gold),box(x+px+out*.17,y+1.08,z+pz,.34,.04,pd+.2,HQ.glassDeep));
+     }
+     for(let zz=P.z0+.08;zz<P.z1;zz+=.16)cubes.push(box(x+(P.x0+P.x1)/2,y+1.12,z+zz,P.x1-P.x0+.3,.035,.05,HQ.glassDeep));
+     for(const dx of [-.7,0,.7])cubes.push(box(x+2+dx,y+.05,z+19.03,.42,.55,.03,'#1d2528'),box(x+2+dx,y+.6,z+19.05,.5,.05,.06,HQ.gold),box(x+2+dx,y+.02,z+19.15,.42,.12,.2,'#8b9493'));}
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+TERMINAL_HUB.mezzanine-.08,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+TERMINAL_HUB.glass-.03,z+zz,1.6,.025,.12,'#fff2d1'));
