@@ -7,6 +7,7 @@ import {AGENCY_KEY,AGENCY_NAME} from "../views/map3d/marketingAgencyPlan";
 import {DEALERSHIP_KEY} from "../views/map3d/dealershipPlan";
 import {buildingDisplayName,buildingOrganization,currentBuildingName,serviceKey} from "../modules/names";
 import {STADIUM_KEY,STADIUM_OFFICE_ID} from "../views/map3d/stadiumPlan";
+import {YACHT_ID,YACHT_KEY,YACHT_OFFICE_ID} from "../views/map3d/yachtPlan";
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
@@ -92,10 +93,10 @@ function Head({ eyebrow, title, children, onClose, building, organization }: { e
   );
 }
 
-function EnterBuildingButton({id}:{id:string}) {
+function EnterBuildingButton({id,label="Enter building"}:{id:string;label?:string}) {
   const {view}=useAtlas();
   const reduced=useReducedMotion();
-  return view==="map"&&webglAvailable()?<button className="ghost-btn enter-building" onClick={()=>enterBuilding(id,reduced||id.startsWith("skyline-business:"))}><Icon name="agents" size={15}/> Enter building</button>:null;
+  return view==="map"&&webglAvailable()?<button className="ghost-btn enter-building" onClick={()=>enterBuilding(id,reduced||id.startsWith("skyline-business:"))}><Icon name="agents" size={15}/> {label}</button>:null;
 }
 
 function LinkedRepositories({project}:{project:Project}) {
@@ -164,6 +165,10 @@ function ServiceDetail({id}:{id:string}) {
   if(id === "bmw-dealership") return <>
     <Head eyebrow="Automotive district · Visual infrastructure" title="Vantor Motors" building={DEALERSHIP_KEY}><span className="chip">Planned</span></Head>
     <div className="panel-body selectable"><ModuleSection/><p>A four-story glass car showroom with a ground-floor reception lounge, three upper display galleries, connected stair flights, front display bays, and separate customer and service access.</p><div className="section-title">Current scope</div><p>Visual visitors enter and leave the showroom through opening glass doors. This is not live agent or customer activity. A service car departs every 60 seconds and arrives every 90 seconds while traffic is enabled. Display vehicles are not live inventory. Sales, servicing, agents, and business integrations are not connected. The furnished showroom can be viewed through its windows; an interactive interior is not available in this first pass.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned workers</dt><dd>None assigned</dd><dt>Workflows</dt><dd>Not connected</dd><dt>Access</dt><dd>Connected district street, raised sidewalk, and marked pedestrian crossing</dd></dl></div>
+  </>;
+  if(id === YACHT_ID) return <>
+    <Head eyebrow="Marina · Below the south shore promenade" title="Atlas" building={YACHT_KEY}><span className="chip">Planned · No agents assigned</span><EnterBuildingButton id={YACHT_OFFICE_ID} label="Enter yacht"/></Head>
+    <div className="panel-body selectable"><ModuleSection/><p>A tri-deck motor yacht about 70 metres long, moored side-to on the open-water side of the marina pontoon. A grey hull with a dark boot top, white superstructure overhangs and black glazing bands, a beach club opening onto the swim platform, and a sun deck with a jacuzzi under the hard top. A pontoon carries on from the marina's cross dock along her port side, and the passerelle runs from the pontoon up to the aft deck gate. People come down the marina stair, cross the passerelle and go aboard.</p><section><div className="section-title">Inside</div><ul><li>Lower deck: beach club, sauna, engine room, VIP cabin, two double and two twin guest cabins, crew quarters</li><li>Main deck: aft deck, main saloon with dining for twelve, lobby with the spiral stair, galley, owner's suite</li><li>Bridge deck: aft dining deck, bridge saloon, captain's cabin, wheelhouse, foredeck lounge</li><li>Sun deck: sun lounge, bar, jacuzzi under the hard top</li></ul><p>A schematic from the deck plan. The people shown are visitors and crew figures.</p></section><div className="section-title">Current scope</div><p>Visual only. The yacht is moored and does not sail, and nothing on board shows live activity.</p><dl className="kv"><dt>Repositories</dt><dd>None linked</dd><dt>Assigned agents</dt><dd>None assigned yet</dd><dt>Workflows</dt><dd>Not connected</dd></dl></div>
   </>;
   if(id === "skyline-stadium") return <>
     <Head eyebrow="Recreation district · Beside Development Hub" title="Atlas Stadium" building={STADIUM_KEY}><span className="chip">Planned · No live events</span><EnterBuildingButton id={STADIUM_OFFICE_ID}/></Head>
