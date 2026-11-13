@@ -383,6 +383,8 @@ function WorkdayTab({ job }: { job: AgentJob }) {
         <p className="small">
           {job.offDuty
             ? OFF_DUTY[job.offDuty]
+            : job.deskOnly
+            ? `Works through the automations it owns, so it keeps its desk at ${job.work.label} and is not drawn walking.`
             : job.work.kind === "workplace"
             ? `No street reaches ${job.work.building} on the map yet, so it is not drawn walking there. Its job card still holds.`
             : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}

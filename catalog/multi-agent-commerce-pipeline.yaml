@@ -27,6 +27,7 @@ agents:
       n8n workflow that takes the next product idea, has Claude write the listing and a design brief,
       then has Claude make the product and six listing images in Canva and emails KC an approval link.
     framework: n8n
+    owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
@@ -527,6 +528,7 @@ agents:
       n8n approval form. When KC approves a drafted product and pastes its Canva template link,
       it creates the Stripe product, price and payment link and puts the product on the shop page.
     framework: n8n
+    owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: KC submits the approve form from the approval email
@@ -696,6 +698,7 @@ agents:
       n8n workflow that emails each buyer the Canva template link for what they bought. It is the
       only way buyers receive their product.
     framework: n8n
+    owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Each paid Stripe checkout
@@ -752,6 +755,7 @@ agents:
     purpose: >-
       n8n workflow that serves the shop page of live products and emails KC a sales summary every Monday.
     framework: n8n
+    owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Shop page visits, and Monday 9am for the sales email
@@ -916,6 +920,7 @@ agents:
     name: Pipeline Tests
     purpose: Compiles, lints and tests the pipeline scripts and checks the shell scripts parse.
     framework: GitHub Actions
+    owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push or pull request
@@ -967,3 +972,42 @@ agents:
         improvements:
           - Add security.yml to the catalog
         last_review: 2026-10-28
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: commerce-operations-manager
+    name: Commerce Operations Manager
+    purpose: >-
+      Runs the commerce pipeline end to end: drafts the next product listing and design, publishes it after Khaneil approves, delivers each order, reports Monday sales, and keeps the pipeline scripts tested. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run on schedules, approvals and orders
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Commerce Operations Coordinator, Product Publishing Coordinator, Digital Fulfillment Coordinator, Sales Reporting Specialist, Commerce Quality Engineer, at Khaneil's request
+    registry:
+      title: Commerce Operations Manager
+      category: business
+      subcategory: Commerce operations
+      tier: coordinator
+      automation_category: business
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Draft the next product listing and design brief, Publish a product after Khaneil approves it, Deliver each order, Email the Monday sales summary, Test the pipeline scripts]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Products go live only after Khaneil approves them.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

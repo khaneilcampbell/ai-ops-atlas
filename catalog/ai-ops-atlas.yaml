@@ -19,6 +19,7 @@ agents:
     name: Atlas CI
     purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; KC approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -235,6 +236,7 @@ agents:
     name: Re-run Failed Jobs
     purpose: Re-runs the failed jobs of a failed GitHub Actions run, only on repositories KC has switched on and only after KC approves each run in a native macOS dialog.
     framework: Atlas desktop action (Rust)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Manual button next to a failed run; off by default
@@ -287,6 +289,7 @@ agents:
     name: Merge Pull Request
     purpose: Merges a pull request from Atlas only when GitHub reports it ready (open, not a draft, no changes requested, mergeable and clean, every required check green), on repositories KC has switched on, after KC approves it in a native macOS dialog and with Touch ID.
     framework: Atlas desktop action (Rust)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Manual Merge button in a repository's PRs tab; off by default
@@ -455,6 +458,7 @@ agents:
     model: No automatic model calls; manual Claude Code review only
     purpose: Reviews Atlas city maps, building interiors, labels, navigation, accessibility, and responsive layouts. Reuses existing CI reports and user-supplied screenshots to suggest at most three small design improvements. Reports only; no automatic edits or model runs.
     framework: Claude Code (manual review)
+    owned_by: atlas-engineering-review            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Manually requested Claude Code session
     status: idle
     trigger: Explicit maintainer request only; no schedule
@@ -504,6 +508,7 @@ agents:
     office_floor: 3
     model: No runner model calls; paid creation remains disabled
     framework: Manual Python handoff + Claude Code review on request
+    owned_by: atlas-engineering-review            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Local deterministic runner; manually dispatched fixture on GitHub Actions
     status: idle
     trigger: Explicit user request only; no schedule
@@ -636,6 +641,7 @@ agents:
     name: Marketplace Steward
     purpose: Checks that Atlas, the product, is published. Reads the main-build release and its latest.json (version, date, signed Mac update) and reports it to the live feed for the Product Marketplace.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every hour, or by hand
@@ -671,6 +677,7 @@ agents:
     name: Signal Watch
     purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every 30 minutes, or by hand
@@ -706,6 +713,7 @@ agents:
     name: Dataset Census
     purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every 3 hours, or by hand
@@ -746,6 +754,7 @@ agents:
       atlas-inventory branch; every morning an n8n workflow reads it and rewrites the Buildings,
       Agents by Building, Map Objects and Inventory Summary tabs of the Atlas Agent Registry sheet.
     framework: n8n + GitHub Actions (Node, no model)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: paused
     trigger: Daily at 7am New York time once published (n8n draft, not published yet)
@@ -780,3 +789,81 @@ agents:
         risk: low
       cost:
         budget: No model calls. About 30 n8n runs a month and a few GitHub Actions minutes per merge.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: atlas-release-manager
+    name: Atlas Release Manager
+    purpose: >-
+      Gets tested Atlas changes to Khaneil safely: every change is tested, failed jobs are re-run, ready pull requests are merged only when Khaneil asks, and the signed Mac update and web page are confirmed published. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A pull request, a push to main, or Khaneil pressing a button in Atlas
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Build and Release Engineer, CI Recovery Specialist, Pull Request Integration Coordinator, Marketplace Steward, at Khaneil's request
+    registry:
+      title: Atlas Release Manager
+      category: engineering
+      subcategory: Release
+      tier: coordinator
+      automation_category: ci
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Test every pull request and push, Re-run failed jobs when Khaneil asks, Merge a ready pull request when Khaneil asks, Confirm the signed Mac update is published]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Its merge and re-run steps act only after Khaneil asks in Atlas; the rest test and report.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: atlas-health-monitor
+    name: Atlas Health Monitor
+    purpose: >-
+      Knows whether Atlas itself is healthy: watches the build and site signals Atlas depends on, counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run every 30 minutes, every 3 hours and daily
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Signal Watch, Dataset Census, Atlas Data Inventory, at Khaneil's request
+    registry:
+      title: Atlas Health Monitor
+      category: infrastructure
+      subcategory: Monitoring
+      tier: coordinator
+      automation_category: monitoring
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

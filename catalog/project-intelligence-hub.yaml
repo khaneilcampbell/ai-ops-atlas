@@ -20,6 +20,7 @@ agents:
     name: Docs Builder
     purpose: Renders each project's Markdown source to styled DOCX with pandoc and python-docx.
     framework: Python script
+    owned_by: documentation-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Local
     status: idle
     trigger: Manual
@@ -68,6 +69,7 @@ agents:
     name: Hub CI
     purpose: Checks every project's sources and renders all documents, with DOCX downloads on request.
     framework: GitHub Actions
+    owned_by: documentation-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -132,6 +134,7 @@ agents:
       Every morning at 7am a third workflow rewrites the sheet's Business Structure tab: who reports
       to whom, how each agent starts and its autonomy level. No model.
     framework: n8n
+    owned_by: agent-operations-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: claude-opus-5-5 for the weekly Sunday ranking only ($3 per 30 days); the registry sync uses no model
     runtime: n8n Cloud
     status: active
@@ -209,6 +212,7 @@ agents:
       Claude call to write a spec for the single best new agent. It emails Khaneil Approve or Reject.
       Approving only records the decision; nothing is built or switched on.
     framework: n8n
+    owned_by: agent-operations-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: claude-opus-5-5 for one proposal a week at most ($2 per 30 days)
     runtime: n8n Cloud
     status: active
@@ -245,3 +249,81 @@ agents:
         audit_log: n8n executions and the agent_factory_proposals table
       cost:
         budget: Claude Opus 5.5, one proposal and $2 per 30 days, checked before each call
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: agent-operations-lead
+    name: Agent Operations Lead
+    purpose: >-
+      Keeps track of every Atlas agent and what to build next: keeps the Agent Registry sheet current and proposes at most one new agent a week for Khaneil to approve or reject. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run every 4 hours and Mondays 8am ET
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Agent Registry Clerk, Agent Factory, at Khaneil's request
+    registry:
+      title: Agent Operations Lead
+      category: engineering
+      subcategory: Agent planning
+      tier: coordinator
+      automation_category: intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Proposes only; approving a proposal builds nothing.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: documentation-lead
+    name: Documentation Lead
+    purpose: >-
+      Keeps every project's documents current: renders each project's Markdown to styled DOCX and checks every source renders on each change. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A pull request or push, or a manual render
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Technical Documentation Specialist, Documentation Quality Engineer, at Khaneil's request
+    registry:
+      title: Documentation Lead
+      category: data
+      subcategory: Documentation
+      tier: coordinator
+      automation_category: maintenance
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Render project Markdown to DOCX, Check every source renders on each change]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 0
+        autonomy_note: Renders and checks documents only.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
