@@ -27,6 +27,7 @@ agents:
       Authenticates to the Splunk REST API, runs the brute-force search,
       parses results and writes a structured Markdown case note for review.
     framework: Python script
+    owned_by: soc-detection-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Lab VM (manual)
     status: idle
     trigger: Manual, python3 soc_automation.py
@@ -86,6 +87,7 @@ agents:
       SPL search over Windows Security EventCode 4625 that flags repeated
       failed SMB logons from one source.
     framework: Splunk SPL
+    owned_by: soc-detection-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Splunk Enterprise (lab)
     status: idle
     trigger: Splunk search or alert
@@ -133,6 +135,7 @@ agents:
     name: SOC Lab CI
     purpose: Lints and tests the SOC automation script against a mocked Splunk API.
     framework: GitHub Actions
+    owned_by: soc-detection-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -184,3 +187,42 @@ agents:
         improvements:
           - Add security-guardrails.yml to the catalog
         last_review: 2026-10-28
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: soc-detection-lead
+    name: Security Detection Lead
+    purpose: >-
+      Owns the brute-force detection lab: the detection search for repeated failed logons, the case notes written from its results, and the tests that keep both working. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Khaneil runs the detection and case notes; tests run on every change
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Threat Detection Analyst, Security Case Documentation Specialist, Detection Quality Engineer, at Khaneil's request
+    registry:
+      title: Security Detection Lead
+      category: security
+      subcategory: Threat detection
+      tier: coordinator
+      automation_category: security
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Flag repeated failed logons from one source, Write case notes from the results, Test the detection and case notes on every change]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: manual
+        environment: Through its automations
+      governance:
+        autonomy: 0
+        autonomy_note: Detects and documents only; it blocks nothing.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
