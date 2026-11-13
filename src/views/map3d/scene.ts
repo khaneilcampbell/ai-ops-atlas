@@ -801,7 +801,9 @@ function buildCity(layout: Layout): Scene3D {
   if(communityRail)communityRail.loop=planPerimeterRail({land,financial,mall,airport,stadium,towers,kiosks,dealership,roads:connections.map(c=>c.road)});
   // New York style avenues: join the north-south streets into through avenues (nycGrid.ts), clear
   // of every building and of the station walks and stairs, so they are laid after the rail.
-  const stationKeepOut=(communityRail?.loop?.stops??[]).flatMap(st=>st.walk.slice(1).map(([x,,z],i)=>{const [px,,pz]=st.walk[i];return {x:(x+px)/2,z:(z+pz)/2,w:Math.abs(x-px)+.48,d:Math.abs(z-pz)+.48};}));
+  // A station's stair and its landing are far wider than a walk: avenues keep a street's half-width and sidewalk
+  // clear of them too (Khaneil, 2026-11-13), so no stair lands on a street corner.
+  const stationKeepOut=(communityRail?.loop?.stops??[]).flatMap(st=>st.walk.slice(1).map(([x,y,z],i)=>{const [px,py,pz]=st.walk[i],m=y>0||py>0?3:.48;return {x:(x+px)/2,z:(z+pz)/2,w:Math.abs(x-px)+m,d:Math.abs(z-pz)+m};}));
   const grid=planGridAvenues({links:connections,bridgeRoads:carBridges.flatMap(b=>b.roads),land,financialStreet:financial?.street,obstacles:[...ringObstacles,...stationKeepOut,
     ...(agency?[{x:agency.cx,z:agency.cz,w:agency.w,d:agency.d}]:[]),...(airport?[airportTrafficKeepOut(airport)]:[]),
     ...(financial?[{x:financial.x+financial.w/2,z:financial.z+financial.d/2,w:financial.w,d:financial.d}]:[])]});

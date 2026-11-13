@@ -101,3 +101,15 @@ describe('footpath paving stays off the streets',()=>{
   }
  });
 });
+
+describe('station stairs land clear of the streets',()=>{
+ it('keeps every station stair foot and its low steps off the carriageways and sidewalks, district and tag',()=>{
+  for(const g of ['district','tag'] as const){
+   const s=buildScene(layoutMap(catalog,[],g)),roads=s.transportConnections.map(c=>c.road),bad:string[]=[];
+   for(const st of s.communityRail?.loop?.stops??[]){const w=st.walk,k0=w.findIndex(p=>p[1]>0)-1;
+    for(let k=Math.max(1,k0+1);k<w.length;k++){const a=w[k-1],b=w[k];if(Math.min(a[1],b[1])>1.2)continue;
+     for(let t=0;t<=4;t++){const q:Pt=[a[0]+(b[0]-a[0])*t/4,a[2]+(b[2]-a[2])*t/4];if(roads.some(r=>distanceToRoad(q,r)<ROAD_W/2+.18))bad.push(`${g} ${st.id} ${q.map(v=>v.toFixed(2))}`);}}}
+   expect(bad.slice(0,4)).toEqual([]);
+  }
+ });
+});

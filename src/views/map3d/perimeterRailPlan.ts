@@ -61,9 +61,14 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   // When a district (such as the bigger stadium) covers the stairs' landing, slide the station
   // along its straight edge, nearest first, until the walk to the platform is clear.
   const alongX=seed.point[1]===top||seed.point[1]===bottom;
-  for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
+  // The stair must land clear of every street (Khaneil, 2026-11-13): first look for a spot whose stair foot and its
+  // low steps stay off the carriageways and their sidewalks; only if none exists, fall back to any clear walk.
+  const stairOnStreet=(boarding:Point3[])=>!!s.roads?.length&&boarding.slice(1).some((b,k)=>{const a=boarding[k];if(Math.min(a[1],b[1])>1.2)return false;
+   for(let t=0;t<=4;t++){const q:Pt=[a[0]+(b[0]-a[0])*t/4,a[2]+(b[2]-a[2])*t/4];if(s.roads!.some(r=>distanceToRoad(q,r)<ROAD_W/2+.18+.5))return true;}return false;});
+  for(const strict of [true,false])for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
    const point:Pt=alongX?[clamp(seed.point[0]+shift,left,right),seed.point[1]]:[seed.point[0],clamp(seed.point[1]+shift,top,bottom)];
    const distance=distanceAt(route,lengths,point),pose=loopPoint({route,lengths,length},distance),basis={point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
+   if(strict&&stairOnStreet(boarding))continue;
    const target='fromStreet' in seed&&s.roads?.length?sidewalkPoint(s.roads,landing)??seed.target:seed.target;
    const ground=routeAround(target,landing,boxes,.3);if(!ground)continue;
    const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
