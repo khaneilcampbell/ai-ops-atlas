@@ -15,11 +15,12 @@ import {stadiumGate} from './stadiumGeometry';
 export const PERIMETER_RAIL={margin:-.75,seaMargin:2,clearance:.4,radius:3,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6,passengersPerStop:2} as const;
 /** The station shell's footprint in station-local coordinates (x along the track, z toward the land), stairs included. */
 export const STATION_SHELL={x:3.85,z0:-.55,z1:5.95} as const;
+// Airport Station was removed from the loop (Khaneil, 2026-11-13: "remove airport station from map listing directory.
+// clean sweep"); the train still circles the whole shore and stops at the three stations below.
 export const LOOP_STATIONS=[
  {id:'service:financial-station',name:'Financial District Station',district:'Financial District'},
  {id:'service:atlas-station',name:'Atlas Central Station',district:'Atlas Marketplace'},
  {id:'service:stadium-station',name:'Stadium Station',district:'Stadium'},
- {id:'service:airport-station',name:'Airport Station',district:'Atlas Airport'},
 ] as const;
 export interface RailStop {id:string;name:string;district:string;point:Pt;yaw:number;distance:number;arrival:number;walk:Point3[]}
 export interface PerimeterRailPlan {route:Pt[];lengths:number[];length:number;period:number;stops:RailStop[]}
@@ -64,7 +65,6 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt,fromStreet:true},
   // Beside the main (east) gate, so the bigger stadium's walk to the platform stays short and clear of the bowl.
   {...LOOP_STATIONS[2],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
-  {...LOOP_STATIONS[3],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
  ];
  // Reserve the airside parcel as a whole; public walks approach the terminal along its eastern edge.
  const airsideRight=front[0]-.8;boxes.push({x:(airportLand.x+airsideRight)/2,z:airportLand.z+airportLand.d/2,w:airsideRight-airportLand.x,d:airportLand.d});

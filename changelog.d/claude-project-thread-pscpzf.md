@@ -1,0 +1,1 @@
+- 2026-11-13 · Airport Station is gone from the map: it no longer appears in the station lists, the map listing or the map itself, and the train now stops at three stations
