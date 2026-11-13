@@ -11,6 +11,7 @@ import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
+import { harbourLoop, yachtBerth } from "./yachtPlan";
 import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
 
 type G = ReturnType<typeof useGeometries>;
@@ -125,19 +126,10 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   // A rounded loop around the island, clear of the cliffs and waterfalls.
   const loop = useMemo(() => {
     const b = scene.bounds;
-    const pad = 4.6;
-    const {x:harborX,pierZ,shoreZ,cityWalkZ}=marinaSite(scene,TERRACE_H);
+    const marina=marinaSite(scene,TERRACE_H),{x:harborX,pierZ,shoreZ,cityWalkZ}=marina;
+    // The circuit swings south of Atlas and in behind her stern to the dock (yachtPlan.harbourLoop).
     const curve = new THREE.CatmullRomCurve3(
-      [
-        [b.x0 - pad, b.z0 - pad],
-        [(b.x0 + b.x1) / 2, b.z0 - pad * 1.3],
-        [b.x1 + pad, b.z0 - pad],
-        [b.x1 + pad * 1.3, (b.z0 + b.z1) / 2],
-        [b.x1 + pad, b.z1 + pad],
-        [harborX, pierZ + 1.4],
-        [b.x0 - pad, b.z1 + pad],
-        [b.x0 - pad * 1.3, (b.z0 + b.z1) / 2],
-      ].map(([x, z]) => new THREE.Vector3(x, WATER_Y + 0.02, z)),
+      harbourLoop(b,marina,yachtBerth(marina)).map(([x, z]) => new THREE.Vector3(x, WATER_Y + 0.02, z)),
       true,
       "centripetal",
     );
