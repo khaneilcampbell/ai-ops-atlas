@@ -108,7 +108,7 @@ describe("automation categories", () => {
           "visual-director",
       ],
       monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
+      intelligence: ["atlas-agent-factory", "atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
       maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
     });
   });

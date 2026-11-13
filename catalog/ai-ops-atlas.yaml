@@ -748,13 +748,15 @@ agents:
     framework: n8n + GitHub Actions (Node, no model)
     runtime: n8n Cloud
     status: paused
-    trigger: Daily at 7am New York time, or the sheet's Refresh button (draft, not published yet)
+    trigger: Daily at 7am New York time once published (n8n draft, not published yet)
     source: src/inventory/mapInventory.ts
     last_run: null
     history:
       - at: 2026-11-13
         event: Designed with Khaneil; placed in the Data Intelligence Center beside Dataset Census
     links:
+      - label: n8n workflow (draft)
+        url: https://khancam15.app.n8n.cloud/workflow/Hua0wdGB5WSDjSGB
       - label: Registry sheet
         url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
     permissions:
