@@ -13,7 +13,7 @@ import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -162,14 +162,17 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      cubes.push(box(x+9.9,y+.02,z+stand.z,2.8,.035,.8,'#8b9493'),box(x+11.5,y+.02,z+extensionZ,.85,.035,extensionD,'#8b9493'));
     }
     // Landing runway on the old river strip, with a taxi lane north of runway 1 to the arrivals stand.
-    const L=LANDING,south=L.z+L.length/2,north=L.z-L.length/2;
+    const L=LANDING,PAD=AIRPORT_LANDING_SOUTH_PAD,south=L.z+L.length/2,north=L.z-L.length/2;
     cubes.push(box(x+L.x,y+.015,z+L.z,L.width,.045,L.length,"#2b3335"));
-    cubes.push(box(x+(11.1+L.x)/2,y+.02,z+L.laneZ,L.x-11.1,.04,.85,"#777f7f"),box(x+(11.5+L.x)/2,y+.07,z+L.laneZ,L.x-11.5,.012,.035,"#d6bd6e"));
-    for(let zz=north+1.2;zz<south-1;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [north+.5,south-.5])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
+    cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.04,t.d,"#777f7f"),lane?box(x+(11.5+L.x)/2,y+.07,z+t.z,L.x-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z,.035,.012,t.d,"#d6bd6e"));}
+    const [northBar,southBar]=AIRPORT_THRESHOLDS.landing;
+    for(let zz=northBar+1;zz<southBar-.6;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
+    for(const threshold of [northBar,southBar])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
     // Aiming-point blocks where arriving jets touch down.
     for(const side of [-1,1])cubes.push(box(x+L.x+side*.55,y+.066,z+L.touchdownZ,.3,.012,1.3,"#f4eedb"));
-    for(let zz=north+.5;zz<=south-.5;zz+=1)for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
+    for(let zz=north+.5;zz<=south-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     for(const gateZ of AIRPORT_LAYOUT.gateZ){
       const bridge=boardingBridge(gateZ);
       // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
@@ -189,10 +192,10 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
     for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
     for(let i=0;i<16;i++)cubes.push(box(x+15,y+.065,z-2+i*1.2,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [-2.5,17.5])for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    for(const threshold of AIRPORT_THRESHOLDS.runway1)for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
     for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
     const landingLamps:Inst[]=[];
-    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
+    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
     return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat(),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);

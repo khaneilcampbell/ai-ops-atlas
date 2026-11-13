@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import {AIRPORT_END_TAXIWAYS,AIRPORT_LANDING_RUNWAY as LR,AIRPORT_LANDING_SOUTH_PAD,AIRPORT_THRESHOLDS} from './airport';
 import { planAirport,airportFootprint,pathCrossesRect } from "./airport";
 it("reserves space beyond every existing land parcel with a connected paved approach",()=>{
  const land=[{x:0,z:0,w:5,d:8},{x:8,z:3,w:6,d:8}];
@@ -92,4 +93,24 @@ describe('airport forecourt', () => {
     expect(pathCrossesRect([[0, 0], [4, 0]], {x: 1, z: -1, w: 1, d: 2})).toBe(true);
     expect(pathCrossesRect([[0, 3], [4, 3]], {x: 1, z: -1, w: 1, d: 2})).toBe(false);
   });
+});
+
+// Runway ends are joined like a real airfield's (Khaneil, 2026-11-13): a taxiway meets every runway end, past its
+// threshold bars, and every end taxiway runs from the parallel taxiway (x 11.5, z -7.8 to 23) to paved runway.
+describe('runway-end taxiways',()=>{
+ const runways=[{x:15,w:2.2,z0:-3,z1:18,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
+ const touches=(t:{x:number;z:number;w:number;d:number},r:{x0:number;x1:number;z0:number;z1:number})=>t.x-t.w/2<=r.x1+1e-6&&t.x+t.w/2>=r.x0-1e-6&&t.z-t.d/2<=r.z1+1e-6&&t.z+t.d/2>=r.z0-1e-6;
+ const paved=[{x0:11.075,x1:11.925,z0:-7.8,z1:23},...runways.map(r=>({x0:r.x-r.w/2,x1:r.x+r.w/2,z0:r.z0,z1:r.z1}))];
+ it('joins both ends of every runway to a taxiway',()=>{
+  for(const r of runways)for(const end of [r.z0,r.z1])expect(AIRPORT_END_TAXIWAYS.some(t=>Math.abs(t.x-r.x)<r.w/2+t.w/2&&Math.abs(t.z-end)<=t.d/2+1e-6+(t.w>t.d?1.2:0)),`${r.x} @ ${end}`).toBe(true);
+ });
+ it('keeps every threshold bar off the taxiways',()=>{
+  for(const r of runways)for(const bar of r.bars)expect(AIRPORT_END_TAXIWAYS.filter(t=>Math.abs(t.x-r.x)<r.w/2+t.w/2&&Math.abs(t.z-bar)<t.d/2+.33)).toEqual([]);
+ });
+ it('ends no taxiway on the grass: both ends of each one are paved',()=>{
+  for(const t of AIRPORT_END_TAXIWAYS){
+   const ends=t.w>t.d?[{...t,x:t.x-t.w/2,w:0},{...t,x:t.x+t.w/2,w:0}]:[{...t,z:t.z-t.d/2,d:0},{...t,z:t.z+t.d/2,d:0}];
+   for(const e of ends)expect(paved.some(p=>touches(e,p))||AIRPORT_END_TAXIWAYS.some(o=>o!==t&&touches(e,{x0:o.x-o.w/2,x1:o.x+o.w/2,z0:o.z-o.d/2,z1:o.z+o.d/2})),JSON.stringify(e)).toBe(true);
+  }
+ });
 });

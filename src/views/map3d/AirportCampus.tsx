@@ -39,7 +39,7 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
  for(let x=-1;x<22;x+=1.3)walls.push(box(x,.065,-14.5,.6,.008,.035,'#ffffff'));
  // The row on the public road's sidewalk (the campus is mirrored, so local x -.8 faces the city) is palms, not round bushes (KC, 2026-11-09); the runway-side row stays.
  let palms=0;
- for(let z=-11;z<25;z+=2.8){for(const x of [-.8,21.6]){if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(x<3.5&&z>-8.5&&z<-4.3)||Math.abs(z-AIRPORT_LANDING_RUNWAY.laneZ)<1.8)continue;if(x<0){walls.push(...palmBoxes(a.x+x,TERRACE_H,a.z+z,palms++,.85));continue;}trunks.push(box(x,0,z,.07,.35,.07,'#786f53'));trees.push(box(x,.3,z,.55,.65,.55,'#719d77'))}}
+ for(let z=-11;z<25;z+=2.8){for(const x of [-.8,21.6]){if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(x<3.5&&z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;if(x<0){walls.push(...palmBoxes(a.x+x,TERRACE_H,a.z+z,palms++,.85));continue;}trunks.push(box(x,0,z,.07,.35,.07,'#786f53'));trees.push(box(x,.3,z,.55,.65,.55,'#719d77'))}}
  // The outer strip past the service road is now the landing runway (KC, 2026-11-07); the river bend is gone.
 
  return {walls,glass,trees,trunks,hits,keys};},[a,palette]);

@@ -6,7 +6,23 @@ export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landD
 export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
 /** Second runway for landings (KC, 2026-11-07), on the old river strip past the service road.
  * Jets touch down near the south end and leave by a taxi lane north of runway 1, so they never cross it. */
-export const AIRPORT_LANDING_RUNWAY={x:24.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6} as const;
+export const AIRPORT_LANDING_RUNWAY={x:24.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6,southLaneZ:19.9} as const;
+type TaxiRect={x:number;z:number;w:number;d:number};
+const TAXI_W=.85,R1={x:15,north:7.5-21/2,south:7.5+21/2};
+/**
+ * Runway-end taxiways, as a real airfield joins its runways (Khaneil, 2026-11-13: "fix connectivity of the
+ * airport landing strip"). A lane crosses from the parallel taxiway to each end of the landing runway, meeting it
+ * square past its threshold markings, and a short stub runs from each lane into the matching end of runway 1, so
+ * every runway end has a taxiway and no taxiway stops on the grass. Centre, width and depth, airport coordinates.
+ */
+export const AIRPORT_END_TAXIWAYS:TaxiRect[]=(()=>{
+ const L=AIRPORT_LANDING_RUNWAY,lane=(z:number):TaxiRect=>({x:(11.1+L.x)/2,z,w:L.x-11.1,d:TAXI_W}),stub=(z0:number,z1:number):TaxiRect=>({x:R1.x,z:(z0+z1)/2,w:TAXI_W,d:Math.abs(z1-z0)});
+ return [lane(L.laneZ),lane(L.southLaneZ),stub(L.laneZ+TAXI_W/2,R1.north),stub(R1.south,L.southLaneZ-TAXI_W/2)];
+})();
+/** Threshold bars stand a taxiway's width in from where the end lanes join, never under them. */
+export const AIRPORT_THRESHOLDS={landing:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT_LANDING_RUNWAY.southLaneZ-1],runway1:[-2.5,16.7]} as const;
+/** The landing runway's south end runs on under its end lane. */
+export const AIRPORT_LANDING_SOUTH_PAD={z0:AIRPORT_LANDING_RUNWAY.z+AIRPORT_LANDING_RUNWAY.length/2,z1:AIRPORT_LANDING_RUNWAY.southLaneZ+TAXI_W/2+.05} as const;
 export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,roof:2.61,arrivalsX:-1.5,parkingZ:-6.4} as const;
 export function airportParkingBays(){return Array.from({length:5},(_,i)=>({x:-.35+i*.7,z:AIRPORT_TERMINAL.parkingZ+.7}));}
 export const AIRCRAFT_LAYOUT={doorX:-.2,doorZ:-.8,doorY:.19,doorHeight:.29,halfSpan:1.35,halfLength:1.4} as const;
