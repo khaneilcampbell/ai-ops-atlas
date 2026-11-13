@@ -22,9 +22,11 @@ describe('perimeter passenger railway',()=>{
   expect(pathClear(p.route,boxes,1)).toBe(true);
   // On the land, hugging the shore (Khaneil, 2026-11-13): the deck's outer edge stays on land and the track never strays inland.
   const half=PERIMETER_RAIL.deckWidth/2,onLand=(x:number,z:number)=>s.land.some(r=>x>=r.x-1e-6&&x<=r.x+r.w+1e-6&&z>=r.z-1e-6&&z<=r.z+r.d+1e-6);
+  const lr=airportPoint(s.airport!,AIRPORT_LANDING_RUNWAY.x,AIRPORT_LANDING_RUNWAY.z),runwayOnWestShore=lr[0]-AIRPORT_LANDING_RUNWAY.width/2<e.x+(-PERIMETER_RAIL.margin)+PERIMETER_RAIL.deckWidth/2+PERIMETER_RAIL.clearance;
   for(let d=0;d<p.length;d+=.5){const q=loopPoint(p,d),nx=Math.cos(q.yaw),nz=-Math.sin(q.yaw);
    const offshore=Math.min(q.x-e.x,e.x+e.w-q.x,q.z-e.z,e.z+e.d-q.z)<0;
-   if(grouping==='district')expect(offshore,`offshore at ${q.x.toFixed(2)},${q.z.toFixed(2)}`).toBe(false);
+   // In the default view every side is on land, except one a runway still reaches into (the landing runway sat on the west shore before #404).
+   if(grouping==='district'&&!(q.x<e.x&&runwayOnWestShore))expect(offshore,`offshore at ${q.x.toFixed(2)},${q.z.toFixed(2)}`).toBe(false);
    // Straight shore sections (corners joining an offshore side swing out to the viaduct).
    if(Math.abs(Math.min(q.x-e.x,e.x+e.w-q.x,q.z-e.z,e.z+e.d-q.z)+PERIMETER_RAIL.margin)<1e-3)for(const k of [-half,0,half])expect(onLand(q.x+nx*k,q.z+nz*k),`deck off land at ${q.x.toFixed(2)},${q.z.toFixed(2)}`).toBe(true);
    expect(Math.min(q.x-e.x,e.x+e.w-q.x,q.z-e.z,e.z+e.d-q.z)).toBeLessThan(PERIMETER_RAIL.radius+.01);}
