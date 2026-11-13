@@ -1,1 +1,1 @@
-- 2026-11-13 · Behind the scenes: test files are now type checked on every pull request (11 hidden mismatches fixed) and the web API shares one reply helper; nothing on screen changes
+- 2026-11-13 · Behind the scenes: test files are now type checked on every pull request (11 hidden mismatches fixed) and the web API shares one reply helper; nothing on screen changes (#415)
