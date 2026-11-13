@@ -6,7 +6,7 @@ import {TERRACE_H} from './scene';
 import {bridgeParts,Instanced,STREET_LINE,type Inst,type useGeometries,type useMaterials} from './models';
 import {distanceToRoad,roadIntersections} from './highway';
 import {ROAD_W,type Pt,type CarBridge} from './roads';
-import {streetPavement} from './streetPavement';
+import {streetPavement,walkOffStreets} from './streetPavement';
 /** A walk crossing this close to a junction arm's zebra is that zebra. */
 const ZEBRA_MERGE=.5;
 /** Original stone bridge parts and green railings, driven by the same paths as pedestrians. */
@@ -43,7 +43,8 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
   // A walk's railing stops wherever any road crosses it, the Galleria's drives included: the walk
   // itself already opens there, so a rail left standing would run across the carriageway (KC, 2026-11-09).
   const railBreaks=[...paths.map(l=>l.road),...clearRoads];
-  for(const span of walkPaths){const link={walk:[span.a,span.b]};
+  const streetSegs=roadSpans.map(s=>[s.a,s.b] as [Pt,Pt]);
+  for(const span of walkPaths)for(const piece of walkOffStreets(span.a,span.b,streetSegs)){const link={walk:piece};
    for(let i=1;i<link.walk.length;i++){
     const a=link.walk[i-1],b=link.walk[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.02)continue;
     const r=Math.atan2(b[0]-a[0],b[1]-a[1]),x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;

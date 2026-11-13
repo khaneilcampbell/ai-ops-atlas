@@ -6,7 +6,7 @@ import {ROAD_W,type Pt} from './roads';
 import {buildScene} from './scene';
 import {distanceToRoad} from './highway';
 import {plazaRings} from './streetGraph';
-import {bridgeStreetSidewalks,SIDEWALK,streetPavement} from './streetPavement';
+import {bridgeStreetSidewalks,SIDEWALK,streetPavement,walkOffStreets} from './streetPavement';
 
 // Sidewalks meet the streets cleanly (Khaneil, 2026-11-13): no kerb runs across a carriageway, and
 // where one street ends on another the sidewalks turn the corner instead of stopping short.
@@ -39,5 +39,20 @@ for(const g of ['district','tag','none'] as GroupBy[])describe(`sidewalks at jun
    if(d>.01&&d<ROAD_W)stubs.push(`${e} ${d.toFixed(2)}`);
   }});
   expect(stubs).toEqual([]);
+ });
+});
+
+describe('walks off the street',()=>{
+ it('drops the stretch of a walk laid along a carriageway and keeps the rest',()=>{
+  expect(walkOffStreets([0,0],[10,0],[[[2,0],[6,0]]])).toEqual([[[0,0],[2,0]],[[6,0],[10,0]]]);
+  expect(walkOffStreets([0,1],[10,1],[[[2,0],[6,0]]])).toEqual([[[0,1],[10,1]]]);
+  expect(walkOffStreets([3,-5],[3,5],[[[0,0],[10,0]]])).toEqual([[[3,-5],[3,5]]]);
+ });
+ const scene=buildScene(layoutMap(catalog,[],'district'));
+ it('leaves no walk running down the middle of a street',()=>{
+  const streets=[...scene.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...scene.carBridges.flatMap(b=>b.roads)].flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt]));
+  const on=connectionSpans(scene.transportConnections.map(l=>l.walk)).flatMap(s=>walkOffStreets(s.a,s.b,streets))
+   .filter(([a,b])=>streets.some(([p,q])=>straight(p,q)&&straight(a,b)&&(p[1]===q[1])===(a[1]===b[1])&&distanceToRoad([(a[0]+b[0])/2,(a[1]+b[1])/2],[p,q])<ROAD_W/2));
+  expect(on).toEqual([]);
  });
 });

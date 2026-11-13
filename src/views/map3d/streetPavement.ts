@@ -148,3 +148,21 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
  }
  return {pavement,markings,zebras};
 }
+
+/**
+ * The pieces of a straight walk that are not laid lengthwise on a street (Khaneil, 2026-11-13: "remove
+ * the sidewalk pavement that's in the middle of the street"). Where a walk runs along a carriageway,
+ * the street's own sidewalks carry people, so that stretch is dropped; crossings are left to the caller.
+ */
+export function walkOffStreets(a:Pt,b:Pt,streets:[Pt,Pt][]):[Pt,Pt][]{
+ if(!straight(a,b))return [[a,b]];
+ const x=Math.abs(a[1]-b[1])<1e-6,k=x?0:1,lo=Math.min(a[k],b[k]),hi=Math.max(a[k],b[k]),c=a[1-k];
+ const clear=TRANSPORT.cityWidth/2+TRANSPORT.walkWidth/2-.02;
+ const cuts=streets.filter(([p,q])=>straight(p,q)&&(Math.abs(p[1]-q[1])<1e-6)===x&&Math.abs(p[1-k]-c)<clear)
+  .map(([p,q])=>[Math.max(lo,Math.min(p[k],q[k])),Math.min(hi,Math.max(p[k],q[k]))]).filter(([s,e])=>e-s>1e-6).sort((u,v)=>u[0]-v[0]);
+ const out:[number,number][]=[];let at=lo;
+ for(const [s,e] of cuts){if(s-at>.05)out.push([at,s]);at=Math.max(at,e);}
+ if(hi-at>.05||!cuts.length)out.push([at,hi]);
+ const pt=(v:number):Pt=>x?[v,c]:[c,v];
+ return out.map(([s,e])=>[pt(s),pt(e)]);
+}
