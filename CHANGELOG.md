@@ -3,7 +3,6 @@
 What changed in Atlas, newest first. From 2026-11-12 new lines go in `changelog.d/` (one file per
 pull request, see `changelog.d/README.md`) so open pull requests don't conflict here. The update notes
 read both places. Older lines stay below; don't add new ones at the top of this file.
-- 2026-11-13 · Signal Watch is removed: its agent, its 30-minute check and its alert are gone. The Observability Center building no longer has an operating agent, and Atlas Health Monitor now owns only Dataset Census and Atlas Data Inventory (#387)
 - 2026-11-12 · README brought up to date: operational building names, building modules, agent counts, n8n alerts and the time zone setting (#394)
 - 2026-11-12 · The Product Marketplace now describes what it's for today: where Benjaire's products are sold (the n8n, Canva and Stripe pipeline) and where Atlas releases are checked by the Marketplace Steward (#386)
 - 2026-11-12 · Atlas now watches buyer emails and Stripe publishing from the n8n shop: each send or publish reports to Atlas, and a failure raises an alert (#388)
