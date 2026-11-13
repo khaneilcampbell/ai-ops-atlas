@@ -134,9 +134,13 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
   expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
  });
- it('puts the gate on the cargo drive, past the street and its sidewalk',()=>{
+ it('puts the gate across the street where it reaches the service building',()=>{
   const G=AIRPORT_SERVICE_GATE;
-  expect(G.x>G.drive.x0&&G.x<G.drive.x1).toBe(true);
-  expect(clearOf([[G.x-.3,G.drive.z0],[G.x+.3,G.drive.z1],[G.x,G.drive.z1+.4]],.36+.18)).toBe(true);
+  // Across the street's last stretch, between the building's east face and the corner where the street turns.
+  expect(G.x>G.building.x1+.3&&G.x<G.drive.x1-.5).toBe(true);
+  // The street there: its centre line runs mid-gate, across both barrier lanes.
+  expect(streets.some(r=>distanceToRoad(world(G.x,(G.drive.z0+G.drive.z1)/2),r)<.05)).toBe(true);
+  // Booth and fence ends stand off every carriageway.
+  expect(clearOf([[G.x+.1,G.drive.z0-.42],[G.x,G.drive.z1+1.2],[G.x,G.drive.z0-1.6]],.36)).toBe(true);
  });
 });

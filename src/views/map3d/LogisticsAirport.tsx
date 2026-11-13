@@ -189,10 +189,10 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,HQ.glassDeep));
     // Security gate on the cargo drive (AIRPORT_SERVICE_GATE): booth, raised striped arms, stop lines, fences.
     {const G=AIRPORT_SERVICE_GATE,gx=x+G.x,mid=(G.drive.z0+G.drive.z1)/2;
-     cubes.push(box(gx,y+.05,z+G.drive.z1+.4,.45,.5,.45,HQ.white),box(gx,y+.55,z+G.drive.z1+.4,.58,.05,.58,HQ.glassDeep),box(gx-.23,y+.25,z+G.drive.z1+.4,.02,.2,.3,HQ.glass));
+     cubes.push(box(gx+.1,y+.05,z+G.drive.z0-.42,.48,.62,.48,HQ.white),box(gx+.1,y+.67,z+G.drive.z0-.42,.6,.06,.6,HQ.glassDeep),box(gx-.15,y+.3,z+G.drive.z0-.42,.02,.24,.34,HQ.glass));
      cubes.push(box(gx-.35,y+.07,z+(G.drive.z0+mid)/2,.06,.012,mid-G.drive.z0-.1,'#f4eedb'),box(gx+.35,y+.07,z+(mid+G.drive.z1)/2,.06,.012,G.drive.z1-mid-.1,'#f4eedb'));
-     for(const [pz,dir] of [[G.drive.z0-.1,1],[G.drive.z1+.1,-1]] as const){cubes.push(box(gx,y+.05,z+pz,.08,.32,.08,'#d6bd6e'));for(let k=0;k<4;k++)cubes.push(box(gx,y+.37+k*.13,z+pz+dir*.02,.035,.13,.035,k%2?'#f4eedb':'#c8442f'));}
-     for(const [z0,z1] of [[G.drive.z1+.65,G.drive.z1+1.9],[16.8,G.drive.z0-.15]] as const){cubes.push(box(gx,y+.28,z+(z0+z1)/2,.025,.025,z1-z0,HQ.glassDeep));for(let pz=z0;pz<=z1+1e-6;pz+=.4)cubes.push(box(gx,y+.05,z+pz,.035,.26,.035,HQ.glassDeep));}}
+     for(const [pz,dir] of [[G.drive.z0-.1,1],[G.drive.z1+.1,-1]] as const){cubes.push(box(gx,y+.05,z+pz,.12,.42,.12,'#d6bd6e'));for(let k=0;k<5;k++)cubes.push(box(gx,y+.47+k*.14,z+pz+dir*.03,.06,.14,.06,k%2?'#f4eedb':'#c8442f'));}
+     for(const [z0,z1] of [[G.drive.z1+.15,G.drive.z1+1.2],[G.drive.z0-1.6,G.drive.z0-.7]] as const){cubes.push(box(gx,y+.28,z+(z0+z1)/2,.025,.025,z1-z0,HQ.glassDeep));for(let pz=z0;pz<=z1+1e-6;pz+=.4)cubes.push(box(gx,y+.05,z+pz,.035,.26,.035,HQ.glassDeep));}}
     cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,HQ.glassDeep));
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
     cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));

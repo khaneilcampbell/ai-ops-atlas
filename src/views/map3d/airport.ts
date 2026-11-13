@@ -22,11 +22,11 @@ export const AIRPORT_END_TAXIWAYS:TaxiRect[]=(()=>{
 /** Threshold bars stand a taxiway's width in from where the end lanes join, never under them. */
 export const AIRPORT_THRESHOLDS={landing:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT_LANDING_RUNWAY.southLaneZ-1],runway1:[-2.5,16.7]} as const;
 /**
- * Security gate on the airside service building's cargo drive (Khaneil, 2026-11-13): a guard booth on the south
- * kerb, a barrier per lane (entry eastbound on the north lane, exit westbound on the south), a stop line before
- * each, and short fences either side. Placed past the landside street's kerb and sidewalk (x 5.5 + .54).
+ * Security gate for the airside service building (Khaneil, 2026-11-13), across the last stretch of the two-lane
+ * street that runs up to its east face (z 17.41, ending at the building): a guard booth on the north (apron) kerb, a
+ * striped barrier per lane (entry on the north lane, exit on the south), a stop line before each, short fences either side.
  */
-export const AIRPORT_SERVICE_GATE={x:6.6,drive:{x0:4,x1:11,z0:17.4,z1:18.6}} as const;
+export const AIRPORT_SERVICE_GATE={x:3.7,building:{x1:3.1},drive:{x0:3.1,x1:5.5,z0:17.05,z1:17.77}} as const;
 /** The landing runway's south end runs on under its end lane. */
 export const AIRPORT_LANDING_SOUTH_PAD={z0:AIRPORT_LANDING_RUNWAY.z+AIRPORT_LANDING_RUNWAY.length/2,z1:AIRPORT_LANDING_RUNWAY.southLaneZ+TAXI_W/2+.05} as const;
 export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,roof:2.61,arrivalsX:-1.5,parkingZ:-6.4} as const;
