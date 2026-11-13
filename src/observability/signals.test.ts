@@ -6,7 +6,7 @@ const NOW = Date.parse("2026-11-11T06:00:00Z");
 const ok = (fetchedAt: string) => ({ kind: "ok" as const, stale: false, data: { fetchedAt } as never });
 const base: SignalInputs = {
   repos: {}, tracked: ["a/x", "a/y"], staleAfterMs: 60 * 60_000,
-  live: { state: "off", message: null, checkedAt: null, last: null, intelRuns: null, production: [] },
+  live: { state: "off", message: null, checkedAt: null, last: null, intelRuns: null, agentRuns: null, production: [] },
   intel: { available: false, error: null, loaded: false, keyPresent: null },
   usage: { firstLoad: true, error: null, records: 0 },
   n8n: { state: "loading", message: null, value: null },
@@ -39,7 +39,7 @@ describe("connected signals", () => {
       ...base,
       n8n: { state: "ready", message: null, value: { state: "not-configured", need: "An n8n API key as a Pages secret" } },
       security: { state: "error", message: "HTTP 500", value: null },
-      live: { state: "live", message: null, checkedAt: "2026-11-11T05:59:00Z", last: { at: "2026-11-11T05:58:00Z", text: "CI passed on benjaire.com" }, intelRuns: null, production: [] },
+      live: { state: "live", message: null, checkedAt: "2026-11-11T05:59:00Z", last: { at: "2026-11-11T05:58:00Z", text: "CI passed on benjaire.com" }, intelRuns: null, agentRuns: null, production: [] },
       usage: { firstLoad: false, error: null, records: 12 },
       intel: { available: true, error: null, loaded: true, keyPresent: false },
     });
