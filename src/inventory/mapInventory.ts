@@ -19,7 +19,7 @@ import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { planGalleriaLife } from "../views/map3d/galleriaLifePlan";
 import { HILLS_KEY } from "../views/map3d/hillsPlan";
 import { planAirportCommuters, planRailCommuters } from "../views/map3d/railCommuters";
-import { planLoopPassengers } from "../views/map3d/loopPassengers";
+import { travelPlan } from "../views/map3d/travelLoops";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { MAP_FLEET } from "../views/map3d/mapFleet";
@@ -27,7 +27,7 @@ import { buildScene, type Scene3D } from "../views/map3d/scene";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
 import { YACHT_KEY, YACHT_NAME } from "../views/map3d/yachtPlan";
 import { planStreetLights } from "../views/map3d/streetLighting";
-import { planDealershipTraffic, planHighwayTraffic, planVehicles, type VehicleKind } from "../views/map3d/vehicles";
+import { MAX_VEHICLES, planDealershipTraffic, planHighwayTraffic, planVehicles, type VehicleKind } from "../views/map3d/vehicles";
 
 // Everything on the Atlas map, as plain rows for the Atlas Data Inventory agent (an n8n workflow
 // that writes them to the Agent Registry sheet). Read from the same catalog and scene the map draws,
@@ -232,7 +232,10 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   const vehicles = (plans: { kind: VehicleKind }[], area: string, source: string) => {
     for (const [kind, count] of countBy(plans, (p) => p.kind)) add({ category: "Road vehicles", kind: VEHICLE_NAMES[kind as VehicleKind] ?? kind, count, area, moves: true, source });
   };
-  vehicles(planVehicles(scene), "City streets", "src/views/map3d/vehicles.ts planVehicles");
+  // Three of the city cars run the travel loops' shuttle rounds instead of a street loop (living.tsx Vehicles).
+  const shuttles = travelPlan(scene)?.shuttles.map((s) => s.plan) ?? [];
+  vehicles(planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), "City streets", "src/views/map3d/vehicles.ts planVehicles");
+  vehicles(shuttles, "Travel loop shuttles", "src/views/map3d/travelLoops.ts planShuttle");
   vehicles(planHighwayTraffic(scene), "Highway", "src/views/map3d/vehicles.ts planHighwayTraffic");
   vehicles(planDealershipTraffic(scene), "Infrastructure Operations Hub", "src/views/map3d/vehicles.ts planDealershipTraffic");
   if (scene.freight) add({ category: "Road vehicles", kind: "Freight truck", count: 1, area: "Freight route to the airport", moves: true, source: "src/views/map3d/freight.ts planFreight" });
@@ -253,12 +256,13 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
     add({ category: "Airport vehicles", kind: "Baggage train", count: planCrewTrains().length, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts planCrewTrains" });
   }
   add({ category: "Aircraft", kind: "Atlas airship", count: MAP_FLEET.airships, area: "Sky", moves: true, source: "src/views/map3d/SkyBalloons.tsx" });
-  add({ category: "Boats", kind: "Atlas yacht (berthed)", count: 1, area: "Marina", moves: false, source: "src/views/map3d/yachtPlan.ts" });
+  const travel = travelPlan(scene);
+  add({ category: "Boats", kind: travel?.yacht ? "Atlas yacht (cruises out to sea and back in under 3 minutes)" : "Atlas yacht (berthed)", count: 1, area: "Marina", moves: !!travel?.yacht, source: travel?.yacht ? "src/views/map3d/travelLoops.ts" : "src/views/map3d/yachtPlan.ts" });
   add({ category: "Boats", kind: "Boat", count: MAP_FLEET.boats, area: "Bay", moves: true, source: "src/views/map3d/living.tsx" });
 
   const rail = scene.communityRail;
   if (rail) add({ category: "Trains", kind: "Passenger train (3 cars)", count: 1, area: rail.loop ? "Perimeter rail loop" : "Atlas Hills line", moves: true, source: "src/views/map3d/HillsCommunity.tsx" });
-  if (rail?.loop) add({ category: "People", kind: "Train passenger", count: planLoopPassengers(rail.loop).length, area: "Perimeter rail loop", moves: true, source: "src/views/map3d/loopPassengers.ts" });
+  if (rail?.loop) add({ category: "People", kind: "Traveller (train, shuttle car and yacht loops)", count: travel?.travellers.length ?? 0, area: "Perimeter rail loop", moves: true, source: "src/views/map3d/travelLoops.ts" });
   else {
     const commuters = planRailCommuters(scene.community, scene.financial, rail);
     add({ category: "People", kind: "Rail commuter", count: commuters?.commuters.length ?? 0, area: "Atlas Hills line", moves: true, source: "src/views/map3d/railCommuters.ts" });

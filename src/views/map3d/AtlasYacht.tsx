@@ -6,17 +6,14 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {focusable} from "./materials";
 import {packNormals} from "./packGeometry";
 import {yachtGeometry,MAIN_Y,hullHalf} from "./yachtGeometry";
-import {YACHT,YACHT_KEY,YACHT_NAME,YACHT_SCALE as S,boardingRoute,routeAt,routeLengths,type YachtBerth} from "./yachtPlan";
+import {YACHT,YACHT_KEY,YACHT_NAME,YACHT_SCALE as S,type YachtBerth} from "./yachtPlan";
+import {TRAVEL_CLOCK,yachtCourse,yachtPoseAt,yachtSailing,type TravelPlan} from "./travelLoops";
 import type {MarinaSite} from "./marinaPlan";
-import {pedestrianAllowed} from "./doorTraffic";
+import type {pedestrianAllowed} from "./doorTraffic";
 
 const noRaycast=()=>null;
-/** People walking on and off by the passerelle, and how fast (the city's strolling pace). */
-export const YACHT_WALKERS=6;
-const PACE=.18,PAUSE=6;
 /** Length of the hull on the map. */
 const L=YACHT.length*S;
-const CLOTHES=["#f4f2ec","#2f4a5a","#c96f53","#4f78a8","#e0c068","#6d9b6a"];
 
 /** The yacht's name in dark lettering, for the transom and both bows. */
 function namePlate(){
@@ -29,10 +26,11 @@ function namePlate(){
 /**
  * Atlas at her berth: the merged hull and superstructure, the name on the transom and bows, the
  * pontoon that carries on from the marina's cross dock with bollards, fenders and lamps, the
- * passerelle up to the aft deck, and people walking on and off. Static apart from the walkers,
- * which stop when motion is off. No agents are assigned: the people are visitors and crew figures.
+ * passerelle up to the aft deck. The people who used to stroll on and off are now the travel loops' yacht guests
+ * (travelLoops.ts, drawn with the city's crowd): once they are aboard she cruises out into the open sea and is back at
+ * her berth inside three minutes, every second train lap (Khaneil, 2026-11-13). Decorative: no agents are assigned to her.
  */
-export function AtlasYacht({berth:b,marina,g,m,pick,night=false,moving,exclusion}:{berth:YachtBerth;marina:MarinaSite;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean;moving:boolean;exclusion?:Parameters<typeof pedestrianAllowed>[0]}){
+export function AtlasYacht({berth:b,travel,g,m,pick,night=false,moving}:{berth:YachtBerth;marina:MarinaSite;travel?:TravelPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean;moving:boolean;exclusion?:Parameters<typeof pedestrianAllowed>[0]}){
  const geo=useMemo(()=>packNormals(yachtGeometry()),[]);
  useEffect(()=>()=>{for(const v of Object.values(geo))v.dispose();},[geo]);
  const name=useMemo(()=>namePlate(),[]);
@@ -77,32 +75,19 @@ export function AtlasYacht({berth:b,marina,g,m,pick,night=false,moving,exclusion
   return {deck,posts,lamps,ramp,rails,stanchions};
  },[b]);
 
- // People: they come down the marina stair, walk the dock and climb the passerelle, pause on the
- // aft deck, then walk back up to the promenade. Spaced out along the route, never two together.
- const route=useMemo(()=>boardingRoute(marina,b),[marina,b]);
- const lengths=useMemo(()=>routeLengths(route),[route]);
- const bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),clock=useRef(0);
- const o=useMemo(()=>new THREE.Object3D(),[]);
- useEffect(()=>{const c=new THREE.Color();for(let i=0;i<YACHT_WALKERS;i++){bodies.current?.setColorAt(i,c.set(CLOTHES[i%CLOTHES.length]));heads.current?.setColorAt(i,c.set(i%3?"#e3b994":"#9c6b4a"));}
-  if(bodies.current?.instanceColor)bodies.current.instanceColor.needsUpdate=true;if(heads.current?.instanceColor)heads.current.instanceColor.needsUpdate=true;},[]);
+ // Sailing: the hull, superstructure and name move together along her course; the pontoon and passerelle stay.
+ const hull=useRef<THREE.Group>(null),clock=useRef(0);
+ const course=useMemo(()=>yachtCourse(b),[b]);
  useFrame((_,dt)=>{
   if(moving)clock.current+=Math.min(dt,.1);
-  const legT=lengths.total/PACE,cycle=legT*2+PAUSE*2;
-  for(let i=0;i<YACHT_WALKERS;i++){
-   const ph=((clock.current+i*cycle/YACHT_WALKERS)%cycle+cycle)%cycle;
-   const out=ph<legT+PAUSE,t=ph<legT?ph/legT:ph<legT+PAUSE?1:ph<legT*2+PAUSE?1-(ph-legT-PAUSE)/legT:0;
-   const {p,dir}=routeAt(route,lengths.legs,t*lengths.total),off=out?-.06:.06;
-   const x=p[0]-dir[1]*off,z=p[2]+dir[0]*off,show=pedestrianAllowed(exclusion,x,z)?1:0;
-   o.rotation.set(0,Math.atan2(dir[0],dir[1])+(out?0:Math.PI),0);
-   o.position.set(x,p[1]+.02,z);o.scale.set(.07*show,.16*show,.06*show);o.updateMatrix();bodies.current?.setMatrixAt(i,o.matrix);
-   o.position.y=p[1]+.21;o.scale.setScalar(.035*show);o.updateMatrix();heads.current?.setMatrixAt(i,o.matrix);
-  }
-  if(bodies.current)bodies.current.instanceMatrix.needsUpdate=true;if(heads.current)heads.current.instanceMatrix.needsUpdate=true;
+  const node=hull.current;if(!node||!travel?.yacht)return;
+  const at=yachtPoseAt(course,yachtSailing(travel,TRAVEL_CLOCK.live?TRAVEL_CLOCK.t:clock.current));
+  node.position.set(at.x,WATER_Y,at.z);node.rotation.y=at.yaw;
  });
 
  const sternX=-YACHT.length/2,bowX=1.05,bowZ=hullHalf(bowX)+.006,bowY=MAIN_Y-.08;
  return <>
-  <group position={[b.x,WATER_Y,b.z]} rotation={[0,b.yaw,0]} scale={S}>
+  <group ref={hull} position={[b.x,WATER_Y,b.z]} rotation={[0,b.yaw,0]} scale={S}>
    <mesh geometry={geo.hull} material={mats.hull} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.boot} material={mats.boot} raycast={noRaycast}/>
    <mesh geometry={geo.white} material={mats.white} castShadow receiveShadow {...handlers}/>
@@ -117,7 +102,5 @@ export function AtlasYacht({berth:b,marina,g,m,pick,night=false,moving,exclusion
   <Instanced items={dock.lamps} geometry={g.ball} material={m.lamp}/>
   <Instanced items={[dock.ramp]} geometry={g.box} material={mats.teak}/>
   <Instanced items={[...dock.rails,...dock.stanchions]} geometry={g.box} material={m.plain}/>
-  <instancedMesh ref={bodies} args={[g.cyl,m.plain,YACHT_WALKERS]} castShadow frustumCulled={false} raycast={noRaycast}/>
-  <instancedMesh ref={heads} args={[g.ball,m.plain,YACHT_WALKERS]} castShadow frustumCulled={false} raycast={noRaycast}/>
  </>;
 }

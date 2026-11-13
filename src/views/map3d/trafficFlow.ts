@@ -9,11 +9,16 @@ import {vehicleBounds} from './vehicleModels';
  * block each other (a junction stand-off) are settled by giving way to the lower index; anyone held for long gives
  * way to nobody for a moment, so traffic can never lock up. No allocation in step() beyond vehicleAt's pose.
  */
-export const TRAFFIC={box:.55,gap:.05,near:1,far:2,height:.2,accel:4,stuck:6,release:1,warmup:6} as const;
+export const TRAFFIC={box:.55,gap:.05,near:1,far:2,height:.2,accel:4,stuck:6,release:1,warmup:6,catchUp:2,rejoin:8} as const;
 
 export interface TrafficFlow {times:Float64Array;step(dt:number):void}
 
-export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[]):TrafficFlow{
+/**
+ * `clock` (optional) is the train clock: a scheduled vehicle (a travel-loop shuttle) still stops for traffic, then drives
+ * up to TRAFFIC.catchUp times faster until it is back on its timetable; far off it (a new scene) it rejoins at once.
+ */
+export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[],clock?:()=>number|undefined):TrafficFlow{
+ let own=-TRAFFIC.warmup;
  const n=plans.length,times=new Float64Array(n),speed=new Float64Array(n).fill(1),held=new Float64Array(n),free=new Float64Array(n);
  const x=new Float64Array(n),z=new Float64Array(n),y=new Float64Array(n),dx=new Float64Array(n).fill(1),dz=new Float64Array(n),on=new Uint8Array(n);
  const half=Float64Array.from(plans,v=>{const b=vehicleBounds(v.kind);return (b.front-b.rear)/2;}),width=Float64Array.from(plans,v=>vehicleBounds(v.kind).halfWidth);
@@ -30,6 +35,7 @@ export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[]):
  const pose=(i:number,t:number,o:Float64Array[],k:number)=>{const a=vehicleAt(plans[i],t),l=Math.hypot(a.dx,a.dz);o[0][k]=a.x;o[1][k]=a.z;if(l>.2){o[2][k]=a.dx/l;o[3][k]=a.dz/l;}else if(o[2]!==dx){o[2][k]=dx[k];o[3][k]=dz[k];}return a;};
  const at=new Int32Array(n),inBox=new Uint8Array(n),dist=new Float64Array(n),hard=new Uint8Array(n),level=new Float64Array(n),midX=new Float64Array(n),midZ=new Float64Array(n),midU=new Float64Array(n),midV=new Float64Array(n);
  const step=(dt:number)=>{
+  own+=dt;const now=clock?.()??own;
   for(let i=0;i<n;i++){const a=pose(i,times[i],[x,z,dx,dz],i);y[i]=a.y;on[i]=vehicleVisible(plans[i],times[i])?1:0;pose(i,times[i]+TRAFFIC.near/2,[midX,midZ,midU,midV],i);pose(i,times[i]+TRAFFIC.near,[nearX,nearZ,nearU,nearV],i);pose(i,times[i]+TRAFFIC.far,[farX,farZ,farU,farV],i);}
   for(let i=0;i<n;i++){
    blocker[i]=-1;level[i]=1;hard[i]=0;if(!on[i])continue;
@@ -55,12 +61,14 @@ export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[]):
    // Stand-off (both would meet): the one already further in (the other barely ahead of it) goes; ties by index.
    if(target===0&&j>=0&&blocker[j]===i&&level[j]===0){const mine=(x[j]-x[i])*dx[i]+(z[j]-z[i])*dz[i],theirs=(x[i]-x[j])*dx[j]+(z[i]-z[j])*dz[j];if(mine<theirs-1e-6||(Math.abs(mine-theirs)<=1e-6&&i<j))target=1;}
    if(free[i]>0){free[i]-=dt;target=hard[i]?0:1;}   // a released car still never drives into one it touches
+   if(plans[i].scheduled){const lag=now-times[i];if(Math.abs(lag)>TRAFFIC.rejoin){times[i]=now;speed[i]=1;continue;}if(target>0)target=Math.max(0,Math.min(TRAFFIC.catchUp,1+lag));}
    speed[i]=target===0?0:speed[i]+(target-speed[i])*Math.min(1,dt*TRAFFIC.accel);
    held[i]=speed[i]<.05?held[i]+dt:0;if(held[i]>TRAFFIC.stuck){held[i]=0;free[i]=TRAFFIC.release;}
    times[i]+=dt*speed[i];
   }
  };
- // Settle the start so no two vehicles begin inside each other.
+ // Settle the start so no two vehicles begin inside each other (scheduled ones start on time, at the warm-up's start).
+ plans.forEach((v,i)=>{if(v.scheduled)times[i]=own;});
  for(let k=0;k<TRAFFIC.warmup*10;k++)step(.1);
  return {times,step};
 }
