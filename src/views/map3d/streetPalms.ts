@@ -63,11 +63,14 @@ export function airportSidewalkPalms(a:AirportPlan):Tree[]{
  return out;
 }
 
-/** Lawn palms (date and fan) outside the palm zones grow as olives and ficus, so palms gather where Khaneil wants them. */
+/** Lawn palms (date and fan) outside the palm zones, or up on a roof terrace, grow as olives and ficus, so palms gather where Khaneil wants them. */
 export function calmLawnPalms(trees:Tree[],zones:Rect[]):Tree[]{
  // Inside the zones only every other lawn palm stays a palm (Khaneil, 2026-11-13: "remove unnecessary ... palm trees").
  let n=0;
- return trees.map(t=>{const k=laTreeKind(t);if((k!=='date'&&k!=='fan')||t.la||(inPalmZone(zones,t.x,t.z)&&n++%2===0))return t;return {...t,la:(Math.floor(Math.abs(t.x*7.3+t.z*3.1))%2?'olive':'ficus')};});
+ return trees.map(t=>{const k=laTreeKind(t);if((k!=='date'&&k!=='fan')||t.la)return t;
+  // Never on a roof or a raised building terrace (Khaneil, 2026-11-13: no palms on top of the Vendor & Supplier Hub).
+  const roof=(t.y??0)>TERRACE_H+.3;
+  if(!roof&&inPalmZone(zones,t.x,t.z)&&n++%2===0)return t;return {...t,la:(Math.floor(Math.abs(t.x*7.3+t.z*3.1))%2?'olive':'ficus')};});
 }
 
 /** Lawn trees standing in an avenue's row give way to it, so the rhythm is never broken. */

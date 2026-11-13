@@ -62,6 +62,8 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants fo
  if(arena.length)expect(palms.filter(p=>inPalmZone(arena,p.x,p.z)&&!inPalmZone(streetPalmZones(s),p.x,p.z))).toHaveLength(0);
  // Outside the zones, lawn trees are never palms.
  for(const t of calmLawnPalms(s.trees,zones))if(!inPalmZone(zones,t.x,t.z)&&t.kind!=='palm')expect(['date','fan']).not.toContain(laTreeKind(t));
+ // No palms on the Vendor & Supplier Hub's roof terraces, or any other roof (Khaneil, 2026-11-13).
+ for(const t of calmLawnPalms(s.trees,zones))if((t.y??0)>.9&&t.kind!=='palm')expect(['date','fan']).not.toContain(laTreeKind(t));
  const a=s.airport&&airportFootprint(s.airport);
  for(const p of palms){
   expect(laTreeKind(p)).toBe('avenue');
