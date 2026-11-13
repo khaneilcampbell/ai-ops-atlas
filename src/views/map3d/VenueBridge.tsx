@@ -26,13 +26,18 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
   // A district street is already paved and marked: a connection running along it adds nothing, and
   // one meeting it stops its center line at the street's edge, so no second set of dashes lands on it.
   const streets=scene.freight?.streets??[],onStreet=(q:Pt,reach=1e-3)=>streets.some(st=>distanceToRoad(q,st)<reach);
-  for(const {a,b,onLand} of splitAtLand(segments,scene.land)){
+  for(const {a,b,onLand:land} of splitAtLand(segments,scene.land)){
+   // A sliver off land (a seam between land pieces, shorter than a street is wide plus its sidewalks) is no bridge:
+   // it gets no parapet, posts or piers, which otherwise stood on both kerbs like poles in the road (Khaneil, 2026-11-13).
+   const sliver=!land&&Math.hypot(b[0]-a[0],b[1]-a[1])<ROAD_W+.4,onLand=land||sliver;
    if(onStreet(a)&&onStreet(b)&&onStreet([(a[0]+b[0])/2,(a[1]+b[1])/2]))continue;
    const axis=a[0]===b[0]?'z':'x',key=JSON.stringify([a,b]);
    const br={key,ends:['',''],axis,a,b,roads:[[],[]]} as CarBridge;
    const p=bridgeParts(br,[],TRANSPORT.bridgeWidth,-1.2,false);
-   const exposedRails=p.rails.filter(v=>!onLand||!scene.land.some(l=>v.p[0]>l.x+.04&&v.p[0]<l.x+l.w-.04&&v.p[2]>l.z+.04&&v.p[2]<l.z+l.d-.04));
-   solid.push(...p.deck.filter(v=>v.c!==STREET_LINE||!onStreet([v.p[0],v.p[2]],TRANSPORT.cityWidth/2+.08)),...clipConnectionRails(exposedRails,junctions,TRANSPORT.junctionOpening),...p.piers.filter(v=>!scene.land.some(l=>v.p[0]>=l.x&&v.p[0]<=l.x+l.w&&v.p[2]>=l.z&&v.p[2]<=l.z+l.d)).map(v=>({...v,c:'#bdb59e'})));
+   // On land a rail survives only off every land piece; seams between pieces count as land, or a street along a
+   // seam keeps broken parapet posts on both kerbs.
+   const exposedRails=sliver?[]:p.rails.filter(v=>!onLand||!scene.land.some(l=>v.p[0]>l.x-.05&&v.p[0]<l.x+l.w+.05&&v.p[2]>l.z-.05&&v.p[2]<l.z+l.d+.05));
+   solid.push(...p.deck.filter(v=>v.c!==STREET_LINE||!onStreet([v.p[0],v.p[2]],TRANSPORT.cityWidth/2+.08)),...clipConnectionRails(exposedRails,junctions,TRANSPORT.junctionOpening),...p.piers.filter(v=>!sliver&&!scene.land.some(l=>v.p[0]>=l.x&&v.p[0]<=l.x+l.w&&v.p[2]>=l.z&&v.p[2]<=l.z+l.d)).map(v=>({...v,c:'#bdb59e'})));
    if(!onLand)lamps.push(...p.lamps.filter(v=>!junctions.some(j=>Math.hypot(v.p[0]-j[0],v.p[2]-j[1])<TRANSPORT.junctionOpening)));
   }
   // Sidewalks, paved corners, zebras and building-matched plazas: flat, so they cast no shadow.
