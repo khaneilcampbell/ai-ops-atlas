@@ -1,1 +1,1 @@
-- 2026-11-13 · The train now runs along the edge of Atlas's land instead of on a bridge out over the water, with the same four stations (#PR)
+- 2026-11-13 · The train now runs along the edge of Atlas's land instead of on a bridge out over the water, with the same four stations (#406)
