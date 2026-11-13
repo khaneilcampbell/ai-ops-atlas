@@ -106,14 +106,6 @@ export const GOLD_JET_SLOT_OK=GOLD_JET_SLOT!==SHARED_SLOT&&GOLD_JET_SLOT<FLIGHT_
 
 /**
  * The airport clock and circuit as the map last saw them, so the interior can pick the flight up where the map left it.
- * Written by the map's Airport frame loop; read once when you enter the aircraft.
+ * Written by the map's Airport frame loop; the cabin you ride in follows it.
  */
-export interface GoldJetWorld {
- /** Where the airport sits on the map (its airport-local origin) and whether it is drawn mirrored. */
- airport:{x:number;z:number;west?:boolean};
- /** The city's land, in map coordinates. */
- bounds:{x0:number;z0:number;x1:number;z1:number};
- /** Building footprints in map coordinates: centre, width, depth and height above the terraces. */
- buildings:{x:number;z:number;w:number;d:number;h:number}[];
-}
-export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean;/** The city outside the windows, as the map last drew it. */world?:GoldJetWorld}={clock:0};
+export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean}={clock:0};

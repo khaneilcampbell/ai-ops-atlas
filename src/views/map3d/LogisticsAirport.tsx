@@ -9,6 +9,7 @@ import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
 import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
+import {goldJetRide} from "./goldJetIds";
 import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
@@ -99,7 +100,8 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
     ref.current.position.set(pose.x,pose.y,pose.z);
     // Heading first, then nose pitch, then bank about the fuselage.
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
-    ref.current.visible=pose.visible;
+    // While you ride the gold jet its cabin (GoldJetRide) is drawn in its place.
+    ref.current.visible=pose.visible&&!(gold&&goldJetRide.active);
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
   const pickAll=gold?{...gold.pick,keys:[] as string[]}:undefined,picked=(items:Inst[])=>pickAll&&{...pickAll,keys:items.map(()=>GOLD_JET_KEY)};
@@ -254,7 +256,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...r1Lamps.flatMap(zz=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]} as Inst))),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
-  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;goldJetLive.world=a&&bounds?{airport:{x:a.x,z:a.z,west:a.west},bounds,buildings:obstacles??[]}:undefined;},[circuit,a,bounds,obstacles]);
+  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;},[circuit,a]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/>

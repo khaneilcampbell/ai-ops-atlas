@@ -37,8 +37,9 @@ import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
 import { GOLD_JET_GATE, GOLD_JET_KEY } from "./goldJetPlan";
+import { GOLD_JET_OFFICE_ID, goldJetRide } from "./goldJetIds";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LEVELS, resetGovernor, useQualityLevel } from "../../lib/governor";
@@ -88,6 +89,8 @@ import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
+/** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
+const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -448,7 +451,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Stop rendering while the window is hidden; nothing on the map needs to move then.
   const visible = usePageVisible();
   // The map is fully covered while a building's office is open, so it stops rendering then.
-  const officePhase = useOffice().phase;
+  const { phase: officePhase, projectId: officeId } = useOffice();
   // Phones get a lighter scene: fewer pixels and a smaller shadow map keep frames steady.
   const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
@@ -463,7 +466,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
-  const drawing = props.active !== false && visible && officePhase !== "inside";
+  // Inside the gold jet the map keeps drawing: its camera rides in the jet (GoldJetRide).
+  const drawing = props.active !== false && visible && (officePhase !== "inside" || officeId === GOLD_JET_OFFICE_ID);
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
@@ -957,6 +961,7 @@ function World({
   // Entering a building: remember the view, glide in toward its headquarters, and glide back to
   // the same view on the way out.
   const office = useOffice();
+  const riding = office.projectId === GOLD_JET_OFFICE_ID && (office.phase === "entering" || office.phase === "inside");
   const saved = useRef<[THREE.Vector3, THREE.Vector3] | null>(null);
   useEffect(() => {
     const { phase, projectId } = office;
@@ -1045,10 +1050,12 @@ function World({
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
     }
-    controls.update();
+    // Riding the gold jet: GoldJetRide places the camera every frame, so the map's own controls stand aside.
+    if (!goldJetRide.active) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
-    const haze = fogRange(dist, ext);
+    // Riding the gold jet the camera hugs the cabin, so haze as if looking over a district, not one building.
+    const haze = fogRange(goldJetRide.active ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
@@ -1182,6 +1189,7 @@ function World({
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
       {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
+      {detailsReady && riding && scene.airport && <Suspense fallback={null}><GoldJetRide plan={scene.airport} night={lightMode==="night"} controls={controls} /></Suspense>}
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY,GOLD_JET_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} night={lightMode==="night"} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
