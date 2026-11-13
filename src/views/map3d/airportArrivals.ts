@@ -12,7 +12,9 @@ import {roundedRoad} from './highway';
  * to back about DEPARTURE_ORIGIN: the roll starts at runway 1's north end and heads south. Times are real seconds
  * unless named `dep`.
  */
-export const DEPARTURE_ORIGIN={x:15,z:8.4} as const;
+/** Where the takeoff roll starts: runway 1's north end, just past the end lane (departure z 10.4). */
+export const ROLL_START_Z=-3.4;
+export const DEPARTURE_ORIGIN={x:15,z:ROLL_START_Z+10.4} as const;
 /** Departure coordinates to airport-local, and back (the mirror is its own inverse). */
 export const fromDeparture=(p:{x:number;z:number})=>({x:DEPARTURE_ORIGIN.x+p.x,z:DEPARTURE_ORIGIN.z-p.z});
 export const toDeparture=(p:{x:number;z:number})=>({x:p.x-DEPARTURE_ORIGIN.x,z:DEPARTURE_ORIGIN.z-p.z});

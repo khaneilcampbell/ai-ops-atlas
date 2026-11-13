@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {fleetPose,flightPhase,loopTiming,TAKEOFF_QUEUE,FLIGHT_SCHEDULE as f} from './flightSchedule';
 import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_LAYOUT as l} from './airport';
-import {ARRIVAL,ARRIVAL_STAND,LOOP} from './airportArrivals';
+import {ARRIVAL,ARRIVAL_STAND,LOOP,ROLL_START_Z} from './airportArrivals';
 // The circuit the map uses for the sample catalog (airport-local, mirror already applied).
 const CITY={x:-27.35,z:.86,rx:46.35,rz:57.9,altitude:18.16};
 const CIRCUITS=[undefined,CITY];
@@ -77,11 +77,14 @@ it('lands every jet on the landing runway and brings it back to the arrivals sta
 });
 
 it('never rolls over runway 1 on the ground except to take off',()=>{
+ // The north lane leads into the lineup at the top of runway 1; arrivals cross on the south lane.
+ const onLane=(z:number)=>z<=ROLL_START_Z+1e-6||Math.abs(z-R.southLaneZ)<.01;
  for(const c of CIRCUITS)for(let t=0;t<f.cycle;t+=.1){
   const p=fleetPose(t,0,c);if(p.y>0)continue;
   // The lineup turn onto the north end is part of taking off; runway 1 runs on south to its far end.
   const onRunway=Math.abs(p.x-l.runwayX)<l.runwayWidth/2+1.35&&p.z>l.runwayZ-l.runwayLength/2+.5&&p.z<l.runwayZ+l.runwayLength/2+1.35;
-  if(onRunway)expect(p.x,`t=${t}`).toBe(l.runwayX);
+  // Taxiing jets cross it only on the end lanes.
+  if(onRunway&&!onLane(p.z))expect(p.x,`t=${t}`).toBe(l.runwayX);
  }
 });
 

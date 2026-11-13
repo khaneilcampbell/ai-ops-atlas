@@ -104,7 +104,7 @@ describe('airport forecourt', () => {
 // Runway ends are joined like a real airfield's (Khaneil, 2026-11-13): a taxiway meets every runway end, past its
 // threshold bars, and every end taxiway runs from the parallel taxiway (x 11.5, z -7.8 to 23) to paved runway.
 describe('runway-end taxiways',()=>{
- const runways=[{x:15,w:2.2,z0:-3,z1:18,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
+ const runways=[{x:15,w:2.2,z0:LR.z-LR.length/2,z1:LR.z+LR.length/2,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
  const touches=(t:{x:number;z:number;w:number;d:number},r:{x0:number;x1:number;z0:number;z1:number})=>t.x-t.w/2<=r.x1+1e-6&&t.x+t.w/2>=r.x0-1e-6&&t.z-t.d/2<=r.z1+1e-6&&t.z+t.d/2>=r.z0-1e-6;
  const paved=[{x0:11.075,x1:11.925,z0:-7.8,z1:23},...runways.map(r=>({x0:r.x-r.w/2,x1:r.x+r.w/2,z0:r.z0,z1:r.z1}))];
  it('joins both ends of every runway to a taxiway',()=>{
@@ -162,7 +162,7 @@ describe('landing runway position (Khaneil, 2026-11-13)',()=>{
   expect(serviceRoadWest-(LR.x+LR.width/2)).toBeGreaterThan(1.2);
  });
  it('keeps every runway-end taxiway flush with the moved runway edge',()=>{
-  for(const t of AIRPORT_END_TAXIWAYS.slice(0,2))expect(t.x+t.w/2).toBeCloseTo(LR.x-LR.width/2,6);
+  for(const t of AIRPORT_END_TAXIWAYS.filter(t=>t.x>15))expect(t.x+t.w/2).toBeCloseTo(LR.x-LR.width/2,6);
  });
 });
 

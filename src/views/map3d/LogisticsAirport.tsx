@@ -21,6 +21,8 @@ type Materials=ReturnType<typeof useMaterials>;
 
 const WHEELS=[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z] as [number,number,number],s:[.055,.065,.065] as [number,number,number],c:"#202b36"})));
 /** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
+/** Edge lamps every metre down a runway, left out where an end taxiway crosses or joins it. */
+const runwayLampZ=(cz:number,len:number)=>{const out:number[]=[];for(let zz=cz-len/2+.5;zz<=cz+len/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))out.push(zz);return out;};
 const GEAR_TOP=.2;
 /** Fuselage tube (radius, centre height, start and end along the aircraft) and the underwing engines. */
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
@@ -128,7 +130,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     const y=TERRACE_H,x=a.x,z=a.z;
     const box=(px:number,py:number,pz:number,w:number,h:number,d:number,c:string):Inst=>({p:[px,py,pz],s:[w,h,d],c});
     const cubes:Inst[]=[
-      box(x+15,y+.015,z+7.5,2.2,.045,21,"#2b3335"),
+      box(x+AIRPORT_LAYOUT.runwayX,y+.015,z+AIRPORT_LAYOUT.runwayZ,AIRPORT_LAYOUT.runwayWidth,.045,AIRPORT_LAYOUT.runwayLength,"#2b3335"),
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
@@ -178,7 +180,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
     cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
     // A taxiway stands 6 mm proud of the runway and service-road paving it meets, so the joins never flicker.
-    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(11.5+x1-.45)/2,y+.07,z+t.z,x1-.45-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z+(t.z<7.5?-.22:.22),.035,.012,t.d-.45,"#d6bd6e"));
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(Math.max(11.5,t.x-t.w/2)+x1-.45)/2,y+.07,z+t.z,x1-.45-Math.max(11.5,t.x-t.w/2),.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z+(t.z<7.5?-.22:.22),.035,.012,t.d-.45,"#d6bd6e"));
      // A hold-short marking (two solid bars) across the taxiway just before the runway edge.
      // A widened mouth where the taxiway meets the runway; the yellow centre line stops short of the hold bars, off the runway.
      if(lane){cubes.push(box(x+x1-.3,y+.02,z+t.z,.6,.046,t.d+.5,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+x1-.18-k*.08,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));}
@@ -213,15 +215,16 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
     cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
     for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
-    for(let i=0;i<16;i++)cubes.push(box(x+15,y+.065,z-2+i*1.2,.055,.012,.55,"#f4eedb"));
+    const [r1North,r1South]=AIRPORT_THRESHOLDS.runway1,r1Lamps=runwayLampZ(AIRPORT_LAYOUT.runwayZ,AIRPORT_LAYOUT.runwayLength);
+    for(let zz=r1North+1;zz<r1South-.6;zz+=1.2)cubes.push(box(x+15,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
     for(const threshold of AIRPORT_THRESHOLDS.runway1)for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
-    for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
+    for(const zz of r1Lamps)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     const landingLamps:Inst[]=[];
     for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
     return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst,
      // Airside grass stands up to 7 mm under the runways and taxiways, so the pavements read flush, not as raised slabs
      // (Khaneil, 2026-11-13). Landside (west of the parallel taxiway) stays level with the city streets that cross it.
-     {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat(),...landingLamps]};
+     {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...r1Lamps.flatMap(zz=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]} as Inst))),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
   if(!a||!parts)return null;

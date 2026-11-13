@@ -1,7 +1,7 @@
 import {roundedRoad} from "./highway";
 import type { Rect, Slab } from "./scene";
 export const AIRPORT_KEY = "service:logistics-airport";
-export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landDepth:43,terminalX:1.5,terminalZ:6,taxiX:11.5,runwayX:15,runwayZ:7.5,runwayWidth:2.2,runwayLength:21,gateX:7,gateZ:[0,4.5,9,13.5],cargoZ:18,departureZ:16.5} as const;
+export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landDepth:43,terminalX:1.5,terminalZ:6,taxiX:11.5,runwayX:15,runwayZ:8.975,runwayWidth:2.2,runwayLength:28.95,gateX:7,gateZ:[0,4.5,9,13.5],cargoZ:18,departureZ:16.5} as const;
 /** The north stand is the arrivals turnaround stand: landed jets park there nose-in, then push back. */
 export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
 /** Second runway for landings (Khaneil, 2026-11-07). Moved in from the old river strip to the grass between runway 1
@@ -10,20 +10,22 @@ export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
  * the north threshold, roll south and leave by the south end lane to the south remote stand, south of runway 1. */
 export const AIRPORT_LANDING_RUNWAY={x:19.2,z:8.975,width:2.2,length:28.95,touchdownZ:-1,laneZ:-4.6,southLaneZ:23} as const;
 type TaxiRect={x:number;z:number;w:number;d:number};
-const TAXI_W=.85,R1={x:15,north:7.5-21/2,south:7.5+21/2};
+/** Runway 1 (takeoffs) runs the same length as the landing runway, end to end beside it (Khaneil, 2026-11-13), so
+ * jets have a longer roll to pick up speed. Both end lanes cross it on their way to the landing runway. */
+const TAXI_W=.85,R1={x:AIRPORT_LAYOUT.runwayX,west:AIRPORT_LAYOUT.runwayX-AIRPORT_LAYOUT.runwayWidth/2,east:AIRPORT_LAYOUT.runwayX+AIRPORT_LAYOUT.runwayWidth/2};
 /**
  * Runway-end taxiways, as a real airfield joins its runways (Khaneil, 2026-11-13: "fix connectivity of the
- * airport landing strip"). A lane crosses from the parallel taxiway to each end of the landing runway, meeting it
- * square past its threshold markings, and a short stub runs from each lane into the matching end of runway 1, so
- * every runway end has a taxiway and no taxiway stops on the grass. Lanes stop at the runway's edge, never paved over
- * it (Khaneil, 2026-11-13: "fix the runway connection"). Centre, width and depth, airport coordinates.
+ * airport landing strip"). A lane crosses from the parallel taxiway over each end of runway 1 to the matching end of
+ * the landing runway, meeting both square past their threshold markings. Lanes stop at each runway's edge, never paved
+ * over it (Khaneil, 2026-11-13: "fix the runway connection"), so each lane is two pieces either side of runway 1.
+ * Centre, width and depth, airport coordinates.
  */
 export const AIRPORT_END_TAXIWAYS:TaxiRect[]=(()=>{
- const L=AIRPORT_LANDING_RUNWAY,lane=(z:number):TaxiRect=>({x:(11.1+L.x-L.width/2)/2,z,w:L.x-L.width/2-11.1,d:TAXI_W}),stub=(z0:number,z1:number):TaxiRect=>({x:R1.x,z:(z0+z1)/2,w:TAXI_W,d:Math.abs(z1-z0)});
- return [lane(L.laneZ),lane(L.southLaneZ),stub(L.laneZ+TAXI_W/2,R1.north),stub(R1.south,L.southLaneZ-TAXI_W/2)];
+ const L=AIRPORT_LANDING_RUNWAY,piece=(x0:number,x1:number,z:number):TaxiRect=>({x:(x0+x1)/2,z,w:x1-x0,d:TAXI_W});
+ return [L.laneZ,L.southLaneZ].flatMap(z=>[piece(11.1,R1.west,z),piece(R1.east,L.x-L.width/2,z)]);
 })();
 /** Threshold bars stand a taxiway's width in from where the end lanes join, never under them. */
-export const AIRPORT_THRESHOLDS={landing:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT_LANDING_RUNWAY.southLaneZ-1],runway1:[-2.5,16.7]} as const;
+export const AIRPORT_THRESHOLDS={landing:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT_LANDING_RUNWAY.southLaneZ-1],runway1:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT_LANDING_RUNWAY.southLaneZ-1]} as const;
 /**
  * Security gate for the airside service building (Khaneil, 2026-11-13), across the last stretch of the two-lane
  * street that runs up to its east face (z 17.41, ending at the building): a guard booth on the north (apron) kerb, a
@@ -114,7 +116,7 @@ export function pathCrossesRect(path:[number,number][],r:Rect,margin=0):boolean{
 export interface FlightObstacle { x:number; z:number; hw:number; hd:number; h:number }
 export interface FlightCircuit { x:number; z:number; rx:number; rz:number; altitude?:number; obstacles?:FlightObstacle[] }
 /** Takeoff timing in departure seconds: line up, accelerate, rotate, lift off, then climb out. */
-export const TAKEOFF={hold:2,accel:.32,liftoff:9.5,rotate:1.1,climbAccel:.25,climbTop:30,climbRamp:4,rotationPitch:.17,cruisePitch:.04,maxPitch:.45,maxBank:.42,gearUp:1.5,gearTime:2,mainGearZ:.5} as const;
+export const TAKEOFF={hold:2,accel:.28,liftoff:11.5,rotate:1.1,climbAccel:.25,climbTop:30,climbRamp:4,rotationPitch:.17,cruisePitch:.04,maxPitch:.45,maxBank:.42,gearUp:1.5,gearTime:2,mainGearZ:.5} as const;
 const clamp01=(u:number)=>Math.max(0,Math.min(1,u));
 const smooth=(u:number)=>{const v=clamp01(u);return v*v*(3-2*v);};
 const T=TAKEOFF,LIFT_SPEED=T.accel*(T.liftoff-T.hold),LIFT_DISTANCE=.5*T.accel*(T.liftoff-T.hold)**2;

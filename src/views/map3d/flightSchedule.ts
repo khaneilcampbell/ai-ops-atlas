@@ -1,5 +1,5 @@
-import {AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from './airport';
-import {ARRIVAL,CIRCUIT_PACE,departureToLocal,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
+import {AIRPORT_LANDING_RUNWAY,AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from './airport';
+import {ROLL_START_Z,ARRIVAL,CIRCUIT_PACE,departureToLocal,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
 import {roundedRoad} from './highway';
 /**
  * One departure every 45 simulation seconds (KC, 2026-11-07), from a single jet holding short.
@@ -9,7 +9,8 @@ import {roundedRoad} from './highway';
 export const FLIGHT_SCHEDULE={interval:LOOP.interval,count:LOOP.count,cycle:LOOP_CYCLE,taxi:LOOP.taxi,start:20} as const;
 /** Jets taxi up from the south stand, hold short facing north, then turn east and south onto runway 1's north end. */
 export const TAKEOFF_QUEUE={x:AIRPORT_LAYOUT.taxiX,frontZ:0} as const;
-const route=roundedRoad([[TAKEOFF_QUEUE.x,TAKEOFF_QUEUE.frontZ],[11.5,-3],[15,-3],[15,-2]],.65);
+/** They taxi up the north end lane and line up at the very top of runway 1, for the whole runway's roll. */
+const route=roundedRoad([[TAKEOFF_QUEUE.x,TAKEOFF_QUEUE.frontZ],[11.5,AIRPORT_LANDING_RUNWAY.laneZ],[15,AIRPORT_LANDING_RUNWAY.laneZ],[15,ROLL_START_Z]],.65);
 const length=route.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-route[i][0],b[1]-route[i][1]),0);
 /** Seconds since this slot was last released from the hold. */
 export function flightPhase(seconds:number,slot:number){return ((seconds+FLIGHT_SCHEDULE.start-slot*FLIGHT_SCHEDULE.interval)%FLIGHT_SCHEDULE.cycle+FLIGHT_SCHEDULE.cycle)%FLIGHT_SCHEDULE.cycle;}
