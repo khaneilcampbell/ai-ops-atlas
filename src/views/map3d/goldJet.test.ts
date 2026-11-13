@@ -28,7 +28,7 @@ describe('gold private jet',()=>{
  it('keeps its wing tips clear of the jets at the neighbouring gates',()=>{
   const neighbours=AIRPORT_LAYOUT.gateZ.filter(z=>z!==GOLD_JET_GATE.z).map(z=>Math.abs(z-GOLD_JET_GATE.z));
   for(const d of neighbours)expect(d).toBeGreaterThan(GOLD_JET_HALF_SPAN+AIRCRAFT_LAYOUT.halfSpan+.5);
-  expect(AIRPORT_PARKED_STANDS.every(s=>s.z!==GOLD_JET_GATE.z)).toBe(true);
+  expect(AIRPORT_PARKED_STANDS.every(s=>(s.z as number)!==GOLD_JET_GATE.z)).toBe(true);
  });
 
  it('keeps clear of the ground crew and their baggage trains',()=>{
