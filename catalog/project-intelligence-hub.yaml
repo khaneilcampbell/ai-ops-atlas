@@ -129,13 +129,17 @@ agents:
       health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
       Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
       building next in the sheet's Top 10 Agents tab, with one capped Claude call.
+      Every morning at 7am a third workflow rewrites the sheet's Business Structure tab: who reports
+      to whom, how each agent starts and its autonomy level. No model.
     framework: n8n
     model: claude-opus-5-5 for the weekly Sunday ranking only ($3 per 30 days); the registry sync uses no model
     runtime: n8n Cloud
-    status: paused
-    trigger: Schedule (draft, not published yet)
+    status: active
+    trigger: Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET
     last_run: null
     history:
+      - at: 2026-11-12
+        event: Published in n8n; added the daily Business Structure workflow and the Refresh registry sheet button
       - at: 2026-11-12
         event: Added the Top 10 Agent Ideas workflow (Sundays 9am, one capped Claude call) at Khaneil's request
       - at: 2026-11-12
@@ -147,6 +151,8 @@ agents:
         url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
       - label: Top 10 Agent Ideas workflow
         url: https://khancam15.app.n8n.cloud/workflow/bgebM33jnVhLPSTF
+      - label: Business Structure workflow
+        url: https://khancam15.app.n8n.cloud/workflow/iY7mu26VL0xYElAP
     permissions:
       - 'GitHub: public reads of catalog/*.yaml, no key'
       - 'n8n API key (read only): workflows and recent executions'
@@ -175,7 +181,7 @@ agents:
         # to keep the map as it is, 2026-11-12).
         tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
         inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
-        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet]
+        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
       execution:
         trigger_type: scheduled
         environment: n8n
@@ -191,5 +197,51 @@ agents:
       docs:
         known_issues:
           - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
-          - The workflow finds the sheet's tab by its name, Untitled
+          - The workflows find the sheet's tabs by name (Registry, Top 10 Agents, Business Structure), so renaming a tab breaks them
+          - n8n does not keep successful scheduled runs of the registry sync, so Atlas cannot show its last run
         last_review: 2026-11-12
+
+  - id: atlas-agent-factory
+    name: Agent Factory
+    purpose: >-
+      Every Monday at 8am an n8n workflow looks for gaps in plain code (catalog buildings and modules
+      with no agent, failing n8n workflows, quiet Atlas feed sources), ranks them, and makes one capped
+      Claude call to write a spec for the single best new agent. It emails Khaneil Approve or Reject.
+      Approving only records the decision; nothing is built or switched on.
+    framework: n8n
+    model: claude-opus-5-5 for one proposal a week at most ($2 per 30 days)
+    runtime: n8n Cloud
+    status: active
+    trigger: Mondays 8am ET, at most one proposal per 7 days
+    last_run: 2026-11-12T11:27:50Z
+    history:
+      - at: 2026-11-12
+        event: Published in n8n; first run proposed a Business Ops HQ Daily Rollup and emailed Khaneil
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/FTCanpGAYPIr3OGe
+    permissions:
+      - 'GitHub: public reads of catalog/*.yaml, no key'
+      - 'n8n API key (read only): workflows and failed runs'
+      - 'Atlas sync key (read only): GET /api/hooks/feed'
+      - 'Anthropic API: one Claude call a week at most, capped at $2 per 30 days'
+      - 'Resend: the proposal email to Khaneil only'
+      - 'n8n data table agent_factory_proposals: writes proposals and decisions'
+    registry:
+      title: Agent Factory
+      category: engineering
+      subcategory: Agent planning
+      classification:
+        type: B
+        confidence: verified
+        evidence: Live n8n workflow FTCanpGAYPIr3OGe ranks gaps in plain code and makes one Claude call to draft the spec
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Proposes only; Khaneil approves or rejects, and approval builds nothing.
+        risk: low
+        audit_log: n8n executions and the agent_factory_proposals table
+      cost:
+        budget: Claude Opus 5.5, one proposal and $2 per 30 days, checked before each call

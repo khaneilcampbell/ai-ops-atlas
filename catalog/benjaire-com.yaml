@@ -676,9 +676,12 @@ agents:
       Emails ops when Shop follow ups, Reply reminders or the Monday digest have not run on time. No AI.
     framework: n8n
     runtime: n8n Cloud
-    status: paused
-    trigger: Daily at 11am ET once switched on
-    last_run: null
+    status: active
+    trigger: Daily at 11am ET
+    last_run: 2026-11-12T16:00:54Z
+    history:
+      - at: 2026-11-11
+        event: Switched on in n8n; scheduled runs succeed daily at 11am ET (checked read-only 2026-11-13)
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/u3B7KFesmHzyEimO
