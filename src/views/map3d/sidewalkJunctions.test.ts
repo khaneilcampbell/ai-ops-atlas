@@ -89,3 +89,15 @@ describe('station paths stay off the streets',()=>{
   }
  });
 });
+
+describe('footpath paving stays off the streets',()=>{
+ it('lays no narrow footpath slab on any carriageway, in district and tag groupings',()=>{
+  for(const g of ['district','tag'] as const){
+   const s=buildScene(layoutMap(catalog,[],g)),h=ROAD_W/2-.02;
+   const rects=[...s.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...s.carBridges.flatMap(b=>b.roads)].flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt]))
+    .map(([a,b])=>({x0:Math.min(a[0],b[0])-h,x1:Math.max(a[0],b[0])+h,z0:Math.min(a[1],b[1])-h,z1:Math.max(a[1],b[1])+h}));
+   const on=s.paving.filter(p=>Math.min(p.w,p.d)<=.5&&rects.some(r=>Math.min(p.x+p.w,r.x1)-Math.max(p.x,r.x0)>.02&&Math.min(p.z+p.d,r.z1)-Math.max(p.z,r.z0)>.02));
+   expect(on.map(p=>`${g} ${[p.x,p.z,p.w,p.d].map(v=>v.toFixed(2))}`).slice(0,5)).toEqual([]);
+  }
+ });
+});

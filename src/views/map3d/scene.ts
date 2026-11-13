@@ -823,6 +823,16 @@ function buildCity(layout: Layout): Scene3D {
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.plaza.x-.2&&items[i].x<mall.plaza.x+mall.plaza.w+.2&&items[i].z>mall.plaza.z&&items[i].z<z1+.2)items.splice(i,1);
     walks.push({x0:mall.cx,z0:mall.plaza.z+mall.plaza.d,x1:mall.cx,z1,y:top+.08});
   }
+  // Footpath paving laid before the street plan was final never lies on a carriageway (Khaneil, 2026-11-13: "remove
+  // pavement that's in the street"): narrow strips are trimmed back from every street piece, half a road past its
+  // ends. Road-width slabs are the streets' own surface and plazas are wide, so both are left alone.
+  {const half=ROAD_W/2,rects=[...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)]
+    .flatMap(r=>r.slice(1).map((b,i)=>{const a=r[i];return {x:Math.min(a[0],b[0])-half,z:Math.min(a[1],b[1])-half,w:Math.abs(b[0]-a[0])+2*half,d:Math.abs(b[1]-a[1])+2*half};}));
+   const minus=(p:Slab,c:{x:number;z:number;w:number;d:number}):Slab[]=>{const x0=Math.max(p.x,c.x),x1=Math.min(p.x+p.w,c.x+c.w),z0=Math.max(p.z,c.z),z1=Math.min(p.z+p.d,c.z+c.d);
+     if(x1-x0<1e-6||z1-z0<1e-6)return [p];
+     return [{...p,w:x0-p.x},{...p,x:x1,w:p.x+p.w-x1},{...p,x:x0,w:x1-x0,d:z0-p.z},{...p,x:x0,z:z1,w:x1-x0,d:p.z+p.d-z1}].filter(q=>q.w>.05&&q.d>.05);};
+   for(let i=paving.length-1;i>=0;i--){const p=paving[i];if(p.y<top-1e-6||Math.min(p.w,p.d)>.5)continue;
+     let parts=[p];for(const c of rects)parts=parts.flatMap(q=>minus(q,c));paving.splice(i,1,...parts);}}
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
