@@ -82,7 +82,7 @@ export interface Park {
  */
 export { OFF_MAP_PROJECTS } from "../catalog/projects";
 /** Removed towers on the city's edge: their land becomes a plain lawn lot. */
-const VACANT_LOTS: ReadonlySet<string> = new Set(["vacant-lot-west", "career-optimizer"]);
+export const VACANT_LOTS: ReadonlySet<string> = new Set(["vacant-lot-west", "career-optimizer"]);
 /**
  * Removed towers in the middle of the city: the streets and bridges that link their neighbors run
  * through the lot, so it keeps its streets and paving and only the building goes.
@@ -143,6 +143,9 @@ const RETIRED_LOTS: { after: string; project: Project }[] = [
     },
   },
 ];
+
+/** Names of the removed towers that keep a lot, for lists of everything on the map. */
+export const RETIRED_LOT_NAMES: Readonly<Record<string, string>> = Object.fromEntries(RETIRED_LOTS.map((l) => [l.project.id, l.project.name]));
 
 /**
  * The catalog's projects with any missing {@link RETIRED_LOTS} put back in their old place. A project
