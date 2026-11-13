@@ -692,20 +692,18 @@
    "automations": 0
   },
   {
-   "id": "project:service-desk",
-   "name": "Service Desk",
+   "id": "project:vacant-lot-west",
+   "name": "Vacant lot",
    "kind": "Retired building",
    "area": "Vacant lot",
    "status": "Vacant lot",
-   "project": "service-desk",
+   "project": "vacant-lot-west",
    "source": "src/catalog/projects.ts OFF_MAP_PROJECTS",
    "organization": "",
    "module": "",
-   "agent_ids": [
-    "service-desk-codeql"
-   ],
+   "agent_ids": [],
    "ai_agents": 0,
-   "automations": 1
+   "automations": 0
   },
   {
    "id": "project:career-optimizer",
@@ -1578,20 +1576,6 @@
    "source": ""
   },
   {
-   "id": "service-desk-codeql",
-   "name": "Application Security Analyst",
-   "kind": "Automation",
-   "status": "active",
-   "building_id": "project:service-desk",
-   "building_name": "Service Desk",
-   "placement": "Runs from its project building",
-   "owned_by": "",
-   "project": "service-desk",
-   "runtime": "GitHub-hosted runner",
-   "trigger": "Push, pull request and schedule",
-   "source": ".github/workflows/service-desk-codeql.yml"
-  },
-  {
    "id": "soc-case-notes",
    "name": "Security Case Documentation Specialist",
    "kind": "Automation",
@@ -1953,6 +1937,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T12:29:33.041Z",
- "commit": "a162abcd35096e8a93997eefd37313841caa3441"
+ "generated_at": "2026-11-13T12:46:34.444Z",
+ "commit": "29adf038ea11ff9531fdd2f2ec75b50a6bc30960"
 }
