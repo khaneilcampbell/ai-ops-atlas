@@ -5,7 +5,7 @@ import {HQ_INTERIOR,core,glassHeight,goldReach,isAtlasHq,isGold,isTall,shellAxes
 import {wingSway} from '../map3d/atlasHqPlan';
 
 const project=catalog.projects.find(p=>p.id==='ai-ops-atlas')!;
-const agents=catalog.agents.filter(a=>a.project===project.id);
+const agents=catalog.agents.filter(a=>a.projectId===project.id);
 const plan=planOffice(project,agents);
 
 describe('Atlas HQ interior',()=>{

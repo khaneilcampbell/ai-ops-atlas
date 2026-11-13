@@ -8,12 +8,11 @@
 import { INQUIRY_AGENT, KEEP_DAYS, MAX_INQUIRY_BYTES, validInquiry, type Inquiry } from "../src/inquiries/model";
 import { replyState, type ReplyEnv } from "./inquiryReply";
 import { bearerOk, ensureSchema as ensureFeed, type D1, type LiveEnv } from "./live";
+import { reply } from "./http";
 
 export const INQUIRIES_PATH = "/api/hooks/inquiries";
 export const READ_LIMIT = 50;
 
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS inquiries (id TEXT PRIMARY KEY, received_at TEXT NOT NULL, body TEXT NOT NULL)",

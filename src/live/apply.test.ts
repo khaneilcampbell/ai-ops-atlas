@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RepoSnapshot } from "../github/types";
+import type { RepoSnapshot, WorkflowRun } from "../github/types";
 import { applyGithubEvent, describe as describeEvent, mergeAgentRuns, toAgentRun, upsertRun, type LiveEvent } from "./apply";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
@@ -42,7 +42,7 @@ describe("live events", () => {
   });
 
   it("keeps the newest default-branch run when pull request runs fill the list", () => {
-    const pr = (id: number) => ({ id, attempt: 1, name: "CI", status: "completed", conclusion: "success", branch: "feature", event: "pull_request", createdAt: `2026-10-27T0${id}:00:00Z`, url: `https://g/${id}` });
+    const pr = (id: number): WorkflowRun => ({ id, attempt: 1, name: "CI", status: "completed", conclusion: "success", branch: "feature", event: "pull_request", createdAt: `2026-10-27T0${id}:00:00Z`, url: `https://g/${id}` });
     const main = { ...snap().runs[0], createdAt: "2026-10-26T00:00:00Z" };
     const s = snap({ workflowRuns: { "ci.yml": [5, 4, 3, 2].map(pr).concat(main) } });
     const next = applyGithubEvent(s, runEvent("completed", { id: 9, head_branch: "other", event: "pull_request", html_url: "https://g/9" }));
