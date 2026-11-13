@@ -771,12 +771,6 @@ function buildCity(layout: Layout): Scene3D {
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(connections.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.5||distanceToRoad([items[i].x,items[i].z],link.walk)<.45))items.splice(i,1);
   const mall=planMall({parks,land,towers,kiosks,marketplace:marketplaceSite,hills,links:connections,roads:[...connections.map(c=>c.road)]});
   if(mall)for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.x-.2&&items[i].x<mall.x+mall.w+.2&&items[i].z>mall.z-.2&&items[i].z<mall.z+mall.d+.2)items.splice(i,1);
-  if(mall){
-    const edge=mall.plaza.z+mall.plaza.d+.3,side=mall.x+mall.w+.4;
-    const path:[[number,number],[number,number],[number,number]]=[[mall.cx,edge],[side,edge],[side,edge-2.5]];
-    for(let i=1;i<path.length;i++)paving.push(strip(...path[i-1],...path[i],.48,top));
-    walks.push({x0:path[0][0],z0:path[0][1],x1:path[2][0],z1:path[2][1],y:top+.08,route:path.map(([gx,gy])=>({gx,gy}))});
-  }
   // Plain meadow filling the island out to a square; the stadium grounds may build on it. It is laid
   // before the Galleria, whose lot behind the Marketplace can reach onto it when a smaller catalog
   // moves the Marketplace toward the island's edge.
@@ -819,6 +813,16 @@ function buildCity(layout: Layout): Scene3D {
   // Every street end meets the street it runs into, square, once the street plan is final.
   joinStreetEnds([...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)],[...connections.map(c=>c.walk),...(financial?[financial.road,...(financial.circa?[financial.circa.street]:[])]:[]),
     ...[...plazaRings({towers,paving}).values()].map((g):[number,number][]=>[[g.x0,g.z0],[g.x1,g.z0],[g.x1,g.z1],[g.x0,g.z1],[g.x0,g.z0]])]);
+  if(mall){
+    // One forecourt (Khaneil, 2026-11-13: "fix sidewalk pavement design"): the plaza paving runs on, square, to the
+    // sidewalk of an east-west street close in front, instead of an L of strips stopping short in the grass.
+    const end=mall.plaza.z+mall.plaza.d+.3,front=connections.flatMap(c=>c.road.slice(1).map((b,i)=>[c.road[i],b] as const))
+      .filter(([a,b])=>Math.abs(a[1]-b[1])<1e-6&&a[1]>end&&a[1]-end<3&&Math.min(Math.max(a[0],b[0]),mall.plaza.x+mall.plaza.w)-Math.max(Math.min(a[0],b[0]),mall.plaza.x)>mall.plaza.w/2).map(([a])=>a[1]);
+    if(front.length)mall.forecourtZ1=Math.min(...front)-ROAD_W/2-.18;
+    const z1=mall.forecourtZ1??end;
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(items[i].x>mall.plaza.x-.2&&items[i].x<mall.plaza.x+mall.plaza.w+.2&&items[i].z>mall.plaza.z&&items[i].z<z1+.2)items.splice(i,1);
+    walks.push({x0:mall.cx,z0:mall.plaza.z+mall.plaza.d,x1:mall.cx,z1,y:top+.08});
+  }
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);
