@@ -25,6 +25,8 @@ export interface MallPlan extends Rect {
  /** Centre of the horseshoe; the open side faces +z, onto the plaza. */
  cx:number;cz:number;rx:number;rz:number;
  plaza:Rect;fountain:{x:number;z:number;r:number};
+ /** Where the forecourt paving ends toward the street: the street sidewalk's edge when one runs close by. */
+ forecourtZ1?:number;
 }
 
 type Input=Pick<Scene3D,'parks'|'land'|'towers'|'kiosks'>&{hills?:Rect;marketplace?:Rect;links:{id?:string;road:Pt[]}[];

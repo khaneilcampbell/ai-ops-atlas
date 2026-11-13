@@ -5,6 +5,7 @@ import {buildScene} from "./scene";
 import {openLot} from "./openLot";
 import {MALL,MALL_SHOPS,mallFloor,mallPieceCount,planMall} from "./mallPlan";
 import {distanceToRoad} from "./highway";
+import {ROAD_W} from "./roads";
 
 /** The mall is a few draw calls of merged meshes plus instanced fins; keep it far under the highway's 7,000. */
 const BUDGET=1_000;
@@ -28,8 +29,11 @@ describe("Atlas Marketplace mall", () => {
   for(const road of roads)expect(distanceToRoad([m.fountain.x,m.fountain.z],road)).toBeGreaterThan(.6+m.fountain.r);
  });
  it("opens its plaza onto the existing sidewalk, so walkers can reach it", () => {
-  const plazaEdge=m.plaza.z+m.plaza.d+.3;
-  expect(s.paving.some(p=>p.z<=plazaEdge&&p.z+p.d>=plazaEdge-.3&&p.x<m.plaza.x+m.plaza.w&&p.x+p.w>m.plaza.x)).toBe(true);
+  // One forecourt rectangle runs square to the street sidewalk in front (Khaneil, 2026-11-13), no strips in the grass.
+  const z1=m.forecourtZ1!;
+  expect(z1).toBeGreaterThan(m.plaza.z+m.plaza.d);
+  expect(s.transportConnections.some(c=>c.road.slice(1).some((b,i)=>{const a=c.road[i];return Math.abs(a[1]-b[1])<1e-6&&Math.abs(a[1]-ROAD_W/2-.18-z1)<1e-6&&Math.min(Math.max(a[0],b[0]),m.plaza.x+m.plaza.w)-Math.max(Math.min(a[0],b[0]),m.plaza.x)>m.plaza.w/2;}))).toBe(true);
+  for(const t of [...s.trees,...s.bushes,...s.rocks])expect(t.x>m.plaza.x&&t.x<m.plaza.x+m.plaza.w&&t.z>m.plaza.z+m.plaza.d&&t.z<z1).toBe(false);
  });
  it("leaves no trees or rocks inside the building", () => {
   // The plaza in front is planted on purpose (Marketplace Gardens); the building footprint never is.

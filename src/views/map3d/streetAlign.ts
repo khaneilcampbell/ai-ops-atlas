@@ -16,6 +16,12 @@ export const STREET_ALIGN={
  road:ROAD_W,
  /** A walk closer than this to a street's centre is on the carriageway or its sidewalk. */
  walkClear:ROAD_W/2+.18+.06,
+ /**
+  * On the final pass, once every street is laid, a walk running beside a street with a strip of grass between
+  * (up to 2.4 from the centre line) moves in flush against the sidewalk too (Khaneil, 2026-11-13: "fix sidewalk
+  * pavement design").
+  */
+ walkBeside:2.4,
  /** Where such a walk goes instead, as the district links lay walks beside their roads. */
  walkSide:.6,
  /** Parallel walks closer than this would overlap: a walk's width. */
@@ -63,7 +69,7 @@ const place=(path:Pt[],i:number,r:Run,c:number,boxes:Box[],margin:number)=>{
 };
 const tidy=(path:Pt[])=>path.filter((p,i)=>!i||Math.hypot(p[0]-path[i-1][0],p[1]-path[i-1][1])>1e-9);
 
-export function alignStreets<L extends DistrictConnection>(links:L[],boxes:Box[]=[]):L[]{
+export function alignStreets<L extends DistrictConnection>(links:L[],boxes:Box[]=[],final=false):L[]{
  const A=STREET_ALIGN,roads:Run[]=[],walks:Run[]=[];
  const out=links.map(l=>({...l,road:l.road.map(p=>[p[0],p[1]] as Pt),walk:l.walk.map(p=>[p[0],p[1]] as Pt)}));
  for(const l of out){
@@ -78,9 +84,23 @@ export function alignStreets<L extends DistrictConnection>(links:L[],boxes:Box[]
  for(const l of out){
   for(let i=1;i<l.walk.length;i++){
    const r=run(l.walk[i-1],l.walk[i]);if(!r)continue;
-   const street=roads.find(o=>overlap(r,o)&&Math.abs(o.c-r.c)<A.walkClear);
+   // Beyond the sidewalk, only a street running alongside for more than a road's width pulls the walk in.
+   const street=roads.find(o=>overlap(r,o)&&(Math.abs(o.c-r.c)<A.walkClear||final&&Math.abs(o.c-r.c)<A.walkBeside&&Math.min(r.hi,o.hi)-Math.max(r.lo,o.lo)>ROAD_W));
    // Out to the side it was nearer, else the other side if that one is blocked.
-   if(street){const side=r.c<street.c?-1:1;if(!place(l.walk,i-1,r,street.c+side*A.walkSide,boxes,.23))place(l.walk,i-1,r,street.c-side*A.walkSide,boxes,.23);}
+   // A move must leave the walk at least walkSide from every other street it runs beside, too.
+   // ...and a walk another path ends on stays put, so that junction holds.
+   // A twin walk (another link sharing this very run) moves along with it, so only a path that merely ends on it counts.
+   const same=(p:Pt,q:Pt)=>Math.hypot(p[0]-q[0],p[1]-q[1])<.05,twin=(m:L)=>[l.walk[i-1],l.walk[i]].every(q=>m.walk.some(p=>same(p,q)));
+   const onRun=(p:Pt)=>r.x?Math.abs(p[1]-r.c)<.05&&p[0]>r.lo-.05&&p[0]<r.hi+.05:Math.abs(p[0]-r.c)<.05&&p[1]>r.lo-.05&&p[1]<r.hi+.05;
+   const joined=out.some(m=>m!==l&&!twin(m)&&[m.walk[0],m.walk[m.walk.length-1],m.road[0],m.road[m.road.length-1]].some(p=>!!p&&onRun(p)));
+   const clearOf=(c:number)=>!joined&&roads.every(o=>!overlap(r,o)||Math.abs(o.c-c)>=A.walkSide-1e-6);
+   if(street&&Math.abs(street.c-r.c)<A.walkClear){const side=r.c<street.c?-1:1;if(!place(l.walk,i-1,r,street.c+side*A.walkSide,boxes,.23))place(l.walk,i-1,r,street.c-side*A.walkSide,boxes,.23);}
+   else if(street){
+    // A first or last run keeps its end (a gate or door) where it is, joined to the moved run by a short step.
+    let k=i-1;const c1=street.c+(r.c<street.c?-1:1)*A.walkSide,c2=2*street.c-c1;
+    if(clearOf(c1)||clearOf(c2)){if(k===0){l.walk.unshift([l.walk[0][0],l.walk[0][1]]);k++;i++;}if(k+1===l.walk.length-1)l.walk.push([l.walk[k+1][0],l.walk[k+1][1]]);}
+    if(!(clearOf(c1)&&place(l.walk,k,r,c1,boxes,.23))&&clearOf(c2))place(l.walk,k,r,c2,boxes,.23);
+   }
    const beside=walks.find(o=>overlap(r,o)&&Math.abs(o.c-r.c)>1e-9&&Math.abs(o.c-r.c)<A.walk);
    if(beside)place(l.walk,i-1,r,beside.c,boxes,.23);
    walks.push(r);
@@ -88,4 +108,44 @@ export function alignStreets<L extends DistrictConnection>(links:L[],boxes:Box[]
   l.walk=tidy(l.walk);
  }
  return out;
+}
+
+/**
+ * Every street end meets the street it runs into (Khaneil, 2026-11-13: "make sure each street path
+ * intersects aesthetically wherever it ends"). A street that stops inside a crossing street's
+ * carriageway, short of or just past its centre line, is run on (or back) along its own axis to that
+ * centre line, so the two draw as one clean T with square corners instead of a stub overlapping the
+ * other street's kerb. Only an end point moves, by less than a road's width; ends clear of any street
+ * keep their place, and an end already joined to a street or to one of the `anchors` (walks, plaza
+ * lanes) it was routed to only runs on through it, never back off it. Points are replaced, never edited, since paths may share them.
+ */
+const onSeg=(p:Pt,a:Pt,b:Pt)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=dx*dx+dz*dz,t=l?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/l)):0;return Math.hypot(p[0]-a[0]-dx*t,p[1]-a[1]-dz*t)<.01;};
+/**
+ * Every street end meets the street it runs into (Khaneil, 2026-11-13: "make sure each street path
+ * intersects aesthetically wherever it ends"). A street that stops inside a crossing street's
+ * carriageway, short of or just past its centre line, is run on (or back) along its own axis to that
+ * centre line, so the two draw as one clean T with square corners instead of a stub overlapping the
+ * other street's kerb. Only a free end moves, by less than a road's width: an end already joined to
+ * a street or to one of the `anchors` it was routed to (walks, plaza lanes) keeps its place. Points
+ * are replaced, never edited, since paths may share them.
+ */
+export function joinStreetEnds(paths:Pt[][],anchors:Pt[][]=[]):void{
+ const segs=(ps:Pt[][])=>ps.flatMap((q,j)=>q.slice(1).map((b,i)=>({j,a:q[i],b,r:run(q[i],b)})));
+ const streets=segs(paths),fixed=segs(anchors);
+ paths.forEach((p,j)=>{
+  if(p.length<2)return;
+  for(const [e,n] of [[0,1],[p.length-1,p.length-2]]){
+   const r=run(p[n],p[e]),end=p[e];if(!r)continue;
+   const k=r.x?0:1,len=Math.abs(end[k]-p[n][k]),dir=Math.sign(end[k]-p[n][k]),near=(s:{a:Pt;b:Pt})=>Math.max(Math.abs(end[0]-(s.a[0]+s.b[0])/2)-Math.abs(s.a[0]-s.b[0])/2,Math.abs(end[1]-(s.a[1]+s.b[1])/2)-Math.abs(s.a[1]-s.b[1])/2)<ROAD_W;
+   const close=streets.filter(s=>s.j!==j&&near(s));
+   if(close.some(s=>onSeg(end,s.a,s.b))||fixed.some(s=>near(s)&&onSeg(end,s.a,s.b)))continue;
+   let best:number|undefined;
+   for(const {r:o} of close){
+    if(!o||o.x===r.x||end[1-k]<o.lo-1e-6||end[1-k]>o.hi+1e-6)continue;
+    const gap=o.c-end[k];
+    if(Math.abs(gap)>1e-6&&(gap*dir>0||Math.abs(gap)<len-.05)&&(best===undefined||Math.abs(gap)<Math.abs(best)))best=gap;
+   }
+   if(best!==undefined){const m:Pt=[end[0],end[1]];m[k]+=best;p[e]=m;}
+  }
+ });
 }

@@ -1,6 +1,6 @@
 import {financialDimensions} from './financialArchitecture';
 import type {Scene3D} from './scene';
-import type {Pt,Box} from './roads';
+import {ROAD_W,type Pt,type Box} from './roads';
 import type {Point3} from './hillsCommunityPlan';
 import {COMMUNITY} from './hillsCommunityPlan';
 import {cityEnvelope} from './citySpacing';
@@ -25,7 +25,15 @@ export function loopPoint(p:Pick<PerimeterRailPlan,'route'|'lengths'|'length'>,d
 function distanceAt(route:Pt[],lengths:number[],point:Pt){for(let i=1;i<route.length;i++)if(distanceToRoad(point,[route[i-1],route[i]])<1e-5)return lengths[i-1]+Math.hypot(point[0]-route[i-1][0],point[1]-route[i-1][1]);throw new Error('Station is not on perimeter track');}
 /** All stations share this exact boarding path, platform and stair opening. */
 export function stationBoardingPath(s:Pick<RailStop,'point'|'yaw'>):Point3[]{return [[1,0,5.9],[1,COMMUNITY.platformRise,1.7],[1,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,.27]].map(([x,y,z])=>{const p=stationPoint(s,x,z);return [p[0],y,p[1]];});}
-export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>):PerimeterRailPlan|undefined{
+/** Where a walk toward `p` starts flush beyond the nearest street's sidewalk, so no slab lies on the street. */
+function sidewalkPoint(roads:Pt[][],p:Pt):Pt|undefined{
+ let best:{q:Pt;d:number}|undefined;
+ for(const r of roads)for(let i=1;i<r.length;i++){const a=r[i-1],b=r[i];if(a[0]!==b[0]&&a[1]!==b[1])continue;
+  const q:Pt=a[0]===b[0]?[a[0],Math.max(Math.min(a[1],b[1]),Math.min(Math.max(a[1],b[1]),p[1]))]:[Math.max(Math.min(a[0],b[0]),Math.min(Math.max(a[0],b[0]),p[0])),a[1]];
+  const d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d>1e-6&&(!best||d<best.d))best={q,d};}
+ if(!best)return;const {q,d}=best,off=ROAD_W/2+.18+.24+.02;return [q[0]+(p[0]-q[0])/d*off,q[1]+(p[1]-q[1])/d*off];
+}
+export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>&{roads?:Pt[][]}):PerimeterRailPlan|undefined{
  const e=cityEnvelope(s.land),f=s.financial,m=s.mall,a=s.airport,stadium=s.stadium;if(!e||!f||!m||!a||!stadium)return;
  const gap=PERIMETER_RAIL.margin,left=e.x-gap,right=e.x+e.w+gap,top=e.z-gap,bottom=e.z+e.d+gap,r=PERIMETER_RAIL.radius;
  const clamp=(v:number,lo:number,hi:number)=>Math.max(lo+r+5,Math.min(hi-r-5,v));
@@ -37,7 +45,9 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
  const airportLand=airportFootprint(a),front=airportPoint(a,-.7,6);
  const seeds=[
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
-  {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt},
+  // Atlas Central Station is walked to from the sidewalk of the nearest street, not across the Marketplace forecourt
+  // and lawn from its entrance (Khaneil, 2026-11-13: "remove the pavement train station path in the middle").
+  {...LOOP_STATIONS[1],point:[right,clamp(m.cz,top,bottom)] as Pt,target:[m.cx,m.z+m.d] as Pt,fromStreet:true},
   // Beside the main (east) gate, so the bigger stadium's walk to the platform stays short and clear of the bowl.
   {...LOOP_STATIONS[2],point:[clamp(stadiumGate(stadium)[0]+1.5,left,right),bottom] as Pt,target:stadiumGate(stadium)},
   {...LOOP_STATIONS[3],point:[left,clamp(airportLand.z-10,top,bottom)] as Pt,target:front},
@@ -51,10 +61,16 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
   // When a district (such as the bigger stadium) covers the stairs' landing, slide the station
   // along its straight edge, nearest first, until the walk to the platform is clear.
   const alongX=seed.point[1]===top||seed.point[1]===bottom;
-  for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
+  // The stair must land clear of every street (Khaneil, 2026-11-13): first look for a spot whose stair foot and its
+  // low steps stay off the carriageways and their sidewalks; only if none exists, fall back to any clear walk.
+  const stairOnStreet=(boarding:Point3[])=>!!s.roads?.length&&boarding.slice(1).some((b,k)=>{const a=boarding[k];if(Math.min(a[1],b[1])>1.2)return false;
+   for(let t=0;t<=4;t++){const q:Pt=[a[0]+(b[0]-a[0])*t/4,a[2]+(b[2]-a[2])*t/4];if(s.roads!.some(r=>distanceToRoad(q,r)<ROAD_W/2+.18+.5))return true;}return false;});
+  for(const strict of [true,false])for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
    const point:Pt=alongX?[clamp(seed.point[0]+shift,left,right),seed.point[1]]:[seed.point[0],clamp(seed.point[1]+shift,top,bottom)];
    const distance=distanceAt(route,lengths,point),pose=loopPoint({route,lengths,length},distance),basis={point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
-   const ground=routeAround(seed.target,landing,boxes,.3);if(!ground)continue;
+   if(strict&&stairOnStreet(boarding))continue;
+   const target='fromStreet' in seed&&s.roads?.length?sidewalkPoint(s.roads,landing)??seed.target:seed.target;
+   const ground=routeAround(target,landing,boxes,.3);if(!ground)continue;
    const walk:Point3[]=[...ground.map(([x,z]):Point3=>[x,0,z]),...boarding.slice(1)];
    return {...seed,point,yaw:pose.yaw,distance,arrival:0,walk};
   }
