@@ -1,0 +1,1 @@
+- 2026-11-13 · Fewer palms, gathered by the Atlas Galleria, the Team Events Arena, the airport front and Financial Park, and every palm trunk is now wrapped in white string lights, Rodeo Drive style. Street lamps stand on the sidewalk by the kerb, a third fewer, with none on the lawns or around tower plazas, and the palms are thinned again (#412)

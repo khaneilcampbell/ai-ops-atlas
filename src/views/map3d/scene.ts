@@ -153,8 +153,6 @@ export interface Tree {
   z: number;
   s: number;
   kind: TreeKind;
-  /** Wrapped in warm-white string lights (palms only; a chosen few, not every palm). */
-  lit?: boolean;
   /** A set species for a designed planting (parks), instead of the lawn mix laPlanting picks by position. */
   la?: "olive" | "ficus" | "date" | "fan" | "cypress" | "jacaranda";
 }
@@ -718,7 +716,7 @@ function buildCity(layout: Layout): Scene3D {
     const plaza=stadiumPlaza(stadium);
     // Palms in a ring round the stadium, grown as the city's avenue palm at the avenue size (Khaneil, 2026-11-13);
     // two in three wear string lights.
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26,kind:'palm' as TreeKind,lit:i%3!==2})));
+    trees.push(...plaza.trees.map(([x,z])=>({x,z,y:top,s:.26,kind:'palm' as TreeKind})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
