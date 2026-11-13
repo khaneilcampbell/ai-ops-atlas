@@ -1773,7 +1773,7 @@
   {
    "category": "Aircraft",
    "kind": "Airliner on the flight loop",
-   "count": 5,
+   "count": 6,
    "area": "Airport",
    "moves": true,
    "source": "src/views/map3d/airportArrivals.ts LOOP"
@@ -1781,10 +1781,18 @@
   {
    "category": "Aircraft",
    "kind": "Parked airliner",
-   "count": 3,
+   "count": 2,
    "area": "Airport",
    "moves": false,
    "source": "src/views/map3d/LogisticsAirport.tsx"
+  },
+  {
+   "category": "Aircraft",
+   "kind": "Executive jet on the flight loop",
+   "count": 1,
+   "area": "Airport",
+   "moves": true,
+   "source": "src/views/map3d/LogisticsAirport.tsx ExecutiveJet"
   },
   {
    "category": "People",
@@ -1849,14 +1857,6 @@
    "area": "Airport",
    "moves": true,
    "source": "src/views/map3d/airportCrew.ts planCrewTrains"
-  },
-  {
-   "category": "Aircraft",
-   "kind": "Jet flying over the city",
-   "count": 1,
-   "area": "Sky",
-   "moves": true,
-   "source": "src/views/map3d/living.tsx CityFlyover"
   },
   {
    "category": "Aircraft",
@@ -1952,6 +1952,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T13:42:29.660Z",
- "commit": "ad3054a01b8295a9fb5e1f870c684cc14b142d94"
+ "generated_at": "2026-11-13T14:20:06.683Z",
+ "commit": "6d27e726277fc9c46476a2f8c7c477cc205daf79"
 }
