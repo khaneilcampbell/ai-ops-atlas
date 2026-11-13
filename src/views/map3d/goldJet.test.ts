@@ -4,7 +4,7 @@ import {describe,expect,it} from 'vitest';
 import {AIRCRAFT_LAYOUT,AIRPORT_LAYOUT,AIRPORT_PARKED_STANDS,BOARDING_LAYOUT,boardingBridge} from './airport';
 import {crewAt,planAirportCrew,planCrewTrains,trainAt} from './airportCrew';
 import {FLIGHT_SCHEDULE,fleetPose,SHARED_SLOT} from './flightSchedule';
-import {GOLD_JET_EXTENT,GOLD_JET_GATE,GOLD_JET_HALF_SPAN,GOLD_JET_OFFICE_ID,GOLD_JET_PASSENGERS,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,GOLD_JET_SLOT_OK,goldJetBridgeWalk,goldJetRoute,goldJetState,goldJetWalkers} from './goldJetPlan';
+import {GOLD_JET_BOX,GOLD_JET_EXTENT,goldJetBounds,goldJetMapPose,GOLD_JET_GATE,GOLD_JET_HALF_SPAN,GOLD_JET_OFFICE_ID,GOLD_JET_PASSENGERS,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,GOLD_JET_SLOT_OK,goldJetBridgeWalk,goldJetRoute,goldJetState,goldJetWalkers} from './goldJetPlan';
 import {JET_CABIN,JET_ROOMS,JET_SEATS,cabinHalfWidth,fitRoute,seatedPassengers} from '../office/goldJetInteriorPlan';
 
 const cycle=FLIGHT_SCHEDULE.cycle;
@@ -77,6 +77,39 @@ describe('gold private jet',()=>{
   expect(route.some(p=>p.y>1)).toBe(true);expect(route.some(p=>p.y===0)).toBe(true);
   const fit=fitRoute(route,280,190);
   for(const p of route){const [x,y]=fit(p.x,p.z);expect(x).toBeGreaterThanOrEqual(-1e-6);expect(x).toBeLessThanOrEqual(280+1e-6);expect(y).toBeGreaterThanOrEqual(-1e-6);expect(y).toBeLessThanOrEqual(190+1e-6);}
+ });
+});
+
+describe('selecting the moving gold jet',()=>{
+ const airports=[{x:40,z:-12},{x:40,z:-12,west:true}];
+ it('follows the jet round the loop instead of staying at its gate',()=>{
+  for(const a of airports){
+   const spots=new Set<string>();
+   for(let t=0;t<cycle;t+=2){
+    const p=fleetPose(t,GOLD_JET_SLOT),m=goldJetMapPose(a,t);
+    // Same place the airport draws it: the airport's corner plus the pose, mirrored on a west airport.
+    expect(m.x).toBeCloseTo(a.west?a.x+AIRPORT_LAYOUT.mirrorWidth-p.x:a.x+p.x);
+    expect(m.z).toBeCloseTo(a.z+p.z);expect(m.y).toBe(p.y);
+    spots.add(`${Math.round(m.x)},${Math.round(m.z)}`);
+   }
+   expect(spots.size).toBeGreaterThan(10);
+  }
+ });
+ it('frames the whole jet, wing tips and nose to tail, at any heading',()=>{
+  for(const a of airports)for(let t=0;t<cycle;t+=3){
+   const p=goldJetMapPose(a,t),b=goldJetBounds(p,a.west),c=Math.cos(p.yaw),s=Math.sin(p.yaw),E=GOLD_JET_EXTENT;
+   for(const [lx0,lz] of [[E.left,0],[E.right,0],[0,E.nose],[0,E.tail]]){
+    const lx=a.west?-lx0:lx0,x=p.x+lx*c+lz*s,z=p.z-lx*s+lz*c;
+    expect(Math.abs(x-b.x)).toBeLessThanOrEqual(b.w/2+1e-6);expect(Math.abs(z-b.z)).toBeLessThanOrEqual(b.d/2+1e-6);
+   }
+   expect(b.y1-b.y0).toBeCloseTo(GOLD_JET_BOX.h);
+  }
+ });
+ it('draws the selection outline and frames the camera on the live jet',()=>{
+  const map=readFileSync(join(__dirname,'Map3D.tsx'),'utf8');
+  expect(map).toContain('if (key === GOLD_JET_KEY && scene.airport) return goldJetOutline(scene.airport);');
+  expect(map).toContain('if (a?.track && groupRef.current) a.track(groupRef.current);');
+  expect(map).toContain('goldJetBounds(live, scene.airport?.west)');
  });
 });
 

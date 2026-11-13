@@ -52,6 +52,8 @@ async function shoot(page: Page, shots: Shot[], phone: boolean) {
     const k = phone ? 1.6 : 1;
     for (const s of shots) {
       clock.current = toClock(phase[s.stage]);
+      // Twice: the airport publishes its clock in its frame, and the selection outline follows it a frame later.
+      state.advance(performance.now());
       state.advance(performance.now());
       const pose = schedule.fleetPose(clock.current, jet.GOLD_JET_SLOT, circuit);
       const eye = [pose.x + s.eye[0] * k, pose.y + s.eye[1] * k, pose.z + s.eye[2] * k], target = s.target ?? [pose.x, pose.y + 0.3, pose.z];
@@ -95,4 +97,26 @@ for (const width of [1512, 390]) for (const light of ["day", "night"] as const) 
   await settle(page, 4);
   await page.screenshot({ path: `${out}/${tag}-window-${light}.png` });
   expect(errors).toEqual([]);
+});
+
+/** Selected while it moves (Khaneil, 2026-11-13): the gold outline and ring stay on the jet as it taxis and flies. */
+for (const width of [1512, 390]) test(`gold jet selected while moving ${width}`, async ({ page }) => {
+  test.skip(!out, "Set SHOT_DIR to write the gold jet screenshots");
+  test.setTimeout(600_000);
+  mkdirSync(out!, { recursive: true });
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+  await openAtlas(page, { light: "day" });
+  await waitForScene(page);
+  await settle(page, 2);
+  await page.locator('.m3-plaque[title^="Atlas Airport"]').first().dispatchEvent("click");
+  await settle(page, 3);
+  await page.getByRole("button", { name: /Atlas Gold Jet/ }).first().click();
+  await settle(page, 3);
+  const tag = width === 390 ? "phone" : "desktop";
+  const wide: Shot[] = [
+    { name: "selected-gate", stage: "boarding", eye: [6, 5, 8] },
+    { name: "selected-taxi", stage: "taxi", eye: [-6, 4, -7] },
+    { name: "selected-flight", stage: "flight", eye: [-7, 4, 7] },
+  ];
+  for (const s of await shoot(page, wide, width === 390)) writeFileSync(`${out}/${tag}-${s.name}.png`, Buffer.from(s.png.split(",")[1], "base64"));
 });

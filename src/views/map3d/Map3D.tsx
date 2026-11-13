@@ -36,7 +36,7 @@ import {Galleria} from "./Galleria";
 import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
-import { GOLD_JET_GATE, GOLD_JET_KEY } from "./goldJetPlan";
+import { GOLD_JET_BOX, GOLD_JET_GATE, GOLD_JET_KEY, goldJetBounds, goldJetLive, goldJetMapPose } from "./goldJetPlan";
 import { GOLD_JET_OFFICE_ID, goldJetRide } from "./goldJetIds";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
 import { Suspense, forwardRef, lazy, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -934,7 +934,9 @@ function World({
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
     const b = anchors.get(key);
-    const a = b && { ...b, ...b.whole };
+    // The gold jet moves: frame it where it is now, not at the gate it boards from.
+    const live = key === GOLD_JET_KEY && scene.airport && goldJetMapPose(scene.airport, goldJetLive.clock, goldJetLive.circuit);
+    const a = live ? { ...goldJetBounds(live, scene.airport?.west), y0: TERRACE_H + live.y } : b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -1159,7 +1161,9 @@ function World({
   useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   // An open building's outline hugs its office, not the shell that was cut away.
-  const hl = (key: string | null) => {
+  const hl = (key: string | null): OutlineBox | undefined => {
+    // The gold jet's outline rides with the jet (see Outline's `track`) instead of staying at its gate.
+    if (key === GOLD_JET_KEY && scene.airport) return goldJetOutline(scene.airport);
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
@@ -1219,9 +1223,29 @@ function World({
 /** A slightly larger back-faced shell behind a building, which reads as an outline. */
 const BOX_EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 
-function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y1: number; w: number; d: number }; color: string; ring?: boolean }) {
+/** An outline box; `track` moves and turns it every frame for something that travels (the gold jet). */
+type OutlineBox = { x: number; z: number; y0: number; y1: number; w: number; d: number; track?: (g: THREE.Object3D) => void };
+
+/** The gold jet's box in its own frame, carried each frame to where the jet is, turned to its heading. */
+function goldJetOutline(airport: { x: number; z: number; west?: boolean }): OutlineBox {
+  const B = GOLD_JET_BOX;
+  return {
+    x: airport.west ? -B.x : B.x, z: B.z, y0: 0, y1: B.h, w: B.w, d: B.d,
+    track: (g) => {
+      const p = goldJetMapPose(airport, goldJetLive.clock, goldJetLive.circuit);
+      g.position.set(p.x, TERRACE_H + 0.06 + p.y, p.z);
+      g.rotation.set(0, p.yaw, 0);
+      // Hidden while it is off the loop, and while you ride inside it.
+      g.visible = p.visible && !goldJetRide.active;
+    },
+  };
+}
+
+function Outline({ a, color, ring }: { a?: OutlineBox; color: string; ring?: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
+    if (a?.track && groupRef.current) a.track(groupRef.current);
     const r = ringRef.current;
     if (!r) return;
     const t = (clock.elapsedTime % 1.8) / 1.8;
@@ -1231,7 +1255,8 @@ function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y
   if (!a) return null;
   const pad = 0.12;
   return (
-    <group>
+    // A tracked outline moves its own group each frame; any other is drawn in place (and a reused group is put back).
+    <group ref={groupRef} {...(a.track ? {} : { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const, visible: true })}>
       {/* Crisp edges rather than a solid silhouette, so the facade stays visible. */}
       <lineSegments position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad, a.y1 - a.y0 + pad, a.d + pad]} geometry={BOX_EDGES} raycast={() => null}>
         <lineBasicMaterial color={color} />

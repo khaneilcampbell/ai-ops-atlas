@@ -1,4 +1,4 @@
-import {AIRCRAFT_LAYOUT,AIRPORT_LAYOUT,BOARDING_LAYOUT,boardingBridge,type FlightCircuit} from './airport';
+import {AIRCRAFT_LAYOUT,AIRPORT_LAYOUT,BOARDING_LAYOUT,airportPoint,boardingBridge,type AirportPlan,type FlightCircuit} from './airport';
 import {ARRIVAL_GATES,arrivalGate,arrivalLegs} from './airportArrivals';
 import {FLIGHT_SCHEDULE,fleetPose,flightPhase,loopTiming,SHARED_SLOT} from './flightSchedule';
 import type {Livery} from './airlineLiveries';
@@ -100,6 +100,23 @@ export function goldJetRoute(circuit?:FlightCircuit,step=.5){
  const pts:{x:number;z:number;y:number}[]=[];
  for(let t=0;t<FLIGHT_SCHEDULE.cycle;t+=step){const p=fleetPose(t,GOLD_JET_SLOT,circuit);pts.push({x:p.x,z:p.z,y:p.y});}
  return pts;
+}
+/** The selection box round the jet in its own frame (nose -z), from the pose point: its scaled span, length and fin. */
+export const GOLD_JET_BOX={x:(GOLD_JET_EXTENT.left+GOLD_JET_EXTENT.right)/2,z:(GOLD_JET_EXTENT.nose+GOLD_JET_EXTENT.tail)/2,w:GOLD_JET_EXTENT.right-GOLD_JET_EXTENT.left,d:GOLD_JET_EXTENT.tail-GOLD_JET_EXTENT.nose,h:1.1};
+/**
+ * Where the gold jet is on the map right now: its pose point in map x/z (mirrored on a west airport), height above
+ * the apron, and heading. The selection outline and the camera follow this, so picking the jet holds on to it as it
+ * taxis and flies instead of staying behind at its gate.
+ */
+export function goldJetMapPose(a:Pick<AirportPlan,'x'|'z'|'west'>,seconds:number,circuit?:FlightCircuit){
+ const p=fleetPose(seconds,GOLD_JET_SLOT,circuit),[x,z]=airportPoint(a as AirportPlan,p.x,p.z);
+ return {x,z,y:p.y,yaw:a.west?-p.yaw:p.yaw,visible:p.visible};
+}
+/** The jet's selection box laid flat on the map at a pose (axis-aligned round the turned box), for framing the camera. */
+export function goldJetBounds(pose:{x:number;z:number;y:number;yaw:number},west?:boolean){
+ const B=GOLD_JET_BOX,c=Math.cos(pose.yaw),s=Math.sin(pose.yaw),bx=west?-B.x:B.x;
+ const w=Math.abs(c)*B.w+Math.abs(s)*B.d,d=Math.abs(s)*B.w+Math.abs(c)*B.d;
+ return {x:pose.x+bx*c+B.z*s,z:pose.z-bx*s+B.z*c,y0:pose.y,y1:pose.y+B.h,w,d};
 }
 /** Sanity: the gold jet never takes the shared slot (which alternates the executive jet and an airliner). */
 export const GOLD_JET_SLOT_OK=GOLD_JET_SLOT!==SHARED_SLOT&&GOLD_JET_SLOT<FLIGHT_SCHEDULE.count&&AIRPORT_LAYOUT.gateZ.includes(GOLD_JET_GATE.z as never);
