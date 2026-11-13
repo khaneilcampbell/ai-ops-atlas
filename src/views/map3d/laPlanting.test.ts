@@ -55,7 +55,7 @@ describe('Los Angeles planting',()=>{
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants formal palm avenues on the streets only, clear of the airport, lamps and buildings in ${group}`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),palms=planStreetPalms(s),lamps=planStreetLights(s),boxes=lightingObstacles(s),walks=s.transportConnections.map(c=>c.walk),streets=[...s.carBridges.flatMap(b=>b.roads),...s.transportConnections.map(c=>c.road),...(s.financial?[s.financial.street]:[]),...(s.community?.streets??[])];
  // Only the Galleria boulevard, the arena and the airport's front road keep street palms (Khaneil, 2026-11-13).
- const zones=palmZones(s);expect(palms.length).toBeGreaterThan(4);expect(palms.length).toBeLessThan(40);
+ const zones=palmZones(s);expect(palms.length).toBeGreaterThan(1);expect(palms.length).toBeLessThan(20);
  for(const p of palms)expect(inPalmZone(zones,p.x,p.z)).toBe(true);
  // No street palms by the Team Events Arena and its station (Khaneil, 2026-11-13).
  const arena=s.stadium?palmZones({stadium:s.stadium}):[];
@@ -77,7 +77,7 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants fo
 describe('airport sidewalk palms',()=>{
  for(const west of [false,true])it(`grow as the avenue palm on the public sidewalk (${west?'west':'east'}-facing campus)`,()=>{
   const a={x:10,z:20,accessX:0,accessZ:0,west},palms=airportSidewalkPalms(a);
-  expect(palms.length).toBeGreaterThanOrEqual(5);
+  expect(palms.length).toBeGreaterThanOrEqual(3);
   const x=west?a.x+AIRPORT_LAYOUT.mirrorWidth-AIRPORT_SIDEWALK_X:a.x+AIRPORT_SIDEWALK_X;
   for(const p of palms){expect(laTreeKind(p)).toBe('avenue');expect(p.s).toBe(STREET_PALMS.size);expect(p.x).toBeCloseTo(x);}
  });

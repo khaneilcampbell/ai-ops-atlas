@@ -12,9 +12,9 @@ import {STADIUM,STADIUM_SCALE,stadiumRingCentre} from './stadiumGeometry';
  * Street lamps stand on the sidewalk at the kerb, like a real city street (Khaneil, 2026-11-13: "remove some street
  * lights, especially the ones in the grass; keep the ones on the sidewalk by the streets"). The pole sits .08 past the
  * carriageway edge (ROAD_W .72), on the .18 sidewalk strip by the kerb, and never in the middle of a walk that runs alongside
- * (centre .6 from the street's line, .48 wide) or crosses it, so people walk past it. Lawn footpaths are no longer lit, and lamps run every 4.8 rather than 3.6.
+ * (centre .6 from the street's line, .48 wide) or crosses it, so people walk past it. Lawn footpaths and tower plaza rings are no longer lit, and lamps run every 7.2 (Khaneil, 2026-11-13: "remove unnecessary street lights").
  */
-export const KERB_LAMP={setback:.08,spacing:4.8,walkMiddle:.15} as const;
+export const KERB_LAMP={setback:.08,spacing:7.2,walkMiddle:.15} as const;
 export const STREET_LIGHT={spacing:KERB_LAMP.spacing,highwaySpacing:6,minSeparation:1.2,junctionClearance:.8,height:.95,highwayHeight:1.35,poleRadius:.025,maxFixtures:420} as const;
 /** A lamp stands clear of a walk's edge (half of the .48 walk plus a step), so neither its post nor its arm is in the walkers' way. */
 export const WALK_CLEAR=.4;
@@ -45,7 +45,7 @@ export interface StreetSpots{
  avoidBoxes?:Box[];
  spacing?:number;start?:number;bothSides?:boolean;setbacks?:readonly number[];minSeparation?:number;max?:number;skipHighway?:boolean;avoid?:{x:number;z:number}[];avoidRadius?:number;walkClear?:number;streetClear?:number;extraWalks?:Pt[][];
  /** Also light the footpaths across the lawns (off by default since 2026-11-13: those lamps stood in the grass). */
- lawnWalks?:boolean}
+ lawnWalks?:boolean;plazaRings?:boolean}
 export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  const paths:{points:Pt[];width:number;highway:boolean;street:boolean}[]=[];
  const add=(points:Pt[],width=.64,highway=false,street=false)=>{if(points.length>1)paths.push({points,width,highway,street});};
@@ -56,7 +56,8 @@ export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  if(s.community)for(const road of s.community.streets)add(road,.64,false,true);
  if(s.airport)add(airportPublicPath(s.airport),.48);
  if(o.lawnWalks)for(const walk of s.walks)add(walk.route?.map(p=>[p.gx,p.gy] as Pt)??[[walk.x0,walk.z0],[walk.x1,walk.z1]],.48);
- for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
+ // Tower plaza rings get no lamps of their own (Khaneil, 2026-11-13: "remove unnecessary street lights"); the kerb lamps light the streets.
+ if(o.plazaRings)for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
  const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[]),...(o.extraWalks??[])];
  const junctions:Pt[]=[...s.transportConnections.flatMap(c=>[c.road[0],c.road[c.road.length-1]]),...(s.freight?.localJunctions??[]),...(s.freight?.exits??[]),...(s.community?.streets.flatMap(p=>[p[0],p[p.length-1]])??[])];
  const result:StreetLamp[]=[],cells=new Map<string,StreetLamp[]>(),cell=o.minSeparation??STREET_LIGHT.minSeparation,max=o.max??STREET_LIGHT.maxFixtures,step=(highway:boolean)=>highway?STREET_LIGHT.highwaySpacing:(o.spacing??STREET_LIGHT.spacing);

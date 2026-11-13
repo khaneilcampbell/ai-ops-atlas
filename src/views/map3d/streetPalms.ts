@@ -22,7 +22,7 @@ export const STREET_PALMS={spacing:4.8,start:3.6,setbacks:[.8,1.05,1.3],walkClea
  * planted only inside these zones, and lawn palms outside them grow as olives and ficus instead. The Financial Park
  * keeps its own palms (financialParkPlanting), so the Financial District needs no zone here.
  */
-export const PALM_ZONES={galleria:7,stadium:5,airport:6} as const;
+export const PALM_ZONES={galleria:7,stadium:5,airport:3} as const;
 export function palmZones(s:Pick<Scene3D,'galleria'|'stadium'|'airport'>):Rect[]{
  const grow=(r:Rect,m:number)=>({x:r.x-m,z:r.z-m,w:r.w+2*m,d:r.d+2*m}),out:Rect[]=[];
  if(s.galleria)out.push(grow(s.galleria.footprint,PALM_ZONES.galleria));
@@ -35,13 +35,14 @@ export function palmZones(s:Pick<Scene3D,'galleria'|'stadium'|'airport'>):Rect[]
  * arena"). The arena keeps its own plaza palms and lawn palms; the streets and sidewalks around it stay bare.
  */
 export function streetPalmZones(s:Pick<Scene3D,'galleria'|'stadium'|'airport'>):Rect[]{return palmZones({...s,stadium:undefined});}
+const outsideArena=(s:Pick<Scene3D,'stadium'>,x:number,z:number)=>!s.stadium||!inPalmZone(palmZones({stadium:s.stadium}),x,z);
 export const inPalmZone=(zones:Rect[],x:number,z:number)=>zones.some(r=>x>=r.x&&x<=r.x+r.w&&z>=r.z&&z<=r.z+r.d);
 
 export function planStreetPalms(s:Scene3D):Tree[]{
  const lamps=planStreetLights(s),avoidBoxes=[];
  if(s.airport){const a=airportFootprint(s.airport),m=STREET_PALMS.airportMargin;avoidBoxes.push({x:a.x+a.w/2,z:a.z+a.d/2,w:a.w+2*m,d:a.d+2*m});}
  const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes,walkClear:STREET_PALMS.walkClear,streetClear:STREET_PALMS.streetClear,extraWalks:s.financial?[s.financial.walk,...s.financial.buildings.map(b=>b.approach)].filter(w=>w.length>1):[]});
- const zones=streetPalmZones(s),kept=spots.filter(p=>inPalmZone(zones,p.x,p.z));
+ const zones=streetPalmZones(s),kept=spots.filter(p=>inPalmZone(zones,p.x,p.z)&&outsideArena(s,p.x,p.z));
  return kept.map(p=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const}));
 }
 
@@ -50,12 +51,12 @@ export const AIRPORT_SIDEWALK_X=-.15;
 
 /**
  * The palm row on the lawn in front of the terminal, behind the public sidewalk (Khaneil, 2026-11-13: "have them
- * match the other ones"). Same spots as before (one every 2.8, clear of buildings, the drop-off and the landing
+ * match the other ones"). One every 4.2 (thinned, Khaneil 2026-11-13: "remove unnecessary ... palm trees"), clear of buildings, the drop-off and the landing
  * lanes), now grown as the city's avenue palm. The campus is drawn mirrored when it faces west, so local x flips.
  */
 export function airportSidewalkPalms(a:AirportPlan):Tree[]{
  const x=AIRPORT_SIDEWALK_X,out:Tree[]=[];
- for(let z=-11;z<25;z+=2.8){
+ for(let z=-11;z<25;z+=4.2){
   if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;
   out.push({x:a.west?a.x+AIRPORT_LAYOUT.mirrorWidth-x:a.x+x,y:TERRACE_H,z:a.z+z,s:STREET_PALMS.size,kind:'avenue'});
  }
@@ -64,7 +65,9 @@ export function airportSidewalkPalms(a:AirportPlan):Tree[]{
 
 /** Lawn palms (date and fan) outside the palm zones grow as olives and ficus, so palms gather where Khaneil wants them. */
 export function calmLawnPalms(trees:Tree[],zones:Rect[]):Tree[]{
- return trees.map(t=>{const k=laTreeKind(t);if((k!=='date'&&k!=='fan')||t.la||inPalmZone(zones,t.x,t.z))return t;return {...t,la:(Math.floor(Math.abs(t.x*7.3+t.z*3.1))%2?'olive':'ficus')};});
+ // Inside the zones only every other lawn palm stays a palm (Khaneil, 2026-11-13: "remove unnecessary ... palm trees").
+ let n=0;
+ return trees.map(t=>{const k=laTreeKind(t);if((k!=='date'&&k!=='fan')||t.la||(inPalmZone(zones,t.x,t.z)&&n++%2===0))return t;return {...t,la:(Math.floor(Math.abs(t.x*7.3+t.z*3.1))%2?'olive':'ficus')};});
 }
 
 /** Lawn trees standing in an avenue's row give way to it, so the rhythm is never broken. */
