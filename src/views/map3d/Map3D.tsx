@@ -1182,7 +1182,7 @@ function World({
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} night={lightMode==="night"} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
-      <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} />
+      <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} night={lightMode==="night"} />
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       {scene.towers.filter((t) => t.identity.landmark).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><AtlasHq tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}

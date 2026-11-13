@@ -28,7 +28,6 @@ describe("districts", () => {
       "commerce-pipeline": "business-operations",
       "intelligence-hub": "ai-engineering",
       "soc-lab": "security-infrastructure",
-      "service-desk": "security-infrastructure",
       "portfolio-site": "career-portfolio",
       "github-profile": "career-portfolio",
     });
@@ -74,8 +73,8 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
-      security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
+      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
+      security: ["bruteforce-detection", "security-check", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
         "benjaire-flow-digest",
@@ -109,7 +108,7 @@ describe("automation categories", () => {
           "visual-director",
       ],
       monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
+      intelligence: ["atlas-agent-factory", "atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "github-profile-manager", "repo-intelligence"],
       maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
     });
   });

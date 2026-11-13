@@ -63,7 +63,9 @@ it("keeps gate aircraft, waiting jets, and cargo clear of the runway",async()=>{
 
 it("joins every gate to the concourse and aircraft door at a usable floor height",async()=>{
  const {boardingBridge,AIRPORT_LAYOUT:l,AIRCRAFT_LAYOUT:p,BOARDING_LAYOUT:b}=await import('./airport');
- for(const gate of l.gateZ){const bridge=boardingBridge(gate);expect(bridge.x-bridge.w/2).toBeCloseTo(b.fromX);expect(bridge.x+bridge.w/2).toBeCloseTo(l.gateX+p.doorX);expect(bridge.z).toBe(gate+p.doorZ);}
+ // Nose-in jets (GATE_YAW): the door is forward of the gate on the +z side; the tunnel runs beside the nose and
+ // its cab turns in to that door, clear of the fuselage.
+ for(const gate of l.gateZ){const bridge=boardingBridge(gate);expect(bridge.x-bridge.w/2).toBeCloseTo(b.fromX);expect(bridge.door).toEqual({x:l.gateX+p.doorZ,z:gate-p.doorX});expect(bridge.endX).toBeGreaterThan(bridge.door.x);expect(bridge.z-.19).toBeGreaterThan(gate+.19);}
  expect(b.floor+.03).toBeCloseTo(.06+p.doorY);
  expect(b.ceiling-b.floor).toBeGreaterThan(.26);
 });
@@ -104,7 +106,7 @@ describe('airport forecourt', () => {
 // Runway ends are joined like a real airfield's (Khaneil, 2026-11-13): a taxiway meets every runway end, past its
 // threshold bars, and every end taxiway runs from the parallel taxiway (x 11.5, z -7.8 to 23) to paved runway.
 describe('runway-end taxiways',()=>{
- const runways=[{x:15,w:2.2,z0:-3,z1:18,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
+ const runways=[{x:15,w:2.2,z0:LR.z-LR.length/2,z1:LR.z+LR.length/2,bars:AIRPORT_THRESHOLDS.runway1},{x:LR.x,w:LR.width,z0:LR.z-LR.length/2,z1:AIRPORT_LANDING_SOUTH_PAD.z1,bars:AIRPORT_THRESHOLDS.landing}];
  const touches=(t:{x:number;z:number;w:number;d:number},r:{x0:number;x1:number;z0:number;z1:number})=>t.x-t.w/2<=r.x1+1e-6&&t.x+t.w/2>=r.x0-1e-6&&t.z-t.d/2<=r.z1+1e-6&&t.z+t.d/2>=r.z0-1e-6;
  const paved=[{x0:11.075,x1:11.925,z0:-7.8,z1:23},...runways.map(r=>({x0:r.x-r.w/2,x1:r.x+r.w/2,z0:r.z0,z1:r.z1}))];
  it('joins both ends of every runway to a taxiway',()=>{
@@ -135,7 +137,7 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   expect(c.x-c.w/2>=AL2.landX&&c.z-c.d/2>=AL2.landZ).toBe(true);
   expect(clearOf(corners(c.x,c.z,c.w,c.d),.36+.18)).toBe(true);
   const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
-  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
+  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:LR.x,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
  });
  it('opens both ends of the service building on the gated street, which runs through the passage',()=>{
   const P=AIRPORT_SERVICE_DOOR.passage,G=AIRPORT_SERVICE_GATE;
@@ -152,5 +154,32 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   expect(streets.some(r=>distanceToRoad(world(G.x,(G.drive.z0+G.drive.z1)/2),r)<.05)).toBe(true);
   // Booth and fence ends stand off every carriageway.
   expect(clearOf([[G.x+.1,G.drive.z0-.42],[G.x,G.drive.z1+1.2],[G.x,G.drive.z0-1.6]],.36)).toBe(true);
+ });
+});
+
+describe('landing runway position (Khaneil, 2026-11-13)',()=>{
+ it('sits on the grass between runway 1 and the service road, with clear room either side',()=>{
+  const r1East=AL2.runwayX+AL2.runwayWidth/2,serviceRoadWest=22.3-.32;
+  expect(LR.x-LR.width/2-r1East).toBeGreaterThan(1.8);
+  expect(serviceRoadWest-(LR.x+LR.width/2)).toBeGreaterThan(1.2);
+ });
+ it('keeps every runway-end taxiway flush with the moved runway edge',()=>{
+  for(const t of AIRPORT_END_TAXIWAYS.filter(t=>t.x>15))expect(t.x+t.w/2).toBeCloseTo(LR.x-LR.width/2,6);
+ });
+});
+
+describe('landings and the Team Events Arena (Khaneil, 2026-11-13)',()=>{
+ it('keeps every arriving jet well clear of the arena, and departures high above it',async()=>{
+  const {flightClearance,airportFlightCircuit}=await import('./flightClearance');
+  const {arrivalPose}=await import('./airportArrivals');
+  const {loopTiming,fleetPose,FLIGHT_SCHEDULE:f}=await import('./flightSchedule');
+  const {stadiumCrown}=await import('./stadiumGeometry');
+  for(const mode of ['district','tag','none','status'] as const){
+   const s=buildScene(layoutMap(catalog,[],mode)),st=s.stadium;if(!st||!s.airport)continue;
+   const fc=flightClearance(s),c=airportFlightCircuit(s.airport,s.bounds,fc.altitude,fc.obstacles),{approach}=loopTiming(c);
+   const gap=(x:number,z:number)=>{const [wx,wz]=airportPoint(s.airport!,x,z);return Math.hypot(Math.max(0,Math.abs(wx-st.x)-st.w/2),Math.max(0,Math.abs(wz-st.z)-st.d/2));};
+   for(let t=0;t<approach.duration+approach.final.time;t+=.1){const q=arrivalPose(t,approach);expect(gap(q.x,q.z)>6||q.y>stadiumCrown()+3,`${mode} t=${t}`).toBe(true);}
+   for(let t=0;t<60;t+=.1){const q=fleetPose(t-f.start+f.taxi,0,c);if(gap(q.x,q.z)<2)expect(q.y,`${mode} departure t=${t}`).toBeGreaterThan(stadiumCrown()+3);}
+  }
  });
 });

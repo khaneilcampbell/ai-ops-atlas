@@ -1,6 +1,6 @@
-import {flightClearance,privateJetPose} from './flightClearance';
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
+import { MAP_FLEET } from "./mapFleet";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -82,7 +82,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
   );
 }
 
-const BOATS = 8;
+const BOATS = MAP_FLEET.boats;
 const BOAT_SPEED = 0.22;
 const STROLL_SPEED = 0.12;
 const CLOTHES = ["#c96f53", "#4f78a8", "#e0c068", "#6d9b6a", "#9a74b8"];
@@ -258,7 +258,6 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
 
   return (
     <group>
-      <CityFlyover scene={scene} g={g} m={m} moving={moving} />
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
       <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
@@ -464,41 +463,6 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
   return <group><Instanced items={parts.deck} geometry={g.box} material={m.plain}/><Instanced items={parts.posts} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={m.lamp}/></group>;
 }
 
-/** Executive jet; shared geometry and the existing decorative waterfront circuit. */
-function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) {
-  const group=useRef<THREE.Group>(null), time=useRef(0);
-  const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const jet=useMemo(()=>({
-    body:[
-      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
-      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
-      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
-      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
-      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
-    ] as Inst[],
-    trim:[
-      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
-      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
-      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
-      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
-      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
-      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
-    ] as Inst[],
-  }),[]);
-  useFrame((_,dt)=>{
-    if(moving)time.current+=Math.min(dt,0.1);
-    if(!group.current)return;
-    const pose=privateJetPose(scene.bounds,safeFlight.altitude,time.current);
-    group.current.visible=true;
-    group.current.position.set(pose.x,TERRACE_H+pose.y,pose.z);
-    group.current.rotation.set(0,pose.yaw,pose.roll);
-  });
-  return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
-}
 
 /** One lettering material per livery and body colour, shared by every vehicle that wears it. */
 const BADGES=new Map<string,THREE.MeshBasicMaterial>();

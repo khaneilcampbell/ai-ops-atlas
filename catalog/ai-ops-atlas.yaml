@@ -736,3 +736,47 @@ agents:
         risk: low
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
+
+  - id: atlas-data-inventory
+    name: Atlas Data Inventory
+    purpose: >-
+      Keeps one organized list of everything on the Atlas map: every building (active, planned,
+      retired or a vacant lot), which agents work in which building, and the cars, trucks, planes,
+      boats, trains and people. After every merge a GitHub Action writes atlas-inventory.json to the
+      atlas-inventory branch; every morning an n8n workflow reads it and rewrites the Buildings,
+      Agents by Building, Map Objects and Inventory Summary tabs of the Atlas Agent Registry sheet.
+    framework: n8n + GitHub Actions (Node, no model)
+    runtime: n8n Cloud
+    status: paused
+    trigger: Daily at 7am New York time once published (n8n draft, not published yet)
+    source: src/inventory/mapInventory.ts
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Designed with Khaneil; placed in the Data Intelligence Center beside Dataset Census
+    links:
+      - label: n8n workflow (draft)
+        url: https://khancam15.app.n8n.cloud/workflow/Hua0wdGB5WSDjSGB
+      - label: Registry sheet
+        url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
+    permissions:
+      - 'GitHub Actions token: pushes atlas-inventory.json to the atlas-inventory branch only'
+      - 'GitHub: public read of atlas-inventory.json, no key'
+      - 'Google Sheets: writes the inventory tabs of the Atlas Agent Registry sheet only'
+    registry:
+      title: Atlas Data Inventory
+      category: data
+      subcategory: Data inventory
+      classification:
+        type: D
+        confidence: verified
+        evidence: src/inventory/mapInventory.ts reads the catalog and the map's own plans; the n8n workflow copies rows with no AI model
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls. About 30 n8n runs a month and a few GitHub Actions minutes per merge.

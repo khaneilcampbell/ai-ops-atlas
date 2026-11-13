@@ -6,10 +6,10 @@ export const COMMONS={pathWidth:.48,bridgeWidth:.55,edgeClearance:.6,pavilionRad
 export interface CommonsPlan {rect:Rect;pond:Pt[];loop:Pt[];paths:Pt[][];bridges:[Pt,Pt][];pavilion:Pt;amphitheater:Pt;trees:Pt[];benches:Pt[];benchRotations:number[];lights:Pt[];access:{service:Pt;marketplace:Pt}}
 /** One bounded park in the existing meadow; no headquarters or transport coordinates move. */
 export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportConnections'>&{parks?:Pick<Scene3D,'parks'>['parks']}):CommonsPlan|undefined{
- // The Service Desk tower was removed (KC, 2026-11-09); its vacant lot stays where it stood, so the
- // park keeps the same west anchor from the middle of that lot.
- const lot=s.parks?.find(p=>p.id==='park:vacant:service-desk');
- const mall=s.mall,desk=s.towers.find(t=>t.projectId==='service-desk')??(lot&&{x:lot.x+lot.w/2,z:lot.z+lot.d/2,size:0}),profile=s.towers.find(t=>t.projectId==='github-profile');
+ // The park takes its west anchor from the middle of the vacant lot west of it, where a removed
+ // tower stood (2026-11-09).
+ const lot=s.parks?.find(p=>p.id==='park:vacant:vacant-lot-west');
+ const mall=s.mall,desk=lot&&{x:lot.x+lot.w/2,z:lot.z+lot.d/2,size:0},profile=s.towers.find(t=>t.projectId==='github-profile');
  if(!mall||!desk||!profile)return;
  let x=Math.max(desk.x+desk.size/2+5,profile.x-3.55),z=Math.max(profile.z+profile.size/2+3.4,mall.z+.8),w=mall.x-.7-x,d=mall.plaza.z-.55-z;
 
@@ -20,7 +20,7 @@ export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportCo
  const pond=outline(0),loop=outline(.65);
  const bridges:[Pt,Pt][]=[10,14].map(i=>[loop[i],loop[48-i]]);
  const pavilion:Pt=[x+2.1,z+2.1],amphitheater:Pt=[x+3.1,z+d*.67];
- // Join the existing Service Desk approach, and the Marketplace's already paved promenade.
+ // Join the existing approach from the vacant lot, and the Marketplace's already paved promenade.
  const service:Pt=s.transportConnections.find(c=>c.id==='skyline-airport')?.walk[0]??[desk.x,desk.z+desk.size/2+1.2],marketplace:Pt=[mall.plaza.x+.1,mall.plaza.z+.425],join:Pt=[x+3.6,cz];
  const paths:Pt[][]=[loop,[loop[24],join,[join[0],service[1]],service],[loop[12],[loop[12][0],z+d-.1],[marketplace[0],z+d-.1],marketplace],[[pavilion[0],pavilion[1]+1.15],[join[0],pavilion[1]+1.15],join],[[amphitheater[0],amphitheater[1]+1.15],[join[0],amphitheater[1]+1.15],[join[0],service[1]]]];
  const trees:Pt[]=[[x+.65,z+.75],[x+w*.31,z+.65],[x+w*.53,z+.65],[x+w*.78,z+.65],[x+w-.65,z+.75],[x+w-.65,z+d-.65],[x+w*.35,z+d-.7]];

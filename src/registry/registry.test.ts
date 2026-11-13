@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 8 projects and 63 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 64 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(8);
-    expect(entries).toHaveLength(63);
+    expect(catalog.projects).toHaveLength(7);
+    expect(entries).toHaveLength(64);
   });
 
 
@@ -58,7 +58,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 17, B: 12, C: 22, D: 11, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 17, B: 13, C: 22, D: 11, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -262,7 +262,7 @@ describe("directory", () => {
 
   it("filters by function, type, project and search", () => {
     expect(filterEntries(entries, { ...EMPTY_FILTER, category: "security" }).map((e) => e.profile.id).sort()).toEqual(
-      ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"].sort(),
+      ["bruteforce-detection", "security-check", "soc-case-notes"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(6);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
@@ -272,7 +272,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(63);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(64);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -289,7 +289,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(33);
+    expect(s.observable).toBe(32);
   });
 });
 

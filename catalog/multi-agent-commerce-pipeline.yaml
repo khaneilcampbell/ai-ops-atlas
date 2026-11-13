@@ -40,6 +40,8 @@ agents:
         url: https://khancam15.app.n8n.cloud/workflow/Pu57gD8f9Dz9gIbq
       - label: Add a product idea
         url: https://khancam15.app.n8n.cloud/form/commerce-idea
+      - label: Add product idea n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/1Dc7L3hYKdbTWL2F
     permissions:
       - Anthropic, through the n8n credential on Claude Writes Brief and Claude Sonnet
       - 'Canva, through the Canva node and the Canva MCP connector: creates designs in KC''s account'
