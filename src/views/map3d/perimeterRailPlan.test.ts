@@ -10,11 +10,11 @@ import {financialDimensions} from './financialArchitecture';
 import {cityEnvelope} from './citySpacing';
 
 describe('perimeter passenger railway',()=>{
- for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`has one closed track and four accessible stops: ${grouping}`,()=>{
+ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`has one closed track and three accessible stops: ${grouping}`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),p=s.communityRail!.loop!,e=cityEnvelope(s.land)!;
   expect(p).toBeDefined();expect(s.freight).toBeUndefined();
   expect(p.route[0]).toEqual(p.route[p.route.length-1]);expect(p.length).toBeGreaterThan(2*(e.w+e.d)-8*PERIMETER_RAIL.radius);
-  expect(new Set(p.stops.map(s=>s.id))).toEqual(new Set(LOOP_STATIONS.map(s=>s.id)));
+  expect(new Set(p.stops.map(s=>s.id))).toEqual(new Set(LOOP_STATIONS.map(s=>s.id)));expect(p.stops.map(s=>s.name)).not.toContain('Airport Station');
   expect(p.stops[0].name).toBe('Financial District Station');expect(p.stops.every((s,i)=>i===0||s.distance>p.stops[i-1].distance)).toBe(true);
   const edges=p.route.slice(1).map((b,i)=>[p.route[i].join(','),b.join(',')].sort().join('|'));expect(new Set(edges).size).toBe(edges.length);
   const boxes=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
@@ -50,7 +50,7 @@ describe('perimeter passenger railway',()=>{
  });
  it('completes a smooth loop and boards only during fully open station dwell',()=>{
   const s=buildScene(layoutMap(catalog,[],'district')),p=s.communityRail!.loop!,people=planLoopPassengers(p),visited=new Set<number>();
-  expect(people).toHaveLength(8);let previous=loopPoint(p,loopState(0,p).distance);
+  expect(people).toHaveLength(PERIMETER_RAIL.passengersPerStop*p.stops.length);let previous=loopPoint(p,loopState(0,p).distance);
   for(let t=.05;t<=p.period+.1;t+=.05){const state=loopState(t,p),at=loopPoint(p,state.distance);expect(Math.hypot(at.x-previous.x,at.z-previous.z)).toBeLessThan(PERIMETER_RAIL.speed*.051);previous=at;if(state.moving)expect(state.doors).toBe(0);else visited.add(state.station);}
   expect(visited.size).toBe(p.stops.length);
   for(const person of people){

@@ -2,7 +2,7 @@ import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkd
 // Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
 test.skip(!process.env.SHOT_DIR,'Set SHOT_DIR to a folder to take station screenshots.');
 /** Every perimeter loop station has the Dubai-style shell and glazed skybridge from #158 (KC, 2026-11-07). */
-const STATIONS=['Financial District Station','Workflow Automation Hub','Events Arena Station','Airport Station'];
+const STATIONS=['Financial District Station','Workflow Automation Hub','Events Arena Station'];
 const slug=(name:string)=>name.split(' ')[0].toLowerCase();
 const out=process.env.SHOT_DIR??'artifacts/financial-station';
 async function openStation(page:Page){
@@ -37,5 +37,5 @@ test('Financial District Station on a phone',async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await openStation(page);await page.screenshot({path:`${out}/phone-financial-selected-day.png`});
- await page.getByRole('button',{name:'Airport Station →',exact:true}).click();await settle(page,3);await page.screenshot({path:`${out}/phone-airport-selected-day.png`});
+ await page.getByRole('button',{name:'Events Arena Station →',exact:true}).click();await settle(page,3);await page.screenshot({path:`${out}/phone-stadium-selected-day.png`});
 });
