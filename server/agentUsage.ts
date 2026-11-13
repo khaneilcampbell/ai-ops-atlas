@@ -7,6 +7,7 @@
 
 import { parseImport, toSyncRows } from "../src/usage/model";
 import { bearerOk, type D1, type LiveEnv } from "./live";
+import { reply } from "./http";
 
 export const AGENT_USAGE_PATH = "/api/hooks/usage";
 /** Rows per POST: one agent run makes a handful of calls at most. */
@@ -16,8 +17,6 @@ export const MAX_POST_BYTES = 64_000;
 export const KEEP_ROWS = 5_000;
 export const READ_LIMIT = 2_000;
 
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS agent_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, agent TEXT NOT NULL, body TEXT NOT NULL)",

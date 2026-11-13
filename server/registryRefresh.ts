@@ -8,6 +8,7 @@ import { instanceOf, type N8nEnv } from "./n8n";
 import { bearerOk } from "./live";
 import type { CheckCache } from "./properties";
 import { REFRESH_COOLDOWN_SEC, type RefreshResult } from "../src/n8n/registryRefresh";
+import { reply as jsonReply } from "./http";
 
 export interface RefreshEnv extends N8nEnv {
   /** The Production URL of the registry workflow's "Atlas Refresh Button" webhook node. */
@@ -19,8 +20,7 @@ type Fetcher = typeof fetch;
 /** The registry run takes ~15 s; give it room, but don't hold the request forever. */
 const TIMEOUT_MS = 90_000;
 const CACHE_KEY = "registry-refresh";
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: RefreshResult) => Response.json(body, { status, headers: noStore });
+const reply: (status: number, body: RefreshResult) => Response = jsonReply;
 
 /** The webhook URL, only when it is an https webhook on the configured n8n instance. */
 export function webhookOf(env: RefreshEnv): string | null {
