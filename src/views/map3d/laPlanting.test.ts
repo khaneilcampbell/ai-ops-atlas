@@ -3,7 +3,7 @@ import {catalog} from '../../catalog';import {layoutMap,type GroupBy} from '../m
 import {laPlanting,laShrubKind,laTreeKind,fanPalm,datePalm,emptyParts,PALM_LIGHTS} from './laPlanting';
 import {airportFootprint} from './airport';
 import {planStreetLights,lightingObstacles} from './streetLighting';
-import {planStreetPalms,airportSidewalkPalms,AIRPORT_SIDEWALK_X,STREET_PALMS} from './streetPalms';
+import {planStreetPalms,airportSidewalkPalms,AIRPORT_SIDEWALK_X,STREET_PALMS,palmZones,inPalmZone,calmLawnPalms} from './streetPalms';
 import {AIRPORT_LAYOUT} from './airport';
 import {distanceToRoad} from './highway';
 
@@ -54,7 +54,11 @@ describe('Los Angeles planting',()=>{
 
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants formal palm avenues on the streets only, clear of the airport, lamps and buildings in ${group}`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),palms=planStreetPalms(s),lamps=planStreetLights(s),boxes=lightingObstacles(s),walks=s.transportConnections.map(c=>c.walk),streets=[...s.carBridges.flatMap(b=>b.roads),...s.transportConnections.map(c=>c.road),...(s.financial?[s.financial.street]:[]),...(s.community?.streets??[])];
- expect(palms.length).toBeGreaterThan(20);expect(palms.length).toBeLessThanOrEqual(STREET_PALMS.max);
+ // Only the Galleria boulevard, the arena and the airport's front road keep street palms (Khaneil, 2026-11-13).
+ const zones=palmZones(s);expect(palms.length).toBeGreaterThan(4);expect(palms.length).toBeLessThan(40);
+ for(const p of palms)expect(inPalmZone(zones,p.x,p.z)).toBe(true);
+ // Outside the zones, lawn trees are never palms.
+ for(const t of calmLawnPalms(s.trees,zones))if(!inPalmZone(zones,t.x,t.z)&&t.kind!=='palm')expect(['date','fan']).not.toContain(laTreeKind(t));
  const a=s.airport&&airportFootprint(s.airport);
  for(const p of palms){
   expect(laTreeKind(p)).toBe('avenue');

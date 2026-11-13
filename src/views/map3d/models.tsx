@@ -17,7 +17,7 @@ import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads"
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
 import { laPlanting } from "./laPlanting";
-import { airportSidewalkPalms, clearForAvenues, planStreetPalms } from "./streetPalms";
+import { airportSidewalkPalms, calmLawnPalms, clearForAvenues, palmZones, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
@@ -487,10 +487,10 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 
 // ── Landscaping ─────────────────────────────────────
 
-/** The lawn trees, less any standing in a palm avenue's row, plus the avenues and the airport's sidewalk palms. */
+/** The lawn trees (palms only inside the palm zones), less any standing in a palm avenue's row, plus the avenues and the airport's sidewalk palms. */
 function avenuePlanting(scene: Scene3D) {
   const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])];
-  return [...clearForAvenues(scene.trees, palms), ...palms];
+  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];
 }
 
 export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G; m: M; night?: boolean }) {
