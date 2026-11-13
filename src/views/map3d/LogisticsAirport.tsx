@@ -13,7 +13,7 @@ import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -138,6 +138,12 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
     // Airside service building: a window band on every side, lit with the terminal glazing at night.
     for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
+    // Its east face, where the gated street arrives, opens on a roll-up loading door (Khaneil, 2026-11-13: "the building
+    // does not have an opening"): a dark bay as wide as the street's carriageway, slatted shutter half up, gold frame.
+    {const D=AIRPORT_SERVICE_DOOR,dz=D.z,dw=D.w,fx=x+D.x+.02;
+     cubes.push(box(fx,y+.05,z+dz,.04,D.h,dw,'#1d2528'),box(fx+.15,y+.97,z+dz,.3,.04,dw+.3,HQ.glassDeep));
+     for(let k=0;k<4;k++)cubes.push(box(fx+.01,y+.55+k*.075,z+dz,.035,.06,dw-.04,'#b9c0bf'));
+     cubes.push(box(fx+.015,y+.85,z+dz,.05,.06,dw+.16,HQ.gold),...[-1,1].map(sd=>box(fx+.015,y+.05,z+dz+sd*(dw/2+.05),.05,.86,.06,HQ.gold)));}
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+TERMINAL_HUB.mezzanine-.08,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+TERMINAL_HUB.glass-.03,z+zz,1.6,.025,.12,'#fff2d1'));

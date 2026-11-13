@@ -27,6 +27,8 @@ export const AIRPORT_THRESHOLDS={landing:[AIRPORT_LANDING_RUNWAY.laneZ+1,AIRPORT
  * striped barrier per lane (entry on the north lane, exit on the south), a stop line before each, short fences either side.
  */
 export const AIRPORT_SERVICE_GATE={x:3.7,building:{x1:3.1},drive:{x0:3.1,x1:5.5,z0:17.05,z1:17.77}} as const;
+/** The service building's roll-up loading door, on the face the gated street meets, centred on that street. */
+export const AIRPORT_SERVICE_DOOR={x:AIRPORT_SERVICE_GATE.building.x1,z:(AIRPORT_SERVICE_GATE.drive.z0+AIRPORT_SERVICE_GATE.drive.z1)/2,w:AIRPORT_SERVICE_GATE.drive.z1-AIRPORT_SERVICE_GATE.drive.z0,h:.8} as const;
 /** The landing runway's south end runs on under its end lane. */
 export const AIRPORT_LANDING_SOUTH_PAD={z0:AIRPORT_LANDING_RUNWAY.z+AIRPORT_LANDING_RUNWAY.length/2,z1:AIRPORT_LANDING_RUNWAY.southLaneZ+TAXI_W/2+.05} as const;
 export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,roof:2.61,arrivalsX:-1.5,parkingZ:-6.4} as const;

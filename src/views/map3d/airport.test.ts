@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {AIRPORT_LAYOUT as AL2,AIRPORT_REMOTE_STANDS,AIRPORT_SERVICE_GATE,airportPoint} from './airport';
+import {AIRPORT_LAYOUT as AL2,AIRPORT_REMOTE_STANDS,AIRPORT_SERVICE_DOOR,AIRPORT_SERVICE_GATE,airportPoint} from './airport';
 import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {buildScene} from './scene';
 import {layoutMap} from '../mapLayout';
@@ -133,6 +133,12 @@ describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
   expect(clearOf(corners(c.x,c.z,c.w,c.d),.36+.18)).toBe(true);
   const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
   expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
+ });
+ it('opens the service building on the gated street with a loading door centred on it',()=>{
+  const D=AIRPORT_SERVICE_DOOR,G=AIRPORT_SERVICE_GATE;
+  expect(D.x).toBe(G.building.x1);
+  expect(streets.some(r=>distanceToRoad(world(D.x+.05,D.z),r)<.05)).toBe(true);
+  expect(D.w).toBeGreaterThanOrEqual(.7);expect(D.h).toBeGreaterThan(.5);
  });
  it('puts the gate across the street where it reaches the service building',()=>{
   const G=AIRPORT_SERVICE_GATE;
