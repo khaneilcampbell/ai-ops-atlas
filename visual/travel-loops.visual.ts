@@ -4,7 +4,7 @@ import {openAtlas,waitForScene,settle} from './atlas';
 /**
  * Travel loops screenshots (travelLoops.ts): the map's clock is stepped by hand to moments in the loops and the camera
  * framed on each place: people leaving Team Residence Towers, the van at the airport terminal, the train and van at
- * Events Arena Station, guests boarding the yacht, the yacht out at sea, the car at the Vendor & Supplier Hub. Written
+ * Events Arena Station, guests boarding the yacht, her casting off and out at sea, a close-up of the walkers' arms and legs, the car at the Vendor & Supplier Hub. Written
  * only when SHOT_DIR is set; no baseline comparison. Runs on main too (for before shots): it imports nothing new.
  */
 const out=process.env.SHOT_DIR;
@@ -29,10 +29,13 @@ for(const width of [1512,390])test(`travel loops ${width}`,async({page})=>{
   const views:[string,number,number[],number[]][]=[
    ['airport-dropoff',46,[ax+1,T,az+2],[ax+9*k,T+7*k,az+9*k]],
    ['team-residence',70,[home[0]+6,T,home[1]+6],[home[0]+12*k,T+9*k,home[1]+16*k]],
+   ['figures-closeup',71,[home[0]+6,T+.1,home[1]+6],[home[0]+6+1.1*k,T+.75*k,home[1]+6+1.6*k]],
    ['arena-dropoff',88,[gx+3,T,gz+3],[gx+12*k,T+9*k,gz-4*k]],
    ['yacht-boarding',139,[b.x-2,W+.5,b.z-1.5],[b.x+3*k,W+5*k,b.z+8*k]],
-   ['yacht-sailing',176,[b.x+3,W,b.z+3],[b.x-4*k,W+11*k,b.z+16*k]],
+   ['yacht-casting-off',158,[b.x+4,W,b.z+3],[b.x-4*k,W+11*k,b.z+16*k]],
    ['vendor-dropoff',185,[v.x+2,T,v.z-3],[v.x+11*k,T+8*k,v.z-10*k]],
+   // Halfway round her cruise, well out at sea south of the city (travelLoops.ts yachtCourse).
+   ['yacht-at-sea',234,[b.x+8,W,b.z+18],[b.x+4*k,W+34*k,b.z-26*k]],
   ];
   state.setFrameloop('never');const render=state.gl.render;state.gl.render=()=>{};
   const result:{name:string;png:string}[]=[];let clock=0;

@@ -27,8 +27,8 @@ function namePlate(){
  * Atlas at her berth: the merged hull and superstructure, the name on the transom and bows, the
  * pontoon that carries on from the marina's cross dock with bollards, fenders and lamps, the
  * passerelle up to the aft deck. The people who used to stroll on and off are now the travel loops' yacht guests
- * (travelLoops.ts, drawn with the city's crowd): once they are aboard she sails a loop in open water and is back at her
- * berth inside a minute, every train lap (Khaneil, 2026-11-13). Decorative: no agents are assigned to her.
+ * (travelLoops.ts, drawn with the city's crowd): once they are aboard she cruises out into the open sea and is back at
+ * her berth inside three minutes, every second train lap (Khaneil, 2026-11-13). Decorative: no agents are assigned to her.
  */
 export function AtlasYacht({berth:b,travel,g,m,pick,night=false,moving}:{berth:YachtBerth;marina:MarinaSite;travel?:TravelPlan;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean;moving:boolean;exclusion?:Parameters<typeof pedestrianAllowed>[0]}){
  const geo=useMemo(()=>packNormals(yachtGeometry()),[]);

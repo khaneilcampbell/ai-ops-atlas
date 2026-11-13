@@ -16,13 +16,15 @@ import type {Pt3} from './roads';
  * leaves... after agents get to the yacht it sails off and comes back within 1 min"). Decorative only: the people are
  * the map's existing unnamed figures (the train passengers, the yacht's walkers and some Financial District office
  * walkers, "utilize people already in Atlas"), never real agents or real activity, and no dashboard data changes.
+ * Later the same day: "make it longer have it sail in the ocean and return in 3 minutes": the yacht now cruises out to
+ * sea for TRAVEL.sail seconds (under three minutes) every yachtLaps train laps.
  *
  * One general system. A traveller is a timeline of steps, each one walk (visible), a wait at a stop (visible, standing)
  * or a ride or stay (hidden: aboard a train, a car or the yacht, or inside a building). Rides are keyed to the existing
  * perimeter train timetable and to three shuttle cars, which are three of the city's 24 cars put on fixed rounds.
  * Everything repeats every train lap: each journey has two groups who ride on alternate laps. Pure and deterministic.
  */
-export const TRAVEL={pace:.6,carSpeed:1,lane:.3,carStop:4,boardBy:2.5,sail:50,sailLead:4,yachtSideStep:1.5,yachtRun:5,yachtTurn:2.5,yachtBack:4} as const;
+export const TRAVEL={pace:.6,carSpeed:1,lane:.3,carStop:4,boardBy:2.5,sail:170,sailLead:4,sailEase:8,yachtSideStep:1.5} as const;
 
 /** Where Atlas places are on the map: Team Residence Towers is the Financial District "circa" pair. */
 const HOME_ID='circa';
@@ -32,13 +34,14 @@ export interface TravelSeg {t0:number;t1:number;route:CommuterRoute;d0:number;pa
 export type Riding='train'|'car'|'yacht'|'inside';
 export interface Traveller {id:string;journey:string;group:number;period:number;offset:number;segs:TravelSeg[];rides:{t0:number;t1:number;kind:Riding}[];span:[number,number]}
 export interface Shuttle {plan:VehiclePlan;stops:Pt3[];names:string[];times:number[]}
-export interface TravelPlan {lap:number;travellers:Traveller[];shuttles:Shuttle[];yacht?:{berth:YachtBerth;depart:number;back:number}}
+export interface TravelPlan {lap:number;travellers:Traveller[];shuttles:Shuttle[];yacht?:{berth:YachtBerth;depart:number;back:number;period:number}}
 export type TravellerState={visible:false;riding?:Riding}|{visible:true;x:number;y:number;z:number;yaw:number;absolute:boolean};
 
 /** Shared clock (seconds since the map's train started), set each frame by the train so cars and yacht keep its time. */
 export const TRAVEL_CLOCK={t:0,live:false};
 
 const mod=(a:number,n:number)=>((a%n)+n)%n;
+const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a,lcm=(a:number,b:number)=>a/gcd(a,b)*b;
 const flat=(a:Pt3,b:Pt3)=>Math.hypot(b[0]-a[0],b[2]-a[2]);
 
 /** A walking route on the city's own streets, from a point to a point (agents walk the same way, agentCommutes.ts). */
@@ -116,33 +119,40 @@ export function planShuttle(scene:Scene3D,id:string,kind:VehicleKind,color:strin
 
 // ---------------------------------------------------------------- yacht
 
+/** Laps of the train between the yacht's sailings: she is away TRAVEL.sail seconds and needs time at the berth to board. */
+export const yachtLaps=(lap:number)=>Math.ceil((TRAVEL.sail+60)/lap);
+
+/** Corners of the yacht's cruise, relative to the point she side-steps out to (bow east): out to sea and back round. */
+const CRUISE:[number,number][]=[[0,0],[8,0],[20,8],[25,22],[14,33],[-4,32],[-14,20],[-11,6],[-4,0],[0,0]];
+
 /**
- * The yacht's round trip from her berth (side-to, bow east): side-step off the pontoon, run east, turn south and west
- * round open water, come back east on a parallel line and side-step onto the berth. Points every 0.1 with headings.
+ * The yacht's cruise from her berth (side-to, bow east): side-step off the pontoon, run east, then a long rounded loop out
+ * into the open sea south of the city and back, ending on the same line heading east, and side-step onto the berth.
+ * Points every 0.1 with headings.
  */
 export function yachtCourse(b:Pick<YachtBerth,'x'|'z'>):{x:number;z:number;yaw:number}[]{
- const {yachtSideStep:s,yachtRun:a,yachtTurn:r,yachtBack:d}=TRAVEL,z1=b.z+s,pts:{x:number;z:number;yaw:number}[]=[];
+ const z1=b.z+TRAVEL.yachtSideStep,pts:{x:number;z:number;yaw:number}[]=[];
  const line=(x0:number,z0:number,x1:number,z1:number,yaw:number)=>{const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,z1-z0)/.1));for(let i=0;i<n;i++)pts.push({x:x0+(x1-x0)*i/n,z:z0+(z1-z0)*i/n,yaw});};
- // Turning to starboard (+z) heading east, then heading west: yaw = atan2(-dz, dx).
- const arc=(cx:number,cz:number,from:number,dir:1|-1)=>{const n=Math.ceil(Math.PI*r/.1);for(let i=0;i<n;i++){const f=from+dir*Math.PI*i/n,x=cx+r*Math.sin(f),z=cz-r*Math.cos(f);const dx=r*Math.cos(f)*dir,dz=r*Math.sin(f)*dir;pts.push({x,z,yaw:Math.atan2(-dz,dx)});}};
+ // Rounded corners (Chaikin), ends kept: the first and last legs stay straight east.
+ let way=CRUISE.map(([x,z]):[number,number]=>[b.x+x,z1+z]);
+ for(let k=0;k<4;k++)way=[way[0],...way.slice(0,-1).flatMap((a,i)=>{const c=way[i+1];return [[a[0]*.75+c[0]*.25,a[1]*.75+c[1]*.25],[a[0]*.25+c[0]*.75,a[1]*.25+c[1]*.75]] as [number,number][];}).slice(1,-1),way[way.length-1]];
  line(b.x,b.z,b.x,z1,0);
- line(b.x,z1,b.x+a,z1,0);
- arc(b.x+a,z1+r,0,1);
- line(b.x+a,z1+2*r,b.x-d,z1+2*r,Math.PI);
- arc(b.x-d,z1+r,Math.PI,1);
- line(b.x-d,z1,b.x,z1,0);
+ // Heading from the direction of travel: yaw = atan2(-dz, dx) (bow east is 0).
+ for(let i=0;i<way.length-1;i++){const [x0,z0]=way[i],[x1,z1b]=way[i+1];line(x0,z0,x1,z1b,Math.atan2(-(z1b-z0),x1-x0));}
  line(b.x,z1,b.x,b.z,0);pts.push({x:b.x,z:b.z,yaw:0});
  return pts;
 }
-/** Where the yacht is `t` seconds after casting off: easing out of and into the berth, back at TRAVEL.sail seconds. */
+/** Where the yacht is `t` seconds after casting off: gathering way and slowing over TRAVEL.sailEase, back at TRAVEL.sail. */
 export function yachtPoseAt(course:{x:number;z:number;yaw:number}[],t:number){
  if(t<=0||t>=TRAVEL.sail)return course[course.length-1];
- const u=t/TRAVEL.sail,e=u*u*(3-2*u),f=e*(course.length-1),i=Math.min(course.length-2,Math.floor(f)),k=f-i,a=course[i],b=course[i+1];
+ // Trapezoid speed: distance travelled as a share of the course, smooth at both ends.
+ const T=TRAVEL.sail,r=Math.min(TRAVEL.sailEase,T/2),v=1/(T-r),u=t<r?v*t*t/(2*r):t>T-r?1-v*(T-t)*(T-t)/(2*r):v*(t-r/2);
+ const f=Math.min(1,Math.max(0,u))*(course.length-1),i=Math.min(course.length-2,Math.floor(f)),k=f-i,a=course[i],b=course[i+1];
  const dyaw=Math.atan2(Math.sin(b.yaw-a.yaw),Math.cos(b.yaw-a.yaw));
  return {x:a.x+(b.x-a.x)*k,z:a.z+(b.z-a.z)*k,yaw:a.yaw+dyaw*k};
 }
 /** Seconds since the yacht last cast off, on the train clock; she is away while this is under TRAVEL.sail. */
-export function yachtSailing(p:Pick<TravelPlan,'lap'|'yacht'>,seconds:number){return p.yacht?mod(seconds-p.yacht.depart,p.lap):Infinity;}
+export function yachtSailing(p:Pick<TravelPlan,'lap'|'yacht'>,seconds:number){return p.yacht?mod(seconds-p.yacht.depart,p.yacht.period):Infinity;}
 
 // ---------------------------------------------------------------- travellers
 
@@ -243,22 +253,24 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
   // By car to the Vendor & Supplier Hub.
   {id:'car-vendor',cars:[car],people:4,build:(tl,k)=>{const end=carRide(tl,car,0,1,door,k),w=end&&streetWalk(g,end,vendor);return w&&tl.walk(w);}},
  ];
- const travellers:Traveller[]=[];
+ const travellers:Traveller[]=[],sailLaps=yachtLaps(lap);
  for(const j of journeys)for(let i=0;i<j.people;i++){
   // People take turns on the laps their cars run (every lap for the train): a person's own loop is the fewest laps
   // that holds their whole trip and fits their car's round, and the journey's people start on different laps.
-  const carLaps=Math.max(1,...(j.cars??[]).map(c=>Math.round((c?.plan.period??lap)/lap)));
+  // Yacht guests keep to her sailings: their loops and lap offsets are whole numbers of her sailing period.
+  const carLaps=Math.max(1,...(j.cars??[]).map(c=>Math.round((c?.plan.period??lap)/lap))),unit=j.id.endsWith('-yacht')?lcm(carLaps,sailLaps):carLaps;
   const k=Math.floor(i/2),pace=TRAVEL.pace+((i*3)%5-2)*.02,tl=new Timeline(0,pace,TRAVEL.lane+((i%3)-1)*.05);
   const built=j.build(tl,k);if(!built||!built.segs.length)continue;
   const t0=Math.min(...built.segs.map(s=>s.t0)),t1=Math.max(...built.segs.map(s=>s.t1));
-  const laps=carLaps*Math.ceil(Math.max(2,Math.ceil((t1-t0+10)/lap))/carLaps),slots=laps/carLaps,group=i%slots;
-  travellers.push({id:`travel:${j.id}:${i}`,journey:j.id,group,period:laps*lap,offset:group*carLaps*lap,segs:built.segs,rides:built.rides,span:[t0,t1]});
+  const laps=unit*Math.ceil(Math.max(2,Math.ceil((t1-t0+10)/lap))/unit),slots=laps/unit,group=i%slots;
+  travellers.push({id:`travel:${j.id}:${i}`,journey:j.id,group,period:laps*lap,offset:group*unit*lap,segs:built.segs,rides:built.rides,span:[t0,t1]});
  }
- // The yacht casts off once the last guest of the lap is aboard: the arrival before the longest quiet spell on the lap's
- // clock. She is back TRAVEL.sail seconds later.
- const yacht=yachtArrivals.length?(()=>{const at=yachtArrivals.map(t=>mod(t,lap)).sort((a,b)=>a-b);let last=at[at.length-1],gap=at[0]+lap-last;
+ // The yacht casts off once the last guest is aboard: the arrival before the longest quiet spell in her sailing period.
+ // She is back TRAVEL.sail seconds later.
+ const period=sailLaps*lap;
+ const yacht=yachtArrivals.length?(()=>{const at=yachtArrivals.map(t=>mod(t,period)).sort((a,b)=>a-b);let last=at[at.length-1],gap=at[0]+period-last;
   for(let i=1;i<at.length;i++)if(at[i]-at[i-1]>gap){gap=at[i]-at[i-1];last=at[i-1];}
-  const depart=mod(last+TRAVEL.sailLead,lap);return {berth,depart,back:mod(depart+TRAVEL.sail,lap)};})():undefined;
+  const depart=mod(last+TRAVEL.sailLead,period);return {berth,depart,back:mod(depart+TRAVEL.sail,period),period};})():undefined;
  return {lap,travellers,shuttles,yacht};
 }
 

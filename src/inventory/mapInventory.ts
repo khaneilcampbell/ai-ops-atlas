@@ -257,7 +257,7 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   }
   add({ category: "Aircraft", kind: "Atlas airship", count: MAP_FLEET.airships, area: "Sky", moves: true, source: "src/views/map3d/SkyBalloons.tsx" });
   const travel = travelPlan(scene);
-  add({ category: "Boats", kind: travel?.yacht ? "Atlas yacht (sails a short loop each train lap)" : "Atlas yacht (berthed)", count: 1, area: "Marina", moves: !!travel?.yacht, source: travel?.yacht ? "src/views/map3d/travelLoops.ts" : "src/views/map3d/yachtPlan.ts" });
+  add({ category: "Boats", kind: travel?.yacht ? "Atlas yacht (cruises out to sea and back in under 3 minutes)" : "Atlas yacht (berthed)", count: 1, area: "Marina", moves: !!travel?.yacht, source: travel?.yacht ? "src/views/map3d/travelLoops.ts" : "src/views/map3d/yachtPlan.ts" });
   add({ category: "Boats", kind: "Boat", count: MAP_FLEET.boats, area: "Bay", moves: true, source: "src/views/map3d/living.tsx" });
 
   const rail = scene.communityRail;

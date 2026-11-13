@@ -1,1 +1,1 @@
-- 2026-11-13 · Travel loops on the map: people from Team Residence Towers take the train and shuttle cars to the airport, the arena, the Vendor & Supplier Hub and the Atlas yacht, which then sails out and is back within a minute
+- 2026-11-13 · Travel loops on the map: people from Team Residence Towers take the train and shuttle cars to the airport, the arena, the Vendor & Supplier Hub and the Atlas yacht, which then cruises out to sea and is back within three minutes. People walking around the city now have arms and legs (#416)

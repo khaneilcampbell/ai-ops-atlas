@@ -64,20 +64,26 @@ describe('travel loops',()=>{
   }
  });
 
- it('sails the yacht once everyone is aboard and brings her back within a minute', ()=>{
+ it('cruises the yacht out to sea once everyone is aboard and brings her back within three minutes', ()=>{
   const y=plan.yacht!;expect(y).toBeTruthy();
-  expect(TRAVEL.sail).toBeLessThan(60);
+  expect(TRAVEL.sail).toBeLessThan(180);expect(TRAVEL.sail).toBeGreaterThan(120);
+  expect(y.period/plan.lap%1).toBeCloseTo(0,6);expect(y.period).toBeGreaterThan(TRAVEL.sail+30);
   const course=yachtCourse(y.berth);
   expect(course[0]).toMatchObject({x:y.berth.x,z:y.berth.z});expect(course[course.length-1]).toMatchObject({x:y.berth.x,z:y.berth.z});
   for(const p of plan.travellers.filter(p=>p.journey.endsWith('-yacht'))){
    // Aboard before she casts off, and nobody walks the dock while she is away.
-   const aboard=Math.max(...p.segs.map(s=>s.t1))+p.offset,wait=((y.depart-aboard)%plan.lap+plan.lap)%plan.lap;
-   expect(wait,p.id).toBeGreaterThan(0);expect(wait,p.id).toBeLessThan(plan.lap-TRAVEL.sail);
+   // Every guest's loop is whole sailings long, so they meet the same sailing every time round.
+   expect(p.period/y.period%1,p.id).toBeCloseTo(0,6);expect(p.offset/y.period%1,p.id).toBeCloseTo(0,6);
+   const aboard=Math.max(...p.segs.map(s=>s.t1))+p.offset,wait=((y.depart-aboard)%y.period+y.period)%y.period;
+   expect(wait,p.id).toBeGreaterThan(0);expect(wait,p.id).toBeLessThan(y.period-TRAVEL.sail);
   }
   // Away for TRAVEL.sail seconds, then back at the berth.
   expect(yachtSailing(plan,y.depart+1)).toBeLessThan(TRAVEL.sail);
   expect(yachtPoseAt(course,TRAVEL.sail)).toMatchObject({x:y.berth.x,z:y.berth.z});
-  const mid=yachtPoseAt(course,TRAVEL.sail/2);expect(Math.hypot(mid.x-y.berth.x,mid.z-y.berth.z)).toBeGreaterThan(3);
+  // Well out at sea, clear of the coast, halfway round; at an even speed (no jumps).
+  const mid=yachtPoseAt(course,TRAVEL.sail/2);expect(Math.hypot(mid.x-y.berth.x,mid.z-y.berth.z)).toBeGreaterThan(20);
+  expect(mid.z).toBeGreaterThan(Math.max(...scene.land.map(r=>r.z+r.d))+20);
+  for(let t=0;t<TRAVEL.sail;t+=.5){const a=yachtPoseAt(course,t),b=yachtPoseAt(course,t+.5);expect(Math.hypot(b.x-a.x,b.z-a.z),`t ${t}`).toBeLessThan(.6);}
  });
 
  it('keeps the yacht in open water: her hull never crosses land, the pontoon or the marina', ()=>{
