@@ -4,6 +4,8 @@ export const AIRPORT_KEY = "service:logistics-airport";
 export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landDepth:43,terminalX:1.5,terminalZ:6,taxiX:11.5,runwayX:15,runwayZ:7.5,runwayWidth:2.2,runwayLength:21,gateX:7,gateZ:[0,4.5,9,13.5],cargoZ:18,departureZ:16.5} as const;
 /** The north stand is the arrivals turnaround stand: landed jets park there nose-in, then push back. */
 export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
+/** Stands and gates where an airliner stays parked with its engines off: the south remote stand and gates 1 and 4. */
+export const AIRPORT_PARKED_STANDS=[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}] as const;
 /** Second runway for landings (KC, 2026-11-07), on the old river strip past the service road.
  * Jets touch down near the south end and leave by a taxi lane north of runway 1, so they never cross it. */
 export const AIRPORT_LANDING_RUNWAY={x:24.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6,southLaneZ:19.9} as const;

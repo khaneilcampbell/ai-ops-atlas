@@ -1,0 +1,1 @@
+- 2026-11-13 · New Atlas Data Inventory agent in the Data Intelligence Center: after every merge Atlas writes a list of every building, which agents work where, and the cars, planes, boats, trains and people on the map, ready for the inventory tabs in your Agent Registry sheet

@@ -11,6 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "validate:catalog": "vitest run src/catalog",
+    "inventory": "ATLAS_INVENTORY_OUT=${ATLAS_INVENTORY_OUT:-atlas-inventory.json} vitest run src/inventory/mapInventory.test.ts",
     "tauri": "tauri",
     "lint": "eslint .",
     "version:set": "node scripts/set-version.mjs",
