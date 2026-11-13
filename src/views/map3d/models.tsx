@@ -15,7 +15,7 @@ import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
-import { SIDEWALK } from "./streetPavement";
+import { bridgeStreetSidewalks } from "./streetPavement";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
@@ -306,14 +306,11 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const all = scene.carBridges.map((br) => bridgeParts(br, scene.brooks));
     const footDeck: Inst[] = [], footRails: Inst[] = [], footPiers: Inst[] = [];
     const streets: Inst[] = [], sidewalks: Inst[] = [], markings: Inst[] = [];
-    const street = (a: [number,number], b: [number,number], width: number, curb: boolean) => {
+    const street = (a: [number,number], b: [number,number], width: number) => {
       const dx=b[0]-a[0], dz=b[1]-a[1], length=Math.hypot(dx,dz);
       if(length<0.01) return;
       const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
       streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
-      if(curb) for(const side of [-1,1]) {
-        const o=width/2+SIDEWALK.width/2;sidewalks.push({p:[x+(alongX?0:side*o),SIDEWALK.y,z+(alongX?side*o:0)],s:alongX?[length,SIDEWALK.h,SIDEWALK.width]:[SIDEWALK.width,SIDEWALK.h,length],c:SIDEWALK.color});
-      }
       for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
     };
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
@@ -335,7 +332,8 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       }
     }
     const spans=connectionSpans(district);
-    for(const sp of spans) street(sp.a,sp.b,ROAD_W,true);
+    for(const sp of spans) street(sp.a,sp.b,ROAD_W);
+    sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).map(l=>l.road)));
     const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
     const squares=new Set<string>();
     spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});

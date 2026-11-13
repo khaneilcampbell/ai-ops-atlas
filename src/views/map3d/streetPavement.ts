@@ -43,6 +43,36 @@ const along=(a:Pt,b:Pt,half:number,reach=0):R=>{
  return a[1]===b[1]?{x:x0-reach,z:z0-half,w:x1-x0+2*reach,d:2*half}:{x:x0-half,z:z0-reach,w:2*half,d:z1-z0+2*reach};
 };
 const box=(r:R,y:number,h:number,c:string):Inst=>({p:[r.x+r.w/2,y,r.z+r.d/2],s:[r.w,h,r.d],c});
+const straight=(a:Pt,b:Pt)=>Math.abs(a[0]-b[0])<1e-6||Math.abs(a[1]-b[1])<1e-6;
+/** Each straight piece of a polyline as [a, b]. */
+const segments=(roads:Pt[][])=>roads.flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt])).filter(([a,b])=>straight(a,b)&&Math.hypot(b[0]-a[0],b[1]-a[1])>1e-6);
+
+/**
+ * Sidewalks for the bridge-approach and plaza streets (models.tsx Bridges), on the same rules as the
+ * district streets below (Khaneil, 2026-11-13): a sidewalk runs on round a corner where its street
+ * meets another, and it never crosses a carriageway, so every junction opens cleanly instead of
+ * kerb running across the mouth of a side street.
+ */
+export function bridgeStreetSidewalks(spans:{a:Pt;b:Pt}[],links:Pt[][]):Inst[]{
+ const half=ROAD_W/2,sw=SIDEWALK.width,others=segments(links);
+ const lines:[Pt,Pt][]=[...spans.map(s=>[s.a,s.b] as [Pt,Pt]),...others];
+ const carriage:R[]=[...spans.filter(s=>straight(s.a,s.b)).map(s=>along(s.a,s.b,half,half)),...others.map(([a,b])=>along(a,b,TRANSPORT.cityWidth/2,TRANSPORT.cityWidth/2))];
+ const out:Inst[]=[];
+ spans.forEach((s,i)=>{
+  if(!straight(s.a,s.b)||Math.hypot(s.b[0]-s.a[0],s.b[1]-s.a[1])<.01)return;
+  const touches=(p:Pt)=>lines.some((l,j)=>j!==i&&distanceToRoad(p,l)<.01);
+  const x=Math.abs(s.a[1]-s.b[1])<1e-6;
+  const [a,b]=(x?s.a[0]<=s.b[0]:s.a[1]<=s.b[1])?[s.a,s.b]:[s.b,s.a];
+  const la=touches(a)?half+sw:0,lb=touches(b)?half+sw:0;
+  for(const side of [-1,1]){
+   const off=side*(half+sw/2);
+   const r:R=x?{x:a[0]-la,z:a[1]+off-sw/2,w:b[0]-a[0]+la+lb,d:sw}:{x:a[0]+off-sw/2,z:a[1]-la,w:sw,d:b[1]-a[1]+la+lb};
+   let parts=[r];for(const c of carriage)parts=parts.flatMap(p=>minusRect(p,c));
+   out.push(...parts.map(p=>box(p,SIDEWALK.y,SIDEWALK.h,SIDEWALK.color)));
+  }
+ });
+ return out;
+}
 
 /** Towers with their own sculpted plaza design keep it. */
 const customPlaza=(t:Tower)=>!!t.identity.landmark||isRibbonTower(t.projectId)||isCommerceTower(t.projectId)||isGithubTower(t.projectId)||isIntelligenceHub(t.projectId);
@@ -57,7 +87,9 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   .filter(s=>s.onLand&&!(onStreet(s.a)&&onStreet(s.b)))
   .filter(s=>Math.hypot(s.b[0]-s.a[0],s.b[1]-s.a[1])>.05);
  const lines=roads.map(s=>[s.a,s.b] as Pt[]);
- const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01);
+ const bridgeLines=segments((scene.carBridges??[]).flatMap(br=>br.roads));
+ // A road that ends on a bridge street turns its sidewalks round that corner too.
+ const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01)||bridgeLines.some(l=>distanceToRoad(p,l)<.01);
  // Everything a sidewalk must stay off: every carriageway, its corner squares, and the bridge approaches and decks.
  const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),
   ...(scene.carBridges??[]).flatMap(br=>[along(br.a,br.b,TRANSPORT.bridgeWidth/2,.04),...br.roads.flatMap(road=>road.slice(1).map((p,i)=>along(road[i],p,ROAD_W/2,ROAD_W/2)))])];
@@ -85,7 +117,7 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   const h=p.a[1]===p.b[1]?p:q,v=h===p?q:p,cx=v.a[0],cz=h.a[1];
   if(cx>Math.min(h.a[0],h.b[0])+.01&&cx<Math.max(h.a[0],h.b[0])-.01&&cz>Math.min(v.a[1],v.b[1])+.01&&cz<Math.max(v.a[1],v.b[1])-.01)points.push([cx,cz]);
  }
- const onRoad=(q:Pt)=>lines.some(l=>distanceToRoad(q,l)<.01);
+ const onRoad=(q:Pt)=>[...lines,...bridgeLines].some(l=>distanceToRoad(q,l)<.01);
  const reach=half+sw+.32;
  for(const pt of points){
   if(seen.some(s=>Math.hypot(s[0]-pt[0],s[1]-pt[1])<half))continue;seen.push(pt);

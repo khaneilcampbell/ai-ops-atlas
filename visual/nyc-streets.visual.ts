@@ -14,7 +14,9 @@ async function views(page:import('@playwright/test').Page,list:View[]){
  },list);
 }
 // The "By district" layout: the whole city from above, then each new avenue stretch close up.
-const VIEWS:View[]=[['overview',[12,0,22],[12,62,70]],['west-avenue',[-3.5,0,45],[4,9,55]],['middle-avenue',[10,0,26],[10,22,44]],['east-avenue',[43,0,36],[34,10,46]]];
+const VIEWS:View[]=[['overview',[12,0,22],[12,62,70]],['west-avenue',[-3.5,0,45],[4,9,55]],['middle-avenue',[10,0,26],[10,22,44]],['east-avenue',[43,0,36],[34,10,46]],
+ // Junction close-ups: where the middle and east avenues meet the street they start from.
+ ['middle-junction',[10,0,19.2],[12.5,4,23.5]],['east-junction',[44.4,0,27.3],[47,4,31.5]]];
 for(const [size,viewport] of [['desktop',{width:1512,height:900}],['iphone',{width:390,height:844}]] as const)for(const light of ['day','night'] as const)test(`New York streets, ${size} ${light}`,async({page})=>{
  test.setTimeout(600_000);await page.setViewportSize(viewport);mkdirSync(out!,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
