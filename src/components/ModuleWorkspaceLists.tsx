@@ -7,7 +7,7 @@ import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
 import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
-import { n8nHealth, n8nWorkflowId, useN8nRuns } from "../n8n/runs";
+import { n8nHealth, unlistedWorkflows, useN8nRuns, workflowOwners } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
@@ -169,12 +169,13 @@ const HEALTH_LABEL = { failing: "Last run failed", ok: "Last run succeeded", idl
 function N8nRuns() {
   const { catalog } = useAtlas();
   const n8n = useN8nRuns();
-  const byWorkflow = useMemo(() => new Map(catalog.agents.flatMap((a) => { const id = n8nWorkflowId(a); return id ? [[id, a.name] as const] : []; })), [catalog]);
+  const byWorkflow = useMemo(() => workflowOwners(catalog.agents), [catalog]);
   const snap = n8n.value;
   const rows = snap?.state === "ok" ? snap.workflows : [];
   const failing = rows.filter((w) => n8nHealth(w) === "failing").length;
+  const unlisted = new Set(unlistedWorkflows(rows, byWorkflow));
   const summary =
-    snap?.state === "ok" ? `${rows.length} workflows, ${rows.filter((w) => w.active).length} on${failing ? `, ${failing} failing` : ""}`
+    snap?.state === "ok" ? `${rows.length} workflows, ${rows.filter((w) => w.active).length} on${failing ? `, ${failing} failing` : ""}${unlisted.size ? `, ${unlisted.size} not in Atlas yet` : ""}`
     : snap?.state === "not-configured" ? "Not set up"
     : n8n.state === "loading" ? "Loading" : n8n.state === "error" ? "Unavailable" : "Not connected here";
   return (
@@ -189,7 +190,7 @@ function N8nRuns() {
               const linked = byWorkflow.get(w.id);
               return (
                 <li key={w.id} data-state={health === "off" ? "none" : undefined}>
-                  <span>{w.name}{linked && linked !== w.name ? <span className="muted small"> · {linked}</span> : null}</span>
+                  <span>{w.name}{linked && linked !== w.name ? <span className="muted small"> · {linked}</span> : null}{unlisted.has(w.id) ? <span className="muted small"> · Not in Atlas yet</span> : null}</span>
                   <span className="muted small">
                     {health === "failing" ? <span className="run-failure">{HEALTH_LABEL[health]}</span> : HEALTH_LABEL[health]}
                     {last?.startedAt ? ` · ${relative(last.startedAt)}` : ""}
@@ -199,7 +200,7 @@ function N8nRuns() {
               );
             })}
           </ul>
-          <p className="muted small">Read from n8n {relative(snap.fetchedAt)}, covering its {snap.window} most recent runs. A workflow with no run in that window shows as not seen, never as healthy.</p>
+          <p className="muted small">Read from n8n {relative(snap.fetchedAt)}, covering its {snap.window} most recent runs. A workflow with no run in that window shows as not seen, never as healthy.{unlisted.size ? " Not in Atlas yet: switched on in n8n, but no catalog agent links to it, so the Agents and Automations tabs don't list it." : ""}</p>
         </>
       ) : (
         <p className="muted small">
