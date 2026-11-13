@@ -30,13 +30,18 @@ export function palmZones(s:Pick<Scene3D,'galleria'|'stadium'|'airport'>):Rect[]
  if(s.airport)out.push(grow(airportFootprint(s.airport),PALM_ZONES.airport));
  return out;
 }
+/**
+ * Street avenues skip the Team Events Arena (Khaneil, 2026-11-13: "remove the palm tree here ... by the events station
+ * arena"). The arena keeps its own plaza palms and lawn palms; the streets and sidewalks around it stay bare.
+ */
+export function streetPalmZones(s:Pick<Scene3D,'galleria'|'stadium'|'airport'>):Rect[]{return palmZones({...s,stadium:undefined});}
 export const inPalmZone=(zones:Rect[],x:number,z:number)=>zones.some(r=>x>=r.x&&x<=r.x+r.w&&z>=r.z&&z<=r.z+r.d);
 
 export function planStreetPalms(s:Scene3D):Tree[]{
  const lamps=planStreetLights(s),avoidBoxes=[];
  if(s.airport){const a=airportFootprint(s.airport),m=STREET_PALMS.airportMargin;avoidBoxes.push({x:a.x+a.w/2,z:a.z+a.d/2,w:a.w+2*m,d:a.d+2*m});}
  const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes,walkClear:STREET_PALMS.walkClear,streetClear:STREET_PALMS.streetClear,extraWalks:s.financial?[s.financial.walk,...s.financial.buildings.map(b=>b.approach)].filter(w=>w.length>1):[]});
- const zones=palmZones(s),kept=spots.filter(p=>inPalmZone(zones,p.x,p.z));
+ const zones=streetPalmZones(s),kept=spots.filter(p=>inPalmZone(zones,p.x,p.z));
  return kept.map(p=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const}));
 }
 
