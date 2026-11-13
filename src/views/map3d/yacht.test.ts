@@ -63,7 +63,7 @@ describe('Inside Atlas',()=>{
   for(const d of [0,1,2,3])expect(people.some(p=>p.deck===d)).toBe(true);
  });
  it('is reached from the panel and routed before the generic interiors', ()=>{
-  const panel=readFileSync(join(__dirname,'../../components/DetailPanel.tsx'),'utf8');expect(panel).toContain('<EnterBuildingButton id={YACHT_OFFICE_ID} label="Enter boat"/>');
+  const panel=readFileSync(join(__dirname,'../../components/DetailPanel.tsx'),'utf8');expect(panel).toContain('<EnterBuildingButton id={YACHT_OFFICE_ID} label="Enter yacht"/>');
   const map=readFileSync(join(__dirname,'../Map.tsx'),'utf8');expect(map).toContain('lazy(() => import("./office/YachtInterior"))');
   expect(map.indexOf('YACHT_OFFICE_ID ?')).toBeLessThan(map.indexOf('startsWith("skyline-business:") ?'));
   expect(YACHT_OFFICE_ID.startsWith('skyline-business:')).toBe(true);

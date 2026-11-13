@@ -36,7 +36,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
  if(await plaque.count()){
   await plaque.first().dispatchEvent('click');await settle(page,4);
   if(light==='day')await page.screenshot({path:`${out}/${tag}-selected-${light}.png`});
-  await page.getByRole('button',{name:'Enter boat'}).first().click();await page.locator('.skyline-interior').waitFor();await settle(page,6);
+  await page.getByRole('button',{name:'Enter yacht'}).first().click();await page.locator('.skyline-interior').waitFor();await settle(page,6);
   await page.screenshot({path:`${out}/${tag}-interior-all-${light}.png`});
   for(const [name,file] of [['Sun deck','sun'],['Bridge deck','bridge'],['Main deck','main'],['Lower deck','lower']]){
    await page.locator('.skyline-floor-picker button',{hasText:name}).click();await settle(page,8);
