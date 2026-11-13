@@ -9,6 +9,7 @@ import { ANNEX } from "./commerceAnnexPlan";
 import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {alignStreets,joinStreetEnds} from './streetAlign';
+import {marinaSite} from './marinaPlan';
 import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
@@ -27,7 +28,7 @@ import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
-import {distanceToRoad} from "./highway";
+import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_CLEAR,streetHitTest} from "./streetAlign";
 import {districtConnections,type DistrictConnection} from "./connections";
 import { AIRPORT_LAYOUT, airportFootprint, airportForecourt, airportPoint, airportTrafficKeepOut, pathCrossesRect, planAirport, type AirportPlan } from "./airport";
@@ -878,6 +879,15 @@ function buildCity(layout: Layout): Scene3D {
     // One paved forecourt under the wheel and pavilion, joined to the station stair by the walks.
     paving.push({...stationPlaza.bounds,y:top,h:.03});
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+    // The forecourt's front walk runs on along the shore to the harbour marina's stair, so the
+    // station plaza joins the boat dock (Khaneil, 2026-11-13). Only on open land and clear of streets.
+    const harbor=marinaSite({terraces,land,paving,bounds:{x0:0,z0:0,x1:0,z1:0}},top),front=stationPlaza.walk[1];
+    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,harbor.shoreZ-.2]];
+    const onLand=(x:number,z:number)=>land.some(l=>inRect(l,x,z));
+    if(harbor.x>front[0]&&dock.every(([x,z])=>onLand(x,z))&&dock.slice(1).every((b,i)=>connections.every(c=>[c.road,...(c.frontage?[c.frontage]:[])].every(r=>roadIntersections([dock[i],b],r).length===0&&distanceToRoad(b,r)>STREET_CLEAR)))){
+      for(let i=1;i<dock.length;i++){const a=dock[i-1],b=dock[i];if(Math.hypot(b[0]-a[0],b[1]-a[1])<.05)continue;paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
+      for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(dock.slice(1).some((b,k)=>distanceToRoad([items[i].x,items[i].z],[dock[k],b])<.45))items.splice(i,1);
+    }
   }
   // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
   // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).

@@ -3,8 +3,9 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {connectionSpans} from './connectionGeometry';
 import {ROAD_W,type Pt} from './roads';
-import {buildScene} from './scene';
-import {distanceToRoad} from './highway';
+import {buildScene,TERRACE_H} from './scene';
+import {distanceToRoad,roadIntersections} from './highway';
+import {marinaSite} from './marinaPlan';
 import {plazaRings} from './streetGraph';
 import {bridgeStreetSidewalks,SIDEWALK,streetPavement,walkOffStreets} from './streetPavement';
 
@@ -54,5 +55,20 @@ describe('walks off the street',()=>{
   const on=connectionSpans(scene.transportConnections.map(l=>l.walk)).flatMap(s=>walkOffStreets(s.a,s.b,streets))
    .filter(([a,b])=>streets.some(([p,q])=>straight(p,q)&&straight(a,b)&&(p[1]===q[1])===(a[1]===b[1])&&distanceToRoad([(a[0]+b[0])/2,(a[1]+b[1])/2],[p,q])<ROAD_W/2));
   expect(on).toEqual([]);
+ });
+});
+
+describe('station plaza to the boat dock',()=>{
+ const scene=buildScene(layoutMap(catalog,[],'district'));
+ const m=marinaSite(scene,TERRACE_H);
+ const streets=scene.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]);
+ it('starts the marina walk at the coast, clear of every street',()=>{
+  const walk:Pt[]=[[m.x,m.cityWalkZ],[m.x,m.shoreZ]];
+  expect(streets.filter(r=>distanceToRoad(walk[0],r)<ROAD_W/2+.3||roadIntersections(walk,r).length)).toEqual([]);
+ });
+ it('paves a walk from the station forecourt to the marina stair',()=>{
+  const p=scene.stationPlaza!,w=scene.walks;
+  expect(w.some(s=>Math.abs(s.x0-(p.bounds.x+p.bounds.w))<1e-6&&s.x1===m.x)).toBe(true);
+  expect(w.some(s=>s.x0===m.x&&s.x1===m.x&&Math.max(s.z0,s.z1)>=m.cityWalkZ)).toBe(true);
  });
 });
