@@ -13,16 +13,16 @@ import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
-import { SIDEWALK } from "./streetPavement";
+import { bridgeStreetSidewalks } from "./streetPavement";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
 import { SOC_LAB, isSocLab, socLabTop } from "./socLabPlan";
-import { plazaSites } from "./streetGraph";
+import { plazaLanes } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -306,36 +306,21 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const all = scene.carBridges.map((br) => bridgeParts(br, scene.brooks));
     const footDeck: Inst[] = [], footRails: Inst[] = [], footPiers: Inst[] = [];
     const streets: Inst[] = [], sidewalks: Inst[] = [], markings: Inst[] = [];
-    const street = (a: [number,number], b: [number,number], width: number, curb: boolean) => {
+    const street = (a: [number,number], b: [number,number], width: number) => {
       const dx=b[0]-a[0], dz=b[1]-a[1], length=Math.hypot(dx,dz);
       if(length<0.01) return;
       const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
       streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
-      if(curb) for(const side of [-1,1]) {
-        const o=width/2+SIDEWALK.width/2;sidewalks.push({p:[x+(alongX?0:side*o),SIDEWALK.y,z+(alongX?side*o:0)],s:alongX?[length,SIDEWALK.h,SIDEWALK.width]:[SIDEWALK.width,SIDEWALK.h,length],c:SIDEWALK.color});
-      }
       for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
     };
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
     // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
     const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
-    for(const t of plazaSites(scene)) {
-      const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
-      const ring=plaza&&towerRing(t,plaza.w);
-      if(!ring) continue;
-      // Draw only the plaza streets that connect actual bridge exits; no decorative dead ends.
-      const exits=scene.carBridges.flatMap(br=>{const end=br.ends.indexOf(t.projectId);return end<0?[]:[br.roads[end][0]];});
-      const drawn=new Set<string>();
-      for(let a=0;a<exits.length;a++) for(let b=a+1;b<exits.length;b++) {
-        const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
-        for(let i=1;i<path.length;i++) {
-          const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
-          if(drawn.has(key))continue;drawn.add(key);district.push([path[i-1],path[i]]);
-        }
-      }
-    }
+    // The paved plaza lanes (streetGraph.ts plazaLanes): the same lanes vehicles drive.
+    district.push(...plazaLanes(scene));
     const spans=connectionSpans(district);
-    for(const sp of spans) street(sp.a,sp.b,ROAD_W,true);
+    for(const sp of spans) street(sp.a,sp.b,ROAD_W);
+    sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])])));
     const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
     const squares=new Set<string>();
     spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});
@@ -395,7 +380,10 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     };
     return {
       deck: [...all.flatMap((b) => b.deck), ...streets, ...sidewalks.flatMap(clearOfStreets), ...markings, ...footDeck.flatMap(p=>p.c==="#d4cfb9"?clearOfStreets(p):[p])],
-      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails],scene.freight?.localJunctions??[],.95),
+      // A bridge's railing stands only where it spans a brook or open water; where the street runs on solid ground the
+      // posts would stand along its kerbs like poles in the road (Khaneil, 2026-11-13), so they are left off there.
+      // A footbridge laid flush beside a street keeps no railing or post on that street's carriageway or sidewalk.
+      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails.filter((v) => ![...crossRoads.map((r) => r.path), ...(scene.transportConnections ?? []).flatMap((c) => [c.road, ...(c.frontage ? [c.frontage] : [])])].some((r) => distanceToRoad([v.p[0], v.p[2]], r) < ROAD_W / 2 + 0.18))].filter((v) => scene.brooks.some((r) => v.p[0] > r.x && v.p[0] < r.x + r.w && v.p[2] > r.z && v.p[2] < r.z + r.d) || !scene.land.some((l) => v.p[0] > l.x + 0.04 && v.p[0] < l.x + l.w - 0.04 && v.p[2] > l.z + 0.04 && v.p[2] < l.z + l.d - 0.04)),scene.freight?.localJunctions??[],.95),
       piers: [...all.flatMap((b) => b.piers), ...footPiers],
       lamps: all.flatMap((b) => b.lamps),
       pools: all.flatMap((b) => b.pools),

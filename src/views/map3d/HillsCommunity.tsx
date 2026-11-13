@@ -1,3 +1,4 @@
+import {walkOffCarriageways} from './streetPavement';
 import {planLoopPassengers,loopPassengerAt,type LoopPassenger} from './loopPassengers';
 import {loopPoint,loopState,stationPoint,PERIMETER_RAIL} from './perimeterRailPlan';
 import {commuterAt,planRailCommuters,planAirportCommuters} from './railCommuters';
@@ -128,9 +129,11 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
   }
 
  }
+ const streetSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
  // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (KC, 2026-11-08).
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0){
-  paths.push(...openWalk([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],TRANSPORT.walkWidth,.075,.03,'#e3dfd2',[...roads,...clearRoads],TRANSPORT.cityWidth/2+.06,TERRACE_H));
+  // No slab on any carriageway, along, across or at a bend (crossings keep their zebra): Khaneil, 2026-11-13.
+  for(const [a,b] of walkOffCarriageways([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],streetSegs,TRANSPORT.walkWidth))paths.push(...openWalk(a,b,TRANSPORT.walkWidth,.075,.03,'#e3dfd2',[...roads,...clearRoads],TRANSPORT.cityWidth/2+.06,TERRACE_H));
  }
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])])){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.061,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
  return {solid,lights,platforms,paths,stationKeys};},[p,roads,clearRoads,keepClear,night,palette,deck]);
