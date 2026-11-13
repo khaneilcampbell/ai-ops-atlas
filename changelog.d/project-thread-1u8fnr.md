@@ -1,1 +1,2 @@
 - 2026-11-13 · The map has a luxury Los Angeles look: tall palms line the main streets as formal avenues, evenly spaced between the street lamps, while lawns are open and calm with olive and ficus trees, a few specimen palms, slim cypress and purple jacaranda, and clipped hedges with agave, bird of paradise and bougainvillea. No palms near the airport or runways (#409)
+- 2026-11-13 · The arena and airport-front palms now match the city's avenue palms, and a few palms wear warm-white string lights that glow at night (#409)

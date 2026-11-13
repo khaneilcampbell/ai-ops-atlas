@@ -143,8 +143,8 @@ export interface StrayBuilding {
   height: number;
 }
 /**
- * "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. "avenue" is a
- * boulevard palm (streetPalms.ts); laPlanting.ts decides what every other kind grows into.
+ * "palm" ring the arena plaza and "avenue" line the streets (streetPalms.ts); both grow as the same
+ * avenue palm. laPlanting.ts decides what every other kind grows into.
  */
 export type TreeKind = "round" | "cone" | "blossom" | "palm" | "avenue";
 export interface Tree {
@@ -153,6 +153,8 @@ export interface Tree {
   z: number;
   s: number;
   kind: TreeKind;
+  /** Wrapped in warm-white string lights (palms only; a chosen few, not every palm). */
+  lit?: boolean;
 }
 export interface Point {
   x: number;
@@ -712,8 +714,9 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
-    // Palms in a ring round the stadium (KC, 2026-11-07), drawn with the stadium's plain boxes.
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'palm' as TreeKind})));
+    // Palms in a ring round the stadium, grown as the city's avenue palm at the avenue size (Khaneil, 2026-11-13);
+    // every other one wears string lights.
+    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.26,kind:'palm' as TreeKind,lit:i%2===0})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.

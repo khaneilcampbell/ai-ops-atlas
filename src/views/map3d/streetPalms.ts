@@ -1,5 +1,6 @@
 import {planStreetLights} from './streetLighting';
-import {airportFootprint} from './airport';
+import {AIRPORT_LANDING_RUNWAY,AIRPORT_LAYOUT,airportFootprint,type AirportPlan} from './airport';
+import {AIRPORT_BUILDINGS} from './airportBuildings';
 import {TERRACE_H,type Scene3D,type Tree} from './scene';
 
 /**
@@ -10,13 +11,32 @@ import {TERRACE_H,type Scene3D,type Tree} from './scene';
  * alternate in an even rhythm. Walks, plaza rings, the highway and the airport grounds stay bare.
  * Spots use the street lamp planner, so palms stay off carriageways, sidewalks, junctions and buildings.
  */
-export const STREET_PALMS={spacing:3.6,start:3,setbacks:[.55,.8,1.1],lampClear:.6,airportMargin:2,max:260,size:.26} as const;
+export const STREET_PALMS={spacing:3.6,start:3,setbacks:[.55,.8,1.1],lampClear:.6,airportMargin:2,max:260,size:.26,litEvery:6} as const;
 
 export function planStreetPalms(s:Scene3D):Tree[]{
  const lamps=planStreetLights(s),avoidBoxes=[];
  if(s.airport){const a=airportFootprint(s.airport),m=STREET_PALMS.airportMargin;avoidBoxes.push({x:a.x+a.w/2,z:a.z+a.d/2,w:a.w+2*m,d:a.d+2*m});}
  const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes});
- return spots.map(p=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const}));
+ // One avenue palm in every six wears string lights, an even rhythm along each street rather than all of them.
+ return spots.map((p,i)=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const,lit:i%STREET_PALMS.litEvery===0}));
+}
+
+/** Campus-local x of the palm row on the public road's sidewalk in front of the terminal. */
+export const AIRPORT_SIDEWALK_X=-.8;
+
+/**
+ * The palm row on the airport's public sidewalk, in front of the terminal (Khaneil, 2026-11-13: "have them
+ * match the other ones"). Same spots as before (one every 2.8, clear of buildings, the drop-off and the landing
+ * lanes), now grown as the city's avenue palm. The campus is drawn mirrored when it faces west, so local x flips.
+ */
+export function airportSidewalkPalms(a:AirportPlan):Tree[]{
+ const x=AIRPORT_SIDEWALK_X,out:Tree[]=[];
+ for(let z=-11;z<25;z+=2.8){
+  if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;
+  // The terminal's front door: every other palm wears string lights.
+  out.push({x:a.west?a.x+AIRPORT_LAYOUT.mirrorWidth-x:a.x+x,y:TERRACE_H,z:a.z+z,s:STREET_PALMS.size,kind:'avenue',lit:out.length%2===0});
+ }
+ return out;
 }
 
 /** Lawn trees standing in an avenue's row give way to it, so the rhythm is never broken. */

@@ -1,9 +1,10 @@
 import {describe,it,expect} from 'vitest';
 import {catalog} from '../../catalog';import {layoutMap,type GroupBy} from '../mapLayout';import {buildScene} from './scene';
-import {laPlanting,laShrubKind,laTreeKind,fanPalm,datePalm,emptyParts} from './laPlanting';
+import {laPlanting,laShrubKind,laTreeKind,fanPalm,datePalm,emptyParts,PALM_LIGHTS} from './laPlanting';
 import {airportFootprint} from './airport';
 import {planStreetLights,lightingObstacles} from './streetLighting';
-import {planStreetPalms,STREET_PALMS} from './streetPalms';
+import {planStreetPalms,airportSidewalkPalms,AIRPORT_SIDEWALK_X,STREET_PALMS} from './streetPalms';
+import {AIRPORT_LAYOUT} from './airport';
 import {distanceToRoad} from './highway';
 
 describe('Los Angeles planting',()=>{
@@ -16,8 +17,8 @@ describe('Los Angeles planting',()=>{
   expect(share('fan')+share('date')).toBeLessThan(.4);
   for(const k of ['fan','date','olive','ficus','jacaranda','cypress'])expect(share(k),k).toBeGreaterThan(0);
  });
- it('leaves the stadium palms to the stadium and keeps old blossom trees flowering, now jacaranda',()=>{
-  expect(laTreeKind({x:1,z:1,kind:'palm'})).toBeNull();
+ it('grows the arena palms as avenue palms and keeps old blossom trees flowering, now jacaranda',()=>{
+  expect(laTreeKind({x:1,z:1,kind:'palm'})).toBe('avenue');
   expect(laTreeKind({x:1,z:1,kind:'blossom'})).toBe('jacaranda');
   expect(['cypress',null]).toContain(laTreeKind({x:3.2,z:7.1,kind:'cone'}));
   expect(laTreeKind({x:3.2,z:7.1,kind:'avenue'})).toBe('avenue');
@@ -62,4 +63,26 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants fo
   expect(walks.some(w=>distanceToRoad([p.x,p.z],w)<.4)).toBe(false);
   if(a)expect(p.x>a.x-STREET_PALMS.airportMargin&&p.x<a.x+a.w+STREET_PALMS.airportMargin&&p.z>a.z-STREET_PALMS.airportMargin&&p.z<a.z+a.d+STREET_PALMS.airportMargin,`palm at ${p.x},${p.z} on the airport`).toBe(false);
  }
+});
+
+describe('airport sidewalk palms',()=>{
+ for(const west of [false,true])it(`grow as the avenue palm on the public sidewalk (${west?'west':'east'}-facing campus)`,()=>{
+  const a={x:10,z:20,accessX:0,accessZ:0,west},palms=airportSidewalkPalms(a);
+  expect(palms.length).toBeGreaterThanOrEqual(5);
+  const x=west?a.x+AIRPORT_LAYOUT.mirrorWidth-AIRPORT_SIDEWALK_X:a.x+AIRPORT_SIDEWALK_X;
+  for(const p of palms){expect(laTreeKind(p)).toBe('avenue');expect(p.s).toBe(STREET_PALMS.size);expect(p.x).toBeCloseTo(x);}
+ });
+});
+
+describe('palm string lights',()=>{
+ it('light only a chosen few palms, with an even spiral of bulbs on each lit trunk',()=>{
+  const s=buildScene(layoutMap(catalog,[],'district')),street=planStreetPalms(s),arena=s.trees.filter(t=>t.kind==='palm');
+  const share=(ts:{lit?:boolean}[])=>ts.filter(t=>t.lit).length/ts.length;
+  expect(share(street)).toBeGreaterThan(.1);expect(share(street)).toBeLessThan(.25);
+  expect(share(arena)).toBeGreaterThan(.3);expect(share(arena)).toBeLessThan(.7);
+  const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true,true);
+  expect(o.bulbs.length).toBe(PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1);
+  const top=Math.max(...o.bulbs.map(b=>b.p[1]));expect(top).toBeLessThan(STREET_PALMS.size*7.6);
+  const plain=emptyParts();fanPalm(plain,0,0,0,STREET_PALMS.size,true);expect(plain.bulbs.length).toBe(0);
+ });
 });

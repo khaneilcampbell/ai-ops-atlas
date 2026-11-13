@@ -26,11 +26,11 @@ const key=(x:number,z:number,salt:string)=>hash(`${x.toFixed(2)}:${z.toFixed(2)}
  * palm on every spot "a jungle" and asked for a luxury metropolitan look: so lawns are thinned to
  * about two thirds, shade trees (olive and ficus) lead, cypress stand as dark accents, and palms
  * are specimens, about one lawn tree in four, with the formal palm avenues on the streets.
- * The stadium's own palms (kind "palm") are drawn by the stadium.
+ * The arena's plaza palms (kind "palm") grow as the avenue palm, matching the streets.
  */
 export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'>):LaTree|null{
- if(t.kind==='palm')return null;
- if(t.kind==='avenue')return 'avenue';
+ // The arena plaza palms and the street avenues are the same palm (Khaneil, 2026-11-13).
+ if(t.kind==='palm'||t.kind==='avenue')return 'avenue';
  if(t.kind==='blossom')return 'jacaranda';
  const p=key(t.x,t.z,'la');
  if(t.kind==='cone')return p<.75?'cypress':null;
@@ -45,7 +45,7 @@ export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
 
 export const LA_COLORS={
  fanFrond:['#7a9a45','#88a650','#6f8d3d'],dateFrond:['#4e7a37','#5b8a3f','#46703a'],
- fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
+ bulb:'#fff6e0',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
  ficus:['#3f7a3a','#4a8642','#386f35','#438040'],olive:['#7f9270','#8a9c7a','#75876a','#93a483'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
  hedge:['#3f6e36','#47783c'],agave:'#86a59a',paradiseLeaf:'#3f7448',paradiseFlower:'#f08a24',bougainvillea:['#d63f8f','#e2589f','#c93583'],
 } as const;
@@ -66,9 +66,21 @@ export interface LaParts{
  clumps:Inst[];
  /** g.ball, plain, no shadow: flowers and date clusters. */
  flowers:Inst[];
+ /** g.box, warm white glow at night (plain by day), no shadow: string-light bulbs wound round lit palm trunks. */
+ bulbs:Inst[];
 }
 
-export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[]});
+export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[],bulbs:[]});
+
+/** String lights: a tight, even spiral of tiny bulbs up the upper trunk of a lit palm (Khaneil, 2026-11-13). */
+export const PALM_LIGHTS={turns:5,perTurn:7,from:.2,to:.92,bulb:.022,gap:.01} as const;
+
+/** Wind string lights round an upright trunk of height h (g.trunk tapers from radius .5 to .35 of its width). */
+export function wrapLights(o:LaParts,x:number,y:number,z:number,h:number,width:number,yaw:number){
+ const {turns,perTurn,from,to,bulb,gap}=PALM_LIGHTS,n=turns*perTurn;
+ for(let i=0;i<=n;i++){const t=i/n,a=yaw+t*turns*Math.PI*2,k=from+(to-from)*t,r=width*(.5-.15*k)+gap;
+  o.bulbs.push({p:[x+Math.sin(a)*r,y+h*k,z+Math.cos(a)*r],s:[bulb,bulb,bulb],r:a,c:LA_COLORS.bulb});}
+}
 
 /** A ring of fronds round a crown top: each frond a folded leaf hinged at the heart, drooping outward by `droop`. */
 function crown(out:Inst[],x:number,y:number,z:number,n:number,len:number,width:number,droop:number,turn:number,colors:readonly string[]){
@@ -85,9 +97,10 @@ function trunkTop(x:number,y:number,z:number,h:number,lean:number,yaw:number):[n
  * Very tall, thin and slightly leaning, with a small tight crown over a brown skirt of dead fronds.
  * A formal avenue palm stands upright and all the same height, like a planted boulevard.
  */
-export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=false){
+export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=false,lit=false){
  const v=key(x,z,'h'),h=formal?s*7.6:s*(6.2+v*3.2),lean=formal?0:(key(x,z,'lean')-.5)*.12,yaw=key(x,z,'yaw')*Math.PI*2;
  o.trunks.push({p:[x,y,z],s:[.075,h,.075],r:yaw,rx:lean,c:LA_COLORS.fanTrunk});
+ if(lit&&lean===0)wrapLights(o,x,y,z,h-s*.62,.075,yaw);
  const [tx,ty,tz]=trunkTop(x,y,z,h,lean,yaw);
  o.trunks.push({p:[tx,ty-s*.62,tz],s:[.15,s*.6,.15],r:yaw,c:LA_COLORS.skirt});
  o.clumps.push({p:[tx,ty+s*.05,tz],s:[s*.2,s*.18,s*.2],c:LA_COLORS.fanFrond[0]});
@@ -124,7 +137,7 @@ function cypress(o:LaParts,x:number,y:number,z:number,s:number,i:number){
 
 export function plantTree(o:LaParts,t:Tree,i:number){
  const kind=laTreeKind(t);
- if(kind==='avenue')fanPalm(o,t.x,t.y,t.z,t.s,true);
+ if(kind==='avenue')fanPalm(o,t.x,t.y,t.z,t.s,true,t.lit);
  else if(kind==='fan')fanPalm(o,t.x,t.y,t.z,t.s);
  else if(kind==='date')datePalm(o,t.x,t.y,t.z,t.s);
  else if(kind==='olive')roundTree(o,t.x,t.y,t.z,t.s*.9,i,LA_COLORS.olive);
