@@ -74,7 +74,7 @@ export interface LaParts{
 export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[],bulbs:[]});
 
 /** String lights: a tight, even spiral of tiny bulbs up the upper trunk of a lit palm (Khaneil, 2026-11-13). */
-export const PALM_LIGHTS={turns:5,perTurn:7,from:.2,to:.92,bulb:.022,gap:.01} as const;
+export const PALM_LIGHTS={turns:5,perTurn:7,from:.2,to:.92,bulb:.032,gap:.012} as const;
 
 /**
  * Wind string lights round a trunk of height h (g.trunk tapers from radius .5 to .35 of its width). A leaning trunk
