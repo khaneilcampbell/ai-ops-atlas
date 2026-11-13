@@ -177,7 +177,11 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     cubes.push(box(x+L.x,y+.015,z+L.z,L.width,.045,L.length,"#2b3335"));
     // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
     cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
-    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.04,t.d,"#777f7f"),lane?box(x+(11.5+L.x)/2,y+.07,z+t.z,L.x-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z,.035,.012,t.d,"#d6bd6e"));}
+    // A taxiway stands 6 mm proud of the runway and service-road paving it meets, so the joins never flicker.
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(11.5+x1)/2,y+.07,z+t.z,x1-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z,.035,.012,t.d,"#d6bd6e"));
+     // Lead-in line on to the runway centre line, and a hold-short marking (two solid, two dashed bars) before its edge.
+     if(lane){cubes.push(box(x+(x1+L.x)/2,y+.066,z+t.z,L.x-x1,.012,.035,"#d6bd6e"));for(let k=0;k<4;k++){const hx=x1-.18-k*.07;if(k<2)cubes.push(box(x+hx,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));else for(let d=-t.d/2+.1;d<t.d/2-.05;d+=.16)cubes.push(box(x+hx,y+.07,z+t.z+d+.04,.03,.012,.08,"#d6bd6e"));}}
+     else{const toRunway=t.z<7.5?1:-1,hz=t.z+toRunway*(t.d/2-.18);for(let k=0;k<4;k++){const bz=hz-toRunway*k*.07;if(k<2)cubes.push(box(x+t.x,y+.07,z+bz,t.w-.1,.012,.03,"#d6bd6e"));else for(let d=-t.w/2+.1;d<t.w/2-.05;d+=.16)cubes.push(box(x+t.x+d+.04,y+.07,z+bz,.08,.012,.03,"#d6bd6e"));}}}
     const [northBar,southBar]=AIRPORT_THRESHOLDS.landing;
     for(let zz=northBar+1;zz<southBar-.6;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
     for(const threshold of [northBar,southBar])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));

@@ -13,10 +13,11 @@ const TAXI_W=.85,R1={x:15,north:7.5-21/2,south:7.5+21/2};
  * Runway-end taxiways, as a real airfield joins its runways (Khaneil, 2026-11-13: "fix connectivity of the
  * airport landing strip"). A lane crosses from the parallel taxiway to each end of the landing runway, meeting it
  * square past its threshold markings, and a short stub runs from each lane into the matching end of runway 1, so
- * every runway end has a taxiway and no taxiway stops on the grass. Centre, width and depth, airport coordinates.
+ * every runway end has a taxiway and no taxiway stops on the grass. Lanes stop at the runway's edge, never paved over
+ * it (Khaneil, 2026-11-13: "fix the runway connection"). Centre, width and depth, airport coordinates.
  */
 export const AIRPORT_END_TAXIWAYS:TaxiRect[]=(()=>{
- const L=AIRPORT_LANDING_RUNWAY,lane=(z:number):TaxiRect=>({x:(11.1+L.x)/2,z,w:L.x-11.1,d:TAXI_W}),stub=(z0:number,z1:number):TaxiRect=>({x:R1.x,z:(z0+z1)/2,w:TAXI_W,d:Math.abs(z1-z0)});
+ const L=AIRPORT_LANDING_RUNWAY,lane=(z:number):TaxiRect=>({x:(11.1+L.x-L.width/2)/2,z,w:L.x-L.width/2-11.1,d:TAXI_W}),stub=(z0:number,z1:number):TaxiRect=>({x:R1.x,z:(z0+z1)/2,w:TAXI_W,d:Math.abs(z1-z0)});
  return [lane(L.laneZ),lane(L.southLaneZ),stub(L.laneZ+TAXI_W/2,R1.north),stub(R1.south,L.southLaneZ-TAXI_W/2)];
 })();
 /** Threshold bars stand a taxiway's width in from where the end lanes join, never under them. */

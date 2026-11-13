@@ -108,7 +108,10 @@ describe('runway-end taxiways',()=>{
  const touches=(t:{x:number;z:number;w:number;d:number},r:{x0:number;x1:number;z0:number;z1:number})=>t.x-t.w/2<=r.x1+1e-6&&t.x+t.w/2>=r.x0-1e-6&&t.z-t.d/2<=r.z1+1e-6&&t.z+t.d/2>=r.z0-1e-6;
  const paved=[{x0:11.075,x1:11.925,z0:-7.8,z1:23},...runways.map(r=>({x0:r.x-r.w/2,x1:r.x+r.w/2,z0:r.z0,z1:r.z1}))];
  it('joins both ends of every runway to a taxiway',()=>{
-  for(const r of runways)for(const end of [r.z0,r.z1])expect(AIRPORT_END_TAXIWAYS.some(t=>Math.abs(t.x-r.x)<r.w/2+t.w/2&&Math.abs(t.z-end)<=t.d/2+1e-6+(t.w>t.d?1.2:0)),`${r.x} @ ${end}`).toBe(true);
+  for(const r of runways)for(const end of [r.z0,r.z1])expect(AIRPORT_END_TAXIWAYS.some(t=>Math.abs(t.x-r.x)<=r.w/2+t.w/2+1e-6&&Math.abs(t.z-end)<=t.d/2+1e-6+(t.w>t.d?1.2:0)),`${r.x} @ ${end}`).toBe(true);
+ });
+ it('never paves a taxiway over a runway',()=>{
+  for(const r of runways)expect(AIRPORT_END_TAXIWAYS.filter(t=>Math.min(t.x+t.w/2,r.x+r.w/2)-Math.max(t.x-t.w/2,r.x-r.w/2)>1e-6&&Math.min(t.z+t.d/2,r.z1)-Math.max(t.z-t.d/2,r.z0)>1e-6)).toEqual([]);
  });
  it('keeps every threshold bar off the taxiways',()=>{
   for(const r of runways)for(const bar of r.bars)expect(AIRPORT_END_TAXIWAYS.filter(t=>Math.abs(t.x-r.x)<r.w/2+t.w/2&&Math.abs(t.z-bar)<t.d/2+.33)).toEqual([]);
