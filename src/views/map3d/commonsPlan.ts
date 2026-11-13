@@ -40,9 +40,10 @@ export const COMMONS_PLANTING={loopPalms:[6,18,30,42],loopOffset:.75,palm:.26,ol
  * of the two footbridges), and the shore is the city's LA shrubs. Landscape draws them with every other tree.
  */
 export function commonsPlanting(p:CommonsPlan,y:number){
- const trees:Tree[]=p.trees.map(([x,z],i)=>i%2===0?{x,y,z,s:COMMONS_PLANTING.palm,kind:'avenue',lit:true}:{x,y,z,s:COMMONS_PLANTING.olive,kind:'round',la:'olive'});
+ // Edge trees are olives; the four lit palms by the loop are the Commons' only palms (Khaneil, 2026-11-13: fewer palms).
+ const trees:Tree[]=p.trees.map(([x,z])=>({x,y,z,s:COMMONS_PLANTING.olive,kind:'round',la:'olive'}));
  const cx=p.pond.reduce((a,q)=>a+q[0],0)/p.pond.length,cz=p.pond.reduce((a,q)=>a+q[1],0)/p.pond.length;
- for(const i of COMMONS_PLANTING.loopPalms){const [x,z]=p.loop[i],dx=x-cx,dz=z-cz,len=Math.hypot(dx,dz);trees.push({x:x+dx/len*COMMONS_PLANTING.loopOffset,y,z:z+dz/len*COMMONS_PLANTING.loopOffset,s:COMMONS_PLANTING.palm,kind:'avenue',lit:true});}
+ for(const i of COMMONS_PLANTING.loopPalms){const [x,z]=p.loop[i],dx=x-cx,dz=z-cz,len=Math.hypot(dx,dz);trees.push({x:x+dx/len*COMMONS_PLANTING.loopOffset,y,z:z+dz/len*COMMONS_PLANTING.loopOffset,s:COMMONS_PLANTING.palm,kind:'avenue'});}
  const bushes:Point[]=[];
  // The south lawn reads like the city's lawns: two olives, each with a pair of shrubs, clear of the paths.
  const {x:rx,z:rz,w:rw,d:rd}=p.rect;

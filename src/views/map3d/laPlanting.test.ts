@@ -3,7 +3,7 @@ import {catalog} from '../../catalog';import {layoutMap,type GroupBy} from '../m
 import {laPlanting,laShrubKind,laTreeKind,fanPalm,datePalm,emptyParts,PALM_LIGHTS} from './laPlanting';
 import {airportFootprint} from './airport';
 import {planStreetLights,lightingObstacles} from './streetLighting';
-import {planStreetPalms,airportSidewalkPalms,AIRPORT_SIDEWALK_X,STREET_PALMS} from './streetPalms';
+import {planStreetPalms,airportSidewalkPalms,AIRPORT_SIDEWALK_X,STREET_PALMS,palmZones,streetPalmZones,inPalmZone,calmLawnPalms} from './streetPalms';
 import {AIRPORT_LAYOUT} from './airport';
 import {distanceToRoad} from './highway';
 
@@ -54,7 +54,16 @@ describe('Los Angeles planting',()=>{
 
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants formal palm avenues on the streets only, clear of the airport, lamps and buildings in ${group}`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),palms=planStreetPalms(s),lamps=planStreetLights(s),boxes=lightingObstacles(s),walks=s.transportConnections.map(c=>c.walk),streets=[...s.carBridges.flatMap(b=>b.roads),...s.transportConnections.map(c=>c.road),...(s.financial?[s.financial.street]:[]),...(s.community?.streets??[])];
- expect(palms.length).toBeGreaterThan(20);expect(palms.length).toBeLessThanOrEqual(STREET_PALMS.max);
+ // Only the Galleria boulevard, the arena and the airport's front road keep street palms (Khaneil, 2026-11-13).
+ const zones=palmZones(s);expect(palms.length).toBeGreaterThan(1);expect(palms.length).toBeLessThan(20);
+ for(const p of palms)expect(inPalmZone(zones,p.x,p.z)).toBe(true);
+ // No street palms by the Team Events Arena and its station (Khaneil, 2026-11-13).
+ const arena=s.stadium?palmZones({stadium:s.stadium}):[];
+ if(arena.length)expect(palms.filter(p=>inPalmZone(arena,p.x,p.z)&&!inPalmZone(streetPalmZones(s),p.x,p.z))).toHaveLength(0);
+ // Outside the zones, lawn trees are never palms.
+ for(const t of calmLawnPalms(s.trees,zones))if(!inPalmZone(zones,t.x,t.z)&&t.kind!=='palm')expect(['date','fan']).not.toContain(laTreeKind(t));
+ // No palms on the Vendor & Supplier Hub's roof terraces, or any other roof (Khaneil, 2026-11-13).
+ for(const t of calmLawnPalms(s.trees,zones))if((t.y??0)>.9&&t.kind!=='palm')expect(['date','fan']).not.toContain(laTreeKind(t));
  const a=s.airport&&airportFootprint(s.airport);
  for(const p of palms){
   expect(laTreeKind(p)).toBe('avenue');
@@ -70,21 +79,24 @@ for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants fo
 describe('airport sidewalk palms',()=>{
  for(const west of [false,true])it(`grow as the avenue palm on the public sidewalk (${west?'west':'east'}-facing campus)`,()=>{
   const a={x:10,z:20,accessX:0,accessZ:0,west},palms=airportSidewalkPalms(a);
-  expect(palms.length).toBeGreaterThanOrEqual(5);
+  expect(palms.length).toBeGreaterThanOrEqual(3);
   const x=west?a.x+AIRPORT_LAYOUT.mirrorWidth-AIRPORT_SIDEWALK_X:a.x+AIRPORT_SIDEWALK_X;
   for(const p of palms){expect(laTreeKind(p)).toBe('avenue');expect(p.s).toBe(STREET_PALMS.size);expect(p.x).toBeCloseTo(x);}
  });
 });
 
 describe('palm string lights',()=>{
- it('light only a chosen few palms, with an even spiral of bulbs on each lit trunk',()=>{
-  const s=buildScene(layoutMap(catalog,[],'district')),street=planStreetPalms(s),arena=s.trees.filter(t=>t.kind==='palm');
-  const share=(ts:{lit?:boolean}[])=>ts.filter(t=>t.lit).length/ts.length;
-  expect(share(street)).toBeGreaterThan(.25);expect(share(street)).toBeLessThan(.45);
-  expect(share(arena)).toBeGreaterThan(.55);expect(share(arena)).toBeLessThan(.8);
-  const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true,true);
-  expect(o.bulbs.length).toBe(PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1);
+ it('light every palm, with an even spiral of bulbs hugging each trunk, leaning or not',()=>{
+  const spiral=PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1;
+  const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true);
+  expect(o.bulbs.length).toBe(spiral);
   const top=Math.max(...o.bulbs.map(b=>b.p[1]));expect(top).toBeLessThan(STREET_PALMS.size*7.6);
-  const plain=emptyParts();fanPalm(plain,0,0,0,STREET_PALMS.size,true);expect(plain.bulbs.length).toBe(0);
+  // A leaning lawn fan palm and a date palm are lit too, the bulbs staying on the trunk.
+  for(const [x,z] of [[3.1,7.7],[12.4,-5.2],[-8.3,20.6]]){
+   const f=emptyParts();fanPalm(f,x,0,z,.3);expect(f.bulbs.length).toBe(spiral);
+   const trunk=f.trunks[0],lean=trunk.rx??0,yaw=trunk.r??0;
+   for(const b of f.bulbs){const h=b.p[1],cx=x+Math.sin(lean)*Math.sin(yaw)*h/Math.cos(lean),cz=z+Math.sin(lean)*Math.cos(yaw)*h/Math.cos(lean);expect(Math.hypot(b.p[0]-cx,b.p[2]-cz)).toBeLessThan(.06);}
+   const d=emptyParts();datePalm(d,x,0,z,.3);expect(d.bulbs.length).toBe(spiral);
+  }
  });
 });
