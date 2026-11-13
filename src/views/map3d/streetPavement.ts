@@ -89,9 +89,12 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
  const lines=roads.map(s=>[s.a,s.b] as Pt[]);
  const bridgeLines=segments((scene.carBridges??[]).flatMap(br=>br.roads));
  // A road that ends on a bridge street turns its sidewalks round that corner too.
- const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01)||bridgeLines.some(l=>distanceToRoad(p,l)<.01);
- // Everything a sidewalk must stay off: every carriageway, its corner squares, and the bridge approaches and decks.
- const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),
+ const frontage=segments((scene.transportConnections??[]).flatMap(l=>l.frontage?[l.frontage]:[]));
+ const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01)||[...bridgeLines,...frontage].some(l=>distanceToRoad(p,l)<.01);
+ // Everything a sidewalk must stay off: every carriageway (on land or not, frontage streets included),
+ // its corner squares, and the bridge approaches and decks.
+ const allStreets=segments((scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]));
+ const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),...allStreets.map(([a,b])=>along(a,b,half,half)),
   ...(scene.carBridges??[]).flatMap(br=>[along(br.a,br.b,TRANSPORT.bridgeWidth/2,.04),...br.roads.flatMap(road=>road.slice(1).map((p,i)=>along(road[i],p,ROAD_W/2,ROAD_W/2)))])];
  const pavement:Inst[]=[],markings:Inst[]=[],zebras:Pt[]=[];
  roads.forEach((s,i)=>{

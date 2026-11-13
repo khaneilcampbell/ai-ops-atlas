@@ -8,7 +8,8 @@ import {compactSquareLand} from './compactLand';
 import { ANNEX } from "./commerceAnnexPlan";
 import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityPlan,type RailPlan} from './hillsCommunityPlan';
 import {planNeighborhoodLinks} from './neighborhoodLinks';
-import {alignStreets} from './streetAlign';
+import {alignStreets,joinStreetEnds} from './streetAlign';
+import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
@@ -814,6 +815,9 @@ function buildCity(layout: Layout): Scene3D {
     connections.splice(0,connections.length,...alignStreets(connections,streetBoxes));
     for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(grid.some(link=>distanceToRoad([items[i].x,items[i].z],link.road)<.55))items.splice(i,1);
   }
+  // Every street end meets the street it runs into, square, once the street plan is final.
+  joinStreetEnds([...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)],[...connections.map(c=>c.walk),...(financial?[financial.road,...(financial.circa?[financial.circa.street]:[])]:[]),
+    ...[...plazaRings({towers,paving}).values()].map((g):[number,number][]=>[[g.x0,g.z0],[g.x1,g.z0],[g.x1,g.z1],[g.x0,g.z1],[g.x0,g.z0]])]);
   // Keep station walks clear of plaza trees, beds and bollards.
   const stationWalks=communityRail?.loop?.stops.map(st=>st.walk.map(([x,,z]):[number,number]=>[x,z]))??[];
   for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(stationWalks.some(w=>distanceToRoad([items[i].x,items[i].z],w)<.45))items.splice(i,1);

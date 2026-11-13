@@ -333,7 +333,7 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     }
     const spans=connectionSpans(district);
     for(const sp of spans) street(sp.a,sp.b,ROAD_W);
-    sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).map(l=>l.road)));
+    sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])])));
     const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
     const squares=new Set<string>();
     spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});

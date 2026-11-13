@@ -89,3 +89,43 @@ export function alignStreets<L extends DistrictConnection>(links:L[],boxes:Box[]
  }
  return out;
 }
+
+/**
+ * Every street end meets the street it runs into (Khaneil, 2026-11-13: "make sure each street path
+ * intersects aesthetically wherever it ends"). A street that stops inside a crossing street's
+ * carriageway, short of or just past its centre line, is run on (or back) along its own axis to that
+ * centre line, so the two draw as one clean T with square corners instead of a stub overlapping the
+ * other street's kerb. Only an end point moves, by less than a road's width; ends clear of any street
+ * keep their place, and an end already joined to a street or to one of the `anchors` (walks, plaza
+ * lanes) it was routed to only runs on through it, never back off it. Points are replaced, never edited, since paths may share them.
+ */
+const onSeg=(p:Pt,a:Pt,b:Pt)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=dx*dx+dz*dz,t=l?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/l)):0;return Math.hypot(p[0]-a[0]-dx*t,p[1]-a[1]-dz*t)<.01;};
+/**
+ * Every street end meets the street it runs into (Khaneil, 2026-11-13: "make sure each street path
+ * intersects aesthetically wherever it ends"). A street that stops inside a crossing street's
+ * carriageway, short of or just past its centre line, is run on (or back) along its own axis to that
+ * centre line, so the two draw as one clean T with square corners instead of a stub overlapping the
+ * other street's kerb. Only a free end moves, by less than a road's width: an end already joined to
+ * a street or to one of the `anchors` it was routed to (walks, plaza lanes) keeps its place. Points
+ * are replaced, never edited, since paths may share them.
+ */
+export function joinStreetEnds(paths:Pt[][],anchors:Pt[][]=[]):void{
+ const segs=(ps:Pt[][])=>ps.flatMap((q,j)=>q.slice(1).map((b,i)=>({j,a:q[i],b,r:run(q[i],b)})));
+ const streets=segs(paths),fixed=segs(anchors);
+ paths.forEach((p,j)=>{
+  if(p.length<2)return;
+  for(const [e,n] of [[0,1],[p.length-1,p.length-2]]){
+   const r=run(p[n],p[e]),end=p[e];if(!r)continue;
+   const k=r.x?0:1,len=Math.abs(end[k]-p[n][k]),dir=Math.sign(end[k]-p[n][k]),near=(s:{a:Pt;b:Pt})=>Math.max(Math.abs(end[0]-(s.a[0]+s.b[0])/2)-Math.abs(s.a[0]-s.b[0])/2,Math.abs(end[1]-(s.a[1]+s.b[1])/2)-Math.abs(s.a[1]-s.b[1])/2)<ROAD_W;
+   const close=streets.filter(s=>s.j!==j&&near(s));
+   if(close.some(s=>onSeg(end,s.a,s.b))||fixed.some(s=>near(s)&&onSeg(end,s.a,s.b)))continue;
+   let best:number|undefined;
+   for(const {r:o} of close){
+    if(!o||o.x===r.x||end[1-k]<o.lo-1e-6||end[1-k]>o.hi+1e-6)continue;
+    const gap=o.c-end[k];
+    if(Math.abs(gap)>1e-6&&(gap*dir>0||Math.abs(gap)<len-.05)&&(best===undefined||Math.abs(gap)<Math.abs(best)))best=gap;
+   }
+   if(best!==undefined){const m:Pt=[end[0],end[1]];m[k]+=best;p[e]=m;}
+  }
+ });
+}
