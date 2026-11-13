@@ -43,7 +43,12 @@ export const AIRPORT_TERMINAL={x:1.5,z:6,width:3.8,depth:10.5,floorHeight:1.2,ro
 export function airportParkingBays(){return Array.from({length:5},(_,i)=>({x:-.35+i*.7,z:AIRPORT_TERMINAL.parkingZ+.7}));}
 export const AIRCRAFT_LAYOUT={doorX:-.2,doorZ:-.8,doorY:.19,doorHeight:.29,halfSpan:1.35,halfLength:1.4} as const;
 export const BOARDING_LAYOUT={floor:.22,ceiling:.54,fromX:3.375} as const;
-export function boardingBridge(gateZ:number){const endX=AIRPORT_LAYOUT.gateX+AIRCRAFT_LAYOUT.doorX;return {x:(BOARDING_LAYOUT.fromX+endX)/2,z:gateZ+AIRCRAFT_LAYOUT.doorZ,w:endX-BOARDING_LAYOUT.fromX,endX};}
+/** Every jet at a gate parks nose-in, facing the terminal (Khaneil, 2026-11-13): heading -x, so its front left
+ * passenger door (aircraft-local doorX, doorZ; nose -z, left -x) sits forward of the gate centre on the +z side. */
+export const GATE_YAW=Math.PI/2;
+export function gateDoor(gateZ:number){return {x:AIRPORT_LAYOUT.gateX+AIRCRAFT_LAYOUT.doorZ,z:gateZ-AIRCRAFT_LAYOUT.doorX};}
+/** The jet bridge runs out from the pier beside the nose, then its cab turns in to meet the door, as at a real gate. */
+export function boardingBridge(gateZ:number){const door=gateDoor(gateZ),endX=door.x+.1,z=door.z+.36;return {x:(BOARDING_LAYOUT.fromX+endX)/2,z,w:endX-BOARDING_LAYOUT.fromX,endX,door};}
 export interface AirportPlan { x:number; z:number; accessX: number; accessZ: number; west?: boolean; publicViaZ?:number }
 /** Airport-local coordinates are the only source of truth, including west-facing campuses. */
 export function airportPoint(a:AirportPlan,x:number,z:number):[number,number] {

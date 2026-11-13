@@ -63,7 +63,9 @@ it("keeps gate aircraft, waiting jets, and cargo clear of the runway",async()=>{
 
 it("joins every gate to the concourse and aircraft door at a usable floor height",async()=>{
  const {boardingBridge,AIRPORT_LAYOUT:l,AIRCRAFT_LAYOUT:p,BOARDING_LAYOUT:b}=await import('./airport');
- for(const gate of l.gateZ){const bridge=boardingBridge(gate);expect(bridge.x-bridge.w/2).toBeCloseTo(b.fromX);expect(bridge.x+bridge.w/2).toBeCloseTo(l.gateX+p.doorX);expect(bridge.z).toBe(gate+p.doorZ);}
+ // Nose-in jets (GATE_YAW): the door is forward of the gate on the +z side; the tunnel runs beside the nose and
+ // its cab turns in to that door, clear of the fuselage.
+ for(const gate of l.gateZ){const bridge=boardingBridge(gate);expect(bridge.x-bridge.w/2).toBeCloseTo(b.fromX);expect(bridge.door).toEqual({x:l.gateX+p.doorZ,z:gate-p.doorX});expect(bridge.endX).toBeGreaterThan(bridge.door.x);expect(bridge.z-.19).toBeGreaterThan(gate+.19);}
  expect(b.floor+.03).toBeCloseTo(.06+p.doorY);
  expect(b.ceiling-b.floor).toBeGreaterThan(.26);
 });

@@ -13,7 +13,7 @@ import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, GATE_YAW, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -28,7 +28,7 @@ const GEAR_TOP=.2;
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
 const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
-function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material}) {
+function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parked?:{x:number;z:number;yaw?:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material}) {
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   const phase=lightPhase(slot+(parked?3:0));
@@ -91,7 +91,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
     ref.current.visible=pose.visible;
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
-  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined}>
+  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
     <Instanced items={parts.body} geometry={g.ball} material={m.plain}/>
     <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
@@ -193,15 +193,21 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(let zz=north+.5;zz<=south-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     for(const gateZ of AIRPORT_LAYOUT.gateZ){
       const bridge=boardingBridge(gateZ);
-      // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
-      cubes.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+BOARDING_LAYOUT.ceiling,z+bridge.z,bridge.w+.2,.04,.5,"#e9ebe6"));
-      for(const side of [-1,1])cubes.push(box(x+5.1,y+.35,z+gateZ-.8+side*.2,3.2,.04,.02,HQ.glassDeep));
-      cubes.push(box(x+7,y+.065,z+gateZ, .035,.012,2.8,"#d6bd6e"));
+      // Jet bridge (Khaneil, 2026-11-13: "realistic like a real airport"): a glazed tunnel from the pier out beside the
+      // nose, a cab that turns in to the front door with a canopy over it, and a wheeled drive column under the tunnel.
+      const B=BOARDING_LAYOUT,cabX=bridge.endX-.22,cabZ0=bridge.door.z+.2,cabZ1=bridge.z+.19;
+      cubes.push(box(x+bridge.x,y+B.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+B.ceiling,z+bridge.z,bridge.w,.04,.46,"#e9ebe6"));
+      cubes.push(box(x+cabX,y+B.floor,z+(cabZ0+cabZ1)/2,.44,.03,cabZ1-cabZ0,"#d9d8ca"),box(x+cabX,y+B.ceiling,z+(cabZ0+cabZ1)/2-.02,.52,.04,cabZ1-cabZ0+.08,"#e9ebe6"));
+      cubes.push(box(x+cabX,y+(B.floor+B.ceiling)/2,z+cabZ0+.02,.4,B.ceiling-B.floor-.02,.03,"#3b4446"));
+      for(const side of [-1,1])glass.push(box(x+cabX+side*.21,y+B.floor+.03+.125,z+(cabZ0+cabZ1)/2,.02,.25,cabZ1-cabZ0,'#ffffff'));
+      cubes.push(box(x+7,y+.065,z+gateZ,2.8,.012,.035,"#d6bd6e"),box(x+5.75,y+.065,z+gateZ,.035,.012,.5,"#f4eedb"));
       for(const side of [-1,1]){
-       glass.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor+.03,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
-       for(let xx=BOARDING_LAYOUT.fromX;xx<bridge.x+bridge.w/2;xx+=.65)cubes.push(box(x+xx,y+BOARDING_LAYOUT.floor,z+bridge.z+side*.21,.035,.32,.035,'#c2ccc7'));
+       glass.push(box(x+bridge.x,y+B.floor+.03+.125,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
+       for(let xx=B.fromX;xx<bridge.x+bridge.w/2;xx+=.65)cubes.push(box(x+xx,y+B.floor,z+bridge.z+side*.21,.035,.32,.035,'#c2ccc7'));
       }
-      cubes.push(box(x+bridge.x+bridge.w/2-.15,y+.05,z+bridge.z,.09,.17,.09,'#c2c7be'));
+      const legX=bridge.endX-.75;
+      cubes.push(box(x+legX,y+.12,z+bridge.z,.08,B.floor-.1,.08,'#c2c7be'),box(x+legX,y+.05,z+bridge.z,.14,.06,.42,'#5b6466'));
+      for(const side of [-1,1])round.push(box(x+legX,y+.04,z+bridge.z+side*.17,.07,.07,.07,'#202b36'));
     }
     // No light poles on the apron (Khaneil, 2026-11-13): jets taxi to and from the gates without passing any.
     for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,HQ.glassDeep));
@@ -236,7 +242,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
     {/* The south remote stand is kept free for arrivals; the north one keeps a parked jet. */}
-    {[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
+    {[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0],yaw:GATE_YAW},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3],yaw:GATE_YAW}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
