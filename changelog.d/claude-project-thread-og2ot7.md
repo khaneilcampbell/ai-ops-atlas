@@ -1,0 +1,1 @@
+- 2026-11-13 · A gold private jet now flies the airport loop. It's bigger than the airliners, boards its passengers from the terminal through the jet bridge, and you can step inside with "Enter aircraft" to see who's on board and its route on a live moving map

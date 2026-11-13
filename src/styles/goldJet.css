@@ -1,0 +1,12 @@
+/* Gold private jet interior (GoldJetInterior.tsx): the in-flight moving map card. */
+.gold-jet-route{position:absolute;right:20px;bottom:16px;z-index:30;width:300px;padding:12px 14px;border-radius:16px;background:rgba(20,16,12,.92);border:1px solid #b99c62;color:#f3e7cc;font:12px system-ui;box-shadow:0 6px 24px #0006}
+.gold-jet-route strong{display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.08em;color:#d9b66a;margin-bottom:6px}
+.gold-jet-route svg{display:block;width:100%;height:auto;background:#101820;border-radius:10px}
+.gold-jet-route .runway{fill:#59626a}.gold-jet-route .terminal{fill:#c9a046;opacity:.8}
+.gold-jet-route .ground{fill:none;stroke:#8c8f8a;stroke-width:1.4;stroke-dasharray:3 3}
+.gold-jet-route .air{fill:none;stroke:#e6bf62;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.gold-jet-route .jet{fill:#fff3d2;stroke:#c9a046;stroke-width:1}
+.gold-jet-route p{margin:8px 0 2px}.gold-jet-route span{display:block;font-size:10px;color:#b9ab8c}
+.gold-jet-interior.skyline-interior .skyline-interior-head>div,.gold-jet-interior.skyline-interior .skyline-interior-note{background:rgba(26,20,15,.94);color:#efe3c8}
+.gold-jet-interior.skyline-interior h2{color:#f3ead7}.gold-jet-interior.skyline-interior small{color:#d4b575}.gold-jet-interior .skyline-interior-note span{color:#bfae8a}
+@media(max-width:650px){.gold-jet-route{top:auto;bottom:118px;right:10px;left:10px;width:auto;padding:8px 10px}.gold-jet-route svg{max-height:120px}.gold-jet-route span{display:none}}

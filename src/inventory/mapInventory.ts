@@ -26,6 +26,7 @@ import { MAP_FLEET } from "../views/map3d/mapFleet";
 import { buildScene, type Scene3D } from "../views/map3d/scene";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
 import { YACHT_KEY, YACHT_NAME } from "../views/map3d/yachtPlan";
+import { GOLD_JET_KEY, GOLD_JET_NAME } from "../views/map3d/goldJetIds";
 import { planStreetLights } from "../views/map3d/streetLighting";
 import { planDealershipTraffic, planHighwayTraffic, planVehicles, type VehicleKind } from "../views/map3d/vehicles";
 
@@ -176,6 +177,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.stadium) add({ id: STADIUM_KEY, name: STADIUM_NAME, kind: "Landmark", area: "Stadium", status: PLANNED, project: "", source: "src/views/map3d/stadiumPlan.ts" });
   // The Atlas yacht is berthed at the marina whenever the map has its harbour (Map3D anchorsOf).
   add({ id: YACHT_KEY, name: YACHT_NAME, kind: "Landmark", area: "Marina", status: PLANNED, project: "", source: "src/views/map3d/yachtPlan.ts" });
+  // The gold private jet flies the airport loop and can be entered (goldJetPlan); decorative, not live.
+  if (scene.airport) add({ id: GOLD_JET_KEY, name: GOLD_JET_NAME, kind: "Landmark", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/goldJetPlan.ts" });
   if (scene.hills) add({ id: HILLS_KEY, name: "Atlas Hills", kind: "Landmark", area: "Atlas Hills", status: PLANNED, project: "", source: "src/views/map3d/hillsPlan.ts" });
   if (scene.airport) {
     add({ id: AIRPORT_KEY, name: "Atlas Airport", kind: "Landmark", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/airport.ts" });
@@ -245,7 +248,8 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   }
 
   if (scene.airport) {
-    add({ category: "Aircraft", kind: "Airliner on the flight loop", count: LOOP.count, area: "Airport", moves: true, source: "src/views/map3d/airportArrivals.ts LOOP" });
+    add({ category: "Aircraft", kind: "Airliner on the flight loop", count: LOOP.count - MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/airportArrivals.ts LOOP" });
+    add({ category: "Aircraft", kind: "Gold private jet on the flight loop", count: MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/goldJetPlan.ts GOLD_JET_SLOT" });
     add({ category: "Aircraft", kind: "Parked airliner", count: AIRPORT_PARKED_STANDS.length, area: "Airport", moves: false, source: "src/views/map3d/LogisticsAirport.tsx" });
     add({ category: "Aircraft", kind: "Executive jet on the flight loop", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
     const crew = planAirportCrew();

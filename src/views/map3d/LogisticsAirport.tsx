@@ -9,6 +9,7 @@ import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
 import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
+import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -28,7 +29,9 @@ const GEAR_TOP=.2;
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
 const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
-function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parked?:{x:number;z:number;yaw?:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material}) {
+/** The gold private jet's extras: scaled about the forward door, gold sleeves in a polished material, clickable. */
+interface GoldTrim {material:THREE.Material;pick:Pick}
+function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{parked?:{x:number;z:number;yaw?:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material;gold?:GoldTrim}) {
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   const phase=lightPhase(slot+(parked?3:0));
@@ -52,7 +55,8 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
       ]),
     ] as Inst[],
     body:[
-      {p:[0,y0,tube],s:[R,R,.42],c:l.fuselage},
+      // The gold jet's nose is solid gold, the darkest step of its fade.
+      {p:[0,y0,tube],s:[R,R,.42],c:gold?GOLD_JET_FADE[GOLD_JET_FADE.length-1].c:l.fuselage},
       {p:[0,y0+.02,tubeTo],s:[R*.92,R*.8,.5],c:l.fuselage},
       ...(parked?WHEELS:[]),
     ] as Inst[],
@@ -74,7 +78,14 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
       {p:[AIRCRAFT_LAYOUT.doorX+.005,y0-.1,AIRCRAFT_LAYOUT.doorZ],s:[.02,.2,.1],c:l.windows},
       ...[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.002),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))),
     ] as Inst[],
-  };},[livery,parked]);
+    // Gold private jet: a gold nose cap, gold sleeves fading back toward the white tail, and gold engine cowls.
+    gold:gold?[
+      ...GOLD_JET_FADE.map((f,i)=>({p:[0,y0,tube],s:[2*R+.003*(i+1),f.to-tube,2*R+.003*(i+1)],rx:Math.PI/2,c:f.c})),
+      ...[-1,1].map(side=>({p:[side*ENGINE.x,ENGINE.y,ENGINE.z],s:[ENGINE.d+.008,ENGINE.len*.7,ENGINE.d+.008],rx:Math.PI/2,c:'#d4a63d'})),
+    ] as Inst[]:[],
+    // Cabin windows on top of the gold sleeves, so the window line runs nose to tail.
+    goldWindows:gold?[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.015),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))).filter(w=>w.p[2]<GOLD_JET_FADE[0].to) as Inst[]:[],
+  };},[livery,parked,gold]);
   useFrame(()=>{
     if(night){
       const blink=blinkState(clock.current,phase);
@@ -91,10 +102,14 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
     ref.current.visible=pose.visible;
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
+  const pickAll=gold?{...gold.pick,keys:[] as string[]}:undefined,picked=(items:Inst[])=>pickAll&&{...pickAll,keys:items.map(()=>GOLD_JET_KEY)};
+  const S=gold?GOLD_JET_SCALE:1,P=GOLD_JET_PIVOT;
   return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
-    <Instanced items={parts.body} geometry={g.ball} material={m.plain}/>
-    <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain}/>
-    <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
+   <group position={gold?P:undefined} scale={S}><group position={gold?[-P[0],-P[1],-P[2]]:undefined}>
+    {gold&&<><Instanced items={parts.gold} geometry={g.cyl} material={gold.material} pick={picked(parts.gold)}/><Instanced items={parts.goldWindows} geometry={g.box} material={m.plain} shadow={false}/></>}
+    <Instanced items={parts.body} geometry={g.ball} material={m.plain} pick={picked(parts.body)}/>
+    <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain} pick={picked(parts.tubes)}/>
+    <Instanced items={parts.wings} geometry={g.box} material={m.plain} pick={picked(parts.wings)}/>
     {!parked&&<group ref={gearRef} position={[0,GEAR_TOP,0]}><Instanced items={parts.gear} geometry={g.ball} material={m.plain} shadow={false}/></group>}
     <Instanced items={cockpit} geometry={g.box} material={night?m.glow:m.plain} shadow={false}/>
     {/* Night lights: red/green/white position lights stay on; a parked jet with engines off shows only those. */}
@@ -109,6 +124,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
         </group>
       </>}
     </>}
+   </group></group>
   </group>;
 }
 
@@ -124,7 +140,12 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
   useEffect(()=>()=>glazing.dispose(),[glazing]);
   const beam=useMemo(()=>new THREE.MeshBasicMaterial({color:'#fff1cc',transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
   useEffect(()=>()=>beam.dispose(),[beam]);
-  useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);});
+  useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);goldJetLive.clock=clock.current;});
+  // Polished gold for the private jet: a little metallic so it catches the sun, warm at night like the terminal glass.
+  const goldMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',metalness:.3,roughness:.32}),[]);
+  useEffect(()=>{goldMaterial.emissive.set('#5a4114');goldMaterial.emissiveIntensity=night?.4:.12;},[goldMaterial,night]);
+  useEffect(()=>()=>goldMaterial.dispose(),[goldMaterial]);
+  const goldTrim=useMemo(()=>({material:goldMaterial,pick}),[goldMaterial,pick]);
   const parts=useMemo(()=>{
     if(!a)return null;
     const y=TERRACE_H,x=a.x,z=a.z;
@@ -233,6 +254,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...r1Lamps.flatMap(zz=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]} as Inst))),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
+  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;},[circuit,a]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/>
@@ -249,7 +271,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     <GroundCrew a={a} g={g} m={m} clock={clock}/>
     <group position={[a.x,TERRACE_H+.06,a.z]}><ExecutiveJet g={g} m={m} clock={clock} circuit={circuit}/></group>
-    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)} night={night} beam={beam}/></group>)}
+    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={slot===GOLD_JET_SLOT?GOLD_JET_LIVERY:liveryFor(slot)} night={night} beam={beam} gold={slot===GOLD_JET_SLOT?goldTrim:undefined}/></group>)}
+    <GoldJetBoarding x={a.x} z={a.z} g={g} m={m} clock={clock} circuit={circuit}/>
   </group>;
 }
 
@@ -311,6 +334,29 @@ function TerminalShapes({a,g,m,glazing,night}:{a:AirportPlan;g:Geometry;m:Materi
   <Instanced items={parts.tintDiscs} geometry={res.disc} material={res.tint}/>
   <Instanced items={parts.tintBoxes} geometry={g.box} material={res.tint}/>
  </>;
+}
+
+/** The gold jet's passengers walking the jet bridge at its gate: off first, then the next group on. The same unnamed
+ * figures as the other boarding groups; one instanced pair of meshes, posed from the shared airport clock. */
+const GOLD_PASSENGER_COLORS=["#2f3b45","#b8893b","#e8e2d4","#6b3f4a","#30594c","#8c96a3"];
+function GoldJetBoarding({x,z,g,m,clock,circuit}:{x:number;z:number;g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
+ const bodyRef=useRef<THREE.InstancedMesh>(null),headRef=useRef<THREE.InstancedMesh>(null);
+ const o=useMemo(()=>new THREE.Object3D(),[]);
+ useEffect(()=>{const c=new THREE.Color();for(let i=0;i<GOLD_PASSENGER_COLORS.length;i++){bodyRef.current?.setColorAt(i,c.set(GOLD_PASSENGER_COLORS[i]));headRef.current?.setColorAt(i,c.set("#c5a580"));}for(const r of [bodyRef,headRef])if(r.current?.instanceColor)r.current.instanceColor.needsUpdate=true;},[]);
+ useFrame(()=>{
+  const body=bodyRef.current,head=headRef.current;if(!body||!head)return;
+  const walkers=goldJetWalkers(goldJetState(clock.current,circuit));
+  for(let i=0;i<GOLD_PASSENGER_COLORS.length;i++){
+   const w=walkers[i],s=w?1:0;
+   o.position.set(w?.x??0,0,w?.z??0);o.rotation.set(0,w?.yaw??0,0);o.scale.set(.055*s,.15*s,.055*s);o.updateMatrix();body.setMatrixAt(i,o.matrix);
+   o.position.y=.2;o.scale.set(.06*s,.06*s,.06*s);o.updateMatrix();head.setMatrixAt(i,o.matrix);
+  }
+  body.instanceMatrix.needsUpdate=true;head.instanceMatrix.needsUpdate=true;body.visible=head.visible=walkers.length>0;
+ });
+ return <group position={[x,TERRACE_H+BOARDING_LAYOUT.floor+.03,z]}>
+  <instancedMesh ref={bodyRef} args={[g.box,m.plain,GOLD_PASSENGER_COLORS.length]} frustumCulled={false} raycast={()=>null}/>
+  <instancedMesh ref={headRef} args={[g.bead,m.plain,GOLD_PASSENGER_COLORS.length]} frustumCulled={false} raycast={()=>null}/>
+ </group>;
 }
 
 /** A single existing frame callback moves small boarding groups and two cargo vehicles. */
