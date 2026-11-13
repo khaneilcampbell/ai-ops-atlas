@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {fleetPose,flightPhase,loopTiming,TAKEOFF_QUEUE,FLIGHT_SCHEDULE as f} from './flightSchedule';
+import {executiveJetPose,fleetPose,flightPhase,loopTiming,SHARED_SLOT,TAKEOFF_QUEUE,FLIGHT_SCHEDULE as f} from './flightSchedule';
 import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_LAYOUT as l} from './airport';
 import {ARRIVAL,ARRIVAL_GATES,ARRIVAL_STAND,LOOP,ROLL_START_Z} from './airportArrivals';
 // The circuit the map uses for the sample catalog (airport-local, mirror already applied).
@@ -11,7 +11,7 @@ it('releases one departure every 45 seconds, including cycle wrap',()=>{
  expect(f.interval).toBe(45);
  expect(f.count*f.interval).toBe(f.cycle);
  // Jets alternate between two gates, so every other slot repeats the same path two intervals later.
- for(let slot=2;slot<f.count;slot++)for(const t of [0,20,50,90,150,200])expect(fleetPose(t+slot*f.interval,slot)).toEqual(fleetPose(t+(slot-2)*f.interval,slot-2));
+ for(let slot=2;slot<SHARED_SLOT;slot++)for(const t of [0,20,50,90,150,200])expect(fleetPose(t+slot*f.interval,slot)).toEqual(fleetPose(t+(slot-2)*f.interval,slot-2));
  expect(fleetPose(f.cycle,0)).toEqual(fleetPose(0,0));
 });
 
@@ -108,5 +108,22 @@ it('works both runways top to bottom: landings come in from the north, takeoffs 
   // The takeoff roll starts at runway 1's north end and runs south.
   const r0=fleetPose(f.taxi+1-f.start,0,c),r1=fleetPose(f.taxi+6-f.start,0,c);
   expect(r0.x).toBe(l.runwayX);expect(r0.z).toBeLessThan(0);expect(r1.z).toBeGreaterThan(r0.z);
+ }
+});
+
+it('flies the executive jet every other loop in the shared slot, resting at the north stand (Khaneil, 2026-11-13)',()=>{
+ for(const c of CIRCUITS){
+  // On the ground, every jet (executive jet included) keeps a wingspan apart from every other; in the air, well clear.
+  let ground=Infinity,air=Infinity;
+  for(let t=0;t<f.cycle*2;t+=.1){
+   const ps=[...Array.from({length:f.count},(_,s)=>fleetPose(t,s,c)),executiveJetPose(t,c)];
+   for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],d=Math.hypot(a.x-b.x,a.z-b.z,a.y-b.y);if(a.y<.05&&b.y<.05)ground=Math.min(ground,d);else air=Math.min(air,d);}
+  }
+  expect(ground).toBeGreaterThan(2.8);expect(air).toBeGreaterThan(2.8);
+  // It takes off in one loop of the shared slot and sits at the north stand right through the next.
+  const flew=[0,1].map(k=>{let up=false;for(let t=0;t<f.cycle;t+=.5)if(executiveJetPose(SHARED_SLOT*f.interval-f.start+k*f.cycle+t,c).y>1)up=true;return up;});
+  expect(flew.filter(Boolean)).toHaveLength(1);
+  const rest=flew[0]?1:0,p=executiveJetPose(SHARED_SLOT*f.interval-f.start+rest*f.cycle+100,c);
+  expect([p.x,p.z]).toEqual([7,-4.6]);
  }
 });

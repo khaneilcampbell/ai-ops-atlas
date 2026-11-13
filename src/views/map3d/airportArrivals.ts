@@ -45,6 +45,10 @@ export const LOOP_CYCLE=LOOP.interval*LOOP.count;
  * takeoff hold (Khaneil, 2026-11-13). Jets alternate between the two empty gates: even slots use gate 2 (the
  * reference timing), odd slots gate 1, the second stand circle. */
 export const ARRIVAL_GATES=[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[2]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[1]}] as const;
+/** Remote stands for the shared slot (flightSchedule): the executive jet rests at the north one, its alternate
+ * airliner at the south one, each for a whole loop between flights (Khaneil, 2026-11-13). */
+export const STAND_NORTH=2,STAND_SOUTH=3;
+const REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
 export const ARRIVAL_STAND=ARRIVAL_GATES[0];
 export const arrivalGate=(slot:number)=>((slot%2)+2)%2;
 /** The hold is on the taxiway by runway 1's north end (TAKEOFF_QUEUE), facing north. */
@@ -99,7 +103,18 @@ function rollout(L:number){
  };
  return {duration,at};
 }
-const GATES=ARRIVAL_GATES.map(gateRoutes);
+const GATES=[...ARRIVAL_GATES,...REMOTE_STANDS].map(gateRoutes);
+// The south remote stand sits on the south end lane, so jets pull straight in from the runway end.
+GATES[STAND_SOUTH]={...GATES[STAND_SOUTH],...(()=>{const st=REMOTE_STANDS[1],groundIn:Pt[]=roundedRoad([[R.x,R.touchdownZ],[R.x,R.southLaneZ],[st.x,st.z]],.9),inLengths=measure(groundIn);return {groundIn,inLengths,roll:rollout(inLengths[inLengths.length-1])};})()};
+/** Parked at a stand: the end of the route in. */
+export function standPose(gate:number):GroundPose{const G=GATES[gate],q=along(G.groundIn,G.inLengths,Infinity);return {x:q.x,y:0,z:q.z,yaw:q.yaw,pitch:0,roll:0,gear:1,visible:true};}
+/** Leaving a stand: pushback, tug pause, then taxi up to the hold, where the jet then waits. */
+export function leaveStandDuration(gate:number){const G=GATES[gate];return G.push.duration+ARRIVAL.pause+G.out.duration;}
+export function leaveStandPose(gate:number,r:number):GroundPose{
+ const G=GATES[gate],ground=(x:number,z:number,yaw:number):GroundPose=>({x,y:0,z,yaw,pitch:0,roll:0,gear:1,visible:true});
+ if(r<G.push.duration+ARRIVAL.pause){const q=along(G.pushRoute,G.pushLengths,G.push.at(r));return ground(q.x,q.z,q.yaw+Math.PI);}
+ const q=along(G.taxiOut,G.outLengths,G.out.at(r-G.push.duration-ARRIVAL.pause));return ground(q.x,q.z,q.yaw);
+}
 const {roll:ROLLOUT,push:PUSH,out:TAXI_OUT}=GATES[0];
 
 /** Final approach in airport-local coordinates: straight in on a constant glide angle, touching down at the aiming

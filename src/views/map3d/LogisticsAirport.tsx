@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
 import {GroundCrew} from "./GroundCrew";
-import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
+import {executiveJetPose,FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
@@ -248,8 +248,44 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     <GroundCrew a={a} g={g} m={m} clock={clock}/>
+    <group position={[a.x,TERRACE_H+.06,a.z]}><ExecutiveJet g={g} m={m} clock={clock} circuit={circuit}/></group>
     {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)} night={night} beam={beam}/></group>)}
   </group>;
+}
+
+/** The executive jet (it used to circle the city on its own): now it flies the airport loop in the shared slot,
+ * every other loop, resting at the north remote stand in between (executiveJetPose, Khaneil 2026-11-13). */
+const EXECUTIVE_JET=({
+    body:[
+      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
+      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
+      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
+      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
+      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
+    ] as Inst[],
+    trim:[
+      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
+      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
+      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
+      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
+      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
+      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
+    ] as Inst[],
+  });
+function ExecutiveJet({g,m,clock,circuit}:{g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
+  const ref=useRef<Group>(null);
+  useFrame(()=>{
+    if(!ref.current)return;
+    const pose=executiveJetPose(clock.current,circuit);
+    ref.current.position.set(pose.x,pose.y,pose.z);
+    ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
+  });
+  // The model is built nose +x; turn it so the nose points -z like the airliners.
+  return <group ref={ref}><group rotation={[0,Math.PI/2,0]}><Instanced items={EXECUTIVE_JET.body} geometry={g.ball} material={m.plain}/><Instanced items={EXECUTIVE_JET.trim} geometry={g.box} material={m.plain}/></group></group>;
 }
 
 /** The redesigned terminal, tower and car park: ten instanced draws sharing three extra geometries. */
