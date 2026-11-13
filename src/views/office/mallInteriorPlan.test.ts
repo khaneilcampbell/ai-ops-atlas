@@ -72,7 +72,7 @@ describe('Marketplace production workspaces',()=>{
    const i=20,x=(outer[i][0]+inner[i][0])/2,z=(outer[i][1]+inner[i][1])/2;
    const hits=new THREE.Raycaster(new THREE.Vector3(x,4,z),new THREE.Vector3(0,-1,0)).intersectObject(mesh);
    expect(hits.length).toBeGreaterThan(0);expect(hits[0].point.y).toBeCloseTo(0,5);expect(hits[0].face!.normal.y).toBeGreaterThan(.99);
-   geo.dispose();(mesh.material as THREE.MeshBasicMaterial).dispose();
+   geo.dispose();mesh.material.dispose();
   }
  });
 });

@@ -8,20 +8,18 @@ import { ALERT_KINDS, MAX_REPOS, PAGE, REPO_RE, SEVERITIES, type AlertFeed, type
 import { owners, type GithubEnv } from "./github";
 import { bearerOk } from "./live";
 import type { CheckCache } from "./properties";
+import { reply, type Json as J } from "./http";
 
 export interface SecurityEnv extends GithubEnv {
   /** The Mac app's sync key, for /api/hooks/security. */
   USAGE_SYNC_TOKEN?: string;
 }
 
-type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Fetcher = typeof fetch;
 
 const TIMEOUT_MS = 15_000;
 /** Reused for ten minutes: alerts change slowly and each repository costs three GitHub requests. */
 export const TTL_SEC = 600;
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 const PATH: Record<AlertKind, string> = {
   dependabot: "dependabot/alerts",
