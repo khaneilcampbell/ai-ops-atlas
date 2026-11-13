@@ -4,7 +4,7 @@ import {openAtlas,waitForScene,settle} from './atlas';
 /**
  * Travel loops screenshots (travelLoops.ts): the map's clock is stepped by hand to moments in the loops and the camera
  * framed on each place: people leaving Team Residence Towers, the van at the airport terminal, the train and van at
- * Events Arena Station, guests boarding the yacht, her casting off and out at sea, a close-up of the walkers' arms and legs, the car at the Vendor & Supplier Hub. Written
+ * Events Arena Station, guests boarding the yacht, her casting off and out at sea, a close-up of the walkers' arms and legs and glowing shirts, the airport and arena traffic, shoppers close up, the car at the Vendor & Supplier Hub. Written
  * only when SHOT_DIR is set; no baseline comparison. Runs on main too (for before shots): it imports nothing new.
  */
 const out=process.env.SHOT_DIR;
@@ -31,6 +31,13 @@ for(const width of [1512,390])test(`travel loops ${width}`,async({page})=>{
    ['team-residence',70,[home[0]+6,T,home[1]+6],[home[0]+12*k,T+9*k,home[1]+16*k]],
    ['figures-closeup',71,[home[0]+6,T+.1,home[1]+6],[home[0]+6+1.1*k,T+.75*k,home[1]+6+1.6*k]],
    ['arena-dropoff',88,[gx+3,T,gz+3],[gx+12*k,T+9*k,gz-4*k]],
+   // Buses, luxury cars, SUVs and shipping trucks on the streets between the airport and the arena (travelLoops.ts).
+   ['arena-traffic',96,[gx+2,T,gz+6],[gx+20*k,T+16*k,gz-10*k]],
+   // Travellers on their way from Events Arena Station to the yacht, close up: glowing shirts.
+   ['glow-shirts',98,[-8.5,T+.1,52.3],[-8.5+3*k,T+2.2*k,52.3-3.6*k]],
+   ['airport-traffic',112,[ax,T,az+4],[ax+18*k,T+15*k,az+18*k]],
+   // Shoppers outside the Vendor & Supplier Hub, close up: everyone in the city has arms and legs.
+   ['shoppers-closeup',120,[v.x,T,v.z-1.5],[v.x+2.4*k,T+1.6*k,v.z-4.2*k]],
    ['yacht-boarding',139,[b.x-2,W+.5,b.z-1.5],[b.x+3*k,W+5*k,b.z+8*k]],
    ['yacht-casting-off',158,[b.x+4,W,b.z+3],[b.x-4*k,W+11*k,b.z+16*k]],
    ['vendor-dropoff',185,[v.x+2,T,v.z-3],[v.x+11*k,T+8*k,v.z-10*k]],

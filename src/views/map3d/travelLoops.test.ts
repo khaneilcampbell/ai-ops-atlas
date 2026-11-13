@@ -6,7 +6,9 @@ import {loopState} from './perimeterRailPlan';
 import {vehicleAt} from './vehicles';
 import {DISTRICT_WALKERS,planDistrictWalkers} from './districtWalkers';
 import {YACHT,YACHT_SCALE} from './yachtPlan';
-import {TRAVEL,planTravel,travellerAt,yachtCourse,yachtPoseAt,yachtSailing} from './travelLoops';
+import {airportCargoPoint,airportPoint} from './airport';
+import {stadiumGate} from './stadiumGeometry';
+import {AIRPORT_ARENA_TRAFFIC,TRAVEL,planTravel,travellerAt,yachtCourse,yachtPoseAt,yachtSailing} from './travelLoops';
 
 const scene=buildScene(layoutMap(catalog,[],'district')),plan=planTravel(scene)!,loop=scene.communityRail!.loop!;
 
@@ -96,5 +98,24 @@ describe('travel loops',()=>{
 
  it('needs nothing on other layouts', ()=>{
   expect(planTravel(buildScene(layoutMap(catalog,[],'none')))).toBeUndefined();
+ });
+ it('runs buses, luxury cars, SUVs and shipping trucks between the airport and the arena, spread out and on the streets',()=>{
+  const kinds=new Set(plan.traffic.map(v=>v.kind));
+  for(const k of ['bus','bmw','gwagon','semi'])expect(kinds).toContain(k);
+  expect(plan.traffic).toHaveLength(AIRPORT_ARENA_TRAFFIC.length);
+  expect(new Set(plan.traffic.map(v=>v.id)).size).toBe(plan.traffic.length);
+  const [tx,tz]=airportPoint(scene.airport!,-.7,6),[cx,cz]=airportCargoPoint(scene.airport!),[gx,gz]=stadiumGate(scene.stadium!);
+  for(const v of plan.traffic){
+   expect(v.scheduled).toBe(true);
+   // Each round pulls up at both ends: the terminal door (or the cargo apron for trucks) and the arena gate.
+   const pts=Array.from({length:600},(_,i)=>vehicleAt(v,i*v.period/600));
+   const near=(x:number,z:number)=>Math.min(...pts.map(p=>Math.hypot(p.x-x,p.z-z)));
+   if(v.kind==='semi')expect(near(cx,cz)).toBeLessThan(3);else expect(near(tx,tz)).toBeLessThan(3);
+   expect(near(gx,gz)).toBeLessThan(3);
+  }
+  // Vehicles on the same round start evenly apart round its timetable.
+  const people=plan.traffic.filter(v=>v.kind!=='semi'),start=(v:typeof people[number])=>((-v.offset%v.period)+v.period)%v.period;
+  const gaps=people.map(start).sort((a,b)=>a-b);
+  for(let i=1;i<gaps.length;i++)expect(gaps[i]-gaps[i-1]).toBeGreaterThan(people[0].period/people.length-1);
  });
 });

@@ -1,4 +1,5 @@
 import {airportFlightCircuit,type WorldObstacle} from './flightClearance';
+import {FIGURE} from './walkerFigure';
 import * as THREE from "three";
 import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
@@ -315,8 +316,11 @@ function TerminalShapes({a,g,m,glazing,night}:{a:AirportPlan;g:Geometry;m:Materi
 
 /** A single existing frame callback moves small boarding groups and two cargo vehicles. */
 function BoardingActivity({x,z,g,m}:{x:number;z:number;g:Geometry;m:Materials}){
- const bodies=useMemo<Inst[]>(()=>Array.from({length:4},(_,j)=>({p:[j*.42,0,0],s:[.055,.15,.055],c:["#294237","#b8893b","#356386","#8a5d79"][j]})),[]);
- const heads=useMemo<Inst[]>(()=>bodies.map(p=>({p:[p.p[0],.2,p.p[2]],s:[.06,.06,.06],c:"#c5a580"})),[bodies]);
+ // Standing passengers with arms and legs (walkerFigure.ts sizes), waiting at the door.
+ const bodies=useMemo<Inst[]>(()=>{const {leg,torso,arm}=FIGURE,out:Inst[]=[];for(let j=0;j<4;j++){const x0=j*.42,shirt=["#294237","#b8893b","#356386","#8a5d79"][j];
+  out.push({p:[x0,torso.y,0],s:[torso.w,torso.h,torso.d],c:shirt});
+  for(const side of [-1,1])out.push({p:[x0+side*leg.x,0,0],s:[leg.w,leg.h,leg.d],c:"#2f3a44"},{p:[x0+side*arm.x,arm.y-arm.h,0],s:[arm.w,arm.h,arm.d],c:shirt});}return out;},[]);
+ const heads=useMemo<Inst[]>(()=>Array.from({length:4},(_,j)=>({p:[j*.42,FIGURE.head.y,0],s:[FIGURE.head.r,FIGURE.head.r,FIGURE.head.r],c:"#c5a580"})),[]);
  return <>{[AIRPORT_LAYOUT.gateZ[0],AIRPORT_LAYOUT.gateZ[3]].map(gate=><group key={gate} position={[x+3.55,TERRACE_H+BOARDING_LAYOUT.floor+.03,z+gate+AIRCRAFT_LAYOUT.doorZ]}><Instanced items={bodies} geometry={g.box} material={m.plain}/><Instanced items={heads} geometry={g.bead} material={m.plain}/></group>)}</>;
 }
 

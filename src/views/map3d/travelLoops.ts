@@ -5,7 +5,7 @@ import {buildStreetGraph,streetLines,streetRoute,type StreetGraph} from './stree
 import {drivingGraph,loopLegs,JUNCTION_STOP,type Leg,type VehicleKind,type VehiclePlan} from './vehicles';
 import {marinaSite} from './marinaPlan';
 import {yachtBerth,boardingRoute,type YachtBerth} from './yachtPlan';
-import {airportPoint} from './airport';
+import {airportCargoPoint,airportPoint} from './airport';
 import {stadiumGate} from './stadiumGeometry';
 import {TERRACE_H,type Scene3D} from './scene';
 import type {Pt3} from './roads';
@@ -34,7 +34,9 @@ export interface TravelSeg {t0:number;t1:number;route:CommuterRoute;d0:number;pa
 export type Riding='train'|'car'|'yacht'|'inside';
 export interface Traveller {id:string;journey:string;group:number;period:number;offset:number;segs:TravelSeg[];rides:{t0:number;t1:number;kind:Riding}[];span:[number,number]}
 export interface Shuttle {plan:VehiclePlan;stops:Pt3[];names:string[];times:number[]}
-export interface TravelPlan {lap:number;travellers:Traveller[];shuttles:Shuttle[];yacht?:{berth:YachtBerth;depart:number;back:number;period:number}}
+export interface TravelPlan {lap:number;travellers:Traveller[];shuttles:Shuttle[];
+ /** Extra traffic between the airport and the arena (no passengers): buses, luxury cars, SUVs and shipping trucks. */
+ traffic:VehiclePlan[];yacht?:{berth:YachtBerth;depart:number;back:number;period:number}}
 export type TravellerState={visible:false;riding?:Riding}|{visible:true;x:number;y:number;z:number;yaw:number;absolute:boolean};
 
 /** Shared clock (seconds since the map's train started), set each frame by the train so cars and yacht keep its time. */
@@ -271,7 +273,36 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
  const yacht=yachtArrivals.length?(()=>{const at=yachtArrivals.map(t=>mod(t,period)).sort((a,b)=>a-b);let last=at[at.length-1],gap=at[0]+period-last;
   for(let i=1;i<at.length;i++)if(at[i]-at[i-1]>gap){gap=at[i]-at[i-1];last=at[i-1];}
   const depart=mod(last+TRAVEL.sailLead,period);return {berth,depart,back:mod(depart+TRAVEL.sail,period),period};})():undefined;
- return {lap,travellers,shuttles,yacht};
+ return {lap,travellers,shuttles,yacht,traffic:planAirportArenaTraffic(scene,lap,{terminal,gate,arenaKerb:arenaOff[arenaOff.length-1],cargo:airportCargoPoint(airport)})};
+}
+
+/**
+ * Traffic by the airport and the arena (Khaneil, 2026-11-13: "add traffic by the airport arena. buses luxury cars suv
+ * shipping trucks"). Each vehicle runs a round between the two on the city streets, stopping briefly at each end like
+ * the shuttles, spread evenly round its timetable so they don't bunch. Decorative only: nobody rides them.
+ */
+export const AIRPORT_ARENA_TRAFFIC:{id:string;kind:VehicleKind;color:string;route:'people'|'freight'}[]=[
+ {id:'bus-blue',kind:'bus',color:'#2f6f8f',route:'people'},
+ {id:'bus-green',kind:'bus',color:'#294237',route:'people'},
+ {id:'luxury-black',kind:'bmw',color:'#1d2430',route:'people'},
+ {id:'luxury-red',kind:'convertible',color:'#9b1c24',route:'people'},
+ {id:'luxury-silver',kind:'sports',color:'#c9ced3',route:'people'},
+ {id:'suv-black',kind:'gwagon',color:'#1f2326',route:'people'},
+ {id:'suv-white',kind:'gwagon',color:'#e8e6df',route:'people'},
+ {id:'truck-white',kind:'semi',color:'#e3e1da',route:'freight'},
+ {id:'truck-blue',kind:'semi',color:'#35556e',route:'freight'},
+];
+export function planAirportArenaTraffic(scene:Scene3D,lap:number,at:{terminal:Pt3;gate:Pt3;arenaKerb:Pt3;cargo:[number,number]}):VehiclePlan[]{
+ const out:VehiclePlan[]=[],cargo:Pt3=[at.cargo[0],0,at.cargo[1]];
+ // Pull up right at the door: a kerb further away costs far more than a longer round (planShuttle weighs walks 6x).
+ const kerb=(name:string,p:Pt3)=>({name,at:p,cost:(n:Pt3)=>8*flat(n,p)});
+ const routes={people:[kerb('Airport terminal',at.terminal),kerb('Team Events Arena',at.gate),kerb('Events Arena Station',at.arenaKerb)],freight:[kerb('Airport cargo',cargo),kerb('Team Events Arena',at.gate)]};
+ for(const kind of ['people','freight'] as const){
+  const fleet=AIRPORT_ARENA_TRAFFIC.filter(v=>v.route===kind);
+  fleet.forEach((v,i)=>{const s=planShuttle(scene,`traffic:${v.id}`,v.kind,v.color,routes[kind],lap,0);if(!s)return;
+   const plan=s.plan;out.push({...plan,offset:mod(plan.offset+i*plan.period/fleet.length,plan.period)});});
+ }
+ return out;
 }
 
 const cache=new WeakMap<Scene3D,TravelPlan|null>();

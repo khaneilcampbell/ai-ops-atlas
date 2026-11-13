@@ -15,6 +15,7 @@ import { trafficFlow } from "./trafficFlow";
 import { harbourLoop, yachtBerth } from "./yachtPlan";
 import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
 import { travelPlan, TRAVEL_CLOCK } from "./travelLoops";
+import { FigureMeshes, useFigures } from "./CityFigures";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -108,10 +109,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   useEffect(()=>()=>{boatGeometry.hull.dispose();boatGeometry.cabin.dispose();},[boatGeometry]);
   const cabin = useRef<THREE.InstancedMesh>(null);
   const light = useRef<THREE.InstancedMesh>(null);
-  const body = useRef<THREE.InstancedMesh>(null);
-  const head = useRef<THREE.InstancedMesh>(null);
-  const passengers = useRef<THREE.InstancedMesh>(null);
-  const passengerHeads = useRef<THREE.InstancedMesh>(null);
+  const sailors = useFigures(BOATS * 2);
   const walkers = useMemo(() => {
     const seen = new Set<string>();
     return scene.walks.filter(w => {
@@ -124,6 +122,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
       return {...w,route,lengths,len:lengths.reduce((a,b)=>a+b,0)};
     });
   }, [scene]);
+  const strollers = useFigures(walkers.length);
 
   // A rounded loop around the island, clear of the cliffs and waterfalls.
   const loop = useMemo(() => {
@@ -181,19 +180,17 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
           const along=(j?0.2:-0.2)*size;
           const px=p.x+Math.cos(yaw)*along, pz=p.z-Math.sin(yaw)*along;
           const visible=pedestrianAllowed(scene.pedestrianExclusion,px,pz)?1:0;
-          o.rotation.set(0,yaw,0);o.position.set(px,p.y+0.13+bob,pz);o.scale.set(0.055*visible,0.12*visible,0.055*visible);o.updateMatrix(); passengers.current?.setMatrixAt(i*2+j,o.matrix);
-          o.position.y=p.y+0.28+bob;o.scale.setScalar(0.03*visible);o.updateMatrix();passengerHeads.current?.setMatrixAt(i*2+j,o.matrix);
+          // Standing on deck, arms and legs at rest while the boat carries them.
+          if(visible)sailors.put(i*2+j,px,p.y+0.135+bob,pz,yaw,true);else sailors.hide(i*2+j);
         }
       }
       h.instanceMatrix.needsUpdate = cb.instanceMatrix.needsUpdate = l.instanceMatrix.needsUpdate = true;
       if(yachtDeck.current) yachtDeck.current.instanceMatrix.needsUpdate=true;
       if(yachtRoof.current) yachtRoof.current.instanceMatrix.needsUpdate=true;
-      if(passengers.current) passengers.current.instanceMatrix.needsUpdate=true;
-      if(passengerHeads.current) passengerHeads.current.instanceMatrix.needsUpdate=true;
+      sailors.commit();
     }
-    const bd = body.current;
-    const hd = head.current;
-    if (bd && hd) {
+    if (walkers.length) {
+      strollers.begin(t);
       beginPedestrianFrame();
       walkers.forEach((w, i) => {
         const {route,lengths,len}=w;
@@ -220,33 +217,22 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
         const z = a.gy + dz*distance + dx*side;
         if(!pedestrianAllowed(scene.pedestrianExclusion,x,z))visitorScale=0;
         if(visitorScale>0) reportPedestrian(x,z);
-        const step = moving ? Math.abs(Math.sin(t * 7 + i)) * 0.008 : 0;
         const sidewalkLift = Math.abs(side) > 0.2 ? 0.05 : 0;
-        o.rotation.set(0, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI), 0);
-        o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.02 + step, z);
-        o.scale.set(0.07*visitorScale, 0.16*visitorScale, 0.06*visitorScale);
-        o.updateMatrix();
-        bd.setMatrixAt(i, o.matrix);
-        o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.21 + step, z);
-        o.scale.setScalar(0.035*visitorScale);
-        o.updateMatrix();
-        hd.setMatrixAt(i, o.matrix);
+        if (visitorScale > 0) strollers.put(i, x, (w.y ?? 0) + sidewalkLift + 0.02, z, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI));
+        else strollers.hide(i);
       });
-      bd.instanceMatrix.needsUpdate = hd.instanceMatrix.needsUpdate = true;
+      strollers.commit();
     }
   };
 
   useEffect(() => {
     const c = new THREE.Color();
-    walkers.forEach((_, i) => body.current?.setColorAt(i, c.set(CLOTHES[i % CLOTHES.length])));
-    if (body.current?.instanceColor) body.current.instanceColor.needsUpdate = true;
-    walkers.forEach((_, i) => head.current?.setColorAt(i, c.set(i % 3 ? "#e3b994" : "#9c6b4a")));
-    if (head.current?.instanceColor) head.current.instanceColor.needsUpdate = true;
+    walkers.forEach((_, i) => strollers.color(i, CLOTHES[i % CLOTHES.length], i % 3 ? "#e3b994" : "#9c6b4a"));
+    strollers.colored();
     for (let i = 0; i < BOATS; i++) hull.current?.setColorAt(i, c.set(["#f4f1e8","#427fa4","#d36b58","#65a593","#dfbd67","#8f80b2","#d5dce2","#33556e"][i]));
     if (hull.current?.instanceColor) hull.current.instanceColor.needsUpdate = true;
-    for(let i=0;i<BOATS*2;i++) { passengers.current?.setColorAt(i,c.set(CLOTHES[i%CLOTHES.length]));passengerHeads.current?.setColorAt(i,c.set(i%3?"#e3b994":"#9c6b4a")); }
-    if(passengers.current?.instanceColor) passengers.current.instanceColor.needsUpdate=true;
-    if(passengerHeads.current?.instanceColor) passengerHeads.current.instanceColor.needsUpdate=true;
+    for(let i=0;i<BOATS*2;i++) sailors.color(i,CLOTHES[i%CLOTHES.length],i%3?"#e3b994":"#9c6b4a");
+    sailors.colored();
     place(clock.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walkers, loop]);
@@ -262,19 +248,13 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
       <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
-      <instancedMesh ref={passengers} args={[g.cyl,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
-      <instancedMesh ref={passengerHeads} args={[g.ball,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
+      <FigureMeshes f={sailors} g={g} m={m} shadow={false} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={yachtDeck} args={[boatGeometry.hull,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={yachtRoof} args={[g.box,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={cabin} args={[boatGeometry.cabin, m.darkGlass, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={light} args={[g.ball, m.lamp, BOATS]} frustumCulled={false} raycast={() => null} />
-      {walkers.length > 0 && (
-        <>
-          <instancedMesh ref={body} args={[g.cyl, m.plain, walkers.length]} frustumCulled={false} raycast={() => null} />
-          <instancedMesh ref={head} args={[g.ball, m.foliage, walkers.length]} frustumCulled={false} raycast={() => null} />
-        </>
-      )}
+      <FigureMeshes f={strollers} g={g} m={m} shadow={false} />
     </group>
   );
 }
@@ -296,7 +276,7 @@ export function MapRenderer() {
  */
 export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
   // Three of the city's cars run the travel loops' shuttle rounds (travelLoops.ts), so the fleet stays the same size.
-  const plans = useMemo(() => { const shuttles = travelPlan(scene)?.shuttles.map((s) => s.plan) ?? []; return [...planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), ...shuttles, ...planDealershipTraffic(scene), ...planHighwayTraffic(scene)]; }, [scene]);
+  const plans = useMemo(() => { const travel = travelPlan(scene), shuttles = travel?.shuttles.map((s) => s.plan) ?? []; return [...planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), ...shuttles, ...(travel?.traffic ?? []), ...planDealershipTraffic(scene), ...planHighwayTraffic(scene)]; }, [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
   // Shared car following (trafficFlow.ts): each vehicle's own progress along its route.
   const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene), () => (TRAVEL_CLOCK.live ? TRAVEL_CLOCK.t : undefined)), [plans, scene]);
@@ -391,21 +371,15 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 /** Timber pier, berthing platform and navigation lights outside the southern shoreline. */
 /** Visitors follow the stair treads in both directions, then stroll along the pier. */
 function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"] }) {
-  const bodies = useRef<THREE.InstancedMesh>(null);
-  const heads = useRef<THREE.InstancedMesh>(null);
+  const people = useFigures(8);
   const elapsed = useRef(0);
-  const object = useMemo(() => new THREE.Object3D(), []);
   useEffect(() => {
-    const color = new THREE.Color();
-    for (let i=0;i<8;i++) {
-      bodies.current?.setColorAt(i,color.set(CLOTHES[i%CLOTHES.length]));
-      heads.current?.setColorAt(i,color.set(i%3 ? "#e3b994" : "#9c6b4a"));
-    }
-    if(bodies.current?.instanceColor) bodies.current.instanceColor.needsUpdate=true;
-    if(heads.current?.instanceColor) heads.current.instanceColor.needsUpdate=true;
-  }, []);
+    for (let i=0;i<8;i++) people.color(i,CLOTHES[i%CLOTHES.length],i%3 ? "#e3b994" : "#9c6b4a");
+    people.colored();
+  }, [people]);
   useFrame((_,dt) => {
     if(moving) elapsed.current += Math.min(dt,0.1);
+    people.begin(elapsed.current);
     const start=cityZ-0.2, end=z+1.05, length=end-start;
     const cityTop=TERRACE_H+0.03, dockTop=WATER_Y+0.22;
     for(let i=0;i<8;i++) {
@@ -415,16 +389,12 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:nu
       const stairProgress=Math.max(0,Math.min(1,(along-(z-1.8))/1.8));
       const tread=Math.min(12,Math.floor(stairProgress*12)+1);
       const floor=along<z-1.8?cityTop:along>=z?dockTop:cityTop-(cityTop-dockTop)*tread/12;
-      object.rotation.set(0,down?0:Math.PI,0);
-      object.position.set(x+(down?-0.12:0.12),floor+0.02,along);
-      const visible=pedestrianAllowed(exclusion,object.position.x,along)?1:0;
-      object.scale.set(0.07*visible,0.16*visible,0.06*visible);object.updateMatrix();bodies.current?.setMatrixAt(i,object.matrix);
-      object.position.y=floor+0.21;object.scale.setScalar(0.035*visible);object.updateMatrix();heads.current?.setMatrixAt(i,object.matrix);
+      const px=x+(down?-0.12:0.12);
+      if(pedestrianAllowed(exclusion,px,along))people.put(i,px,floor+0.02,along,down?0:Math.PI);else people.hide(i);
     }
-    if(bodies.current) bodies.current.instanceMatrix.needsUpdate=true;
-    if(heads.current) heads.current.instanceMatrix.needsUpdate=true;
+    people.commit();
   });
-  return <group><instancedMesh ref={bodies} args={[g.cyl,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/><instancedMesh ref={heads} args={[g.ball,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/></group>;
+  return <group><FigureMeshes f={people} g={g} m={m}/></group>;
 }
 
 function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M}) {
