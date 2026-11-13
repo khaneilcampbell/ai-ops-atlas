@@ -380,7 +380,9 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     };
     return {
       deck: [...all.flatMap((b) => b.deck), ...streets, ...sidewalks.flatMap(clearOfStreets), ...markings, ...footDeck.flatMap(p=>p.c==="#d4cfb9"?clearOfStreets(p):[p])],
-      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails],scene.freight?.localJunctions??[],.95),
+      // A bridge's railing stands only where it spans a brook or open water; where the street runs on solid ground the
+      // posts would stand along its kerbs like poles in the road (Khaneil, 2026-11-13), so they are left off there.
+      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails].filter((v) => scene.brooks.some((r) => v.p[0] > r.x && v.p[0] < r.x + r.w && v.p[2] > r.z && v.p[2] < r.z + r.d) || !scene.land.some((l) => v.p[0] > l.x + 0.04 && v.p[0] < l.x + l.w - 0.04 && v.p[2] > l.z + 0.04 && v.p[2] < l.z + l.d - 0.04)),scene.freight?.localJunctions??[],.95),
       piers: [...all.flatMap((b) => b.piers), ...footPiers],
       lamps: all.flatMap((b) => b.lamps),
       pools: all.flatMap((b) => b.pools),
