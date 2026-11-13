@@ -76,11 +76,16 @@ export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puf
 /** String lights: a tight, even spiral of tiny bulbs up the upper trunk of a lit palm (Khaneil, 2026-11-13). */
 export const PALM_LIGHTS={turns:5,perTurn:7,from:.2,to:.92,bulb:.022,gap:.01} as const;
 
-/** Wind string lights round an upright trunk of height h (g.trunk tapers from radius .5 to .35 of its width). */
-export function wrapLights(o:LaParts,x:number,y:number,z:number,h:number,width:number,yaw:number){
+/**
+ * Wind string lights round a trunk of height h (g.trunk tapers from radius .5 to .35 of its width). A leaning trunk
+ * (turned by yaw, leaning by `lean`) carries its spiral with it. Every palm wears them (Khaneil, 2026-11-13, once the
+ * palms were thinned out: "give all palm trees now the pepper lights").
+ */
+export function wrapLights(o:LaParts,x:number,y:number,z:number,h:number,width:number,yaw:number,lean=0){
  const {turns,perTurn,from,to,bulb,gap}=PALM_LIGHTS,n=turns*perTurn;
  for(let i=0;i<=n;i++){const t=i/n,a=yaw+t*turns*Math.PI*2,k=from+(to-from)*t,r=width*(.5-.15*k)+gap;
-  o.bulbs.push({p:[x+Math.sin(a)*r,y+h*k,z+Math.cos(a)*r],s:[bulb,bulb,bulb],r:a,c:LA_COLORS.bulb});}
+  const [ax,ay,az]=trunkTop(x,y,z,h*k,lean,yaw);
+  o.bulbs.push({p:[ax+Math.sin(a)*r,ay,az+Math.cos(a)*r],s:[bulb,bulb,bulb],r:a,c:LA_COLORS.bulb});}
 }
 
 /** A ring of fronds round a crown top: each frond a folded leaf hinged at the heart, drooping outward by `droop`. */
@@ -98,10 +103,10 @@ function trunkTop(x:number,y:number,z:number,h:number,lean:number,yaw:number):[n
  * Very tall, thin and slightly leaning, with a small tight crown over a brown skirt of dead fronds.
  * A formal avenue palm stands upright and all the same height, like a planted boulevard.
  */
-export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=false,lit=false){
+export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=false){
  const v=key(x,z,'h'),h=formal?s*7.6:s*(6.2+v*3.2),lean=formal?0:(key(x,z,'lean')-.5)*.12,yaw=key(x,z,'yaw')*Math.PI*2;
  o.trunks.push({p:[x,y,z],s:[.075,h,.075],r:yaw,rx:lean,c:LA_COLORS.fanTrunk});
- if(lit&&lean===0)wrapLights(o,x,y,z,h-s*.62,.075,yaw);
+ wrapLights(o,x,y,z,h-s*.62,.075,yaw,lean);
  const [tx,ty,tz]=trunkTop(x,y,z,h,lean,yaw);
  o.trunks.push({p:[tx,ty-s*.62,tz],s:[.15,s*.6,.15],r:yaw,c:LA_COLORS.skirt});
  o.clumps.push({p:[tx,ty+s*.05,tz],s:[s*.2,s*.18,s*.2],c:LA_COLORS.fanFrond[0]});
@@ -113,6 +118,7 @@ export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=fal
 export function datePalm(o:LaParts,x:number,y:number,z:number,s:number){
  const v=key(x,z,'h'),h=s*(2.6+v*1.4),yaw=key(x,z,'yaw')*Math.PI*2;
  o.trunks.push({p:[x,y,z],s:[.17,h,.17],r:yaw,c:LA_COLORS.dateTrunk});
+ wrapLights(o,x,y,z,h,.17,yaw);
  o.clumps.push({p:[x,y+h,z],s:[s*.42,s*.34,s*.42],c:LA_COLORS.dateFrond[2]});
  crown(o.leaves,x,y+h+s*.3,z,5,s*2.3,s*.5,-.15,yaw,LA_COLORS.dateFrond);
  crown(o.leaves,x,y+h+s*.2,z,8,s*2.6,s*.55,.35,yaw+.4,LA_COLORS.dateFrond);
@@ -138,7 +144,7 @@ function cypress(o:LaParts,x:number,y:number,z:number,s:number,i:number){
 
 export function plantTree(o:LaParts,t:Tree,i:number){
  const kind=laTreeKind(t);
- if(kind==='avenue')fanPalm(o,t.x,t.y,t.z,t.s,true,t.lit);
+ if(kind==='avenue')fanPalm(o,t.x,t.y,t.z,t.s,true);
  else if(kind==='fan')fanPalm(o,t.x,t.y,t.z,t.s);
  else if(kind==='date')datePalm(o,t.x,t.y,t.z,t.s);
  else if(kind==='olive')roundTree(o,t.x,t.y,t.z,t.s*.9,i,LA_COLORS.olive);

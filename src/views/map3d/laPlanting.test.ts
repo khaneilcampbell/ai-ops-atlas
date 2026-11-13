@@ -81,14 +81,17 @@ describe('airport sidewalk palms',()=>{
 });
 
 describe('palm string lights',()=>{
- it('light only a chosen few palms, with an even spiral of bulbs on each lit trunk',()=>{
-  const s=buildScene(layoutMap(catalog,[],'district')),street=planStreetPalms(s),arena=s.trees.filter(t=>t.kind==='palm');
-  const share=(ts:{lit?:boolean}[])=>ts.filter(t=>t.lit).length/ts.length;
-  expect(share(street)).toBeGreaterThan(.25);expect(share(street)).toBeLessThan(.45);
-  expect(share(arena)).toBeGreaterThan(.55);expect(share(arena)).toBeLessThan(.8);
-  const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true,true);
-  expect(o.bulbs.length).toBe(PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1);
+ it('light every palm, with an even spiral of bulbs hugging each trunk, leaning or not',()=>{
+  const spiral=PALM_LIGHTS.turns*PALM_LIGHTS.perTurn+1;
+  const o=emptyParts();fanPalm(o,0,0,0,STREET_PALMS.size,true);
+  expect(o.bulbs.length).toBe(spiral);
   const top=Math.max(...o.bulbs.map(b=>b.p[1]));expect(top).toBeLessThan(STREET_PALMS.size*7.6);
-  const plain=emptyParts();fanPalm(plain,0,0,0,STREET_PALMS.size,true);expect(plain.bulbs.length).toBe(0);
+  // A leaning lawn fan palm and a date palm are lit too, the bulbs staying on the trunk.
+  for(const [x,z] of [[3.1,7.7],[12.4,-5.2],[-8.3,20.6]]){
+   const f=emptyParts();fanPalm(f,x,0,z,.3);expect(f.bulbs.length).toBe(spiral);
+   const trunk=f.trunks[0],lean=trunk.rx??0,yaw=trunk.r??0;
+   for(const b of f.bulbs){const h=b.p[1],cx=x+Math.sin(lean)*Math.sin(yaw)*h/Math.cos(lean),cz=z+Math.sin(lean)*Math.cos(yaw)*h/Math.cos(lean);expect(Math.hypot(b.p[0]-cx,b.p[2]-cz)).toBeLessThan(.06);}
+   const d=emptyParts();datePalm(d,x,0,z,.3);expect(d.bulbs.length).toBe(spiral);
+  }
  });
 });

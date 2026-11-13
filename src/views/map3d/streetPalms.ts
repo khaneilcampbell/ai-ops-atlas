@@ -14,7 +14,7 @@ import {TERRACE_H,type Rect,type Scene3D,type Tree} from './scene';
  * Every palm stands on planted grass (Khaneil, 2026-11-13): past the walk that runs flush beside a street
  * (centre .6 from the street's centre line, .48 wide), so the setbacks start beyond it.
  */
-export const STREET_PALMS={spacing:3.6,start:3,setbacks:[.8,1.05,1.3],walkClear:.55,streetClear:1.05,lampClear:.6,airportMargin:2,max:260,size:.26,litEvery:3} as const;
+export const STREET_PALMS={spacing:4.8,start:3.6,setbacks:[.8,1.05,1.3],walkClear:.55,streetClear:1.05,lampClear:.6,airportMargin:2,max:260,size:.26} as const;
 
 /**
  * Where palms belong (Khaneil, 2026-11-13: "still excessive ... keep them mostly in the places in the screenshots"):
@@ -37,8 +37,7 @@ export function planStreetPalms(s:Scene3D):Tree[]{
  if(s.airport){const a=airportFootprint(s.airport),m=STREET_PALMS.airportMargin;avoidBoxes.push({x:a.x+a.w/2,z:a.z+a.d/2,w:a.w+2*m,d:a.d+2*m});}
  const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes,walkClear:STREET_PALMS.walkClear,streetClear:STREET_PALMS.streetClear,extraWalks:s.financial?[s.financial.walk,...s.financial.buildings.map(b=>b.approach)].filter(w=>w.length>1):[]});
  const zones=palmZones(s),kept=spots.filter(p=>inPalmZone(zones,p.x,p.z));
- // One avenue palm in every three wears string lights, an even rhythm along each street rather than all of them.
- return kept.map((p,i)=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const,lit:i%STREET_PALMS.litEvery===0}));
+ return kept.map(p=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const}));
 }
 
 /** Campus-local x of the palm row in front of the terminal: on the lawn just behind the public road's sidewalk (Khaneil, 2026-11-13). */
@@ -53,8 +52,7 @@ export function airportSidewalkPalms(a:AirportPlan):Tree[]{
  const x=AIRPORT_SIDEWALK_X,out:Tree[]=[];
  for(let z=-11;z<25;z+=2.8){
   if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;
-  // The terminal's front door: every palm wears string lights.
-  out.push({x:a.west?a.x+AIRPORT_LAYOUT.mirrorWidth-x:a.x+x,y:TERRACE_H,z:a.z+z,s:STREET_PALMS.size,kind:'avenue',lit:true});
+  out.push({x:a.west?a.x+AIRPORT_LAYOUT.mirrorWidth-x:a.x+x,y:TERRACE_H,z:a.z+z,s:STREET_PALMS.size,kind:'avenue'});
  }
  return out;
 }
