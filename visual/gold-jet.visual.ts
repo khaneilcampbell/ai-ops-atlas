@@ -91,5 +91,8 @@ for (const width of [1512, 390]) for (const light of ["day", "night"] as const) 
   await page.locator(".gold-jet-interior").waitFor();
   await settle(page, 8);
   await page.screenshot({ path: `${out}/${tag}-interior-${light}.png` });
+  await page.getByRole("button", { name: "Window seat view" }).click();
+  await settle(page, 4);
+  await page.screenshot({ path: `${out}/${tag}-window-${light}.png` });
   expect(errors).toEqual([]);
 });

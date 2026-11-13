@@ -1,1 +1,2 @@
 - 2026-11-13 · A gold private jet now flies the airport loop. It's bigger than the airliners, boards its passengers from the terminal through the jet bridge, and you can step inside with "Enter aircraft" to see who's on board and its route on a live moving map (#418)
+- 2026-11-13 · Inside the gold jet you now see the outside too: the sky, the airport, the city's buildings and clouds go past as the jet taxis, takes off and circles, and the jet has its wings and gold engines. A "Window seat view" button puts you in a lounge seat looking out (#418)

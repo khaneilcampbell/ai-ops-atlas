@@ -13,6 +13,7 @@ import {fleetPose} from '../map3d/flightSchedule';
 import {GOLD_JET_KEY,GOLD_JET_NAME,GOLD_JET_PASSENGERS,GOLD_JET_SLOT,goldJetLive,goldJetRoute,goldJetState} from '../map3d/goldJetPlan';
 import {buildingDisplayName} from '../../modules/names';
 import {SeatedPerson} from './InteriorPrimitives';
+import {GoldJetOutside,GoldJetSky} from './GoldJetOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
 import {CABIN_FLOOR_DROP,JET_CABIN as C,JET_ROOMS,cabinHalfWidth,fitRoute,roomCentreX,seatedPassengers,type JetRoom} from './goldJetInteriorPlan';
@@ -107,21 +108,39 @@ function Ends(){
   const tail=new THREE.ConeGeometry(C.radius,9,32,1,true);tail.rotateZ(Math.PI/2);
   const gold=new THREE.MeshStandardMaterial({color:GOLD,metalness:.6,roughness:.3});
   const white=new THREE.MeshStandardMaterial({color:'#f2eee4',roughness:.4,side:THREE.DoubleSide});
-  return {nose,tail,gold,white};
+  // Swept low wings either side (drawn in x/y, laid flat into x/z), gold engines under them, and a tall white fin.
+  const wingShape=new THREE.Shape([[7,0],[-3,0],[-13,19],[-9.5,19]].map(([x,y])=>new THREE.Vector2(x,y)));
+  const wing=new THREE.ExtrudeGeometry(wingShape,{depth:.35,bevelEnabled:false});wing.rotateX(Math.PI/2);
+  const finShape=new THREE.Shape([[-17,0],[-26,0],[-30,9],[-25.5,9]].map(([x,y])=>new THREE.Vector2(x,y)));
+  const fin=new THREE.ExtrudeGeometry(finShape,{depth:.4,bevelEnabled:false});fin.translate(0,0,-.2);
+  const engine=new THREE.CylinderGeometry(1.25,1.05,5.5,24);engine.rotateZ(Math.PI/2);
+  return {nose,tail,gold,white,wing,fin,engine};
  },[]);
  useEffect(()=>()=>{for(const v of Object.values(res))v.dispose();},[res]);
- return <><mesh geometry={res.nose} material={res.gold} position={[C.noseX,CY,0]}/><mesh geometry={res.tail} material={res.white} position={[C.tailX-4.5,CY,0]}/></>;
+ const wingY=CY-C.radius+.9,halfW=cabinHalfWidth();
+ return <>
+  <mesh geometry={res.nose} material={res.gold} position={[C.noseX,CY,0]}/><mesh geometry={res.tail} material={res.white} position={[C.tailX-4.5,CY,0]}/>
+  {[1,-1].map(side=><group key={side} position={[0,wingY,side*(halfW-.3)]} scale={[1,1,side]}>
+   <mesh geometry={res.wing} material={res.white} position={[0,.35,0]}/>
+   <mesh geometry={res.engine} material={res.gold} position={[1.5,-1.3,8.5]}/>
+  </group>)}
+  <mesh geometry={res.fin} material={res.white} position={[0,CY+C.radius-.6,0]}/>
+ </>;
 }
 
-const VIEW_EYE:[number,number,number]=[4,24,34];
+/** Low enough to see the horizon and sky past the cabin, high enough to look into every room. */
+const VIEW_EYE:[number,number,number]=[4,15,38];
 /** A portrait phone can't fit the cabin side-on, so it looks down the cabin's length from behind the tail. */
 const PHONE_EYE:[number,number,number]=[-34,22,18],PHONE_TARGET:[number,number,number]=[3,-4,0];
-function Camera(){
+/** Window seat: from a lounge recliner, looking out of the open side past the wing at the world going by. */
+const WINDOW_EYE:[number,number,number]=[8.6,1.9,.4],WINDOW_TARGET:[number,number,number]=[1,-3,26];
+export type JetView='cutaway'|'window';
+function Camera({view}:{view:JetView}){
  const controls=useRef<OrbitControlsImpl>(null);const {camera,invalidate,size}=useThree();
  const portrait=size.width<size.height;
- useLayoutEffect(()=>{const [eye,target]=portrait?[PHONE_EYE,PHONE_TARGET]:[VIEW_EYE,[0,0,0] as [number,number,number]];camera.position.set(...eye);const t=controls.current?.target;if(t){t.set(...target);camera.lookAt(t);controls.current?.update();}invalidate();},[camera,invalidate,portrait]);
+ useLayoutEffect(()=>{const [eye,target]=view==='window'?[WINDOW_EYE,WINDOW_TARGET]:portrait?[PHONE_EYE,PHONE_TARGET]:[VIEW_EYE,[0,0,0] as [number,number,number]];camera.position.set(...eye);const t=controls.current?.target;if(t){t.set(...target);camera.lookAt(t);controls.current?.update();}invalidate();},[camera,invalidate,portrait,view]);
  useInteriorTrackpad(()=>controls.current,{x:C.length/2,z:6});
- return <OrbitControls ref={controls} makeDefault minDistance={6} maxDistance={120} maxPolarAngle={Math.PI/2.1}/>;
+ return <OrbitControls ref={controls} makeDefault minDistance={6} maxDistance={160} maxPolarAngle={Math.PI/1.75}/>;
 }
 
 /** The airport clock as the map left it, carried on by this view while it is open (held still for reduced motion). */
@@ -164,7 +183,7 @@ function RouteMap({seconds}:{seconds:number}){
  * The moving map shows the loop the jet flies on the map, live from the airport clock.
  */
 export default function GoldJetInterior({light}:{light:LightMode}){
- const [picked,setPicked]=useState<string|null>(null);
+ const [picked,setPicked]=useState<string|null>(null),[view,setView]=useState<JetView>('cutaway');
  const power=usePowerProfile(),visible=usePageVisible(),reduced=useReducedMotion(),isNight=light==='night';
  useEffect(()=>{cityNight.value=isNight?1:0;},[isNight]);
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
@@ -174,21 +193,22 @@ export default function GoldJetInterior({light}:{light:LightMode}){
  const cabin=useMemo(cabinItems,[]);
  const windows=useMemo(()=>windowItems(isNight),[isNight]);
  return <section className="skyline-interior gold-jet-interior night" aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows camera={{position:VIEW_EYE,fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows gl={{logarithmicDepthBuffer:true}} camera={{position:VIEW_EYE,fov:40,near:.3,far:12000}}>
    <FramePacer profile={power} running={!reduced}/>
-   <color attach="background" args={[isNight?'#0c1018':'#c9d6e0']}/>
+   <GoldJetSky night={isNight}/>
    <ambientLight color="#ffe9c7" intensity={isNight?.35:.55}/>
    <hemisphereLight args={['#fff1d6','#3b2a1c',isNight?.5:.9]}/>
    <directionalLight color="#fff1d6" position={[10,30,26]} intensity={isNight?.4:1.4} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-30} shadow-camera-right={30} shadow-camera-top={20} shadow-camera-bottom={-20}/>
    <pointLight position={[3,3,0]} color="#ffc977" intensity={isNight?60:25} distance={30} decay={1.5}/>
    <pointLight position={[-14,3,0]} color="#ffc977" intensity={isNight?50:20} distance={24} decay={1.5}/>
-   <Camera/>
+   <Camera view={view}/>
+   <GoldJetOutside night={isNight} reduced={reduced}/>
    <Shell night={isNight}/><Ends/>
    <Boxes items={cabin.solid}/><Boxes items={cabin.glow} glow/><Boxes items={windows} glow/>
    {seats.map((p,i)=><group key={i} position={[p.x,.05,p.z]} rotation={[0,p.yaw,0]} scale={1.15}><SeatedPerson x={0} z={0} color={CLOTHES[i%CLOTHES.length]}/></group>)}
    {JET_ROOMS.map(r=><Html key={r.id} position={[roomCentreX(r),3.4,-.5]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${r.name} · ${r.what}`)}>{r.name}</button></Html>)}
   </Canvas>
-  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to the airport`}>← Exit aircraft</button><div><small>{shown().toUpperCase()} · PRIVATE JET</small><h2>Main cabin · Open cutaway</h2></div></header>
+  <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to the airport`}>← Exit aircraft</button><div><small>{shown().toUpperCase()} · PRIVATE JET</small><h2>{view==='window'?'Window seat · Lounge':'Main cabin · Open cutaway'}</h2></div><button className="gold-jet-view" onClick={()=>setView(v=>v==='window'?'cutaway':'window')} aria-pressed={view==='window'}>{view==='window'?'Cabin cutaway':'Window seat view'}</button></header>
   <RouteMap seconds={seconds}/>
   <aside className="skyline-interior-note">{picked??`${state.aboard} of ${GOLD_JET_PASSENGERS} passengers on board · ${state.label} · ${lookHint()}`}<span>Decorative flight · Passengers are unnamed figures who boarded at the gate, not agents · A schematic, not a fitted model</span></aside>
  </section>;

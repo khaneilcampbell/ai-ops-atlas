@@ -254,7 +254,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...r1Lamps.flatMap(zz=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]} as Inst))),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
-  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;},[circuit,a]);
+  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;goldJetLive.world=a&&bounds?{airport:{x:a.x,z:a.z,west:a.west},bounds,buildings:obstacles??[]}:undefined;},[circuit,a,bounds,obstacles]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/>
