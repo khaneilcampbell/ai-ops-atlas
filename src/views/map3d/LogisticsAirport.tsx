@@ -213,8 +213,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      for(const [z0,z1] of [[G.drive.z1+.15,G.drive.z1+1.2],[G.drive.z0-1.6,G.drive.z0-.7]] as const){cubes.push(box(gx,y+.28,z+(z0+z1)/2,.025,.025,z1-z0,HQ.glassDeep));for(let pz=z0;pz<=z1+1e-6;pz+=.4)cubes.push(box(gx,y+.05,z+pz,.035,.26,.035,HQ.glassDeep));}}
     cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,HQ.glassDeep));
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
-    cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
-    for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
+    cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"));
+    // The old mid-runway taxiway stub at z 17.5 is gone (Khaneil, 2026-11-13): departures lift off there now.
     const [r1North,r1South]=AIRPORT_THRESHOLDS.runway1,r1Lamps=runwayLampZ(AIRPORT_LAYOUT.runwayZ,AIRPORT_LAYOUT.runwayLength);
     for(let zz=r1North+1;zz<r1South-.6;zz+=1.2)cubes.push(box(x+15,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
     for(const threshold of AIRPORT_THRESHOLDS.runway1)for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
