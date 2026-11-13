@@ -27,3 +27,4 @@ design-consistency-*.json
 
 # Private manual Benjaire handoff state and drafts
 .local/benjaire-production/
+atlas-inventory.json

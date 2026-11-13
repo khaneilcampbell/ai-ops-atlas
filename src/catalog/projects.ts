@@ -13,9 +13,9 @@ export const RETIRED_REPOSITORIES = ["khaneilcampbell/skyline", "khaneilcampbell
 
 /**
  * Projects kept in the catalog for ownership and history but no longer shown as city buildings.
- * Skyline, Service Desk, Career Applications and Benjaire Dashboard were removed from the map.
+ * Removed towers whose land stays as an empty lot, so the rest of the city keeps its place.
  */
-export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "service-desk", "career-optimizer", "benjaire-ops"]);
+export const OFF_MAP_PROJECTS: ReadonlySet<string> = new Set(["skyline", "vacant-lot-west", "career-optimizer", "benjaire-ops"]);
 
 /**
  * The project that owns each repository. Several projects can share one repository (Skyline,

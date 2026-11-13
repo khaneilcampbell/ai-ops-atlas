@@ -38,9 +38,9 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 8 projects and 63 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 63 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
-    expect(catalog.projects).toHaveLength(8);
+    expect(catalog.projects).toHaveLength(7);
     expect(entries).toHaveLength(63);
   });
 
@@ -262,7 +262,7 @@ describe("directory", () => {
 
   it("filters by function, type, project and search", () => {
     expect(filterEntries(entries, { ...EMPTY_FILTER, category: "security" }).map((e) => e.profile.id).sort()).toEqual(
-      ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"].sort(),
+      ["bruteforce-detection", "security-check", "soc-case-notes"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(6);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
@@ -289,7 +289,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(33);
+    expect(s.observable).toBe(32);
   });
 });
 

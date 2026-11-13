@@ -46,6 +46,9 @@ export const BOARDING_LAYOUT={floor:.22,ceiling:.54,fromX:3.375} as const;
 /** Every jet at a gate parks nose-in, facing the terminal (Khaneil, 2026-11-13): heading -x, so its front left
  * passenger door (aircraft-local doorX, doorZ; nose -z, left -x) sits forward of the gate centre on the +z side. */
 export const GATE_YAW=Math.PI/2;
+/** Gates where an airliner stays parked with its engines off: gates 1 and 4, nose-in to the terminal. The remote stands are
+ * used by the loop (the executive jet rests at the north one, an airliner at the south one every other loop). */
+export const AIRPORT_PARKED_STANDS=[{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0],yaw:GATE_YAW},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3],yaw:GATE_YAW}] as const;
 export function gateDoor(gateZ:number){return {x:AIRPORT_LAYOUT.gateX+AIRCRAFT_LAYOUT.doorZ,z:gateZ-AIRCRAFT_LAYOUT.doorX};}
 /** The jet bridge runs out from the pier beside the nose, then its cab turns in to meet the door, as at a real gate. */
 export function boardingBridge(gateZ:number){const door=gateDoor(gateZ),endX=door.x+.1,z=door.z+.36;return {x:(BOARDING_LAYOUT.fromX+endX)/2,z,w:endX-BOARDING_LAYOUT.fromX,endX,door};}
