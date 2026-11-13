@@ -1,7 +1,7 @@
 import {useMemo,useEffect} from 'react';
 import * as THREE from 'three';
 import {AIRPORT_BUILDINGS,AIRPORT_STOREY_SCALE as S,airportBuildingKey} from './airportBuildings';
-import {AIRPORT_LANDING_RUNWAY,type AirportPlan} from './airport';
+import {AIRPORT_LANDING_RUNWAY,AIRPORT_LAYOUT,type AirportPlan} from './airport';
 import {TERRACE_H} from './scene';
 import {ATLAS_HQ_COLORS as HQ} from './airportPalette';
 import {palmBoxes} from './palms';
@@ -29,7 +29,8 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
    // Glass lobby under a gold-edged canopy.
    walls.push(box(b.x,.6,b.z+b.d/2+.3,1.3,.05,.6,palette.white),box(b.x,.58,b.z+b.d/2+.6,1.3,.06,.03,HQ.goldDeep));
   }else{glass.push(box(b.x,.1,b.z+b.d/2+.02,b.w*.82,1.2*S,.035,'#ffffff'));walls.push(box(b.x,1.32*S,b.z+b.d/2+.035,b.w*.92,.06,.05,HQ.goldDeep));}
-  if(b.kind==='hangar'){const front=b.z+b.d/2+1.4;walls.push(box((b.x+21.8)/2,0,front,21.8-b.x+.35,.055,.35,'#e5dfce'));}
+  // The hangar's front path runs to the nearer road: the landside street (x 5.5) or the service road (x 21.8).
+  if(b.kind==='hangar'){const front=b.z+b.d/2+1.4,to=b.x<AIRPORT_LAYOUT.taxiX?6.04:21.8;walls.push(box((b.x+to)/2,0,front,Math.abs(to-b.x)+.35,.055,.35,'#e5dfce'));}
   if(b.kind==='office'){const side=b.x+b.w/2+.45,front=b.z+b.d/2+.65;walls.push(box((b.x+side)/2,0,front,side-b.x+.35,.055,.35,'#e5dfce'),box(side,0,(front-13.98)/2,.35,.055,front+13.98,'#e5dfce'));}
   walls.push(box(b.x,0,b.z+b.d/2+.8,.48,.055,1.6,'#e5dfce'),box(b.x,.05,b.z+b.d/2+.025,.35,.65,.04,palette.green));
  }

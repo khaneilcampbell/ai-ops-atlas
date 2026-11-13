@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import {AIRPORT_LAYOUT as AL2,AIRPORT_REMOTE_STANDS,AIRPORT_SERVICE_GATE,airportPoint} from './airport';
+import {AIRPORT_BUILDINGS} from './airportBuildings';
+import {buildScene} from './scene';
+import {layoutMap} from '../mapLayout';
+import {catalog} from '../../catalog';
+import {distanceToRoad} from './highway';
 import {AIRPORT_END_TAXIWAYS,AIRPORT_LANDING_RUNWAY as LR,AIRPORT_LANDING_SOUTH_PAD,AIRPORT_THRESHOLDS} from './airport';
 import { planAirport,airportFootprint,pathCrossesRect } from "./airport";
 it("reserves space beyond every existing land parcel with a connected paved approach",()=>{
@@ -112,5 +118,25 @@ describe('runway-end taxiways',()=>{
    const ends=t.w>t.d?[{...t,x:t.x-t.w/2,w:0},{...t,x:t.x+t.w/2,w:0}]:[{...t,z:t.z-t.d/2,d:0},{...t,z:t.z+t.d/2,d:0}];
    for(const e of ends)expect(paved.some(p=>touches(e,p))||AIRPORT_END_TAXIWAYS.some(o=>o!==t&&touches(e,{x0:o.x-o.w/2,x1:o.x+o.w/2,z0:o.z-o.d/2,z1:o.z+o.d/2})),JSON.stringify(e)).toBe(true);
   }
+ });
+});
+
+describe('Cargo (Model Intelligence Lab) lot and the service gate',()=>{
+ const scene=buildScene(layoutMap(catalog,[],'district'));const a=scene.airport!;
+ const streets=scene.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]);
+ const world=(x:number,z:number)=>airportPoint(a,x,z);
+ const corners=(x:number,z:number,w:number,d:number)=>[[x-w/2,z-d/2],[x+w/2,z-d/2],[x+w/2,z+d/2],[x-w/2,z+d/2],[x,z]] as [number,number][];
+ const clearOf=(pts:[number,number][],m:number)=>pts.every(([x,z])=>streets.every(r=>distanceToRoad(world(x,z),r)>m));
+ it('stands on airport land, clear of streets and their sidewalks, stands, taxiway and runways',()=>{
+  const c=AIRPORT_BUILDINGS.find(b=>b.id==='cargo')!;
+  expect(c.x-c.w/2>=AL2.landX&&c.z-c.d/2>=AL2.landZ).toBe(true);
+  expect(clearOf(corners(c.x,c.z,c.w,c.d),.36+.18)).toBe(true);
+  const overlap=(r:{x:number;z:number;w:number;d:number})=>Math.abs(c.x-r.x)<(c.w+r.w)/2&&Math.abs(c.z-r.z)<(c.d+r.d)/2;
+  expect([...AIRPORT_REMOTE_STANDS.map(s=>({...s,w:3.7,d:3.6})),{x:11.5,z:-3.9,w:.85,d:7.8},{x:15,z:7.5,w:2.2,d:21},{x:24.2,z:7.25,w:2.2,d:25.5},{x:10.4,z:-14.5,w:24.4,d:.64}].filter(overlap)).toEqual([]);
+ });
+ it('puts the gate on the cargo drive, past the street and its sidewalk',()=>{
+  const G=AIRPORT_SERVICE_GATE;
+  expect(G.x>G.drive.x0&&G.x<G.drive.x1).toBe(true);
+  expect(clearOf([[G.x-.3,G.drive.z0],[G.x+.3,G.drive.z1],[G.x,G.drive.z1+.4]],.36+.18)).toBe(true);
  });
 });
