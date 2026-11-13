@@ -92,10 +92,11 @@
    "agent_ids": [
     "docs-builder",
     "hub-ci",
-    "agent-registry-sync"
+    "agent-registry-sync",
+    "atlas-agent-factory"
    ],
    "ai_agents": 0,
-   "automations": 3
+   "automations": 4
   },
   {
    "id": "project:soc-lab",
@@ -956,7 +957,7 @@
    "owned_by": "",
    "project": "ai-ops-atlas",
    "runtime": "n8n Cloud",
-   "trigger": "Daily at 7am New York time, or the sheet's Refresh button (draft, not published yet)",
+   "trigger": "Daily at 7am New York time once published (n8n draft, not published yet)",
    "source": "src/inventory/mapInventory.ts"
   },
   {
@@ -1159,14 +1160,14 @@
    "id": "benjaire-flow-missed-runs",
    "name": "Flow Missed Run Check",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "project:benjaire-site",
    "building_name": "Business Operations HQ",
    "placement": "Runs from its project building",
    "owned_by": "",
    "project": "benjaire-site",
    "runtime": "n8n Cloud",
-   "trigger": "Daily at 11am ET once switched on",
+   "trigger": "Daily at 11am ET",
    "source": ""
   },
   {
@@ -1565,14 +1566,28 @@
    "id": "agent-registry-sync",
    "name": "Agent Registry Clerk",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "project:intelligence-hub",
    "building_name": "Agent Operations Center",
    "placement": "Runs from its project building",
    "owned_by": "",
    "project": "intelligence-hub",
    "runtime": "n8n Cloud",
-   "trigger": "Schedule (draft, not published yet)",
+   "trigger": "Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET",
+   "source": ""
+  },
+  {
+   "id": "atlas-agent-factory",
+   "name": "Agent Factory",
+   "kind": "Automation",
+   "status": "active",
+   "building_id": "project:intelligence-hub",
+   "building_name": "Agent Operations Center",
+   "placement": "Runs from its project building",
+   "owned_by": "",
+   "project": "intelligence-hub",
+   "runtime": "n8n Cloud",
+   "trigger": "Mondays 8am ET, at most one proposal per 7 days",
    "source": ""
   },
   {
@@ -1937,6 +1952,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T13:22:39.708Z",
- "commit": "a68da42d7e80cf46424870f1f8c700f01e1d655b"
+ "generated_at": "2026-11-13T13:42:29.660Z",
+ "commit": "ad3054a01b8295a9fb5e1f870c684cc14b142d94"
 }
