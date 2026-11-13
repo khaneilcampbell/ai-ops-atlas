@@ -675,7 +675,7 @@ function World({
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
-  const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.map(c=>c.road)],[scene]);
+  const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...(scene.carBridges??[]).flatMap(b=>b.roads)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
     // Turn all the way around (right drag, two fingers, or Shift with the left button), but stay

@@ -8,7 +8,9 @@ export const AIRPORT_STOREY_SCALE=1.5;
 const PARCELS=[
  {id:'terminal',name:'Atlas · Terminal',agent:'Airport Operations Coordinator',x:1.5,z:6,w:3.8,d:10.5,h:2.6,kind:'terminal',rooms:['Check-in operations','Passenger lounge','Gate coordination','Terminal review']},
  {id:'tower',name:'Atlas · Air Traffic',agent:'Airfield Safety Coordinator',x:1.5,z:-3,w:1.5,d:1.4,h:4.95,kind:'tower',rooms:['Tower consoles','Airfield review','Traffic planning','Safety briefing']},
- {id:'cargo',name:'Atlas · Cargo',agent:'Cargo Logistics Coordinator',x:19.7,z:22,w:4,d:3,h:2.1,kind:'hangar',rooms:['Cargo staging','Freight planning','Service coordination','Shipment review']},
+ // Cargo (home of the Model Intelligence Lab) stands on the open lot between the north service road, the
+ // landside street, the taxiway and the north remote stand (Khaneil, 2026-11-13), off the old runway-side strip.
+ {id:'cargo',name:'Atlas · Cargo',agent:'Cargo Logistics Coordinator',x:8.5,z:-10.5,w:4,d:3,h:2.1,kind:'hangar',rooms:['Cargo staging','Freight planning','Service coordination','Shipment review']},
  {id:'operations',name:'Atlas · Operations',agent:'Airport Systems Analyst',x:.3,z:-12,w:2.4,d:2.8,h:4.2,kind:'office',rooms:['Systems desk','Operations review','Infrastructure planning','Briefing room']},
 ] as const;
 export const AIRPORT_BUILDINGS=PARCELS.map(b=>({...b,h:Math.round(b.h*AIRPORT_STOREY_SCALE*100)/100}));

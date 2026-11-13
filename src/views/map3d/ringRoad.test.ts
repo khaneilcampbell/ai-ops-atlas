@@ -23,7 +23,10 @@ describe('ring road and traffic rules',()=>{
 
  it('drives only streets that lead on, so no car ever turns round in the road',()=>{
   const d=drivingGraph(scene)!;
-  for(const list of d.next)if(list.length)expect(list.length).toBeGreaterThanOrEqual(2);
+  // Every junction has a way in and a way out, and joins at least two streets (one-way streets
+  // can leave a junction with a single way out).
+  const into=d.next.map(()=>new Set<number>());d.next.forEach((l,i)=>l.forEach(j=>into[j].add(i)));
+  d.next.forEach((list,i)=>{if(!list.length)return;expect(into[i].size).toBeGreaterThan(0);expect(new Set([...list,...into[i]]).size).toBeGreaterThanOrEqual(2);});
   for(const v of planVehicles(scene)){
    const moves=v.legs.filter(l=>!l.hold);
    for(let i=0;i<moves.length;i++){

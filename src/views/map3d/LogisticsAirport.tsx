@@ -13,7 +13,7 @@ import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -132,12 +132,23 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
-      box(x+2,y+.05,z+18,2.2,1.05,2,HQ.white),
-      box(x+2,y+1.1,z+18,2.5,.12,2.3,HQ.glassDeep),
+      // Service building as a drive-through (Khaneil, 2026-11-13): a south wing, the gated street running through
+      // an open passage along its north side under a louvred roof (AIRPORT_SERVICE_DOOR.passage).
+      box(x+2,y+.05,z+18.425,2.2,1.05,1.15,HQ.white),
+      box(x+2,y+1.1,z+18.5,2.5,.12,1.3,HQ.glassDeep),
+      box(x+2,y+1.22,z+17.875,2.5,.06,.05,HQ.gold),box(x+2,y+1.22,z+19.125,2.5,.06,.05,HQ.gold),box(x+.775,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),box(x+3.225,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),
     ];
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
     // Airside service building: a window band on every side, lit with the terminal glazing at night.
-    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18.425+side*.59,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18.425,.025,.4,.95,'#ffffff'));
+    // The passage: a portal at each end (white columns, gold lintel, slate canopy), louvres over the road so it and
+    // its traffic show through from above, and three loading docks along the south wall.
+    {const P=AIRPORT_SERVICE_DOOR.passage,pz=(P.z0+P.z1)/2,pd=P.z1-P.z0;
+     for(const [px,out] of [[P.x0,-1],[P.x1,1]] as const){
+      cubes.push(box(x+px,y+.05,z+P.z0+.05,.1,1.05,.1,HQ.white),box(x+px,y+.98,z+pz,.12,.1,pd,HQ.gold),box(x+px+out*.17,y+1.08,z+pz,.34,.04,pd+.2,HQ.glassDeep));
+     }
+     for(let zz=P.z0+.08;zz<P.z1;zz+=.16)cubes.push(box(x+(P.x0+P.x1)/2,y+1.12,z+zz,P.x1-P.x0+.3,.035,.05,HQ.glassDeep));
+     for(const dx of [-.7,0,.7])cubes.push(box(x+2+dx,y+.05,z+19.03,.42,.55,.03,'#1d2528'),box(x+2+dx,y+.6,z+19.05,.5,.05,.06,HQ.gold),box(x+2+dx,y+.02,z+19.15,.42,.12,.2,'#8b9493'));}
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+TERMINAL_HUB.mezzanine-.08,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+TERMINAL_HUB.glass-.03,z+zz,1.6,.025,.12,'#fff2d1'));
@@ -162,14 +173,22 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
      cubes.push(box(x+9.9,y+.02,z+stand.z,2.8,.035,.8,'#8b9493'),box(x+11.5,y+.02,z+extensionZ,.85,.035,extensionD,'#8b9493'));
     }
     // Landing runway on the old river strip, with a taxi lane north of runway 1 to the arrivals stand.
-    const L=LANDING,south=L.z+L.length/2,north=L.z-L.length/2;
+    const L=LANDING,PAD=AIRPORT_LANDING_SOUTH_PAD,south=L.z+L.length/2,north=L.z-L.length/2;
     cubes.push(box(x+L.x,y+.015,z+L.z,L.width,.045,L.length,"#2b3335"));
-    cubes.push(box(x+(11.1+L.x)/2,y+.02,z+L.laneZ,L.x-11.1,.04,.85,"#777f7f"),box(x+(11.5+L.x)/2,y+.07,z+L.laneZ,L.x-11.5,.012,.035,"#d6bd6e"));
-    for(let zz=north+1.2;zz<south-1;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [north+.5,south-.5])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
+    cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
+    // A taxiway stands 6 mm proud of the runway and service-road paving it meets, so the joins never flicker.
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(11.5+x1-.45)/2,y+.07,z+t.z,x1-.45-11.5,.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z+(t.z<7.5?-.22:.22),.035,.012,t.d-.45,"#d6bd6e"));
+     // A hold-short marking (two solid bars) across the taxiway just before the runway edge.
+     // A widened mouth where the taxiway meets the runway; the yellow centre line stops short of the hold bars, off the runway.
+     if(lane){cubes.push(box(x+x1-.3,y+.02,z+t.z,.6,.046,t.d+.5,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+x1-.18-k*.08,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));}
+     else{const toRunway=t.z<7.5?1:-1,hz=t.z+toRunway*(t.d/2-.18);cubes.push(box(x+t.x,y+.02,z+t.z+toRunway*(t.d/2-.2),t.w+.5,.046,.4,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+t.x,y+.07,z+hz-toRunway*k*.08,t.w-.1,.012,.03,"#d6bd6e"));}}
+    const [northBar,southBar]=AIRPORT_THRESHOLDS.landing;
+    for(let zz=northBar+1;zz<southBar-.6;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
+    for(const threshold of [northBar,southBar])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
     // Aiming-point blocks where arriving jets touch down.
     for(const side of [-1,1])cubes.push(box(x+L.x+side*.55,y+.066,z+L.touchdownZ,.3,.012,1.3,"#f4eedb"));
-    for(let zz=north+.5;zz<=south-.5;zz+=1)for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
+    for(let zz=north+.5;zz<=south-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     for(const gateZ of AIRPORT_LAYOUT.gateZ){
       const bridge=boardingBridge(gateZ);
       // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
@@ -184,16 +203,25 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     }
     for(const gz of AIRPORT_LAYOUT.gateZ)cubes.push(box(x+9.7,y+.05,z+gz+1.8,.05,2.35,.05,HQ.rib),box(x+9.7,y+2.4,z+gz+1.8,.3,.035,.08,HQ.rib));
     for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,HQ.glassDeep));
+    // Security gate on the cargo drive (AIRPORT_SERVICE_GATE): booth, raised striped arms, stop lines, fences.
+    {const G=AIRPORT_SERVICE_GATE,gx=x+G.x,mid=(G.drive.z0+G.drive.z1)/2;
+     cubes.push(box(gx+.1,y+.05,z+G.drive.z0-.42,.48,.62,.48,HQ.white),box(gx+.1,y+.67,z+G.drive.z0-.42,.6,.06,.6,HQ.glassDeep),box(gx-.15,y+.3,z+G.drive.z0-.42,.02,.24,.34,HQ.glass));
+     cubes.push(box(gx-.35,y+.07,z+(G.drive.z0+mid)/2,.06,.012,mid-G.drive.z0-.1,'#f4eedb'),box(gx+.35,y+.07,z+(mid+G.drive.z1)/2,.06,.012,G.drive.z1-mid-.1,'#f4eedb'));
+     for(const [pz,dir] of [[G.drive.z0-.1,1],[G.drive.z1+.1,-1]] as const){cubes.push(box(gx,y+.05,z+pz,.12,.42,.12,'#d6bd6e'));for(let k=0;k<5;k++)cubes.push(box(gx,y+.47+k*.14,z+pz+dir*.03,.06,.14,.06,k%2?'#f4eedb':'#c8442f'));}
+     for(const [z0,z1] of [[G.drive.z1+.15,G.drive.z1+1.2],[G.drive.z0-1.6,G.drive.z0-.7]] as const){cubes.push(box(gx,y+.28,z+(z0+z1)/2,.025,.025,z1-z0,HQ.glassDeep));for(let pz=z0;pz<=z1+1e-6;pz+=.4)cubes.push(box(gx,y+.05,z+pz,.035,.26,.035,HQ.glassDeep));}}
     cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,HQ.glassDeep));
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
     cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
     for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
     for(let i=0;i<16;i++)cubes.push(box(x+15,y+.065,z-2+i*1.2,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [-2.5,17.5])for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    for(const threshold of AIRPORT_THRESHOLDS.runway1)for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
     for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
     const landingLamps:Inst[]=[];
-    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
-    return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat(),...landingLamps]};
+    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
+    return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst,
+     // Airside grass stands up to 7 mm under the runways and taxiways, so the pavements read flush, not as raised slabs
+     // (Khaneil, 2026-11-13). Landside (west of the parallel taxiway) stays level with the city streets that cross it.
+     {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat(),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
   if(!a||!parts)return null;
