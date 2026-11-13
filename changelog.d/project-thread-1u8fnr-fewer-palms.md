@@ -1,0 +1,1 @@
+- 2026-11-13 · Fewer palms: they now gather by the Atlas Galleria, the Team Events Arena, the airport front and Financial Park, with olives and ficus on the other lawns (#412)
