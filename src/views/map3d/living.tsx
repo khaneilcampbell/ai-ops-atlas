@@ -1,6 +1,7 @@
 import {flightClearance,privateJetPose} from './flightClearance';
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
+import { MAP_FLEET } from "./mapFleet";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -80,7 +81,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
   );
 }
 
-const BOATS = 8;
+const BOATS = MAP_FLEET.boats;
 const BOAT_SPEED = 0.22;
 const STROLL_SPEED = 0.12;
 const CLOTHES = ["#c96f53", "#4f78a8", "#e0c068", "#6d9b6a", "#9a74b8"];
