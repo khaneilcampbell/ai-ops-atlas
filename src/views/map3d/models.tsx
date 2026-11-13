@@ -16,6 +16,8 @@ import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTextu
 import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
+import { laPlanting } from "./laPlanting";
+import { planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
@@ -474,43 +476,16 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 
 // ── Landscaping ─────────────────────────────────────
 
-const LEAVES = ["#4f8b3b", "#5c9a43", "#6aa84b", "#477f37"];
-const BLOSSOM = ["#e7b2bf", "#f0c6cf", "#dc9fb0"];
-
 export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
-    const trunks: Inst[] = [];
-    const blobs: Inst[] = [];
-    const puffs: Inst[] = [];
-    const cones: Inst[] = [];
-    scene.trees.forEach((t, i) => {
-      const s = t.s;
-      if (t.kind === "palm") return;
-      if (t.kind === "cone") {
-        trunks.push({ p: [t.x, t.y, t.z], s: [0.07, s * 0.6, 0.07], c: "#6b5038" });
-        cones.push({ p: [t.x, t.y + s * 0.4, t.z], s: [s * 1.8, s * 2.2, s * 1.8], c: "#3f7342" });
-        cones.push({ p: [t.x, t.y + s * 1.4, t.z], s: [s * 1.35, s * 1.7, s * 1.35], c: "#4c8550" });
-        return;
-      }
-      const pal = t.kind === "blossom" ? BLOSSOM : LEAVES;
-      const col = (k: number) => pal[(i + k) % pal.length];
-      trunks.push({ p: [t.x, t.y, t.z], s: [0.08, s * 1.3, 0.08], c: "#7a5c40" });
-      blobs.push({ p: [t.x, t.y + s * 1.9, t.z], s: [s, s * 0.95, s], c: col(0) });
-      blobs.push({ p: [t.x - s * 0.45, t.y + s * 1.55, t.z + s * 0.3], s: [s * 0.72, s * 0.66, s * 0.72], c: col(1) });
-      blobs.push({ p: [t.x + s * 0.4, t.y + s * 1.6, t.z - s * 0.25], s: [s * 0.7, s * 0.66, s * 0.7], c: col(2) });
-      // The small top puff's shadow falls inside the main canopy's, so it skips the shadow pass.
-      puffs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
-    });
-    const bushes: Inst[] = scene.bushes.map((b, i) => ({ p: [b.x, b.y + b.s * 0.5, b.z], s: [b.s * 1.4, b.s, b.s * 1.4], c: LEAVES[i % 3] }));
-    const flowers: Inst[] = scene.bushes
-      .filter((_, i) => i % 3 === 0)
-      .flatMap((b, i) => [0, 1, 2].map((k) => ({ p: [b.x + (k - 1) * b.s * 0.7, b.y + b.s * 1.2, b.z + ((k % 2) - 0.5) * b.s], s: [0.035, 0.035, 0.035], c: ["#f6efd8", "#e9c97a", "#eab8c2"][(i + k) % 3] }) as Inst));
+    // Los Angeles planting: mostly palms, with dry-garden shrubs (laPlanting.ts).
+    const { trunks, fronds, blobs, puffs, cones, clumps, flowers } = laPlanting([...scene.trees, ...planStreetPalms(scene)], scene.bushes);
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     // Low path lights, and pools of light on the ground that fade in at night.
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, blobs, puffs, cones, bushes, flowers, rocks, bollards, caps, pools };
+    return { trunks, fronds, blobs, puffs, cones, clumps, flowers, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
@@ -518,7 +493,8 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
       <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
-      <Instanced items={items.bushes} geometry={g.ball} material={m.foliage} />
+      <Instanced items={items.fronds} geometry={g.box} material={m.foliage} />
+      <Instanced items={items.clumps} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />

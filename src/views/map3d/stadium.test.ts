@@ -156,7 +156,7 @@ describe("Atlas Stadium grounds",()=>{
     // Palms ring the plaza (KC, 2026-11-07), only on the stadium's lot, drawn by the stadium.
     expect(g.palms!.length).toBeGreaterThanOrEqual(12);
     for(const t of s.trees.filter(t=>t.kind==='palm'))expect(t.x>=lot.x&&t.x<=lot.x+lot.w&&t.z>=lot.z&&t.z<=lot.z+lot.d).toBe(true);
-    expect(readFileSync(join(__dirname,"models.tsx"),"utf8")).toMatch(/t\.kind === "palm"\) return/);
+    expect(readFileSync(join(__dirname,"laPlanting.ts"),"utf8")).toMatch(/t\.kind==='palm'\)return null/);
     // The pools ring the halls but leave the main gate open.
     const [cx,cz]=stadiumCentre(a),water=g.boxes.filter(b=>b.c==='#5aaac0');
     expect(water.length).toBeGreaterThan(20);

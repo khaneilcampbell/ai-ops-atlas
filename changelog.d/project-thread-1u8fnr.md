@@ -1,0 +1,1 @@
+- 2026-11-13 · The map now looks like Los Angeles: most trees are tall fan palms and fuller date palms, city streets are lined with palms on both sides, and shrub beds are hedges, agave, bird of paradise and bougainvillea, with a few purple jacaranda and slim cypress
