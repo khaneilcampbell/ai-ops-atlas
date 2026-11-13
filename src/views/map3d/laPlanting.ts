@@ -28,7 +28,8 @@ const key=(x:number,z:number,salt:string)=>hash(`${x.toFixed(2)}:${z.toFixed(2)}
  * are specimens, about one lawn tree in four, with the formal palm avenues on the streets.
  * The arena's plaza palms (kind "palm") grow as the avenue palm, matching the streets.
  */
-export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'>):LaTree|null{
+export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'|'la'>):LaTree|null{
+ if(t.la)return t.la;
  // The arena plaza palms and the street avenues are the same palm (Khaneil, 2026-11-13).
  if(t.kind==='palm'||t.kind==='avenue')return 'avenue';
  if(t.kind==='blossom')return 'jacaranda';

@@ -1,4 +1,4 @@
-import type {Rect,Scene3D} from './scene';
+import type {Point,Rect,Scene3D,Tree} from './scene';
 import type {Pt} from './roads';
 export const COMMONS_KEY='service:atlas-commons';
 export const COMMONS_NAME='Atlas Commons';
@@ -29,4 +29,22 @@ export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportCo
  const benches:Pt[]=benchIndices.map(i=>{const q=loop[i],dx=q[0]-cx,dz=q[1]-cz,len=Math.hypot(dx,dz);benchRotations.push(Math.atan2(dx,dz));return [q[0]+dx/len*.6,q[1]+dz/len*.6];});
  const lights:Pt[]=[...trees.filter((_,i)=>i%2===0).map(([x,z]):Pt=>[x+.3,z+.15]),[join[0]-.35,service[1]]];
  return {rect,pond,loop,paths,bridges,pavilion,amphitheater,trees,benches,benchRotations,lights,access:{service,marketplace}};
+}
+
+/** How far outside the walking loop the pond palms stand, on the lawn. */
+export const COMMONS_PLANTING={loopPalms:[6,18,30,42],loopOffset:.75,palm:.26,olive:.34,shrub:.13} as const;
+
+/**
+ * Atlas Commons in the city's planting (Khaneil, 2026-11-13: "same landscape as the rest of Atlas … not excessive").
+ * The edge trees alternate lit avenue palms and olives, four lit palms frame the pond outside the loop (either side
+ * of the two footbridges), and the shore is the city's LA shrubs. Landscape draws them with every other tree.
+ */
+export function commonsPlanting(p:CommonsPlan,y:number){
+ const trees:Tree[]=p.trees.map(([x,z],i)=>i%2===0?{x,y,z,s:COMMONS_PLANTING.palm,kind:'avenue',lit:true}:{x,y,z,s:COMMONS_PLANTING.olive,kind:'round',la:'olive'});
+ const cx=p.pond.reduce((a,q)=>a+q[0],0)/p.pond.length,cz=p.pond.reduce((a,q)=>a+q[1],0)/p.pond.length;
+ for(const i of COMMONS_PLANTING.loopPalms){const [x,z]=p.loop[i],dx=x-cx,dz=z-cz,len=Math.hypot(dx,dz);trees.push({x:x+dx/len*COMMONS_PLANTING.loopOffset,y,z:z+dz/len*COMMONS_PLANTING.loopOffset,s:COMMONS_PLANTING.palm,kind:'avenue',lit:true});}
+ const bushes:Point[]=[];
+ // Low planted shoreline below the promenade, leaving every bridge mouth open.
+ for(let i=0;i<48;i+=2){const [x,z]=p.pond[i];if(p.bridges.some(([a])=>Math.abs(x-a[0])<.45))continue;bushes.push({x,y,z,s:COMMONS_PLANTING.shrub});}
+ return {trees,bushes};
 }

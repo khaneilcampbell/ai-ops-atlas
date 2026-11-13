@@ -1,6 +1,6 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
-import {planCommons,type CommonsPlan} from './commonsPlan';
+import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -12,7 +12,7 @@ import {alignStreets,joinStreetEnds} from './streetAlign';
 import {marinaSite} from './marinaPlan';
 import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
-import {planFinancial,type FinancialPlan} from "./financialPlan";
+import {planFinancial,financialParkPlanting,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {sizeIntelligenceHub} from "./intelligenceHubPlan";
@@ -155,6 +155,8 @@ export interface Tree {
   kind: TreeKind;
   /** Wrapped in warm-white string lights (palms only; a chosen few, not every palm). */
   lit?: boolean;
+  /** A set species for a designed planting (parks), instead of the lawn mix laPlanting picks by position. */
+  la?: "olive" | "ficus" | "date" | "fan" | "cypress" | "jacaranda";
 }
 export interface Point {
   x: number;
@@ -890,6 +892,10 @@ function buildCity(layout: Layout): Scene3D {
 
   const commons=planCommons({mall,towers,paving,transportConnections:connections,parks});
   if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
+  // Financial Park too: its palms are the city's lit avenue palm and its shrubs the city's LA shrubs (Khaneil, 2026-11-13).
+  if(financial){const f=financialParkPlanting(financial,top);trees.push(...f.trees);bushes.push(...f.bushes);}
+  // Atlas Commons is planted like the rest of the city (Khaneil, 2026-11-13): its trees are lit avenue palms and olives, and its shore is LA shrubs.
+  if(commons){const c=commonsPlanting(commons,top);trees.push(...c.trees);bushes.push(...c.bushes);}
   const stationPlaza=planStationPlaza({stadium,communityRail},{
     land,roads:connections.map(c=>c.road),
     obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
