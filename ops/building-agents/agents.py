@@ -2,7 +2,6 @@
 """Building operators for Atlas: one model-free check per building, reported to the live feed.
 
   marketplace  Product Marketplace     the main-build release and its latest.json
-  signals      Observability Center    the latest main run of each workflow, and the site answering
   census       Data Intelligence Center the catalog's projects, agents and repositories on GitHub
 
 GET requests only. Each run posts one report to ATLAS_FEED_URL (/api/hooks/agents) with the
@@ -21,11 +20,9 @@ import urllib.request
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "khaneilcampbell/ai-ops-atlas")
 API = "https://api.github.com"
-AGENT = {"marketplace": "marketplace-steward", "signals": "signal-watch", "census": "dataset-census"}
-PHASE = {"marketplace": "Product publishing check", "signals": "Signal check", "census": "Dataset census"}
+AGENT = {"marketplace": "marketplace-steward", "census": "dataset-census"}
+PHASE = {"marketplace": "Product publishing check", "census": "Dataset census"}
 FRESH_DAYS = 30
-# Workflows whose latest main run failing means Atlas itself is broken, not just one check.
-REQUIRED_WORKFLOWS = {"ci.yml"}
 
 
 class CheckFailed(Exception):
@@ -66,40 +63,6 @@ def marketplace() -> str:
         raise CheckFailed(f"latest.json is incomplete (version {version or 'missing'}, {len(signed)} signed platforms)")
     when = f" published {ago(date)}" if date else ""
     return f"Atlas {version}{when} · signed update for {', '.join(signed)} · {len(assets)} release files"
-
-
-def signals() -> str:
-    workflows = [w for w in get(f"{API}/repos/{REPO}/actions/workflows?per_page=100")["workflows"] if w.get("state") == "active"]
-    passing, failing, newest, broken = 0, [], None, []
-    for w in workflows:
-        runs = get(f"{API}/repos/{REPO}/actions/workflows/{w['id']}/runs?branch=main&status=completed&per_page=1")["workflow_runs"]
-        if not runs:
-            continue
-        r = runs[0]
-        newest = max(newest or r["created_at"], r["created_at"])
-        name = w["path"].rsplit("/", 1)[-1]
-        if r["conclusion"] in ("failure", "timed_out"):
-            failing.append(name)
-            if name in REQUIRED_WORKFLOWS:
-                broken.append(name)
-        elif r["conclusion"] == "success":
-            passing += 1
-    site = os.environ.get("ATLAS_SITE_URL") or re.sub(r"/api/hooks/agents/?$", "/", os.environ.get("ATLAS_FEED_URL", ""))
-    answered = "not checked"
-    if site:
-        try:
-            get(site, raw=True)
-            answered = "answering"
-        except urllib.error.HTTPError as e:
-            # Cloudflare Access answers a signed-out visit with 302/401/403: the site is up.
-            answered = "answering" if e.code < 500 else f"down ({e.code})"
-        except OSError as e:
-            answered = f"down ({e.__class__.__name__})"
-    checked = passing + len(failing)
-    detail = f"{passing} of {checked} workflows passing on main" + (f", failing: {', '.join(failing)}" if failing else "") + f" · site {answered}" + (f" · newest run {ago(newest)}" if newest else "")
-    if broken or answered.startswith("down"):
-        raise CheckFailed(detail)
-    return detail
 
 
 def census() -> str:
@@ -160,7 +123,7 @@ def main() -> int:
     failed = False
     for check in AGENT if args.check == "all" else [args.check]:
         try:
-            status, detail = "ok", {"marketplace": marketplace, "signals": signals, "census": census}[check]()
+            status, detail = "ok", {"marketplace": marketplace, "census": census}[check]()
         except CheckFailed as e:
             status, detail, failed = "failed", str(e), True
         except Exception as e:  # the check itself broke: still tell Atlas, so the building goes red

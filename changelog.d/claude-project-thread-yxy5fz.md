@@ -1,0 +1,1 @@
+- 2026-11-13 · Signal Watch is removed: its agent, its 30-minute check and its alert are gone. The Observability Center building no longer has an operating agent, and Atlas Health Monitor now owns only Dataset Census and Atlas Data Inventory (#387)

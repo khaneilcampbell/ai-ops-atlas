@@ -673,42 +673,6 @@ agents:
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
 
-  - id: signal-watch
-    name: Signal Watch
-    purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
-    framework: GitHub Actions (Python, standard library)
-    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
-    runtime: GitHub-hosted runner
-    status: active
-    trigger: Every 30 minutes, or by hand
-    source: ops/building-agents/agents.py
-    observe:
-      agent_feed: true
-    alerts:
-      failures: true
-      report_within: 90m
-    last_run: null
-    permissions:
-      - 'GITHUB_TOKEN: actions read (workflow runs)'
-      - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
-    registry:
-      title: Signal Watch
-      category: infrastructure
-      subcategory: Observability
-      classification:
-        type: D
-        confidence: verified
-        evidence: ops/building-agents/agents.py signals; no AI model
-      execution:
-        trigger_type: scheduled
-        environment: GitHub-hosted runner
-      governance:
-        autonomy: 1
-        autonomy_note: Reads and reports only.
-        risk: low
-      cost:
-        budget: No model calls. GitHub Actions minutes on a public repository.
-
   - id: dataset-census
     name: Dataset Census
     purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
@@ -834,12 +798,12 @@ agents:
   - id: atlas-health-monitor
     name: Atlas Health Monitor
     purpose: >-
-      Knows whether Atlas itself is healthy: watches the build and site signals Atlas depends on, counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
+      Knows whether Atlas itself is healthy: counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
     framework: Atlas owning agent (runs through its automations)
     model: None of its own; each automation it owns keeps its own model and cap
     runtime: Through its automations
     status: active
-    trigger: Its automations run every 30 minutes, every 3 hours and daily
+    trigger: Its automations run every 3 hours and daily
     last_run: null
     history:
       - at: 2026-11-13
