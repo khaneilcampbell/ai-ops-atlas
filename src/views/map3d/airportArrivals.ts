@@ -1,4 +1,4 @@
-import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_REMOTE_STANDS,AIRPORT_LAYOUT,DEFAULT_CIRCUIT,DEPARTURE_TIMES,circuitState,departurePose,type FlightCircuit} from './airport';
+import {AIRPORT_LANDING_RUNWAY as R,AIRPORT_LAYOUT,DEFAULT_CIRCUIT,DEPARTURE_TIMES,circuitState,departurePose,type FlightCircuit} from './airport';
 import {roundedRoad} from './highway';
 
 /**
@@ -39,12 +39,13 @@ export const ARRIVAL={
  * than queueing at the hold (the stand is clear long before the next arrival needs it). */
 export const LOOP={interval:45,count:5,taxi:6,holdMin:10,holdMax:38,standExtra:12} as const;
 export const LOOP_CYCLE=LOOP.interval*LOOP.count;
-/** Arrivals land heading south (Khaneil, 2026-11-13), so they turn round at the south remote stand. */
-export const ARRIVAL_STAND=AIRPORT_REMOTE_STANDS[1];
+/** Landed jets taxi to the terminal and park nose-in at the free gate (gate 2, between the two parked jets), then
+ * push back from it and taxi up to the takeoff hold (Khaneil, 2026-11-13). */
+export const ARRIVAL_STAND={x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[2]} as const;
 /** The hold is on the taxiway by runway 1's north end (TAKEOFF_QUEUE), facing north. */
 const HOLD={x:AIRPORT_LAYOUT.taxiX,z:0} as const;
-/** Pushback ends on the taxiway beside the stand, nose north, ready to taxi up to the hold. */
-const PUSH_END={x:AIRPORT_LAYOUT.taxiX,z:23.6} as const;
+/** Pushback ends on the taxiway just south of the gate, nose north, ready to taxi up to the hold. */
+const PUSH_END={x:AIRPORT_LAYOUT.taxiX,z:ARRIVAL_STAND.z+1.2} as const;
 type Pt=[number,number];
 type XZ={x:number;z:number};
 export interface GroundPose {x:number;y:number;z:number;yaw:number;pitch:number;roll:number;gear:number;visible:boolean}
@@ -72,7 +73,7 @@ function trapezoid(length:number,v:number,accel:number,brake:number){
  return {duration,at};
 }
 
-const groundIn:Pt[]=roundedRoad([[R.x,R.touchdownZ],[R.x,R.southLaneZ],[ARRIVAL_STAND.x,ARRIVAL_STAND.z]],.9);
+const groundIn:Pt[]=roundedRoad([[R.x,R.touchdownZ],[R.x,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,R.southLaneZ],[AIRPORT_LAYOUT.taxiX,ARRIVAL_STAND.z],[ARRIVAL_STAND.x,ARRIVAL_STAND.z]],.9);
 const groundInLengths=measure(groundIn);
 const pushRoute:Pt[]=roundedRoad([[ARRIVAL_STAND.x,ARRIVAL_STAND.z],[PUSH_END.x,ARRIVAL_STAND.z],[PUSH_END.x,PUSH_END.z]],.6);
 const pushLengths=measure(pushRoute);
