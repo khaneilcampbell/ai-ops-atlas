@@ -7,7 +7,7 @@ import {TERRACE_H,type Scene3D,type Tree} from './scene';
  * carriageway, sidewalk, walks, junctions and buildings, and kept clear of the lamps themselves.
  * The highway stays bare. They stand on the one ground plane, like the lamps (StreetLights.tsx). Which palm grows at each spot is decided by laPlanting.ts.
  */
-export const STREET_PALMS={spacing:1.8,start:.3,setbacks:[.55,.8],lampClear:.45,max:700,size:.26} as const;
+export const STREET_PALMS={spacing:2.1,start:.3,setbacks:[.55,.8],lampClear:.45,max:700,size:.26} as const;
 
 export function planStreetPalms(s:Scene3D):Tree[]{
  const lamps=planStreetLights(s);

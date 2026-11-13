@@ -12,8 +12,8 @@ import type {Point,Tree} from './scene';
  * cone tree). Shrubs: clipped hedges, agave, bird of paradise and bougainvillea.
  *
  * Every part is a box, ball, trunk or cone from the shared geometry kit, grouped so the whole
- * planting is a handful of instanced draws. A palm is about 200 triangles; the round tree it
- * replaces is over a thousand.
+ * planting is a handful of instanced draws. A palm's fronds are four-triangle folded leaves, so a
+ * whole palm is about 100 triangles; the round tree it replaces is over a thousand.
  */
 export type LaTree='fan'|'date'|'ficus'|'jacaranda'|'cypress';
 export type LaShrub='hedge'|'agave'|'paradise'|'bougainvillea';
@@ -46,7 +46,9 @@ export const LA_COLORS={
 export interface LaParts{
  /** g.trunk, plain: trunks and the dead-frond skirts under fan palm crowns. */
  trunks:Inst[];
- /** g.box, foliage: palm fronds, clipped hedges and agave blades. */
+ /** g.frond, foliage: palm fronds (a folded four-triangle leaf). */
+ leaves:Inst[];
+ /** g.box, foliage: clipped hedges, agave blades and bird of paradise flowers. */
  fronds:Inst[];
  /** g.blob, foliage: ficus and jacaranda canopies (shadowed) and their small top puffs (no shadow). */
  blobs:Inst[];puffs:Inst[];
@@ -58,12 +60,12 @@ export interface LaParts{
  flowers:Inst[];
 }
 
-export const emptyParts=():LaParts=>({trunks:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[]});
+export const emptyParts=():LaParts=>({trunks:[],leaves:[],fronds:[],blobs:[],puffs:[],cones:[],clumps:[],flowers:[]});
 
-/** A ring of fronds round a crown top: each frond a thin box hinged at the heart, drooping outward by `droop`. */
+/** A ring of fronds round a crown top: each frond a folded leaf hinged at the heart, drooping outward by `droop`. */
 function crown(out:Inst[],x:number,y:number,z:number,n:number,len:number,width:number,droop:number,turn:number,colors:readonly string[]){
  for(let f=0;f<n;f++){const t=turn+f/n*Math.PI*2,reach=len*.5*Math.cos(droop);
-  out.push({p:[x+Math.sin(t)*reach,y-len*.5*Math.sin(droop)-.012,z+Math.cos(t)*reach],s:[width,.024,len],r:t,rx:droop,c:colors[f%colors.length]});}
+  out.push({p:[x+Math.sin(t)*reach,y-len*.5*Math.sin(droop),z+Math.cos(t)*reach],s:[width,width*.35,len],r:t,rx:droop,c:colors[f%colors.length]});}
 }
 
 /** Where a leaning trunk of this height ends (the trunk turns by yaw, then leans by `lean`, like Inst's YXZ rotation). */
@@ -78,8 +80,8 @@ export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number){
  const [tx,ty,tz]=trunkTop(x,y,z,h,lean,yaw);
  o.trunks.push({p:[tx,ty-s*.62,tz],s:[.15,s*.6,.15],r:yaw,c:LA_COLORS.skirt});
  o.clumps.push({p:[tx,ty+s*.05,tz],s:[s*.2,s*.18,s*.2],c:LA_COLORS.fanFrond[0]});
- crown(o.fronds,tx,ty+s*.12,tz,7,s*1.2,s*.26,-.4,yaw,LA_COLORS.fanFrond);
- crown(o.fronds,tx,ty+s*.04,tz,8,s*1.3,s*.28,.4,yaw+.4,LA_COLORS.fanFrond);
+ crown(o.leaves,tx,ty+s*.12,tz,6,s*1.45,s*.42,-.4,yaw,LA_COLORS.fanFrond);
+ crown(o.leaves,tx,ty+s*.04,tz,7,s*1.6,s*.45,.4,yaw+.45,LA_COLORS.fanFrond);
 }
 
 /** Shorter and thicker, with a wide, full, drooping crown and orange date clusters under it. */
@@ -87,9 +89,9 @@ export function datePalm(o:LaParts,x:number,y:number,z:number,s:number){
  const v=key(x,z,'h'),h=s*(2.6+v*1.4),yaw=key(x,z,'yaw')*Math.PI*2;
  o.trunks.push({p:[x,y,z],s:[.17,h,.17],r:yaw,c:LA_COLORS.dateTrunk});
  o.clumps.push({p:[x,y+h,z],s:[s*.42,s*.34,s*.42],c:LA_COLORS.dateFrond[2]});
- crown(o.fronds,x,y+h+s*.3,z,6,s*2.3,s*.3,-.15,yaw,LA_COLORS.dateFrond);
- crown(o.fronds,x,y+h+s*.2,z,9,s*2.6,s*.32,.35,yaw+.35,LA_COLORS.dateFrond);
- crown(o.fronds,x,y+h+s*.04,z,8,s*2.3,s*.32,.85,yaw+.7,LA_COLORS.dateFrond);
+ crown(o.leaves,x,y+h+s*.3,z,5,s*2.3,s*.5,-.15,yaw,LA_COLORS.dateFrond);
+ crown(o.leaves,x,y+h+s*.2,z,8,s*2.6,s*.55,.35,yaw+.4,LA_COLORS.dateFrond);
+ crown(o.leaves,x,y+h+s*.04,z,7,s*2.3,s*.5,.85,yaw+.8,LA_COLORS.dateFrond);
  for(const a of [.7,2.8,4.9])o.flowers.push({p:[x+Math.sin(a+yaw)*s*.38,y+h-s*.12,z+Math.cos(a+yaw)*s*.38],s:[s*.12,s*.12,s*.12],c:LA_COLORS.dates});
 }
 

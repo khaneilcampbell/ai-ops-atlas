@@ -127,6 +127,16 @@ function fromTriangles(tris: number[][]) {
   return g;
 }
 
+/**
+ * A palm frond: a pointed leaf along z (hub at -z, tip at +z), folded down from a ridge at y=0 to
+ * its edges at y=-1, so the instance's y scale sets how far the leaflets hang. Four triangles, faced
+ * both ways, against twelve for a thin box.
+ */
+function frondLeaf() {
+  const i = [0, 0, -0.5], t = [0, 0, 0.5], l = [-0.5, -1, -0.1], r = [0.5, -1, -0.1];
+  return fromTriangles([i, l, t, i, t, r, i, t, l, i, r, t]);
+}
+
 /** Gabled roof slopes over a unit footprint, ridge along x at height 1. */
 function gableSlopes() {
   const a = [-0.5, 0, 0.5], b = [0.5, 0, 0.5], c = [0.5, 0, -0.5], d = [-0.5, 0, -0.5];
@@ -153,6 +163,7 @@ export function useGeometries() {
       hip: hipRoof(),
       cyl: lifted(new THREE.CylinderGeometry(0.5, 0.5, 1, 14)),
       trunk: lifted(new THREE.CylinderGeometry(0.35, 0.5, 1, 6)),
+      frond: frondLeaf(),
       blob: new THREE.IcosahedronGeometry(1, 2),
       cone: lifted(new THREE.ConeGeometry(0.5, 1, 9)),
       dish: lifted(new THREE.CylinderGeometry(0.5, 0.14, 1, 14)),
@@ -479,13 +490,13 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     // Los Angeles planting: mostly palms, with dry-garden shrubs (laPlanting.ts).
-    const { trunks, fronds, blobs, puffs, cones, clumps, flowers } = laPlanting([...scene.trees, ...planStreetPalms(scene)], scene.bushes);
+    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers } = laPlanting([...scene.trees, ...planStreetPalms(scene)], scene.bushes);
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     // Low path lights, and pools of light on the ground that fade in at night.
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, fronds, blobs, puffs, cones, clumps, flowers, rocks, bollards, caps, pools };
+    return { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
@@ -493,6 +504,7 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
       <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
+      <Instanced items={items.leaves} geometry={g.frond} material={m.foliage} />
       <Instanced items={items.fronds} geometry={g.box} material={m.foliage} />
       <Instanced items={items.clumps} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />

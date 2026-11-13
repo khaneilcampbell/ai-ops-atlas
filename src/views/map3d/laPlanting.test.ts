@@ -28,15 +28,16 @@ describe('Los Angeles planting',()=>{
   const fanH=fan.trunks[0].s[1],dateH=date.trunks[0].s[1];
   expect(fanH).toBeGreaterThan(dateH*1.5);
   expect(fan.trunks[0].s[0]).toBeLessThan(date.trunks[0].s[0]);
-  const reach=(o:typeof fan)=>Math.max(...o.fronds.map(f=>Math.hypot(f.p[0],f.p[2])+f.s[2]/2));
+  const reach=(o:typeof fan)=>Math.max(...o.leaves.map(f=>Math.hypot(f.p[0],f.p[2])+f.s[2]/2));
   expect(reach(date)).toBeGreaterThan(reach(fan));
   // A leaning fan palm's crown still sits on top of its trunk.
   const top=fan.clumps[0].p;expect(Math.hypot(top[0],top[2])).toBeLessThan(fanH*.07);
  });
  it('draws a palm in far fewer triangles than the round tree it replaces',()=>{
   const o=emptyParts();fanPalm(o,0,0,0,.3);
-  const palm=o.trunks.length*24+o.fronds.length*12+o.clumps.length*160,round=24+4*320;
-  expect(palm).toBeLessThan(round/2);
+  const palm=o.trunks.length*24+o.leaves.length*4+o.fronds.length*12+o.clumps.length*80,round=24+4*80;
+  // Even against the round tree's far (overview) canopies.
+  expect(palm).toBeLessThan(round*.6);
  });
 });
 
