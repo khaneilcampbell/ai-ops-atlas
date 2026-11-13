@@ -7,7 +7,7 @@ import {buildScene,TERRACE_H} from './scene';
 import {distanceToRoad,roadIntersections} from './highway';
 import {marinaSite} from './marinaPlan';
 import {plazaRings} from './streetGraph';
-import {bridgeStreetSidewalks,SIDEWALK,streetPavement,walkOffStreets} from './streetPavement';
+import {bridgeStreetSidewalks,SIDEWALK,streetPavement,walkOffCarriageways,walkOffStreets} from './streetPavement';
 
 // Sidewalks meet the streets cleanly (Khaneil, 2026-11-13): no kerb runs across a carriageway, and
 // where one street ends on another the sidewalks turn the corner instead of stopping short.
@@ -74,16 +74,17 @@ describe('station plaza to the boat dock',()=>{
 });
 
 describe('station paths stay off the streets',()=>{
- it('leaves no station path slab lying along a street, in district and tag groupings',()=>{
+ it('lays no station path slab on any carriageway, in district and tag groupings',()=>{
   for(const g of ['district','tag'] as const){
    const s=buildScene(layoutMap(catalog,[],g));
    const roads=[...s.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...s.carBridges.flatMap(b=>b.roads)];
    const segs=roads.flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt]));
    const along:string[]=[];
    for(const st of s.communityRail?.loop?.stops??[]){const p=st.walk.filter(q=>q[1]===0).map(q=>[q[0],q[2]] as Pt);
-    for(let i=1;i<p.length;i++)for(const [a,b] of walkOffStreets(p[i-1],p[i],segs))for(let k=1;k<20;k++){const q:Pt=[a[0]+(b[0]-a[0])*k/20,a[1]+(b[1]-a[1])*k/20];
-     // Points on a crossing are opened by the renderer (and zebra-striped); a slab running along a street is not.
-     const near=segs.filter(([u,v])=>distanceToRoad(q,[u,v])<ROAD_W/2+.22);if(near.length&&near.every(([u,v])=>straight(u,v)&&(Math.abs(u[1]-v[1])<1e-6)===(Math.abs(a[1]-b[1])<1e-6)))along.push(`${g} ${st.id} ${q.map(v=>v.toFixed(2))}`);}}
+    // Every station path slab the renderer lays stays off every carriageway rectangle (junction squares included).
+    for(let i=1;i<p.length;i++)for(const [a,b] of walkOffCarriageways(p[i-1],p[i],segs,.48))for(let k=0;k<=20;k++){const q:Pt=[a[0]+(b[0]-a[0])*k/20,a[1]+(b[1]-a[1])*k/20];
+     const x=Math.abs(a[1]-b[1])<1e-6;for(const off of [-.23,0,.23]){const e:Pt=x?[q[0],q[1]+off]:[q[0]+off,q[1]];
+      if(segs.some(([u,v])=>straight(u,v)&&e[0]>Math.min(u[0],v[0])-ROAD_W/2+.01&&e[0]<Math.max(u[0],v[0])+ROAD_W/2-.01&&e[1]>Math.min(u[1],v[1])-ROAD_W/2+.01&&e[1]<Math.max(u[1],v[1])+ROAD_W/2-.01))along.push(`${g} ${st.id} ${e.map(v=>v.toFixed(2))}`);}}}
    expect(along.slice(0,5)).toEqual([]);
   }
  });

@@ -166,3 +166,20 @@ export function walkOffStreets(a:Pt,b:Pt,streets:[Pt,Pt][]):[Pt,Pt][]{
  const pt=(v:number):Pt=>x?[v,c]:[c,v];
  return out.map(([s,e])=>[pt(s),pt(e)]);
 }
+
+/**
+ * The pieces of a straight walk of width `w` that lie off every carriageway, each street piece's rectangle reaching
+ * half a road past its ends (the paved junction squares). Station paths use this (Khaneil, 2026-11-13: "remove the
+ * pavement that's in the street"), so a slab never lies on asphalt, whether along, across or at a bend.
+ */
+export function walkOffCarriageways(a:Pt,b:Pt,streets:[Pt,Pt][],w:number):[Pt,Pt][]{
+ if(!straight(a,b))return [[a,b]];
+ const x=Math.abs(a[1]-b[1])<1e-6,k=x?0:1,c=a[1-k],h=ROAD_W/2;
+ let pieces:[number,number][]=[[Math.min(a[k],b[k]),Math.max(a[k],b[k])]];
+ for(const [p,q] of streets){if(!straight(p,q))continue;
+  const r=along(p,q,h,h),lo=x?r.x:r.z,hi=lo+(x?r.w:r.d),c0=x?r.z:r.x,c1=c0+(x?r.d:r.w);
+  if(c+w/2<=c0+1e-6||c-w/2>=c1-1e-6)continue;
+  pieces=pieces.flatMap(([s,e])=>e<=lo||s>=hi?[[s,e] as [number,number]]:[[s,Math.min(e,lo)],[Math.max(s,hi),e]].filter(([u,v])=>v-u>.05) as [number,number][]);}
+ const pt=(v:number):Pt=>x?[v,c]:[c,v];
+ return pieces.map(([s,e])=>[pt(s),pt(e)]);
+}
