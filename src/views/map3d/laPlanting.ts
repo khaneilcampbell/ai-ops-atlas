@@ -149,7 +149,8 @@ export function plantTree(o:LaParts,t:Tree,i:number){
 
 export function plantShrub(o:LaParts,b:Point,i:number){
  const {x,y,z,s}=b,kind=laShrubKind(b),turn=key(x,z,'turn')*Math.PI;
- if(kind==='hedge'){o.fronds.push({p:[x,y,z],s:[s*2.4,s*1.1,s*1.3],r:turn,c:LA_COLORS.hedge[i%2]});return;}
+ // A clipped hedge: straight sides with a softly rounded, slightly lighter top, not a hard box (Khaneil, 2026-11-13).
+ if(kind==='hedge'){o.fronds.push({p:[x,y,z],s:[s*2.3,s*.85,s*1.2],r:turn,c:LA_COLORS.hedge[i%2]});o.clumps.push({p:[x,y+s*.85,z],s:[s*1.2,s*.32,s*.62],r:turn,c:LA_COLORS.hedge[1]});return;}
  if(kind==='agave'){
   // A low rosette of stiff blue-grey blades leaning out from the middle.
   for(let k=0;k<7;k++){const t=turn+k/7*Math.PI*2;o.fronds.push({p:[x+Math.sin(t)*s*.12,y,z+Math.cos(t)*s*.12],s:[s*.32,s*1.3,s*.07],r:t,rx:.75,c:LA_COLORS.agave});}
