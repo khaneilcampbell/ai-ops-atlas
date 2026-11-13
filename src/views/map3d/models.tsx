@@ -517,8 +517,8 @@ export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G
       <Instanced items={items.fronds} geometry={g.box} material={m.foliage} />
       <Instanced items={items.clumps} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
-      {/* Palm string lights: tiny warm-white bulbs by day, glowing at night. */}
-      <Instanced items={items.bulbs} geometry={g.box} material={night ? m.glow : m.plain} shadow={false} />
+      {/* Palm string lights stay switched on day and night, like Rodeo Drive (Khaneil, 2026-11-13: lights not showing by day). */}
+      <Instanced items={items.bulbs} geometry={g.box} material={m.glow} shadow={false} />
       {/* At night each wrapped trunk also gives off a soft warm haze, so the lights read from the normal map zoom. */}
       {night && <Instanced items={items.halos} geometry={g.trunk} material={palmHalo} shadow={false} />}
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
