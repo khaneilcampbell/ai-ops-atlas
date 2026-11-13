@@ -48,7 +48,7 @@ describe('New York street grid',()=>{
    ['ai-ops-atlas',35.375,9.4,10.7,10.7],['benjaire-site',6.9,-.35,8.2,8.2],['commerce-pipeline',6.9,9.4,10.7,10.7],
    ['intelligence-hub',37.625,21.65,10.7,10.7],['soc-lab',-.35,30.4,8.2,8.2],['portfolio-site',16.65,21.65,5.7,5.7],
    ['github-profile',9.4,28.9,5.7,5.7],['park:cleared:benjaire-ops',-.35,14.4,5.7,5.7],['park:cleared:street-reserve:ai-ops-atlas',19.15,14.4,5.7,5.7],
-   ['park:cleared:street-reserve:intelligence-hub',26.4,11.9,8.2,8.2],['park:vacant:service-desk',0,40.5,5,5],['park:vacant:career-optimizer',9.75,22,5,5],
+   ['park:cleared:street-reserve:intelligence-hub',26.4,11.9,8.2,8.2],['park:vacant:vacant-lot-west',0,40.5,5,5],['park:vacant:career-optimizer',9.75,22,5,5],
    ['park:d:career-portfolio',9.75,36.5,12,9],['github-profile',15.1,28.9,3,5.7],
   ]);
  });

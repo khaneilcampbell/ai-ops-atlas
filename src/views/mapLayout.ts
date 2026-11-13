@@ -77,13 +77,12 @@ export interface Park {
 
 /**
  * Projects that stay registered (agents, Mission Control, search) but have no building on the map.
- * Skyline's district was removed to make space (KC, 2026-11-08). Service Desk, Career Applications
- * and Benjaire Dashboard were removed on 2026-11-09, and each keeps its land, so every other
- * building, road and bridge keeps its place.
+ * Skyline's district was removed to make space (2026-11-08). Three more towers were removed on
+ * 2026-11-09, and each keeps its land, so every other building, road and bridge keeps its place.
  */
 export { OFF_MAP_PROJECTS } from "../catalog/projects";
 /** Removed towers on the city's edge: their land becomes a plain lawn lot. */
-export const VACANT_LOTS: ReadonlySet<string> = new Set(["service-desk", "career-optimizer"]);
+export const VACANT_LOTS: ReadonlySet<string> = new Set(["vacant-lot-west", "career-optimizer"]);
 /**
  * Removed towers in the middle of the city: the streets and bridges that link their neighbors run
  * through the lot, so it keeps its streets and paving and only the building goes.
@@ -123,6 +122,22 @@ const RETIRED_LOTS: { after: string; project: Project }[] = [
       repository: "",
       tags: ["claude", "career", "human-in-the-loop"],
       district: "career-portfolio",
+      links: [],
+      agentIds: [],
+    },
+  },
+  {
+    // A removed project (Khaneil, 2026-11-12: everything about it left Atlas). Only its empty lot is
+    // kept, so no other building moves; its tags keep the lot in the same place in every grouping.
+    after: "intelligence-hub",
+    project: {
+      id: "vacant-lot-west",
+      name: "Vacant lot",
+      summary: "Removed project.",
+      status: "active",
+      repository: "",
+      tags: ["itsm", "dashboard"],
+      district: "security-infrastructure",
       links: [],
       agentIds: [],
     },
@@ -461,7 +476,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     const center = cleared.find(d => d.project.id === "benjaire-ops");
     const campusComplete = ["benjaire-site", "commerce-pipeline", "intelligence-hub", "soc-lab", "portfolio-site", "github-profile"].every(id => districts.some(d => d.project.id === id));
     // Keep the proven fallback packing when repository filtering removes part of this campus.
-    if (hub && center && campusComplete && catalog.projects.some(p => p.id === "service-desk") && hub.size === center.size) {
+    if (hub && center && campusComplete && projects.some(p => p.id === "vacant-lot-west") && hub.size === center.size) {
       const dx = center.ox - hub.ox, dy = center.oy - hub.oy;
       const move = (d: District, x: number, y: number) => {
         d.ox += x; d.oy += y; d.hq.gx += x; d.hq.gy += y;

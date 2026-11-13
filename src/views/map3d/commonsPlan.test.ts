@@ -7,10 +7,10 @@ import type {Pt} from './roads';
 const inside=(q:Pt,poly:Pt[])=>{let hit=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++)if((poly[i][1]>q[1])!==(poly[j][1]>q[1])&&q[0]<(poly[j][0]-poly[i][0])*(q[1]-poly[i][1])/(poly[j][1]-poly[i][1])+poly[i][0])hit=!hit;return hit;};
 const scene=buildScene(layoutMap(catalog,[],'district')),p=scene.commons!;
 describe('Atlas Commons',()=>{
- it('uses existing meadow without moving the Service Desk lot or neighboring buildings',()=>{
-  // The Service Desk tower was removed (2026-11-09); its lot stays as a vacant lawn in the same place.
-  expect(p).toBeDefined();expect(scene.towers.find(t=>t.projectId==='service-desk')).toBeUndefined();
-  expect(scene.parks.find(l=>l.id==='park:vacant:service-desk')).toMatchObject({x:0,z:40.5,w:5,d:5});
+ it('uses existing meadow without moving the west vacant lot or neighboring buildings',()=>{
+  // A removed tower's lot (2026-11-09) stays as a vacant lawn in the same place.
+  expect(p).toBeDefined();expect(scene.towers.find(t=>t.projectId==='vacant-lot-west')).toBeUndefined();
+  expect(scene.parks.find(l=>l.id==='park:vacant:vacant-lot-west')).toMatchObject({x:0,z:40.5,w:5,d:5});
   expect(p.rect).toEqual({x:8.7,z:35.974999999999994,w:14.9875,d:7.950000000000003});
   expect(p.rect.x+p.rect.w).toBeLessThan(scene.mall!.x);expect(p.rect.z+p.rect.d).toBeLessThan(scene.mall!.plaza.z);
   for(const b of [...scene.towers,...scene.kiosks])expect(b.x+b.size/2<p.rect.x||b.x-b.size/2>p.rect.x+p.rect.w||b.z+b.size/2<p.rect.z||b.z-b.size/2>p.rect.z+p.rect.d).toBe(true);

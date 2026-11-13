@@ -9,7 +9,7 @@ Atlas organizes the catalog in three ways. Each value is either **declared** in 
 | AI Operations | Atlas |
 | Business Operations | Benjaire.com, Benjaire Ops Dashboard, Multi-Agent Commerce Pipeline |
 | AI Engineering | Project Intelligence Hub |
-| Security & Infrastructure | SOC Brute Force Detection Lab, Service Desk Intelligence Dashboard |
+| Security & Infrastructure | SOC Brute Force Detection Lab |
 | Career & Portfolio | khaneilcampbell.com, Profile Tower, AI Career Application Optimization System |
 
 Each manifest declares `project.district`. Without it, the rules look at the tags and at the most common registry category among the project's items (CI pipelines don't count): career or portfolio, then security or infrastructure, then business, and AI Engineering otherwise. Atlas itself is always AI Operations. A test checks that the rules reproduce every declared district, so a new manifest without the field still lands in the right place.

@@ -28,7 +28,6 @@ describe("districts", () => {
       "commerce-pipeline": "business-operations",
       "intelligence-hub": "ai-engineering",
       "soc-lab": "security-infrastructure",
-      "service-desk": "security-infrastructure",
       "portfolio-site": "career-portfolio",
       "github-profile": "career-portfolio",
     });
@@ -75,7 +74,7 @@ describe("automation categories", () => {
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
       ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
-      security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
+      security: ["bruteforce-detection", "security-check", "soc-case-notes"],
       business: [
         "benjaire-contact-worker",
         "benjaire-flow-digest",
