@@ -21,8 +21,9 @@ export async function railJourney(page:Page){
   const visited=new Set<number>(),faults:string[]=[];let walking=0,last:number[][]=[];
   try{for(let t=.1;t<loop.period+1;t+=.1){fiber.advance(t,false,store.getState());if(train.userData.station>=0)visited.add(train.userData.station);
    const current:number[][]=[];for(let i=0;i<riders.length;i++){const e=mesh.instanceMatrix.array,k=i*16,visible=Math.hypot(e[k],e[k+1],e[k+2])>.001,p=[e[k+12],e[k+14]];current.push(visible?p:[]);if(!visible)continue;walking++;
-    const routes=riders[i].segs.map((s:{route:{points:number[][]}})=>s.route.points);let nearest=Infinity;for(const r of routes)for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],dx=b[0]-a[0],dz=b[2]-a[2],u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[2])*dz)/(dx*dx+dz*dz||1)));nearest=Math.min(nearest,Math.hypot(p[0]-a[0]-u*dx,p[1]-a[2]-u*dz));}
-    if(nearest>.02)faults.push(`Passenger ${i} left its route`);if(last[i]?.length&&Math.hypot(p[0]-last[i][0],p[1]-last[i][1])>.12)faults.push(`Passenger ${i} jumped`);
+    // Travellers walk side by side, up to their lane's width off the route's centre line (railCommuters.ts along).
+    const segs=riders[i].segs as {route:{points:number[][]};lane:number}[],routes=segs.map(s=>s.route.points),slack=Math.max(...segs.map(s=>Math.abs(s.lane)))+.02;let nearest=Infinity;for(const r of routes)for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],dx=b[0]-a[0],dz=b[2]-a[2],u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[2])*dz)/(dx*dx+dz*dz||1)));nearest=Math.min(nearest,Math.hypot(p[0]-a[0]-u*dx,p[1]-a[2]-u*dz));}
+    if(nearest>slack)faults.push(`Passenger ${i} left its route`);if(last[i]?.length&&Math.hypot(p[0]-last[i][0],p[1]-last[i][1])>.12)faults.push(`Passenger ${i} jumped`);
    }last=current;if(faults.length)break;}
   }finally{state.gl.render=render;}
   return {trains:state.scene.getObjectsByProperty('name','atlas-passenger-train').length,visited:visited.size,stops:loop.stops.length,elapsed:train.userData.elapsed,walking,faults};
