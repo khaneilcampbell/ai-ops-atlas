@@ -1,0 +1,1 @@
+- 2026-11-13 · Atlas, a large yacht, is moored at the marina. Walk on board by the passerelle from a new pontoon, and enter it to see all four decks with people on board (no agents assigned yet)
