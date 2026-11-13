@@ -13,9 +13,11 @@ import {buildingDisplayName} from '../../modules/names';
 import {Person,SeatedPerson} from './InteriorPrimitives';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
-import {DECKS,DECK_INSET,DECK_SPAN,K,ROOMS,STATUS,YACHT_INTERIOR as I,halfBeam,peopleOnBoard,roomCentre,type Deck,type Room} from './yachtInteriorPlan';
+import {DECKS,DECK_INSET,DECK_SPAN,K,ROOMS,harbourAround,STATUS,YACHT_INTERIOR as I,halfBeam,peopleOnBoard,roomCentre,type Deck,type Room} from './yachtInteriorPlan';
 import '../../styles/skyline.css';
 
+/** Height of the harbour water for a view: below the lowest deck shown. */
+const waterY=(view:number)=>(view<=0?0:-I.deckH*view)-1.8;
 const shown=()=>buildingDisplayName(YACHT_KEY,'Atlas Yacht');
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
 const WHITE='#f1f0ec',HULL='#a4a9ac',BOOT='#2c3134',GLASS='#8fa9b6',INK='#2b2a28',FABRIC='#ece6d8',WOOD='#8a6a4c';
@@ -139,7 +141,8 @@ export default function YachtInterior({light}:{light:LightMode}){
   for(let x=-28;x<=28;x+=8)out.push({p:[x,y-3.2,-(side+2.6)],s:[.4,3,.4],c:'#54493f'});
   for(let k=0;k<=8;k++){const t=k/8;out.push({p:[gateX,y-1.7+1.7*t,-(side-t*len)],s:[1.4,.08,len/8+.05],c:'#b98c5f'});}
   for(const s of [-1,1])out.push({p:[gateX+s*.7,y-.8,-(side-len/2)],s:[.06,.9,len],c:'#cfd3d5'});
-  return out;
+  // The marina, stair and shore round her, lined up on the pontoon deck, down to the water.
+  return out.concat(harbourAround(y-1.7,waterY(view)));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- decks and baseY follow view
  },[view]);
  const title=all?'All decks · Open cutaway':DECKS[view];
@@ -152,7 +155,7 @@ export default function YachtInterior({light}:{light:LightMode}){
    <directionalLight color={isNight?'#99b8ed':'#fff4da'} position={[18,40,24]} intensity={isNight?.35:1.9} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-36} shadow-camera-right={36} shadow-camera-top={36} shadow-camera-bottom={-36}/>
    <Camera view={view}/>
    {/* The harbour round the hull. */}
-   <mesh position={[0,(all?0:view===0?0:-I.deckH*view)-1.8,0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[200,200]}/><meshStandardMaterial color={isNight?'#16303f':'#4f8aa0'} roughness={.25} metalness={.1} transparent opacity={.92}/></mesh>
+   <mesh position={[0,waterY(view),0]} rotation={[-Math.PI/2,0,0]} receiveShadow><planeGeometry args={[200,200]}/><meshStandardMaterial color={isNight?'#16303f':'#4f8aa0'} roughness={.25} metalness={.1} transparent opacity={.92}/></mesh>
    {decks.map(d=><DeckPlate key={d} deck={d} y={baseY(d)}/>)}
    <Boxes items={items}/><Boxes items={dock}/>
    {people.map((p,i)=><group key={i} position={[p.x,baseY(p.deck)+.04,p.z]} scale={1.35}>{p.seated?<SeatedPerson x={0} z={0} color={CLOTHES[i%CLOTHES.length]}/>:<Person x={0} z={0} color={CLOTHES[i%CLOTHES.length]}/>}</group>)}

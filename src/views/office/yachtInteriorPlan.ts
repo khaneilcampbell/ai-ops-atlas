@@ -1,4 +1,5 @@
-import {YACHT} from '../map3d/yachtPlan';
+import {YACHT,YACHT_SCALE,yachtBerth} from '../map3d/yachtPlan';
+import {TERRACE_H,WATER_Y} from '../map3d/scene';
 import {hullHalf} from '../map3d/yachtGeometry';
 
 /**
@@ -80,4 +81,36 @@ export function peopleOnBoard():{deck:Deck;x:number;z:number;seated:boolean;room
   ['sun-aft',-14,-2.6,true],['sun-bar',-4.6,1.5,false],['jacuzzi',3.4,1.8,true],
  ];
  return spots.map(([room,x,z,seated])=>({deck:ROOMS.find(r=>r.id===room)!.deck,x,z,seated,room}));
+}
+
+/** A box in the interior scene: centre, size and colour (metres). */
+export type AroundBox={p:[number,number,number];s:[number,number,number];c:string};
+/**
+ * Where Atlas lies, round the interior (Khaneil, 2026-11-13: "i want to see whats around the boat
+ * where its located"): the marina cross dock her pontoon joins, the pier and stair up to the south
+ * shore promenade, the seawall and railing, and the lawn behind. Laid out from the map's own marina
+ * and berth (yachtBerth), scaled to the interior and lined up on the pontoon deck at `dockTop`.
+ * Land runs down to the water plane at `water`. Port side (-z) faces the shore, as on the map.
+ */
+export function harbourAround(dockTop:number,water:number):AroundBox[]{
+ const m={x:0,pierZ:0,shoreZ:-1.8,cityWalkZ:-2.6},b=yachtBerth(m),F=K/YACHT_SCALE;
+ const mapDock=WATER_Y+.22,cityTop=TERRACE_H+.03,Y=(y:number)=>dockTop+(y-mapDock)*F;
+ const X=(x:number)=>(x-b.x)*F,Z=(z:number)=>(z-b.z)*F;
+ const out:AroundBox[]=[];
+ // Top-aligned box from map values: x/z centre and size, top height, depth down (metres).
+ const slab=(x:number,z:number,w:number,d:number,top:number,c:string,deep=.4)=>out.push({p:[X(x),top-deep/2,Z(z)],s:[w*F,deep,d*F],c});
+ // Cross dock and pier, as on the map's marina, with piles.
+ slab(m.x,m.pierZ+1.05,3.6,.38,dockTop,'#b89569');slab(m.x,m.pierZ+.55,.5,1.1,dockTop,'#a7835d');
+ for(const x of [-1.72,-.9,.9])out.push({p:[X(m.x+x),(dockTop+water)/2,Z(m.pierZ+1.05)],s:[.4,dockTop-water,.4],c:'#54493f'});
+ // Stair from the promenade down to the pier, twelve treads.
+ const run=1.8,n=12,top=Y(cityTop);
+ for(let i=0;i<n;i++){const t=top-(top-dockTop)*(i+1)/n,z=m.pierZ-run+(i+.5)*run/n;slab(m.x,z,.72,run/n+.015,t,i%2?'#aaa99e':'#bab7a8',t-water);}
+ // Seawall and promenade along the shore, the lawn behind, and the railing (open at the stair).
+ const shore=m.pierZ-run,span=26,land=5;
+ slab(b.x,shore-.4,span,.8,top,'#c2bba5',top-water+.5);
+ slab(b.x,shore-.8-land/2,span,land,top-.05,'#8fb07a',top-water+.5);
+ for(const s of [-1,1]){const x0=s<0?b.x-span/2:m.x+.4,x1=s<0?m.x-.4:b.x+span/2;
+  out.push({p:[X((x0+x1)/2),top+1.1,Z(shore)+.2],s:[(x1-x0)*F,.12,.12],c:'#76b5ae'});
+  for(let x=x0;x<=x1;x+=1.2)out.push({p:[X(x),top+.55,Z(shore)+.2],s:[.1,1.1,.1],c:'#335b58'});}
+ return out;
 }
