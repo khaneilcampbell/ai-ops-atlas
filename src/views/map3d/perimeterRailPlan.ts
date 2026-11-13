@@ -25,13 +25,13 @@ export function loopPoint(p:Pick<PerimeterRailPlan,'route'|'lengths'|'length'>,d
 function distanceAt(route:Pt[],lengths:number[],point:Pt){for(let i=1;i<route.length;i++)if(distanceToRoad(point,[route[i-1],route[i]])<1e-5)return lengths[i-1]+Math.hypot(point[0]-route[i-1][0],point[1]-route[i-1][1]);throw new Error('Station is not on perimeter track');}
 /** All stations share this exact boarding path, platform and stair opening. */
 export function stationBoardingPath(s:Pick<RailStop,'point'|'yaw'>):Point3[]{return [[1,0,5.9],[1,COMMUNITY.platformRise,1.7],[1,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,1.05],[.24,COMMUNITY.platformRise,.27]].map(([x,y,z])=>{const p=stationPoint(s,x,z);return [p[0],y,p[1]];});}
-/** The point on the nearest street's sidewalk edge facing `p`, along that street's axis-aligned side. */
+/** Where a walk toward `p` starts flush beyond the nearest street's sidewalk, so no slab lies on the street. */
 function sidewalkPoint(roads:Pt[][],p:Pt):Pt|undefined{
  let best:{q:Pt;d:number}|undefined;
  for(const r of roads)for(let i=1;i<r.length;i++){const a=r[i-1],b=r[i];if(a[0]!==b[0]&&a[1]!==b[1])continue;
   const q:Pt=a[0]===b[0]?[a[0],Math.max(Math.min(a[1],b[1]),Math.min(Math.max(a[1],b[1]),p[1]))]:[Math.max(Math.min(a[0],b[0]),Math.min(Math.max(a[0],b[0]),p[0])),a[1]];
   const d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d>1e-6&&(!best||d<best.d))best={q,d};}
- if(!best)return;const {q,d}=best,off=ROAD_W/2+.18+.05;return [q[0]+(p[0]-q[0])/d*off,q[1]+(p[1]-q[1])/d*off];
+ if(!best)return;const {q,d}=best,off=ROAD_W/2+.18+.24+.02;return [q[0]+(p[0]-q[0])/d*off,q[1]+(p[1]-q[1])/d*off];
 }
 export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>&{roads?:Pt[][]}):PerimeterRailPlan|undefined{
  const e=cityEnvelope(s.land),f=s.financial,m=s.mall,a=s.airport,stadium=s.stadium;if(!e||!f||!m||!a||!stadium)return;

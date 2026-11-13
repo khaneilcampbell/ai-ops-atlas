@@ -72,3 +72,19 @@ describe('station plaza to the boat dock',()=>{
   expect(w.some(s=>s.x0===m.x&&s.x1===m.x&&Math.max(s.z0,s.z1)>=m.cityWalkZ)).toBe(true);
  });
 });
+
+describe('station paths stay off the streets',()=>{
+ it('leaves no station path slab lying along a street, in district and tag groupings',()=>{
+  for(const g of ['district','tag'] as const){
+   const s=buildScene(layoutMap(catalog,[],g));
+   const roads=[...s.transportConnections.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...s.carBridges.flatMap(b=>b.roads)];
+   const segs=roads.flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt]));
+   const along:string[]=[];
+   for(const st of s.communityRail?.loop?.stops??[]){const p=st.walk.filter(q=>q[1]===0).map(q=>[q[0],q[2]] as Pt);
+    for(let i=1;i<p.length;i++)for(const [a,b] of walkOffStreets(p[i-1],p[i],segs))for(let k=1;k<20;k++){const q:Pt=[a[0]+(b[0]-a[0])*k/20,a[1]+(b[1]-a[1])*k/20];
+     // Points on a crossing are opened by the renderer (and zebra-striped); a slab running along a street is not.
+     const near=segs.filter(([u,v])=>distanceToRoad(q,[u,v])<ROAD_W/2+.22);if(near.length&&near.every(([u,v])=>straight(u,v)&&(Math.abs(u[1]-v[1])<1e-6)===(Math.abs(a[1]-b[1])<1e-6)))along.push(`${g} ${st.id} ${q.map(v=>v.toFixed(2))}`);}}
+   expect(along.slice(0,5)).toEqual([]);
+  }
+ });
+});
