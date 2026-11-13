@@ -1,1 +1,1 @@
-- 2026-11-13 · Fewer palms, gathered by the Atlas Galleria, the Team Events Arena, the airport front and Financial Park, and every palm now wears warm-white string lights. Street lamps stand on the sidewalk by the kerb, fewer of them, and none out on the lawns (#412)
+- 2026-11-13 · Fewer palms, gathered by the Atlas Galleria, the Team Events Arena, the airport front and Financial Park, and every palm trunk is now wrapped in white string lights, Rodeo Drive style. Street lamps stand on the sidewalk by the kerb, fewer of them, and none out on the lawns (#412)
