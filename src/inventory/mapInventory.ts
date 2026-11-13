@@ -247,11 +247,11 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   if (scene.airport) {
     add({ category: "Aircraft", kind: "Airliner on the flight loop", count: LOOP.count, area: "Airport", moves: true, source: "src/views/map3d/airportArrivals.ts LOOP" });
     add({ category: "Aircraft", kind: "Parked airliner", count: AIRPORT_PARKED_STANDS.length, area: "Airport", moves: false, source: "src/views/map3d/LogisticsAirport.tsx" });
+    add({ category: "Aircraft", kind: "Executive jet on the flight loop", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
     const crew = planAirportCrew();
     for (const [role, count] of countBy(crew, (c) => c.role)) add({ category: "People", kind: `Ground crew (${role})`, count, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts" });
     add({ category: "Airport vehicles", kind: "Baggage train", count: planCrewTrains().length, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts planCrewTrains" });
   }
-  add({ category: "Aircraft", kind: "Jet flying over the city", count: MAP_FLEET.flyoverJets, area: "Sky", moves: true, source: "src/views/map3d/living.tsx CityFlyover" });
   add({ category: "Aircraft", kind: "Atlas airship", count: MAP_FLEET.airships, area: "Sky", moves: true, source: "src/views/map3d/SkyBalloons.tsx" });
   add({ category: "Boats", kind: "Atlas yacht (berthed)", count: 1, area: "Marina", moves: false, source: "src/views/map3d/yachtPlan.ts" });
   add({ category: "Boats", kind: "Boat", count: MAP_FLEET.boats, area: "Bay", moves: true, source: "src/views/map3d/living.tsx" });

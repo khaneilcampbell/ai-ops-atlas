@@ -3,8 +3,8 @@
 export const MAP_FLEET = {
   /** Boats circling the bay: living.tsx draws this many. */
   boats: 8,
-  /** The one jet that flies over the city (living.tsx CityFlyover draws a single jet). */
-  flyoverJets: 1,
+  /** The one executive jet on the airport loop (LogisticsAirport.tsx ExecutiveJet draws a single jet). */
+  executiveJets: 1,
   /** The one Atlas airship (SkyBalloons.tsx draws a single airship). */
   airships: 1,
 } as const;

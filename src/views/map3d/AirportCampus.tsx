@@ -38,10 +38,11 @@ export default function AirportCampus({a,g,m,pick,night}:{a:AirportPlan;g:Return
  walls.push(box(10.4,0,-13.98,24.4,.055,.4,'#e5dfce'));
  walls.push(box(10.4,.025,-14.5,24.4,.035,.64,'#727c7e'),box(-1.5,.025,-11,.64,.035,7,'#727c7e'),box(22.3,.025,5.25,.64,.035,39.5,'#727c7e'),box(13.3,.025,25,18,.035,.64,'#727c7e'),box(4.3,.025,21.5,.64,.035,7,'#727c7e'));
  for(let x=-1;x<22;x+=1.3)walls.push(box(x,.065,-14.5,.6,.008,.035,'#ffffff'));
- // The row on the public road's sidewalk (the campus is mirrored, so local x -.8 faces the city) is palms, not round bushes (KC, 2026-11-09); the runway-side row stays.
+ // The row on the public road's sidewalk (the campus is mirrored, so local x -.8 faces the city) is palms (Khaneil, 2026-11-09).
+ // The runway-side bush row is gone: the landing runway now sits there (Khaneil, 2026-11-13).
  let palms=0;
- for(let z=-11;z<25;z+=2.8){for(const x of [-.8,21.6]){if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(x<3.5&&z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;if(x<0){walls.push(...palmBoxes(a.x+x,TERRACE_H,a.z+z,palms++,.85));continue;}trunks.push(box(x,0,z,.07,.35,.07,'#786f53'));trees.push(box(x,.3,z,.55,.65,.55,'#719d77'))}}
- // The outer strip past the service road is now the landing runway (KC, 2026-11-07); the river bend is gone.
+ for(let z=-11;z<25;z+=2.8){for(const x of [-.8]){if(AIRPORT_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w/2+.5&&Math.abs(z-b.z)<b.d/2+.5)||(x<3.5&&z>-8.5&&z<-4.3)||[AIRPORT_LANDING_RUNWAY.laneZ,AIRPORT_LANDING_RUNWAY.southLaneZ].some(lz=>Math.abs(z-lz)<1.8))continue;if(x<0){walls.push(...palmBoxes(a.x+x,TERRACE_H,a.z+z,palms++,.85));continue;}trunks.push(box(x,0,z,.07,.35,.07,'#786f53'));trees.push(box(x,.3,z,.55,.65,.55,'#719d77'))}}
+ // The outer strip past the service road is plain grass; the landing runway moved inside the service road (Khaneil, 2026-11-13).
 
  return {walls,glass,trees,trunks,hits,keys};},[a,palette]);
  return <><Instanced items={parts.walls} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={resources.windows}/><Instanced items={parts.trunks} geometry={g.box} material={m.plain}/><Instanced items={parts.trees} geometry={g.ball} material={m.plain}/>{AIRPORT_BUILDINGS.filter(b=>b.kind==='hangar').map(b=><mesh key={b.id} position={[a.x+b.x,TERRACE_H+1.4*S,a.z+b.z-b.d/2]} scale={[b.w,.9*S,b.d]} geometry={resources.roof} material={resources.material} castShadow receiveShadow/>)}<Instanced items={parts.hits} geometry={g.box} material={resources.hit} pick={{...pick,keys:parts.keys}}/></>;
