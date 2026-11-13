@@ -143,10 +143,10 @@ export interface StrayBuilding {
   height: number;
 }
 /**
- * "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. "fan" and "date"
- * are the street palms (streetPalms.ts); laPlanting.ts decides what every other kind grows into.
+ * "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. "avenue" is a
+ * boulevard palm (streetPalms.ts); laPlanting.ts decides what every other kind grows into.
  */
-export type TreeKind = "round" | "cone" | "blossom" | "palm" | "fan" | "date";
+export type TreeKind = "round" | "cone" | "blossom" | "palm" | "avenue";
 export interface Tree {
   x: number;
   y: number;

@@ -31,15 +31,20 @@ export function lightingObstacles(s:Scene3D):Box[]{const boxes:Box[]=[...s.tower
  * The street lamps use the defaults; street palms (streetPalms.ts) pass their own spacing, start and
  * setbacks, plant both sides at once, skip the highway and keep clear of the lamps.
  */
-export interface StreetSpots{spacing?:number;start?:number;bothSides?:boolean;setbacks?:readonly number[];minSeparation?:number;max?:number;skipHighway?:boolean;avoid?:{x:number;z:number}[];avoidRadius?:number}
+export interface StreetSpots{
+ /** Only the city's streets (district avenues, cross streets, bridges): no walks, plaza rings, highway or airport road. */
+ streetsOnly?:boolean;
+ /** Areas to keep entirely clear, such as the airport grounds. */
+ avoidBoxes?:Box[];
+ spacing?:number;start?:number;bothSides?:boolean;setbacks?:readonly number[];minSeparation?:number;max?:number;skipHighway?:boolean;avoid?:{x:number;z:number}[];avoidRadius?:number}
 export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
- const paths:{points:Pt[];width:number;highway:boolean}[]=[];
- const add=(points:Pt[],width=.64,highway=false)=>{if(points.length>1)paths.push({points,width,highway});};
- for(const b of s.carBridges)for(const road of b.roads)add(road);
- for(const link of s.transportConnections)add(link.road);
- if(s.freight){add(s.freight.highway,1.4,true);add(s.freight.route,1.1);for(const a of s.freight.access){add(a.collector,1.1);for(const r of a.ramps)add(r,1.1);}}
- if(s.financial)add(s.financial.street);
- if(s.community)for(const road of s.community.streets)add(road);
+ const paths:{points:Pt[];width:number;highway:boolean;street:boolean}[]=[];
+ const add=(points:Pt[],width=.64,highway=false,street=false)=>{if(points.length>1)paths.push({points,width,highway,street});};
+ for(const b of s.carBridges)for(const road of b.roads)add(road,.64,false,true);
+ for(const link of s.transportConnections)add(link.road,.64,false,true);
+ if(s.freight){add(s.freight.highway,1.4,true);add(s.freight.route,1.1,false,true);for(const a of s.freight.access){add(a.collector,1.1,false,true);for(const r of a.ramps)add(r,1.1);}}
+ if(s.financial)add(s.financial.street,.64,false,true);
+ if(s.community)for(const road of s.community.streets)add(road,.64,false,true);
  if(s.airport)add(airportPublicPath(s.airport),.48);
  for(const walk of s.walks)add(walk.route?.map(p=>[p.gx,p.gy] as Pt)??[[walk.x0,walk.z0],[walk.x1,walk.z1]],.48);
  for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
@@ -49,10 +54,10 @@ export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  const avoidCells=new Map<string,{x:number;z:number}[]>(),ar=o.avoidRadius??0;for(const a of o.avoid??[]){const k=`${Math.floor(a.x)}:${Math.floor(a.z)}`;avoidCells.set(k,[...(avoidCells.get(k)??[]),a]);}
  const avoided=(x:number,z:number)=>{if(!ar)return false;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)if(avoidCells.get(`${Math.floor(x)+dx}:${Math.floor(z)+dz}`)?.some(a=>Math.hypot(x-a.x,z-a.z)<ar))return true;return false;};
  const near=(x:number,z:number)=>{const cx=Math.floor(x/cell),cz=Math.floor(z/cell);for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)if(cells.get(`${cx+dx}:${cz+dz}`)?.some(p=>Math.hypot(x-p.x,z-p.z)<cell))return true;return false;};
- for(const path of paths){if(o.skipHighway&&path.highway)continue;let carried=o.start??1.2,index=0;for(let i=1;i<path.points.length;i++){const a=path.points[i-1],b=path.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const nx=(b[1]-a[1])/len,nz=-(b[0]-a[0])/len;
+ for(const path of paths){if((o.skipHighway&&path.highway)||(o.streetsOnly&&!path.street))continue;let carried=o.start??1.2,index=0;for(let i=1;i<path.points.length;i++){const a=path.points[i-1],b=path.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const nx=(b[1]-a[1])/len,nz=-(b[0]-a[0])/len;
  for(let d=carried;d<len;d+=step(path.highway)){const rx=a[0]+(b[0]-a[0])*d/len,rz=a[1]+(b[1]-a[1])*d/len;if(junctions.some(p=>Math.hypot(rx-p[0],rz-p[1])<STREET_LIGHT.junctionClearance))continue;
  for(const sign of index++%2?[1,-1]:[-1,1]){let placed=false;for(const setback of o.setbacks??[.5,.75]){const offset=path.width/2+setback,x=rx+nx*sign*offset,z=rz+nz*sign*offset;
- if(near(x,z)||avoided(x,z)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
+ if(near(x,z)||avoided(x,z)||o.avoidBoxes?.some(b=>Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
  if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<WALK_CLEAR))continue;
  // Off the carriageway and its sidewalk: a district street is wider than the line it is drawn from.
  if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,STREET_CLEAR))))continue;

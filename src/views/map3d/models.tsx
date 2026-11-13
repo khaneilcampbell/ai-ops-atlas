@@ -17,7 +17,7 @@ import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads"
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
 import { laPlanting } from "./laPlanting";
-import { planStreetPalms } from "./streetPalms";
+import { clearForAvenues, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
@@ -487,10 +487,16 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 
 // ── Landscaping ─────────────────────────────────────
 
+/** The lawn trees, less any standing in a palm avenue's row, plus the avenues. */
+function avenuePlanting(scene: Scene3D) {
+  const palms = planStreetPalms(scene);
+  return [...clearForAvenues(scene.trees, palms), ...palms];
+}
+
 export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
   const items = useMemo(() => {
     // Los Angeles planting: mostly palms, with dry-garden shrubs (laPlanting.ts).
-    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers } = laPlanting([...scene.trees, ...planStreetPalms(scene)], scene.bushes);
+    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers } = laPlanting(avenuePlanting(scene), scene.bushes);
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     // Low path lights, and pools of light on the ground that fade in at night.
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));

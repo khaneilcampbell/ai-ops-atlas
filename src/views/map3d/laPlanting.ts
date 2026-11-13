@@ -7,38 +7,46 @@ import type {Point,Tree} from './scene';
  * decides where a tree or shrub stands; this decides what grows there and how it is built, from a
  * hash of its position so a plant never changes between renders.
  *
- * Trees: tall, thin fan palms and shorter, fuller date palms are the majority, with a few round
- * shade trees (ficus), purple jacaranda (the old pink blossom) and slim Italian cypress (the old
- * cone tree). Shrubs: clipped hedges, agave, bird of paradise and bougainvillea.
+ * Trees: olive and ficus shade trees, specimen date and fan palms, slim Italian cypress (the old
+ * cone tree) and purple jacaranda (the old pink blossom), on thinned, open lawns; formal fan palm
+ * avenues line the streets (streetPalms.ts). Shrubs: mostly clipped hedges, with agave, bird of
+ * paradise and bougainvillea.
  *
  * Every part is a box, ball, trunk or cone from the shared geometry kit, grouped so the whole
  * planting is a handful of instanced draws. A palm's fronds are four-triangle folded leaves, so a
  * whole palm is about 100 triangles; the round tree it replaces is over a thousand.
  */
-export type LaTree='fan'|'date'|'ficus'|'jacaranda'|'cypress';
+export type LaTree='avenue'|'fan'|'date'|'olive'|'ficus'|'jacaranda'|'cypress';
 export type LaShrub='hedge'|'agave'|'paradise'|'bougainvillea';
 
 const key=(x:number,z:number,salt:string)=>hash(`${x.toFixed(2)}:${z.toFixed(2)}:${salt}`);
 
-/** What grows where the scene planted a tree; null for trees drawn by their own building (stadium palms). */
+/**
+ * What grows where the scene planted a tree, or null for nothing. Khaneil (2026-11-13) found a
+ * palm on every spot "a jungle" and asked for a luxury metropolitan look: so lawns are thinned to
+ * about two thirds, shade trees (olive and ficus) lead, cypress stand as dark accents, and palms
+ * are specimens, about one lawn tree in four, with the formal palm avenues on the streets.
+ * The stadium's own palms (kind "palm") are drawn by the stadium.
+ */
 export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'>):LaTree|null{
  if(t.kind==='palm')return null;
- if(t.kind==='fan'||t.kind==='date')return t.kind;
+ if(t.kind==='avenue')return 'avenue';
  if(t.kind==='blossom')return 'jacaranda';
  const p=key(t.x,t.z,'la');
- if(t.kind==='cone')return p<.45?'cypress':'fan';
- return p<.5?'fan':p<.82?'date':p<.94?'ficus':'cypress';
+ if(t.kind==='cone')return p<.75?'cypress':null;
+ return p<.32?null:p<.5?'olive':p<.62?'ficus':p<.78?'date':p<.88?'cypress':'fan';
 }
 
+/** Mostly clipped hedges, with agave, bird of paradise and bougainvillea as accents. */
 export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
  const p=key(b.x,b.z,'shrub');
- return p<.35?'hedge':p<.6?'agave':p<.8?'paradise':'bougainvillea';
+ return p<.55?'hedge':p<.7?'agave':p<.85?'paradise':'bougainvillea';
 }
 
 export const LA_COLORS={
  fanFrond:['#7a9a45','#88a650','#6f8d3d'],dateFrond:['#4e7a37','#5b8a3f','#46703a'],
  fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
- ficus:['#3f7a3a','#4a8642','#386f35','#438040'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
+ ficus:['#3f7a3a','#4a8642','#386f35','#438040'],olive:['#7f9270','#8a9c7a','#75876a','#93a483'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
  hedge:['#3f6e36','#47783c'],agave:'#86a59a',paradiseLeaf:'#3f7448',paradiseFlower:'#f08a24',bougainvillea:['#d63f8f','#e2589f','#c93583'],
 } as const;
 
@@ -73,9 +81,12 @@ function trunkTop(x:number,y:number,z:number,h:number,lean:number,yaw:number):[n
  return [x+Math.sin(lean)*Math.sin(yaw)*h,y+Math.cos(lean)*h,z+Math.sin(lean)*Math.cos(yaw)*h];
 }
 
-/** Very tall, thin and slightly leaning, with a small tight crown over a brown skirt of dead fronds. */
-export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number){
- const v=key(x,z,'h'),h=s*(6.2+v*3.2),lean=(key(x,z,'lean')-.5)*.12,yaw=key(x,z,'yaw')*Math.PI*2;
+/**
+ * Very tall, thin and slightly leaning, with a small tight crown over a brown skirt of dead fronds.
+ * A formal avenue palm stands upright and all the same height, like a planted boulevard.
+ */
+export function fanPalm(o:LaParts,x:number,y:number,z:number,s:number,formal=false){
+ const v=key(x,z,'h'),h=formal?s*7.6:s*(6.2+v*3.2),lean=formal?0:(key(x,z,'lean')-.5)*.12,yaw=key(x,z,'yaw')*Math.PI*2;
  o.trunks.push({p:[x,y,z],s:[.075,h,.075],r:yaw,rx:lean,c:LA_COLORS.fanTrunk});
  const [tx,ty,tz]=trunkTop(x,y,z,h,lean,yaw);
  o.trunks.push({p:[tx,ty-s*.62,tz],s:[.15,s*.6,.15],r:yaw,c:LA_COLORS.skirt});
@@ -113,8 +124,10 @@ function cypress(o:LaParts,x:number,y:number,z:number,s:number,i:number){
 
 export function plantTree(o:LaParts,t:Tree,i:number){
  const kind=laTreeKind(t);
- if(kind==='fan')fanPalm(o,t.x,t.y,t.z,t.s);
+ if(kind==='avenue')fanPalm(o,t.x,t.y,t.z,t.s,true);
+ else if(kind==='fan')fanPalm(o,t.x,t.y,t.z,t.s);
  else if(kind==='date')datePalm(o,t.x,t.y,t.z,t.s);
+ else if(kind==='olive')roundTree(o,t.x,t.y,t.z,t.s*.9,i,LA_COLORS.olive);
  else if(kind==='ficus')roundTree(o,t.x,t.y,t.z,t.s,i,LA_COLORS.ficus);
  else if(kind==='jacaranda')roundTree(o,t.x,t.y,t.z,t.s,i,LA_COLORS.jacaranda);
  else if(kind==='cypress')cypress(o,t.x,t.y,t.z,t.s,i);
