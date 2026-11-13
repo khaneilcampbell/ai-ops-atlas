@@ -217,7 +217,7 @@ export function orbitRig(rig: Rig, azimuth: number, polar: number, minPolar: num
 }
 
 /** Keep the point looked at over the island plus a margin, moving the camera with it. */
-export function clampRig(rig: Rig, b: { x0: number; x1: number; z0: number; z1: number }, margin = TUNING.edgeMargin) {
+export function clampRig(rig: Rig, b: { x0: number; x1: number; z0: number; z1: number }, margin: number = TUNING.edgeMargin) {
   const x = THREE.MathUtils.clamp(rig.target.x, b.x0 - margin, b.x1 + margin);
   const z = THREE.MathUtils.clamp(rig.target.z, b.z0 - margin, b.z1 + margin);
   const fix = new THREE.Vector3(x - rig.target.x, 0, z - rig.target.z);
