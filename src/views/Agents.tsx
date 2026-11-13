@@ -103,7 +103,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
               <Icon name="alert" size={13} /> {owns.orphans.length} {owns.orphans.length === 1 ? "automation has" : "automations have"} no owning agent yet. Each one is marked in the list; group by Owning agent to see them together.
             </p>
           )}
-          <p className="muted">{kind === "agents" ? "Agents use model-driven reasoning; planned agents are labeled separately. Fixed workflows are listed under Automations." : "Predefined workflows, including those with AI steps. Listed here does not mean enabled or running."}</p>
+          <p className="muted">{kind === "agents" ? "Agents use model-driven reasoning or own automations that do the work; planned agents are labeled separately. Fixed workflows are listed under Automations." : "Predefined workflows, including those with AI steps. Listed here does not mean enabled or running."}</p>
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">

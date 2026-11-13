@@ -4,7 +4,7 @@ import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {alignStreets,STREET_ALIGN,STREET_CLEAR} from './streetAlign';
 import {distanceToRoad} from './highway';
-import {planStreetLights} from './streetLighting';
+import {KERB_LAMP,planStreetLights} from './streetLighting';
 import {streetPavement} from './streetPavement';
 import {ROAD_W,type Pt} from './roads';
 
@@ -57,7 +57,8 @@ describe('one street per corridor',()=>{
   const streets=[...s.transportConnections.map(c=>c.road),...s.carBridges.flatMap(b=>b.roads)],walks=s.transportConnections.map(c=>c.walk);
   const items=[...s.trees,...s.bushes,...s.rocks,...s.bollards].map(i=>[i.x,i.z] as Pt);
   expect(items.filter(p=>streets.some(r=>distanceToRoad(p,r)<STREET_CLEAR)||walks.some(w=>distanceToRoad(p,w)<.24))).toEqual([]);
-  expect(planStreetLights(s).filter(l=>!l.highway&&streets.some(r=>distanceToRoad([l.x,l.z],r)<STREET_CLEAR))).toEqual([]);
+  // Lamps stand on the sidewalk at the kerb (Khaneil, 2026-11-13), so they only stay off the carriageway.
+  expect(planStreetLights(s).filter(l=>!l.highway&&streets.some(r=>distanceToRoad([l.x,l.z],r)<ROAD_W/2+KERB_LAMP.setback-.02))).toEqual([]);
  });
 });
 

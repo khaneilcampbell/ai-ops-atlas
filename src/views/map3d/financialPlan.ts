@@ -1,6 +1,6 @@
 import {financialDimensions,financialHeight} from './financialArchitecture';
 import {financialBrand} from "./financialBrands";
-import type {Rect,Scene3D} from './scene';
+import type {Point,Rect,Scene3D,Tree} from './scene';
 import {pathClear,type Pt} from './roads';
 import {distanceToRoad} from './highway';
 import {airportFootprint} from './airport';
@@ -104,4 +104,16 @@ export function planFinancial(s:Pick<Scene3D,'stadium'|'land'|'towers'|'kiosks'|
  const walk=paths.slice(0,8).map(p=>routeAround(p,walkEntry,blocks,.35)).find((p):p is Pt[]=>!!p);if(!road||!walk)return;
  const circa:CircaSite|undefined=westFree?{...site,street:[[x+.6,z+FINANCIAL.streetZ],[x-CIRCA.siteWidth+.5,z+FINANCIAL.streetZ]],sidewalk:[[x+.6,z+FINANCIAL.promenadeZ],[x-CIRCA.siteWidth+.4,z+FINANCIAL.promenadeZ]]}:undefined;
  return {x,z,w,d,circa,perimeterTrees,park,originalX,referenceHeight,buildings,road,walk,street:[[x+w-.6,entry[1]],entry,[x+.6,entry[1]]],sidewalk:[[x+.6,walkEntry[1]],walkEntry,[x+w-.6,walkEntry[1]]]};
+}
+
+/**
+ * Financial Park in the city's planting (Khaneil, 2026-11-13: "do the same for Financial park"): its palms are the
+ * lit avenue palm at the street palms' size, and its shrubs the city's LA shrubs. Landscape draws them.
+ */
+export function financialParkPlanting(a:Pick<FinancialPlan,'x'|'z'|'park'>,y:number):{trees:Tree[];bushes:Point[]}{
+ return {
+  trees:a.park.trees.map(([x,z])=>({x:a.x+x,y,z:a.z+z,s:.26,kind:'avenue'})),
+  // Only the shrubs inside the park loop, beside the benches; the loose ones on the north lawn read as scattered.
+  bushes:a.park.shrubs.filter(([,z])=>z>4.55).map(([x,z,r])=>({x:a.x+x,y,z:a.z+z,s:r*.7})),
+ };
 }

@@ -11,6 +11,16 @@ export function isAiAgent(a: Pick<Agent, "registry">) {
   return !!t && AI_TYPES.has(t);
 }
 
+/** The runtime an owning agent declares when it has no model or runtime of its own and works only
+ *  through the automations that name it in `owned_by` (added 2026-11-13). */
+export const THROUGH_AUTOMATIONS = "Through its automations";
+
+/** An owning agent that works only through its automations: it has a desk, but the map does not
+ *  draw it walking, because no run of its own happens anywhere. */
+export function worksThroughAutomations(a: Pick<Agent, "runtime">) {
+  return a.runtime === THROUGH_AUTOMATIONS;
+}
+
 /** What the Agents or Automations directory lists: current items of that kind. Retired items stay in
  *  their manifests as history but no longer run anywhere, so the directories leave them out. */
 export function directoryItems<T extends Pick<Agent, "registry" | "status">>(agents: T[], kind: "agents" | "automations"): T[] {

@@ -26,6 +26,7 @@ agents:
       Validates contact form submissions (Turnstile, rate limit) and forwards
       valid inquiries to the Benjaire Flow intake in n8n.
     framework: Cloudflare Worker
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Cloudflare Workers
     status: active
     trigger: POST /api/contact
@@ -86,6 +87,7 @@ agents:
     purpose: >-
       n8n workflow that checks the intake key, classifies each inquiry with Claude, saves it, alerts the owner and acknowledges the sender.
     framework: n8n
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     model: claude-haiku-5-5
     runtime: n8n Cloud
     status: active
@@ -161,6 +163,7 @@ agents:
     purpose: >-
       Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds KC to follow up on day 3 and day 7. KC sends every message from their own mail app.
     framework: Atlas (plain code, no model)
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: AI Ops Atlas site (Cloudflare Pages + D1) and app
     status: idle
     trigger: Inquiry copied from the contact Worker to POST /api/hooks/inquiries
@@ -216,6 +219,7 @@ agents:
     name: Site CI
     purpose: Builds and tests the Astro site on every pull request and push to main.
     framework: GitHub Actions
+    owned_by: benjaire-ops-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push or pull request to main
@@ -579,6 +583,7 @@ agents:
     purpose: >-
       When any Benjaire Flow or Shop workflow fails, emails the ops address with the workflow, step, error and a link to the run.
     framework: n8n
+    owned_by: benjaire-ops-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Error trigger from any Flow or Shop workflow
@@ -603,6 +608,7 @@ agents:
     purpose: >-
       Owner status links from the intake alert: confirm page, verified status change, audit event, and a welcome and onboarding email to the client on a first win.
     framework: n8n
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Status link clicked in an owner alert
@@ -627,6 +633,7 @@ agents:
     purpose: >-
       Emails the owner once about any inquiry still unanswered after its reply target.
     framework: n8n
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Weekdays at 9am, 1pm and 5pm ET
@@ -651,6 +658,7 @@ agents:
     purpose: >-
       Emails the owner new inquiries, wins, response time and who is still waiting.
     framework: n8n
+    owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Mondays at 8am ET
@@ -675,6 +683,7 @@ agents:
     purpose: >-
       Emails ops when Shop follow ups, Reply reminders or the Monday digest have not run on time. No AI.
     framework: n8n
+    owned_by: benjaire-ops-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Daily at 11am ET
@@ -702,6 +711,7 @@ agents:
     purpose: >-
       Verifies each Stripe checkout against Stripe, saves the order, emails the buyer a private expiring download link and serves the kit zip.
     framework: n8n
+    owned_by: benjaire-shop-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Stripe checkout.session.completed webhook
@@ -726,6 +736,7 @@ agents:
     purpose: >-
       Sends the day 2 setup check and the day 12 help window email, once per order.
     framework: n8n
+    owned_by: benjaire-shop-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Every 4 hours
@@ -744,3 +755,120 @@ agents:
       execution:
         trigger_type: scheduled
         environment: n8n
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: benjaire-inquiry-manager
+    name: Client Inquiry Manager
+    purpose: >-
+      Makes sure every benjaire.com inquiry is received, sorted, answered and followed up: the contact form, Claude intake sorting, reply drafts in Atlas, status links, reply reminders and the Monday digest. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A contact form submission, plus scheduled reminders and the Monday digest
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Inquiry Routing Coordinator, Client Intake Specialist, Client Reply Assistant, Flow Status Updates, Flow Reply Reminders, Flow Monday Digest, at Khaneil's request
+    registry:
+      title: Client Inquiry Manager
+      category: business
+      subcategory: Client inquiries
+      tier: coordinator
+      automation_category: business
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Accept and check contact form submissions, Sort each inquiry and alert Khaneil, Draft replies Khaneil reviews in Atlas, Remind Khaneil about unanswered inquiries, Send the Monday digest]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Replies to clients are sent only after Khaneil reviews them.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: benjaire-shop-manager
+    name: Shop Order Manager
+    purpose: >-
+      Looks after every Benjaire shop buyer: verifies each checkout, delivers the download, and sends the day 2 and day 12 follow up emails once per order. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A completed checkout, plus scheduled follow ups
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Shop Starter Delivery, Shop Buyer Follow Ups, at Khaneil's request
+    registry:
+      title: Shop Order Manager
+      category: business
+      subcategory: Shop orders
+      tier: coordinator
+      automation_category: business
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Verify each checkout and deliver the download, Send the day 2 and day 12 follow ups once per order]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Buyer emails follow fixed templates and the approval gate set up on 2026-11-12.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: benjaire-ops-monitor
+    name: Business Operations Monitor
+    purpose: >-
+      Keeps the Benjaire site and its workflows working: tests the site on every change, emails ops when a Flow or Shop workflow fails, and flags scheduled workflows that missed a run. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A pull request or push, a failed workflow, and a scheduled missed-run check
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Website Quality Engineer, Flow Error Alerts, Flow Missed Run Check, at Khaneil's request
+    registry:
+      title: Business Operations Monitor
+      category: infrastructure
+      subcategory: Monitoring
+      tier: coordinator
+      automation_category: monitoring
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Build and test the site on every change, Email ops when a Flow or Shop workflow fails, Flag scheduled workflows that did not run on time]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Tests and alerts only.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

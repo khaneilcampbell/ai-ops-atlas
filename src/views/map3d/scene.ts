@@ -1,6 +1,6 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
-import {planCommons,type CommonsPlan} from './commonsPlan';
+import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -12,7 +12,7 @@ import {alignStreets,joinStreetEnds} from './streetAlign';
 import {marinaSite} from './marinaPlan';
 import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
-import {planFinancial,type FinancialPlan} from "./financialPlan";
+import {planFinancial,financialParkPlanting,type FinancialPlan} from "./financialPlan";
 import {sizeCustomTowers} from "./customTowers";
 import {sizeGithubTower} from "./githubTowerPlan";
 import {sizeIntelligenceHub} from "./intelligenceHubPlan";
@@ -142,14 +142,19 @@ export interface StrayBuilding {
   size: number;
   height: number;
 }
-/** "palm" is drawn by the building it belongs to (Atlas Stadium), not by Landscape. */
-export type TreeKind = "round" | "cone" | "blossom" | "palm";
+/**
+ * "palm" ring the arena plaza and "avenue" line the streets (streetPalms.ts); both grow as the same
+ * avenue palm. laPlanting.ts decides what every other kind grows into.
+ */
+export type TreeKind = "round" | "cone" | "blossom" | "palm" | "avenue";
 export interface Tree {
   x: number;
   y: number;
   z: number;
   s: number;
   kind: TreeKind;
+  /** A set species for a designed planting (parks), instead of the lawn mix laPlanting picks by position. */
+  la?: "olive" | "ficus" | "date" | "fan" | "cypress" | "jacaranda";
 }
 export interface Point {
   x: number;
@@ -709,8 +714,9 @@ function buildCity(layout: Layout): Scene3D {
   if(stadium){
     // Atlas Stadium's plaza: a ring of trees with planted beds, and lit bollards on the approach.
     const plaza=stadiumPlaza(stadium);
-    // Palms in a ring round the stadium (KC, 2026-11-07), drawn with the stadium's plain boxes.
-    trees.push(...plaza.trees.map(([x,z],i)=>({x,z,y:top,s:.3+(i%3)*.03,kind:'palm' as TreeKind})));
+    // Palms in a ring round the stadium, grown as the city's avenue palm at the avenue size (Khaneil, 2026-11-13);
+    // two in three wear string lights.
+    trees.push(...plaza.trees.map(([x,z])=>({x,z,y:top,s:.26,kind:'palm' as TreeKind})));
     bushes.push(...plaza.beds.map(([x,z],i)=>({x,y:top,z,s:.13+(i%2)*.03})));bollards.push(...plaza.bollards.map(([x,z])=>({x,y:top,z,s:1})));
   }
   // Marketplace owns its local access reservation; removing a residential district must not remove the mall.
@@ -884,6 +890,10 @@ function buildCity(layout: Layout): Scene3D {
 
   const commons=planCommons({mall,towers,paving,transportConnections:connections,parks});
   if(commons)for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(commons.rect,items[i].x,items[i].z,.25))items.splice(i,1);
+  // Financial Park too: its palms are the city's lit avenue palm and its shrubs the city's LA shrubs (Khaneil, 2026-11-13).
+  if(financial){const f=financialParkPlanting(financial,top);trees.push(...f.trees);bushes.push(...f.bushes);}
+  // Atlas Commons is planted like the rest of the city (Khaneil, 2026-11-13): its trees are lit avenue palms and olives, and its shore is LA shrubs.
+  if(commons){const c=commonsPlanting(commons,top);trees.push(...c.trees);bushes.push(...c.bushes);}
   const stationPlaza=planStationPlaza({stadium,communityRail},{
     land,roads:connections.map(c=>c.road),
     obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
