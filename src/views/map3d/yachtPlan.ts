@@ -8,8 +8,8 @@ import {WATER_Y,TERRACE_H} from './scene';
  * black glazing bands, a beach club at the stern and a sun deck with a jacuzzi. It carries only the
  * name Atlas: no builder mark, flag or real yacht name from the references.
  *
- * Map units: a person is about 0.2 tall, so one unit is about 9 m and the yacht is about 55 m long.
- * Local frame: x along the length (bow +x, stern -x), z across (starboard +z), y up from the waterline.
+ * Map units: a person is about 0.2 tall, so one unit is about 9 m. These are design sizes; the map
+ * draws them YACHT_SCALE larger, about 70 m long. Local frame: x along the length (bow +x, stern -x), z across (starboard +z), y up from the waterline.
  */
 export const YACHT_KEY='service:atlas-yacht';
 export const YACHT_ID='atlas-yacht';
@@ -43,34 +43,51 @@ export interface YachtBerth {
  gangway:{x:number;z0:number;z1:number;y0:number;y1:number};
 }
 
+/** The map draws the design 25% larger (Khaneil, 2026-11-13: "expand the size make it bit larger"), about 70 m. */
+export const YACHT_SCALE=1.25;
+const SL=YACHT.length*YACHT_SCALE,SB=YACHT.beam*YACHT_SCALE;
+/** Height of the main deck above the water, on the map. */
+export const YACHT_DECK_Y=YACHT.hull.deck*YACHT_SCALE;
 /** Gap between the cross dock's east end and the yacht's transom. */
 const STERN_GAP=2.2;
-/** Pontoon width (narrower than the cross dock, so passing boats keep clear). */
-const PONTOON_W=.32;
+/** Pontoon width, and the water between the pontoon and the hull, spanned by the passerelle. */
+const PONTOON_W=.32,GAP=.45;
 
 /**
- * Berth Atlas side-to inside the marina: bow east, starboard side to a pontoon that continues the
- * cross dock, in the water between the cliff and the boat lane. Nothing on land moves.
+ * Berth Atlas side-to on the open-water side of a pontoon that continues the marina's cross dock
+ * (Khaneil, 2026-11-13: "move the yacht to the other side of the boardwalk"): bow east, port side to
+ * the pontoon. The harbour boats go round her (harbourLoop). Nothing on land moves.
  */
 export function yachtBerth(m:MarinaSite):YachtBerth{
- const dockZ=m.pierZ+1.05,x=m.x+STERN_GAP+YACHT.length/2,z=m.pierZ-.3;
- const deckY=WATER_Y+YACHT.hull.deck,dockTop=WATER_Y+.22,gate=x+(YACHT.main.aftDeck+YACHT.platform.x1)/2+.25;
+ const dockZ=m.pierZ+1.08,x=m.x+STERN_GAP+SL/2,z=dockZ+PONTOON_W/2+GAP+SB/2;
+ const deckY=WATER_Y+YACHT_DECK_Y,dockTop=WATER_Y+.22,gate=x+((YACHT.main.aftDeck+YACHT.platform.x1)/2+.25)*YACHT_SCALE;
  return {
   x,z,yaw:0,
-  pontoon:{x0:m.x+1.6,x1:x+YACHT.length/2+.3,z:dockZ+.03,w:PONTOON_W},
-  gangway:{x:gate,z0:dockZ+.03-PONTOON_W/2+.04,z1:z+YACHT.beam/2-.02,y0:dockTop,y1:deckY},
+  pontoon:{x0:m.x+1.6,x1:x+SL/2+.3,z:dockZ,w:PONTOON_W},
+  gangway:{x:gate,z0:dockZ+PONTOON_W/2-.04,z1:z-SB/2+.02,y0:dockTop,y1:deckY},
  };
 }
 
 /** Water the yacht and its pontoon take, with a margin: viaduct supports and other piers keep off it. */
 export function yachtFootprint(b:YachtBerth):Area{
- const x0=b.x-YACHT.length/2-.5,x1=Math.max(b.pontoon.x1,b.x+YACHT.length/2)+.3;
- return {x:x0,z:b.z-YACHT.beam/2-.3,w:x1-x0,d:b.pontoon.z+b.pontoon.w/2+.2-(b.z-YACHT.beam/2-.3)};
+ const x0=b.x-SL/2-.5,x1=Math.max(b.pontoon.x1,b.x+SL/2)+.3,z0=b.pontoon.z-b.pontoon.w/2-.2,z1=b.z+SB/2+.3;
+ return {x:x0,z:z0,w:x1-x0,d:z1-z0};
 }
 
 /** Selection box for the map (anchors, framing, plaque): hull and superstructure up to the mast. */
 export function yachtBounds(b:YachtBerth){
- return {x:b.x,z:b.z,y0:WATER_Y,y1:WATER_Y+YACHT.hull.deck+YACHT.sun.mastTop,w:YACHT.length,d:YACHT.beam+.4};
+ return {x:b.x,z:b.z,y0:WATER_Y,y1:WATER_Y+(YACHT.hull.deck+YACHT.sun.mastTop)*YACHT_SCALE,w:SL,d:SB+.4};
+}
+
+/**
+ * Waypoints of the harbour boats' loop round the island (living.tsx): the same rounded circuit as
+ * before, with two extra points that take the boats south of Atlas and in behind her stern to the
+ * cross dock, so no boat sails through the yacht.
+ */
+export function harbourLoop(bounds:{x0:number;z0:number;x1:number;z1:number},m:MarinaSite,b?:YachtBerth):[number,number][]{
+ const pad=4.6,o=bounds;
+ const round:[number,number][]=b?[[b.x+SL*.15,b.z+SB/2+1.2],[b.x-SL/2-1.1,b.z+SB/2+.5]]:[];
+ return [[o.x0-pad,o.z0-pad],[(o.x0+o.x1)/2,o.z0-pad*1.3],[o.x1+pad,o.z0-pad],[o.x1+pad*1.3,(o.z0+o.z1)/2],[o.x1+pad,o.z1+pad],...round,[m.x,m.pierZ+1.4],[o.x0-pad,o.z1+pad],[o.x0-pad*1.3,(o.z0+o.z1)/2]];
 }
 
 export type RoutePoint=[number,number,number];
@@ -80,8 +97,8 @@ export type RoutePoint=[number,number,number];
  * and visitors walk this both ways. Points are [x, y, z]; the stair is one straight sloping leg.
  */
 export function boardingRoute(m:MarinaSite,b:YachtBerth):RoutePoint[]{
- const cityTop=TERRACE_H+.03,dockTop=WATER_Y+.22,deckY=WATER_Y+YACHT.hull.deck+.01,dockZ=b.pontoon.z;
- const saloonX=b.x+YACHT.main.aftDeck-.12;
+ const cityTop=TERRACE_H+.03,dockTop=WATER_Y+.22,deckY=WATER_Y+YACHT_DECK_Y+.01,dockZ=b.pontoon.z;
+ const saloonX=b.x+(YACHT.main.aftDeck-.12)*YACHT_SCALE;
  return [
   [m.x,cityTop,m.cityWalkZ],
   [m.x,cityTop,m.pierZ-1.8],
@@ -90,8 +107,8 @@ export function boardingRoute(m:MarinaSite,b:YachtBerth):RoutePoint[]{
   [b.gangway.x,dockTop,dockZ],
   [b.gangway.x,dockTop,b.gangway.z0],
   [b.gangway.x,deckY,b.gangway.z1],
-  [b.gangway.x,deckY,b.z+.1],
-  [saloonX,deckY,b.z+.1],
+  [b.gangway.x,deckY,b.z-.1],
+  [saloonX,deckY,b.z-.1],
  ];
 }
 

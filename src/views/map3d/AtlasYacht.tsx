@@ -6,7 +6,7 @@ import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from
 import {focusable} from "./materials";
 import {packNormals} from "./packGeometry";
 import {yachtGeometry,MAIN_Y,hullHalf} from "./yachtGeometry";
-import {YACHT,YACHT_KEY,YACHT_NAME,boardingRoute,routeAt,routeLengths,type YachtBerth} from "./yachtPlan";
+import {YACHT,YACHT_KEY,YACHT_NAME,YACHT_SCALE as S,boardingRoute,routeAt,routeLengths,type YachtBerth} from "./yachtPlan";
 import type {MarinaSite} from "./marinaPlan";
 import {pedestrianAllowed} from "./doorTraffic";
 
@@ -14,6 +14,8 @@ const noRaycast=()=>null;
 /** People walking on and off by the passerelle, and how fast (the city's strolling pace). */
 export const YACHT_WALKERS=6;
 const PACE=.18,PAUSE=6;
+/** Length of the hull on the map. */
+const L=YACHT.length*S;
 const CLOTHES=["#f4f2ec","#2f4a5a","#c96f53","#4f78a8","#e0c068","#6d9b6a"];
 
 /** The yacht's name in dark lettering, for the transom and both bows. */
@@ -57,20 +59,21 @@ export function AtlasYacht({berth:b,marina,g,m,pick,night=false,moving,exclusion
  const dock=useMemo(()=>{
   const deck:Inst[]=[],posts:Inst[]=[],lamps:Inst[]=[],top=WATER_Y+.22,p=b.pontoon,gw=b.gangway;
   deck.push({p:[(p.x0+p.x1)/2,top-.09,p.z],s:[p.x1-p.x0,.09,p.w],c:"#b89569"});
-  for(let x=p.x0+.4;x<p.x1;x+=1.1){posts.push({p:[x,WATER_Y-.45,p.z+p.w/2-.03],s:[.06,.85,.06],c:"#54493f"});}
-  for(let x=b.x-YACHT.length/2+.5;x<b.x+YACHT.length/2-.6;x+=1.15)posts.push({p:[x,top,p.z-p.w/2+.05],s:[.05,.05,.05],c:"#30363a"});
-  for(const x of [p.x0+1.6,b.x+.4,p.x1-.25]){posts.push({p:[x,top,p.z+p.w/2-.05],s:[.025,.3,.025],c:"#335b58"});lamps.push({p:[x,top+.3,p.z+p.w/2-.05],s:[.05,.05,.05]});}
+  // The yacht lies on the pontoon's south (open-water) side: piles and lamps keep to its north edge.
+  for(let x=p.x0+.4;x<p.x1;x+=1.1){posts.push({p:[x,WATER_Y-.45,p.z-p.w/2+.03],s:[.06,.85,.06],c:"#54493f"});}
+  for(let x=b.x-L/2+.5;x<b.x+L/2-.6;x+=1.15)posts.push({p:[x,top,p.z+p.w/2-.05],s:[.05,.05,.05],c:"#30363a"});
+  for(const x of [p.x0+1.6,b.x+.4,p.x1-.25]){posts.push({p:[x,top,p.z-p.w/2+.05],s:[.025,.3,.025],c:"#335b58"});lamps.push({p:[x,top+.3,p.z-p.w/2+.05],s:[.05,.05,.05]});}
   // Fenders along the dock side, hanging between the hull and the pontoon.
-  const side=b.z+YACHT.beam/2;
-  for(let x=b.x-YACHT.length/2+.6;x<b.x+.9;x+=.7)posts.push({p:[x,WATER_Y+.1,side+.035],s:[.07,.14,.07],c:"#2f4a5a"});
+  const side=b.z-YACHT.beam*S/2;
+  for(let x=b.x-L/2+.7;x<b.x+1.1;x+=.8)posts.push({p:[x,WATER_Y+.12,side-.04],s:[.07,.14,.07],c:"#2f4a5a"});
   // Mooring lines from the bow and stern cleats down to the pontoon bollards.
-  const line=(x0:number,x1:number)=>{const y0=WATER_Y+MAIN_Y,y1=top+.02,z0=b.z+hullHalf(x0-b.x)-.02,z1=p.z-p.w/2+.05,len=Math.hypot(x1-x0,z1-z0,y1-y0);posts.push({p:[(x0+x1)/2,(y0+y1)/2-.006,(z0+z1)/2],s:[len,.012,.012],r:-Math.atan2(z1-z0,x1-x0),c:"#e8e1cf"});};
-  line(b.x-YACHT.length/2+.15,b.x-YACHT.length/2-.25);line(b.x+YACHT.length/2-.9,b.x+YACHT.length/2-.4);
+  const line=(x0:number,x1:number)=>{const y0=WATER_Y+MAIN_Y*S,y1=top+.02,z0=b.z-hullHalf((x0-b.x)/S)*S+.02,z1=p.z+p.w/2-.05,len=Math.hypot(x1-x0,z1-z0,y1-y0);posts.push({p:[(x0+x1)/2,(y0+y1)/2-.006,(z0+z1)/2],s:[len,.012,.012],r:-Math.atan2(z1-z0,x1-x0),c:"#e8e1cf"});};
+  line(b.x-L/2+.2,b.x-L/2-.3);line(b.x+L/2-1.1,b.x+L/2-.5);
   // Passerelle: a teak tread on a white stringer, sloping from the pontoon to the aft deck gate.
-  const run=gw.z0-gw.z1,rise=gw.y1-gw.y0,len=Math.hypot(run,rise),tilt=Math.atan2(rise,run);
+  const run=gw.z1-gw.z0,rise=gw.y1-gw.y0,len=Math.hypot(run,rise),tilt=-Math.sign(run)*Math.atan2(rise,Math.abs(run));
   const ramp:Inst={p:[gw.x,(gw.y0+gw.y1)/2-.012,(gw.z0+gw.z1)/2],s:[.15,.022,len],rx:tilt};
   const rails:Inst[]=[-1,1].map(s=>({p:[gw.x+s*.07,(gw.y0+gw.y1)/2+.1,(gw.z0+gw.z1)/2] as [number,number,number],s:[.012,.012,len],rx:tilt,c:"#cfd3d5"}));
-  const stanchions:Inst[]=[-1,1].flatMap(s=>[0,.5,1].map(t=>({p:[gw.x+s*.07,gw.y0+rise*t-.01,gw.z0-run*t] as [number,number,number],s:[.01,.11,.01],c:"#cfd3d5"})));
+  const stanchions:Inst[]=[-1,1].flatMap(s=>[0,.5,1].map(t=>({p:[gw.x+s*.07,gw.y0+rise*t-.01,gw.z0+run*t] as [number,number,number],s:[.01,.11,.01],c:"#cfd3d5"})));
   return {deck,posts,lamps,ramp,rails,stanchions};
  },[b]);
 
@@ -99,7 +102,7 @@ export function AtlasYacht({berth:b,marina,g,m,pick,night=false,moving,exclusion
 
  const sternX=-YACHT.length/2,bowX=1.05,bowZ=hullHalf(bowX)+.006,bowY=MAIN_Y-.08;
  return <>
-  <group position={[b.x,WATER_Y,b.z]} rotation={[0,b.yaw,0]}>
+  <group position={[b.x,WATER_Y,b.z]} rotation={[0,b.yaw,0]} scale={S}>
    <mesh geometry={geo.hull} material={mats.hull} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.boot} material={mats.boot} raycast={noRaycast}/>
    <mesh geometry={geo.white} material={mats.white} castShadow receiveShadow {...handlers}/>

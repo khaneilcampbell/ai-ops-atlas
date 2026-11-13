@@ -115,7 +115,7 @@ function Camera({view}:{view:number}){
 
 /**
  * Inside Atlas: all four decks as an open cutaway (the decks lifted apart so every room shows), or
- * one deck at a time. The pontoon and passerelle sit off the starboard side at the main deck, the
+ * one deck at a time. The pontoon and passerelle sit off the port side at the main deck, the
  * way on and off. People are visitors and crew figures: no agents are assigned to the yacht.
  */
 export default function YachtInterior({light}:{light:LightMode}){
@@ -131,14 +131,14 @@ export default function YachtInterior({light}:{light:LightMode}){
  const people=useMemo(()=>peopleOnBoard().filter(p=>decks.includes(p.deck)),
   // eslint-disable-next-line react-hooks/exhaustive-deps -- decks follows view
   [view]);
- // Dock connector: the pontoon alongside, and the passerelle up to the aft deck gate (main deck).
+ // Dock connector, on the port side as on the map: the pontoon alongside, and the passerelle up to the aft deck gate (main deck).
  const dock=useMemo(()=>{
   if(!decks.includes(1))return [] as Item[];
   const y=baseY(1),side=halfBeam(-20)+3.5,gateX=(YACHT.main.aftDeck+YACHT.platform.x1)/2*K+.25*K,len=side-halfBeam(gateX)-1.4;
-  const out:Item[]=[{p:[0,y-1.9,side+1.4],s:[64,.4,2.8],c:'#b89569'}];
-  for(let x=-28;x<=28;x+=8)out.push({p:[x,y-3.2,side+2.6],s:[.4,3,.4],c:'#54493f'});
-  for(let k=0;k<=8;k++){const t=k/8;out.push({p:[gateX,y-1.7+1.7*t,side-t*len],s:[1.4,.08,len/8+.05],c:'#b98c5f'});}
-  for(const s of [-1,1])out.push({p:[gateX+s*.7,y-.8,side-len/2],s:[.06,.9,len],c:'#cfd3d5'});
+  const out:Item[]=[{p:[0,y-1.9,-(side+1.4)],s:[64,.4,2.8],c:'#b89569'}];
+  for(let x=-28;x<=28;x+=8)out.push({p:[x,y-3.2,-(side+2.6)],s:[.4,3,.4],c:'#54493f'});
+  for(let k=0;k<=8;k++){const t=k/8;out.push({p:[gateX,y-1.7+1.7*t,-(side-t*len)],s:[1.4,.08,len/8+.05],c:'#b98c5f'});}
+  for(const s of [-1,1])out.push({p:[gateX+s*.7,y-.8,-(side-len/2)],s:[.06,.9,len],c:'#cfd3d5'});
   return out;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- decks and baseY follow view
  },[view]);
@@ -158,7 +158,7 @@ export default function YachtInterior({light}:{light:LightMode}){
    {people.map((p,i)=><group key={i} position={[p.x,baseY(p.deck)+.04,p.z]} scale={1.35}>{p.seated?<SeatedPerson x={0} z={0} color={CLOTHES[i%CLOTHES.length]}/>:<Person x={0} z={0} color={CLOTHES[i%CLOTHES.length]}/>}</group>)}
    {all&&decks.map(d=><Html key={d} position={[DECK_SPAN[d][0]-2.5,baseY(d)+.4,halfBeam(DECK_SPAN[d][0])]} center zIndexRange={[6,0]}><button className="skyline-room-label building-floor-label" data-floor-label={d} onClick={()=>{setView(d);setPicked(null);}}>{DECKS[d]}</button></Html>)}
    {!all&&ROOMS.filter(r=>r.deck===view).map(r=>{const [x,z]=roomCentre(r);return <Html key={r.id} position={[x,3.3,z]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`${r.name} · ${r.what} · ${STATUS}`)}>{r.name}</button></Html>;})}
-   {view===1&&<Html position={[(YACHT.main.aftDeck+YACHT.platform.x1)/2*K+.25*K,-1,halfBeam(-20)+4.5]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`Passerelle · The gangway from the marina pontoon to the aft deck gate, how everyone gets on and off · ${STATUS}`)}>Passerelle</button></Html>}
+   {view===1&&<Html position={[(YACHT.main.aftDeck+YACHT.platform.x1)/2*K+.25*K,-1,-(halfBeam(-20)+4.5)]} center zIndexRange={[8,0]}><button className="skyline-room-label" onClick={()=>setPicked(`Passerelle · The gangway from the marina pontoon to the aft deck gate, how everyone gets on and off · ${STATUS}`)}>Passerelle</button></Html>}
    <pointLight position={[0,(all?I.explode*1.5:0)+8,0]} color="#ffe6bf" intensity={isNight?120:8} distance={60} decay={1.6}/>
   </Canvas>
   <header className="skyline-interior-head"><button onClick={()=>leaveBuilding(true)} aria-label={`Exit ${shown()} and return to city`}>← Exit yacht</button><div><small>{shown().toUpperCase()} · YACHT</small><h2>{title}</h2></div></header>

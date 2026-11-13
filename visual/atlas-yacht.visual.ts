@@ -23,7 +23,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
    ['stern',[b.x,w+.6,b.z],[b.x-5*k,w+2.2*k,b.z+4.5*k]],
    ['profile',[b.x,w+.6,b.z],[b.x+.5,w+1.2,b.z+7.5*k]],
    ['bow',[b.x,w+.6,b.z],[b.x+6*k,w+2*k,b.z+3.5*k]],
-   ['passerelle',[b.gangway.x,w+.3,b.gangway.z0],[b.gangway.x-1.8*k,w+1.3*k,b.gangway.z0+2.4*k]],
+   ['passerelle',[b.gangway.x,w+.3,b.gangway.z0],[b.gangway.x-1.8*k,w+1.6*k,b.gangway.z0-2.6*k]],
    ['top',[b.x,w,b.z],[b.x+.01,w+9*k,b.z+3*k]],
    ['marina',[b.x-2,w+.8,b.z-1],[b.x+4*k,w+6*k,b.z+11*k]],
   ];
