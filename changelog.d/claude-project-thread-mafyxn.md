@@ -1,1 +1,1 @@
-- 2026-11-13 · The Security Operations Center now has warm sandstone frames and blue sky-reflecting windows with mullions and set-back panes, so it matches the Career & Portfolio and Vendor & Supplier Hub buildings beside it
+- 2026-11-13 · The Security Operations Center now has warm sandstone frames and blue sky-reflecting windows, and the Log Analytics Lab next to it uses the same sandstone and blue glass (still with its green sign), so both match the Career & Portfolio and Vendor & Supplier Hub buildings beside them

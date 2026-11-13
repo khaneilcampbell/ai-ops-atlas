@@ -624,48 +624,56 @@ function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
 }
 
 /** Small branded business offices, kept below the project headquarters skyline. */
-export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
+export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet; night?: boolean }) {
   const items = useMemo(() => {
     const y = TERRACE_H + 0.03;
-    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
+    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], skyWindows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
     const one = (k: Kiosk) => {
       const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
-      const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
+      const brand = toolBrand(k.name), w = k.size, d = w * 0.8, f = brand.facade;
+      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#fff5d9", glassSide = f?.glass[1] ?? "#e5e8e1";
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
       // Six office floors with a regular curtain-wall grid and branded cornices.
       const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
       const floorSpacing=Math.min(0.36,(OFFICE_H-0.68)/floorCount);
+      // A facade override uses plain sky glass, so its blue reads true instead of tinting the warm office glass.
+      const panes = f ? skyWindows : windows;
       for (let floor = 0; floor < floorCount; floor++) {
-        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
+        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: f ? f.bands[floor % 2] : floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+          panes.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: glassFront });
+          panes.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: glassSide });
+          panes.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: glassFront });
+          panes.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: glassSide });
         }
       }
       // Slim corner columns and a recessed rooftop plant room give the offices a corporate silhouette.
       for (const side of [-1, 1]) {
-        accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
+        accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: trim });
       }
       slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
       accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
       accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
       doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
-      slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
+      slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: f ? trim : brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
-      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: f ? brand.wall : brand.secondary });
     };
     for (const k of kiosks) one(k);
-    return { walls, slabs, accents, windows, domes, pediments, doors };
+    return { walls, slabs, accents, windows, skyWindows, domes, pediments, doors };
   }, [kiosks]);
+  // Sky glass by day; at night it glows warm white like the Security Operations Center next door.
+  const skyGlass = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#ffe9c4", emissiveIntensity: 0, roughness: 0.18, metalness: 0.15 }), []);
+  useEffect(() => { skyGlass.emissiveIntensity = night ? 0.85 : 0; }, [skyGlass, night]);
+  useEffect(() => () => skyGlass.dispose(), [skyGlass]);
   return <group>
     <Instanced items={items.walls} geometry={g.box} material={m.plain} pick={pick.of(kiosks.map(k => k.key))} />
     <Instanced items={items.slabs} geometry={g.box} material={m.plain} />
     <Instanced items={items.accents} geometry={g.box} material={m.plain} />
     <Instanced items={items.windows} geometry={g.box} material={m.glass} />
+    {items.skyWindows.length > 0 && <Instanced items={items.skyWindows} geometry={g.box} material={skyGlass} />}
     <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />
