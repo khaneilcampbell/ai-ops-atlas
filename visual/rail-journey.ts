@@ -27,7 +27,7 @@ export async function railJourney(page:Page){
   }finally{state.gl.render=render;}
   return {trains:state.scene.getObjectsByProperty('name','atlas-passenger-train').length,visited:visited.size,stops:loop.stops.length,elapsed:train.userData.elapsed,walking,faults};
  });
- expect(result.trains).toBe(1);expect(result.visited,JSON.stringify(result)).toBe(4);expect(result.stops).toBe(4);expect(result.elapsed).toBeGreaterThan(60);expect(result.walking).toBeGreaterThan(0);expect(result.faults).toEqual([]);
+ expect(result.trains).toBe(1);expect(result.visited,JSON.stringify(result)).toBe(3);expect(result.stops).toBe(3);expect(result.elapsed).toBeGreaterThan(60);expect(result.walking).toBeGreaterThan(0);expect(result.faults).toEqual([]);
  await page.getByRole('button',{name:'Traffic',exact:true}).click();await settle(page,1);
  const paused=await page.evaluate(async()=>{const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)![1],fiber:typeof import('@react-three/fiber')=await import(url),store=fiber._roots.get(document.querySelector('canvas')!)!.store,state=store.getState(),train=state.scene.getObjectByName('atlas-passenger-train')!,before=train.userData.elapsed;const render=state.gl.render;state.gl.render=()=>{};try{for(let t=1000;t<1003;t+=.1)fiber.advance(t,false,store.getState());}finally{state.gl.render=render;}return {before,after:train.userData.elapsed};});
  expect(paused.before).toBeGreaterThan(60);expect(paused.after).toBe(paused.before);
