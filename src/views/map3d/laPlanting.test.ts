@@ -53,14 +53,16 @@ describe('Los Angeles planting',()=>{
 });
 
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`plants formal palm avenues on the streets only, clear of the airport, lamps and buildings in ${group}`,()=>{
- const s=buildScene(layoutMap(catalog,[],group)),palms=planStreetPalms(s),lamps=planStreetLights(s),boxes=lightingObstacles(s),walks=s.transportConnections.map(c=>c.walk);
+ const s=buildScene(layoutMap(catalog,[],group)),palms=planStreetPalms(s),lamps=planStreetLights(s),boxes=lightingObstacles(s),walks=s.transportConnections.map(c=>c.walk),streets=[...s.carBridges.flatMap(b=>b.roads),...s.transportConnections.map(c=>c.road),...(s.financial?[s.financial.street]:[]),...(s.community?.streets??[])];
  expect(palms.length).toBeGreaterThan(20);expect(palms.length).toBeLessThanOrEqual(STREET_PALMS.max);
  const a=s.airport&&airportFootprint(s.airport);
  for(const p of palms){
   expect(laTreeKind(p)).toBe('avenue');
   expect(boxes.some(b=>Math.abs(p.x-b.x)<b.w/2+.12&&Math.abs(p.z-b.z)<b.d/2+.12)).toBe(false);
   expect(lamps.some(l=>Math.hypot(l.x-p.x,l.z-p.z)<STREET_PALMS.lampClear)).toBe(false);
-  expect(walks.some(w=>distanceToRoad([p.x,p.z],w)<.4)).toBe(false);
+  expect(walks.some(w=>distanceToRoad([p.x,p.z],w)<STREET_PALMS.walkClear),`palm at ${p.x},${p.z} on a walk`).toBe(false);
+  // On planted grass, past the street, its kerb and the walk flush beside it (centre .6 out, .48 wide).
+  expect(streets.some(r=>distanceToRoad([p.x,p.z],r)<1),`palm at ${p.x},${p.z} on a sidewalk`).toBe(false);
   if(a)expect(p.x>a.x-STREET_PALMS.airportMargin&&p.x<a.x+a.w+STREET_PALMS.airportMargin&&p.z>a.z-STREET_PALMS.airportMargin&&p.z<a.z+a.d+STREET_PALMS.airportMargin,`palm at ${p.x},${p.z} on the airport`).toBe(false);
  }
 });

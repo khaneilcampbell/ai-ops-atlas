@@ -10,13 +10,15 @@ import {TERRACE_H,type Scene3D,type Tree} from './scene';
  * upright), on both sidewalks, at the lamp spacing and halfway between the lamps, so palm and lamp
  * alternate in an even rhythm. Walks, plaza rings, the highway and the airport grounds stay bare.
  * Spots use the street lamp planner, so palms stay off carriageways, sidewalks, junctions and buildings.
+ * Every palm stands on planted grass (Khaneil, 2026-11-13): past the walk that runs flush beside a street
+ * (centre .6 from the street's centre line, .48 wide), so the setbacks start beyond it.
  */
-export const STREET_PALMS={spacing:3.6,start:3,setbacks:[.55,.8,1.1],lampClear:.6,airportMargin:2,max:260,size:.26,litEvery:3} as const;
+export const STREET_PALMS={spacing:3.6,start:3,setbacks:[.8,1.05,1.3],walkClear:.55,streetClear:1.05,lampClear:.6,airportMargin:2,max:260,size:.26,litEvery:3} as const;
 
 export function planStreetPalms(s:Scene3D):Tree[]{
  const lamps=planStreetLights(s),avoidBoxes=[];
  if(s.airport){const a=airportFootprint(s.airport),m=STREET_PALMS.airportMargin;avoidBoxes.push({x:a.x+a.w/2,z:a.z+a.d/2,w:a.w+2*m,d:a.d+2*m});}
- const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes});
+ const spots=planStreetLights(s,{streetsOnly:true,spacing:STREET_PALMS.spacing,start:STREET_PALMS.start,bothSides:true,setbacks:STREET_PALMS.setbacks,skipHighway:true,minSeparation:1.5,max:STREET_PALMS.max,avoid:lamps,avoidRadius:STREET_PALMS.lampClear,avoidBoxes,walkClear:STREET_PALMS.walkClear,streetClear:STREET_PALMS.streetClear,extraWalks:s.financial?[s.financial.walk,...s.financial.buildings.map(b=>b.approach)].filter(w=>w.length>1):[]});
  // One avenue palm in every three wears string lights, an even rhythm along each street rather than all of them.
  return spots.map((p,i)=>({x:p.x,y:TERRACE_H,z:p.z,s:STREET_PALMS.size,kind:'avenue' as const,lit:i%STREET_PALMS.litEvery===0}));
 }

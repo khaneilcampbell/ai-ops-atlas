@@ -36,7 +36,7 @@ export interface StreetSpots{
  streetsOnly?:boolean;
  /** Areas to keep entirely clear, such as the airport grounds. */
  avoidBoxes?:Box[];
- spacing?:number;start?:number;bothSides?:boolean;setbacks?:readonly number[];minSeparation?:number;max?:number;skipHighway?:boolean;avoid?:{x:number;z:number}[];avoidRadius?:number}
+ spacing?:number;start?:number;bothSides?:boolean;setbacks?:readonly number[];minSeparation?:number;max?:number;skipHighway?:boolean;avoid?:{x:number;z:number}[];avoidRadius?:number;walkClear?:number;streetClear?:number;extraWalks?:Pt[][]}
 export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  const paths:{points:Pt[];width:number;highway:boolean;street:boolean}[]=[];
  const add=(points:Pt[],width=.64,highway=false,street=false)=>{if(points.length>1)paths.push({points,width,highway,street});};
@@ -48,7 +48,7 @@ export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  if(s.airport)add(airportPublicPath(s.airport),.48);
  for(const walk of s.walks)add(walk.route?.map(p=>[p.gx,p.gy] as Pt)??[[walk.x0,walk.z0],[walk.x1,walk.z1]],.48);
  for(const t of plazaSites(s)){const plaza=s.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<.01&&Math.abs(p.z+p.d/2-t.z)<.01&&Math.abs(p.w-p.d)<.01).sort((a,b)=>a.w-b.w)[0];const r=plaza&&towerRing(t,plaza.w);if(r)add([[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1],[r.x0,r.z0]]);}
- const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[])];
+ const obstacles=lightingObstacles(s),walks=[...s.transportConnections.map(c=>c.walk),...(s.community?.walks??[]),...(s.financial?[s.financial.sidewalk]:[]),...(o.extraWalks??[])];
  const junctions:Pt[]=[...s.transportConnections.flatMap(c=>[c.road[0],c.road[c.road.length-1]]),...(s.freight?.localJunctions??[]),...(s.freight?.exits??[]),...(s.community?.streets.flatMap(p=>[p[0],p[p.length-1]])??[])];
  const result:StreetLamp[]=[],cells=new Map<string,StreetLamp[]>(),cell=o.minSeparation??STREET_LIGHT.minSeparation,max=o.max??STREET_LIGHT.maxFixtures,step=(highway:boolean)=>highway?STREET_LIGHT.highwaySpacing:(o.spacing??STREET_LIGHT.spacing);
  const avoidCells=new Map<string,{x:number;z:number}[]>(),ar=o.avoidRadius??0;for(const a of o.avoid??[]){const k=`${Math.floor(a.x)}:${Math.floor(a.z)}`;avoidCells.set(k,[...(avoidCells.get(k)??[]),a]);}
@@ -58,9 +58,9 @@ export function planStreetLights(s:Scene3D,o:StreetSpots={}):StreetLamp[]{
  for(let d=carried;d<len;d+=step(path.highway)){const rx=a[0]+(b[0]-a[0])*d/len,rz=a[1]+(b[1]-a[1])*d/len;if(junctions.some(p=>Math.hypot(rx-p[0],rz-p[1])<STREET_LIGHT.junctionClearance))continue;
  for(const sign of index++%2?[1,-1]:[-1,1]){let placed=false;for(const setback of o.setbacks??[.5,.75]){const offset=path.width/2+setback,x=rx+nx*sign*offset,z=rz+nz*sign*offset;
  if(near(x,z)||avoided(x,z)||o.avoidBoxes?.some(b=>Math.abs(x-b.x)<b.w/2&&Math.abs(z-b.z)<b.d/2)||(!path.highway&&!s.land.some(r=>x>r.x+.1&&x<r.x+r.w-.1&&z>r.z+.1&&z<r.z+r.d-.1)))continue;
- if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<WALK_CLEAR))continue;
+ if(obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.12&&Math.abs(z-o.z)<o.d/2+.12)||walks.some(w=>distanceToRoad([x,z],w)<(o.walkClear??WALK_CLEAR)))continue;
  // Off the carriageway and its sidewalk: a district street is wider than the line it is drawn from.
- if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,STREET_CLEAR))))continue;
+ if(paths.some(other=>distanceToRoad([x,z],other.points)<(other.highway?other.width/2+.12:Math.max(other.width/2+.12,other.street?o.streetClear??STREET_CLEAR:STREET_CLEAR))))continue;
  const lamp:StreetLamp={x,z,roadX:rx,roadZ:rz,yaw:Math.atan2(rx-x,rz-z),height:path.highway?STREET_LIGHT.highwayHeight:STREET_LIGHT.height,highway:path.highway};result.push(lamp);const key=`${Math.floor(x/cell)}:${Math.floor(z/cell)}`;cells.set(key,[...(cells.get(key)??[]),lamp]);placed=true;break;}
  if(placed&&!o.bothSides)break;}
  if(result.length>=max)return result;
