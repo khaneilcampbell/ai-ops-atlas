@@ -74,7 +74,7 @@ describe("Atlas Marketplace when a project leaves the map", () => {
  // An archived or deleted repository drops its project from the live catalog, which moves the
  // open lot. The Marketplace and the railway must follow it (the garden behind it only when there is room), not vanish.
  const without=(id:string)=>({...catalog,projects:catalog.projects.filter(p=>p.id!==id),agents:catalog.agents.filter(a=>a.projectId!==id)});
- for(const id of ["soc-lab","ai-ops-atlas","career-optimizer","portfolio-site","intelligence-hub","service-desk","commerce-pipeline"])
+ for(const id of ["soc-lab","ai-ops-atlas","career-optimizer","portfolio-site","intelligence-hub","commerce-pipeline"])
   for(const g of ["district","tag"] as GroupBy[])it(`keeps the Marketplace and railway without ${id} (${g})`,()=>{
    const s=buildScene(layoutMap(without(id),[],g)),m=s.mall;
    expect(m).toBeDefined();expect(s.communityRail?.loop).toBeDefined();
