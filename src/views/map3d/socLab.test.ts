@@ -29,7 +29,7 @@ describe('SOC Lab',()=>{
   expect(plan.storey).toBeLessThan(FLOOR_H*1.15);
  });
 
- it('has three terraces, each with cyan strips, a green roof and a lit pavilion, clear of the lobby and roof',()=>{
+ it('has three terraces, each with cyan strips and a planted roof, clear of the lobby and roof',()=>{
   expect(plan.terraces).toHaveLength(3);
   const bandH=SOC_LAB.terraces.storeys*plan.storey;
   for(const [i,y] of plan.terraces.entries()){
@@ -38,10 +38,20 @@ describe('SOC Lab',()=>{
    if(i)expect(y-plan.terraces[i-1]).toBeGreaterThan(bandH+plan.storey);
   }
   expect(plan.boxes.filter(b=>b.kind==='cyan')).toHaveLength(12);
-  expect(plan.boxes.filter(b=>b.kind==='pavilion')).toHaveLength(3);
+  expect(plan.boxes.filter(b=>b.kind==='hedge')).toHaveLength(6);
   expect(plan.boxes.filter(b=>b.kind==='lawn')).toHaveLength(3);
   expect(plan.discs.filter(d=>d.kind==='cyan')).toHaveLength(1);
   for(const b of plan.boxes){expect(b.x1).toBeGreaterThan(b.x0);expect(b.y1).toBeGreaterThan(b.y0);expect(b.z1).toBeGreaterThan(b.z0);}
+ });
+
+ it('fills its glass front to the spine line from the lobby roof to the roof, so both faces line up',()=>{
+  const front=plan.boxes.find(b=>b.kind==='curtain'&&b.z1===SOC_LAB.front)!;
+  expect(front).toBeDefined();
+  expect(front.y0).toBe(SOC_LAB.lobby.h);
+  expect(front.y1).toBeCloseTo(plan.height);
+  expect(SOC_LAB.front).toBeCloseTo(SOC_LAB.spine.z1-.02);
+  // The terraces still stand out of it, with room for their gardens.
+  expect(SOC_LAB.terraces.z1-SOC_LAB.front).toBeGreaterThan(.1);
  });
 
  it('braces its steel spine in a zigzag from the ground to the roof',()=>{
