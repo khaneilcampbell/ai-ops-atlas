@@ -13,7 +13,7 @@ import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
@@ -22,7 +22,7 @@ import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
 import { SOC_LAB, isSocLab, socLabTop } from "./socLabPlan";
-import { plazaSites } from "./streetGraph";
+import { plazaLanes } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -316,21 +316,8 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
     // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
     const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
-    for(const t of plazaSites(scene)) {
-      const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
-      const ring=plaza&&towerRing(t,plaza.w);
-      if(!ring) continue;
-      // Draw only the plaza streets that connect actual bridge exits; no decorative dead ends.
-      const exits=scene.carBridges.flatMap(br=>{const end=br.ends.indexOf(t.projectId);return end<0?[]:[br.roads[end][0]];});
-      const drawn=new Set<string>();
-      for(let a=0;a<exits.length;a++) for(let b=a+1;b<exits.length;b++) {
-        const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
-        for(let i=1;i<path.length;i++) {
-          const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
-          if(drawn.has(key))continue;drawn.add(key);district.push([path[i-1],path[i]]);
-        }
-      }
-    }
+    // The paved plaza lanes (streetGraph.ts plazaLanes): the same lanes vehicles drive.
+    district.push(...plazaLanes(scene));
     const spans=connectionSpans(district);
     for(const sp of spans) street(sp.a,sp.b,ROAD_W);
     sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])])));
