@@ -33,7 +33,8 @@ Mac app  ◀── GET /api/hooks/feed?after=N (Bearer USAGE_SYNC_TOKEN, same ca
 1. **GitHub App.** Settings → Developer settings → GitHub Apps → New. Webhook URL
    `https://ai-ops-atlas.pages.dev/api/hooks/github`, a random webhook secret
    (`openssl rand -hex 32`), permissions Actions: read and Contents: read, events
-   Workflow run, Workflow job and Push, "Only on this account".
+   Workflow run and Push, "Only on this account". Leave Workflow job off: the site ignores job
+   events, because they used most of D1's free 100,000 rows written a day.
 2. **Install** the app on All repositories.
 3. **Secret.** Cloudflare → Workers & Pages → ai-ops-atlas → Settings → Variables and Secrets:
    add `GITHUB_WEBHOOK_SECRET` (type Secret) with the same value.
