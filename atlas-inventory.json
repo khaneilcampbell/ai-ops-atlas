@@ -1917,7 +1917,7 @@
   {
    "category": "Street furniture",
    "kind": "Street lamp",
-   "count": 215,
+   "count": 68,
    "area": "City streets",
    "moves": false,
    "source": "src/views/map3d/streetLighting.ts"
@@ -1952,6 +1952,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T15:00:06.406Z",
- "commit": "54e1d2a60247cd6d124bd1cf6f8d5be669c63f1e"
+ "generated_at": "2026-11-13T17:30:40.019Z",
+ "commit": "1487201c56848bec86bb9dd75e3b333e43b07aa4"
 }
