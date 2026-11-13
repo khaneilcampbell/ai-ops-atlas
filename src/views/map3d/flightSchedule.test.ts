@@ -27,7 +27,7 @@ it('keeps one jet holding short, off the runway, and the turnaround inside the c
  for(const c of CIRCUITS){
   const {hold,dwell}=loopTiming(c);
   expect(hold).toBeGreaterThanOrEqual(LOOP.holdMin-1e-9);expect(hold).toBeLessThanOrEqual(LOOP.holdMax+1e-9);
-  expect(dwell).toBe(ARRIVAL.dwell);expect(LOOP.holdMax).toBeLessThan(f.interval-5);
+  expect(dwell).toBeGreaterThanOrEqual(ARRIVAL.dwell);expect(dwell).toBeLessThanOrEqual(ARRIVAL.dwell+LOOP.standExtra);expect(LOOP.holdMax).toBeLessThan(f.interval-5);
   for(let t=0;t<f.cycle;t+=.25){
    const holding=fleet(t,c).filter(p=>p.x===TAKEOFF_QUEUE.x&&Math.abs(p.z-TAKEOFF_QUEUE.frontZ)<1e-6);
    expect(holding.length).toBeLessThanOrEqual(1);
@@ -79,7 +79,20 @@ it('lands every jet on the landing runway and brings it back to the arrivals sta
 it('never rolls over runway 1 on the ground except to take off',()=>{
  for(const c of CIRCUITS)for(let t=0;t<f.cycle;t+=.1){
   const p=fleetPose(t,0,c);if(p.y>0)continue;
-  const onRunway=Math.abs(p.x-l.runwayX)<l.runwayWidth/2+1.35&&p.z>l.runwayZ-l.runwayLength/2-1.35&&p.z<16;
+  // The lineup turn onto the north end is part of taking off; runway 1 runs on south to its far end.
+  const onRunway=Math.abs(p.x-l.runwayX)<l.runwayWidth/2+1.35&&p.z>l.runwayZ-l.runwayLength/2+.5&&p.z<l.runwayZ+l.runwayLength/2+1.35;
   if(onRunway)expect(p.x,`t=${t}`).toBe(l.runwayX);
+ }
+});
+
+it('works both runways top to bottom: landings come in from the north, takeoffs roll south (Khaneil, 2026-11-13)',()=>{
+ for(const c of CIRCUITS){
+  const {leave,approach}=loopTiming(c);
+  // On final the jet lines up on the landing runway north of its threshold and flies south.
+  const t0=leave+approach.duration-f.start+.5,a=fleetPose(t0,0,c),b=fleetPose(t0+.5,0,c);
+  expect(a.x).toBeCloseTo(R.x,5);expect(a.z).toBeLessThan(R.touchdownZ);expect(b.z).toBeGreaterThan(a.z);expect(b.y).toBeLessThan(a.y);
+  // The takeoff roll starts at runway 1's north end and runs south.
+  const r0=fleetPose(f.taxi+1-f.start,0,c),r1=fleetPose(f.taxi+6-f.start,0,c);
+  expect(r0.x).toBe(l.runwayX);expect(r0.z).toBeLessThan(0);expect(r1.z).toBeGreaterThan(r0.z);
  }
 });

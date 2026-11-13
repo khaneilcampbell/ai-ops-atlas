@@ -168,11 +168,11 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(const stand of AIRPORT_REMOTE_STANDS){
      cubes.push(box(x+stand.x,y+.02,z+stand.z,3.7,.035,3.6,'#969e9d'),box(x+stand.x,y+.06,z+stand.z,.035,.01,2.8,'#d6bd6e'));
      for(const side of [-1,1])cubes.push(box(x+stand.x+side*1.65,y+.06,z+stand.z,.025,.01,3.4,'#e5e7da'));
-     // The north (arrivals) stand's taxiway runs on past it, to where jets finish their pushback.
-     const [extensionZ,extensionD]=stand.z<0?[-3.9,7.8]:[20,6];
+     // The south (arrivals) stand's taxiway runs on past it, to where jets finish their pushback.
+     const [extensionZ,extensionD]=stand.z<0?[-3.9,7.8]:[20.6,7.2];
      cubes.push(box(x+9.9,y+.02,z+stand.z,2.8,.035,.8,'#8b9493'),box(x+11.5,y+.02,z+extensionZ,.85,.035,extensionD,'#8b9493'));
     }
-    // Landing runway on the old river strip, with a taxi lane north of runway 1 to the arrivals stand.
+    // Landing runway between runway 1 and the service road. Jets land from the north and leave by the south end lane.
     const L=LANDING,PAD=AIRPORT_LANDING_SOUTH_PAD,south=L.z+L.length/2,north=L.z-L.length/2;
     cubes.push(box(x+L.x,y+.015,z+L.z,L.width,.045,L.length,"#2b3335"));
     // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
@@ -232,8 +232,8 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.glass} geometry={g.box} material={glazing} pick={{...pick,keys:parts.glass.map(()=>AIRPORT_KEY)}}/>
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
-    {/* The north remote stand is kept free for arrivals; the south one keeps its parked jet. */}
-    {[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
+    {/* The south remote stand is kept free for arrivals; the north one keeps a parked jet. */}
+    {[AIRPORT_REMOTE_STANDS[0],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>

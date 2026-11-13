@@ -165,3 +165,19 @@ describe('landing runway position (Khaneil, 2026-11-13)',()=>{
   for(const t of AIRPORT_END_TAXIWAYS.slice(0,2))expect(t.x+t.w/2).toBeCloseTo(LR.x-LR.width/2,6);
  });
 });
+
+describe('landings and the Team Events Arena (Khaneil, 2026-11-13)',()=>{
+ it('keeps every arriving jet well clear of the arena, and departures high above it',async()=>{
+  const {flightClearance,airportFlightCircuit}=await import('./flightClearance');
+  const {arrivalPose}=await import('./airportArrivals');
+  const {loopTiming,fleetPose,FLIGHT_SCHEDULE:f}=await import('./flightSchedule');
+  const {stadiumCrown}=await import('./stadiumGeometry');
+  for(const mode of ['district','tag','none','status'] as const){
+   const s=buildScene(layoutMap(catalog,[],mode)),st=s.stadium;if(!st||!s.airport)continue;
+   const fc=flightClearance(s),c=airportFlightCircuit(s.airport,s.bounds,fc.altitude,fc.obstacles),{approach}=loopTiming(c);
+   const gap=(x:number,z:number)=>{const [wx,wz]=airportPoint(s.airport!,x,z);return Math.hypot(Math.max(0,Math.abs(wx-st.x)-st.w/2),Math.max(0,Math.abs(wz-st.z)-st.d/2));};
+   for(let t=0;t<approach.duration+approach.final.time;t+=.1){const q=arrivalPose(t,approach);expect(gap(q.x,q.z)>6||q.y>stadiumCrown()+3,`${mode} t=${t}`).toBe(true);}
+   for(let t=0;t<60;t+=.1){const q=fleetPose(t-f.start+f.taxi,0,c);if(gap(q.x,q.z)<2)expect(q.y,`${mode} departure t=${t}`).toBeGreaterThan(stadiumCrown()+3);}
+  }
+ });
+});

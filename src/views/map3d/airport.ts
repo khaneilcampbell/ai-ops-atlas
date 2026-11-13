@@ -5,9 +5,10 @@ export const AIRPORT_LAYOUT={mirrorWidth:8,landX:-2,landZ:-16,landWidth:28,landD
 /** The north stand is the arrivals turnaround stand: landed jets park there nose-in, then push back. */
 export const AIRPORT_REMOTE_STANDS=[{x:7,z:-4.6},{x:7,z:23}] as const;
 /** Second runway for landings (Khaneil, 2026-11-07). Moved in from the old river strip to the grass between runway 1
- * and the service road, where the runway-side bush row stood (Khaneil, 2026-11-13). Jets touch down near the south
- * end and leave by a taxi lane north of runway 1, so they never cross it. */
-export const AIRPORT_LANDING_RUNWAY={x:19.2,z:7.25,width:2.2,length:25.5,touchdownZ:17,laneZ:-4.6,southLaneZ:19.9} as const;
+ * and the service road, where the runway-side bush row stood, and run on down to the south service road (Khaneil,
+ * 2026-11-13). Jets now land from the north, away from the Team Events Arena off the south end: they touch down past
+ * the north threshold, roll south and leave by the south end lane to the south remote stand, south of runway 1. */
+export const AIRPORT_LANDING_RUNWAY={x:19.2,z:8.975,width:2.2,length:28.95,touchdownZ:-1,laneZ:-4.6,southLaneZ:23} as const;
 type TaxiRect={x:number;z:number;w:number;d:number};
 const TAXI_W=.85,R1={x:15,north:7.5-21/2,south:7.5+21/2};
 /**

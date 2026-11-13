@@ -7,11 +7,13 @@ import {TOOL_OFFICE_HEIGHT} from './toolBrand';
 import {DEALERSHIP} from './dealershipPlan';
 import {COMMUNITY_BUILDINGS} from './hillsCommunityPlan';
 import {HILLS} from './hillsPlan';
+import {stadiumCrown} from './stadiumGeometry';
+import {toDeparture} from './airportArrivals';
 
 export const FLIGHT_CLEARANCE={roofGap:4,minimumCruise:14,aircraftRadius:1.95} as const;
 /** Conservative roof envelope, including crowns and the new Financial District skyline.
  * Computed once per scene, not by testing every building on every animation frame. */
-export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'>&Partial<Pick<Scene3D,'dealership'>>){
+export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'|'houses'|'kiosks'>&Partial<Pick<Scene3D,'dealership'|'stadium'>>){
  const roof=Math.max(8,headquartersEnvelope(scene.towers),(scene.dealership?.showroom.height??DEALERSHIP.height)+.7,HILLS.mansion.h+1,...COMMUNITY_BUILDINGS.map(b=>b.h+1),...scene.strays.map(b=>b.height+1),...scene.houses.map(b=>b.h+b.roofH+.6),...scene.kiosks.map(b=>('height' in b&&b.height?b.height:TOOL_OFFICE_HEIGHT)+1),...AIRPORT_BUILDINGS.map(b=>b.h+1),...(scene.financial?.buildings.map(b=>b.height+financialDimensions(b.id).top)??[]));
  // Footprints of the tall buildings, so departures can climb clear of whatever sits off the runway.
  const obstacles:WorldObstacle[]=[
@@ -19,6 +21,8 @@ export function flightClearance(scene:Pick<Scene3D,'towers'|'financial'|'strays'
   ...(scene.financial?.buildings.map(b=>({x:scene.financial!.x+b.x,z:scene.financial!.z+b.z,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d,h:b.height+financialDimensions(b.id).top}))??[]),
   ...scene.strays.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:b.height+1})),
   ...scene.kiosks.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size,h:('height' in b&&b.height?b.height:TOOL_OFFICE_HEIGHT)+1})),
+  // The Team Events Arena sits off the landing runway's south end in some groupings: arrivals keep clear of it.
+  ...(scene.stadium?[{x:scene.stadium.x,z:scene.stadium.z,w:scene.stadium.w,d:scene.stadium.d,h:stadiumCrown()+1}]:[]),
  ];
  return {roof,altitude:Math.max(FLIGHT_CLEARANCE.minimumCruise,roof+FLIGHT_CLEARANCE.roofGap),obstacles};
 }
@@ -27,8 +31,9 @@ export interface WorldObstacle {x:number;z:number;w:number;d:number;h:number}
 export function airportFlightCircuit(a:AirportPlan,b:Scene3D['bounds'],altitude?:number,obstacles:WorldObstacle[]=[]):FlightCircuit{
  const centerX=(b.x0+b.x1)/2;
  // Departure coordinates: runway threshold at the origin, mirrored for west-facing airports.
- const local:FlightObstacle[]=obstacles.map(o=>({x:(a.west?AIRPORT_LAYOUT.mirrorWidth-(o.x-a.x):o.x-a.x)-15,z:o.z-a.z-6.1,hw:o.w/2,hd:o.d/2,h:o.h}));
- return {x:(a.west?2*a.x+AIRPORT_LAYOUT.mirrorWidth-centerX:centerX)-(a.x+15),z:(b.z0+b.z1)/2-a.z-6.1,rx:(b.x1-b.x0)/2+2,rz:(b.z1-b.z0)/2+2,altitude,obstacles:local};
+ const dep=(x:number,z:number)=>toDeparture({x:a.west?AIRPORT_LAYOUT.mirrorWidth-(x-a.x):x-a.x,z:z-a.z});
+ const local:FlightObstacle[]=obstacles.map(o=>({...dep(o.x,o.z),hw:o.w/2,hd:o.d/2,h:o.h}));
+ return {...dep(centerX,(b.z0+b.z1)/2),rx:(b.x1-b.x0)/2+2,rz:(b.z1-b.z0)/2+2,altitude,obstacles:local};
 }
 /** Existing private-jet orbit, with the same scene-derived roof clearance. */
 export function privateJetPose(b:Scene3D['bounds'],altitude:number,seconds:number){

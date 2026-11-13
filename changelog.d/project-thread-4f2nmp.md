@@ -1,1 +1,1 @@
-- 2026-11-13 · The airport's landing runway moved in from the river edge to the grass beside the main runway, and the line of round bushes there is gone. Planes land, taxi and take off exactly as before (#404)
+- 2026-11-13 · The airport's landing runway moved in from the river edge to the grass beside the main runway and now runs down to the south road, and the line of round bushes there is gone. Both runways now work top to bottom: planes land coming in from the north, well clear of the Team Events Arena, and take off heading south, climbing high over it (#404)

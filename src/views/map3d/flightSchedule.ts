@@ -1,5 +1,5 @@
 import {AIRPORT_LAYOUT,DEPARTURE_TIMES,departurePose,type FlightCircuit} from './airport';
-import {ARRIVAL,CIRCUIT_PACE,DEPARTURE_ORIGIN,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
+import {ARRIVAL,CIRCUIT_PACE,departureToLocal,DEPARTURE_PACE,LOOP,LOOP_CYCLE,arrivalApproach,arrivalPose,exitTime,legsTotal} from './airportArrivals';
 import {roundedRoad} from './highway';
 /**
  * One departure every 45 simulation seconds (KC, 2026-11-07), from a single jet holding short.
@@ -7,8 +7,9 @@ import {roundedRoad} from './highway';
  * arrivals stand, push back and taxi back to the hold. Every jet is slot 0 shifted by `interval`.
  */
 export const FLIGHT_SCHEDULE={interval:LOOP.interval,count:LOOP.count,cycle:LOOP_CYCLE,taxi:LOOP.taxi,start:20} as const;
-export const TAKEOFF_QUEUE={x:AIRPORT_LAYOUT.taxiX,frontZ:14.5} as const;
-const route=roundedRoad([[TAKEOFF_QUEUE.x,TAKEOFF_QUEUE.frontZ],[11.5,17.5],[15,17.5],[15,16.5]],.65);
+/** Jets taxi up from the south stand, hold short facing north, then turn east and south onto runway 1's north end. */
+export const TAKEOFF_QUEUE={x:AIRPORT_LAYOUT.taxiX,frontZ:0} as const;
+const route=roundedRoad([[TAKEOFF_QUEUE.x,TAKEOFF_QUEUE.frontZ],[11.5,-3],[15,-3],[15,-2]],.65);
 const length=route.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-route[i][0],b[1]-route[i][1]),0);
 /** Seconds since this slot was last released from the hold. */
 export function flightPhase(seconds:number,slot:number){return ((seconds+FLIGHT_SCHEDULE.start-slot*FLIGHT_SCHEDULE.interval)%FLIGHT_SCHEDULE.cycle+FLIGHT_SCHEDULE.cycle)%FLIGHT_SCHEDULE.cycle;}
@@ -17,7 +18,7 @@ export function gateOccupied(seconds:number,gate:number){return gate===0||gate==
  * time stays fixed unless no circuit exit fits the hold window, when it gives up the difference (within limits). */
 export function loopTiming(circuit?:FlightCircuit){
  const approach=arrivalApproach(circuit),leave=exitTime(approach,FLIGHT_SCHEDULE.taxi),hold=FLIGHT_SCHEDULE.cycle-leave-legsTotal(approach);
- const fix=hold<LOOP.holdMin?Math.max(hold-LOOP.holdMin,8-ARRIVAL.dwell):hold>LOOP.holdMax?Math.min(hold-LOOP.holdMax,5):0;
+ const fix=hold<LOOP.holdMin?Math.max(hold-LOOP.holdMin,8-ARRIVAL.dwell):hold>LOOP.holdMax?Math.min(hold-LOOP.holdMax,LOOP.standExtra):0;
  return {approach,leave,dwell:ARRIVAL.dwell+fix,hold:hold-fix};
 }
 /** Hold, taxi, takeoff, circuit, approach, landing and turnaround all use the paused/reduced-motion-aware clock. */
@@ -35,7 +36,8 @@ export function fleetPose(seconds:number,slot:number,circuit?:FlightCircuit){
   // Takeoff and the turn onto the circuit run in real time; the circuit itself plays a little faster.
   const join=DEPARTURE_TIMES.join,flightTime=elapsed<join?elapsed:join+(elapsed-join)*CIRCUIT_PACE;
   const p=departurePose(Math.min(flightTime,approach.exitDep),true,circuit);
-  return {...p,x:DEPARTURE_ORIGIN.x+p.x,z:DEPARTURE_ORIGIN.z+p.z,y:p.y-.28,yaw:phase<f.taxi+3?0:p.yaw,visible:true};
+  const q=departureToLocal(p);
+  return {...q,y:p.y-.28,yaw:phase<f.taxi+3?Math.PI:q.yaw,visible:true};
  }
  return arrivalPose(phase-leave,approach,dwell);
 }
