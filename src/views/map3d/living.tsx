@@ -1,6 +1,6 @@
-import {flightClearance,privateJetPose} from './flightClearance';
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
+import { MAP_FLEET } from "./mapFleet";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -11,7 +11,11 @@ import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
 import { marinaSite } from "./marinaPlan";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible } from "./vehicles";
+import { trafficFlow } from "./trafficFlow";
+import { harbourLoop, yachtBerth } from "./yachtPlan";
+import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
+import { travelPlan, TRAVEL_CLOCK } from "./travelLoops";
+import { FigureMeshes, useFigures } from "./CityFigures";
 
 type G = ReturnType<typeof useGeometries>;
 type M = ReturnType<typeof useMaterials>;
@@ -80,7 +84,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
   );
 }
 
-const BOATS = 8;
+const BOATS = MAP_FLEET.boats;
 const BOAT_SPEED = 0.22;
 const STROLL_SPEED = 0.12;
 const CLOTHES = ["#c96f53", "#4f78a8", "#e0c068", "#6d9b6a", "#9a74b8"];
@@ -105,10 +109,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   useEffect(()=>()=>{boatGeometry.hull.dispose();boatGeometry.cabin.dispose();},[boatGeometry]);
   const cabin = useRef<THREE.InstancedMesh>(null);
   const light = useRef<THREE.InstancedMesh>(null);
-  const body = useRef<THREE.InstancedMesh>(null);
-  const head = useRef<THREE.InstancedMesh>(null);
-  const passengers = useRef<THREE.InstancedMesh>(null);
-  const passengerHeads = useRef<THREE.InstancedMesh>(null);
+  const sailors = useFigures(BOATS * 2);
   const walkers = useMemo(() => {
     const seen = new Set<string>();
     return scene.walks.filter(w => {
@@ -121,23 +122,15 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
       return {...w,route,lengths,len:lengths.reduce((a,b)=>a+b,0)};
     });
   }, [scene]);
+  const strollers = useFigures(walkers.length);
 
   // A rounded loop around the island, clear of the cliffs and waterfalls.
   const loop = useMemo(() => {
     const b = scene.bounds;
-    const pad = 4.6;
-    const {x:harborX,pierZ,shoreZ,cityWalkZ}=marinaSite(scene,TERRACE_H);
+    const marina=marinaSite(scene,TERRACE_H),{x:harborX,pierZ,shoreZ,cityWalkZ}=marina;
+    // The circuit swings south of Atlas and in behind her stern to the dock (yachtPlan.harbourLoop).
     const curve = new THREE.CatmullRomCurve3(
-      [
-        [b.x0 - pad, b.z0 - pad],
-        [(b.x0 + b.x1) / 2, b.z0 - pad * 1.3],
-        [b.x1 + pad, b.z0 - pad],
-        [b.x1 + pad * 1.3, (b.z0 + b.z1) / 2],
-        [b.x1 + pad, b.z1 + pad],
-        [harborX, pierZ + 1.4],
-        [b.x0 - pad, b.z1 + pad],
-        [b.x0 - pad * 1.3, (b.z0 + b.z1) / 2],
-      ].map(([x, z]) => new THREE.Vector3(x, WATER_Y + 0.02, z)),
+      harbourLoop(b,marina,yachtBerth(marina)).map(([x, z]) => new THREE.Vector3(x, WATER_Y + 0.02, z)),
       true,
       "centripetal",
     );
@@ -187,19 +180,17 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
           const along=(j?0.2:-0.2)*size;
           const px=p.x+Math.cos(yaw)*along, pz=p.z-Math.sin(yaw)*along;
           const visible=pedestrianAllowed(scene.pedestrianExclusion,px,pz)?1:0;
-          o.rotation.set(0,yaw,0);o.position.set(px,p.y+0.13+bob,pz);o.scale.set(0.055*visible,0.12*visible,0.055*visible);o.updateMatrix(); passengers.current?.setMatrixAt(i*2+j,o.matrix);
-          o.position.y=p.y+0.28+bob;o.scale.setScalar(0.03*visible);o.updateMatrix();passengerHeads.current?.setMatrixAt(i*2+j,o.matrix);
+          // Standing on deck, arms and legs at rest while the boat carries them.
+          if(visible)sailors.put(i*2+j,px,p.y+0.135+bob,pz,yaw,true);else sailors.hide(i*2+j);
         }
       }
       h.instanceMatrix.needsUpdate = cb.instanceMatrix.needsUpdate = l.instanceMatrix.needsUpdate = true;
       if(yachtDeck.current) yachtDeck.current.instanceMatrix.needsUpdate=true;
       if(yachtRoof.current) yachtRoof.current.instanceMatrix.needsUpdate=true;
-      if(passengers.current) passengers.current.instanceMatrix.needsUpdate=true;
-      if(passengerHeads.current) passengerHeads.current.instanceMatrix.needsUpdate=true;
+      sailors.commit();
     }
-    const bd = body.current;
-    const hd = head.current;
-    if (bd && hd) {
+    if (walkers.length) {
+      strollers.begin(t);
       beginPedestrianFrame();
       walkers.forEach((w, i) => {
         const {route,lengths,len}=w;
@@ -226,33 +217,22 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
         const z = a.gy + dz*distance + dx*side;
         if(!pedestrianAllowed(scene.pedestrianExclusion,x,z))visitorScale=0;
         if(visitorScale>0) reportPedestrian(x,z);
-        const step = moving ? Math.abs(Math.sin(t * 7 + i)) * 0.008 : 0;
         const sidewalkLift = Math.abs(side) > 0.2 ? 0.05 : 0;
-        o.rotation.set(0, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI), 0);
-        o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.02 + step, z);
-        o.scale.set(0.07*visitorScale, 0.16*visitorScale, 0.06*visitorScale);
-        o.updateMatrix();
-        bd.setMatrixAt(i, o.matrix);
-        o.position.set(x, (w.y ?? 0) + sidewalkLift + 0.21 + step, z);
-        o.scale.setScalar(0.035*visitorScale);
-        o.updateMatrix();
-        hd.setMatrixAt(i, o.matrix);
+        if (visitorScale > 0) strollers.put(i, x, (w.y ?? 0) + sidewalkLift + 0.02, z, Math.atan2(dx, dz) + (ph < leg+pause ? 0 : Math.PI));
+        else strollers.hide(i);
       });
-      bd.instanceMatrix.needsUpdate = hd.instanceMatrix.needsUpdate = true;
+      strollers.commit();
     }
   };
 
   useEffect(() => {
     const c = new THREE.Color();
-    walkers.forEach((_, i) => body.current?.setColorAt(i, c.set(CLOTHES[i % CLOTHES.length])));
-    if (body.current?.instanceColor) body.current.instanceColor.needsUpdate = true;
-    walkers.forEach((_, i) => head.current?.setColorAt(i, c.set(i % 3 ? "#e3b994" : "#9c6b4a")));
-    if (head.current?.instanceColor) head.current.instanceColor.needsUpdate = true;
+    walkers.forEach((_, i) => strollers.color(i, CLOTHES[i % CLOTHES.length], i % 3 ? "#e3b994" : "#9c6b4a"));
+    strollers.colored();
     for (let i = 0; i < BOATS; i++) hull.current?.setColorAt(i, c.set(["#f4f1e8","#427fa4","#d36b58","#65a593","#dfbd67","#8f80b2","#d5dce2","#33556e"][i]));
     if (hull.current?.instanceColor) hull.current.instanceColor.needsUpdate = true;
-    for(let i=0;i<BOATS*2;i++) { passengers.current?.setColorAt(i,c.set(CLOTHES[i%CLOTHES.length]));passengerHeads.current?.setColorAt(i,c.set(i%3?"#e3b994":"#9c6b4a")); }
-    if(passengers.current?.instanceColor) passengers.current.instanceColor.needsUpdate=true;
-    if(passengerHeads.current?.instanceColor) passengerHeads.current.instanceColor.needsUpdate=true;
+    for(let i=0;i<BOATS*2;i++) sailors.color(i,CLOTHES[i%CLOTHES.length],i%3?"#e3b994":"#9c6b4a");
+    sailors.colored();
     place(clock.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walkers, loop]);
@@ -265,23 +245,16 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
 
   return (
     <group>
-      <CityFlyover scene={scene} g={g} m={m} moving={moving} />
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
       <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
-      <instancedMesh ref={passengers} args={[g.cyl,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
-      <instancedMesh ref={passengerHeads} args={[g.ball,m.plain,BOATS*2]} frustumCulled={false} raycast={()=>null} />
+      <FigureMeshes f={sailors} g={g} m={m} shadow={false} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={yachtDeck} args={[boatGeometry.hull,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={yachtRoof} args={[g.box,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
       <instancedMesh ref={cabin} args={[boatGeometry.cabin, m.darkGlass, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={light} args={[g.ball, m.lamp, BOATS]} frustumCulled={false} raycast={() => null} />
-      {walkers.length > 0 && (
-        <>
-          <instancedMesh ref={body} args={[g.cyl, m.plain, walkers.length]} frustumCulled={false} raycast={() => null} />
-          <instancedMesh ref={head} args={[g.ball, m.foliage, walkers.length]} frustumCulled={false} raycast={() => null} />
-        </>
-      )}
+      <FigureMeshes f={strollers} g={g} m={m} shadow={false} />
     </group>
   );
 }
@@ -302,8 +275,11 @@ export function MapRenderer() {
  * project data or agent activity. Frozen in place when motion is off.
  */
 export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; moving: boolean }) {
-  const plans = useMemo(() => [...planVehicles(scene),...planDealershipTraffic(scene),...planHighwayTraffic(scene)], [scene]);
+  // Three of the city's cars run the travel loops' shuttle rounds (travelLoops.ts), so the fleet stays the same size.
+  const plans = useMemo(() => { const travel = travelPlan(scene), shuttles = travel?.shuttles.map((s) => s.plan) ?? []; return [...planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), ...shuttles, ...(travel?.traffic ?? []), ...planDealershipTraffic(scene), ...planHighwayTraffic(scene)]; }, [scene]);
   const parts = useMemo(() => plans.flatMap((v, i) => MODELS[v.kind].parts.map((p) => ({ v: i, p, color: p.color ?? v.color }))), [plans]);
+  // Shared car following (trafficFlow.ts): each vehicle's own progress along its route.
+  const flow = useMemo(() => trafficFlow(plans, trafficJunctions(scene), () => (TRAVEL_CLOCK.live ? TRAVEL_CLOCK.t : undefined)), [plans, scene]);
   const mats = useMemo(
     () => ({
       head: focusable(new THREE.MeshStandardMaterial({ color: "#f3ead4", emissive: "#fff1d2", emissiveIntensity: 0, roughness: 0.4 })),
@@ -317,7 +293,6 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
   const tails = useRef<THREE.InstancedMesh>(null);
   const pools = useRef<THREE.InstancedMesh>(null);
   const tmp = useMemo(() => ({ base: new THREE.Matrix4(), part: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(0, 0, 0, "YZX"), p: new THREE.Vector3(), s: new THREE.Vector3(), one: new THREE.Quaternion() }), []);
-  const clock = useRef(0);
   const yaw = useRef<number[]>([]);
   const pitch = useRef<number[]>([]);
   const y0 = TERRACE_H + 0.03;
@@ -335,11 +310,11 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
       return cur + diff * (1 - Math.exp(-dt * rate));
     };
     const pose = plans.map((v, i) => {
-      const at = vehicleAt(v, clock.current);
+      const at = vehicleAt(v, flow.times[i]);
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
-      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,clock.current)?1:0));
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,flow.times[i])?1:0));
     });
     // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
@@ -377,14 +352,14 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     mats.tail.emissiveIntensity = k * 1.3;
     if (!moving) return;
     const dt = Math.min(delta, 0.1);
-    clock.current += dt;
+    flow.step(dt);
     place(dt);
   });
 
   if (!plans.length) return null;
   return (
     <group name="atlas-road-traffic">
-      {plans.map(v=><VehicleBadge key={v.id} plan={v} moving={moving} />)}
+      {plans.map((v,i)=><VehicleBadge key={v.id} plan={v} time={()=>flow.times[i]} />)}
       <instancedMesh ref={body} args={[g.box, m.plain, parts.length]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={heads} args={[g.ball, mats.head, plans.length * 2]} frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={tails} args={[g.box, mats.tail, plans.length * 2]} frustumCulled={false} raycast={() => null} />
@@ -396,21 +371,15 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 /** Timber pier, berthing platform and navigation lights outside the southern shoreline. */
 /** Visitors follow the stair treads in both directions, then stroll along the pier. */
 function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"] }) {
-  const bodies = useRef<THREE.InstancedMesh>(null);
-  const heads = useRef<THREE.InstancedMesh>(null);
+  const people = useFigures(8);
   const elapsed = useRef(0);
-  const object = useMemo(() => new THREE.Object3D(), []);
   useEffect(() => {
-    const color = new THREE.Color();
-    for (let i=0;i<8;i++) {
-      bodies.current?.setColorAt(i,color.set(CLOTHES[i%CLOTHES.length]));
-      heads.current?.setColorAt(i,color.set(i%3 ? "#e3b994" : "#9c6b4a"));
-    }
-    if(bodies.current?.instanceColor) bodies.current.instanceColor.needsUpdate=true;
-    if(heads.current?.instanceColor) heads.current.instanceColor.needsUpdate=true;
-  }, []);
+    for (let i=0;i<8;i++) people.color(i,CLOTHES[i%CLOTHES.length],i%3 ? "#e3b994" : "#9c6b4a");
+    people.colored();
+  }, [people]);
   useFrame((_,dt) => {
     if(moving) elapsed.current += Math.min(dt,0.1);
+    people.begin(elapsed.current);
     const start=cityZ-0.2, end=z+1.05, length=end-start;
     const cityTop=TERRACE_H+0.03, dockTop=WATER_Y+0.22;
     for(let i=0;i<8;i++) {
@@ -420,16 +389,12 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:nu
       const stairProgress=Math.max(0,Math.min(1,(along-(z-1.8))/1.8));
       const tread=Math.min(12,Math.floor(stairProgress*12)+1);
       const floor=along<z-1.8?cityTop:along>=z?dockTop:cityTop-(cityTop-dockTop)*tread/12;
-      object.rotation.set(0,down?0:Math.PI,0);
-      object.position.set(x+(down?-0.12:0.12),floor+0.02,along);
-      const visible=pedestrianAllowed(exclusion,object.position.x,along)?1:0;
-      object.scale.set(0.07*visible,0.16*visible,0.06*visible);object.updateMatrix();bodies.current?.setMatrixAt(i,object.matrix);
-      object.position.y=floor+0.21;object.scale.setScalar(0.035*visible);object.updateMatrix();heads.current?.setMatrixAt(i,object.matrix);
+      const px=x+(down?-0.12:0.12);
+      if(pedestrianAllowed(exclusion,px,along))people.put(i,px,floor+0.02,along,down?0:Math.PI);else people.hide(i);
     }
-    if(bodies.current) bodies.current.instanceMatrix.needsUpdate=true;
-    if(heads.current) heads.current.instanceMatrix.needsUpdate=true;
+    people.commit();
   });
-  return <group><instancedMesh ref={bodies} args={[g.cyl,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/><instancedMesh ref={heads} args={[g.ball,m.plain,8]} castShadow frustumCulled={false} raycast={()=>null}/></group>;
+  return <group><FigureMeshes f={people} g={g} m={m}/></group>;
 }
 
 function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M}) {
@@ -470,53 +435,22 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
   return <group><Instanced items={parts.deck} geometry={g.box} material={m.plain}/><Instanced items={parts.posts} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={m.lamp}/></group>;
 }
 
-/** Executive jet; shared geometry and the existing decorative waterfront circuit. */
-function CityFlyover({scene,g,m,moving}:{scene:Scene3D;g:G;m:M;moving:boolean}) {
-  const group=useRef<THREE.Group>(null), time=useRef(0);
-  const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
-  const jet=useMemo(()=>({
-    body:[
-      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
-      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
-      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
-      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
-      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
-    ] as Inst[],
-    trim:[
-      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
-      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
-      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
-      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
-      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
-      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
-    ] as Inst[],
-  }),[]);
-  useFrame((_,dt)=>{
-    if(moving)time.current+=Math.min(dt,0.1);
-    if(!group.current)return;
-    const pose=privateJetPose(scene.bounds,safeFlight.altitude,time.current);
-    group.current.visible=true;
-    group.current.position.set(pose.x,TERRACE_H+pose.y,pose.z);
-    group.current.rotation.set(0,pose.yaw,pose.roll);
-  });
-  return <group ref={group}><Instanced items={jet.body} geometry={g.ball} material={m.plain}/><Instanced items={jet.trim} geometry={g.box} material={m.plain}/></group>;
+
+/** One lettering material per livery and body colour, shared by every vehicle that wears it. */
+const BADGES=new Map<string,THREE.MeshBasicMaterial>();
+function badgeMaterial(text:string,ink:string,body:string){
+  const key=`${text}|${ink}|${body}`;let material=BADGES.get(key);if(material)return material;
+  const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
+  ctx.fillStyle=body;ctx.fillRect(0,0,256,96);ctx.fillStyle=ink;ctx.font=`bold ${text.length>6?40:64}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,128,50,245);
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  material=new THREE.MeshBasicMaterial({map:texture});BADGES.set(key,material);return material;
 }
 
-function VehicleBadge({plan,moving}:{plan:ReturnType<typeof planVehicles>[number];moving:boolean}) {
-  const ref=useRef<THREE.Group>(null),clock=useRef(0);
-  const label=({amazon:"amazon",ups:"UPS",bus:"MTA"} as Record<string,string>)[plan.kind];
-  const badge=useMemo(()=>{
-    const c=document.createElement("canvas");c.width=256;c.height=96;const ctx=c.getContext("2d")!;
-    ctx.fillStyle=plan.color;ctx.fillRect(0,0,256,96);ctx.fillStyle=plan.kind==="ups"?"#e5bd62":"#ffffff";ctx.font="bold 64px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label??"",128,50,245);
-    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-    return {texture,material:new THREE.MeshBasicMaterial({map:texture})};
-  },[label,plan.color,plan.kind]);
-  useEffect(()=>()=>{badge.texture.dispose();badge.material.dispose();},[badge]);
-  useFrame((_,dt)=>{if(moving)clock.current+=Math.min(dt,0.1);if(!ref.current)return;const a=vehicleAt(plan,clock.current);ref.current.position.set(a.x,TERRACE_H+0.03+a.y,a.z);ref.current.rotation.y=Math.atan2(-a.dz,a.dx);});
+function VehicleBadge({plan,time}:{plan:ReturnType<typeof planVehicles>[number];time:()=>number}) {
+  const ref=useRef<THREE.Group>(null);
+  const livery=VEHICLE_LIVERY[plan.kind],label=livery?.text;
+  const badge=useMemo(()=>badgeMaterial(label??"",livery?.ink??"#ffffff",plan.color),[label,livery,plan.color]);
+  useFrame(()=>{if(!ref.current)return;const a=vehicleAt(plan,time());ref.current.position.set(a.x,TERRACE_H+0.03+a.y,a.z);ref.current.rotation.y=Math.atan2(-a.dz,a.dx);});
   if(!label)return null;
-  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge.material} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
+  return <group ref={ref} scale={SCALE}>{[-1,1].map(side=><mesh key={side} position={[-0.035,0.09,side*0.058]} rotation={[0,side<0?Math.PI:0,0]} material={badge} raycast={()=>null}><planeGeometry args={[0.115,0.04]}/></mesh>)}</group>;
 }

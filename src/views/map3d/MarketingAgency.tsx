@@ -78,7 +78,7 @@ function wordmark(){
   g.font='400 150px Georgia, "Times New Roman", serif';letterSpaced(g,'BENJAIRE',W/2,H*.43,26);
   const ry=H*.66,d=11;g.fillRect(W*.2,ry-1.5,W*.6,3);
   g.beginPath();g.moveTo(W/2,ry-d*1.4);g.lineTo(W/2+d,ry);g.lineTo(W/2,ry+d*1.4);g.lineTo(W/2-d,ry);g.closePath();g.fillStyle=night?'#000':'#ebe3d6';g.fill();g.strokeStyle=copper;g.lineWidth=3;g.stroke();
-  g.fillStyle=copper;g.font='500 40px -apple-system, "Helvetica Neue", Arial, sans-serif';letterSpaced(g,'MARKETING AGENCY',W/2,H*.81,14);
+  g.fillStyle=copper;g.font='500 40px -apple-system, "Helvetica Neue", Arial, sans-serif';letterSpaced(g,'DIGITAL STUDIO',W/2,H*.81,14);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
  };
  return {map:make(false),glow:make(true)};

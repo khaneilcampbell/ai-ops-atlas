@@ -10,21 +10,23 @@ const KIND: Record<string, string> = {
   dep: "Agent dependency from the agent registry",
   decl: "Connection declared in the project manifest",
   sync: "Repository data that Atlas reads from GitHub",
+  live: "A live building's module data, shown in Atlas",
 };
 
 /** The connection inspector, docked beside the map in place of the building inspector. */
 export function ConnectionPanel({ c, onClose }: { c: Connection; onClose: () => void }) {
   const { catalog, select } = useAtlas();
-  const name = (e: Endpoint) => (e.kind === "agent" ? catalog.agents.find((a) => a.id === e.id)?.name : catalog.projects.find((p) => p.id === e.id)?.name) ?? e.id;
+  const name = (e: Endpoint) => e.name ?? (e.kind === "agent" ? catalog.agents.find((a) => a.id === e.id)?.name : catalog.projects.find((p) => p.id === e.id)?.name) ?? e.id;
   const open = (e: Endpoint) => {
     if (e.kind === "agent") return select({ kind: "agent", id: e.id });
+    if (e.kind === "landmark") return select({ kind: "service", id: e.id });
     const p = catalog.projects.find((x) => x.id === e.id);
     if (p) select({ kind: "repo", id: p.repository });
   };
   const end = (e: Endpoint) => (
     <button className="text-btn" style={{ padding: 0, textAlign: "left" }} onClick={() => open(e)}>
       {name(e)}
-      <span className="muted small"> · {e.kind === "agent" ? "agent" : "project"}</span>
+      <span className="muted small"> · {e.kind === "agent" ? "agent" : e.kind === "landmark" ? "building" : "project"}</span>
     </button>
   );
   const list = (xs: string[]) => (xs.length ? xs.map((x) => <div key={x}>{x}</div>) : NA);

@@ -33,7 +33,8 @@ Mac app  ◀── GET /api/hooks/feed?after=N (Bearer USAGE_SYNC_TOKEN, same ca
 1. **GitHub App.** Settings → Developer settings → GitHub Apps → New. Webhook URL
    `https://ai-ops-atlas.pages.dev/api/hooks/github`, a random webhook secret
    (`openssl rand -hex 32`), permissions Actions: read and Contents: read, events
-   Workflow run, Workflow job and Push, "Only on this account".
+   Workflow run and Push, "Only on this account". Leave Workflow job off: the site ignores job
+   events, because they used most of D1's free 100,000 rows written a day.
 2. **Install** the app on All repositories.
 3. **Secret.** Cloudflare → Workers & Pages → ai-ops-atlas → Settings → Variables and Secrets:
    add `GITHUB_WEBHOOK_SECRET` (type Secret) with the same value.
@@ -50,8 +51,8 @@ The Mac app uses the website sync URL and key it already has; nothing to set the
 
 Pipelines that run elsewhere report each phase result to `POST /api/hooks/agents`, and Atlas
 shows them as the run history of the catalog agents whose manifest has
-`observe: { agent_feed: true }`. The commerce pipeline used it before it moved to n8n; its
-n8n workflows do not post to this feed yet, so Atlas shows no runs for them.
+`observe: { agent_feed: true }`. On n8n, Order Delivery and Approve and Publish post here
+(project `commerce-pipeline`); see [alerts.md](alerts.md#which-agents-are-watched).
 
 One report is one JSON object, at most 4 KB:
 

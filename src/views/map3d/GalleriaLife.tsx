@@ -6,6 +6,7 @@ import type {Scene3D} from './scene';
 import {Instanced,type Inst,type useGeometries,type useMaterials} from './models';
 import {FLEET_STRIDE,carBoxes} from './galleriaFleet';
 import {STREET_ASPHALT,STREET_LINE} from './transportScale';
+import {FigureMeshes,useFigures} from './CityFigures';
 import {CAR_SURFACE,GALLERIA_LIFE,carHeight,driverAt,planGalleriaLife,walkerAt} from './galleriaLifePlan';
 
 const COATS=['#346583','#a18455','#6d875e','#846798','#ab6355','#2f3a45'];
@@ -54,19 +55,16 @@ export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:
  },[life,y,L]);
 
  const enabled=moving&&focused&&power.idleFps>15,elapsed=useRef(0);
- const bodies=useRef<THREE.InstancedMesh>(null),faces=useRef<THREE.InstancedMesh>(null),cars=useRef<THREE.InstancedMesh>(null);
+ const cars=useRef<THREE.InstancedMesh>(null);
  const people=(life?.walkers.length??0)+(life?.drivers.length??0),fleet=life?.drivers.length??0;
- const o=useMemo(()=>new THREE.Object3D(),[]);
+ const o=useMemo(()=>new THREE.Object3D(),[]),crowd=useFigures(people);
  const place=(t:number)=>{
   if(!life)return;let i=0;
-  const person=(p:ReturnType<typeof walkerAt>,step:number)=>{
-   if(p.visible){o.position.set(p.x,y+.02+step,p.z);o.rotation.set(0,p.yaw,0);o.scale.set(.07,.16,.06);}else o.scale.setScalar(0);
-   o.updateMatrix();bodies.current?.setMatrixAt(i,o.matrix);
-   if(p.visible){o.position.y=y+.23+step;o.scale.setScalar(.035);}o.updateMatrix();faces.current?.setMatrixAt(i,o.matrix);i++;
-  };
-  life.walkers.forEach((w,k)=>person(walkerAt(w,t),Math.abs(Math.sin(t*6+k))*.008));
+  crowd.begin(t);
+  const person=(p:ReturnType<typeof walkerAt>)=>{if(p.visible)crowd.put(i,p.x,y+.02,p.z,p.yaw);else crowd.hide(i);i++;};
+  life.walkers.forEach(w=>person(walkerAt(w,t)));
   life.drivers.forEach((d,k)=>{
-   const {person:p,car}=driverAt(d,t);person(p,Math.abs(Math.sin(t*6+k))*.008);
+   const {person:p,car}=driverAt(d,t);person(p);
    // Each car is FLEET_STRIDE boxes of one shared mesh; a model with fewer parts hides the rest.
    const parts=car.visible?carBoxes(d.car.kind,d.car.c,[car.x,car.z],car.yaw,y+carHeight(life,car.x,car.z)):[];
    for(let j=0;j<FLEET_STRIDE;j++){
@@ -74,13 +72,13 @@ export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:
     o.updateMatrix();cars.current?.setMatrixAt(k*FLEET_STRIDE+j,o.matrix);
    }
   });
-  for(const r of [bodies,faces,cars])if(r.current)r.current.instanceMatrix.needsUpdate=true;
+  crowd.commit();if(cars.current)cars.current.instanceMatrix.needsUpdate=true;
  };
  useLayoutEffect(()=>{
   if(!life)return;const c=new THREE.Color();
-  for(let i=0;i<people;i++){bodies.current?.setColorAt(i,c.set(COATS[i%COATS.length]));faces.current?.setColorAt(i,c.set(i%3?'#dfb996':'#9b6d50'));}
+  for(let i=0;i<people;i++)crowd.color(i,COATS[i%COATS.length],i%3?'#dfb996':'#9b6d50');crowd.colored();
   life.drivers.forEach((d,k)=>carBoxes(d.car.kind,d.car.c,[0,0],0).forEach((b,j)=>cars.current?.setColorAt(k*FLEET_STRIDE+j,c.set(b.c))));
-  for(const r of [bodies,faces,cars])if(r.current?.instanceColor)r.current.instanceColor.needsUpdate=true;
+  if(cars.current?.instanceColor)cars.current.instanceColor.needsUpdate=true;
   place(elapsed.current);
   // Posed once when paused; frames then do the work only while moving.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,8 +92,7 @@ export function GalleriaLife({scene,plan,g,m,night,moving}:{scene:Scene3D;plan?:
   <Instanced items={fixed.poles} geometry={g.box} material={m.plain}/>
   <Instanced items={fixed.heads} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/>
   {night&&<Instanced items={fixed.pools} geometry={g.cyl} material={glow} shadow={false}/>}
-  <instancedMesh name="galleria-shoppers" ref={bodies} args={[g.cyl,m.plain,people]} castShadow frustumCulled={false} raycast={()=>null}/>
-  <instancedMesh ref={faces} args={[g.ball,m.plain,people]} frustumCulled={false} raycast={()=>null}/>
+  <FigureMeshes f={crowd} g={g} m={m} name="galleria-shoppers"/>
   {fleet>0&&<instancedMesh name="galleria-cars" ref={cars} args={[g.box,m.plain,fleet*FLEET_STRIDE]} castShadow frustumCulled={false} raycast={()=>null}/>}
  </group>;
 }

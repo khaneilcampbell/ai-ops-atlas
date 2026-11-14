@@ -7,13 +7,12 @@
 
 import { isReportAgent, MAX_REPORT_BYTES, reportLine, validReport, type StoredReport } from "../src/reports/model";
 import { bearerOk, ensureSchema as ensureFeed, type D1, type LiveEnv } from "./live";
+import { reply } from "./http";
 
 export const REPORTS_PATH = "/api/hooks/reports";
 export const KEEP_REPORTS = 20;
 export const READ_LIMIT = 10;
 
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS agent_reports (id INTEGER PRIMARY KEY AUTOINCREMENT, agent TEXT NOT NULL, at TEXT NOT NULL, body TEXT NOT NULL)",

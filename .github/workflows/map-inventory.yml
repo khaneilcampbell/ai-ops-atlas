@@ -1,0 +1,62 @@
+# Atlas Data Inventory: after every merge to main, write everything on the map (buildings, which
+# agents work where, and the cars, planes, boats, trains and people) to atlas-inventory.json on the
+# `atlas-inventory` branch. The Atlas Data Inventory n8n workflow (Data Intelligence Center) reads
+# that file and writes the inventory tabs of the Agent Registry sheet. No model calls, no secrets:
+# the job only pushes the one generated file to its own data branch, never to main.
+name: Map inventory
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  pull_request:
+    paths: [src/inventory/**, .github/workflows/map-inventory.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the inventory
+        env:
+          ATLAS_INVENTORY_OUT: ${{ runner.temp }}/atlas-inventory.json
+        run: |
+          npm run inventory
+          node -e "const d=require(process.argv[1]);console.log(d.buildings.length+' buildings, '+d.agents.length+' agents, '+d.objects.length+' object rows')" "$ATLAS_INVENTORY_OUT"
+      # Pull requests only check that the file builds. Main publishes it to the data branch.
+      - name: Publish to the atlas-inventory branch
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILE: ${{ runner.temp }}/atlas-inventory.json
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/data"
+          mkdir -p "$dir" && cd "$dir"
+          git init -q -b atlas-inventory
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 "$remote" atlas-inventory 2>/dev/null; then git reset -q --soft FETCH_HEAD; fi
+          cp "$FILE" atlas-inventory.json
+          git add atlas-inventory.json
+          if git diff --cached --quiet; then echo "Inventory unchanged."; exit 0; fi
+          git commit -q -m "Map inventory for ${GITHUB_SHA::7}"
+          git push -q "$remote" HEAD:atlas-inventory

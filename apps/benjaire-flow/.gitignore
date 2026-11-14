@@ -1,0 +1,2 @@
+# Flow kit zips built with build/pack.py; attach them to a GitHub release, never commit them.
+dist/

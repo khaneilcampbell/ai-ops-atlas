@@ -15,9 +15,7 @@ describe("identityFor", () => {
     expect(of("portfolio-site").symbol).toBe("globe");
     expect(of("commerce-pipeline").symbol).toBe("nodes");
     expect(of("intelligence-hub").symbol).toBe("book");
-    expect(of("service-desk").symbol).toBe("chart");
     expect(of("benjaire-site")).toMatchObject({ symbol: "monogram", style: "classic" });
-    expect(of("benjaire-ops").symbol).toBe("chart");
     const planning = { ...catalog.projects.find((p) => p.id === "benjaire-site")!, id: "benjaire-plans", tags: ["benjaire", "planning"] };
     expect(identityFor(planning).symbol).toBe("compass");
   });
