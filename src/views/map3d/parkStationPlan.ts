@@ -4,7 +4,7 @@ import type {Pt} from './roads';
 import {stationPoint,type RailStop} from './perimeterRailPlan';
 
 /**
- * Financial Park station, after Dubai's rail architecture (KC, 2026-10-31): a Dubai Metro style
+ * Financial Park station, after Dubai's rail architecture (Khaneil, 2026-10-31): a Dubai Metro style
  * shell over the platform (Aedas' metro stations) and an enclosed, glazed skybridge with sweeping
  * arch ribs down to the park, like the Al Yalayis link between Etihad Rail and the Metro.
  * Everything is boxes on the shared instanced geometry: no new lights and no new meshes per frame.

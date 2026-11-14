@@ -1,8 +1,8 @@
 import {STADIUM,STADIUM_SCALE,sideGateFeet} from '../map3d/stadiumGeometry';
 
 /**
- * Atlas Stadium interior (KC, 2026-11-07: "add interior to be able to enter the building"; then
- * the steel-truss arena from KC's reference). Interior units are the map stadium at the cutaway
+ * Atlas Stadium interior (Khaneil, 2026-11-07: "add interior to be able to enter the building"; then
+ * the steel-truss arena from Khaneil's reference). Interior units are the map stadium at the cutaway
  * scale CityOutside uses (4 interior units per map unit), so the hall lines up with the plaza and
  * city seen outside. Origin at the stadium centre (the main hall's centre), x east towards the
  * main gate, z south, y up from the plaza.

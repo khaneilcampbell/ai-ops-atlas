@@ -92,7 +92,7 @@ export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
 /**
  * Lots of removed towers whose manifest is gone too. Career Applications' repository
  * (khaneilcampbell/career-application-system) was deleted on GitHub and its catalog file removed
- * (KC, 2026-11-10), but its land stays a vacant lot so no other building moves. Each entry holds only
+ * (Khaneil, 2026-11-10), but its land stays a vacant lot so no other building moves. Each entry holds only
  * what the layout reads: the lot's size comes from a district with nothing in it (5 across, as
  * before), its groupings from the old manifest, and it goes right after `after` in catalog order.
  */
@@ -250,9 +250,9 @@ export function districtSize(lotCount: number, projectId?: string) {
 /**
  * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
  * and its grounds. The Commerce district holds the teardrop tower and its garden podium
- * (KC, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
+ * (Khaneil, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
  * about twice its usual land (7.5 across, from 5: 2.25x the area, the nearest step on the grid),
- * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
+ * and its building widens with it by the usual HQ share (Khaneil, 2026-11-08: "expand intelligence hub
  * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
 export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5, "portfolio-site": 7.5 };
@@ -260,7 +260,7 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
- * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
+ * the tower (Khaneil, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
 export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
 const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);

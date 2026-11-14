@@ -3,7 +3,7 @@ import {AIRPORT_LAYOUT,AIRCRAFT_LAYOUT} from './airport';
 import {ATLAS_HQ_COLORS as HQ} from './airportPalette';
 import {AIRPORT_STOREY_SCALE as S} from './airportBuildings';
 
-/** Atlas Airport terminal, redesigned (KC, 2026-10-31): an oval glass hub under a white ribbed shell,
+/** Atlas Airport terminal, redesigned (Khaneil, 2026-10-31): an oval glass hub under a white ribbed shell,
  * a glazed pier with rounded ends, a twisted control tower and an oval car park. Procedural shapes only,
  * airport-local coordinates, all drawn with shared instanced meshes (no new lights or textures). */
 export const TERMINAL_HUB={x:1.5,z:6,rx:1.9,rz:5,glass:1.85*S,eave:1.92*S,dome:.42*S,mezzanine:1.2*S} as const;

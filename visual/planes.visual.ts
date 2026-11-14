@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
-/** Airport takeoff stages and airline liveries (KC, 2026-10-31). Not a baseline check: it writes
+/** Airport takeoff stages and airline liveries (Khaneil, 2026-10-31). Not a baseline check: it writes
  * close-up screenshots to SHOT_DIR for before/after comparison. Reduced motion keeps the airport
  * clock still, so each shot sets that clock directly and lets one frame place the aircraft. */
 const out = process.env.SHOT_DIR ?? "artifacts/planes";

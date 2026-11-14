@@ -4,7 +4,7 @@ import {isRibbonTower} from './ribbonTowerPlan';
 import {isCommerceTower} from './commerceTowerPlan';
 
 /**
- * The custom-built HQs stand with the Financial District (KC, 2026-10-31: "make the building bigger
+ * The custom-built HQs stand with the Financial District (Khaneil, 2026-10-31: "make the building bigger
  * to align with the size of Financial district buildings ... correlate"). Each one's roof is a share
  * of the same reference height the Financial District towers rise from, so whenever the city's
  * scale changes, both move together. The shortest Financial tower is 1.08 of that reference, so

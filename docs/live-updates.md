@@ -7,7 +7,7 @@ what it last reported.
 ## How it works
 
 ```
-GitHub App "KC Atlas Live" ──webhook──▶ POST /api/hooks/github  (HMAC, GITHUB_WEBHOOK_SECRET)
+GitHub App "Khaneil Atlas Live" ──webhook──▶ POST /api/hooks/github  (HMAC, GITHUB_WEBHOOK_SECRET)
 Mac app (Repository Intelligence) ────▶ POST /api/hooks/atlas   (Bearer USAGE_SYNC_TOKEN)
 Outside pipelines ────────────────────▶ POST /api/hooks/agents  (Bearer AGENT_FEED_TOKEN)
 Opportunity Scout (GitHub Actions) ───▶ POST /api/hooks/reports (Bearer AGENT_FEED_TOKEN)

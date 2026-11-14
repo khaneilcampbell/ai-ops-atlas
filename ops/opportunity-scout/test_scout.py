@@ -24,7 +24,7 @@ def idea(title, revenue=3, effort=3, cost=3, risk=3, reuses=("site-ci",)):
 def spec(**extra):
     return {"idea": "Audit service", "name": "Audit Seller", "purpose": "Drafts site audit offers", "trigger": "Weekly",
             "schedule": "Mon 09:00 UTC", "inputs": ["Site audit report"], "outputs": ["Draft offer"],
-            "monthly_cap_usd": 2.0, "building": "portfolio-site", "approval_point": "KC approves every offer before it is sent", **extra}
+            "monthly_cap_usd": 2.0, "building": "portfolio-site", "approval_point": "Khaneil approves every offer before it is sent", **extra}
 
 
 DIGEST = {
@@ -127,7 +127,7 @@ class Report(unittest.TestCase):
         text = sc.report_markdown(r, DIGEST)
         self.assertIn("| 1 | Audit service | Service | Small shops | ~14d | $2.50 | 5 | 3 | 4 | 4 | 4.2 |", text)
         self.assertIn("### Agent spec: Audit Seller", text)
-        self.assertIn("KC approves every offer", text)
+        self.assertIn("Khaneil approves every offer", text)
         hidden = sc.report_markdown(r, DIGEST, publish_details=False)
         self.assertNotIn("Audit Seller", hidden)
         self.assertNotIn("Small shops", hidden)

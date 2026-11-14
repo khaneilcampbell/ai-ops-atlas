@@ -1,6 +1,6 @@
 import { ALERT_LABEL, type AlertKind, type RepoAlerts, type SecuritySnapshot } from "./types";
 
-// Security incidents for the Security Operations Center: the open GitHub alerts that need KC now,
+// Security incidents for the Security Operations Center: the open GitHub alerts that need Khaneil now,
 // raised from the same counts the Security alerts list shows (src/security/alerts.ts). Atlas sees
 // counts and severities only, never alert details, so an incident says how many and where to look.
 // - Any open secret scanning alert is critical: a leaked secret has no severity and must be rotated.

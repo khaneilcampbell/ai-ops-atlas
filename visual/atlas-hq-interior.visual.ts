@@ -1,7 +1,7 @@
 import {mkdirSync} from "node:fs";
 import {test} from "@playwright/test";
 import {openAtlas,selectBuilding,settle,waitForOffice} from "./atlas";
-/** Atlas HQ interior matched to the curving glass exterior (KC, 2026-10-31). Writes floor views, day and night. */
+/** Atlas HQ interior matched to the curving glass exterior (Khaneil, 2026-10-31). Writes floor views, day and night. */
 const out=process.env.SHOT_DIR??"artifacts/atlas-hq-interior";
 for(const light of ["day","night"] as const)test(`Atlas HQ interior, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});

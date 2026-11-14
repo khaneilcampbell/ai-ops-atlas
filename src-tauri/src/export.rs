@@ -1,4 +1,4 @@
-//! Saves files the app makes (today: agent report PDFs) where KC picks, through the native save
+//! Saves files the app makes (today: agent report PDFs) where Khaneil picks, through the native save
 //! dialog. The page hands over the bytes; only a PDF of bounded size is written, and only to the
 //! path the dialog returned.
 
@@ -24,7 +24,7 @@ pub fn clean_name(name: &str) -> String {
     }
 }
 
-/// Asks where to save, then writes the PDF. `false` when KC cancelled the dialog.
+/// Asks where to save, then writes the PDF. `false` when Khaneil cancelled the dialog.
 #[tauri::command]
 pub async fn save_pdf(app: AppHandle, name: String, bytes: Vec<u8>) -> Result<bool, String> {
     if bytes.len() > MAX_BYTES || !bytes.starts_with(b"%PDF-") {

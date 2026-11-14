@@ -3,7 +3,7 @@ import {headquartersEnvelope} from './financialPlan';
 import {intelligenceHubHeight} from './intelligenceHubPlan';
 
 /**
- * The Portfolio Site as a slim apartment tower, after KC's reference (the G+M+8 apartment
+ * The Portfolio Site as a slim apartment tower, after Khaneil's reference (the G+M+8 apartment
  * building in Dhaka by Khetro Sthapati, Behance screenshots 2026-11-08): white render, brown brick
  * and timber slats on the left side and back, and on the faces the map looks at:
  * - front (+z): a balcony per floor on the left (white slab, brown slatted railing, warm window
@@ -21,7 +21,7 @@ import {intelligenceHubHeight} from './intelligenceHubPlan';
 export const PORTFOLIO_SITE={
  projectId:'portfolio-site',
  /**
-  * Ground floor plus twelve floors: the reference is G+8, but KC asked for it taller (2026-11-08),
+  * Ground floor plus twelve floors: the reference is G+8, but Khaneil asked for it taller (2026-11-08),
   * so the same floor repeats four more times and the roof stands near the old tower's height.
   */
  floors:12,

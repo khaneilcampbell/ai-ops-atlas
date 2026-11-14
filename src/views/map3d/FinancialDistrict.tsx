@@ -88,10 +88,10 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
   for(let i=1;i<b.approach.length;i++){const u=b.approach[i-1],v=b.approach[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);if(length>.01)solid.push({...box((u[0]+v[0])/2-a.x,.04,(u[1]+v[1])/2-a.z,.6,.04,length+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
  }
  // The western waterfront stays protected. With Circa next door the west wall stops short of the shared street, walks and promenade.
- // No wall on the east side: the district opens straight onto its neighbour (KC, 2026-11-09).
+ // No wall on the east side: the district opens straight onto its neighbour (Khaneil, 2026-11-09).
  const westWall=a.circa?F.northWalkZ-.5:a.d-.4;
  solid.push(box(.18,0,.2+westWall/2,.18,.35,westWall,'#c6c3b4'));
- // No wall on the street side or the station side either: the promenade and the station walks meet the neighbouring land level (KC, 2026-11-09).
+ // No wall on the street side or the station side either: the promenade and the station walks meet the neighbouring land level (Khaneil, 2026-11-09).
  for(const [x,z]of a.perimeterTrees){solid.push(box(x,0,z,.07,.7,.07,'#8b7f65'));plants.push(box(x,.9,z,F.perimeterTreeRadius,.8,F.perimeterTreeRadius,'#70956c'));}
  for(let x=1;x<a.w-1;x+=2.5)lights.push(box(x,.02,14.5,.06,.12,.06,'#ffffff'));
  return {solid,glass,clearGlass,tinted,tintedKeys,glow,clearKeys,bevelled,plants,lights,keys};
