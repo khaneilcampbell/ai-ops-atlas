@@ -603,6 +603,20 @@
    "automations": 0
   },
   {
+   "id": "service:atlas-gold-jet",
+   "name": "Atlas Gold Jet",
+   "kind": "Landmark",
+   "area": "Airport",
+   "status": "Planned",
+   "project": "",
+   "source": "src/views/map3d/goldJetPlan.ts",
+   "organization": "",
+   "module": "",
+   "agent_ids": [],
+   "ai_agents": 0,
+   "automations": 0
+  },
+  {
    "id": "service:logistics-airport",
    "name": "Atlas Airport",
    "kind": "Landmark",
@@ -1933,10 +1947,18 @@
   {
    "category": "Aircraft",
    "kind": "Airliner on the flight loop",
-   "count": 6,
+   "count": 5,
    "area": "Airport",
    "moves": true,
    "source": "src/views/map3d/airportArrivals.ts LOOP"
+  },
+  {
+   "category": "Aircraft",
+   "kind": "Gold private jet on the flight loop",
+   "count": 1,
+   "area": "Airport",
+   "moves": true,
+   "source": "src/views/map3d/goldJetPlan.ts GOLD_JET_SLOT"
   },
   {
    "category": "Aircraft",
@@ -2112,6 +2134,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-13T22:28:26.393Z",
- "commit": "e2671b72b05e28dacf9b8dee5e9d56e7e6e79275"
+ "generated_at": "2026-11-14T05:17:26.850Z",
+ "commit": "418f13a653afd5d3e1c3dc74d3143eb2647e7bc2"
 }
