@@ -70,6 +70,8 @@ agents:
         data_sensitivity: confidential
         credential_owner: KC (Worker secrets in the Cloudflare dashboard)
         risk: medium
+        kill_switch: 'Not live yet: benjaire.com pull request "security: add contact and checkout kill switches" adds CONTACT_PAUSED and CHECKOUT_PAUSED Worker secrets. Until it merges, roll back the Worker in Cloudflare.'
+        caps: '5 a minute per visitor and 20 a minute site-wide, for the contact form and for checkout (Cloudflare rate limits). Email only reaches verified Email Routing addresses.'
       docs:
         technical: site/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#contact-form-worker
@@ -142,6 +144,8 @@ agents:
         credential_owner: KC (n8n credentials and the flow_settings table)
         risk: medium
         audit_log: flow_events data table in n8n
+        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Saved as a draft, not yet published: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes.'
+        caps: 'Only inquiries the contact Worker forwards (5 a minute per visitor, 20 site-wide). Spam at confidence 0.7 or more is never answered.'
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
       docs:
@@ -324,16 +328,16 @@ agents:
         data_sensitivity: internal
         credential_owner: KC (n8n credentials for Anthropic, Gmail and Notion)
         risk: low
+        kill_switch: 'Switch the Monthly next-product report task off, or unpublish the Product Lab Lead agent, in n8n.'
+        caps: 'n8n agent budget of $3 a month and $1.50 a session, at most 5 web searches a run. Emails only Khaneil.'
       cost:
         notes: One run a month on Sonnet 5.5 with reasoning high, up to 5 web searches and n8n memory. Not measured yet; Atlas makes no model calls for it.
       docs:
         technical: https://khancam15.app.n8n.cloud
         known_issues:
-          - Atlas cannot see its runs yet; n8n Agent runs are not workflow executions and the agent does not post to Atlas
+          - Atlas sees each monthly brief (send_atlas_report posts it to /api/hooks/reports, checked in the published agent on 2026-11-14), not each n8n Agent run
           - Reasoning high plus observational memory on every run is the main cost
-        improvements:
-          - Post each finished brief to Atlas through POST /api/hooks/reports
-        last_review: 2026-11-04
+        last_review: 2026-11-14
 
   - id: benjaire-product-lab-research
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-insights"}
@@ -730,6 +734,9 @@ agents:
       execution:
         trigger_type: event
         environment: n8n
+      governance:
+        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Saved as a draft, not yet published: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
+        caps: 'One delivery email per Stripe-verified paid order, duplicates skipped.'
 
   - id: benjaire-shop-follow-ups
     name: Shop Buyer Follow Ups
@@ -755,6 +762,9 @@ agents:
       execution:
         trigger_type: scheduled
         environment: n8n
+      governance:
+        kill_switch: 'Unpublish Shop · Flow follow ups in n8n. Saved as a draft, not yet published: shop_settings.customer_emails_paused = true sends nothing that run.'
+        caps: 'Each email once per order. A run with more due than followup_max_per_run (default 5) is held for Khaneil and reported to Atlas.'
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.

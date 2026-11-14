@@ -236,6 +236,8 @@ export interface EcoContext {
     status: string;
     approval: string | null;
     risk: string | null;
+    kill_switch: string | null;
+    caps: string | null;
   }[];
 }
 
