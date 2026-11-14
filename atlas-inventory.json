@@ -17,18 +17,13 @@
     "atlas-engineering-review",
     "atlas-rerun-failed",
     "atlas-merge-pr",
-    "atlas-github-steward",
-    "atlas-system-improvements",
-    "atlas-ui-improvement-designer",
     "atlas-production-coordinator",
-    "atlas-reliability-reviewer",
-    "atlas-performance-reviewer",
     "atlas-release-coordinator",
     "atlas-release-manager",
     "atlas-health-monitor"
    ],
-   "ai_agents": 5,
-   "automations": 9
+   "ai_agents": 6,
+   "automations": 3
   },
   {
    "id": "project:benjaire-site",
@@ -817,88 +812,18 @@
    "source": "src-tauri/src/actions/merge.rs"
   },
   {
-   "id": "atlas-github-steward",
-   "name": "Repository Maintenance Analyst",
-   "kind": "Automation",
-   "status": "idle",
-   "building_id": "project:ai-ops-atlas",
-   "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
-   "project": "ai-ops-atlas",
-   "runtime": "Inside the desktop app (Rust side)",
-   "trigger": "Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open",
-   "source": "src-tauri/src/steward/check.rs"
-  },
-  {
-   "id": "atlas-system-improvements",
-   "name": "AI Production Improvement Analyst",
-   "kind": "Automation",
-   "status": "idle",
-   "building_id": "project:ai-ops-atlas",
-   "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
-   "project": "ai-ops-atlas",
-   "runtime": "GitHub-hosted Python reports; local Claude Code CLI for manual reviews",
-   "trigger": "After main-branch push CI completes, or manually from GitHub Actions on main",
-   "source": "ops/system-improvements/report.py"
-  },
-  {
-   "id": "atlas-ui-improvement-designer",
-   "name": "AI UI Improvement Designer",
-   "kind": "Automation",
-   "status": "idle",
-   "building_id": "project:ai-ops-atlas",
-   "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
-   "project": "ai-ops-atlas",
-   "runtime": "Manually requested Claude Code session",
-   "trigger": "Explicit maintainer request only; no schedule",
-   "source": "ops/system-improvements/ui-design-prompt.md"
-  },
-  {
    "id": "atlas-production-coordinator",
    "name": "Atlas Production Coordinator",
-   "kind": "Automation",
+   "kind": "AI agent",
    "status": "idle",
    "building_id": "project:ai-ops-atlas",
    "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
+   "placement": "Desk in its project building",
+   "owned_by": "",
    "project": "ai-ops-atlas",
    "runtime": "Local deterministic runner; manually dispatched fixture on GitHub Actions",
    "trigger": "Explicit user request only; no schedule",
    "source": "ops/benjaire-production/team.py"
-  },
-  {
-   "id": "atlas-reliability-reviewer",
-   "name": "Atlas Reliability Reviewer",
-   "kind": "Automation",
-   "status": "idle",
-   "building_id": "project:ai-ops-atlas",
-   "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
-   "project": "ai-ops-atlas",
-   "runtime": "Explicitly requested review session",
-   "trigger": "Explicit user request only; no schedule",
-   "source": "ops/system-improvements/production-team.md"
-  },
-  {
-   "id": "atlas-performance-reviewer",
-   "name": "Atlas Performance Reviewer",
-   "kind": "Automation",
-   "status": "idle",
-   "building_id": "project:ai-ops-atlas",
-   "building_name": "Atlas Command Center",
-   "placement": "Runs from its project building",
-   "owned_by": "atlas-engineering-review",
-   "project": "ai-ops-atlas",
-   "runtime": "Explicitly requested review session",
-   "trigger": "Explicit user request only; no schedule",
-   "source": "ops/system-improvements/production-team.md"
   },
   {
    "id": "atlas-release-coordinator",
@@ -1342,7 +1267,7 @@
    "building_id": "project:github-profile",
    "building_name": "Development Hub",
    "placement": "Runs from its project building",
-   "owned_by": "development-hub-lead",
+   "owned_by": "atlas-production-coordinator",
    "project": "github-profile",
    "runtime": "GitHub-hosted runner",
    "trigger": "Every 4 hours, when a pull request's Atlas CI finishes, or manual",
@@ -2134,6 +2059,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-14T13:41:42.455Z",
- "commit": "1e5ef397a0f65521af545ee9e97bfc7f309e961c"
+ "generated_at": "2026-11-14T14:54:58.085Z",
+ "commit": "141f44c64a35d9d4bb2e1ccdbe79938328d8b341"
 }
