@@ -14,15 +14,17 @@ export async function railJourney(page:Page){
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Renderer import missing');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,store=fiber._roots.get(canvas)!.store,state=store.getState();
   const train=state.scene.getObjectByName('atlas-passenger-train');if(!train)throw new Error('Passenger train missing');
-  const [data,layout,planner,passengers]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/loopPassengers.ts'].map(u=>import(u)));
-  const loop=planner.buildScene(layout.layoutMap(data.catalog,[],'district')).communityRail.loop,riders=passengers.planLoopPassengers(loop);
-  const mesh=state.scene.getObjectByName('rail-commuters') as import('three').InstancedMesh;if(!mesh)throw new Error('Commuter mesh missing');
+  const [data,layout,planner,passengers]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/views/map3d/travelLoops.ts'].map(u=>import(u)));
+  const scene=planner.buildScene(layout.layoutMap(data.catalog,[],'district')),loop=scene.communityRail.loop,riders=passengers.planTravel(scene).travellers;
+  // Travellers' torsos are drawn by the glowing-shirt mesh (HillsCommunity.tsx), in the same order as planTravel's list.
+  const mesh=state.scene.getObjectByName('travel-glow-shirts') as import('three').InstancedMesh;if(!mesh)throw new Error('Traveller mesh missing');
   state.setFrameloop('never');const render=state.gl.render;state.gl.render=()=>{};
   const visited=new Set<number>(),faults:string[]=[];let walking=0,last:number[][]=[];
   try{for(let t=.1;t<loop.period+1;t+=.1){fiber.advance(t,false,store.getState());if(train.userData.station>=0)visited.add(train.userData.station);
    const current:number[][]=[];for(let i=0;i<riders.length;i++){const e=mesh.instanceMatrix.array,k=i*16,visible=Math.hypot(e[k],e[k+1],e[k+2])>.001,p=[e[k+12],e[k+14]];current.push(visible?p:[]);if(!visible)continue;walking++;
-    const routes=[riders[i].out.points,riders[i].destinationWalk.points];let nearest=Infinity;for(const r of routes)for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],dx=b[0]-a[0],dz=b[2]-a[2],u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[2])*dz)/(dx*dx+dz*dz||1)));nearest=Math.min(nearest,Math.hypot(p[0]-a[0]-u*dx,p[1]-a[2]-u*dz));}
-    if(nearest>.02)faults.push(`Passenger ${i} left its route`);if(last[i]?.length&&Math.hypot(p[0]-last[i][0],p[1]-last[i][1])>.12)faults.push(`Passenger ${i} jumped`);
+    // Travellers walk side by side, up to their lane's width off the route's centre line (railCommuters.ts along).
+    const segs=riders[i].segs as {route:{points:number[][]};lane:number}[],routes=segs.map(s=>s.route.points),slack=Math.max(...segs.map(s=>Math.abs(s.lane)))+.02;let nearest=Infinity;for(const r of routes)for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],dx=b[0]-a[0],dz=b[2]-a[2],u=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[2])*dz)/(dx*dx+dz*dz||1)));nearest=Math.min(nearest,Math.hypot(p[0]-a[0]-u*dx,p[1]-a[2]-u*dz));}
+    if(nearest>slack)faults.push(`Passenger ${i} left its route`);if(last[i]?.length&&Math.hypot(p[0]-last[i][0],p[1]-last[i][1])>.12)faults.push(`Passenger ${i} jumped`);
    }last=current;if(faults.length)break;}
   }finally{state.gl.render=render;}
   return {trains:state.scene.getObjectsByProperty('name','atlas-passenger-train').length,visited:visited.size,stops:loop.stops.length,elapsed:train.userData.elapsed,walking,faults};

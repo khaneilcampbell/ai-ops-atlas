@@ -3,7 +3,10 @@ import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
-import {YACHT_KEY,YACHT_NAME,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
+import {YACHT_KEY,YACHT_NAME,YACHT_OFFICE_ID,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
+import {YACHT_BOX,yachtBoundsAt,yachtLivePose} from './yachtRidePlan';
+import {riding as rideActive,yachtRide} from './yachtRide';
+import {travelPlan} from './travelLoops';
 import {AtlasYacht} from './AtlasYacht';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
@@ -36,8 +39,10 @@ import {Galleria} from "./Galleria";
 import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
+import { GOLD_JET_BOX, GOLD_JET_GATE, GOLD_JET_KEY, goldJetBounds, goldJetLive, goldJetMapPose } from "./goldJetPlan";
+import { GOLD_JET_OFFICE_ID, goldJetRide } from "./goldJetIds";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LEVELS, resetGovernor, useQualityLevel } from "../../lib/governor";
@@ -87,6 +92,10 @@ import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
+/** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
+const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
+/** The yacht's decks you ride on, loaded only when you enter the yacht. */
+const YachtRide = lazy(() => import("../office/YachtRide"));
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -188,6 +197,8 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   else if(scene.communityRail){for(const [key,[x,z]]of [[ATLAS_STATION_KEY,scene.communityRail.hills],["service:financial-station",scene.communityRail.financial]] as const)m.set(key,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
+  // The gold jet moves round the loop; selecting it frames its gate, where it boards (goldJetPlan).
+  if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
@@ -394,7 +405,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
     if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
-    {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});}
+    {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});
+      // Her nameplate sails with her: it follows her out to sea and back instead of staying at the mooring.
+      const label=out[out.length-1],y=label.pos.y;label.follow=(pos)=>{const p=yachtLivePose();if(p)pos.set(p.x,y,p.z);};}
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
@@ -445,7 +458,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Stop rendering while the window is hidden; nothing on the map needs to move then.
   const visible = usePageVisible();
   // The map is fully covered while a building's office is open, so it stops rendering then.
-  const officePhase = useOffice().phase;
+  const { phase: officePhase, projectId: officeId } = useOffice();
   // Phones get a lighter scene: fewer pixels and a smaller shadow map keep frames steady.
   const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
@@ -460,7 +473,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
-  const drawing = props.active !== false && visible && officePhase !== "inside";
+  // Inside the gold jet or the yacht the map keeps drawing: its camera rides with them (GoldJetRide, YachtRide).
+  const drawing = props.active !== false && visible && (officePhase !== "inside" || officeId === GOLD_JET_OFFICE_ID || officeId === YACHT_OFFICE_ID);
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
@@ -675,6 +689,8 @@ function World({
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
+  // Decorative travel loops (train, shuttle cars, yacht) for the perimeter-loop layout: one plan shared by all three.
+  const travel=useMemo(()=>travelPlan(scene),[scene]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...(scene.carBridges??[]).flatMap(b=>b.roads)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -927,7 +943,10 @@ function World({
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
     const b = anchors.get(key);
-    const a = b && { ...b, ...b.whole };
+    // The gold jet and the yacht move: frame them where they are now, not at the gate or mooring they start from.
+    const live = key === GOLD_JET_KEY && scene.airport && goldJetMapPose(scene.airport, goldJetLive.clock, goldJetLive.circuit);
+    const sailing = key === YACHT_KEY && yachtLivePose();
+    const a = live ? { ...goldJetBounds(live, scene.airport?.west), y0: TERRACE_H + live.y } : sailing ? yachtBoundsAt(sailing) : b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -954,6 +973,9 @@ function World({
   // Entering a building: remember the view, glide in toward its headquarters, and glide back to
   // the same view on the way out.
   const office = useOffice();
+  const aboard = office.phase === "entering" || office.phase === "inside";
+  const riding = office.projectId === GOLD_JET_OFFICE_ID && aboard;
+  const ridingYacht = office.projectId === YACHT_OFFICE_ID && aboard;
   const saved = useRef<[THREE.Vector3, THREE.Vector3] | null>(null);
   useEffect(() => {
     const { phase, projectId } = office;
@@ -1042,10 +1064,12 @@ function World({
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
     }
-    controls.update();
+    // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
+    if (!rideActive()) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
-    const haze = fogRange(dist, ext);
+    // Riding the camera hugs the cabin or decks, so haze as if looking over a district, not one building.
+    const haze = fogRange(rideActive() ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
@@ -1054,9 +1078,11 @@ function World({
       onNear(isNear);
     }
 
-    // Re-place labels only when the view or the label set changed.
+    // Re-place labels only when the view, the label set or a travelling label (the yacht's) changed.
+    let moved = "";
+    for (const l of labels) if (l.follow) { l.follow(l.pos); moved += `${l.pos.x.toFixed(3)},${l.pos.z.toFixed(3)},`; }
     const e = camera.matrixWorld.elements;
-    const sig = `${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
+    const sig = `${moved}${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
     const boxes = [];
@@ -1149,7 +1175,11 @@ function World({
   useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   // An open building's outline hugs its office, not the shell that was cut away.
-  const hl = (key: string | null) => {
+  const hl = (key: string | null): OutlineBox | undefined => {
+    // The gold jet's outline rides with the jet (see Outline's `track`) instead of staying at its gate.
+    if (key === GOLD_JET_KEY && scene.airport) return goldJetOutline(scene.airport);
+    // The yacht's outline sails with her too.
+    if (key === YACHT_KEY) return yachtOutline();
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
@@ -1168,18 +1198,20 @@ function World({
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
-      {detailsReady && <AtlasYacht berth={berth} marina={marina} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&office.phase===null} exclusion={scene.pedestrianExclusion}/>}
+      {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
+      {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
       {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
-      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
+      {detailsReady && riding && scene.airport && <Suspense fallback={null}><GoldJetRide plan={scene.airport} night={lightMode==="night"} controls={controls} /></Suspense>}
+      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY,GOLD_JET_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} night={lightMode==="night"} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} night={lightMode==="night"} />
@@ -1208,9 +1240,43 @@ function World({
 /** A slightly larger back-faced shell behind a building, which reads as an outline. */
 const BOX_EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 
-function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y1: number; w: number; d: number }; color: string; ring?: boolean }) {
+/** An outline box; `track` moves and turns it every frame for something that travels (the gold jet). */
+type OutlineBox = { x: number; z: number; y0: number; y1: number; w: number; d: number; track?: (g: THREE.Object3D) => void };
+
+/** The gold jet's box in its own frame, carried each frame to where the jet is, turned to its heading. */
+function goldJetOutline(airport: { x: number; z: number; west?: boolean }): OutlineBox {
+  const B = GOLD_JET_BOX;
+  return {
+    x: airport.west ? -B.x : B.x, z: B.z, y0: 0, y1: B.h, w: B.w, d: B.d,
+    track: (g) => {
+      const p = goldJetMapPose(airport, goldJetLive.clock, goldJetLive.circuit);
+      g.position.set(p.x, TERRACE_H + 0.06 + p.y, p.z);
+      g.rotation.set(0, p.yaw, 0);
+      // Hidden while it is off the loop, and while you ride inside it.
+      g.visible = p.visible && !goldJetRide.active;
+    },
+  };
+}
+
+/** The yacht's box in her own frame (bow +x), carried each frame to where she is on her cruise, turned to her heading. */
+function yachtOutline(): OutlineBox {
+  const B = YACHT_BOX;
+  return {
+    x: 0, z: 0, y0: WATER_Y, y1: WATER_Y + B.h, w: B.w, d: B.d,
+    track: (g) => {
+      const p = yachtLivePose();
+      if (p) { g.position.set(p.x, 0, p.z); g.rotation.set(0, p.yaw, 0); }
+      // Hidden while you ride inside her.
+      g.visible = !!p && !yachtRide.active;
+    },
+  };
+}
+
+function Outline({ a, color, ring }: { a?: OutlineBox; color: string; ring?: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
+    if (a?.track && groupRef.current) a.track(groupRef.current);
     const r = ringRef.current;
     if (!r) return;
     const t = (clock.elapsedTime % 1.8) / 1.8;
@@ -1220,7 +1286,8 @@ function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y
   if (!a) return null;
   const pad = 0.12;
   return (
-    <group>
+    // A tracked outline moves its own group each frame; any other is drawn in place (and a reused group is put back).
+    <group ref={groupRef} {...(a.track ? {} : { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const, visible: true })}>
       {/* Crisp edges rather than a solid silhouette, so the facade stays visible. */}
       <lineSegments position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad, a.y1 - a.y0 + pad, a.d + pad]} geometry={BOX_EDGES} raycast={() => null}>
         <lineBasicMaterial color={color} />

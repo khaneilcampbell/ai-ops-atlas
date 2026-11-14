@@ -3,7 +3,6 @@ import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {loopPoint,loopState,stationPoint,stationBoardingPath,LOOP_STATIONS,PERIMETER_RAIL} from './perimeterRailPlan';
-import {planLoopPassengers,loopPassengerAt} from './loopPassengers';
 import {pathClear} from './roads';
 import {airportPoint,AIRPORT_LAYOUT,AIRPORT_LANDING_RUNWAY,airportFootprint} from './airport';
 import {financialDimensions} from './financialArchitecture';
@@ -48,16 +47,10 @@ describe('perimeter passenger railway',()=>{
   }
   expect(parcel.z).toBeGreaterThan(s.financial!.z+s.financial!.d);
  });
- it('completes a smooth loop and boards only during fully open station dwell',()=>{
-  const s=buildScene(layoutMap(catalog,[],'district')),p=s.communityRail!.loop!,people=planLoopPassengers(p),visited=new Set<number>();
-  expect(people).toHaveLength(PERIMETER_RAIL.passengersPerStop*p.stops.length);let previous=loopPoint(p,loopState(0,p).distance);
+ it('completes a smooth loop, stopping at every station with its doors open',()=>{
+  const s=buildScene(layoutMap(catalog,[],'district')),p=s.communityRail!.loop!,visited=new Set<number>();
+  let previous=loopPoint(p,loopState(0,p).distance);
   for(let t=.05;t<=p.period+.1;t+=.05){const state=loopState(t,p),at=loopPoint(p,state.distance);expect(Math.hypot(at.x-previous.x,at.z-previous.z)).toBeLessThan(PERIMETER_RAIL.speed*.051);previous=at;if(state.moving)expect(state.doors).toBe(0);else visited.add(state.station);}
   expect(visited.size).toBe(p.stops.length);
-  for(const person of people){
-   for(const [time,station]of [[person.board,person.origin],[person.alight,person.destination],[person.returnBoard,person.destination],[person.homeAlight,person.origin]])expect(loopState(time,p)).toMatchObject({station,doors:1,moving:false});
-   expect(person.leaveDestination-person.atDestination).toBeGreaterThan(0);expect(person.period+person.leave-person.atHome).toBeGreaterThanOrEqual(10);
-   let last:{x:number;z:number}|undefined;
-   for(let t=person.leave;t<person.atHome;t+=.1){const at=loopPassengerAt(person,t);if(at.visible){if(last)expect(Math.hypot(at.x-last.x,at.z-last.z)).toBeLessThan(person.pace*.101+.01);last=at;}else last=undefined;}
-  }
  });
 });

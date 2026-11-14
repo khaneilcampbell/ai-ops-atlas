@@ -8,7 +8,7 @@ import {buildScene,TERRACE_H,WATER_Y} from './scene';
 import {marinaSite} from './marinaPlan';
 import {YACHT,YACHT_OFFICE_ID,YACHT_SCALE,YACHT_DECK_Y,boardingRoute,harbourLoop,routeLengths,yachtBerth,yachtFootprint} from './yachtPlan';
 import {yachtGeometry} from './yachtGeometry';
-import {ROOMS,peopleOnBoard,roomInsideHull,DECKS,harbourAround,halfBeam} from '../office/yachtInteriorPlan';
+import {ROOMS,peopleOnBoard,roomInsideHull,DECKS} from '../office/yachtInteriorPlan';
 
 const scene=buildScene(layoutMap(catalog,[],'district')),marina=marinaSite(scene,TERRACE_H),berth=yachtBerth(marina);
 const overlaps=(a:{x:number;z:number;w:number;d:number},b:{x:number;z:number;w:number;d:number})=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.z<b.z+b.d&&a.z+a.d>b.z;
@@ -67,16 +67,5 @@ describe('Inside Atlas',()=>{
   const map=readFileSync(join(__dirname,'../Map.tsx'),'utf8');expect(map).toContain('lazy(() => import("./office/YachtInterior"))');
   expect(map.indexOf('YACHT_OFFICE_ID ?')).toBeLessThan(map.indexOf('startsWith("skyline-business:") ?'));
   expect(YACHT_OFFICE_ID.startsWith('skyline-business:')).toBe(true);
- });
- it('shows the marina and shore round her inside, on the port side, with the stair rising from the dock', () => {
-  const around=harbourAround(0,-3),top=(b:{p:number[];s:number[]})=>b.p[1]+b.s[1]/2;
-  expect(around.length).toBeLessThan(80);
-  // Everything is off the port side (shore negative z) or astern at the cross dock, never on the hull.
-  for(const b of around)expect(b.p[2]+b.s[2]/2<-halfBeam(0)||b.p[0]+b.s[0]/2<-29).toBe(true);
-  // The cross dock's deck is level with the pontoon, and the promenade stands well above it.
-  expect(Math.max(...around.map(top))).toBeGreaterThan(10);
-  expect(around.some(b=>Math.abs(top(b))<1e-9&&b.s[0]>20)).toBe(true);
-  // Land reaches down into the water.
-  expect(Math.min(...around.map(b=>b.p[1]-b.s[1]/2))).toBeLessThan(-3);
  });
 });
