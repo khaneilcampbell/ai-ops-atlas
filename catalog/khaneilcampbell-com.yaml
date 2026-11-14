@@ -287,7 +287,7 @@ agents:
         beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Read the job page or pasted description, Extract requirements, Pick the 1 to 3 strongest projects, Draft resume summary cover note and recruiter message, List missing requirements and one interview question, Save a Draft row and email Khaneil for review]
-        tools: [n8n Cloud, Claude (claude-haiku-5-5 and claude-opus-5-5), n8n data tables, Resend]
+        tools: [Claude (claude-haiku-5-5 and claude-opus-5-5), Workflow data tables, Resend]
         inputs: [Job form, Confirmed rows in career_verified_facts]
         outputs: [Draft row in career_applications, Review email with a .md attachment]
         limitations: [Only confirmed facts are used, Job pages that need a login need the description pasted]
