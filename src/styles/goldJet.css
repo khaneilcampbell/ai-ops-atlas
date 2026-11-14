@@ -15,5 +15,5 @@
 .gold-jet-interior.riding:active{cursor:grabbing}
 /* Room names in the cabin: small, quiet tags that sit low on the far wall and never take a click. */
 .gold-jet-room-tag{display:inline-block;padding:2px 7px;border-radius:999px;background:rgba(20,15,10,.55);border:1px solid rgba(214,180,110,.3);color:#f1e2bf;font:600 9px/1.3 system-ui;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;opacity:.82;pointer-events:none;user-select:none}
-.gold-jet-riding .map-intro,.gold-jet-riding .map-controls,.gold-jet-riding .m3-labels,.gold-jet-riding .m3-plaque{visibility:hidden!important}
+.gold-jet-riding .map-intro,.gold-jet-riding .map-controls,.gold-jet-riding .m3-labels,.gold-jet-riding .m3-plaque,.gold-jet-riding .m3-pill{visibility:hidden!important}
 @media(max-width:650px){.gold-jet-interior .skyline-interior-head{flex-wrap:wrap;right:10px}.gold-jet-interior .skyline-interior-head small{display:none}.gold-jet-interior.skyline-interior h2{font-size:15px;margin:0}.gold-jet-interior .skyline-interior-head button{padding:8px 12px}}

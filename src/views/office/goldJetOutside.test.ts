@@ -52,7 +52,7 @@ describe('riding the gold jet on the map',()=>{
  it('rides inside the map: the map keeps drawing, hides its own gold jet and leaves its controls alone meanwhile',()=>{
   const map=read('../map3d/Map3D.tsx'),airportSrc=read('../map3d/LogisticsAirport.tsx'),ride=read('./GoldJetRide.tsx'),inside=read('./GoldJetInterior.tsx');
   expect(map).toContain('officeId === GOLD_JET_OFFICE_ID');
-  expect(map).toContain('if (!goldJetRide.active) controls.update();');
+  expect(map).toContain('if (!rideActive()) controls.update();');expect(read('../map3d/yachtRide.ts')).toContain('goldJetRide.active');
   expect(map).toContain('<GoldJetRide plan={scene.airport}');
   expect(airportSrc).toContain('!(gold&&goldJetRide.active)');
   expect(ride).toContain('controls.enabled=false');
