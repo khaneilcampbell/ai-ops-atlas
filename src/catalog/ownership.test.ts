@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog, manifestIssues as issues } from "./index";
 import { buildCatalog } from "./parse";
-import { isAiAgent } from "./roles";
+import { isAiAgent, worksThroughAutomations } from "./roles";
 import { ownership, rollupHealth } from "./ownership";
 
 const manifest = (agents: string) => `schema: atlas/v2
@@ -69,5 +69,14 @@ describe("automation ownership", () => {
     if (orphans.length)
       console.info(`Orphan check: ${orphans.length} automation(s) have no owning agent (catalog owned_by):\n${orphans.map((a) => `  - ${a.id} (${a.projectId})`).join("\n")}`);
     expect(orphans.every((a) => !a.ownedBy)).toBe(true);
+  });
+
+  // Owning agents with no runtime of their own (2026-11-13) exist only to own automations, so each
+  // must own at least one; an empty one would be a title with nothing behind it.
+  it("gives every owning agent that works through its automations at least one automation", () => {
+    const { owned } = ownership(catalog);
+    const shells = catalog.agents.filter((a) => isAiAgent(a) && worksThroughAutomations(a) && a.status !== "retired" && !owned.get(a.id)?.length);
+    expect(shells.map((a) => a.id)).toEqual([]);
+    expect(catalog.agents.filter((a) => isAiAgent(a) && worksThroughAutomations(a))).toHaveLength(10);
   });
 });

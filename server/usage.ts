@@ -6,6 +6,8 @@
 // it needs the USAGE_SYNC_TOKEN shared secret instead, which only the Mac's Keychain and the
 // Cloudflare secret hold. Reads stay behind Access like every other route.
 
+import { noStore, reply } from "./http";
+
 export interface Kv {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
@@ -22,9 +24,7 @@ export const PUSH_PATH = "/api/usage/push";
 const KEY = "snapshot";
 export const MAX_BYTES = 2_000_000;
 export const MAX_RECORDS = 5_000;
-const noStore = { "cache-control": "no-store" };
 
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 /** Compares two strings without returning early on the first difference. */
 export function sameSecret(a: string, b: string): boolean {

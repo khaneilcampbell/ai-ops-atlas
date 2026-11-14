@@ -22,6 +22,6 @@ it("shows Benjaire Product Lab as configured, not verified, until Atlas sees a r
 it("lists exactly the Gmail-to-KC, Notion and web search permissions on the lead agent", () => {
   const lead = catalog.agents.find((a) => a.id === "benjaire-product-lab")!;
   expect(lead.permissions).toHaveLength(3);
-  expect(lead.permissions.join(" ")).toContain("sends only to benjaireco@gmail.com");
-  expect(lead.permissions.join(" ")).toContain("Notion");
+  expect(lead.permissions!.join(" ")).toContain("sends only to benjaireco@gmail.com");
+  expect(lead.permissions!.join(" ")).toContain("Notion");
 });

@@ -42,7 +42,7 @@ describe("office plan", () => {
   it("gives the Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = projectOfficeAgents(catalog.agents,project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-system-improvements", "atlas-ui-improvement-designer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer", "atlas-release-coordinator"]);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-system-improvements", "atlas-ui-improvement-designer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer", "atlas-release-coordinator", "atlas-release-manager", "atlas-health-monitor"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());
@@ -53,7 +53,8 @@ describe("office plan", () => {
   });
 
   it("keeps coordinators separate and orders specialists by their dependencies",()=>{
-    const agents=[{id:"publish",registry:{responsibilities:{dependencies:["design"]}}},{id:"lead",registry:{tier:"coordinator" as const}},{id:"design",registry:{responsibilities:{dependencies:["research"]}}},{id:"research"}];
+    const needs=(...dependencies:string[])=>({responsibilities:{tasks:[],tools:[],inputs:[],outputs:[],dependencies,limitations:[]}});
+    const agents:Parameters<typeof planOffice>[1]=[{id:"publish",registry:needs("design")},{id:"lead",registry:{tier:"coordinator"}},{id:"design",registry:needs("research")},{id:"research"}];
     const plan=planOffice({id:"demo",repository:"me/demo"},agents);
     expect(plan.workstations.map(w=>w.agentId)).toEqual(["lead","research","design","publish"]);
     expect(plan.workstations[0].z).toBeLessThan(plan.workstations[1].z);

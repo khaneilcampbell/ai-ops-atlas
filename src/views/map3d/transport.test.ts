@@ -1,4 +1,5 @@
 import {describe,it,expect} from 'vitest';
+import {GRID_ID} from './nycGrid';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
@@ -15,8 +16,8 @@ describe('shared transportation plan',()=>{
   for(const r of s.land)if(r.x!==parcel.x||r.z!==parcel.z)expect(parcel.x<r.x+r.w&&parcel.x+parcel.w>r.x&&parcel.z<r.z+r.d&&parcel.z+parcel.d>r.z,'stadium parcel overlap').toBe(false);
   const boxes=[...s.towers,...s.kiosks];
   const links=s.transportConnections;
-  // The ring road's pieces have sidewalks along both sides instead of a separate footpath.
-  expect(links.every(l=>l.road.length>1&&(l.walk.length>1||l.id.startsWith('ring-road:')))).toBe(true);
+  // The ring road's and the avenues' pieces have sidewalks along both sides instead of a separate footpath.
+  expect(links.every(l=>l.road.length>1&&(l.walk.length>1||l.id.startsWith('ring-road:')||l.id.startsWith(`${GRID_ID}:`)))).toBe(true);
   for(const link of links){
    for(let i=1;i<link.road.length;i++)expect(link.road[i][0]===link.road[i-1][0]||link.road[i][1]===link.road[i-1][1]).toBe(true);
    for(const p of sample(link.walk))for(const b of boxes)expect(Math.abs(p[0]-b.x)<b.size/2&&Math.abs(p[1]-b.z)<b.size/2,`${link.id} crosses ${b.name}`).toBe(false);

@@ -21,6 +21,7 @@ agents:
     name: Merge Flow
     purpose: Sorts every open pull request across KC's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; KC still says "merge".
     framework: GitHub Actions + Claude
+    owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: Claude Opus 5.5 (Anthropic API), only when the triage changed
     runtime: GitHub-hosted runner
     status: active
@@ -104,6 +105,7 @@ agents:
     name: Opportunity Scout
     purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories KC already has, plus a build-ready spec for the best one. Recommend-only; KC decides what gets built.
     framework: GitHub Actions + Claude
+    owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: Claude Opus 5.5 (Anthropic API), only when the registry changed
     runtime: GitHub-hosted runner
     status: active
@@ -187,6 +189,7 @@ agents:
     name: Design Consistency
     purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; KC says "merge".
     framework: GitHub Actions + Claude
+    owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: Claude Opus 5.5 (Anthropic API), only for findings that need judgment
     runtime: GitHub-hosted runner
     status: active
@@ -290,3 +293,42 @@ agents:
       execution:
         trigger_type: manual
         environment: n8n
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: development-hub-lead
+    name: Development Hub Lead
+    purpose: >-
+      Runs Khaneil's cross-repository GitHub routines from the Development Hub: sorts every open pull request into one lane, checks Atlas styles and names for design drift, and proposes scored ways to earn from the agents when the registry changes. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run on GitHub Actions schedules
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Merge Flow Coordinator, Design Consistency, Opportunity Scout, at Khaneil's request
+    registry:
+      title: Development Hub Lead
+      category: engineering
+      subcategory: Repository operations
+      tier: coordinator
+      automation_category: intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Sort open pull requests into lanes, Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Recommends and reports; merging stays with Khaneil.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

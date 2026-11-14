@@ -1,0 +1,1 @@
+- 2026-11-12 · Agents has a Refresh registry sheet button: it runs the Agent Registry workflow in n8n now instead of waiting up to 4 hours, shows when the sheet was updated or why it wasn't, allows one refresh a minute, and links to the sheet (#383)

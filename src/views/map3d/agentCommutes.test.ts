@@ -32,6 +32,11 @@ describe("agent commutes", () => {
     expect(plan.commutes.length + plan.skipped.length).toBe(jobs.length);
     // Fixed workflows no longer receive simulated agent commutes.
     expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "atlas-release-coordinator", "site-builder"]);
+    // Owning agents that work only through their automations keep their desk and are not drawn walking.
+    expect(plan.skipped.filter((s) => s.reason.startsWith("works through its automations")).map((s) => s.agentId).sort()).toEqual(
+      jobs.filter((j) => j.deskOnly && !j.offDuty).map((j) => j.agentId).sort(),
+    );
+    expect(jobs.filter((j) => j.deskOnly)).toHaveLength(10);
     // The Workday tab says workplace agents are not drawn walking; keep the two in step.
     const suites = jobs.filter((j) => j.work.kind === "workplace" && !j.offDuty).map((j) => j.agentId);
     expect(plan.commutes.filter((c) => suites.includes(c.agentId))).toEqual([]);

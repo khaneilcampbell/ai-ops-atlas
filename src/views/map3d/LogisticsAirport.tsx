@@ -1,19 +1,22 @@
 import {airportFlightCircuit,type WorldObstacle} from './flightClearance';
+import {FIGURE} from './walkerFigure';
 import * as THREE from "three";
 import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
 import {GroundCrew} from "./GroundCrew";
-import {FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
+import {executiveJetPose,FLIGHT_SCHEDULE,fleetPose} from "./flightSchedule";
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
 import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
+import {goldJetRide} from "./goldJetIds";
+import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group } from "three";
-import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_LAYOUT, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
+import { AIRPORT_KEY, AIRPORT_LANDING_RUNWAY as LANDING, AIRPORT_END_TAXIWAYS, AIRPORT_LANDING_SOUTH_PAD, AIRPORT_SERVICE_DOOR, AIRPORT_SERVICE_GATE, AIRPORT_THRESHOLDS, AIRPORT_LAYOUT, AIRPORT_PARKED_STANDS, AIRPORT_REMOTE_STANDS, AIRPORT_TERMINAL, airportParkingBays, AIRCRAFT_LAYOUT, BOARDING_LAYOUT, boardingBridge, type AirportPlan, type FlightCircuit } from "./airport";
 import { Instanced, type Inst, type useGeometries, type useMaterials, type Pick } from "./models";
 import { TERRACE_H } from "./scene";
 type Geometry=ReturnType<typeof useGeometries>;
@@ -21,12 +24,16 @@ type Materials=ReturnType<typeof useMaterials>;
 
 const WHEELS=[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z] as [number,number,number],s:[.055,.065,.065] as [number,number,number],c:"#202b36"})));
 /** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
+/** Edge lamps every metre down a runway, left out where an end taxiway crosses or joins it. */
+const runwayLampZ=(cz:number,len:number)=>{const out:number[]=[];for(let zz=cz-len/2+.5;zz<=cz+len/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))out.push(zz);return out;};
 const GEAR_TOP=.2;
 /** Fuselage tube (radius, centre height, start and end along the aircraft) and the underwing engines. */
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
 const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
-function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parked?:{x:number;z:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material}) {
+/** The gold private jet's extras: scaled about the forward door, gold sleeves in a polished material, clickable. */
+interface GoldTrim {material:THREE.Material;pick:Pick}
+function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{parked?:{x:number;z:number;yaw?:number};g:Geometry;m:Materials;circuit?:FlightCircuit;clock:MutableRefObject<number>;slot:number;livery:Livery;night?:boolean;beam?:THREE.Material;gold?:GoldTrim}) {
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   const phase=lightPhase(slot+(parked?3:0));
@@ -50,7 +57,8 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
       ]),
     ] as Inst[],
     body:[
-      {p:[0,y0,tube],s:[R,R,.42],c:l.fuselage},
+      // The gold jet's nose is solid gold, the darkest step of its fade.
+      {p:[0,y0,tube],s:[R,R,.42],c:gold?GOLD_JET_FADE[GOLD_JET_FADE.length-1].c:l.fuselage},
       {p:[0,y0+.02,tubeTo],s:[R*.92,R*.8,.5],c:l.fuselage},
       ...(parked?WHEELS:[]),
     ] as Inst[],
@@ -72,7 +80,14 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
       {p:[AIRCRAFT_LAYOUT.doorX+.005,y0-.1,AIRCRAFT_LAYOUT.doorZ],s:[.02,.2,.1],c:l.windows},
       ...[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.002),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))),
     ] as Inst[],
-  };},[livery,parked]);
+    // Gold private jet: a gold nose cap, gold sleeves fading back toward the white tail, and gold engine cowls.
+    gold:gold?[
+      ...GOLD_JET_FADE.map((f,i)=>({p:[0,y0,tube],s:[2*R+.003*(i+1),f.to-tube,2*R+.003*(i+1)],rx:Math.PI/2,c:f.c})),
+      ...[-1,1].map(side=>({p:[side*ENGINE.x,ENGINE.y,ENGINE.z],s:[ENGINE.d+.008,ENGINE.len*.7,ENGINE.d+.008],rx:Math.PI/2,c:'#d4a63d'})),
+    ] as Inst[]:[],
+    // Cabin windows on top of the gold sleeves, so the window line runs nose to tail.
+    goldWindows:gold?[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.015),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))).filter(w=>w.p[2]<GOLD_JET_FADE[0].to) as Inst[]:[],
+  };},[livery,parked,gold]);
   useFrame(()=>{
     if(night){
       const blink=blinkState(clock.current,phase);
@@ -86,13 +101,18 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
     ref.current.position.set(pose.x,pose.y,pose.z);
     // Heading first, then nose pitch, then bank about the fuselage.
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
-    ref.current.visible=pose.visible;
+    // While you ride the gold jet its cabin (GoldJetRide) is drawn in its place.
+    ref.current.visible=pose.visible&&!(gold&&goldJetRide.active);
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
-  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined}>
-    <Instanced items={parts.body} geometry={g.ball} material={m.plain}/>
-    <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain}/>
-    <Instanced items={parts.wings} geometry={g.box} material={m.plain}/>
+  const pickAll=gold?{...gold.pick,keys:[] as string[]}:undefined,picked=(items:Inst[])=>pickAll&&{...pickAll,keys:items.map(()=>GOLD_JET_KEY)};
+  const S=gold?GOLD_JET_SCALE:1,P=GOLD_JET_PIVOT;
+  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
+   <group position={gold?P:undefined} scale={S}><group position={gold?[-P[0],-P[1],-P[2]]:undefined}>
+    {gold&&<><Instanced items={parts.gold} geometry={g.cyl} material={gold.material} pick={picked(parts.gold)}/><Instanced items={parts.goldWindows} geometry={g.box} material={m.plain} shadow={false}/></>}
+    <Instanced items={parts.body} geometry={g.ball} material={m.plain} pick={picked(parts.body)}/>
+    <Instanced items={parts.tubes} geometry={g.cyl} material={m.plain} pick={picked(parts.tubes)}/>
+    <Instanced items={parts.wings} geometry={g.box} material={m.plain} pick={picked(parts.wings)}/>
     {!parked&&<group ref={gearRef} position={[0,GEAR_TOP,0]}><Instanced items={parts.gear} geometry={g.ball} material={m.plain} shadow={false}/></group>}
     <Instanced items={cockpit} geometry={g.box} material={night?m.glow:m.plain} shadow={false}/>
     {/* Night lights: red/green/white position lights stay on; a parked jet with engines off shows only those. */}
@@ -107,6 +127,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam}:{parke
         </group>
       </>}
     </>}
+   </group></group>
   </group>;
 }
 
@@ -122,22 +143,38 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
   useEffect(()=>()=>glazing.dispose(),[glazing]);
   const beam=useMemo(()=>new THREE.MeshBasicMaterial({color:'#fff1cc',transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
   useEffect(()=>()=>beam.dispose(),[beam]);
-  useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);});
+  useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);goldJetLive.clock=clock.current;});
+  // Polished gold for the private jet: a little metallic so it catches the sun, warm at night like the terminal glass.
+  const goldMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',metalness:.3,roughness:.32}),[]);
+  useEffect(()=>{goldMaterial.emissive.set('#5a4114');goldMaterial.emissiveIntensity=night?.4:.12;},[goldMaterial,night]);
+  useEffect(()=>()=>goldMaterial.dispose(),[goldMaterial]);
+  const goldTrim=useMemo(()=>({material:goldMaterial,pick}),[goldMaterial,pick]);
   const parts=useMemo(()=>{
     if(!a)return null;
     const y=TERRACE_H,x=a.x,z=a.z;
     const box=(px:number,py:number,pz:number,w:number,h:number,d:number,c:string):Inst=>({p:[px,py,pz],s:[w,h,d],c});
     const cubes:Inst[]=[
-      box(x+15,y+.015,z+7.5,2.2,.045,21,"#2b3335"),
+      box(x+AIRPORT_LAYOUT.runwayX,y+.015,z+AIRPORT_LAYOUT.runwayZ,AIRPORT_LAYOUT.runwayWidth,.045,AIRPORT_LAYOUT.runwayLength,"#2b3335"),
       box(x+7.35,y+.02,z+7,7.6,.035,20.8,"#969e9d"),
       box(x+11.5,y+.02,z+8,.85,.04,20,"#777f7f"),
       box(x+7.5,y+.02,z+18,7,.04,1.2,"#414a49"),
-      box(x+2,y+.05,z+18,2.2,1.05,2,HQ.white),
-      box(x+2,y+1.1,z+18,2.5,.12,2.3,HQ.glassDeep),
+      // Service building as a drive-through (Khaneil, 2026-11-13): a south wing, the gated street running through
+      // an open passage along its north side under a louvred roof (AIRPORT_SERVICE_DOOR.passage).
+      box(x+2,y+.05,z+18.425,2.2,1.05,1.15,HQ.white),
+      box(x+2,y+1.1,z+18.5,2.5,.12,1.3,HQ.glassDeep),
+      box(x+2,y+1.22,z+17.875,2.5,.06,.05,HQ.gold),box(x+2,y+1.22,z+19.125,2.5,.06,.05,HQ.gold),box(x+.775,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),box(x+3.225,y+1.22,z+18.5,.05,.06,1.3,HQ.gold),
     ];
     const glass:Inst[]=[],interiorLights:Inst[]=[],round:Inst[]=[];
     // Airside service building: a window band on every side, lit with the terminal glazing at night.
-    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18+side*1.015,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18,.025,.4,1.6,'#ffffff'));
+    for(const side of [-1,1])glass.push(box(x+2,y+.45,z+18.425+side*.59,1.8,.4,.025,'#ffffff'),box(x+2+side*1.115,y+.45,z+18.425,.025,.4,.95,'#ffffff'));
+    // The passage: a portal at each end (white columns, gold lintel, slate canopy), louvres over the road so it and
+    // its traffic show through from above, and three loading docks along the south wall.
+    {const P=AIRPORT_SERVICE_DOOR.passage,pz=(P.z0+P.z1)/2,pd=P.z1-P.z0;
+     for(const [px,out] of [[P.x0,-1],[P.x1,1]] as const){
+      cubes.push(box(x+px,y+.05,z+P.z0+.05,.1,1.05,.1,HQ.white),box(x+px,y+.98,z+pz,.12,.1,pd,HQ.gold),box(x+px+out*.17,y+1.08,z+pz,.34,.04,pd+.2,HQ.glassDeep));
+     }
+     for(let zz=P.z0+.08;zz<P.z1;zz+=.16)cubes.push(box(x+(P.x0+P.x1)/2,y+1.12,z+zz,P.x1-P.x0+.3,.035,.05,HQ.glassDeep));
+     for(const dx of [-.7,0,.7])cubes.push(box(x+2+dx,y+.05,z+19.03,.42,.55,.03,'#1d2528'),box(x+2+dx,y+.6,z+19.05,.5,.05,.06,HQ.gold),box(x+2+dx,y+.02,z+19.15,.42,.12,.2,'#8b9493'));}
     // Check-in islands and lounge seating inside the oval hall, lit from the ceiling at night.
     for(const zz of [3.4,5.2,6.8,8.6]){
      interiorLights.push(box(x+1.6,y+TERMINAL_HUB.mezzanine-.08,z+zz,2,.025,.12,'#fff2d1'),box(x+1.8,y+TERMINAL_HUB.glass-.03,z+zz,1.6,.025,.12,'#fff2d1'));
@@ -157,45 +194,70 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     for(const stand of AIRPORT_REMOTE_STANDS){
      cubes.push(box(x+stand.x,y+.02,z+stand.z,3.7,.035,3.6,'#969e9d'),box(x+stand.x,y+.06,z+stand.z,.035,.01,2.8,'#d6bd6e'));
      for(const side of [-1,1])cubes.push(box(x+stand.x+side*1.65,y+.06,z+stand.z,.025,.01,3.4,'#e5e7da'));
-     // The north (arrivals) stand's taxiway runs on past it, to where jets finish their pushback.
-     const [extensionZ,extensionD]=stand.z<0?[-3.9,7.8]:[20,6];
+     // The south (arrivals) stand's taxiway runs on past it, to where jets finish their pushback.
+     const [extensionZ,extensionD]=stand.z<0?[-3.9,7.8]:[20.6,7.2];
      cubes.push(box(x+9.9,y+.02,z+stand.z,2.8,.035,.8,'#8b9493'),box(x+11.5,y+.02,z+extensionZ,.85,.035,extensionD,'#8b9493'));
     }
-    // Landing runway on the old river strip, with a taxi lane north of runway 1 to the arrivals stand.
-    const L=LANDING,south=L.z+L.length/2,north=L.z-L.length/2;
+    // Landing runway between runway 1 and the service road. Jets land from the north and leave by the south end lane.
+    const L=LANDING,PAD=AIRPORT_LANDING_SOUTH_PAD,south=L.z+L.length/2,north=L.z-L.length/2;
     cubes.push(box(x+L.x,y+.015,z+L.z,L.width,.045,L.length,"#2b3335"));
-    cubes.push(box(x+(11.1+L.x)/2,y+.02,z+L.laneZ,L.x-11.1,.04,.85,"#777f7f"),box(x+(11.5+L.x)/2,y+.07,z+L.laneZ,L.x-11.5,.012,.035,"#d6bd6e"));
-    for(let zz=north+1.2;zz<south-1;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [north+.5,south-.5])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    // Runway-end taxiways (airport.ts): pavement, with the yellow centre line on from the parallel taxiway.
+    cubes.push(box(x+L.x,y+.015,z+(PAD.z0+PAD.z1)/2,L.width,.045,PAD.z1-PAD.z0,"#2b3335"));
+    // A taxiway stands 6 mm proud of the runway and service-road paving it meets, so the joins never flicker.
+    for(const t of AIRPORT_END_TAXIWAYS){const lane=t.w>t.d,x1=t.x+t.w/2;cubes.push(box(x+t.x,y+.02,z+t.z,t.w,.046,t.d,"#777f7f"),lane?box(x+(Math.max(11.5,t.x-t.w/2)+x1-.45)/2,y+.07,z+t.z,x1-.45-Math.max(11.5,t.x-t.w/2),.012,.035,"#d6bd6e"):box(x+t.x,y+.07,z+t.z+(t.z<7.5?-.22:.22),.035,.012,t.d-.45,"#d6bd6e"));
+     // A hold-short marking (two solid bars) across the taxiway just before the runway edge.
+     // A widened mouth where the taxiway meets the runway; the yellow centre line stops short of the hold bars, off the runway.
+     if(lane){cubes.push(box(x+x1-.3,y+.02,z+t.z,.6,.046,t.d+.5,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+x1-.18-k*.08,y+.07,z+t.z,.03,.012,t.d-.1,"#d6bd6e"));}
+     else{const toRunway=t.z<7.5?1:-1,hz=t.z+toRunway*(t.d/2-.18);cubes.push(box(x+t.x,y+.02,z+t.z+toRunway*(t.d/2-.2),t.w+.5,.046,.4,"#777f7f"));for(let k=0;k<2;k++)cubes.push(box(x+t.x,y+.07,z+hz-toRunway*k*.08,t.w-.1,.012,.03,"#d6bd6e"));}}
+    const [northBar,southBar]=AIRPORT_THRESHOLDS.landing;
+    for(let zz=northBar+1;zz<southBar-.6;zz+=1.2)cubes.push(box(x+L.x,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
+    for(const threshold of [northBar,southBar])for(let i=0;i<5;i++)cubes.push(box(x+L.x-.8+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
     // Aiming-point blocks where arriving jets touch down.
     for(const side of [-1,1])cubes.push(box(x+L.x+side*.55,y+.066,z+L.touchdownZ,.3,.012,1.3,"#f4eedb"));
-    for(let zz=north+.5;zz<=south-.5;zz+=1)for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
+    for(let zz=north+.5;zz<=south-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])cubes.push(box(x+L.x+side*(L.width/2+.15),y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     for(const gateZ of AIRPORT_LAYOUT.gateZ){
       const bridge=boardingBridge(gateZ);
-      // Enclosed boarding bridges stop at the passenger door; no public path crosses airside.
-      cubes.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+BOARDING_LAYOUT.ceiling,z+bridge.z,bridge.w+.2,.04,.5,"#e9ebe6"));
-      for(const side of [-1,1])cubes.push(box(x+5.1,y+.35,z+gateZ-.8+side*.2,3.2,.04,.02,HQ.glassDeep));
-      cubes.push(box(x+7,y+.065,z+gateZ, .035,.012,2.8,"#d6bd6e"));
+      // Jet bridge (Khaneil, 2026-11-13: "realistic like a real airport"): a glazed tunnel from the pier out beside the
+      // nose, a cab that turns in to the front door with a canopy over it, and a wheeled drive column under the tunnel.
+      const B=BOARDING_LAYOUT,cabX=bridge.endX-.22,cabZ0=bridge.door.z+.2,cabZ1=bridge.z+.19;
+      cubes.push(box(x+bridge.x,y+B.floor,z+bridge.z,bridge.w,.03,.38,"#d9d8ca"),box(x+bridge.x,y+B.ceiling,z+bridge.z,bridge.w,.04,.46,"#e9ebe6"));
+      cubes.push(box(x+cabX,y+B.floor,z+(cabZ0+cabZ1)/2,.44,.03,cabZ1-cabZ0,"#d9d8ca"),box(x+cabX,y+B.ceiling,z+(cabZ0+cabZ1)/2-.02,.52,.04,cabZ1-cabZ0+.08,"#e9ebe6"));
+      cubes.push(box(x+cabX,y+(B.floor+B.ceiling)/2,z+cabZ0+.02,.4,B.ceiling-B.floor-.02,.03,"#3b4446"));
+      for(const side of [-1,1])glass.push(box(x+cabX+side*.21,y+B.floor+.03+.125,z+(cabZ0+cabZ1)/2,.02,.25,cabZ1-cabZ0,'#ffffff'));
+      cubes.push(box(x+7,y+.065,z+gateZ,2.8,.012,.035,"#d6bd6e"),box(x+5.75,y+.065,z+gateZ,.035,.012,.5,"#f4eedb"));
       for(const side of [-1,1]){
-       glass.push(box(x+bridge.x,y+BOARDING_LAYOUT.floor+.03,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
-       for(let xx=BOARDING_LAYOUT.fromX;xx<bridge.x+bridge.w/2;xx+=.65)cubes.push(box(x+xx,y+BOARDING_LAYOUT.floor,z+bridge.z+side*.21,.035,.32,.035,'#c2ccc7'));
+       glass.push(box(x+bridge.x,y+B.floor+.03+.125,z+bridge.z+side*.2,bridge.w,.25,.02,'#ffffff'));
+       for(let xx=B.fromX;xx<bridge.x+bridge.w/2;xx+=.65)cubes.push(box(x+xx,y+B.floor,z+bridge.z+side*.21,.035,.32,.035,'#c2ccc7'));
       }
-      cubes.push(box(x+bridge.x+bridge.w/2-.15,y+.05,z+bridge.z,.09,.17,.09,'#c2c7be'));
+      const legX=bridge.endX-.75;
+      cubes.push(box(x+legX,y+.12,z+bridge.z,.08,B.floor-.1,.08,'#c2c7be'),box(x+legX,y+.05,z+bridge.z,.14,.06,.42,'#5b6466'));
+      for(const side of [-1,1])round.push(box(x+legX,y+.04,z+bridge.z+side*.17,.07,.07,.07,'#202b36'));
     }
-    for(const gz of AIRPORT_LAYOUT.gateZ)cubes.push(box(x+9.7,y+.05,z+gz+1.8,.05,2.35,.05,HQ.rib),box(x+9.7,y+2.4,z+gz+1.8,.3,.035,.08,HQ.rib));
+    // No light poles on the apron (Khaneil, 2026-11-13): jets taxi to and from the gates without passing any.
     for(let px=4;px<10;px+=.4)cubes.push(box(x+px,y+.05,z+16.8,.035,.24,.035,HQ.glassDeep));
+    // Security gate on the cargo drive (AIRPORT_SERVICE_GATE): booth, raised striped arms, stop lines, fences.
+    {const G=AIRPORT_SERVICE_GATE,gx=x+G.x,mid=(G.drive.z0+G.drive.z1)/2;
+     cubes.push(box(gx+.1,y+.05,z+G.drive.z0-.42,.48,.62,.48,HQ.white),box(gx+.1,y+.67,z+G.drive.z0-.42,.6,.06,.6,HQ.glassDeep),box(gx-.15,y+.3,z+G.drive.z0-.42,.02,.24,.34,HQ.glass));
+     cubes.push(box(gx-.35,y+.07,z+(G.drive.z0+mid)/2,.06,.012,mid-G.drive.z0-.1,'#f4eedb'),box(gx+.35,y+.07,z+(mid+G.drive.z1)/2,.06,.012,G.drive.z1-mid-.1,'#f4eedb'));
+     for(const [pz,dir] of [[G.drive.z0-.1,1],[G.drive.z1+.1,-1]] as const){cubes.push(box(gx,y+.05,z+pz,.12,.42,.12,'#d6bd6e'));for(let k=0;k<5;k++)cubes.push(box(gx,y+.47+k*.14,z+pz+dir*.03,.06,.14,.06,k%2?'#f4eedb':'#c8442f'));}
+     for(const [z0,z1] of [[G.drive.z1+.15,G.drive.z1+1.2],[G.drive.z0-1.6,G.drive.z0-.7]] as const){cubes.push(box(gx,y+.28,z+(z0+z1)/2,.025,.025,z1-z0,HQ.glassDeep));for(let pz=z0;pz<=z1+1e-6;pz+=.4)cubes.push(box(gx,y+.05,z+pz,.035,.26,.035,HQ.glassDeep));}}
     cubes.push(box(x+7,y+.29,z+16.8,6,.035,.035,HQ.glassDeep));
     // Parallel taxiway and hold-short bars keep all waiting jets off the active runway.
-    cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"),box(x+13,y+.02,z+17.5,3,.04,.85,"#777f7f"));
-    for(const zz of [17.2,17.4])cubes.push(box(x+13.6,y+.075,z+zz,.04,.015,.7,"#d6bd6e"));
-    for(let i=0;i<16;i++)cubes.push(box(x+15,y+.065,z-2+i*1.2,.055,.012,.55,"#f4eedb"));
-    for(const threshold of [-2.5,17.5])for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
-    for(let i=0;i<22;i++)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z-2.5+i,.045,.06,.045,"#d0ad69"));
+    cubes.push(box(x+11.5,y+.07,z+8,.035,.012,19,"#d6bd6e"));
+    // The old mid-runway taxiway stub at z 17.5 is gone (Khaneil, 2026-11-13): departures lift off there now.
+    const [r1North,r1South]=AIRPORT_THRESHOLDS.runway1,r1Lamps=runwayLampZ(AIRPORT_LAYOUT.runwayZ,AIRPORT_LAYOUT.runwayLength);
+    for(let zz=r1North+1;zz<r1South-.6;zz+=1.2)cubes.push(box(x+15,y+.065,z+zz,.055,.012,.55,"#f4eedb"));
+    for(const threshold of AIRPORT_THRESHOLDS.runway1)for(let i=0;i<5;i++)cubes.push(box(x+14.2+i*.4,y+.066,z+threshold,.14,.012,.65,"#f4eedb"));
+    for(const zz of r1Lamps)for(const side of [13.75,16.25])cubes.push(box(x+side,y+.04,z+zz,.045,.06,.045,"#d0ad69"));
     const landingLamps:Inst[]=[];
-    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
-    return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...AIRPORT_LAYOUT.gateZ.map(gz=>({p:[x+9.7,y+2.45,z+gz+1.8],s:[.15,.04,.15]} as Inst)),...Array.from({length:22},(_,i)=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z-2.5+i],s:[.025,.025,.025]} as Inst))).flat(),...landingLamps]};
+    for(let zz=L.z-L.length/2+.5;zz<=L.z+L.length/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))for(const side of [-1,1])landingLamps.push({p:[a.x+L.x+side*(L.width/2+.15),TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]});
+    return {glass,interiorLights,round,grass:[{p:[x+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landWidth,y,AIRPORT_LAYOUT.landDepth]} as Inst,
+     // Airside grass stands up to 7 mm under the runways and taxiways, so the pavements read flush, not as raised slabs
+     // (Khaneil, 2026-11-13). Landside (west of the parallel taxiway) stays level with the city streets that cross it.
+     {p:[x+(11.93+AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth)/2,0,z+AIRPORT_LAYOUT.landZ+AIRPORT_LAYOUT.landDepth/2],s:[AIRPORT_LAYOUT.landX+AIRPORT_LAYOUT.landWidth-11.93,y+.053,AIRPORT_LAYOUT.landDepth]} as Inst],cubes,lamps:[...r1Lamps.flatMap(zz=>[13.75,16.25].map(dx=>({p:[a.x+dx,TERRACE_H+.11,a.z+zz],s:[.025,.025,.025]} as Inst))),...landingLamps]};
   },[a]);
   const circuit=useMemo(()=>a&&bounds?airportFlightCircuit(a,bounds,flightAltitude,obstacles):undefined,[a,bounds,flightAltitude,obstacles]);
+  useEffect(()=>{goldJetLive.circuit=circuit;goldJetLive.west=a?.west;},[circuit,a]);
   if(!a||!parts)return null;
   return <group position={a.west?[2*a.x+AIRPORT_LAYOUT.mirrorWidth,0,0]:[0,0,0]} scale={a.west?[-1,1,1]:[1,1,1]}>
     <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp}/>
@@ -204,15 +266,52 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <Instanced items={parts.glass} geometry={g.box} material={glazing} pick={{...pick,keys:parts.glass.map(()=>AIRPORT_KEY)}}/>
     <Instanced items={parts.interiorLights} geometry={g.box} material={m.glass}/>
     <Instanced items={parts.round} geometry={g.ball} material={m.plain}/>
-    {/* The north remote stand is kept free for arrivals; the south one keeps its parked jet. */}
-    {[AIRPORT_REMOTE_STANDS[1],{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[0]},{x:AIRPORT_LAYOUT.gateX,z:AIRPORT_LAYOUT.gateZ[3]}].map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
+    {/* Gates 1 and 4 keep parked jets; both remote stands belong to the loop. */}
+    {AIRPORT_PARKED_STANDS.map((stand,i)=><group key={i} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={0} parked={stand} livery={liveryFor(i+2)} night={night}/></group>)}
     <TerminalShapes a={a} g={g} m={m} glazing={glazing} night={night}/>
     <AirportCampus a={a} g={g} m={m} pick={pick} night={night}/>
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     <GroundCrew a={a} g={g} m={m} clock={clock}/>
-    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={liveryFor(slot)} night={night} beam={beam}/></group>)}
+    <group position={[a.x,TERRACE_H+.06,a.z]}><ExecutiveJet g={g} m={m} clock={clock} circuit={circuit}/></group>
+    {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={slot===GOLD_JET_SLOT?GOLD_JET_LIVERY:liveryFor(slot)} night={night} beam={beam} gold={slot===GOLD_JET_SLOT?goldTrim:undefined}/></group>)}
+    <GoldJetBoarding x={a.x} z={a.z} g={g} m={m} clock={clock} circuit={circuit}/>
   </group>;
+}
+
+/** The executive jet (it used to circle the city on its own): now it flies the airport loop in the shared slot,
+ * every other loop, resting at the north remote stand in between (executiveJetPose, Khaneil 2026-11-13). */
+const EXECUTIVE_JET=({
+    body:[
+      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
+      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
+      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
+      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
+      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
+      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
+    ] as Inst[],
+    trim:[
+      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
+      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
+      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
+      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
+      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
+      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
+      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
+    ] as Inst[],
+  });
+function ExecutiveJet({g,m,clock,circuit}:{g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
+  const ref=useRef<Group>(null);
+  useFrame(()=>{
+    if(!ref.current)return;
+    const pose=executiveJetPose(clock.current,circuit);
+    ref.current.position.set(pose.x,pose.y,pose.z);
+    ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
+  });
+  // The model is built nose +x; turn it so the nose points -z like the airliners.
+  return <group ref={ref}><group rotation={[0,Math.PI/2,0]}><Instanced items={EXECUTIVE_JET.body} geometry={g.ball} material={m.plain}/><Instanced items={EXECUTIVE_JET.trim} geometry={g.box} material={m.plain}/></group></group>;
 }
 
 /** The redesigned terminal, tower and car park: ten instanced draws sharing three extra geometries. */
@@ -240,10 +339,36 @@ function TerminalShapes({a,g,m,glazing,night}:{a:AirportPlan;g:Geometry;m:Materi
  </>;
 }
 
+/** The gold jet's passengers walking the jet bridge at its gate: off first, then the next group on. The same unnamed
+ * figures as the other boarding groups; one instanced pair of meshes, posed from the shared airport clock. */
+const GOLD_PASSENGER_COLORS=["#2f3b45","#b8893b","#e8e2d4","#6b3f4a","#30594c","#8c96a3"];
+function GoldJetBoarding({x,z,g,m,clock,circuit}:{x:number;z:number;g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
+ const bodyRef=useRef<THREE.InstancedMesh>(null),headRef=useRef<THREE.InstancedMesh>(null);
+ const o=useMemo(()=>new THREE.Object3D(),[]);
+ useEffect(()=>{const c=new THREE.Color();for(let i=0;i<GOLD_PASSENGER_COLORS.length;i++){bodyRef.current?.setColorAt(i,c.set(GOLD_PASSENGER_COLORS[i]));headRef.current?.setColorAt(i,c.set("#c5a580"));}for(const r of [bodyRef,headRef])if(r.current?.instanceColor)r.current.instanceColor.needsUpdate=true;},[]);
+ useFrame(()=>{
+  const body=bodyRef.current,head=headRef.current;if(!body||!head)return;
+  const walkers=goldJetWalkers(goldJetState(clock.current,circuit));
+  for(let i=0;i<GOLD_PASSENGER_COLORS.length;i++){
+   const w=walkers[i],s=w?1:0;
+   o.position.set(w?.x??0,0,w?.z??0);o.rotation.set(0,w?.yaw??0,0);o.scale.set(.055*s,.15*s,.055*s);o.updateMatrix();body.setMatrixAt(i,o.matrix);
+   o.position.y=.2;o.scale.set(.06*s,.06*s,.06*s);o.updateMatrix();head.setMatrixAt(i,o.matrix);
+  }
+  body.instanceMatrix.needsUpdate=true;head.instanceMatrix.needsUpdate=true;body.visible=head.visible=walkers.length>0;
+ });
+ return <group position={[x,TERRACE_H+BOARDING_LAYOUT.floor+.03,z]}>
+  <instancedMesh ref={bodyRef} args={[g.box,m.plain,GOLD_PASSENGER_COLORS.length]} frustumCulled={false} raycast={()=>null}/>
+  <instancedMesh ref={headRef} args={[g.bead,m.plain,GOLD_PASSENGER_COLORS.length]} frustumCulled={false} raycast={()=>null}/>
+ </group>;
+}
+
 /** A single existing frame callback moves small boarding groups and two cargo vehicles. */
 function BoardingActivity({x,z,g,m}:{x:number;z:number;g:Geometry;m:Materials}){
- const bodies=useMemo<Inst[]>(()=>Array.from({length:4},(_,j)=>({p:[j*.42,0,0],s:[.055,.15,.055],c:["#294237","#b8893b","#356386","#8a5d79"][j]})),[]);
- const heads=useMemo<Inst[]>(()=>bodies.map(p=>({p:[p.p[0],.2,p.p[2]],s:[.06,.06,.06],c:"#c5a580"})),[bodies]);
+ // Standing passengers with arms and legs (walkerFigure.ts sizes), waiting at the door.
+ const bodies=useMemo<Inst[]>(()=>{const {leg,torso,arm}=FIGURE,out:Inst[]=[];for(let j=0;j<4;j++){const x0=j*.42,shirt=["#294237","#b8893b","#356386","#8a5d79"][j];
+  out.push({p:[x0,torso.y,0],s:[torso.w,torso.h,torso.d],c:shirt});
+  for(const side of [-1,1])out.push({p:[x0+side*leg.x,0,0],s:[leg.w,leg.h,leg.d],c:"#2f3a44"},{p:[x0+side*arm.x,arm.y-arm.h,0],s:[arm.w,arm.h,arm.d],c:shirt});}return out;},[]);
+ const heads=useMemo<Inst[]>(()=>Array.from({length:4},(_,j)=>({p:[j*.42,FIGURE.head.y,0],s:[FIGURE.head.r,FIGURE.head.r,FIGURE.head.r],c:"#c5a580"})),[]);
  return <>{[AIRPORT_LAYOUT.gateZ[0],AIRPORT_LAYOUT.gateZ[3]].map(gate=><group key={gate} position={[x+3.55,TERRACE_H+BOARDING_LAYOUT.floor+.03,z+gate+AIRCRAFT_LAYOUT.doorZ]}><Instanced items={bodies} geometry={g.box} material={m.plain}/><Instanced items={heads} geometry={g.bead} material={m.plain}/></group>)}</>;
 }
 

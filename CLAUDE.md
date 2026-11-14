@@ -18,6 +18,22 @@ and redeploys the web page. Treat every merge as a production release.
   with "Also build the macOS app" before asking to merge.
 - Never merge. KC merges, or says "merge" in the thread.
 
+## Keep the dashboard tabs current
+Khaneil's standing rule (2026-11-13): any change that adds, removes, renames or switches on or off
+something in Atlas updates the data behind the tabs in the same pull request, so every tab shows it.
+- Agents, automations, n8n workflows: the agent's entry in `catalog/*.yaml`. Its `status`, `trigger`,
+  `last_run`, `history` and links must match what is live (published in n8n = `active`, draft =
+  `paused` with "draft" in the trigger). Link every n8n workflow it runs, labelled with "n8n".
+- Buildings and landmarks: `catalog/workspace/buildings.yaml` (names), `workspace.yaml` (module,
+  agents), and the map inventory in `src/inventory/mapInventory.ts` for new map objects.
+- Hosting, spend caps: `src/infra/hosts.ts`, `src/finance/caps.ts`, `catalog/workspace/finance.yaml`.
+- A new agent gets a desk inside its building. It never resizes a district or moves buildings, so
+  leave outside services out of its `registry.responsibilities.tools` unless Khaneil wants a new
+  tool building there (a major tool that works with that building).
+- Only record what is on `main` and what you checked; anything unproven stays "Not documented".
+- `src/catalog/dashboardData.test.ts` guards this; the Workflow Automation Plant in the app lists
+  any n8n workflow switched on but not in the catalog as "Not in Atlas yet".
+
 ## High risk, say so in the PR
 Signing and release (`.github/`, `scripts/*signing*`, `src-tauri/tauri.conf.json`), secrets
 (`src-tauri/src/secrets.rs`, `handoff.rs`), the updater (`src/components/UpdateButton.tsx`), and write

@@ -93,6 +93,20 @@ describe("live hooks", () => {
     expect(d.rows).toHaveLength(0);
   });
 
+  it("skips job events and requested runs, which cost D1 writes and show nothing new", async () => {
+    const d = fakeD1();
+    const env = { LIVE: d.db, GITHUB_WEBHOOK_SECRET: SECRET };
+    const job = { action: "in_progress", repository: { full_name: "o/r" }, workflow_job: { id: 1, run_id: 7, name: "build", status: "in_progress" } };
+    expect(compactGithub("workflow_job", job)).toBeNull();
+    expect(await (await receiveGithub(hook("workflow_job", job), env, NOW)).json()).toEqual({ ignored: "workflow_job" });
+    const requested = { ...runPayload("queued"), action: "requested" };
+    expect(compactGithub("workflow_run", requested)).toBeNull();
+    expect((await receiveGithub(hook("workflow_run", requested), env, NOW)).status).toBe(202);
+    expect(d.rows).toHaveLength(0);
+    expect(compactGithub("workflow_run", runPayload("in_progress"))?.kind).toBe("workflow_run");
+    expect(compactGithub("workflow_run", runPayload("completed"))?.kind).toBe("workflow_run");
+  });
+
   it("keeps a push's commit summaries only", () => {
     const c = compactGithub("push", {
       ref: "refs/heads/main",

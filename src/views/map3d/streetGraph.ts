@@ -1,4 +1,4 @@
-import { crossing, towerRing, type Pt, type Pt3, type Ring } from "./roads";
+import { crossing, ringPath, towerRing, type Pt, type Pt3, type Ring } from "./roads";
 import type { Scene3D } from "./scene";
 
 /**
@@ -35,6 +35,30 @@ export function plazaRings(scene: Pick<Scene3D, "towers" | "clearedLots" | "pavi
   );
 }
 
+/**
+ * The plaza lanes actually paved: round each plaza ring, the short way between every pair of streets that reach it
+ * (bridge exits and district roads ending on the ring). The renderer draws these and vehicles drive only these
+ * (Khaneil, 2026-11-13: "cars are running off the streets"), so no car circles an undrawn lane across a plaza.
+ */
+export function plazaLanes(scene: Pick<Scene3D, "towers" | "clearedLots" | "paving" | "carBridges" | "transportConnections">): [Pt, Pt][] {
+  const out: [Pt, Pt][] = [], seen = new Set<string>();
+  const onRing = (g: Ring, p: Pt) => (Math.abs(p[0] - g.x0) < 1e-6 || Math.abs(p[0] - g.x1) < 1e-6) && p[1] >= g.z0 - 1e-6 && p[1] <= g.z1 + 1e-6 || (Math.abs(p[1] - g.z0) < 1e-6 || Math.abs(p[1] - g.z1) < 1e-6) && p[0] >= g.x0 - 1e-6 && p[0] <= g.x1 + 1e-6;
+  for (const [id, g] of plazaRings(scene)) {
+    const entries: Pt[] = [];
+    for (const p of [...scene.carBridges.flatMap((br) => { const end = br.ends.indexOf(id); return end < 0 ? [] : [br.roads[end][0]]; }),
+      ...(scene.transportConnections ?? []).flatMap((c) => [c.road[0], c.road[c.road.length - 1]]).filter((p) => onRing(g, p))])
+      if (!entries.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 1e-6)) entries.push(p);
+    for (let a = 0; a < entries.length; a++) for (let b = a + 1; b < entries.length; b++) {
+      const path = [entries[a], ...ringPath(g, entries[a], entries[b])];
+      for (let i = 1; i < path.length; i++) {
+        const key = [path[i - 1].join(":"), path[i].join(":")].sort().join("|");
+        if (!seen.has(key) && Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]) > 1e-6) { seen.add(key); out.push([path[i - 1], path[i]]); }
+      }
+    }
+  }
+  return out;
+}
+
 /** The centre lines of every street a pedestrian may follow, as 3D polylines. */
 export function streetLines(scene: Scene3D, opts: { drive?: boolean } = {}): Pt3[][] {
   const flat = (line: Pt[]): Pt3[] => line.map((p) => [p[0], 0, p[1]]);
@@ -51,7 +75,8 @@ export function streetLines(scene: Scene3D, opts: { drive?: boolean } = {}): Pt3
   }
   // Vehicles never drive across the front of a tower, where its entrance stairs are: for driving,
   // the plaza lane runs round the sides and back only.
-  for (const g of plazaRings(scene).values()) lines.push(flat(opts.drive ? [[g.x0, g.z1], [g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1]] : [[g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1], [g.x0, g.z1], [g.x0, g.z0]]));
+  if (opts.drive) for (const seg of plazaLanes(scene)) lines.push(flat(seg));
+  else for (const g of plazaRings(scene).values()) lines.push(flat([[g.x0, g.z0], [g.x1, g.z0], [g.x1, g.z1], [g.x0, g.z1], [g.x0, g.z0]]));
   return lines.map((l) => l.filter((p, i) => !i || Math.hypot(p[0] - l[i - 1][0], p[2] - l[i - 1][2]) > 1e-6)).filter((l) => l.length > 1);
 }
 
