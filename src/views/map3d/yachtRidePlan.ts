@@ -85,7 +85,7 @@ function baseView(view:YachtView,portrait:boolean){
  if(view==='sundeck'){const y=DECK_FLOOR[3]+2.6;return {eye:new THREE.Vector3(-14,y,0),target:new THREE.Vector3(40,y-9,0),orbit:false};}
  if(view===-1)return portrait
   // A portrait phone can't fit her side-on: it looks along her from off the starboard quarter.
-  ?{eye:new THREE.Vector3(-58,34,46),target:new THREE.Vector3(2,6,0),orbit:true}
+  ?{eye:new THREE.Vector3(-84,44,66),target:new THREE.Vector3(2,6,0),orbit:true}
   // Off her starboard side, a little above the sun deck: every deck shows through the open side, the city beyond.
   :{eye:new THREE.Vector3(4,20,72),target:new THREE.Vector3(0,8,0),orbit:true};
  const y=DECK_FLOOR[view];
