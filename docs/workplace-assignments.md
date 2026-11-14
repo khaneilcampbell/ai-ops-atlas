@@ -21,12 +21,7 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Senior Engineering Reviewer (`atlas-engineering-review`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | CI Recovery Specialist (`atlas-rerun-failed`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Pull Request Integration Coordinator (`atlas-merge-pr`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Repository Maintenance Analyst (`atlas-github-steward`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| AI Production Improvement Analyst (`atlas-system-improvements`) | ai-ops-atlas | Atlas HQ | Project office | Moved from Model Lab 401 when Skyline was removed (2026-11-08) | Existing configuration preserved; see recorded Output |
-| AI UI Improvement Designer (`atlas-ui-improvement-designer`) | ai-ops-atlas | Atlas HQ | Project office | Moved from Model Lab 402 when Skyline was removed (2026-11-08) | Existing configuration preserved; see recorded Output |
 | Atlas Production Coordinator (`atlas-production-coordinator`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Atlas Reliability Reviewer (`atlas-reliability-reviewer`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Atlas Performance Reviewer (`atlas-performance-reviewer`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Inquiry Routing Coordinator (`benjaire-contact-worker`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Client Intake Specialist (`benjaire-flow-intake`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Client Reply Assistant (`benjaire-inquiry-to-client`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |

@@ -9,13 +9,15 @@ for(const width of [1512,390]) test(`Agents own their automations ${width}`,asyn
  await openAtlas(page);
  mkdirSync('docs/agent-owners',{recursive:true});
  await goTo(page,'Agents');
- const nested=page.getByRole('list',{name:'Automations run by Senior Engineering Reviewer'});
- await expect(nested.getByRole('button')).toHaveCount(6);
+ // Since 2026-11-14 the Production Coordinator runs Merge Flow; Senior Engineering Reviewer's six were deleted or moved.
+ const nested=page.getByRole('list',{name:'Automations run by Atlas Production Coordinator'});
+ await expect(nested.getByRole('button')).toHaveCount(1);
+ await expect(page.getByRole('list',{name:'Automations run by Senior Engineering Reviewer'})).toHaveCount(0);
  await expect(page.getByRole('list',{name:'Automations run by Client Inquiry Manager'}).getByRole('button')).toHaveCount(6);
  await expect(page.getByRole('list',{name:'Automations run by Commerce Operations Manager'}).getByRole('button')).toHaveCount(5);
  await expect(page.getByRole('list',{name:'Automations run by Portfolio Web Developer'}).getByRole('button')).toHaveCount(3);
- await page.locator('.reg-row[data-id="atlas-engineering-review"]').scrollIntoViewIfNeeded();await settle(page,1);
- await page.locator('.reg-row[data-id="atlas-engineering-review"]').evaluate(e=>e.scrollIntoView({block:'start'}));
+ await page.locator('.reg-row[data-id="atlas-production-coordinator"]').scrollIntoViewIfNeeded();await settle(page,1);
+ await page.locator('.reg-row[data-id="atlas-production-coordinator"]').evaluate(e=>e.scrollIntoView({block:'start'}));
  await page.screenshot({path:`docs/agent-owners/agents-${width}.png`});
  await page.locator('.reg-row[data-id="benjaire-inquiry-manager"]').evaluate(e=>e.scrollIntoView({block:'start'}));await settle(page,1);
  await page.screenshot({path:`docs/agent-owners/new-owner-${width}.png`});

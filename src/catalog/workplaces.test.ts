@@ -7,13 +7,9 @@ import {WORKSPACE} from "../modules/workspace";
 // Agents that operate a landmark building (workspace.yaml `agents`) are placed there, not at headquarters.
 const operators=()=>catalog.agents.filter(a=>WORKSPACE.landmarks.some(l=>l.agents?.includes(a.id)));
 
-it("moves the Model Lab agents to Atlas HQ when Skyline is removed, keeping repo ownership",()=>{
-  for(const id of ["atlas-system-improvements","atlas-ui-improvement-designer"]){
-    const agent=catalog.agents.find(a=>a.id===id)!;
-    expect(agent.workplace).toBeUndefined();
-    expect(agent.repository).toBe("khaneilcampbell/ai-ops-atlas");
-    expect(projectOfficeAgents(catalog.agents,"ai-ops-atlas")).toContain(agent);
-  }
+it("seats every agent exactly somewhere, and keeps the five agents deleted on 2026-11-14 gone",()=>{
+  for(const id of ["atlas-system-improvements","atlas-ui-improvement-designer","atlas-reliability-reviewer","atlas-performance-reviewer","atlas-github-steward"])
+    expect(catalog.agents.find(a=>a.id===id)).toBeUndefined();
   const placed=[...catalog.projects.flatMap(p=>projectOfficeAgents(catalog.agents,p.id)),...catalog.agents.filter(a=>a.workplace),...operators()];
   expect(placed.map(a=>a.id).sort()).toEqual(catalog.agents.map(a=>a.id).sort());
 });
@@ -29,15 +25,9 @@ it("rejects unsupported rooms, floor mismatches, and double-booked workplaces",(
   expect(buildCatalog({"a.yaml":duplicate}).issues[0].message).toContain("more than one worker");
 });
 
-it("keeps the UI designer manual-only",()=>{
- const agent=catalog.agents.find(a=>a.id==="atlas-ui-improvement-designer")!;
- expect(agent.trigger).toBe("Explicit maintainer request only; no schedule");
- expect(agent.observe).toBeUndefined();
-});
-
-it("assigns the manual production team only to Atlas Floor 3 and rejects invalid floors",()=>{
+it("assigns the Production Coordinator only to Atlas Floor 3 and rejects invalid floors",()=>{
  const team=catalog.agents.filter(a=>a.officeFloor===3);
- expect(team.map(a=>a.id).sort()).toEqual(["atlas-performance-reviewer","atlas-production-coordinator","atlas-reliability-reviewer"]);
+ expect(team.map(a=>a.id).sort()).toEqual(["atlas-production-coordinator"]);
  expect(team.every(a=>a.projectId==="ai-ops-atlas"&&!a.workplace&&a.status==="idle")).toBe(true);
  expect(team.find(a=>a.id==="atlas-production-coordinator")?.observe?.githubWorkflow).toBe("benjaire-production.yml");
  for(const floor of [0,5,2.5,'"2"']) {

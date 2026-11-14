@@ -21,7 +21,7 @@ agents:
     name: Merge Flow
     purpose: Sorts every open pull request across Khaneil's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; Khaneil still says "merge".
     framework: GitHub Actions + Claude
-    owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
+    owned_by: atlas-production-coordinator    # owning agent, moved at Khaneil's request 2026-11-14 (was development-hub-lead)
     model: Claude Opus 5.5 (Anthropic API), only when the triage changed
     runtime: GitHub-hosted runner
     status: active
@@ -299,7 +299,7 @@ agents:
   - id: development-hub-lead
     name: Development Hub Lead
     purpose: >-
-      Runs Khaneil's cross-repository GitHub routines from the Development Hub: sorts every open pull request into one lane, checks Atlas styles and names for design drift, and proposes scored ways to earn from the agents when the registry changes. It has no model of its own yet; it works through the automations it owns.
+      Runs Khaneil's cross-repository GitHub routines from the Development Hub: checks Atlas styles and names for design drift, and proposes scored ways to earn from the agents when the registry changes. It has no model of its own yet; it works through the automations it owns.
     framework: Atlas owning agent (runs through its automations)
     model: None of its own; each automation it owns keeps its own model and cap
     runtime: Through its automations
@@ -309,6 +309,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Merge Flow Coordinator, Design Consistency, Opportunity Scout, at Khaneil's request
+      - at: 2026-11-14
+        event: Merge Flow moved to the Atlas Production Coordinator, at Khaneil's request
     registry:
       title: Development Hub Lead
       category: engineering
@@ -320,7 +322,7 @@ agents:
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
       responsibilities:
-        tasks: [Sort open pull requests into lanes, Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
+        tasks: [Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
         tools: [Its automations]
         outputs: [The results of its automations]
       execution:
