@@ -19,7 +19,7 @@ describe("agent jobs", () => {
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
     // Exercise declared-workplace mapping independently of the real workflow's classification.
-    const original = catalog.agents.find(a => a.id === "atlas-system-improvements")!;
+    const original = catalog.agents.find(a => a.id === "atlas-production-coordinator")!;
     const fixture = { ...original, workplace: { building: "Atlas Marketplace" as const, floor: 1, room: "108" }, registry: { ...original.registry, classification: { type: "A" as const, confidence: "verified" as const } } };
     const suite = agentJobs({ ...catalog, agents: [fixture] })[0];
     expect(suite.work).toMatchObject({ kind: "workplace", building: "Atlas Marketplace" });
