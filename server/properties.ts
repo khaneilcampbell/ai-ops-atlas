@@ -15,6 +15,7 @@ import { PROPERTY_DOMAINS, propertyByDomain } from "../src/properties/registry";
 import { edgeEvents, findZone, NoZone, traffic, type Zone } from "./cloudflare";
 import type { Check, CheckName, DnsInfo, DomainInfo, EdgeEvent, PerfInfo, ProbeInfo, SiteSnapshot, TlsInfo, TrafficInfo } from "../src/properties/types";
 import { bearerOk } from "./live";
+import { reply, type Json as J } from "./http";
 
 export interface PropertyEnv {
   /** Optional Google API key, only to raise the PageSpeed Insights quota. */
@@ -33,7 +34,6 @@ export interface CheckCache {
   put(key: string, value: unknown, ttlSec: number): Promise<void>;
 }
 
-type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Fetcher = typeof fetch;
 
 const TIMEOUT_MS = 15_000;
@@ -53,8 +53,6 @@ export const TTL: Record<"domain" | "dns" | "tls" | "probe" | "performance" | "t
 };
 const ZONE_TTL = 24 * 3600;
 
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 async function getJson(fetcher: Fetcher, url: string, init: RequestInit = {}, timeout = TIMEOUT_MS): Promise<unknown> {
   const r = await fetcher(url, { ...init, signal: AbortSignal.timeout(timeout) });

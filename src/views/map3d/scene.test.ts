@@ -41,13 +41,13 @@ describe("buildScene", () => {
     }
   });
 
-  it("gives office projects a tower and off-map projects none (Skyline, Service Desk, Career Applications, Benjaire Dashboard)", () => {
+  it("gives office projects a tower and off-map projects none", () => {
     const s = buildScene(layoutMap(catalog));
     expect(s.towers.map((t) => t.projectId).sort()).toEqual(catalog.projects.filter(p => !OFF_MAP_PROJECTS.has(p.id)).map((p) => p.id).sort());
     expect(s.houses).toEqual([]);
     expect(s.towers.reduce((n, t) => n + t.agents + t.automations, 0)).toBe(catalog.agents.filter((a) => !OFF_MAP_PROJECTS.has(a.projectId)).length);
     // Their land stays as plain lawn, apart from the open lot the Marketplace anchors on.
-    expect(s.parks.filter((p) => p.label === VACANT_LOT_LABEL).map((p) => p.id).sort()).toEqual(["park:vacant:career-optimizer", "park:vacant:service-desk"]);
+    expect(s.parks.filter((p) => p.label === VACANT_LOT_LABEL).map((p) => p.id).sort()).toEqual(["park:vacant:career-optimizer", "park:vacant:vacant-lot-west"]);
     expect(openLot(s.parks)?.id).toBe("park:all");
     expect(s.clearedLots?.map((t) => t.projectId)).toEqual(["benjaire-ops"]);
     expect(s.terraces.some((t) => t.id === "benjaire-ops")).toBe(false);
@@ -114,7 +114,9 @@ describe("open lot", () => {
       const on = (x: number, z: number) => x > lot.x && x < lot.x + lot.w && z > lot.z && z < lot.z + lot.d;
       for (const b of [...scene.towers, ...scene.kiosks, ...scene.strays]) expect(on(b.x, b.z), `${g} ${b.key}`).toBe(false);
       for (const h of scene.houses) expect(on(h.x, h.z), `${g} ${h.key}`).toBe(false);
-      expect(scene.trees.filter((t) => on(t.x, t.z)), g).toEqual([]);
+      // Atlas Commons' designed planting (drawn by Landscape since Nov 13) may reach into the lot; the lot's own meadow trees stay cleared.
+      const c = scene.commons?.rect, inCommons = (x: number, z: number) => !!c && x >= c.x && x <= c.x + c.w && z >= c.z && z <= c.z + c.d;
+      expect(scene.trees.filter((t) => on(t.x, t.z) && !inCommons(t.x, t.z)), g).toEqual([]);
       expect(scene.fountains.filter((f) => on(f.x, f.z)), g).toEqual([]);
       expect(scene.ponds.filter((p) => on(p.x, p.z)), g).toEqual([]);
     }

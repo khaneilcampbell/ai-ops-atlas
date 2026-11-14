@@ -66,8 +66,9 @@ export function Mall({plan:a,g,m,pick,night=false}:{plan?:MallPlan;night?:boolea
    for(const q of along(inset(outer,inner,.1),MALL.plantStep))plants.push({p:[q.x,y0+(l+1)*MALL.floor+MALL.slab+.04,q.z],s:[.22,.14,.22],c:l%2?'#86b958':'#4f7a52'});
   }
   const p=a.plaza;
-  // The plaza runs on to the collector road's sidewalk, so walkers arrive on paving.
-  solid.push({p:[p.x+p.w/2,y0+.005,p.z+(p.d+.3)/2],s:[p.w,.02,p.d+.3],c:'#dcd3bd'});
+  // One forecourt in one paving shade, square to the street sidewalk where one runs in front (scene.ts).
+  const z1=a.forecourtZ1??p.z+p.d+.3;
+  solid.push({p:[p.x+p.w/2,y0+.005,(p.z+z1)/2],s:[p.w,.02,z1-p.z],c:'#dcd3bd'});
   // Entrance court inside the horseshoe, under the canopy.
   solid.push({p:[a.cx,y0+.006,a.cz+a.rz*.45],s:[a.rx*.9,.02,a.rz*1.1],c:'#e6d6b4'});
   // Monument sign at the head of the plaza, facing the boulevard.

@@ -3,6 +3,10 @@ import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene} from './scene';
 import {highwayShare} from './highway';
+import {planVehicles,vehicleAt} from './vehicles';
+import {plazaLanes} from './streetGraph';
+import {distanceToRoad} from './highway';
+import {VEHICLE_LIVERY} from './vehicles';
 import {vehicleBounds} from './vehicleModels';
 import {ROAD,TRANSPORT as T} from './transportScale';
 import {straightenJogs} from './routing';
@@ -18,7 +22,7 @@ describe('Atlas road standard',()=>{
   expect(T.highwayShoulder,'edge lines sit inside it').toBeLessThan(T.highwayWidth/2);
  });
  it('fits two opposing vehicles of every kind in a city lane pair and a highway lane pair',()=>{
-  for(const kind of ['sedan','sports','bmw','gwagon','pickup','bus','semi','taxi','amazon','ups'] as const){
+  for(const kind of ['sedan','sports','bmw','gwagon','pickup','bus','semi','taxi','delivery','parcel'] as const){
    const b=vehicleBounds(kind);
    expect(T.cityLaneOffset-b.halfWidth,`${kind}: opposing city lanes do not overlap`).toBeGreaterThan(0);
    expect(T.cityLaneOffset+b.halfWidth,`${kind}: stays on the street`).toBeLessThan(T.cityWidth/2);
@@ -56,5 +60,27 @@ describe('district streets carry on over their bridges',()=>{
    const level=asphalt.find(d=>!d.rx)!,mid=dashes.find(d=>!d.rx);
    if(mid)expect(mid.p[1],`${br.key}: center line sits on the asphalt`).toBeGreaterThan(level.p[1]+level.s[1]);
   }
+ });
+});
+
+describe('commercial vehicle liveries',()=>{
+ it('letters the fleet as Atlas, with no real brand names left',()=>{
+  const texts=Object.values(VEHICLE_LIVERY).map(l=>l!.text);
+  expect(texts.length).toBeGreaterThan(0);
+  for(const t of texts){expect(t.startsWith('ATLAS')).toBe(true);expect(t).not.toMatch(/ups|amazon|fedex|dhl|usps|mta|uber|lyft/i);}
+ });
+});
+
+// City traffic stays on drawn asphalt (Khaneil, 2026-11-13: "cars are running off the streets"): streets, bridges,
+// Financial District streets and the paved plaza lanes, never an undrawn lane across a plaza.
+for(const g of ['district','tag'] as const)describe(`city traffic on the streets, ${g} grouping`,()=>{
+ it('keeps every vehicle on a carriageway or a paved plaza lane',()=>{
+  const s=buildScene(layoutMap(catalog,[],g));
+  const lines:Pt[][]=[...s.transportConnections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...s.carBridges.flatMap(b=>[...b.roads,[b.a,b.b]]),
+   ...(s.financial?[s.financial.street,s.financial.road,...(s.financial.circa?[s.financial.circa.street]:[])]:[]),
+   ...plazaLanes(s)];
+  const off:string[]=[];
+  for(const v of planVehicles(s))for(let t=0;t<v.period;t+=v.period/120){const a=vehicleAt(v,t);if(!lines.some(l=>distanceToRoad([a.x,a.z],l)<ROAD.lane*1.25))off.push(`${v.id} ${a.x.toFixed(1)},${a.z.toFixed(1)}`);}
+  expect(off.slice(0,5)).toEqual([]);
  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { n8nHealth, n8nWorkflowId } from "./runs";
+import { n8nHealth, n8nWorkflowId, n8nWorkflowIds, unlistedWorkflows, workflowOwners } from "./runs";
 import type { N8nWorkflowRuns } from "./types";
 
 const wf = (over: Partial<N8nWorkflowRuns>): N8nWorkflowRuns => ({ id: "a", name: "A", active: true, runs: [], failures24h: 0, ...over });
@@ -18,5 +18,24 @@ describe("n8n runs in the page", () => {
     expect(n8nHealth(wf({ runs: [] }))).toBe("idle");
     expect(n8nHealth(wf({ runs: [run("canceled")] }))).toBe("idle");
     expect(n8nHealth(wf({ active: false, runs: [run("error")] }))).toBe("off");
+  });
+});
+
+describe("n8n workflows the Atlas tabs list", () => {
+  const agents = [
+    { name: "Agent Registry Clerk", links: [{ label: "n8n workflow", url: "https://x.app.n8n.cloud/workflow/AAA" }, { label: "Sheet", url: "https://docs.google.com/x" }, { label: "Business Structure workflow", url: "https://x.app.n8n.cloud/workflow/BBB" }] },
+    { name: "Website", links: [{ label: "Live site", url: "https://benjaire.com/workflow/CCC" }] },
+  ];
+
+  it("maps every n8n workflow an agent links to, keeping the first as its main one", () => {
+    expect(n8nWorkflowIds(agents[0])).toEqual(["AAA", "BBB"]);
+    expect(n8nWorkflowId(agents[0])).toBe("AAA");
+    expect([...workflowOwners(agents)]).toEqual([["AAA", "Agent Registry Clerk"], ["BBB", "Agent Registry Clerk"]]);
+  });
+
+  it("flags only switched-on workflows that no agent links to", () => {
+    const owners = workflowOwners(agents);
+    const wf = (id: string, active: boolean) => ({ id, active });
+    expect(unlistedWorkflows([wf("AAA", true), wf("BBB", true), wf("CCC", true), wf("DDD", false)], owners)).toEqual(["CCC"]);
   });
 });

@@ -7,6 +7,7 @@
 import { FAILED, RUNS_PER_WORKFLOW, type N8nRun, type N8nRunStatus, type N8nSnapshot, type N8nWorkflowRuns } from "../src/n8n/types";
 import { bearerOk } from "./live";
 import type { CheckCache } from "./properties";
+import { reply, type Json as J } from "./http";
 
 export interface N8nEnv {
   /** Read-only n8n API key (n8n Settings → n8n API, scope "Read only"). */
@@ -17,7 +18,6 @@ export interface N8nEnv {
   USAGE_SYNC_TOKEN?: string;
 }
 
-type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Fetcher = typeof fetch;
 
 export const DEFAULT_INSTANCE = "https://khancam15.app.n8n.cloud";
@@ -30,8 +30,6 @@ const DAY_MS = 24 * 3_600_000;
 const CACHE_KEY = "n8n-runs";
 
 const STATUSES: ReadonlySet<string> = new Set(["success", "error", "crashed", "canceled", "running", "waiting", "new"]);
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 const iso = (v: unknown): string | null => (typeof v === "string" && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : null);
 

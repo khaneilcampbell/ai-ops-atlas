@@ -43,6 +43,36 @@ const along=(a:Pt,b:Pt,half:number,reach=0):R=>{
  return a[1]===b[1]?{x:x0-reach,z:z0-half,w:x1-x0+2*reach,d:2*half}:{x:x0-half,z:z0-reach,w:2*half,d:z1-z0+2*reach};
 };
 const box=(r:R,y:number,h:number,c:string):Inst=>({p:[r.x+r.w/2,y,r.z+r.d/2],s:[r.w,h,r.d],c});
+const straight=(a:Pt,b:Pt)=>Math.abs(a[0]-b[0])<1e-6||Math.abs(a[1]-b[1])<1e-6;
+/** Each straight piece of a polyline as [a, b]. */
+const segments=(roads:Pt[][])=>roads.flatMap(r=>r.slice(1).map((b,i)=>[r[i],b] as [Pt,Pt])).filter(([a,b])=>straight(a,b)&&Math.hypot(b[0]-a[0],b[1]-a[1])>1e-6);
+
+/**
+ * Sidewalks for the bridge-approach and plaza streets (models.tsx Bridges), on the same rules as the
+ * district streets below (Khaneil, 2026-11-13): a sidewalk runs on round a corner where its street
+ * meets another, and it never crosses a carriageway, so every junction opens cleanly instead of
+ * kerb running across the mouth of a side street.
+ */
+export function bridgeStreetSidewalks(spans:{a:Pt;b:Pt}[],links:Pt[][]):Inst[]{
+ const half=ROAD_W/2,sw=SIDEWALK.width,others=segments(links);
+ const lines:[Pt,Pt][]=[...spans.map(s=>[s.a,s.b] as [Pt,Pt]),...others];
+ const carriage:R[]=[...spans.filter(s=>straight(s.a,s.b)).map(s=>along(s.a,s.b,half,half)),...others.map(([a,b])=>along(a,b,TRANSPORT.cityWidth/2,TRANSPORT.cityWidth/2))];
+ const out:Inst[]=[];
+ spans.forEach((s,i)=>{
+  if(!straight(s.a,s.b)||Math.hypot(s.b[0]-s.a[0],s.b[1]-s.a[1])<.01)return;
+  const touches=(p:Pt)=>lines.some((l,j)=>j!==i&&distanceToRoad(p,l)<.01);
+  const x=Math.abs(s.a[1]-s.b[1])<1e-6;
+  const [a,b]=(x?s.a[0]<=s.b[0]:s.a[1]<=s.b[1])?[s.a,s.b]:[s.b,s.a];
+  const la=touches(a)?half+sw:0,lb=touches(b)?half+sw:0;
+  for(const side of [-1,1]){
+   const off=side*(half+sw/2);
+   const r:R=x?{x:a[0]-la,z:a[1]+off-sw/2,w:b[0]-a[0]+la+lb,d:sw}:{x:a[0]+off-sw/2,z:a[1]-la,w:sw,d:b[1]-a[1]+la+lb};
+   let parts=[r];for(const c of carriage)parts=parts.flatMap(p=>minusRect(p,c));
+   out.push(...parts.map(p=>box(p,SIDEWALK.y,SIDEWALK.h,SIDEWALK.color)));
+  }
+ });
+ return out;
+}
 
 /** Towers with their own sculpted plaza design keep it. */
 const customPlaza=(t:Tower)=>!!t.identity.landmark||isRibbonTower(t.projectId)||isCommerceTower(t.projectId)||isGithubTower(t.projectId)||isIntelligenceHub(t.projectId);
@@ -57,9 +87,14 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   .filter(s=>s.onLand&&!(onStreet(s.a)&&onStreet(s.b)))
   .filter(s=>Math.hypot(s.b[0]-s.a[0],s.b[1]-s.a[1])>.05);
  const lines=roads.map(s=>[s.a,s.b] as Pt[]);
- const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01);
- // Everything a sidewalk must stay off: every carriageway, its corner squares, and the bridge approaches and decks.
- const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),
+ const bridgeLines=segments((scene.carBridges??[]).flatMap(br=>br.roads));
+ // A road that ends on a bridge street turns its sidewalks round that corner too.
+ const frontage=segments((scene.transportConnections??[]).flatMap(l=>l.frontage?[l.frontage]:[]));
+ const touches=(p:Pt,self:number)=>lines.some((l,i)=>i!==self&&distanceToRoad(p,l)<half+.01)||[...bridgeLines,...frontage].some(l=>distanceToRoad(p,l)<.01);
+ // Everything a sidewalk must stay off: every carriageway (on land or not, frontage streets included),
+ // its corner squares, and the bridge approaches and decks.
+ const allStreets=segments((scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]));
+ const carriage:R[]=[...roads.map(s=>along(s.a,s.b,half,half)),...allStreets.map(([a,b])=>along(a,b,half,half)),
   ...(scene.carBridges??[]).flatMap(br=>[along(br.a,br.b,TRANSPORT.bridgeWidth/2,.04),...br.roads.flatMap(road=>road.slice(1).map((p,i)=>along(road[i],p,ROAD_W/2,ROAD_W/2)))])];
  const pavement:Inst[]=[],markings:Inst[]=[],zebras:Pt[]=[];
  roads.forEach((s,i)=>{
@@ -85,7 +120,7 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   const h=p.a[1]===p.b[1]?p:q,v=h===p?q:p,cx=v.a[0],cz=h.a[1];
   if(cx>Math.min(h.a[0],h.b[0])+.01&&cx<Math.max(h.a[0],h.b[0])-.01&&cz>Math.min(v.a[1],v.b[1])+.01&&cz<Math.max(v.a[1],v.b[1])-.01)points.push([cx,cz]);
  }
- const onRoad=(q:Pt)=>lines.some(l=>distanceToRoad(q,l)<.01);
+ const onRoad=(q:Pt)=>[...lines,...bridgeLines].some(l=>distanceToRoad(q,l)<.01);
  const reach=half+sw+.32;
  for(const pt of points){
   if(seen.some(s=>Math.hypot(s[0]-pt[0],s[1]-pt[1])<half))continue;seen.push(pt);
@@ -112,4 +147,39 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   pavement.push(...clear(outer).map(p=>box(p,top-.004,.008,stone.border)),...clear(inner).map(p=>box(p,top,.008,stone.field)));
  }
  return {pavement,markings,zebras};
+}
+
+/**
+ * The pieces of a straight walk that are not laid lengthwise on a street (Khaneil, 2026-11-13: "remove
+ * the sidewalk pavement that's in the middle of the street"). Where a walk runs along a carriageway,
+ * the street's own sidewalks carry people, so that stretch is dropped; crossings are left to the caller.
+ */
+export function walkOffStreets(a:Pt,b:Pt,streets:[Pt,Pt][]):[Pt,Pt][]{
+ if(!straight(a,b))return [[a,b]];
+ const x=Math.abs(a[1]-b[1])<1e-6,k=x?0:1,lo=Math.min(a[k],b[k]),hi=Math.max(a[k],b[k]),c=a[1-k];
+ const clear=TRANSPORT.cityWidth/2+TRANSPORT.walkWidth/2-.02;
+ const cuts=streets.filter(([p,q])=>straight(p,q)&&(Math.abs(p[1]-q[1])<1e-6)===x&&Math.abs(p[1-k]-c)<clear)
+  .map(([p,q])=>[Math.max(lo,Math.min(p[k],q[k])),Math.min(hi,Math.max(p[k],q[k]))]).filter(([s,e])=>e-s>1e-6).sort((u,v)=>u[0]-v[0]);
+ const out:[number,number][]=[];let at=lo;
+ for(const [s,e] of cuts){if(s-at>.05)out.push([at,s]);at=Math.max(at,e);}
+ if(hi-at>.05||!cuts.length)out.push([at,hi]);
+ const pt=(v:number):Pt=>x?[v,c]:[c,v];
+ return out.map(([s,e])=>[pt(s),pt(e)]);
+}
+
+/**
+ * The pieces of a straight walk of width `w` that lie off every carriageway, each street piece's rectangle reaching
+ * half a road past its ends (the paved junction squares). Station paths use this (Khaneil, 2026-11-13: "remove the
+ * pavement that's in the street"), so a slab never lies on asphalt, whether along, across or at a bend.
+ */
+export function walkOffCarriageways(a:Pt,b:Pt,streets:[Pt,Pt][],w:number):[Pt,Pt][]{
+ if(!straight(a,b))return [[a,b]];
+ const x=Math.abs(a[1]-b[1])<1e-6,k=x?0:1,c=a[1-k],h=ROAD_W/2;
+ let pieces:[number,number][]=[[Math.min(a[k],b[k]),Math.max(a[k],b[k])]];
+ for(const [p,q] of streets){if(!straight(p,q))continue;
+  const r=along(p,q,h,h),lo=x?r.x:r.z,hi=lo+(x?r.w:r.d),c0=x?r.z:r.x,c1=c0+(x?r.d:r.w);
+  if(c+w/2<=c0+1e-6||c-w/2>=c1-1e-6)continue;
+  pieces=pieces.flatMap(([s,e])=>e<=lo||s>=hi?[[s,e] as [number,number]]:[[s,Math.min(e,lo)],[Math.max(s,hi),e]].filter(([u,v])=>v-u>.05) as [number,number][]);}
+ const pt=(v:number):Pt=>x?[v,c]:[c,v];
+ return pieces.map(([s,e])=>[pt(s),pt(e)]);
 }

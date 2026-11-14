@@ -1,4 +1,4 @@
-import { isAiAgent } from "./roles";
+import { isAiAgent, worksThroughAutomations } from "./roles";
 import { tierOf, type Decided } from "./organization";
 import { TIER_INFO } from "./taxonomy";
 import type { Agent, Catalog } from "./types";
@@ -46,6 +46,8 @@ export interface AgentJob {
   output: Decided<string>;
   /** Set when the agent has no workday yet, with the reason; it stays home. */
   offDuty: OffDuty | null;
+  /** Works only through the automations it owns, so it keeps its desk and is not drawn walking. */
+  deskOnly?: boolean;
 }
 
 const declared = <T,>(value: T, reason: string): Decided<T> => ({ value, provenance: "declared", reason });
@@ -114,6 +116,7 @@ export function agentJobs(catalog: Catalog): AgentJob[] {
       budget: budget ? declared(budget, "registry.cost.budget in the manifest") : inferred("Not documented", "no budget written in the manifest"),
       output: output ? declared(output, "first of registry.responsibilities.outputs") : inferred("Not documented", "no outputs written in the manifest"),
       offDuty,
+      ...(worksThroughAutomations(a) ? { deskOnly: true } : {}),
     };
   });
 }

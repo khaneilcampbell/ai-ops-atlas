@@ -7,8 +7,8 @@
 // Cloudflare account" rather than zero.
 
 import type { EdgeEvent, TrafficInfo } from "../src/properties/types";
+import { type Json as J } from "./http";
 
-type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 type Fetcher = typeof fetch;
 
 const API = "https://api.cloudflare.com/client/v4";

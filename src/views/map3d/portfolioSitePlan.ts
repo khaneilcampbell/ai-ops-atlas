@@ -69,7 +69,7 @@ export function planPortfolioSite():PortfolioSitePlan{
 
  // The white body over the ground floor, with brick and timber on the left side and back.
  box('white',C.x0,C.x1,G-P.slab,roof,C.z0,C.z1);
- box('slats',C.x0-P.skin,C.x0,G-P.slab,roof+P.parapet,C.z0-P.skin,C.z1);
+ box('slats',C.x0-P.skin,C.x0,G-P.slab,roof,C.z0-P.skin,C.z1);   // both cladding faces top out at the roof (Khaneil, 2026-11-13)
  box('slats',C.x0,C.x1,G-P.slab,roof,C.z0-P.skin,C.z0);
  // The right-hand pier, from the ground up to the roof canopy it holds.
  box('white',P.pier.x0,P.pier.x1,0,top,C.z1,P.pier.z1);
