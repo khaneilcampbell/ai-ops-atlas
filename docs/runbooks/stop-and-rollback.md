@@ -25,7 +25,7 @@ All commerce workflows live in the "Commerce" folder on n8n Cloud. Per-workflow 
 
 ## Benjaire.com
 
-**Benjaire Flow Intake (n8n).** Stop: in n8n Cloud, open the "Flow · 1 Intake" workflow and switch it to inactive. The contact Worker keeps emailing every inquiry to `CONTACT_TO`, so no inquiry is lost. Roll back: open the workflow's version history in n8n and restore the last good version, or import `products/flow/live-ops/workflows/1-intake.json` from `benjaire-dashboard`. Acknowledgements already sent can't be recalled.
+**Benjaire Flow Intake (n8n).** Stop: in n8n Cloud, open the "Flow · 1 Intake" workflow and switch it to inactive. The contact Worker keeps emailing every inquiry to `CONTACT_TO`, so no inquiry is lost. Roll back: open the workflow's version history in n8n and restore the last good version, or import `apps/benjaire-flow/live-ops/workflows/1-intake.json`. Acknowledgements already sent can't be recalled.
 
 **Contact Form Worker (Cloudflare).** Stop or roll back in Cloudflare → Workers & Pages → `benjaire-com` → Deployments: pick the last good deployment and roll back to it. To stop all sends, remove the Worker's mail secrets there; the form then answers 503.
 

@@ -19,7 +19,8 @@ it('keeps every building clear of the landing runway and the arrivals taxi lane,
  const {AIRPORT_LANDING_RUNWAY:r,AIRCRAFT_LAYOUT:p}=await import('./airport');
  expect(r.x+r.width/2+.4).toBeLessThan(l.landX+l.landWidth);
  expect(r.x-p.halfSpan).toBeGreaterThan(l.runwayX+l.runwayWidth/2+p.halfSpan);
- expect(r.laneZ+p.halfSpan).toBeLessThan(l.runwayZ-l.runwayLength/2);
+ // Both runways run the same length, end to end (Khaneil, 2026-11-13).
+ expect([l.runwayZ,l.runwayLength]).toEqual([r.z,r.length]);
  for(const b of buildings){
   expect(b.x+b.w/2<r.x-p.halfSpan,`${b.id} vs landing runway`).toBe(true);
   const laneClear=b.z-b.d/2>r.laneZ+p.halfSpan||b.z+b.d/2<r.laneZ-p.halfSpan||b.x+b.w/2<11.5-p.halfSpan;

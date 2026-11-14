@@ -2,7 +2,7 @@
 <!-- One or two plain sentences: what KC will see or be able to do after this merges. -->
 
 ## Changelog line
-<!-- Also added at the top of CHANGELOG.md. The newest five show in the Mac app's Update button. -->
+<!-- Also added as a new file changelog.d/<branch-name>.md (not CHANGELOG.md). The newest five show in the Mac app's Update button. -->
 - YYYY-MM-DD · 
 
 ## Risk

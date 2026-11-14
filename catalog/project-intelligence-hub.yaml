@@ -20,6 +20,7 @@ agents:
     name: Docs Builder
     purpose: Renders each project's Markdown source to styled DOCX with pandoc and python-docx.
     framework: Python script
+    owned_by: documentation-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Local
     status: idle
     trigger: Manual
@@ -68,6 +69,7 @@ agents:
     name: Hub CI
     purpose: Checks every project's sources and renders all documents, with DOCX downloads on request.
     framework: GitHub Actions
+    owned_by: documentation-lead            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -120,3 +122,208 @@ agents:
         improvements:
           - Compare rendered documents with the committed ones
         last_review: 2026-10-28
+
+  - id: agent-registry-sync
+    name: Agent Registry Sync
+    purpose: >-
+      n8n workflow that keeps the Atlas Agent Registry Google Sheet in the Benjaire Drive current:
+      one row per agent and n8n workflow, with building, where it runs, status, schedule, last run,
+      health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
+      Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
+      building next in the sheet's Top 10 Agents tab, with one capped Claude call.
+      Every morning at 7am a third workflow rewrites the sheet's Business Structure tab: who reports
+      to whom, how each agent starts and its autonomy level. No model.
+    framework: n8n
+    owned_by: agent-operations-lead            # owning agent, added at Khaneil's request 2026-11-13
+    model: claude-opus-5-5 for the weekly Sunday ranking only ($3 per 30 days); the registry sync uses no model
+    runtime: n8n Cloud
+    status: active
+    trigger: Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET
+    last_run: null
+    history:
+      - at: 2026-11-12
+        event: Published in n8n; added the daily Business Structure workflow and the Refresh registry sheet button
+      - at: 2026-11-12
+        event: Added the Top 10 Agent Ideas workflow (Sundays 9am, one capped Claude call) at Khaneil's request
+      - at: 2026-11-12
+        event: Built as an unpublished n8n draft; first real run filled the sheet with 71 rows
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/JCjTTvb7qZLpVXhs
+      - label: Registry sheet
+        url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
+      - label: Top 10 Agent Ideas workflow
+        url: https://khancam15.app.n8n.cloud/workflow/bgebM33jnVhLPSTF
+      - label: Business Structure workflow
+        url: https://khancam15.app.n8n.cloud/workflow/iY7mu26VL0xYElAP
+    permissions:
+      - 'GitHub: public reads of catalog/*.yaml, no key'
+      - 'n8n API key (read only): workflows and recent executions'
+      - 'Atlas sync key (read only): GET /api/hooks/feed'
+      - 'Google Sheets: reads and writes the Atlas Agent Registry sheet only'
+      - 'Anthropic API: one Claude call a week for the Top 10 ranking, capped at $3 per 30 days'
+    registry:
+      title: Agent Registry Clerk
+      category: engineering
+      subcategory: Workflow automation
+      automation_category: maintenance       # B since the Top 10 ranking step; keeps its place beside the registry sync's other upkeep
+      classification:
+        type: B
+        confidence: verified
+        evidence: The registry workflow compares rows in plain code with no AI model; the Top 10 Agent Ideas workflow builds its brief in plain code and makes one Claude call to rank the ideas
+      mission:
+        problem: There was no single list of every agent and automation with its status, schedule, health and links.
+        outcomes:
+          - Every agent in the Atlas catalog and every n8n workflow has one current row in the registry sheet
+          - A ranked list of the 10 agents most worth building next, refreshed every Sunday
+        beneficiaries: [Khaneil]
+      responsibilities:
+        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date, Rank the top 10 agents to build every Sunday]
+        # Framework and runtime say n8n. The tools list leaves the vendor name out on purpose: naming it
+        # here would add an Automation Works kiosk to this district and reshape its land (Khaneil chose
+        # to keep the map as it is, 2026-11-12).
+        tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
+        inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
+        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Writes only to its own Google Sheet; read-only toward Atlas and n8n.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials)
+        risk: low
+        audit_log: n8n executions and the sheet's version history
+      cost:
+        budget: "Registry sync: no model spending. Top 10 ranking: Claude Opus 5.5, $3 and 12 runs per 30 days, checked before each call (n8n table agent_ideas_runs)"
+      docs:
+        known_issues:
+          - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
+          - The workflows find the sheet's tabs by name (Registry, Top 10 Agents, Business Structure), so renaming a tab breaks them
+          - n8n does not keep successful scheduled runs of the registry sync, so Atlas cannot show its last run
+        last_review: 2026-11-12
+
+  - id: atlas-agent-factory
+    name: Agent Factory
+    purpose: >-
+      Every Monday at 8am an n8n workflow looks for gaps in plain code (catalog buildings and modules
+      with no agent, failing n8n workflows, quiet Atlas feed sources), ranks them, and makes one capped
+      Claude call to write a spec for the single best new agent. It emails Khaneil Approve or Reject.
+      Approving only records the decision; nothing is built or switched on.
+    framework: n8n
+    owned_by: agent-operations-lead            # owning agent, added at Khaneil's request 2026-11-13
+    model: claude-opus-5-5 for one proposal a week at most ($2 per 30 days)
+    runtime: n8n Cloud
+    status: active
+    trigger: Mondays 8am ET, at most one proposal per 7 days
+    last_run: 2026-11-12T11:27:50Z
+    history:
+      - at: 2026-11-12
+        event: Published in n8n; first run proposed a Business Ops HQ Daily Rollup and emailed Khaneil
+    links:
+      - label: n8n workflow
+        url: https://khancam15.app.n8n.cloud/workflow/FTCanpGAYPIr3OGe
+    permissions:
+      - 'GitHub: public reads of catalog/*.yaml, no key'
+      - 'n8n API key (read only): workflows and failed runs'
+      - 'Atlas sync key (read only): GET /api/hooks/feed'
+      - 'Anthropic API: one Claude call a week at most, capped at $2 per 30 days'
+      - 'Resend: the proposal email to Khaneil only'
+      - 'n8n data table agent_factory_proposals: writes proposals and decisions'
+    registry:
+      title: Agent Factory
+      category: engineering
+      subcategory: Agent planning
+      classification:
+        type: B
+        confidence: verified
+        evidence: Live n8n workflow FTCanpGAYPIr3OGe ranks gaps in plain code and makes one Claude call to draft the spec
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Proposes only; Khaneil approves or rejects, and approval builds nothing.
+        risk: low
+        audit_log: n8n executions and the agent_factory_proposals table
+      cost:
+        budget: Claude Opus 5.5, one proposal and $2 per 30 days, checked before each call
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: agent-operations-lead
+    name: Agent Operations Lead
+    purpose: >-
+      Keeps track of every Atlas agent and what to build next: keeps the Agent Registry sheet current and proposes at most one new agent a week for Khaneil to approve or reject. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run every 4 hours and Mondays 8am ET
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Agent Registry Clerk, Agent Factory, at Khaneil's request
+    registry:
+      title: Agent Operations Lead
+      category: engineering
+      subcategory: Agent planning
+      tier: coordinator
+      automation_category: intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Proposes only; approving a proposal builds nothing.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: documentation-lead
+    name: Documentation Lead
+    purpose: >-
+      Keeps every project's documents current: renders each project's Markdown to styled DOCX and checks every source renders on each change. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A pull request or push, or a manual render
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Technical Documentation Specialist, Documentation Quality Engineer, at Khaneil's request
+    registry:
+      title: Documentation Lead
+      category: data
+      subcategory: Documentation
+      tier: coordinator
+      automation_category: maintenance
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Render project Markdown to DOCX, Check every source renders on each change]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 0
+        autonomy_note: Renders and checks documents only.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

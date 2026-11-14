@@ -19,6 +19,7 @@ agents:
     name: Atlas CI
     purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; KC approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual
@@ -235,6 +236,7 @@ agents:
     name: Re-run Failed Jobs
     purpose: Re-runs the failed jobs of a failed GitHub Actions run, only on repositories KC has switched on and only after KC approves each run in a native macOS dialog.
     framework: Atlas desktop action (Rust)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Manual button next to a failed run; off by default
@@ -287,6 +289,7 @@ agents:
     name: Merge Pull Request
     purpose: Merges a pull request from Atlas only when GitHub reports it ready (open, not a draft, no changes requested, mergeable and clean, every required check green), on repositories KC has switched on, after KC approves it in a native macOS dialog and with Touch ID.
     framework: Atlas desktop action (Rust)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Manual Merge button in a repository's PRs tab; off by default
@@ -340,6 +343,7 @@ agents:
     name: GitHub Steward
     purpose: "GitHub Steward: Collects bounded read-only observations for Atlas about CI, security alert counts and maintenance files. This is a deterministic read-only workflow with optional daily checks while Atlas is open; AI reasoning is not enabled."
     framework: Atlas read-only workflow
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Inside the desktop app (Rust side)
     status: idle
     trigger: Check now in Intel → GitHub Steward; optional daily schedule while Atlas is open
@@ -395,17 +399,18 @@ agents:
 
   - id: atlas-system-improvements
     name: Atlas System Improvements
-    model: Automatic reports use no model; manual reviews use an explicitly selected Codex model
-    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Codex reviews are available on request from Atlas HQ.
-    framework: GitHub Actions + Codex (manual)
-    runtime: GitHub-hosted Python reports; local Codex CLI for manual reviews
+    model: Automatic reports use no model; manual reviews use an explicitly selected Claude model
+    purpose: Produces bounded reports about main-branch CI failures, floor-renderer stability risks, and source maintenance hotspots. Reuses existing CI evidence with no automatic AI model calls and never changes code. Manual Claude Code reviews are available on request from Atlas HQ.
+    framework: GitHub Actions + Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
+    runtime: GitHub-hosted Python reports; local Claude Code CLI for manual reviews
     status: idle
     trigger: After main-branch push CI completes, or manually from GitHub Actions on main
     source: ops/system-improvements/report.py
     observe:
       github_workflow: system-improvements.yml
     last_run: null
-    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Codex reads supplied source excerpts only]
+    permissions: [Repository contents read, Workflow runs read, Writes only the current run summary and report artifact, Manual Claude Code reads supplied source excerpts only]
     registry:
       title: AI Production Improvement Analyst
       version: 1.1.0
@@ -416,7 +421,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: Automatic reporting uses fixed checks; ops/system-improvements/codex_review.py adds a separately requested, read-only Codex review. Manual review has not been run.
+        evidence: Automatic reporting uses fixed checks; ops/system-improvements/claude_review.py adds a separately requested, read-only Claude Code review. Manual review has not been run.
       mission:
         problem: Atlas needs reviewable system improvement candidates without recurring model usage or repeated full builds.
         outcomes: [Prioritized evidence-linked improvement candidates, Explicit gaps in coverage, Zero automatic model calls]
@@ -426,12 +431,12 @@ agents:
         tools: [Python standard library, GitHub read-only REST API, GitHub Actions summary and artifact]
         inputs: [Completed main-branch CI push run or manual request, Exact assessed commit]
         outputs: [Markdown run summary, JSON and Markdown report artifact retained 14 days]
-        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Codex review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
+        limitations: [At most two GitHub GET requests with no retries, At most 300 source files and 4 MiB of source, At most eight report findings, Manual Claude Code review uses an explicitly selected model and a two-minute timeout with no retries, No automatic AI calls or code changes, Not a security audit or visual correctness check]
       goals:
         objective: Surface small evidence-backed improvements while minimizing usage.
       execution:
         trigger_type: event
-        environment: GitHub Actions for automatic reports; local Codex for requested reviews
+        environment: GitHub Actions for automatic reports; local Claude Code for requested reviews
         stages: [Read bounded source evidence, Read two bounded GitHub endpoints, Rank improvement candidates, Publish report]
       governance:
         autonomy: 1
@@ -442,7 +447,7 @@ agents:
         risk: low
         audit_log: GitHub Actions run summary and report artifact
       cost:
-        budget: Automatic reports use zero model tokens; manual Codex review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
+        budget: Automatic reports use zero model tokens; manual Claude Code review consumes the selected model allowance only when explicitly started; one runner job capped at three minutes, with GitHub runner and artifact usage governed by the account plan.
       docs:
         technical: docs/system-improvements.md
         runbook: docs/system-improvements.md
@@ -450,10 +455,11 @@ agents:
 
   - id: atlas-ui-improvement-designer
     name: AI UI Improvement Designer
-    model: No automatic model calls; manual Codex review only
+    model: No automatic model calls; manual Claude Code review only
     purpose: Reviews Atlas city maps, building interiors, labels, navigation, accessibility, and responsive layouts. Reuses existing CI reports and user-supplied screenshots to suggest at most three small design improvements. Reports only; no automatic edits or model runs.
-    framework: Codex (manual review)
-    runtime: Manually requested Codex session
+    framework: Claude Code (manual review)
+    owned_by: atlas-engineering-review            # owning agent, added at Khaneil's request 2026-11-13
+    runtime: Manually requested Claude Code session
     status: idle
     trigger: Explicit maintainer request only; no schedule
     source: ops/system-improvements/ui-design-prompt.md
@@ -475,22 +481,22 @@ agents:
         beneficiaries: [KC, Atlas users]
       responsibilities:
         tasks: [Review label clarity and visual hierarchy, Check building and path clearance, Assess floor navigation and entrances, Review accessibility and day-night contrast, Propose small prioritized improvements]
-        tools: [Manually requested Codex review, Existing CI report, User-supplied screenshots]
+        tools: [Manually requested Claude Code review, Existing CI report, User-supplied screenshots]
         inputs: [Explicit review request, Current screenshots, Focused source excerpts, Existing CI evidence]
         outputs: [Compact design report with evidence and a next validation step]
         limitations: [No scheduled model runs, No automatic code edits or deployments, No visual claims without screenshots, At most three recommendations, Reuses existing reports rather than rerunning CI]
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex session
+        environment: Maintainer-started Claude Code session
         stages: [Review supplied evidence, Identify confirmed UI issues, Rank three or fewer improvements, Return review for approval]
       governance:
         autonomy: 1
         autonomy_note: Reports only. Implementation requires a separate user request.
         data_sensitivity: internal
-        approval: Explicit user request starts each Codex review.
+        approval: Explicit user request starts each Claude Code review.
         risk: low
       cost:
-        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Codex allowance only when requested.
+        budget: Zero automatic model tokens or additional scheduled runner jobs. Manual reviews consume Claude Code allowance only when requested.
       docs:
         technical: docs/ui-improvement-designer.md
         runbook: docs/ui-improvement-designer.md
@@ -501,7 +507,8 @@ agents:
     purpose: Prioritizes Atlas production issues, identifies review and CI bottlenecks, and prepares the shortest safe path from a focused change to a verified update. Recommends reusing valid check results, running change-appropriate checks, resolving stale branches, and distinguishing web deployment from desktop installation. Never bypasses required checks, merges, or deploys. Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation. The hosted workflow is fixture-only; external creation is not invoked.
     office_floor: 3
     model: No runner model calls; paid creation remains disabled
-    framework: Manual Python handoff + Codex review on request
+    framework: Manual Python handoff + Claude Code review on request
+    owned_by: atlas-engineering-review            # owning agent, added at Khaneil's request 2026-11-13
     runtime: Local deterministic runner; manually dispatched fixture on GitHub Actions
     status: idle
     trigger: Explicit user request only; no schedule
@@ -536,8 +543,9 @@ agents:
     name: Atlas Reliability Reviewer
     purpose: Reviews existing test failures, building transitions, navigation, and error reports for reproducible reliability issues. Manual reports only, using existing evidence and at most three findings.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
+    model: No automatic model calls; manual Claude Code review only
+    framework: Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
@@ -557,7 +565,7 @@ agents:
         evidence: Catalog role and manual review instructions only; no autonomous runner.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
+        environment: Maintainer-started Claude Code review
         stages: [Read existing evidence, Return three or fewer prioritized findings]
       governance:
         autonomy: 1
@@ -570,8 +578,9 @@ agents:
     name: Atlas Performance Reviewer
     purpose: Reviews supplied rendering and usage evidence for focused performance improvements without repeated builds or model loops. Manual reports only, using existing evidence and at most three findings.
     office_floor: 3
-    model: No automatic model calls; manual Codex review only
-    framework: Codex (manual)
+    model: No automatic model calls; manual Claude Code review only
+    framework: Claude Code (manual)
+    owned_by: atlas-engineering-review            # owning agent, confirmed by Khaneil 2026-11-12
     runtime: Explicitly requested review session
     status: idle
     trigger: Explicit user request only; no schedule
@@ -591,7 +600,7 @@ agents:
         evidence: Catalog role and manual review instructions only; no autonomous runner.
       execution:
         trigger_type: manual
-        environment: Maintainer-started Codex review
+        environment: Maintainer-started Claude Code review
         stages: [Read existing evidence, Return three or fewer prioritized findings]
       governance:
         autonomy: 1
@@ -600,6 +609,31 @@ agents:
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
 
+  - id: atlas-release-coordinator
+    name: Atlas Release Coordinator
+    purpose: >-
+      n8n chat agent KC asks about Atlas releases. Chat only, no tools, capped at $1 a month.
+    framework: n8n Agent
+    runtime: n8n Cloud
+    status: active
+    trigger: KC asks it in n8n chat
+    last_run: null
+    registry:
+      title: Release Coordinator
+      category: engineering
+      subcategory: Release
+      tier: specialized
+      automation_category: intelligence
+      classification:
+        type: A
+        confidence: verified
+        evidence: Published n8n agent xwPwuboturejm9hz, checked read-only on 2026-11-11
+      execution:
+        trigger_type: manual
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Answers in chat only; it has no tools and changes nothing.
   # Building operators (2026-11-12): one scheduled, model-free check per building that reports to
   # the live feed. Their reports are what turn Product Marketplace, Observability Center and Data
   # Intelligence Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
@@ -607,6 +641,7 @@ agents:
     name: Marketplace Steward
     purpose: Checks that Atlas, the product, is published. Reads the main-build release and its latest.json (version, date, signed Mac update) and reports it to the live feed for the Product Marketplace.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every hour, or by hand
@@ -642,6 +677,7 @@ agents:
     name: Signal Watch
     purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every 30 minutes, or by hand
@@ -677,6 +713,7 @@ agents:
     name: Dataset Census
     purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
     framework: GitHub Actions (Python, standard library)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
     trigger: Every 3 hours, or by hand
@@ -707,3 +744,126 @@ agents:
         risk: low
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
+
+  - id: atlas-data-inventory
+    name: Atlas Data Inventory
+    purpose: >-
+      Keeps one organized list of everything on the Atlas map: every building (active, planned,
+      retired or a vacant lot), which agents work in which building, and the cars, trucks, planes,
+      boats, trains and people. After every merge a GitHub Action writes atlas-inventory.json to the
+      atlas-inventory branch; every morning an n8n workflow reads it and rewrites the Buildings,
+      Agents by Building, Map Objects and Inventory Summary tabs of the Atlas Agent Registry sheet.
+    framework: n8n + GitHub Actions (Node, no model)
+    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
+    runtime: n8n Cloud
+    status: paused
+    trigger: Daily at 7am New York time once published (n8n draft, not published yet)
+    source: src/inventory/mapInventory.ts
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Designed with Khaneil; placed in the Data Intelligence Center beside Dataset Census
+    links:
+      - label: n8n workflow (draft)
+        url: https://khancam15.app.n8n.cloud/workflow/Hua0wdGB5WSDjSGB
+      - label: Registry sheet
+        url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
+    permissions:
+      - 'GitHub Actions token: pushes atlas-inventory.json to the atlas-inventory branch only'
+      - 'GitHub: public read of atlas-inventory.json, no key'
+      - 'Google Sheets: writes the inventory tabs of the Atlas Agent Registry sheet only'
+    registry:
+      title: Atlas Data Inventory
+      category: data
+      subcategory: Data inventory
+      classification:
+        type: D
+        confidence: verified
+        evidence: src/inventory/mapInventory.ts reads the catalog and the map's own plans; the n8n workflow copies rows with no AI model
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls. About 30 n8n runs a month and a few GitHub Actions minutes per merge.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: atlas-release-manager
+    name: Atlas Release Manager
+    purpose: >-
+      Gets tested Atlas changes to Khaneil safely: every change is tested, failed jobs are re-run, ready pull requests are merged only when Khaneil asks, and the signed Mac update and web page are confirmed published. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: A pull request, a push to main, or Khaneil pressing a button in Atlas
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Build and Release Engineer, CI Recovery Specialist, Pull Request Integration Coordinator, Marketplace Steward, at Khaneil's request
+    registry:
+      title: Atlas Release Manager
+      category: engineering
+      subcategory: Release
+      tier: coordinator
+      automation_category: ci
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Test every pull request and push, Re-run failed jobs when Khaneil asks, Merge a ready pull request when Khaneil asks, Confirm the signed Mac update is published]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: event
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Its merge and re-run steps act only after Khaneil asks in Atlas; the rest test and report.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.
+
+  # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
+  # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: atlas-health-monitor
+    name: Atlas Health Monitor
+    purpose: >-
+      Knows whether Atlas itself is healthy: watches the build and site signals Atlas depends on, counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
+    framework: Atlas owning agent (runs through its automations)
+    model: None of its own; each automation it owns keeps its own model and cap
+    runtime: Through its automations
+    status: active
+    trigger: Its automations run every 30 minutes, every 3 hours and daily
+    last_run: null
+    history:
+      - at: 2026-11-13
+        event: Added as the owning agent of Signal Watch, Dataset Census, Atlas Data Inventory, at Khaneil's request
+    registry:
+      title: Atlas Health Monitor
+      category: infrastructure
+      subcategory: Monitoring
+      tier: coordinator
+      automation_category: monitoring
+      classification:
+        type: A
+        confidence: verified
+        evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      responsibilities:
+        tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current]
+        tools: [Its automations]
+        outputs: [The results of its automations]
+      execution:
+        trigger_type: scheduled
+        environment: Through its automations
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+      cost:
+        budget: No model calls of its own; each automation keeps its own cap.

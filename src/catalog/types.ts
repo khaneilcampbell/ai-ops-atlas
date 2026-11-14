@@ -47,6 +47,9 @@ export interface Agent {
   alerts?: AlertRules;
   /** Hand-maintained registry profile (atlas/v2). Absent on atlas/v1 agents. */
   registry?: RegistryManifest;
+  /** Automations only: id of the AI agent that runs this automation as one of its fixed steps
+   *  (manifest `owned_by`). Absent means no agent owns it yet; it is never guessed. */
+  ownedBy?: string;
   projectId: string;
   repository: string;
 }

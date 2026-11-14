@@ -1,0 +1,1 @@
+- 2026-11-13 · Atlas tabs now show the live Agent Registry Clerk, Missed Run Check and Agent Factory (with a desk in the Agent Operations Center), the Data Inventory draft workflow is linked, and Atlas flags any n8n workflow that is switched on but not listed yet (#410)

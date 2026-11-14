@@ -30,21 +30,19 @@ describe("bundled catalog", () => {
   });
 
   it("preserves dashboard and documentation projects with real migrated sources", () => {
-    for (const id of ["benjaire-ops", "intelligence-hub"]) {
+    for (const id of ["intelligence-hub"]) {
       expect(catalog.projects.find(p => p.id === id)?.repository).toBe("khaneilcampbell/ai-ops-atlas");
     }
-    for (const id of ["benjaire-ops-ci", "hub-ci", "docs-builder"]) {
+    for (const id of ["hub-ci", "docs-builder"]) {
       const agent = catalog.agents.find(a => a.id === id);
       expect(agent).toBeDefined();
       expect(readFileSync(join(dir, "..", agent!.source!), "utf8").length).toBeGreaterThan(0);
     }
   });
 
-  it("preserves the Service Desk project and its real security workflow", () => {
-    expect(catalog.projects.find(p => p.id === "service-desk")?.repository).toBe("khaneilcampbell/ai-ops-atlas");
-    const agent = catalog.agents.find(a => a.id === "service-desk-codeql");
-    expect(agent?.observe?.githubWorkflow).toBe("service-desk-codeql.yml");
-    expect(readFileSync(join(dir, "..", agent!.source!), "utf8")).toContain("security-extended");
+  it("has nothing left of the removed Service Desk project", () => {
+    expect(catalog.projects.some(p => /service.?desk/i.test(`${p.id} ${p.name}`))).toBe(false);
+    expect(catalog.agents.some(a => /service.?desk/i.test(`${a.id} ${a.projectId} ${a.source ?? ""}`))).toBe(false);
   });
 
   it("links every agent to a known project", () => {

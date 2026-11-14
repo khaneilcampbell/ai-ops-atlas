@@ -14,7 +14,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, liveLandmarkConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
@@ -23,7 +23,7 @@ import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { useAtlas } from "../state";
-import { useLandmarkMarks } from "./map3d/landmarkMarks";
+import { landmarkMarksOf, useLiveLandmarks } from "./map3d/landmarkMarks";
 import {
   hash,
   TH,
@@ -54,6 +54,8 @@ const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
 import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
 import { STADIUM_OFFICE_ID } from "./map3d/stadiumPlan";
+import { YACHT_OFFICE_ID } from "./map3d/yachtPlan";
+import { GOLD_JET_OFFICE_ID } from "./map3d/goldJetIds";
 import { interiorFloors } from "./office/circaFloors";
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
@@ -61,6 +63,8 @@ const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 const MallInterior = lazy(() => import("./office/MallInterior"));
 const GalleriaInterior = lazy(() => import("./office/GalleriaInterior"));
 const StadiumInterior = lazy(() => import("./office/StadiumInterior"));
+const YachtInterior = lazy(() => import("./office/YachtInterior"));
+const GoldJetInterior = lazy(() => import("./office/GoldJetInterior"));
 
 type Pt = { x: number; y: number };
 type Cam = { x: number; y: number; k: number };
@@ -476,7 +480,9 @@ export function MapView({active=true}:{active?:boolean}) {
     });
   const [linksMenu, setLinksMenu] = useState(false);
   const [linkSel, setLinkSel] = useState<string | null>(null);
-  const connections = useMemo(() => buildConnections(catalog, repos), [catalog, repos]);
+  // Live landmarks drive both their status dots and their line to Atlas Command Center.
+  const live = useLiveLandmarks();
+  const connections = useMemo(() => [...buildConnections(catalog, repos), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
@@ -900,7 +906,7 @@ export function MapView({active=true}:{active?:boolean}) {
   const zoomBy = (f: number) => (is3d ? map3d.current?.zoom(f) : zoomAt(f));
   const fitAny = () => (is3d ? map3d.current?.fit() : fit());
 
-  const landmarkMarks = useLandmarkMarks();
+  const landmarkMarks = useMemo(() => landmarkMarksOf(live), [live]);
   const healthFor = useCallback(
     (repository: string) => ({ ...verifiedState(repos[repository]), health: overallHealth(repoHealth(repoData(repos[repository]), 0)) }),
     [repos],
@@ -944,7 +950,7 @@ export function MapView({active=true}:{active?:boolean}) {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {active && office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId === YACHT_OFFICE_ID ? <YachtInterior light={light} key={office.projectId} /> : office.projectId === GOLD_JET_OFFICE_ID ? <GoldJetInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">

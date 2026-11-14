@@ -47,9 +47,10 @@ function reviewReasons(p: AgentProfile, op: Operational, status: Status): string
   return out;
 }
 
-export type GroupKey = "none" | "project" | "category" | "classification" | "operational" | "runtime";
+export type GroupKey = "none" | "owner" | "project" | "category" | "classification" | "operational" | "runtime";
 export const GROUP_LABEL: Record<GroupKey, string> = {
   none: "No grouping",
+  owner: "Owning agent",
   project: "Project",
   category: "Function",
   classification: "Agent type",
@@ -145,11 +146,19 @@ export function sortEntries(entries: RegistryEntry[], key: SortKey, desc = false
   return desc ? out.reverse() : out;
 }
 
-export function groupEntries(entries: RegistryEntry[], key: GroupKey): { key: string; label: string; entries: RegistryEntry[] }[] {
+/** Group key for automations with no owning agent; listed first so they stand out. */
+export const NO_OWNER = "no-owner";
+
+/** `owners` maps an automation id to its owning agent's id and title (see catalog/ownership.ts). */
+export function groupEntries(entries: RegistryEntry[], key: GroupKey, owners: Map<string, { id: string; title: string }> = new Map()): { key: string; label: string; entries: RegistryEntry[] }[] {
   if (key === "none") return [{ key: "all", label: "All agents", entries }];
   const label = (e: RegistryEntry): [string, string] => {
     const p = e.profile;
     switch (key) {
+      case "owner": {
+        const o = owners.get(p.id);
+        return o ? [o.id, o.title] : [NO_OWNER, "No owning agent"];
+      }
       case "project":
         return [p.project.id, p.project.name];
       case "category":
@@ -169,7 +178,7 @@ export function groupEntries(entries: RegistryEntry[], key: GroupKey): { key: st
     groups.get(k)!.entries.push(e);
   }
   const order = key === "classification" ? (k: string) => CLASS_ORDER.indexOf(k as Classification) : null;
-  return [...groups.values()].sort((a, b) => (order ? order(a.key) - order(b.key) : a.label.localeCompare(b.label)));
+  return [...groups.values()].sort((a, b) => (order ? order(a.key) - order(b.key) : Number(b.key === NO_OWNER) - Number(a.key === NO_OWNER) || a.label.localeCompare(b.label)));
 }
 
 export interface PortfolioSummary {

@@ -56,6 +56,8 @@ An agent is watched when its manifest has an `alerts` block (see
 | marketplace-steward | yes | 3 hours (runs hourly) | watched |
 | signal-watch | yes | 90 minutes (runs every 30 min) | watched |
 | dataset-census | yes | 7 hours (runs every 3 h) | watched |
+| order-delivery | yes | none (runs per order) | watched once n8n reports |
+| shopify-publisher | yes | none (runs per approval) | watched once n8n reports |
 
 The last three are the building operators (`ops/building-agents/agents.py`, run by
 `.github/workflows/building-agents.yml`, no model calls). Each operates one landmark through
@@ -63,8 +65,13 @@ The last three are the building operators (`ops/building-agents/agents.py`, run 
 map and in its module card: green only while it reports successes in time. They need the
 `ATLAS_FEED_URL` and `ATLAS_FEED_TOKEN` repository secrets that the Opportunity Scout uses.
 
-The commerce pipeline now runs on n8n and has no `alerts` block: its n8n workflows email
-failures themselves. Add one again only when they report to the agent feed.
+The commerce pipeline runs on n8n. Its two agents that face customers or write to Stripe are
+watched: **Order Delivery** (buyer delivery emails and the "Shop · Flow follow ups" emails) and
+**Approve and Publish** (Stripe product, price and payment link, created only after Khaneil's
+approval form). Their n8n workflows post one report per send or publish to `/api/hooks/agents`
+with the n8n credential "Atlas reports". A report that fails to post never blocks the email or
+the Stripe call. Design Run and the weekly sales email only email Khaneil and keep emailing
+their own failures.
 
 The benjaire.com agents only show reports once their Worker and n8n workflow send them to
 `/api/hooks/agents` ([live-updates.md](live-updates.md#pipeline-runs-outside-atlas)). Until

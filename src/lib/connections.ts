@@ -5,10 +5,15 @@ import { PRIVATE_OR_MISSING } from "../github/transport";
 import { observedRun, repoData } from "./derive";
 import { daysSince } from "./time";
 
-/** One end of a connection: a project (its headquarters on the map) or an agent (its house). */
+/**
+ * One end of a connection: a project (its headquarters on the map), an agent (its house), or a
+ * landmark building that houses a workspace module (selected on the map as `service:<id>`).
+ */
 export interface Endpoint {
-  kind: "project" | "agent";
+  kind: "project" | "agent" | "landmark";
   id: string;
+  /** A landmark's display name; projects and agents are named from the catalog. */
+  name?: string;
 }
 
 /**
@@ -206,8 +211,46 @@ function syncStatus(state: RepoState | undefined, now: number): { status: Connec
   return { status: "active", note: "Read from GitHub recently", at: state.data.fetchedAt };
 }
 
+/** A landmark whose module reported live data, with the same health its status dot shows. */
+export interface LiveLandmark {
+  id: string;
+  name: string;
+  health: "good" | "warn" | "bad";
+  summary: string;
+}
+
+const LIVE_STATUS: Record<LiveLandmark["health"], ConnectionStatus> = { good: "active", warn: "inactive", bad: "unhealthy" };
+
+/**
+ * The rule: every landmark whose module is live (its live sources answered, so its plaque shows a
+ * real status dot) is connected to Atlas Command Center, because Atlas is what reads and shows
+ * that data. Derived from module state only, never a hand-kept list, so a building that goes live
+ * gains its line and one with nothing connected, nothing verified or a planned module has none.
+ */
+export function liveLandmarkConnections(catalog: Catalog, live: readonly LiveLandmark[]): Connection[] {
+  const atlas = catalog.projects.find((p) => p.id === ATLAS_PROJECT);
+  if (!atlas) return [];
+  return live.map((l) => ({
+    id: `live:${l.id}`,
+    source: { kind: "landmark", id: l.id, name: l.name },
+    target: { kind: "project", id: atlas.id },
+    type: "dependency",
+    directed: true,
+    relation: `${l.name} reports live data to ${atlas.name}`,
+    evidence: ["catalog/workspace/workspace.yaml assigns its module", `Module status: ${l.summary}`],
+    status: LIVE_STATUS[l.health],
+    statusNote: l.summary,
+    lastVerified: null,
+    repositories: [atlas.repository],
+    agents: [],
+    workflows: [],
+    details: ["Shown because the building's module is live"],
+  }));
+}
+
 /** Projects an endpoint belongs to, for focus highlighting. */
 export function projectOfEndpoint(catalog: Catalog, e: Endpoint): Project | undefined {
+  if (e.kind === "landmark") return undefined;
   const id = e.kind === "project" ? e.id : catalog.agents.find((a) => a.id === e.id)?.projectId;
   return catalog.projects.find((p) => p.id === id);
 }
@@ -215,6 +258,7 @@ export function projectOfEndpoint(catalog: Catalog, e: Endpoint): Project | unde
 /** Map key of the building that stands for an endpoint. */
 export function endpointKey(catalog: Catalog, e: Endpoint): string | undefined {
   if (e.kind === "agent") return `agent:${e.id}`;
+  if (e.kind === "landmark") return `service:${e.id}`;
   const p = catalog.projects.find((x) => x.id === e.id);
   return p && `project:${p.id}`;
 }

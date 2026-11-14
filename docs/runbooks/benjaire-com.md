@@ -1,6 +1,6 @@
 # Runbooks: Benjaire.com
 
-Repository: [khaneilcampbell/benjaire.com](https://github.com/khaneilcampbell/benjaire.com). The site's own setup notes are in `site/README.md`; the Flow workflow export and its notes are in Atlas under `apps/benjaire-dashboard/products/flow/live-ops/`.
+Repository: [khaneilcampbell/benjaire.com](https://github.com/khaneilcampbell/benjaire.com). The site's own setup notes are in `site/README.md`; the Flow workflow export and its notes are in Atlas under `apps/benjaire-flow/live-ops/`.
 
 ## Contact Form Worker
 
@@ -18,7 +18,7 @@ Repository: [khaneilcampbell/benjaire.com](https://github.com/khaneilcampbell/be
 
 ## Benjaire Flow Intake
 
-The n8n Cloud workflow "Flow · 1 Intake" (`POST /webhook/flow-intake`). Export: `products/flow/live-ops/workflows/1-intake.json` in `benjaire-dashboard`.
+The n8n Cloud workflow "Flow · 1 Intake" (`POST /webhook/flow-intake`). Export: `apps/benjaire-flow/live-ops/workflows/1-intake.json`.
 
 - **Healthy:** each inquiry adds a `flow_inquiries` row and a `flow_events` row in n8n, the owner gets an alert and the sender an acknowledgement. Error alerts from "Flow · 0 Error alerts" go to `ops_email`.
 - **Run it:** submit the site's contact form, or `POST` the documented JSON with the `x-flow-key` header (see `live-ops/README.md`).
