@@ -1,1 +1,1 @@
-- 2026-11-14 · Agents now show how to stop them (kill switch) and their always-on limits (caps), and Claude's review stops calling agents silent when they do report to Atlas
+- 2026-11-14 · Agents now show how to stop them (kill switch) and their always-on limits (caps), and Claude's review stops calling agents silent when they do report to Atlas (#422)
