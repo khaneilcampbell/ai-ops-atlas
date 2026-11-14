@@ -1663,7 +1663,9 @@ pub mod tests {
             Depth::Standard,
             "2026-10-28",
         );
-        assert!(p.user.contains("kill switch Set CONTACT_PAUSED=1 | caps 20 a minute site-wide"));
+        assert!(p
+            .user
+            .contains("kill switch Set CONTACT_PAUSED=1 | caps 20 a minute site-wide"));
         assert!(p.user.contains("Publisher") && p.user.contains("kill switch not documented"));
     }
 
