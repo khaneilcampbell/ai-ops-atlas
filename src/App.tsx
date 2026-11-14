@@ -28,8 +28,6 @@ import { PHONE_QUERY, useMedia } from "./lib/media";
 import { publishWatches, useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
-import { startStewardScheduler } from "./steward/store";
-import { StewardNotice } from "./steward/Notice";
 import { InstallHint } from "./components/InstallHint";
 import { formatDateTime, useTimeZone } from "./lib/timezone";
 
@@ -48,7 +46,6 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
 export const PHONE_TABS: View[] = ["map", "agents", "overview", "activity"];
 
 export default function App() {
-  useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
@@ -142,7 +139,6 @@ export default function App() {
       )}
 
       <main className="main">
-        <StewardNotice />
         <InstallHint />
         {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
         <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>

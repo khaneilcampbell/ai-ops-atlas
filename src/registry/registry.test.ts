@@ -38,27 +38,24 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 7 projects and 74 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 69 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(7);
-    expect(entries).toHaveLength(74);
+    expect(entries).toHaveLength(69);
   });
 
 
-  it("registers the improvement analyst as observable automation with manual Claude Code and model-free automatic reporting", () => {
-    const agent=catalog.agents.find(a=>a.id==="atlas-system-improvements")!;
-    expect(agent.projectId).toBe("ai-ops-atlas");
-    expect(agent.registry?.classification?.type).toBe("B");
-    expect(agent.observe?.githubWorkflow).toBe("system-improvements.yml");
-    expect(agent.model).toContain("no model");
-    // Works from Atlas HQ since its Model Lab suite left with the Skyline district (2026-11-08).
-    expect(agent.workplace).toBeUndefined();
-    expect(agent.registry?.governance?.autonomy).toBe(1);
+  it("lets the Production Coordinator own Merge Flow and work with the Release Coordinator (2026-11-14)", () => {
+    const agent = catalog.agents.find((a) => a.id === "atlas-production-coordinator")!;
+    expect(agent.registry?.classification?.type).toBe("A");
+    expect(catalog.agents.find((a) => a.id === "github-merge-flow")?.ownedBy).toBe("atlas-production-coordinator");
+    expect(agent.registry?.responsibilities?.dependencies).toEqual(["github-merge-flow", "atlas-release-coordinator"]);
+    expect(agent.observe?.githubWorkflow).toBe("benjaire-production.yml");
   });
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 27, B: 13, C: 22, D: 11, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 28, B: 8, C: 21, D: 11, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -272,7 +269,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(74);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(69);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -289,7 +286,7 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(32);
+    expect(s.observable).toBe(31);
   });
 });
 

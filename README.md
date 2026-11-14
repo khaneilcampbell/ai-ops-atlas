@@ -81,11 +81,9 @@ Agents that work on Atlas itself or its repositories:
 | --- | --- | --- |
 | Repository Intelligence | Reads one repository and asks Claude for an assessment, within per-run and monthly caps | [docs/repository-intelligence.md](docs/repository-intelligence.md) |
 | Senior Engineering Reviewer | Reviews every repository at once and returns a scorecard and ranked fixes. Recommends only | [docs/engineering-review.md](docs/engineering-review.md) |
-| GitHub Steward | Observes repository health from the Mac app | [docs/github-steward.md](docs/github-steward.md) |
 | Merge Flow | Sorts every open pull request into a lane and names the next move. Recommends only | [ops/merge-flow](ops/merge-flow/README.md) |
 | Opportunity Scout | Looks for revenue ideas in the agents Khaneil already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
 | Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
-| System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
 | Marketplace Steward, Signal Watch, Dataset Census | Building agents that report on the Product Marketplace, the Observability Center and the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
 | Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
 
