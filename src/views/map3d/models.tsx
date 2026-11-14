@@ -13,16 +13,18 @@ import type { BuildingStyle } from "./identity";
 import { hash } from "../mapLayout";
 import { farDetailOf, pickDetail, setFarDetail } from "./farDetail";
 import { billboardTexture, facadeTexture, focusable, glowTexture, houseWallTexture, nameBoardTexture, patterned, signTexture, swaying, windowLights } from "./materials";
-import { ROAD_W, DECK_W, deckRise, dist, rampOf, towerRing, ringPath, type CarBridge } from "./roads";
+import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads";
 import { HQ, hqTop } from "./atlasHqPlan";
-import { SIDEWALK } from "./streetPavement";
+import { bridgeStreetSidewalks } from "./streetPavement";
+import { laPlanting } from "./laPlanting";
+import { airportSidewalkPalms, calmLawnPalms, clearForAvenues, palmZones, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
 import { SOC_LAB, isSocLab, socLabTop } from "./socLabPlan";
-import { plazaSites } from "./streetGraph";
+import { plazaLanes } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
@@ -125,6 +127,16 @@ function fromTriangles(tris: number[][]) {
   return g;
 }
 
+/**
+ * A palm frond: a pointed leaf along z (hub at -z, tip at +z), folded down from a ridge at y=0 to
+ * its edges at y=-1, so the instance's y scale sets how far the leaflets hang. Four triangles, faced
+ * both ways, against twelve for a thin box.
+ */
+function frondLeaf() {
+  const i = [0, 0, -0.5], t = [0, 0, 0.5], l = [-0.5, -1, -0.1], r = [0.5, -1, -0.1];
+  return fromTriangles([i, l, t, i, t, r, i, t, l, i, r, t]);
+}
+
 /** Gabled roof slopes over a unit footprint, ridge along x at height 1. */
 function gableSlopes() {
   const a = [-0.5, 0, 0.5], b = [0.5, 0, 0.5], c = [0.5, 0, -0.5], d = [-0.5, 0, -0.5];
@@ -151,6 +163,7 @@ export function useGeometries() {
       hip: hipRoof(),
       cyl: lifted(new THREE.CylinderGeometry(0.5, 0.5, 1, 14)),
       trunk: lifted(new THREE.CylinderGeometry(0.35, 0.5, 1, 6)),
+      frond: frondLeaf(),
       blob: new THREE.IcosahedronGeometry(1, 2),
       cone: lifted(new THREE.ConeGeometry(0.5, 1, 9)),
       dish: lifted(new THREE.CylinderGeometry(0.5, 0.14, 1, 14)),
@@ -306,36 +319,21 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     const all = scene.carBridges.map((br) => bridgeParts(br, scene.brooks));
     const footDeck: Inst[] = [], footRails: Inst[] = [], footPiers: Inst[] = [];
     const streets: Inst[] = [], sidewalks: Inst[] = [], markings: Inst[] = [];
-    const street = (a: [number,number], b: [number,number], width: number, curb: boolean) => {
+    const street = (a: [number,number], b: [number,number], width: number) => {
       const dx=b[0]-a[0], dz=b[1]-a[1], length=Math.hypot(dx,dz);
       if(length<0.01) return;
       const x=(a[0]+b[0])/2,z=(a[1]+b[1])/2, alongX=Math.abs(dx)>Math.abs(dz);
       streets.push({p:[x,TERRACE_H+0.034,z],s:alongX?[length,0.008,width]:[width,0.008,length],c:STREET_ASPHALT});
-      if(curb) for(const side of [-1,1]) {
-        const o=width/2+SIDEWALK.width/2;sidewalks.push({p:[x+(alongX?0:side*o),SIDEWALK.y,z+(alongX?side*o:0)],s:alongX?[length,SIDEWALK.h,SIDEWALK.width]:[SIDEWALK.width,SIDEWALK.h,length],c:SIDEWALK.color});
-      }
       for(let d=0.16;d<length-0.1;d+=STREET_DASH) markings.push({p:[a[0]+dx*d/length,TERRACE_H+0.045,a[1]+dz*d/length],s:alongX?[0.12,0.006,0.018]:[0.018,0.006,0.12],c:STREET_LINE});
     };
     // Bridge roads share their driveways and through streets, so union the collinear pieces and
     // draw each stretch once: one set of dashes, and a paved square wherever two stretches meet.
     const district: [number,number][][] = scene.carBridges.flatMap(br=>br.roads);
-    for(const t of plazaSites(scene)) {
-      const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
-      const ring=plaza&&towerRing(t,plaza.w);
-      if(!ring) continue;
-      // Draw only the plaza streets that connect actual bridge exits; no decorative dead ends.
-      const exits=scene.carBridges.flatMap(br=>{const end=br.ends.indexOf(t.projectId);return end<0?[]:[br.roads[end][0]];});
-      const drawn=new Set<string>();
-      for(let a=0;a<exits.length;a++) for(let b=a+1;b<exits.length;b++) {
-        const path=[exits[a],...ringPath(ring,exits[a],exits[b])];
-        for(let i=1;i<path.length;i++) {
-          const key=[path[i-1].join(":"),path[i].join(":")].sort().join("|");
-          if(drawn.has(key))continue;drawn.add(key);district.push([path[i-1],path[i]]);
-        }
-      }
-    }
+    // The paved plaza lanes (streetGraph.ts plazaLanes): the same lanes vehicles drive.
+    district.push(...plazaLanes(scene));
     const spans=connectionSpans(district);
-    for(const sp of spans) street(sp.a,sp.b,ROAD_W,true);
+    for(const sp of spans) street(sp.a,sp.b,ROAD_W);
+    sidewalks.push(...bridgeStreetSidewalks(spans,(scene.transportConnections??[]).flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])])));
     const touches=(p:[number,number],self:number)=>spans.some((o,j)=>j!==self&&distanceToRoad(p,[o.a,o.b])<0.01);
     const squares=new Set<string>();
     spans.forEach((sp,i)=>{for(const p of [sp.a,sp.b]){const k=p.map(v=>v.toFixed(3)).join(":");if(squares.has(k)||!touches(p,i))continue;squares.add(k);streets.push({p:[p[0],TERRACE_H+0.034,p[1]],s:[ROAD_W,0.008,ROAD_W],c:STREET_ASPHALT});}});
@@ -395,7 +393,10 @@ export function Bridges({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
     };
     return {
       deck: [...all.flatMap((b) => b.deck), ...streets, ...sidewalks.flatMap(clearOfStreets), ...markings, ...footDeck.flatMap(p=>p.c==="#d4cfb9"?clearOfStreets(p):[p])],
-      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails],scene.freight?.localJunctions??[],.95),
+      // A bridge's railing stands only where it spans a brook or open water; where the street runs on solid ground the
+      // posts would stand along its kerbs like poles in the road (Khaneil, 2026-11-13), so they are left off there.
+      // A footbridge laid flush beside a street keeps no railing or post on that street's carriageway or sidewalk.
+      rails: clipConnectionRails([...all.flatMap((b) => b.rails), ...footRails.filter((v) => ![...crossRoads.map((r) => r.path), ...(scene.transportConnections ?? []).flatMap((c) => [c.road, ...(c.frontage ? [c.frontage] : [])])].some((r) => distanceToRoad([v.p[0], v.p[2]], r) < ROAD_W / 2 + 0.18))].filter((v) => scene.brooks.some((r) => v.p[0] > r.x && v.p[0] < r.x + r.w && v.p[2] > r.z && v.p[2] < r.z + r.d) || !scene.land.some((l) => v.p[0] > l.x + 0.04 && v.p[0] < l.x + l.w - 0.04 && v.p[2] > l.z + 0.04 && v.p[2] < l.z + l.d - 0.04)),scene.freight?.localJunctions??[],.95),
       piers: [...all.flatMap((b) => b.piers), ...footPiers],
       lamps: all.flatMap((b) => b.lamps),
       pools: all.flatMap((b) => b.pools),
@@ -486,43 +487,25 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
 
 // ── Landscaping ─────────────────────────────────────
 
-const LEAVES = ["#4f8b3b", "#5c9a43", "#6aa84b", "#477f37"];
-const BLOSSOM = ["#e7b2bf", "#f0c6cf", "#dc9fb0"];
+/** Warm haze round a string-lit palm trunk at night: additive and see-through, so the bulbs still show inside it. */
+const palmHalo = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
-export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
+/** The lawn trees (palms only inside the palm zones), less any standing in a palm avenue's row, plus the avenues and the airport's sidewalk palms. */
+function avenuePlanting(scene: Scene3D) {
+  const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])];
+  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];
+}
+
+export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G; m: M; night?: boolean }) {
   const items = useMemo(() => {
-    const trunks: Inst[] = [];
-    const blobs: Inst[] = [];
-    const puffs: Inst[] = [];
-    const cones: Inst[] = [];
-    scene.trees.forEach((t, i) => {
-      const s = t.s;
-      if (t.kind === "palm") return;
-      if (t.kind === "cone") {
-        trunks.push({ p: [t.x, t.y, t.z], s: [0.07, s * 0.6, 0.07], c: "#6b5038" });
-        cones.push({ p: [t.x, t.y + s * 0.4, t.z], s: [s * 1.8, s * 2.2, s * 1.8], c: "#3f7342" });
-        cones.push({ p: [t.x, t.y + s * 1.4, t.z], s: [s * 1.35, s * 1.7, s * 1.35], c: "#4c8550" });
-        return;
-      }
-      const pal = t.kind === "blossom" ? BLOSSOM : LEAVES;
-      const col = (k: number) => pal[(i + k) % pal.length];
-      trunks.push({ p: [t.x, t.y, t.z], s: [0.08, s * 1.3, 0.08], c: "#7a5c40" });
-      blobs.push({ p: [t.x, t.y + s * 1.9, t.z], s: [s, s * 0.95, s], c: col(0) });
-      blobs.push({ p: [t.x - s * 0.45, t.y + s * 1.55, t.z + s * 0.3], s: [s * 0.72, s * 0.66, s * 0.72], c: col(1) });
-      blobs.push({ p: [t.x + s * 0.4, t.y + s * 1.6, t.z - s * 0.25], s: [s * 0.7, s * 0.66, s * 0.7], c: col(2) });
-      // The small top puff's shadow falls inside the main canopy's, so it skips the shadow pass.
-      puffs.push({ p: [t.x + s * 0.1, t.y + s * 2.45, t.z + s * 0.1], s: [s * 0.55, s * 0.5, s * 0.55], c: col(3) });
-    });
-    const bushes: Inst[] = scene.bushes.map((b, i) => ({ p: [b.x, b.y + b.s * 0.5, b.z], s: [b.s * 1.4, b.s, b.s * 1.4], c: LEAVES[i % 3] }));
-    const flowers: Inst[] = scene.bushes
-      .filter((_, i) => i % 3 === 0)
-      .flatMap((b, i) => [0, 1, 2].map((k) => ({ p: [b.x + (k - 1) * b.s * 0.7, b.y + b.s * 1.2, b.z + ((k % 2) - 0.5) * b.s], s: [0.035, 0.035, 0.035], c: ["#f6efd8", "#e9c97a", "#eab8c2"][(i + k) % 3] }) as Inst));
+    // Los Angeles planting: mostly palms, with dry-garden shrubs (laPlanting.ts).
+    const { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs, halos } = laPlanting(avenuePlanting(scene), scene.bushes);
     const rocks: Inst[] = scene.rocks.map((r, i) => ({ p: [r.x, r.y, r.z], s: [r.s, r.s * 0.6, r.s * 0.9], r: i, c: i % 2 ? "#9d9a8e" : "#8b897e" }));
     // Low path lights, and pools of light on the ground that fade in at night.
     const bollards: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y, b.z], s: [0.035, 0.09, 0.035], c: "#3c4c40" }));
     const caps: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.1, b.z], s: [0.026, 0.02, 0.026] }));
     const pools: Inst[] = scene.bollards.map((b) => ({ p: [b.x, b.y + 0.035, b.z], s: [0.42, 0.004, 0.42] }) as Inst);
-    return { trunks, blobs, puffs, cones, bushes, flowers, rocks, bollards, caps, pools };
+    return { trunks, fronds, leaves, blobs, puffs, cones, clumps, flowers, bulbs, halos, rocks, bollards, caps, pools };
   }, [scene]);
   return (
     <group>
@@ -530,8 +513,14 @@ export function Landscape({ scene, g, m }: { scene: Scene3D; g: G; m: M }) {
       <Instanced items={items.blobs} geometry={g.blob} material={m.foliage} />
       <Instanced items={items.puffs} geometry={g.blob} material={m.foliage} shadow={false} />
       <Instanced items={items.cones} geometry={g.cone} material={m.foliage} />
-      <Instanced items={items.bushes} geometry={g.ball} material={m.foliage} />
+      <Instanced items={items.leaves} geometry={g.frond} material={m.foliage} />
+      <Instanced items={items.fronds} geometry={g.box} material={m.foliage} />
+      <Instanced items={items.clumps} geometry={g.ball} material={m.foliage} />
       <Instanced items={items.flowers} geometry={g.ball} material={m.plain} shadow={false} />
+      {/* Palm string lights stay switched on day and night, like Rodeo Drive (Khaneil, 2026-11-13: lights not showing by day). */}
+      <Instanced items={items.bulbs} geometry={g.box} material={m.glow} shadow={false} />
+      {/* At night each wrapped trunk also gives off a soft warm haze, so the lights read from the normal map zoom. */}
+      {night && <Instanced items={items.halos} geometry={g.trunk} material={palmHalo} shadow={false} />}
       <Instanced items={items.rocks} geometry={g.rock} material={m.roof} />
       <Instanced items={items.bollards} geometry={g.cyl} material={m.plain} shadow={false} />
       <Instanced items={items.caps} geometry={g.ball} material={m.lamp} shadow={false} />
@@ -624,48 +613,78 @@ function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
 }
 
 /** Small branded business offices, kept below the project headquarters skyline. */
-export function Kiosks({ kiosks, g, m, pick }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet }) {
+export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[]; g: G; m: M; pick: PickHandlerSet; night?: boolean }) {
   const items = useMemo(() => {
     const y = TERRACE_H + 0.03;
-    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
+    const walls: Inst[] = [], slabs: Inst[] = [], accents: Inst[] = [], windows: Inst[] = [], skyWindows: Inst[] = [], planters: Inst[] = [], flowers: Inst[] = [], strips: Inst[] = [], domes: Inst[] = [], pediments: Inst[] = [], doors: Inst[] = [];
     const one = (k: Kiosk) => {
       const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
-      const brand = toolBrand(k.name), w = k.size, d = w * 0.8;
+      const brand = toolBrand(k.name), w = k.size, d = w * 0.8, f = brand.facade;
+      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#fff5d9", glassSide = f?.glass[1] ?? "#e5e8e1";
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
       // Six office floors with a regular curtain-wall grid and branded cornices.
       const floorCount=OFFICE_H < 2 ? 3 : Math.max(6, Math.round((OFFICE_H-0.68)/0.36));
       const floorSpacing=Math.min(0.36,(OFFICE_H-0.68)/floorCount);
+      // A facade override uses plain sky glass, so its blue reads true instead of tinting the warm office glass.
+      const panes = f ? skyWindows : windows;
       for (let floor = 0; floor < floorCount; floor++) {
-        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: floor % 2 ? brand.secondary : brand.primary });
+        slabs.push({ p: [k.x, y + 0.48 + floor * floorSpacing, k.z], s: [w * 1.03, 0.035, d * 1.04], c: f ? f.bands[floor % 2] : floor % 2 ? brand.secondary : brand.primary });
         for (let col = 0; col < 3; col++) {
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
-          windows.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: "#fff5d9" });
-          windows.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: "#e5e8e1" });
+          panes.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z + d / 2 + 0.008], s: [w * 0.17, 0.22, 0.018], c: glassFront });
+          panes.push({ p: [k.x + w / 2 + 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: glassSide });
+          panes.push({ p: [k.x + (col - 1) * w * 0.25, y + 0.58 + floor * floorSpacing, k.z - d / 2 - 0.008], s: [w * 0.17, 0.22, 0.018], c: glassFront });
+          panes.push({ p: [k.x - w / 2 - 0.008, y + 0.58 + floor * floorSpacing, k.z + (col - 1) * d * 0.25], s: [0.018, 0.22, d * 0.17], c: glassSide });
         }
+      }
+      // Planted ledges on every third floor and the roof, each lit from below by a blue strip (the SOC's terraces in miniature).
+      if (f?.garden) {
+        const greens = ["#5f8f4a", "#6f9c50", "#557f43", "#7aa35a"], blooms = ["#f2a7c3", "#ffffff", "#f6d36b", "#e98fb0", "#c9a6f0"];
+        for (let floor = 2; floor < floorCount; floor += 3) {
+          const ly = y + 0.48 + floor * floorSpacing;
+          strips.push({ p: [k.x, ly - 0.03, k.z], s: [w * 1.05, 0.025, d * 1.06] });
+          planters.push({ p: [k.x, ly + 0.035, k.z + d / 2 + 0.035], s: [w * 0.94, 0.07, 0.06], c: greens[floor % greens.length] });
+          planters.push({ p: [k.x + w / 2 + 0.035, ly + 0.035, k.z], s: [0.06, 0.07, d * 0.94], c: greens[(floor + 1) % greens.length] });
+          for (let i = 0; i < 5; i++) {
+            const t = (i - 2) / 2.4;
+            flowers.push({ p: [k.x + t * w * 0.45, ly + 0.11, k.z + d / 2 + 0.035], s: [0.035, 0.03, 0.035], c: blooms[(i + floor) % blooms.length] });
+            flowers.push({ p: [k.x + w / 2 + 0.035, ly + 0.11, k.z + t * d * 0.45], s: [0.035, 0.03, 0.035], c: blooms[(i + floor + 2) % blooms.length] });
+          }
+        }
+        strips.push({ p: [k.x, y + OFFICE_H - 0.03, k.z], s: [w * 1.09, 0.025, d * 1.13] });
+        planters.push({ p: [k.x + w * 0.3, y + OFFICE_H + 0.1, k.z + d * 0.3], s: [w * 0.3, 0.08, d * 0.3], c: "#5f8f4a" });
+        for (let i = 0; i < 6; i++) flowers.push({ p: [k.x + w * (0.2 + (i % 3) * 0.1), y + OFFICE_H + 0.2, k.z + d * (0.22 + Math.floor(i / 3) * 0.14)], s: [0.05, 0.045, 0.05], c: i % 2 ? blooms[i % blooms.length] : greens[i % greens.length] });
       }
       // Slim corner columns and a recessed rooftop plant room give the offices a corporate silhouette.
       for (const side of [-1, 1]) {
-        accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: brand.roof });
+        accents.push({ p: [k.x + side * w * 0.47, y + 0.08, k.z + d * 0.49], s: [w * 0.045, OFFICE_H - 0.08, 0.035], c: trim });
       }
       slabs.push({ p: [k.x, y + OFFICE_H + 0.1, k.z - d * 0.12], s: [w * 0.48, 0.16, d * 0.45], c: brand.wall });
       accents.push({ p: [k.x - w * 0.43, y + 0.12, k.z + d / 2 + 0.012], s: [w * 0.09, OFFICE_H - 0.12, 0.035], c: brand.primary });
       accents.push({ p: [k.x + w / 2 + 0.012, y + 0.12, k.z - d * 0.43], s: [0.035, OFFICE_H - 0.12, d * 0.09], c: brand.secondary });
       doors.push({ p: [k.x, y + 0.08, k.z + d / 2 + 0.018], s: [w * 0.24, 0.34, 0.03], c: "#233e49" });
-      slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: brand.primary });
+      slabs.push({ p: [k.x, y + 0.43, k.z + d * 0.38], s: [w * 0.5, 0.045, d * 0.3], c: f ? trim : brand.primary });
       if (brand.rounded) domes.push({ p: [k.x, y + OFFICE_H + 0.1, k.z], s: [w * 0.62, 0.2, d * 0.62], c: brand.primary });
-      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: brand.secondary });
+      if (brand.stepped) slabs.push({ p: [k.x - w * 0.1, y + OFFICE_H + 0.1, k.z - d * 0.1], s: [w * 0.65, 0.2, d * 0.65], c: f ? brand.wall : brand.secondary });
     };
     for (const k of kiosks) one(k);
-    return { walls, slabs, accents, windows, domes, pediments, doors };
+    return { walls, slabs, accents, windows, skyWindows, planters, flowers, strips, domes, pediments, doors };
   }, [kiosks]);
+  // Sky glass by day; at night it glows warm white like the Security Operations Center next door.
+  const skyGlass = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#ffe9c4", emissiveIntensity: 0, roughness: 0.18, metalness: 0.15 }), []);
+  const cyan = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8fd3df", emissive: "#2ad8ff", emissiveIntensity: 0.35, roughness: 0.3, toneMapped: false }), []);
+  useEffect(() => { skyGlass.emissiveIntensity = night ? 0.85 : 0; cyan.emissiveIntensity = night ? 2.2 : 0.35; }, [skyGlass, cyan, night]);
+  useEffect(() => () => { skyGlass.dispose(); cyan.dispose(); }, [skyGlass, cyan]);
   return <group>
     <Instanced items={items.walls} geometry={g.box} material={m.plain} pick={pick.of(kiosks.map(k => k.key))} />
     <Instanced items={items.slabs} geometry={g.box} material={m.plain} />
     <Instanced items={items.accents} geometry={g.box} material={m.plain} />
     <Instanced items={items.windows} geometry={g.box} material={m.glass} />
+    {items.skyWindows.length > 0 && <Instanced items={items.skyWindows} geometry={g.box} material={skyGlass} />}
+    {items.strips.length > 0 && <Instanced items={items.strips} geometry={g.box} material={cyan} shadow={false} />}
+    {items.planters.length > 0 && <Instanced items={items.planters} geometry={g.box} material={m.foliage} shadow={false} />}
+    {items.flowers.length > 0 && <Instanced items={items.flowers} geometry={g.blob} material={m.foliage} shadow={false} />}
     <Instanced items={items.domes} geometry={g.cyl} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gable} material={m.plain} />
     <Instanced items={items.pediments} geometry={g.gableEnds} material={m.plain} />

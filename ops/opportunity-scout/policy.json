@@ -18,7 +18,7 @@
     "monthlyBudgetUsd": 1.0,
     "inputUsdPerMTok": 4.0,
     "outputUsdPerMTok": 20.0,
-    "worstCaseInputTokens": 9000
+    "worstCaseInputTokens": 10000
   },
   "neverDo": ["spend money", "message people", "publish", "merge", "push", "comment", "change settings"]
 }

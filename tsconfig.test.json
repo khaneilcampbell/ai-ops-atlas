@@ -1,0 +1,11 @@
+{
+  // Type checks the test files, which tsconfig.json leaves out of the app build. Tests run in Node
+  // under Vitest, so they get Node's types and a newer library than the app's ES2021 target.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "server/**/*.test.ts"],
+  "exclude": []
+}

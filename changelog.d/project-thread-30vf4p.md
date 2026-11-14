@@ -1,0 +1,1 @@
+- 2026-11-12 · Claude Code is now the tool for the five manual review agents (System Improvements, UI Improvement Designer, Production Coordinator, Reliability and Performance Reviewers); the review button copies a Claude Code prompt and no longer reads "undefined · Floor undefined" (#390)

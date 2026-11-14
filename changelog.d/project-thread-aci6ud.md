@@ -1,0 +1,1 @@
+- 2026-11-12 · Repository Intelligence: a run cut off because Atlas closed no longer shows as a failure, and the scheduler runs it again on the next launch instead of waiting a week. A scheduled run on a repository GitHub can't find (deleted or renamed) takes it off the scheduled list, so it stops failing every week (#395)

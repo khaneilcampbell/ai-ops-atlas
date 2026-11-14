@@ -15,7 +15,7 @@ subtitle: Project Roadmap · sec-01
 |---|---|---|---|---|---|---|
 | 1 | Review and merge `docs/portfolio-review` into `main` | P1 | S | None | README on GitHub shows accurate status, limitations and links | Not started |
 | 2 | Update the local folder from GitHub; decide what to do with the older duplicate clone | P1 | S | 1 | One current local copy that includes `soc_automation.py` | Not started |
-| 3 | Fix the profile README link `ssplunk-bruteforce-detection-lab` (also in service-desk-dashboard) | P1 | S | None | Links from your profile resolve | Not started |
+| 3 | Fix the profile README link `ssplunk-bruteforce-detection-lab` | P1 | S | None | Links from your profile resolve | Not started |
 
 # Short-Term Improvements
 
