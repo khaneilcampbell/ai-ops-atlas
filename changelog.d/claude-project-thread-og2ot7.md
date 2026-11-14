@@ -1,0 +1,3 @@
+- 2026-11-13 · A gold private jet now flies the airport loop. It's bigger than the airliners, boards its passengers from the terminal through the jet bridge, and you can step inside with "Enter aircraft" to see who's on board and its route on a live moving map (#418)
+- 2026-11-13 · Inside the gold jet you now ride through the real Atlas map: the same city, airport, sky and other planes you see from outside go by around the open cabin as the jet taxis, takes off and circles. "Window seat view" looks out past the nose, and the room names are small quiet tags (#418)
+- 2026-11-13 · Selecting the gold jet now stays with it: the gold outline and ring follow the jet as it taxis, takes off and flies, and the camera goes to where the jet is instead of its empty gate (#418)

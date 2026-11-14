@@ -37,8 +37,10 @@ import {Galleria} from "./Galleria";
 import {GALLERIA_KEY,GALLERIA_NAME} from "./galleriaPlan";
 import { Airport } from "./LogisticsAirport";
 import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
+import { GOLD_JET_BOX, GOLD_JET_GATE, GOLD_JET_KEY, goldJetBounds, goldJetLive, goldJetMapPose } from "./goldJetPlan";
+import { GOLD_JET_OFFICE_ID, goldJetRide } from "./goldJetIds";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, forwardRef, lazy, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { LEVELS, resetGovernor, useQualityLevel } from "../../lib/governor";
@@ -88,6 +90,8 @@ import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
+/** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
+const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -189,6 +193,8 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   else if(scene.communityRail){for(const [key,[x,z]]of [[ATLAS_STATION_KEY,scene.communityRail.hills],["service:financial-station",scene.communityRail.financial]] as const)m.set(key,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
+  // The gold jet moves round the loop; selecting it frames its gate, where it boards (goldJetPlan).
+  if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
@@ -446,7 +452,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Stop rendering while the window is hidden; nothing on the map needs to move then.
   const visible = usePageVisible();
   // The map is fully covered while a building's office is open, so it stops rendering then.
-  const officePhase = useOffice().phase;
+  const { phase: officePhase, projectId: officeId } = useOffice();
   // Phones get a lighter scene: fewer pixels and a smaller shadow map keep frames steady.
   const phone = useMedia(PHONE_QUERY);
   // Buildings light up while their agents are observed working.
@@ -461,7 +467,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
-  const drawing = props.active !== false && visible && officePhase !== "inside";
+  // Inside the gold jet the map keeps drawing: its camera rides in the jet (GoldJetRide).
+  const drawing = props.active !== false && visible && (officePhase !== "inside" || officeId === GOLD_JET_OFFICE_ID);
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
@@ -930,7 +937,9 @@ function World({
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
     const b = anchors.get(key);
-    const a = b && { ...b, ...b.whole };
+    // The gold jet moves: frame it where it is now, not at the gate it boards from.
+    const live = key === GOLD_JET_KEY && scene.airport && goldJetMapPose(scene.airport, goldJetLive.clock, goldJetLive.circuit);
+    const a = live ? { ...goldJetBounds(live, scene.airport?.west), y0: TERRACE_H + live.y } : b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -957,6 +966,7 @@ function World({
   // Entering a building: remember the view, glide in toward its headquarters, and glide back to
   // the same view on the way out.
   const office = useOffice();
+  const riding = office.projectId === GOLD_JET_OFFICE_ID && (office.phase === "entering" || office.phase === "inside");
   const saved = useRef<[THREE.Vector3, THREE.Vector3] | null>(null);
   useEffect(() => {
     const { phase, projectId } = office;
@@ -1045,10 +1055,12 @@ function World({
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
     }
-    controls.update();
+    // Riding the gold jet: GoldJetRide places the camera every frame, so the map's own controls stand aside.
+    if (!goldJetRide.active) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
-    const haze = fogRange(dist, ext);
+    // Riding the gold jet the camera hugs the cabin, so haze as if looking over a district, not one building.
+    const haze = fogRange(goldJetRide.active ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
@@ -1152,7 +1164,9 @@ function World({
   useEffect(() => () => cancelAnimationFrame(detailFrame.current), []);
   const safeFlight=useMemo(()=>flightClearance(scene),[scene]);
   // An open building's outline hugs its office, not the shell that was cut away.
-  const hl = (key: string | null) => {
+  const hl = (key: string | null): OutlineBox | undefined => {
+    // The gold jet's outline rides with the jet (see Outline's `track`) instead of staying at its gate.
+    if (key === GOLD_JET_KEY && scene.airport) return goldJetOutline(scene.airport);
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
@@ -1182,7 +1196,8 @@ function World({
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}
       {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
-      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY])} />}
+      {detailsReady && riding && scene.airport && <Suspense fallback={null}><GoldJetRide plan={scene.airport} night={lightMode==="night"} controls={controls} /></Suspense>}
+      {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY,GOLD_JET_KEY])} />}
       {detailsReady && <Landscape scene={scene} g={g} m={m} night={lightMode==="night"} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
       <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} night={lightMode==="night"} />
@@ -1211,9 +1226,29 @@ function World({
 /** A slightly larger back-faced shell behind a building, which reads as an outline. */
 const BOX_EDGES = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 
-function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y1: number; w: number; d: number }; color: string; ring?: boolean }) {
+/** An outline box; `track` moves and turns it every frame for something that travels (the gold jet). */
+type OutlineBox = { x: number; z: number; y0: number; y1: number; w: number; d: number; track?: (g: THREE.Object3D) => void };
+
+/** The gold jet's box in its own frame, carried each frame to where the jet is, turned to its heading. */
+function goldJetOutline(airport: { x: number; z: number; west?: boolean }): OutlineBox {
+  const B = GOLD_JET_BOX;
+  return {
+    x: airport.west ? -B.x : B.x, z: B.z, y0: 0, y1: B.h, w: B.w, d: B.d,
+    track: (g) => {
+      const p = goldJetMapPose(airport, goldJetLive.clock, goldJetLive.circuit);
+      g.position.set(p.x, TERRACE_H + 0.06 + p.y, p.z);
+      g.rotation.set(0, p.yaw, 0);
+      // Hidden while it is off the loop, and while you ride inside it.
+      g.visible = p.visible && !goldJetRide.active;
+    },
+  };
+}
+
+function Outline({ a, color, ring }: { a?: OutlineBox; color: string; ring?: boolean }) {
   const ringRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
+    if (a?.track && groupRef.current) a.track(groupRef.current);
     const r = ringRef.current;
     if (!r) return;
     const t = (clock.elapsedTime % 1.8) / 1.8;
@@ -1223,7 +1258,8 @@ function Outline({ a, color, ring }: { a?: { x: number; z: number; y0: number; y
   if (!a) return null;
   const pad = 0.12;
   return (
-    <group>
+    // A tracked outline moves its own group each frame; any other is drawn in place (and a reused group is put back).
+    <group ref={groupRef} {...(a.track ? {} : { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const, visible: true })}>
       {/* Crisp edges rather than a solid silhouette, so the facade stays visible. */}
       <lineSegments position={[a.x, (a.y0 + a.y1) / 2, a.z]} scale={[a.w + pad, a.y1 - a.y0 + pad, a.d + pad]} geometry={BOX_EDGES} raycast={() => null}>
         <lineBasicMaterial color={color} />

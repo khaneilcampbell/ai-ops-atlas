@@ -5,6 +5,8 @@ export const MAP_FLEET = {
   boats: 8,
   /** The one executive jet on the airport loop (LogisticsAirport.tsx ExecutiveJet draws a single jet). */
   executiveJets: 1,
+  /** The gold private jet: it takes one of the loop's airliner slots (goldJetPlan GOLD_JET_SLOT). */
+  goldJets: 1,
   /** The one Atlas airship (SkyBalloons.tsx draws a single airship). */
   airships: 1,
 } as const;
