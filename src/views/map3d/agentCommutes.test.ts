@@ -31,7 +31,7 @@ describe("agent commutes", () => {
   it("gives every working agent a walk, and says why the rest have none", () => {
     expect(plan.commutes.length + plan.skipped.length).toBe(jobs.length);
     // Fixed workflows no longer receive simulated agent commutes.
-    expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "atlas-release-coordinator", "site-builder"]);
+    expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "atlas-production-coordinator", "atlas-release-coordinator", "site-builder"]);
     // Owning agents that work only through their automations keep their desk and are not drawn walking.
     expect(plan.skipped.filter((s) => s.reason.startsWith("works through its automations")).map((s) => s.agentId).sort()).toEqual(
       jobs.filter((j) => j.deskOnly && !j.offDuty).map((j) => j.agentId).sort(),
