@@ -28,7 +28,6 @@ describe("districts", () => {
       "commerce-pipeline": "business-operations",
       "intelligence-hub": "ai-engineering",
       "soc-lab": "security-infrastructure",
-      "service-desk": "security-infrastructure",
       "portfolio-site": "career-portfolio",
       "github-profile": "career-portfolio",
     });
@@ -60,7 +59,9 @@ describe("agent tiers", () => {
   });
 
   it("makes orchestrators coordinators", () => {
-    expect(tiers("coordinator")).toEqual(["benjaire-product-lab", "commerce-loop"]);
+    expect(tiers("coordinator")).toEqual([
+      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "soc-detection-lead",
+    ]);
   });
 
   it("keeps a declared tier", () => {
@@ -74,11 +75,17 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-merge-pr", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
-      security: ["bruteforce-detection", "security-check", "service-desk-codeql", "soc-case-notes"],
+      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
+      security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
         "benjaire-contact-worker",
+        "benjaire-flow-digest",
+        "benjaire-flow-errors",
         "benjaire-flow-intake",
+        "benjaire-flow-missed-runs",
+        "benjaire-flow-reminders",
+        "benjaire-flow-status",
+        "benjaire-inquiry-manager",
         "benjaire-inquiry-to-client",
         "benjaire-product-lab",
         "benjaire-product-lab-brief",
@@ -86,10 +93,14 @@ describe("automation categories", () => {
         "benjaire-product-lab-customers",
         "benjaire-product-lab-research",
         "benjaire-product-lab-scoring",
+        "benjaire-shop-delivery",
+        "benjaire-shop-follow-ups",
+        "benjaire-shop-manager",
         "brand-strategist",
         "canva-mockups",
         "career-execution",
         "commerce-loop",
+        "commerce-operations-manager",
         "copy-strategist",
         "email-digest",
         "github-opportunity-scout",
@@ -102,9 +113,9 @@ describe("automation categories", () => {
         "shopify-publisher",
           "visual-director",
       ],
-      monitoring: ["health-report"],
-      intelligence: ["atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "repo-intelligence"],
-      maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "github-design-consistency", "site-audit", "site-builder"],
+      monitoring: ["atlas-health-monitor", "benjaire-ops-monitor", "health-report"],
+      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
+      maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
 

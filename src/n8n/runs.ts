@@ -67,13 +67,34 @@ export function useN8nRuns(): N8nState {
   return useSyncExternalStore(subscribe, () => current, () => current);
 }
 
-/** The n8n workflow id a catalog agent links to (a link to …/workflow/<id> on its n8n instance). */
-export function n8nWorkflowId(agent: Pick<Agent, "links">): string | null {
+/** Every n8n workflow id a catalog agent links to (links to …/workflow/<id> on its n8n instance), in link order. */
+export function n8nWorkflowIds(agent: Pick<Agent, "links">): string[] {
+  const out: string[] = [];
   for (const l of agent.links ?? []) {
     const m = /^https:\/\/[^/]+\/workflow\/([A-Za-z0-9]+)(?:[/?#]|$)/.exec(l.url);
-    if (m && /n8n/i.test(new URL(l.url).hostname + l.label)) return m[1];
+    if (m && /n8n/i.test(new URL(l.url).hostname + l.label) && !out.includes(m[1])) out.push(m[1]);
   }
-  return null;
+  return out;
+}
+
+/** The agent's main n8n workflow: the first one it links to. Its runs set the agent's health. */
+export function n8nWorkflowId(agent: Pick<Agent, "links">): string | null {
+  return n8nWorkflowIds(agent)[0] ?? null;
+}
+
+/**
+ * Which catalog agent each n8n workflow belongs to, by workflow id. A workflow that is switched on
+ * in n8n but missing here is live work the Atlas tabs don't show yet (see unlistedWorkflows).
+ */
+export function workflowOwners(agents: readonly Pick<Agent, "name" | "links">[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const a of agents) for (const id of n8nWorkflowIds(a)) if (!out.has(id)) out.set(id, a.name);
+  return out;
+}
+
+/** Workflows switched on in n8n that no catalog agent links to, so no Atlas tab lists them yet. */
+export function unlistedWorkflows(workflows: readonly Pick<N8nWorkflowRuns, "id" | "active">[], owners: ReadonlyMap<string, string>): string[] {
+  return workflows.filter((w) => w.active && !owners.has(w.id)).map((w) => w.id);
 }
 
 export type N8nHealth = "failing" | "ok" | "idle" | "off";

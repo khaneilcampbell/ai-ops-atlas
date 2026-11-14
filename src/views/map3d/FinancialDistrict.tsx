@@ -119,32 +119,44 @@ export function FinancialDistrict({plan:a,junctions,g,m,pick,night,moving=false}
  for(const path of a.park.paths)for(let i=1;i<path.length;i++){const u=path[i-1],v=path[i],length=Math.hypot(v[0]-u[0],v[1]-u[1]);solid.push({...box((u[0]+v[0])/2,.025,(u[1]+v[1])/2,.5,.045,length+.025,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}
  // Plazas at the head and foot of the fountain axis, in a lighter stone than the paths.
  for(const r of a.park.plazas)solid.push(box(r.x+r.w/2,.026,r.z+r.d/2,r.w,.05,r.d,'#ece5d3'));
- // Stepped fountain: four basins, each a little lower than the one above it, with stone rims.
- for(const q of a.park.pools){const cx=q.x+q.w/2,cz=q.z+q.d/2;
-  solid.push(box(cx,.025,cz,q.w+.3,.035,q.d+.3,'#d4cebe'),box(cx,.025,cz,q.w,q.rise-.06,q.d,'#bfb7a2'));water.push(box(cx,Math.max(q.rise-.035,.064),cz,q.w,.02,q.d,'#ffffff'));
-  for(const x of [q.x-.08,q.x+q.w+.08])solid.push(box(x,.025,cz,.12,q.rise+.03,q.d+.3,'#cfc8b5'));
-  for(const z of [q.z-.08,q.z+q.d+.08])solid.push(box(cx,.025,z,q.w,q.rise+.03,.12,'#cfc8b5'));
-  solid.push(box(cx,q.rise,cz,.08,.14,.08,'#cfc8b5'));}
- // Sculpture gardens: a bright round lawn ringed by a narrow path.
- for(const ring of a.park.rings){const n=14;plants.push(box(ring.x,-.05,ring.z,ring.r-.12,.08,ring.r-.12,'#8fbf6a'));
+ // Stepped fountain (Khaneil, 2026-11-13: more realistic): four granite basins, each a little lower than the one
+ // above, with a dark liner under the water, a bevelled coping, a tiered bowl and jet in the middle, and a thin
+ // sheet of water spilling over the lip into the next basin.
+ a.park.pools.forEach((q,i)=>{const cx=q.x+q.w/2,cz=q.z+q.d/2,next=a.park.pools[i+1];
+  solid.push(box(cx,.02,cz,q.w+.36,.03,q.d+.36,'#cdc6b4'),box(cx,.02,cz,q.w,q.rise-.05,q.d,'#4f5f63'));
+  water.push(box(cx,Math.max(q.rise-.035,.064),cz,q.w-.02,.02,q.d-.02,'#ffffff'));
+  // Coping: a wide flat cap over a slightly narrower plinth, all four sides.
+  for(const x of [q.x-.09,q.x+q.w+.09])solid.push(box(x,.02,cz,.14,q.rise+.02,q.d+.32,'#c6bfac'),box(x,q.rise+.04,cz,.19,.025,q.d+.36,'#e1dbcb'));
+  for(const z of [q.z-.09,q.z+q.d+.09])solid.push(box(cx,.02,z,q.w,q.rise+.02,.14,'#c6bfac'),box(cx,q.rise+.04,z,q.w+.36,.025,.19,'#e1dbcb'));
+  // Tiered bowl on a pedestal, with a jet rising out of it and a little crown of spray.
+  const top=q.rise+.02;solid.push(box(cx,top,cz,.07,.16,.07,'#d4cebe'));plants.push(box(cx,top+.17,cz,.1,.02,.1,'#d4cebe'));
+  water.push(box(cx,top+.185,cz,.16,.01,.16,'#ffffff'));solid.push(box(cx,top+.19,cz,.014,.3,.014,'#eef8fa'));
+  // Four small arcing jets from the bowl's rim back into the basin.
+  for(let k=0;k<4;k++){const t=k*Math.PI/2+Math.PI/4;solid.push({...box(cx+Math.sin(t)*.12,top+.08,cz+Math.cos(t)*.12,.012,.16,.012,'#eef8fa'),r:t,rx:-.6});}
+  // Spill sheet over the south lip into the next basin.
+  if(next)solid.push(box(cx,next.rise-.02,q.z+q.d+.17,q.w*.62,top-next.rise+.06,.012,'#dff1f4'));
+ });
+ // Ring lawns are the city's own grass (the park slab), so no brighter disc of their own (Khaneil, 2026-11-13).
+ for(const ring of a.park.rings){const n=14;
   for(let i=0;i<n;i++){const t0=i/n*Math.PI*2,t1=(i+1)/n*Math.PI*2,u:[number,number]=[ring.x+Math.cos(t0)*ring.r,ring.z+Math.sin(t0)*ring.r],v:[number,number]=[ring.x+Math.cos(t1)*ring.r,ring.z+Math.sin(t1)*ring.r];
    solid.push({...box((u[0]+v[0])/2,.025,(u[1]+v[1])/2,.24,.045,Math.hypot(v[0]-u[0],v[1]-u[1])+.03,'#e5dfd0'),r:Math.atan2(v[0]-u[0],v[1]-u[1])});}}
  for(const [x,z]of a.park.sculptures){solid.push(box(x,.04,z,.32,.12,.32,'#d4cebe'),box(x-.04,.16,z,.08,.55,.08,'#c9a35a'));plants.push(box(x+.06,.78,z,.13,.13,.13,'#c9a35a'));}
- // Flower beds: a soil planter with three clumps of blooms.
- for(const b of a.park.beds){solid.push(box(b.x+b.w/2,.02,b.z+b.d/2,b.w,.05,b.d,'#7d6a52'));for(const k of [-1,0,1])plants.push(box(b.x+b.w/2+(k===0?.05:-.04),.1,b.z+b.d/2+k*b.d*.3,.17,.11,.16,b.c));}
- for(const [x,z,r]of a.park.shrubs)plants.push(box(x,r*.55,z,r,r*.8,r,'#5f8a58'));
- // Palms (KC, 2026-10-31): a ringed trunk and a crown of drooping fronds, each a flattened ball
- // pushed out from the top and tipped down, with a few coconuts. Same instanced meshes as before.
- for(const [i,[x,z]]of a.park.trees.entries()){const top=1.75+(i%3)*.12;
-  solid.push(box(x,.02,z,.11,top*.5,.11,'#9a8a68'),box(x,.02+top*.5,z,.09,top*.5,.09,'#8e7f5f'));
-  for(const y of [.45,.9,1.35])if(y<top)solid.push(box(x,y,z,.12,.03,.12,'#7d6f53'));
-  for(let k=0;k<7;k++){const t=k/7*Math.PI*2+i*.4;plants.push({...box(x+Math.sin(t)*.42,top-.05,z+Math.cos(t)*.42,.16,.06,.55,k%2?'#5c8f4e':'#6ea35a'),r:t,rx:.42});}
-  plants.push(box(x,top+.02,z,.16,.12,.16,'#5c8f4e'));
-  for(const t of [.6,2.7,4.8])plants.push(box(x+Math.sin(t)*.09,top-.12,z+Math.cos(t)*.09,.06,.06,.06,'#8a6a3e'));}
- for(const [x,z]of a.park.benches){solid.push(box(x,.015,z,1.3,.025,.75,'#d4cebe'),box(x,.18,z,1,.08,.35,'#b68c60'),box(x,.26,z+.15,1,.4,.07,'#b68c60'));for(const side of [-1,1])solid.push(box(x+side*.38,.04,z,.07,.14,.28,materials.green));}
+ // Flower beds: a raised stone planter with a clipped boxwood edge and a dense mass of blooms over green foliage.
+ for(const b of a.park.beds){const cx=b.x+b.w/2,cz=b.z+b.d/2;
+  solid.push(box(cx,.02,cz,b.w+.06,.07,b.d+.06,'#cfc8b5'),box(cx,.06,cz,b.w-.04,.03,b.d-.04,'#6b5a45'));
+  for(const side of [-1,1]){plants.push(box(cx+side*(b.w/2-.06),.11,cz,.05,.045,(b.d-.1)/2,'#3f6e36'),box(cx,.11,cz+side*(b.d/2-.06),(b.w-.1)/2,.045,.05,'#3f6e36'));}
+  plants.push(box(cx,.1,cz,(b.w-.2)/2,.04,(b.d-.2)/2,'#4f7d45'));
+  for(let k=0;k<6;k++){const u=(k%2-.5)*.14,v=(Math.floor(k/2)-1)*b.d*.24;plants.push(box(cx+u,.15+(k%3)*.012,cz+v,.065,.04,.065,b.c));}}
+ // The park's palms and shrubs are the city's planting, drawn by Landscape (financialParkPlanting, Khaneil 2026-11-13).
+ // Park benches (Khaneil, 2026-11-13: more realistic): timber slats on cast-iron side frames, on a stone pad.
+ for(const [x,z]of a.park.benches){solid.push(box(x,.015,z,1.3,.025,.75,'#d4cebe'));
+  for(const k of [-1.5,-.5,.5,1.5])solid.push(box(x,.2,z-.04+k*.07,.98,.025,.055,'#a9784c'));
+  for(const k of [0,1,2])solid.push({...box(x,.27+k*.085,z+.17+k*.012,.98,.055,.022,'#a9784c'),rx:-.18});
+  for(const side of [-1,1]){const sx=x+side*.44;
+   solid.push(box(sx,.04,z-.11,.035,.17,.035,materials.green),box(sx,.04,z+.13,.035,.47,.035,materials.green),box(sx,.185,z+.01,.035,.025,.3,materials.green),box(sx,.31,z-.04,.035,.02,.26,materials.green),box(sx,.21,z-.15,.035,.11,.03,materials.green));}}
  for(const [x,z]of a.park.lights){solid.push(box(x,.02,z,.05,.28,.05,materials.green));lights.push(box(x,.3,z,.07,.05,.07,'#ffffff'));}
  return {solid,plants,water,lights};
  },[a,materials]);
  if(!a)return null;
- return <><FinancialSigns plan={a} night={night} pick={pick}/><CircaTowers plan={a} g={g} m={m} night={night} pick={pick} moving={moving}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d],c:'#82a871'}]:[]} geometry={g.box} material={m.plain} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/><Instanced items={parts.tinted} geometry={g.box} material={officeGlass} shadow={false} pick={pick.of(parts.tintedKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={windows} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/></>;
+ return <><FinancialSigns plan={a} night={night} pick={pick}/><CircaTowers plan={a} g={g} m={m} night={night} pick={pick} moving={moving}/><Instanced items={foyer.items} geometry={g.box} material={lobbyGlass} pick={pick.of(foyer.keys)}/><Instanced items={a?[{p:[a.x+a.park.x+a.park.w/2,TERRACE_H+.01,a.z+a.park.z+a.park.d/2],s:[a.park.w,.012,a.park.d]}]:[]} geometry={g.box} material={m.terrace} pick={pick.of([FINANCIAL_PARK_KEY])}/><Instanced items={parkParts.solid} geometry={g.box} material={m.plain}/><Instanced items={parkParts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parkParts.water} geometry={g.box} material={materials.water}/><Instanced items={parkParts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/><Instanced items={[{p:[a.x+a.w/2,0,a.z+a.d/2],s:[a.w,TERRACE_H,a.d]}]} geometry={g.box} material={m.terrace}/><group name="amex-clear-facade"><Instanced items={parts.clearGlass} geometry={g.box} material={curtain} shadow={false} pick={pick.of(parts.clearKeys)}/><Instanced items={parts.tinted} geometry={g.box} material={officeGlass} shadow={false} pick={pick.of(parts.tintedKeys)}/></group><Instanced items={parts.glow} geometry={g.box} material={interiorGlow} shadow={false}/><Instanced items={parts.bevelled} geometry={bevelGeometry} material={m.plain}/><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={windows} geometry={g.box} material={materials.window} pick={{...pick.of(parts.keys),keys:parts.keys}}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/></>;
 }
