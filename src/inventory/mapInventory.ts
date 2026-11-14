@@ -175,7 +175,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.commons) add({ id: COMMONS_KEY, name: COMMONS_NAME, kind: "Public space", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/commonsPlan.ts" });
   if (scene.galleria) add({ id: GALLERIA_KEY, name: GALLERIA_NAME, kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/galleriaPlan.ts" });
   if (scene.stadium) add({ id: STADIUM_KEY, name: STADIUM_NAME, kind: "Landmark", area: "Stadium", status: PLANNED, project: "", source: "src/views/map3d/stadiumPlan.ts" });
-  // The Atlas yacht is berthed at the marina whenever the map has its harbour (Map3D anchorsOf).
+  // The Atlas yacht is berthed at the marina whenever the map has its harbour; she cruises out with her guests and can be
+  // selected and entered wherever she is on her cruise (yachtRidePlan).
   add({ id: YACHT_KEY, name: YACHT_NAME, kind: "Landmark", area: "Marina", status: PLANNED, project: "", source: "src/views/map3d/yachtPlan.ts" });
   // The gold private jet flies the airport loop and can be entered (goldJetPlan); decorative, not live.
   if (scene.airport) add({ id: GOLD_JET_KEY, name: GOLD_JET_NAME, kind: "Landmark", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/goldJetPlan.ts" });

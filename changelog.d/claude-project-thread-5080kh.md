@@ -1,0 +1,2 @@
+- 2026-11-14 · The Atlas yacht can now be selected wherever she is: her nameplate, gold outline and ring sail with her out to sea and back, and the camera goes to where she is instead of her empty mooring (#419)
+- 2026-11-14 · Inside the yacht you now ride on board through the real Atlas map, like the gold jet: her four decks open on one side with the city, marina and sea going by, the view turning so the city stays in sight wherever she is, a live cruise map, a "Sun deck view", and small quiet room names (#419)
