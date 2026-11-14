@@ -25,6 +25,12 @@ minutes, and it redeploys the web page.
 - Commit your work and push it. Uncommitted work on a laptop can't be reviewed or tracked.
 - No model names in commits, PR titles or bodies, code or comments.
 
+## Keep the dashboard tabs current
+
+Every change that adds or changes something in Atlas (buildings, agents, automations, n8n workflows,
+map objects, names, statuses) also updates the data behind the tabs in the same pull request. Where
+that data lives and what is checked: `CLAUDE.md`, "Keep the dashboard tabs current".
+
 ## Fix requests from Atlas
 
 When KC pastes a **Codex fix prompt** copied from Atlas, follow `ops/fix-with-claude/prompt.md` from

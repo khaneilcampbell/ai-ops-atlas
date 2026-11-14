@@ -10,7 +10,6 @@ export {STADIUM_KEY,planStadium} from "./stadiumPlan";
 import {STADIUM_KEY,type StadiumPlan} from "./stadiumPlan";
 import type {StadiumSite} from "./stadiumSite";
 import {LAND_TOP} from "./scene";
-import {palmBoxes} from "./palms";
 import {packNormals} from "./packGeometry";
 
 const noRaycast=()=>null;
@@ -43,8 +42,8 @@ export function Stadium({plan:a,site,g,m,pick,night=false,building=true}:{night?
     onPointerOut:()=>pick.out(),
     onClick:(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();pick.click(STADIUM_KEY,e);},
   }),[pick]);
-  const ground=useMemo(()=>[...(site?.boxes??[]).map((b):Inst=>{const h=b.h??.04;return {p:[b.x,LAND_TOP+h/2,b.z],s:[b.w,h,b.d],r:b.r,c:b.c};}),
-    ...(site?.palms??[]).flatMap(([x,z],i)=>palmBoxes(x,LAND_TOP,z,i,.85))],[site]);
+  // The plaza palms are drawn by Landscape as the city's avenue palm (laPlanting.ts), so they match every other palm (Khaneil, 2026-11-13).
+  const ground=useMemo(()=>(site?.boxes??[]).map((b):Inst=>{const h=b.h??.04;return {p:[b.x,LAND_TOP+h/2,b.z],s:[b.w,h,b.d],r:b.r,c:b.c};}),[site]);
   if(!a)return null;
   const [cx,cz]=stadiumCentre(a);
   return <>

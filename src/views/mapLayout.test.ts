@@ -53,8 +53,7 @@ describe("layoutMap", () => {
     const layout = layoutMap(catalog);
     const housed = layout.districts.flatMap((d) => d.lots.map((l) => l.agent.id));
     const inside = layout.districts.flatMap((d) => d.crew.map((a) => a.id));
-    // Off-map projects have no building: Skyline's one agent works in the Atlas Marketplace, and the
-    // Service Desk and Career Applications agents stay registered without a tower to sit in.
+    // Off-map projects have no building: Skyline's one agent works in the Atlas Marketplace.
     const seated = catalog.agents.filter((a) => !OFF_MAP_PROJECTS.has(a.projectId));
     expect([...housed, ...inside].sort()).toEqual(seated.map((a) => a.id).sort());
     expect(housed).toEqual([]);
@@ -166,24 +165,25 @@ it("does not draw a second building for a registered repository left in discover
   const name="khaneilcampbell/service-desk-intelligence";
   const layout=layoutMap(catalog,[name]);
   expect(layout.parks.flatMap(p=>p.strays).some(s=>s.name===name)).toBe(false);
-  // Service Desk stays registered but has no building (removed 2026-11-09): its land is a vacant lot.
-  expect(layout.districts.filter(d=>d.project.id==="service-desk")).toHaveLength(0);
-  expect(layout.parks.filter(p=>p.id==="park:vacant:service-desk")).toHaveLength(1);
+  // Its tower was removed (2026-11-09) and its project removed (2026-11-12): only a vacant lot is left.
+  expect(layout.districts.some(d=>d.project.id==="vacant-lot-west")).toBe(false);
+  expect(layout.parks.filter(p=>p.id==="park:vacant:vacant-lot-west")).toHaveLength(1);
 });
 
-it("leaves the land of removed towers (Service Desk, Career Applications, Benjaire Dashboard) in every grouping",()=>{
+it("leaves the land of removed towers in every grouping",()=>{
   for(const group of ["none","district","status","tag"] as const){
     const layout=layoutMap(catalog,[],group);
     // The same catalog with the removed projects renamed, so they are still drawn as towers. Career
-    // Applications (2026-11-10) and Benjaire Dashboard (2026-11-12) have no manifest any more, so their
-    // towers are put back on their old slots.
-    const was=(id:string)=>["service-desk","benjaire-ops"].includes(id)?`was-${id}`:id;
-    const projects=catalog.projects.map(p=>({...p,id:was(p.id)}));
+    // Applications (2026-11-10), Benjaire Dashboard and the west lot's project (2026-11-12) have no
+    // manifest any more, so their towers are put back on their old slots.
+    const projects=[...catalog.projects];
+    // Same name as the west lot, so the layout does not also put the empty lot back.
+    projects.splice(projects.findIndex(p=>p.id==="intelligence-hub")+1,0,{id:"was-vacant-lot-west",name:"Vacant lot",summary:"",status:"active",repository:"",tags:["itsm","dashboard"],district:"security-infrastructure",links:[],agentIds:[]});
     projects.splice(projects.findIndex(p=>p.id==="benjaire-site")+1,0,{id:"was-benjaire-ops",name:"Benjaire Dashboard",summary:"",status:"active",repository:"",tags:["benjaire","cloudflare","d1","dashboard"],district:"business-operations",links:[],agentIds:[]});
     projects.splice(projects.findIndex(p=>p.id==="was-benjaire-ops")+1,0,{id:"was-career-optimizer",name:"Career Applications",summary:"",status:"active",repository:"",tags:["claude","career","human-in-the-loop"],district:"career-portfolio",links:[],agentIds:[]});
-    const without=layoutMap({projects,agents:catalog.agents.map(a=>({...a,projectId:was(a.projectId)}))},[],group);
+    const without=layoutMap({projects,agents:catalog.agents},[],group);
     expect(without.districts.filter(d=>d.project.id.startsWith("was-"))).toHaveLength(3);
-    expect(layout.districts.map(d=>d.project.id)).not.toContain("service-desk");
+    expect(layout.districts.map(d=>d.project.id)).not.toContain("vacant-lot-west");
     expect(layout.districts.map(d=>d.project.id)).not.toContain("career-optimizer");
     // Benjaire Dashboard's lot keeps its streets (roads to Intelligence Hub run through it): it is
     // laid out as a cleared district, in the same place, with no building.
@@ -201,7 +201,7 @@ it("leaves the land of removed towers (Service Desk, Career Applications, Benjai
     }
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();
-    expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:service-desk"]);
+    expect(lots).toEqual(["park:vacant:career-optimizer","park:vacant:vacant-lot-west"]);
     // A group left with only a vacant lot gets no heading.
     expect(districtHeadings(layout,group).every(n=>n.count>0)).toBe(true);
   }
@@ -224,13 +224,9 @@ it("has no Skyline project or district, and no stray for its old repository", ()
 });
 
 describe("keepRemovedLots", () => {
-  it("keeps the city in place when a removed tower's repository is deleted on GitHub", () => {
-    const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y}`).sort();
-    const full = layoutMap(catalog, [], "district");
-    // What the live catalog does with a deleted repository: its project and agents drop out.
-    const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "service-desk"), agents: catalog.agents.filter(a => a.projectId !== "service-desk") };
-    expect(where(layoutMap(live, [], "district"))).not.toEqual(where(full));
-    expect(where(layoutMap(keepRemovedLots(live, catalog), [], "district"))).toEqual(where(full));
+  it("leaves the live catalog alone when no removed lot is missing from it", () => {
+    const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "soc-lab") };
+    expect(keepRemovedLots(live, catalog)).toBe(live);
   });
   it("keeps Career Applications' lot where it was after its manifest is removed", () => {
     // career-application-system was deleted on GitHub and its catalog file removed (2026-11-10).
