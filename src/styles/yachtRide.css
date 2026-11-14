@@ -1,0 +1,24 @@
+/* Riding the Atlas yacht (YachtInterior.tsx + YachtRide.tsx): the same rules as the gold jet, in the yacht's navy and white. */
+/* The map draws underneath, so this layer is see-through and only catches drags. */
+.yacht-interior.riding,.yacht-interior.riding.night{background:transparent;touch-action:none;cursor:grab}
+.yacht-interior.riding:active{cursor:grabbing}
+.yacht-interior.skyline-interior .skyline-interior-head>div,.yacht-interior.skyline-interior .skyline-interior-note,.yacht-interior.skyline-interior .skyline-floor-picker{background:rgba(16,26,36,.92);color:#e8eef2;border-color:#7d97a8}
+.yacht-interior.skyline-interior h2{color:#f4f7f8}.yacht-interior.skyline-interior small,.yacht-interior .skyline-floor-picker strong{color:#9fc0d2}.yacht-interior .skyline-interior-note span{color:#a9b9c2}
+.yacht-interior .skyline-interior-head button,.yacht-interior .skyline-floor-picker button{background:#1d3446;border-color:#7d97a8;color:#eef4f7}
+.yacht-interior .skyline-floor-picker button[aria-pressed=true],.yacht-interior .yacht-view[aria-pressed=true]{background:#d9e6ec;color:#12202b}
+/* The cruise map card. */
+.yacht-cruise{position:absolute;right:20px;bottom:16px;z-index:30;width:300px;padding:12px 14px;border-radius:16px;background:rgba(16,26,36,.92);border:1px solid #7d97a8;color:#e8eef2;font:12px system-ui;box-shadow:0 6px 24px #0006}
+.yacht-cruise strong{display:block;font:600 10px system-ui;text-transform:uppercase;letter-spacing:.08em;color:#9fc0d2;margin-bottom:6px}
+.yacht-cruise svg{display:block;width:100%;height:auto;background:#123048;border-radius:10px}
+.yacht-cruise .land{fill:#5d7a5a}.yacht-cruise .pontoon{stroke:#c9a46e;stroke-width:3;stroke-linecap:round}
+.yacht-cruise .course{fill:none;stroke:#cfe3ee;stroke-width:1.6;stroke-dasharray:4 3;stroke-linejoin:round}
+.yacht-cruise .yacht{fill:#ffffff;stroke:#1d3446;stroke-width:1}
+.yacht-cruise p{margin:8px 0 2px}.yacht-cruise span{display:block;font-size:10px;color:#a9b9c2}
+/* Room and deck names on board: small, quiet tags on the far side that never take a click (the gold jet's rule). */
+.ride-room-tag.yacht{display:inline-block;padding:2px 7px;border-radius:999px;background:rgba(14,24,33,.55);border:1px solid rgba(190,214,228,.35);color:#eef4f7;font:600 9px/1.3 system-ui;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;opacity:.82;pointer-events:none;user-select:none}
+.yacht-riding .map-intro,.yacht-riding .map-controls,.yacht-riding .m3-labels,.yacht-riding .m3-plaque,.yacht-riding .m3-pill{visibility:hidden!important}
+@media(max-width:650px){
+ .yacht-cruise{bottom:118px;right:10px;left:10px;width:auto;padding:8px 10px}.yacht-cruise svg{max-height:110px}.yacht-cruise span{display:none}
+ .yacht-interior .skyline-interior-head{flex-wrap:wrap;right:10px}.yacht-interior .skyline-interior-head small{display:none}.yacht-interior.skyline-interior h2{font-size:15px;margin:0}.yacht-interior .skyline-interior-head button{padding:8px 12px}
+ .yacht-interior .skyline-floor-picker{top:auto;bottom:250px;left:10px;right:10px;flex-direction:row;overflow-x:auto;max-height:none;border-radius:18px;padding:8px}.yacht-interior .skyline-floor-picker strong{display:none}.yacht-interior .skyline-floor-picker button{white-space:nowrap;flex:none}
+}

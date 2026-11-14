@@ -3,7 +3,9 @@ import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
-import {YACHT_KEY,YACHT_NAME,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
+import {YACHT_KEY,YACHT_NAME,YACHT_OFFICE_ID,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
+import {YACHT_BOX,yachtBoundsAt,yachtLivePose} from './yachtRidePlan';
+import {riding as rideActive,yachtRide} from './yachtRide';
 import {travelPlan} from './travelLoops';
 import {AtlasYacht} from './AtlasYacht';
 import {mapLabelVisible} from "../mapPresentation";
@@ -92,6 +94,8 @@ import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 /** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
 const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
+/** The yacht's decks you ride on, loaded only when you enter the yacht. */
+const YachtRide = lazy(() => import("../office/YachtRide"));
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -401,7 +405,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
     if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
-    {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});}
+    {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});
+      // Her nameplate sails with her: it follows her out to sea and back instead of staying at the mooring.
+      const label=out[out.length-1],y=label.pos.y;label.follow=(pos)=>{const p=yachtLivePose();if(p)pos.set(p.x,y,p.z);};}
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
@@ -467,8 +473,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
-  // Inside the gold jet the map keeps drawing: its camera rides in the jet (GoldJetRide).
-  const drawing = props.active !== false && visible && (officePhase !== "inside" || officeId === GOLD_JET_OFFICE_ID);
+  // Inside the gold jet or the yacht the map keeps drawing: its camera rides with them (GoldJetRide, YachtRide).
+  const drawing = props.active !== false && visible && (officePhase !== "inside" || officeId === GOLD_JET_OFFICE_ID || officeId === YACHT_OFFICE_ID);
   // If the graphics driver drops the WebGL context (a frame took too long, or the GPU reset) and the
   // browser doesn't hand it back, start a fresh canvas instead of leaving the map blank.
   const [glKey, setGlKey] = useState(0);
@@ -937,9 +943,10 @@ function World({
   /** Glide to a selected building, close enough to read its signs, with the whole building in view. */
   function frame(key: string) {
     const b = anchors.get(key);
-    // The gold jet moves: frame it where it is now, not at the gate it boards from.
+    // The gold jet and the yacht move: frame them where they are now, not at the gate or mooring they start from.
     const live = key === GOLD_JET_KEY && scene.airport && goldJetMapPose(scene.airport, goldJetLive.clock, goldJetLive.circuit);
-    const a = live ? { ...goldJetBounds(live, scene.airport?.west), y0: TERRACE_H + live.y } : b && { ...b, ...b.whole };
+    const sailing = key === YACHT_KEY && yachtLivePose();
+    const a = live ? { ...goldJetBounds(live, scene.airport?.west), y0: TERRACE_H + live.y } : sailing ? yachtBoundsAt(sailing) : b && { ...b, ...b.whole };
     if (!a) return;
     touched.current = true;
     const h = a.y1 - a.y0;
@@ -966,7 +973,9 @@ function World({
   // Entering a building: remember the view, glide in toward its headquarters, and glide back to
   // the same view on the way out.
   const office = useOffice();
-  const riding = office.projectId === GOLD_JET_OFFICE_ID && (office.phase === "entering" || office.phase === "inside");
+  const aboard = office.phase === "entering" || office.phase === "inside";
+  const riding = office.projectId === GOLD_JET_OFFICE_ID && aboard;
+  const ridingYacht = office.projectId === YACHT_OFFICE_ID && aboard;
   const saved = useRef<[THREE.Vector3, THREE.Vector3] | null>(null);
   useEffect(() => {
     const { phase, projectId } = office;
@@ -1055,12 +1064,12 @@ function World({
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
     }
-    // Riding the gold jet: GoldJetRide places the camera every frame, so the map's own controls stand aside.
-    if (!goldJetRide.active) controls.update();
+    // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
+    if (!rideActive()) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
-    // Riding the gold jet the camera hugs the cabin, so haze as if looking over a district, not one building.
-    const haze = fogRange(goldJetRide.active ? fitDist.current * 0.5 : dist, ext);
+    // Riding the camera hugs the cabin or decks, so haze as if looking over a district, not one building.
+    const haze = fogRange(rideActive() ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
@@ -1069,9 +1078,11 @@ function World({
       onNear(isNear);
     }
 
-    // Re-place labels only when the view or the label set changed.
+    // Re-place labels only when the view, the label set or a travelling label (the yacht's) changed.
+    let moved = "";
+    for (const l of labels) if (l.follow) { l.follow(l.pos); moved += `${l.pos.x.toFixed(3)},${l.pos.z.toFixed(3)},`; }
     const e = camera.matrixWorld.elements;
-    const sig = `${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
+    const sig = `${moved}${e.map((n) => n.toFixed(3)).join(",")},${camera.projectionMatrix.elements.join(",")},${size.width},${size.height},${labelSig.current},${labelEls.current.size}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
     const boxes = [];
@@ -1167,6 +1178,8 @@ function World({
   const hl = (key: string | null): OutlineBox | undefined => {
     // The gold jet's outline rides with the jet (see Outline's `track`) instead of staying at its gate.
     if (key === GOLD_JET_KEY && scene.airport) return goldJetOutline(scene.airport);
+    // The yacht's outline sails with her too.
+    if (key === YACHT_KEY) return yachtOutline();
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
     return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
@@ -1190,7 +1203,8 @@ function World({
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
-      {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&office.phase===null} exclusion={scene.pedestrianExclusion}/>}
+      {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
+      {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
@@ -1240,6 +1254,20 @@ function goldJetOutline(airport: { x: number; z: number; west?: boolean }): Outl
       g.rotation.set(0, p.yaw, 0);
       // Hidden while it is off the loop, and while you ride inside it.
       g.visible = p.visible && !goldJetRide.active;
+    },
+  };
+}
+
+/** The yacht's box in her own frame (bow +x), carried each frame to where she is on her cruise, turned to her heading. */
+function yachtOutline(): OutlineBox {
+  const B = YACHT_BOX;
+  return {
+    x: 0, z: 0, y0: WATER_Y, y1: WATER_Y + B.h, w: B.w, d: B.d,
+    track: (g) => {
+      const p = yachtLivePose();
+      if (p) { g.position.set(p.x, 0, p.z); g.rotation.set(0, p.yaw, 0); }
+      // Hidden while you ride inside her.
+      g.visible = !!p && !yachtRide.active;
     },
   };
 }
