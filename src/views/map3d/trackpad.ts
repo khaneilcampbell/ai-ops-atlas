@@ -17,6 +17,8 @@ import type { ScrollMode } from "../../lib/navigation";
  * - Option with a scroll turns (sideways) and tilts (up and down) the view, with a trackpad or
  *   a mouse wheel.
  * - a plain mouse wheel still zooms to the cursor through MapControls, unchanged.
+ * - Command with a scroll zooms to the cursor, for a Magic Mouse on an iMac: it scrolls like a
+ *   trackpad (so a plain scroll moves the map) but has no pinch.
  *
  * Inertia is the Mac's own: after a flick macOS keeps sending scroll events that slow down.
  * Atlas adds no easing of its own on top. Those trailing events are dropped once the person
@@ -52,6 +54,8 @@ export interface WheelSample {
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
+  /** Command: with a scroll it zooms, for a Magic Mouse, which can't pinch. */
+  metaKey?: boolean;
   timeStamp: number;
 }
 
@@ -136,10 +140,17 @@ export function wheelIntent(e: WheelSample, c: WheelClassifier, mode: ScrollMode
     return { kind: "zoom", factor: THREE.MathUtils.clamp(f, 1 / TUNING.maxStep, TUNING.maxStep) };
   }
   if (stale) return { kind: "drop" };
+  if (e.metaKey) return commandZoom(dy, speed);
   if (e.altKey) return { kind: "orbit", azimuth: dx * TUNING.orbit * speed, polar: dy * TUNING.tilt * speed };
   const pan = mode === "pan" || (mode === "auto" && kind === "trackpad");
   if (!pan) return { kind: "pass" };
   return { kind: "pan", dx: dx * TUNING.pan * speed, dy: dy * TUNING.pan * speed };
+}
+
+/** Command with a scroll: zoom, in the same direction a plain mouse wheel zooms the map. */
+function commandZoom(dy: number, speed: number): { kind: "zoom"; factor: number } {
+  const f = Math.exp(-dy * TUNING.pinch * speed);
+  return { kind: "zoom", factor: THREE.MathUtils.clamp(f, 1 / TUNING.maxStep, TUNING.maxStep) };
 }
 
 /** A Mac with a trackpad as its likely pointer: not an iPad, whose fingers MapControls already handles. */
@@ -272,6 +283,7 @@ export function interiorIntent(e: WheelSample, c: WheelClassifier, mode: ScrollM
     return { kind: "zoom", factor: THREE.MathUtils.clamp(f, 1 / TUNING.maxStep, TUNING.maxStep) };
   }
   if (stale) return { kind: "drop" };
+  if (e.metaKey) return commandZoom(dy, speed);
   if (e.altKey) return { kind: "move", dx: dx * TUNING.pan * speed, dy: dy * TUNING.pan * speed };
   const look = mode === "pan" || (mode === "auto" && kind === "trackpad");
   if (!look) return { kind: "pass" };

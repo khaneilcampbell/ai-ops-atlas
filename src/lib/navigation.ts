@@ -4,20 +4,23 @@ import { load, save } from "./storage";
 /**
  * How the 3D map reads a two-finger scroll, and how fast trackpad gestures move it.
  *
+ * The stored values stay auto, pan and zoom; the labels name the Mac each suits.
+ *
  * - auto (default): a trackpad scroll moves the map and a mouse wheel zooms. Atlas tells the two
  *   apart from the events themselves, which is reliable in most cases but not all (see trackpad.ts).
  * - pan: every plain scroll moves the map, the way a trackpad does in Apple Maps.
  * - zoom: every plain scroll zooms, the old behavior, for a mouse wheel that Automatic misreads.
  *
- * Pinch always zooms, and Option with a scroll always turns and tilts the view.
+ * Pinch and Command with a scroll always zoom, and Option with a scroll always turns and tilts the
+ * view. The keyboard works the same in every mode (see map3d/keys.ts).
  */
 export type ScrollMode = "auto" | "pan" | "zoom";
 export type TrackpadSpeed = "slow" | "normal" | "fast";
 
 export const SCROLL_MODES: { mode: ScrollMode; label: string; hint: string }[] = [
-  { mode: "auto", label: "Automatic", hint: "A trackpad scroll moves the map and a mouse wheel zooms. Pinch to zoom, twist to turn, hold Option and scroll to turn and tilt." },
-  { mode: "pan", label: "Moves the map", hint: "Every two-finger scroll moves the map. Pinch to zoom, twist to turn, hold Option and scroll to turn and tilt." },
-  { mode: "zoom", label: "Zooms", hint: "Every scroll zooms, for a mouse wheel. Hold Option and scroll to turn and tilt." },
+  { mode: "auto", label: "Automatic", hint: "A trackpad or Magic Mouse scroll moves the map and a mouse wheel zooms. Pinch, or Command with a scroll, zooms. Twist, or Option with a scroll, turns and tilts." },
+  { mode: "pan", label: "Trackpad (MacBook)", hint: "Every two-finger scroll moves the map. Pinch to zoom, twist to turn, hold Option and scroll to turn and tilt." },
+  { mode: "zoom", label: "Mouse wheel (iMac)", hint: "Every scroll zooms, for an iMac or any mouse with a wheel. Drag to move the map, right-drag to turn and tilt, or hold Option and scroll." },
 ];
 
 export const TRACKPAD_SPEEDS: { speed: TrackpadSpeed; label: string; factor: number }[] = [

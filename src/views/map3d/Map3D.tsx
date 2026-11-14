@@ -89,6 +89,7 @@ import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
+import { HeldKeys, isStill, keyStep, navKeyOf } from "./keys";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 /** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
 const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
@@ -821,6 +822,50 @@ function World({
       el.removeEventListener("gesturestart", onGestureStart);
       el.removeEventListener("gesturechange", onGestureChange);
       el.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [surface, camera, controls, gl, start, wheels]);
+
+  // Keyboard moves for a mouse and keyboard, as on an iMac (see keys.ts): W A S D or Shift with
+  // the arrows move the map, R and F tilt, for as long as they are held. Only while the map has
+  // focus (the map view's own keys need the same), so typing elsewhere never moves it.
+  useEffect(() => {
+    const stage = surface.current?.closest<HTMLElement>(".map-stage");
+    if (!stage) return;
+    const cam = camera as THREE.PerspectiveCamera;
+    const rig = { target: controls.target, position: camera.position };
+    const held = new HeldKeys((keys, dt) => {
+      const s = keyStep(keys, dt, speedFactor(getNavigationPrefs().speed));
+      if (isStill(s)) return;
+      if (s.dx || s.dy) panRig(rig, cam.fov, gl.domElement.clientHeight, s.dx, s.dy);
+      if (s.azimuth || s.polar) orbitRig(rig, s.azimuth, s.polar, controls.minPolarAngle, controls.maxPolarAngle);
+      clampRig(rig, boundsRef.current);
+      start();
+      wake(250);
+    });
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target !== stage) return;
+      const k = navKeyOf(e, "map");
+      if (!k) return;
+      e.preventDefault();
+      wheels.interrupt();
+      held.press(k, performance.now());
+    };
+    // Released whatever has focus now, and whatever modifiers are down.
+    const onKeyUp = (e: KeyboardEvent) => {
+      const k = navKeyOf({ key: e.key, code: e.code, shiftKey: true, altKey: false, metaKey: false, ctrlKey: false }, "map");
+      if (k) held.release(k);
+    };
+    const release = () => held.releaseAll();
+    stage.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", release);
+    stage.addEventListener("blur", release);
+    return () => {
+      held.releaseAll();
+      stage.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", release);
+      stage.removeEventListener("blur", release);
     };
   }, [surface, camera, controls, gl, start, wheels]);
 
