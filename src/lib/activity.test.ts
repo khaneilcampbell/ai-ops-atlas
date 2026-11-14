@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoState } from "../github/types";
+import type { Run } from "../intel/types";
 import { filterEvents, workspaceEvents } from "./activity";
 
 const run = (name: string, conclusion: string | null, createdAt: string) => ({ name, status: conclusion ? "completed" : "in_progress", conclusion, branch: "main", event: "push", createdAt, url: `u:${name}:${createdAt}` });
@@ -71,7 +72,7 @@ describe("intelligence runs", () => {
       id: "r1", repo: "me/p", trigger: "manual", depth: "standard", model: "claude-x", force: false, status: "failed",
       queued_at: "2026-10-26T13:00:00Z", started_at: "2026-10-26T13:00:01Z", finished_at: null, duration_ms: null, error: null,
       attempts: 1, github_requests: 3, usage: null, estimate: null, cost_usd: 0.0123, trace: [],
-    } as const;
+    } satisfies Run;
     const e = workspaceEvents(catalog, repos, [], [run]).find((x) => x.kind === "intel")!;
     expect(e).toMatchObject({ result: "failure", projectId: "p", at: "2026-10-26T13:00:01Z" });
     expect(e.detail).toContain("$0.012");

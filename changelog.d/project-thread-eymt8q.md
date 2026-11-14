@@ -1,0 +1,1 @@
+- 2026-11-12 · The Agents list now includes every live n8n workflow (Flow error alerts, status updates, reply reminders, Monday digest, missed run check, shop delivery and shop follow ups) with a link to each one, plus the Release Coordinator and the draft GitHub Profile Manager n8n agents (#360)

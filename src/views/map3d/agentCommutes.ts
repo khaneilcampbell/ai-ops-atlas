@@ -63,6 +63,7 @@ export function planAgentCommutes(scene: Scene3D, jobs: AgentJob[], graph: Stree
   jobs.forEach((job, i) => {
     const skip = (reason: string) => skipped.push({ agentId: job.agentId, reason });
     if (job.offDuty) return skip(`${job.offDuty}: stays home`);
+    if (job.deskOnly) return skip("works through its automations: stays at its desk");
     const home = homeDoor(scene, job.home.building), door = workDoor(scene, job);
     if (!home) return skip(`${job.home.building} is not on this map layout`);
     if (!door) return skip(`${job.work.label} is not on this map layout`);

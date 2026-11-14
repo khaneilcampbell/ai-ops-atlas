@@ -55,7 +55,7 @@ describe('every perimeter stop wears the shell (KC, 2026-11-07)',()=>{
   boxes.push({x:runway[0],z:runway[1],w:AIRPORT_LAYOUT.runwayWidth+2,d:AIRPORT_LAYOUT.runwayLength+2});
   const all=mergeStationParts(loop.stops.map(stop=>placeParkStation(local,stop)));
   expect(all.accents.length).toBe(loop.stops.length*local.accents.length);
-  for(const part of [...all.metal,...all.glass,...all.accents])for(const b of boxes)expect(Math.abs(part.p[0]-b.x)<b.w/2&&Math.abs(part.p[2]-b.z)<b.d/2).toBe(false);
+  for(const part of [...all.metal,...all.glass,...all.accents])for(const b of boxes)expect(Math.abs(part.p[0]-b.x)<b.w/2&&Math.abs(part.p[2]-b.z)<b.d/2,`part ${part.p.map(v=>v.toFixed(2))} in ${JSON.stringify(b)}`).toBe(false);
  });
 });
 

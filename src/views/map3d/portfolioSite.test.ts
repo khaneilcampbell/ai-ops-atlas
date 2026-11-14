@@ -55,3 +55,12 @@ describe('Portfolio Site',()=>{
   expect(plan.plants.filter(p=>p.kind==='shrub').length).toBeLessThan(60);
  });
 });
+
+describe('Portfolio Site brown cladding',()=>{
+ it('tops both full-height cladding faces (left side and back) at one height, the roof',()=>{
+  const p=planPortfolioSite(),faces=p.boxes.filter(b=>b.kind==='slats'&&b.y1-b.y0>p.roof*.5);
+  expect(faces.length).toBeGreaterThanOrEqual(2);
+  expect(new Set(faces.map(b=>b.y1.toFixed(4))).size).toBe(1);
+  expect(faces[0].y1).toBeCloseTo(p.roof,6);
+ });
+});

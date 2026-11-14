@@ -1,6 +1,6 @@
 import { isAiAgent } from "../../catalog/roles";
 import { AgentOutput } from "../../components/AgentOutput";
-import {CodexReviewHandoff} from "../../components/CodexReviewHandoff";
+import {ClaudeReviewHandoff} from "../../components/ClaudeReviewHandoff";
 import { useMemo, useState } from "react";
 import { AgentReports } from "../../components/AgentReports";
 import { Icon } from "../../components/Icon";
@@ -151,7 +151,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
       <div className="ap-body selectable" role="tabpanel" id={`reg-panel-${tab}`} aria-labelledby={`reg-tab-${tab}`}>
         {tab === "report" && reports && <AgentReports agent={reports} />}
 
-        {tab !== "output" && <CodexReviewHandoff agent={agent}/>}
+        {tab !== "output" && <ClaudeReviewHandoff agent={agent}/>}
         {tab === "output" && <AgentOutput agent={agent}/>}
         {tab === "overview" && (
           <div className="reg-cols">
@@ -383,6 +383,8 @@ function WorkdayTab({ job }: { job: AgentJob }) {
         <p className="small">
           {job.offDuty
             ? OFF_DUTY[job.offDuty]
+            : job.deskOnly
+            ? `Works through the automations it owns, so it keeps its desk at ${job.work.label} and is not drawn walking.`
             : job.work.kind === "workplace"
             ? `No street reaches ${job.work.building} on the map yet, so it is not drawn walking there. Its job card still holds.`
             : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}
