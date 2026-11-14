@@ -1,0 +1,1 @@
+- 2026-11-14 · Atlas can now be fully navigated on an iMac with a mouse and keyboard: W A S D moves, Q E turns, R F tilts, Command with a scroll zooms on a Magic Mouse, the same keys work inside buildings, and a new Controls button on the map lists every control for MacBook and iMac (#420)

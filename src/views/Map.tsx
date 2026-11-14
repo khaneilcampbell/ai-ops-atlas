@@ -44,6 +44,7 @@ import {
 } from "./mapLayout";
 import { measure, SANS, SERIF, wrap } from "./mapText";
 import type { Map3DApi, MapLink } from "./map3d/Map3D";
+import { ControlsHelp } from "./map3d/ControlsHelp";
 import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
@@ -465,6 +466,7 @@ export function MapView({active=true}:{active?:boolean}) {
   useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
   const displayNeighborhoods = useMemo(() => districtHeadings(layout, groupBy), [layout, groupBy]);
   const map3d = useRef<Map3DApi>(null);
+  const [controlsHelp, setControlsHelp] = useState(false);
   const phone = useMedia(PHONE_QUERY);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
@@ -934,8 +936,10 @@ export function MapView({active=true}:{active?:boolean}) {
     const dir = dirs[e.key];
     if (dir) {
       e.preventDefault();
-      if (e.shiftKey && !is3d) panBy(-dir[0] * 120, -dir[1] * 120);
-      else moveFocus(dir[0], dir[1]);
+      // Shift with an arrow moves the map. In 3D the map moves itself while the keys are held (keys.ts).
+      if (e.shiftKey) {
+        if (!is3d) panBy(-dir[0] * 120, -dir[1] * 120);
+      } else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (focused) select({ kind: "project", id: focused.project.id });
@@ -944,6 +948,7 @@ export function MapView({active=true}:{active?:boolean}) {
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
     else if (is3d && e.key === "i") setInside(!inside);
+    else if (is3d && e.key === "?") setControlsHelp((o) => !o);
   };
 
   return (
@@ -960,7 +965,7 @@ export function MapView({active=true}:{active?:boolean}) {
           tabIndex={0}
           role="application"
           aria-roledescription="map"
-          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan, I shows inside the buildings."
+          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows or W A S D pan, Q and E turn, R and F tilt, I shows inside the buildings, question mark lists every control."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
             if (e.button !== 0 || is3d) return;
@@ -1256,6 +1261,22 @@ export function MapView({active=true}:{active?:boolean}) {
                     onClose={() => setLinksMenu(false)}
                   />
                 )}
+              </div>
+            )}
+            {is3d && !phone && (
+              <div className="map-menu-wrap">
+                <button
+                  className={`icon-btn ${controlsHelp ? "on" : ""}`}
+                  onClick={() => setControlsHelp(!controlsHelp)}
+                  aria-expanded={controlsHelp}
+                  aria-haspopup="dialog"
+                  aria-label="Map controls"
+                  aria-keyshortcuts="?"
+                  title="Map controls for trackpad, mouse and keyboard (?)"
+                >
+                  <Icon name="keyboard" size={17} />
+                </button>
+                {controlsHelp && <ControlsHelp onClose={() => setControlsHelp(false)} />}
               </div>
             )}
             {is3d && (
