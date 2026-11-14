@@ -1,0 +1,1 @@
+- 2026-11-13 · The live feed no longer stores GitHub job events or "requested" workflow runs, cutting Cloudflare D1 writes by about three quarters so the free daily limit stops filling up. The header no longer says "Job running"; workflow runs still show running, passed and failed (#403)

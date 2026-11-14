@@ -11,7 +11,6 @@ Prepared November 3, 2026. This migration adds source code to Atlas; it does not
 | Benjaire Dashboard | Removed 2026-11-12; only the Flow files remain, in `apps/benjaire-flow/` | `khaneilcampbell/benjaire-dashboard` | The dashboard no longer exists (Khaneil, 2026-11-12) |
 | Intelligence Hub | `docs/intelligence-hub/` | `khaneilcampbell/projects-intelligence-hub` | This migration is prepared; do not delete |
 
-Service Desk is also consolidated in `apps/service-desk` via merged PR #213; its separate retirement gates are in `docs/service-desk-migration.md`.
 
 This checklist covers these migrated source repositories only. **Keep `ai-ops-atlas` and all other business repositories.** Deleting every GitHub repository would destroy unrelated projects. Any broader retirement list needs a separate inventory and explicit approval.
 
@@ -42,7 +41,7 @@ Common credential-pattern scans covered 138 Dashboard and 142 Hub history blobs 
 
 ## Delete only after every gate passes, per source repository
 
-1. Merge the corresponding reviewed migration PR with passing required checks and a merge commit. Career #211 is separate from this PR; reconcile shared catalog, CI and retirement-list changes when merging both. Service Desk #213 has already been integrated here, preserving its retirement alias, tests and dependency monitoring.
+1. Merge the corresponding reviewed migration PR with passing required checks and a merge commit. Career #211 is separate from this PR; reconcile shared catalog, CI and retirement-list changes when merging both.
 2. Verify Atlas's deployed/released version: selection, linked Atlas repository, building entry, lobby, floor switching, all-floor view and exit. A local screenshot alone is insufficient.
 3. Benjaire Dashboard was removed from Atlas on 2026-11-12. Any Cloudflare Worker or D1 database it left behind is outside this repository and needs its own owner approval to delete.
 4. Review n8n workflow references, release/download URLs and external integrations. Preserve actual live n8n state and credentials in their existing secure storage. Imported JSON exports are not activated. For Career, preserve ignored personal workspaces separately and update any runner paths only after review. For Hub, redirect document links and optional artifact consumers.

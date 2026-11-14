@@ -8,6 +8,7 @@
 import { brandedEmailHtml } from "../src/inquiries/emailHtml";
 import { validInquiry, type Inquiry } from "../src/inquiries/model";
 import { bearerOk, type D1, type LiveEnv } from "./live";
+import { reply as out } from "./http";
 
 export interface ReplyEnv {
   /** Sender on a domain verified in Resend, for example "Benjaire <contact@benjaire.com>". */
@@ -23,8 +24,6 @@ export const MAX_BODY_CHARS = 10_000;
 export const DAILY_CAP = 50;
 const TIMEOUT_MS = 10_000;
 
-const noStore = { "cache-control": "no-store" };
-const out = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 type Env = LiveEnv & ReplyEnv;
 

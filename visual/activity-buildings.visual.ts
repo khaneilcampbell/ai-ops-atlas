@@ -10,7 +10,7 @@ for (const phone of [false, true]) {
     await goTo(page, "Activity");
     const filter = page.getByRole("combobox", { name: "Project", exact: true });
     await expect(filter.locator("option", { hasText: "Atlas Command Center" })).toHaveCount(1);
-    for (const name of ["Skyline", "Service Desk", "Benjaire Dashboard"]) {
+    for (const name of ["Skyline", "Benjaire Dashboard"]) {
       await expect(filter.locator("option").filter({ hasText: new RegExp(`^${name}$`) })).toHaveCount(0);
     }
   });

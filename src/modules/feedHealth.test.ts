@@ -36,7 +36,9 @@ describe("building feed health", () => {
     for (const [id, agentId] of Object.entries(want)) {
       const l = landmarkInstances().find((x) => x.id === id)!;
       const assets = buildingAssets(l, catalog);
-      expect([...assets.agents, ...assets.automations].map((a) => a.id), id).toEqual([agentId]);
+      // The Data Intelligence Center also houses Atlas Data Inventory, which reports to the sheet, not the feed.
+      const extra: Record<string, string[]> = { "financial:residence": ["atlas-data-inventory"] };
+      expect([...assets.agents, ...assets.automations].map((a) => a.id).sort(), id).toEqual([agentId, ...(extra[id] ?? [])].sort());
       const a = agent(agentId);
       expect(a.observe?.agentFeed, agentId).toBe(true);
       expect(a.alerts?.failures, agentId).toBe(true);
