@@ -19,7 +19,7 @@ async function views(page:import('@playwright/test').Page,list:View[]){
 }
 // Offsets from the building (found by name); the map looks at it from +x/+z.
 const at=(dx:number,y:number,dz:number):[number,number,number]=>[dx,y,dz];
-const VIEWS:View[]=[['front',at(0,3.8,0),at(3.6,2.8,11.5)],['corner',at(0,3.8,0),at(8.5,3.8,8.5)]];
+const VIEWS:View[]=[['front',at(0,5,0),at(6,8,22)],['corner',at(0,5,0),at(17,10,17)],['roof',at(0,7,0),at(-7,15,-10)]];
 test.skip(!process.env.PORTFOLIO_SITE_SHOTS,'Screenshots only: set PORTFOLIO_SITE_SHOTS=1');
 for(const light of ['day','night'] as const)test(`Portfolio Site, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -35,5 +35,5 @@ test('Portfolio Site nameplate still opens its panel',async({page})=>{
 test('Portfolio Site on a phone',async({page})=>{
  mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- for(const s of await views(page,[['phone',at(0,3.8,0),at(8.5,4.8,11)]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ for(const s of await views(page,[['phone',at(0,5,0),at(18,12,24)],['phone-roof',at(0,7,0),at(-9,17,-13)]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });
