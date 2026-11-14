@@ -65,6 +65,15 @@ function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, 
   push("chair", [0, 0.8, 0.9], [0.48, 0.56, 0.07]);
   push("torso", [0, 0.86, 0.66], [0.36, 0.62, 0.32], off ? C.inactive : d.accent);
   push("head", [0, 1.25, 0.64], [0.27, 0.27, 0.27], C.skin[Math.floor(h * 4) % 4]);
+  // Seated with arms and legs, like the agents at their desks in the building interiors: thighs on the seat, shins to
+  // the floor, upper arms down from the shoulders and forearms resting on the desk.
+  const shirt = off ? C.inactive : d.accent;
+  for (const side of [-1, 1]) {
+    push("torso", [side * 0.09, 0.58, 0.48], [0.13, 0.1, 0.38], "#2f3a44");
+    push("torso", [side * 0.09, 0.28, 0.32], [0.11, 0.56, 0.11], "#2f3a44");
+    push("torso", [side * 0.22, 0.98, 0.62], [0.09, 0.3, 0.09], shirt);
+    push("torso", [side * 0.19, 0.83, 0.38], [0.09, 0.08, 0.42], shirt);
+  }
   push("hair", [0, 1.3, 0.67], [0.285, 0.24, 0.285], C.hair[Math.floor(h * 17) % 4]);
   push("lamp", [0.6, 0.9, -0.24], [0.22, 0.22, 0.22], STATE_COLOR[d.state]);
   // A marker over the desk when a person is needed, as inside.

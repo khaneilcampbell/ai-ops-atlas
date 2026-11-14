@@ -8,7 +8,7 @@ import type {Point3} from './hillsCommunityPlan';
  * the same routes and walking maths as the rail commuters, so there is one movement system.
  * Pure and deterministic: the same clock always gives the same picture.
  */
-export const DISTRICT_WALKERS={count:24,rest:[7,10,13,16,19,22],laneWidth:.09} as const;
+export const DISTRICT_WALKERS={count:18,rest:[7,10,13,16,19,22],laneWidth:.09} as const;
 
 export interface DistrictWalker {
  id:string;from:string;to:string;pace:number;lane:number;

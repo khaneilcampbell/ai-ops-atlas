@@ -12,7 +12,7 @@ import {stadiumGate} from './stadiumGeometry';
 /** margin: track centre this far outside the land envelope; negative runs it on the land, hugging the shore (Khaneil,
  * 2026-11-13: "move the train line route to the Atlas edge of the land"). A side whose shore strip is taken (a lot or
  * runway reaching the coast) keeps the old viaduct just offshore at seaMargin. clearance: deck edge to anything beside it. */
-export const PERIMETER_RAIL={margin:-.75,seaMargin:2,clearance:.4,radius:3,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6,passengersPerStop:2} as const;
+export const PERIMETER_RAIL={margin:-.75,seaMargin:2,clearance:.4,radius:3,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6} as const;
 /** The station shell's footprint in station-local coordinates (x along the track, z toward the land), stairs included. */
 export const STATION_SHELL={x:3.85,z0:-.55,z1:5.95} as const;
 // Airport Station was removed from the loop (Khaneil, 2026-11-13: "remove airport station from map listing directory.

@@ -4,6 +4,7 @@ import Commons from './Commons';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
 import {YACHT_KEY,YACHT_NAME,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
+import {travelPlan} from './travelLoops';
 import {AtlasYacht} from './AtlasYacht';
 import {mapLabelVisible} from "../mapPresentation";
 import {mapZoomLimits} from "./mapViewport";
@@ -682,6 +683,8 @@ function World({
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
+  // Decorative travel loops (train, shuttle cars, yacht) for the perimeter-loop layout: one plan shared by all three.
+  const travel=useMemo(()=>travelPlan(scene),[scene]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...(scene.carBridges??[]).flatMap(b=>b.roads)],[scene]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
@@ -1182,12 +1185,12 @@ function World({
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
-      {detailsReady && <AtlasYacht berth={berth} marina={marina} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&office.phase===null} exclusion={scene.pedestrianExclusion}/>}
+      {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&office.phase===null} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}

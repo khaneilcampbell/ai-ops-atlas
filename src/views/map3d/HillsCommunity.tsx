@@ -1,5 +1,6 @@
 import {walkOffCarriageways} from './streetPavement';
-import {planLoopPassengers,loopPassengerAt,type LoopPassenger} from './loopPassengers';
+import {travellerAt,TRAVEL_CLOCK,type TravelPlan,type Traveller} from './travelLoops';
+import {figureParts,hideGait,newGait,stepGait,type Gait} from './walkerFigure';
 import {loopPoint,loopState,stationPoint,PERIMETER_RAIL} from './perimeterRailPlan';
 import {commuterAt,planRailCommuters,planAirportCommuters} from './railCommuters';
 import {agentAt,type CommutePlan} from './agentCommutes';
@@ -19,6 +20,8 @@ import {openWalk} from './connectionGeometry';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
 import {blocksArea,supportPoint,type Area} from './marinaPlan';
 import {PARK_STATION,mergeStationParts,parkStationParts,placeParkStation} from './parkStationPlan';
+/** Bright shirt colours for the travellers on the loops, drawn unlit so they glow day and night. */
+export const GLOW_SHIRTS=['#4fe3ff','#ffd24d','#6dff9e','#ff7ad1','#a98bff','#ff9b45'];
 function useCommunityPalette(){return useMemo(()=>{const css=getComputedStyle(document.documentElement);return {green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a'};},[]);}
 type Shared={g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>};
 /** All neighborhood architecture is static and instanced. The original estate stays separate. */
@@ -74,10 +77,10 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
 const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
 /** Elevated track, platforms and stair approaches share the same sampled route as the train. */
-export function CommunityRail({plan:p,agents,community,financial,roads,clearRoads=[],keepClear=[],g,m,pick,moving,night}:{plan?:RailPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
+export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],g,m,pick,moving,night}:{plan?:RailPlan;travel?:TravelPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
   /** Drives the walks must open for but that draw their own crossings (the Galleria's driveways). */
   clearRoads?:[number,number][][];keepClear?:Area[];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
- const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0),service=useRef<THREE.Group>(null);
+ const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),legs=useRef<THREE.InstancedMesh>(null),arms=useRef<THREE.InstancedMesh>(null),glowShirts=useRef<THREE.InstancedMesh>(null),gaits=useRef<Gait[]>([]),lastPlaced=useRef<number|undefined>(undefined),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0),service=useRef<THREE.Group>(null);
  const enabled=moving&&focused&&power.idleFps>15;
  const deck=useMemo(()=>p?.loop?{...p,route:p.loop.route,lengths:p.loop.lengths,length:p.loop.length}:p?serviceRailDeck(p):undefined,[p]);
  const trainGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:night?'#f5dfb1':'#9ec6c8',transparent:true,opacity:.38,depthWrite:false,roughness:.35,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.2:0}),[night]);
@@ -144,25 +147,36 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
  const commuters=useMemo(()=>p?.loop?undefined:planRailCommuters(community,financial,p),[community,financial,p]);
  const airportCommuters=useMemo(()=>planAirportCommuters(commuters,p),[commuters,p]);
  const walkers=useMemo(()=>planDistrictWalkers(financial),[financial]);
- const loopPassengers=useMemo(()=>p?.loop?planLoopPassengers(p.loop):undefined,[p]);
- const people=useMemo<{loopRider?:LoopPassenger;rider?:NonNullable<typeof commuters>["commuters"][number];airportRider?:NonNullable<typeof commuters>["commuters"][number];walker?:typeof walkers[number];agent?:CommutePlan["commutes"][number]}[]>(()=>{if(loopPassengers)return [...loopPassengers.map(loopRider=>({loopRider})),...(agents?.commutes??[]).map(agent=>({agent})),...walkers.map(walker=>({walker}))];if(!commuters)return [];const riders=commuters.commuters,base=riders.slice(0,12),extra=riders.slice(12),out:{loopRider?:LoopPassenger;rider?:typeof riders[number];airportRider?:typeof riders[number];walker?:typeof walkers[number];agent?:CommutePlan['commutes'][number]}[]=[...(airportCommuters?.commuters??[]).map(airportRider=>({airportRider})),...base.map(rider=>({rider})),...(agents?.commutes??[]).map(agent=>({agent}))];
+ // The perimeter loop's people are the travel loops' travellers (travelLoops.ts): the same figures, on longer trips.
+ const loopPassengers=useMemo(()=>p?.loop?travel?.travellers??[]:undefined,[p,travel]);
+ const people=useMemo<{loopRider?:Traveller;rider?:NonNullable<typeof commuters>["commuters"][number];airportRider?:NonNullable<typeof commuters>["commuters"][number];walker?:typeof walkers[number];agent?:CommutePlan["commutes"][number]}[]>(()=>{if(loopPassengers)return [...loopPassengers.map(loopRider=>({loopRider})),...(agents?.commutes??[]).map(agent=>({agent})),...walkers.map(walker=>({walker}))];if(!commuters)return [];const riders=commuters.commuters,base=riders.slice(0,12),extra=riders.slice(12),out:{loopRider?:Traveller;rider?:typeof riders[number];airportRider?:typeof riders[number];walker?:typeof walkers[number];agent?:CommutePlan['commutes'][number]}[]=[...(airportCommuters?.commuters??[]).map(airportRider=>({airportRider})),...base.map(rider=>({rider})),...(agents?.commutes??[]).map(agent=>({agent}))];
   for(let i=0;i<Math.max(extra.length,walkers.length);i++){if(extra[i])out.push({rider:extra[i]});if(walkers[i])out.push({walker:walkers[i]});}return out;},[commuters,airportCommuters,loopPassengers,walkers,agents]);
- const count=people.length,qualityLevel=useQualityLevel(),agentCount=agents?.commutes.length??0,limit=crowdLimit(count,{qualityLevel,saver:power.pauseInBackground,base:12+agentCount});
- useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],c=new THREE.Color();for(let i=0;i<count;i++){const agent=!!people[i]?.agent;bodies.current?.setColorAt(i,c.set(agent?palette.gold:colors[i%colors.length]));heads.current?.setColorAt(i,c.set(agent?palette.green:'#c6ad8f'));}for(const mesh of [bodies.current,heads.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count,people,palette]);
- const pose=useMemo(()=>new THREE.Object3D(),[]);
+ const count=people.length,qualityLevel=useQualityLevel(),agentCount=agents?.commutes.length??0,limit=crowdLimit(count,{qualityLevel,saver:power.pauseInBackground,base:Math.max(12,loopPassengers?.length??0)+agentCount});
+ // Travellers on the loops wear glowing shirts (Khaneil, 2026-11-13), so their trips are easy to follow: their torsos are
+ // drawn unlit in bright colours from this mesh instead of the plain one. They are the first people in the list.
+ const glowing=loopPassengers?.length??0,glowShirt=useMemo(()=>new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false}),[]);
+ useEffect(()=>()=>glowShirt.dispose(),[glowShirt]);
+ useEffect(()=>{const colors=['#304d67','#8c7760','#64856c','#7a4f5a','#4f6f7a','#a08a5c'],trousers=['#2f3a44','#3b3530','#2c3b33'],c=new THREE.Color();for(let i=0;i<count;i++){const agent=!!people[i]?.agent,shirt=agent?palette.gold:i<glowing?GLOW_SHIRTS[i%GLOW_SHIRTS.length]:colors[i%colors.length];if(i<glowing)glowShirts.current?.setColorAt(i,c.set(shirt));bodies.current?.setColorAt(i,c.set(shirt));heads.current?.setColorAt(i,c.set(agent?palette.green:'#c6ad8f'));for(const k of [0,1]){arms.current?.setColorAt(i*2+k,c.set(shirt));legs.current?.setColorAt(i*2+k,c.set(trousers[i%trousers.length]));}}for(const mesh of [bodies.current,heads.current,arms.current,legs.current,glowShirts.current])if(mesh?.instanceColor)mesh.instanceColor.needsUpdate=true;},[count,people,palette,glowing]);
+ const figure=useMemo(()=>({torso:new THREE.Matrix4(),head:new THREE.Matrix4(),legs:[new THREE.Matrix4(),new THREE.Matrix4()] as [THREE.Matrix4,THREE.Matrix4],arms:[new THREE.Matrix4(),new THREE.Matrix4()] as [THREE.Matrix4,THREE.Matrix4]}),[]),hidden=useMemo(()=>new THREE.Matrix4().makeScale(0,0,0).setPosition(0,-10,0),[]);
  const placePeople=(seconds:number)=>{
-  const body=bodies.current,head=heads.current;if((!commuters&&!loopPassengers)||!body||!head)return {outbound:false,back:false};
-  let outbound=false,back=false;body.count=head.count=limit;
-  for(let i=0;i<limit;i++){const {rider,airportRider,loopRider,walker,agent}=people[i],at=loopRider?loopPassengerAt(loopRider,seconds):airportRider?commuterAt(airportCommuters!,airportRider,seconds):rider?commuterAt(commuters!,rider,seconds):agent?agentAt(agent,seconds):walkerAt(walker!,seconds);
-   if(!at.visible){if('where' in at&&at.where==='aboard'){if(!('direction' in at)||at.direction==='outbound')outbound=true;else back=true;}pose.scale.setScalar(0);pose.position.set(0,-10,0);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);head.setMatrixAt(i,pose.matrix);continue;}
-   const y=agent?TERRACE_H+.105+at.y:TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
-   pose.rotation.set(0,at.yaw,0);pose.position.set(at.x,y,at.z);pose.scale.set(.07,.16,.06);pose.updateMatrix();body.setMatrixAt(i,pose.matrix);
-   pose.position.set(at.x,y+.21,at.z);pose.scale.setScalar(.035);pose.updateMatrix();head.setMatrixAt(i,pose.matrix);
+  const body=bodies.current,head=heads.current,leg=legs.current,arm=arms.current;if((!commuters&&!loopPassengers)||!body||!head||!leg||!arm)return {outbound:false,back:false};
+  let outbound=false,back=false;body.count=head.count=limit;leg.count=arm.count=limit*2;
+  // Seconds since the last placement, for the walking stride (0 on the first, or when the clock goes back).
+  const dt=lastPlaced.current===undefined?0:Math.max(0,seconds-lastPlaced.current);lastPlaced.current=seconds;
+  for(let i=0;i<limit;i++){const {rider,airportRider,loopRider,walker,agent}=people[i],at=loopRider?travellerAt(loopRider,seconds):airportRider?commuterAt(airportCommuters!,airportRider,seconds):rider?commuterAt(commuters!,rider,seconds):agent?agentAt(agent,seconds):walkerAt(walker!,seconds);
+   const gait=gaits.current[i]??=newGait();
+   if(!at.visible){if('riding' in at&&at.riding==='train')outbound=true;if('where' in at&&at.where==='aboard'){if(!('direction' in at)||at.direction==='outbound')outbound=true;else back=true;}hideGait(gait);body.setMatrixAt(i,hidden);if(i<glowing)glowShirts.current?.setMatrixAt(i,hidden);head.setMatrixAt(i,hidden);for(const k of [0,1]){leg.setMatrixAt(i*2+k,hidden);arm.setMatrixAt(i*2+k,hidden);}continue;}
+   // Travellers on the marina and the yacht walk below or above the terrace on real surfaces (absolute heights).
+   const y=agent?TERRACE_H+.105+at.y:'absolute' in at&&at.absolute&&at.y<0?TERRACE_H+at.y+.085:TERRACE_H+(at.y>0?Math.ceil(at.y/(C.platformRise/15))*(C.platformRise/15)+.02:.105);
+   // Arms and legs swing with the distance walked and settle when the person stands (walkerFigure.ts).
+   figureParts(at.x,y,at.z,at.yaw,stepGait(gait,at.x,at.z,dt),figure);if(i<glowing){body.setMatrixAt(i,hidden);glowShirts.current?.setMatrixAt(i,figure.torso);}else body.setMatrixAt(i,figure.torso);head.setMatrixAt(i,figure.head);
+   for(const k of [0,1]){leg.setMatrixAt(i*2+k,figure.legs[k]);arm.setMatrixAt(i*2+k,figure.arms[k]);}
   }
-  body.instanceMatrix.needsUpdate=true;head.instanceMatrix.needsUpdate=true;return {outbound,back};
+  for(const mesh of [body,head,leg,arm,glowShirts.current])if(mesh)mesh.instanceMatrix.needsUpdate=true;return {outbound,back};
  };
  useEffect(()=>{placePeople(elapsed.current);});
- useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);const state=p.loop?loopState(elapsed.current,p.loop):railServiceState(elapsed.current,p),aboard=placePeople(elapsed.current);if(service.current&&p.loop)service.current.userData={visualSimulation:true,elapsed:elapsed.current,station:'station' in state?state.station:-1};riders.current.forEach(r=>{if(r)r.visible=p.loop?aboard.outbound||aboard.back:('phase' in state&&((state.phase==='outbound'||state.phase==='airport-outbound')&&aboard.outbound||(state.phase==='return'||state.phase==='airport-return')&&aboard.back));});carriages.current.forEach((car,i)=>{if(!car)return;const q=p.loop?loopPoint(p.loop,state.distance+(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(p.loop?(i%2?0:-1):(i%2?1:-1));});});
+ useEffect(()=>()=>{TRAVEL_CLOCK.live=false;},[]);
+ useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);if(p.loop){TRAVEL_CLOCK.t=elapsed.current;TRAVEL_CLOCK.live=true;}const state=p.loop?loopState(elapsed.current,p.loop):railServiceState(elapsed.current,p),aboard=placePeople(elapsed.current);if(service.current&&p.loop)service.current.userData={visualSimulation:true,elapsed:elapsed.current,station:'station' in state?state.station:-1};riders.current.forEach(r=>{if(r)r.visible=p.loop?aboard.outbound||aboard.back:('phase' in state&&((state.phase==='outbound'||state.phase==='airport-outbound')&&aboard.outbound||(state.phase==='return'||state.phase==='airport-return')&&aboard.back));});carriages.current.forEach((car,i)=>{if(!car)return;const q=p.loop?loopPoint(p.loop,state.distance+(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(p.loop?(i%2?0:-1):(i%2?1:-1));});});
  if(!p||!deck)return null;
  return <><group name="atlas-perimeter-railway"><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
  </group>{station&&<><Instanced items={station.metal} geometry={g.box} material={m.metal}/><Instanced items={station.accents} geometry={g.box} material={m.plain}/><Instanced items={station.glass} geometry={g.box} material={stationGlass} shadow={false}/></>}
@@ -175,6 +189,6 @@ export function CommunityRail({plan:p,agents,community,financial,roads,clearRoad
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.bead} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
   {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
  </group>;})}</group>
- {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/></>}
+ {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/><instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
  </>;
 }
