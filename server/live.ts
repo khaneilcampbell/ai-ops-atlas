@@ -12,6 +12,7 @@ import { validReport } from "../src/production/model";
 
 import { sameSecret } from "./usage";
 import { alertOnRun, type AlertEnv } from "./alerts";
+import { reply, type Json as J } from "./http";
 
 export interface D1Statement {
   bind(...values: unknown[]): D1Statement;
@@ -55,10 +56,7 @@ export interface LiveEvent {
   body: unknown;
 }
 
-type J = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const noStore = { "cache-control": "no-store" };
-const reply = (status: number, body: unknown) => Response.json(body, { status, headers: noStore });
 
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, source TEXT NOT NULL, kind TEXT NOT NULL, repo TEXT, delivery TEXT UNIQUE, body TEXT NOT NULL)",

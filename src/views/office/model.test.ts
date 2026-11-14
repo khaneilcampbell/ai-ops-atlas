@@ -53,7 +53,8 @@ describe("office plan", () => {
   });
 
   it("keeps coordinators separate and orders specialists by their dependencies",()=>{
-    const agents=[{id:"publish",registry:{responsibilities:{dependencies:["design"]}}},{id:"lead",registry:{tier:"coordinator" as const}},{id:"design",registry:{responsibilities:{dependencies:["research"]}}},{id:"research"}];
+    const needs=(...dependencies:string[])=>({responsibilities:{tasks:[],tools:[],inputs:[],outputs:[],dependencies,limitations:[]}});
+    const agents:Parameters<typeof planOffice>[1]=[{id:"publish",registry:needs("design")},{id:"lead",registry:{tier:"coordinator"}},{id:"design",registry:needs("research")},{id:"research"}];
     const plan=planOffice({id:"demo",repository:"me/demo"},agents);
     expect(plan.workstations.map(w=>w.agentId)).toEqual(["lead","research","design","publish"]);
     expect(plan.workstations[0].z).toBeLessThan(plan.workstations[1].z);

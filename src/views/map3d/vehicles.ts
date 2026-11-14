@@ -35,6 +35,8 @@ export interface VehiclePlan {
   /** Where in its loop the vehicle starts, in seconds, so they don't move in step. */
   offset: number;
   serviceWindow?: {start:number;duration:number};
+  /** Keeps to a timetable on the train clock (travelLoops.ts shuttles): car following may delay it, then it catches up. */
+  scheduled?: boolean;
 }
 
 /** At most this many vehicles, one per district, in the busiest districts. */
@@ -286,7 +288,7 @@ function driveLoop(nodes: Pt3[], next: number[][], start: number, seed: number):
  * Legs for one closed loop of street points: shifted into the right-hand lane all the way round,
  * with a stop at the stop line before each junction.
  */
-function loopLegs(points: Pt3[], junction: boolean[], laneOf: number[], speed: number): Leg[] {
+export function loopLegs(points: Pt3[], junction: boolean[], laneOf: number[], speed: number): Leg[] {
   // Stop lines: a point just short of each junction, where the vehicle waits. `lanes` is the
   // offset of the stretch leaving each point.
   const pts: Pt3[] = [], stops: boolean[] = [], lanes: number[] = [];

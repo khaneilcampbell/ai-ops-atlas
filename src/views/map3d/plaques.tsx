@@ -15,6 +15,8 @@ export interface LabelSpec {
   className: string;
   onClick?: () => void;
   title?: string;
+  /** For something that travels (the yacht): moves `pos` to where it is now, each frame, before the labels are placed. */
+  follow?: (pos: THREE.Vector3) => void;
 }
 
 /**
