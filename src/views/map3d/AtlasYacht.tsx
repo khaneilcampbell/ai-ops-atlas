@@ -7,7 +7,9 @@ import {focusable} from "./materials";
 import {packNormals} from "./packGeometry";
 import {yachtGeometry,MAIN_Y,hullHalf} from "./yachtGeometry";
 import {YACHT,YACHT_KEY,YACHT_NAME,YACHT_SCALE as S,type YachtBerth} from "./yachtPlan";
-import {TRAVEL_CLOCK,yachtCourse,yachtPoseAt,yachtSailing,type TravelPlan} from "./travelLoops";
+import type {TravelPlan} from "./travelLoops";
+import {publishYacht,yachtLive,yachtLivePose} from "./yachtRidePlan";
+import {yachtRide} from "./yachtRide";
 import type {MarinaSite} from "./marinaPlan";
 import type {pedestrianAllowed} from "./doorTraffic";
 
@@ -76,12 +78,16 @@ export function AtlasYacht({berth:b,travel,g,m,pick,night=false,moving}:{berth:Y
  },[b]);
 
  // Sailing: the hull, superstructure and name move together along her course; the pontoon and passerelle stay.
- const hull=useRef<THREE.Group>(null),clock=useRef(0);
- const course=useMemo(()=>yachtCourse(b),[b]);
+ // Where she is now is worked out in one place (yachtRidePlan), so her nameplate, selection outline, the camera and
+ // the decks you ride in all follow her out to sea instead of staying at the mooring.
+ const hull=useRef<THREE.Group>(null);
+ useEffect(()=>publishYacht(b,travel),[b,travel]);
  useFrame((_,dt)=>{
-  if(moving)clock.current+=Math.min(dt,.1);
-  const node=hull.current;if(!node||!travel?.yacht)return;
-  const at=yachtPoseAt(course,yachtSailing(travel,TRAVEL_CLOCK.live?TRAVEL_CLOCK.t:clock.current));
+  if(moving)yachtLive.clock+=Math.min(dt,.1);
+  const node=hull.current;if(!node)return;
+  // While you ride inside her, her open decks (YachtRide) are drawn in her place.
+  node.visible=!yachtRide.active;
+  const at=travel?.yacht&&yachtLivePose();if(!at)return;
   node.position.set(at.x,WATER_Y,at.z);node.rotation.y=at.yaw;
  });
 

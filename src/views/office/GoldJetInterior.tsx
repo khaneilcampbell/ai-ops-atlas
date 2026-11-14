@@ -6,7 +6,7 @@ import {AIRPORT_LANDING_RUNWAY,AIRPORT_LAYOUT} from '../map3d/airport';
 import {fleetPose} from '../map3d/flightSchedule';
 import {GOLD_JET_KEY,GOLD_JET_NAME,GOLD_JET_PASSENGERS,GOLD_JET_SLOT,goldJetLive,goldJetRoute,goldJetState} from '../map3d/goldJetPlan';
 import {goldJetRide} from '../map3d/goldJetIds';
-import {likelyMacTrackpad} from '../map3d/trackpad';
+import {useRideGestures} from './useRideGestures';
 import {buildingDisplayName} from '../../modules/names';
 import {lookHint} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
@@ -22,30 +22,6 @@ function useFlightClock(){
  const [now,setNow]=useState(goldJetLive.clock);
  useEffect(()=>{const id=window.setInterval(()=>setNow(goldJetLive.clock),500);return()=>window.clearInterval(id);},[]);
  return now;
-}
-
-/**
- * Turns and zooms the ride camera (goldJetRide) from drags, a mouse wheel, Mac trackpad scrolls and pinches, and a
- * two-finger pinch on a phone. The map underneath draws the view; this only moves it and wakes the map to redraw.
- */
-function useRideGestures(el:React.RefObject<HTMLElement|null>,reduced:boolean){
- useEffect(()=>{
-  const node=el.current;if(!node)return;
-  const trackpad=likelyMacTrackpad(navigator),pts=new Map<number,{x:number;y:number}>();let pinch=0;
-  const turn=(dx:number,dy:number)=>{goldJetRide.yaw-=dx*.005;goldJetRide.pitch=Math.max(-1.6,Math.min(1.6,goldJetRide.pitch+dy*.004));wake(reduced?60:250);};
-  const zoom=(f:number)=>{goldJetRide.zoom=Math.max(.35,Math.min(3,goldJetRide.zoom*f));wake(reduced?60:250);};
-  const spread=()=>{const [a,b]=[...pts.values()];return a&&b?Math.hypot(a.x-b.x,a.y-b.y):0;};
-  const isControl=(t:EventTarget|null)=>t instanceof Element&&!!t.closest('button,a,aside,header');
-  const down=(e:PointerEvent)=>{if(isControl(e.target))return;node.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});pinch=spread();};
-  const move=(e:PointerEvent)=>{const p=pts.get(e.pointerId);if(!p)return;
-   if(pts.size>1){pts.set(e.pointerId,{x:e.clientX,y:e.clientY});const s=spread();if(pinch&&s)zoom(pinch/s);pinch=s;return;}
-   turn(e.clientX-p.x,e.clientY-p.y);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});};
-  const up=(e:PointerEvent)=>{pts.delete(e.pointerId);pinch=spread();};
-  const wheel=(e:WheelEvent)=>{if(isControl(e.target))return;e.preventDefault();
-   if(e.ctrlKey)zoom(Math.exp(e.deltaY*.01));else if(trackpad)turn(-e.deltaX,-e.deltaY);else zoom(Math.exp(e.deltaY*.0015));};
-  node.addEventListener('pointerdown',down);node.addEventListener('pointermove',move);node.addEventListener('pointerup',up);node.addEventListener('pointercancel',up);node.addEventListener('wheel',wheel,{passive:false});
-  return()=>{node.removeEventListener('pointerdown',down);node.removeEventListener('pointermove',move);node.removeEventListener('pointerup',up);node.removeEventListener('pointercancel',up);node.removeEventListener('wheel',wheel);};
- },[el,reduced]);
 }
 
 /** The in-flight moving map: the loop the jet really flies on the map, the airport's runways, where it is now. */
@@ -75,8 +51,6 @@ function RouteMap({seconds}:{seconds:number}){
 }
 
 /**
-
-/**
  * Inside the gold private jet. The map keeps drawing underneath and its camera rides in the jet's open cabin
  * (GoldJetRide in the map's scene), so the real Atlas city, airport, sky and the other planes go by outside. This layer
  * holds the controls, the moving map and the passenger count, and turns the view with your drags.
@@ -87,7 +61,7 @@ export default function GoldJetInterior({light}:{light:LightMode}){
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();leaveBuilding(true);}};window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true);},[]);
  // Each visit starts from the view's own framing.
  useEffect(()=>{Object.assign(goldJetRide,{view,yaw:0,pitch:0,zoom:1});wake(400);},[view]);
- useRideGestures(layer,reduced);
+ useRideGestures(layer,reduced,goldJetRide);
  // The map's own titles, plaques and view menus would sit over the ride: tuck them away while you are aboard.
  useEffect(()=>{document.body.classList.add('gold-jet-riding');return()=>document.body.classList.remove('gold-jet-riding');},[]);
  const seconds=useFlightClock();
