@@ -51,6 +51,7 @@ import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
 import { fogRange } from "./fogRange";
+import { depthRange, shadowBox } from "./viewFit";
 import { MapRenderer, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { OPERATIONS_DISTRICTS, placeLabels, type Layout } from "../mapLayout";
@@ -166,6 +167,8 @@ const ELEVATION = (42 * Math.PI) / 180;
 const DIR = new THREE.Vector3(Math.cos(ELEVATION) * Math.SQRT1_2, Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.SQRT1_2);
 const DIR_UPRIGHT = new THREE.Vector3(0, Math.sin(ELEVATION), Math.cos(ELEVATION));
 const FOV = 30;
+/** Share of the remaining camera glide OrbitControls removes per frame at 60 Hz; scaled to the real frame time each frame. */
+const DAMPING_60HZ = 0.14;
 /**
  * Portrait views keep this width-to-height ratio's horizontal angle, so a change in height (Safari's
  * toolbar, the keyboard, a strip below the map) shows a little more or less sky and sea instead of
@@ -499,7 +502,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   return (
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows="percentage" dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
@@ -701,7 +704,7 @@ function World({
     c.minPolarAngle = (12 * Math.PI) / 180;
     c.maxPolarAngle = (72 * Math.PI) / 180;
     c.enableDamping = true;
-    c.dampingFactor = 0.14;
+    c.dampingFactor = DAMPING_60HZ;
     c.zoomToCursor = true;
     c.screenSpacePanning = false;
     c.zoomSpeed = 1.2;
@@ -1001,8 +1004,11 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [office.phase, office.projectId]);
 
-  // Light and shadows sized to the whole map.
+  // Light and shadows sized to the whole map; zoomed in, the shadow box follows the view (steady()).
   const light = useRef<THREE.DirectionalLight>(null);
+  // A camera, not a plain Object3D: lookAt turns cameras to face down -z, as the shadow camera does.
+  const sunView = useMemo(() => new THREE.OrthographicCamera(), []);
+  const shadowKey = useRef("");
   useEffect(() => {
     const l = light.current;
     if (!l) return;
@@ -1017,10 +1023,15 @@ function World({
     c.near = 1;
     c.far = ext * 5;
     c.updateProjectionMatrix();
+    // The sun's own view, to place the close-up shadow box in (see shadowBox).
+    sunView.position.copy(l.position);
+    sunView.lookAt(center);
+    sunView.updateMatrixWorld();
+    shadowKey.current = "";
     return () => {
       three.remove(l.target);
     };
-  }, [center, ext, three]);
+  }, [center, ext, three, sunView]);
 
   // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
   const quality = LEVELS[useQualityLevel()];
@@ -1051,8 +1062,49 @@ function World({
   }, [labels]);
   const nearRef = useRef<"far" | "mid" | "near">("far");
   const v = useMemo(() => new THREE.Vector3(), []);
+  const ahead = useMemo(() => new THREE.Vector3(), []);
+  // Last frame's label placement, so labels hold their spots while the camera moves (placeLabels).
+  const lastShown = useRef<Map<string, number>>(new Map());
+  const sunInverse = useMemo(() => new THREE.Matrix4(), []);
 
-  useFrame((state) => {
+  /**
+   * Keeps depth and shadows precise at this camera distance (see viewFit.ts). Riding the jet or the
+   * yacht, the camera hugs a cabin far from the controls' target, so it keeps the wide defaults.
+   */
+  const steady = (dist: number, fogFar: number, riding: boolean) => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const { near, far } = riding ? { near: 0.5, far: 800 } : depthRange(dist, fogFar);
+    if (Math.abs(near - cam.near) > cam.near * 0.02 || Math.abs(far - cam.far) > cam.far * 0.02) {
+      cam.near = near;
+      cam.far = far;
+      cam.updateProjectionMatrix();
+    }
+    const l = light.current;
+    if (!l) return;
+    // Cover more of the ground ahead of the target, where the view reaches, than behind it.
+    ahead.copy(controls.target).sub(camera.position).setY(0);
+    if (ahead.lengthSq() > 1e-6) ahead.setLength(dist * 0.6);
+    ahead.add(controls.target).applyMatrix4(sunInverse.copy(sunView.matrixWorld).invert());
+    const box = shadowBox(riding ? Infinity : dist, ahead, ext * 1.2, shadowSize);
+    const key = `${box.left},${box.top},${box.texel}`;
+    if (key === shadowKey.current) return;
+    const resized = !shadowKey.current.endsWith(`,${box.texel}`);
+    shadowKey.current = key;
+    const c = l.shadow.camera;
+    c.left = box.left;
+    c.right = box.right;
+    c.top = box.top;
+    c.bottom = box.bottom;
+    c.updateProjectionMatrix();
+    // About two texels of normal offset clears acne on faces turned away from the sun without
+    // lifting small shadows off the ground; it shrinks with the texels close up.
+    l.shadow.normalBias = Math.min(0.03, box.texel * 2);
+    // A new size redraws now, so a zoom never shows the old box stretched. A pan just moves the
+    // box, and the paced shadow updates catch up: the old map still lines up with its own box.
+    if (resized) gl.shadowMap.needsUpdate = true;
+  };
+
+  useFrame((state, delta) => {
     if (!reduced) time.value = state.clock.elapsedTime;
     const a = anim.current;
     if (a) {
@@ -1065,6 +1117,9 @@ function World({
       if (p >= 1) anim.current = null;
     }
     // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
+    // OrbitControls eases by a fixed share per frame, so the glide after a drag lasted half as long
+    // on a 120 Hz display as at 60 Hz, and dragged on when frames ran slow. Scale it to frame time.
+    controls.dampingFactor = 1 - Math.pow(1 - DAMPING_60HZ, Math.min(delta, 0.1) * 60);
     if (!rideActive()) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
@@ -1072,6 +1127,7 @@ function World({
     const haze = fogRange(rideActive() ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
+    steady(dist, haze.far, rideActive());
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
     if (isNear !== nearRef.current) {
       nearRef.current = isNear;
@@ -1095,7 +1151,8 @@ function World({
       screen.set(l.id, { x, y });
       boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)] });
     }
-    const shown = placeLabels(boxes, 10);
+    const shown = placeLabels(boxes, 10, lastShown.current);
+    lastShown.current = shown;
     for (const l of labels) {
       const el = labelEls.current.get(l.id);
       if (!el) continue;
@@ -1191,7 +1248,7 @@ function World({
       <MapRenderer />
       {detailsReady && <Traffic scene={scene} g={g} m={m} moving={!reduced} />}
       {detailsReady && traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
