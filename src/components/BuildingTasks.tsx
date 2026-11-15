@@ -6,6 +6,9 @@ import { buildingSummary } from "../tasks/select";
 import { useTasks } from "../tasks/store";
 import { relative } from "../lib/time";
 import { Icon } from "./Icon";
+import { DEFINITIONS } from "../workflows/benjaireLaunch";
+import { resolveAll } from "../workflows/engine";
+import { selectBuilding } from "../workflows/selection";
 
 /**
  * A building's (or an agent's) tasks in the inspector: open, running, blocked and failed counts,
@@ -14,7 +17,19 @@ import { Icon } from "./Icon";
  */
 export function BuildingTasks({ buildingId, agentId }: { buildingId?: string; agentId?: string }) {
   const tasks = useTasks();
-  const { setView, select } = useAtlas();
+  const { setView, select, catalog } = useAtlas();
+  // Saved workflow steps that happen in this building (Workflow Intelligence), from the same registry.
+  const steps = useMemo(() => {
+    if (!buildingId) return 0;
+    let n = 0;
+    for (const d of Object.values(DEFINITIONS)) for (const r of resolveAll(d, catalog).values()) if (r.buildingId === buildingId) n++;
+    return n;
+  }, [buildingId, catalog]);
+  const openWorkflows = () => {
+    select(null);
+    setView("workflows");
+    selectBuilding(buildingId ?? null);
+  };
   const s = useMemo(() => {
     if (buildingId) return buildingSummary(tasks, buildingId);
     const mine = tasks.filter((t) => t.agentId === agentId);
@@ -47,6 +62,11 @@ export function BuildingTasks({ buildingId, agentId }: { buildingId?: string; ag
         </>
       ) : (
         <div className="muted small">No tasks {buildingId ? "in this building" : "for this agent"} yet.</div>
+      )}
+      {steps > 0 && (
+        <button className="text-btn small building-workflows" onClick={openWorkflows}>
+          <Icon name="flow" size={13} /> {steps} workflow step{steps === 1 ? "" : "s"} here · Open Workflow Intelligence
+        </button>
       )}
     </section>
   );

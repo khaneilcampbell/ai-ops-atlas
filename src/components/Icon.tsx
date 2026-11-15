@@ -40,6 +40,8 @@ const PATHS: Record<string, string> = {
   download: "M12 3v12M7 10l5 5 5-5M5 21h14",
   // A checklist: three ticked rows.
   tasks: "M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5",
+  // A workflow: one step branching to two.
+  flow: "M3 10h5v4H3zM16 4h5v4h-5zM16 16h5v4h-5zM8 12h4M12 6v12M12 6h4M12 18h4",
 };
 
 export type IconName = keyof typeof PATHS;
