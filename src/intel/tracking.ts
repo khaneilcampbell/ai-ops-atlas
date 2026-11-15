@@ -1,5 +1,5 @@
 /**
- * What happened to a recommendation after KC pressed Fix with Claude or Open issue. Atlas never
+ * What happened to a recommendation after Khaneil pressed Fix with Claude or Open issue. Atlas never
  * creates those issues itself, so it finds them again with read-only GitHub GETs: by the hidden
  * `atlas-rec:<id>` line Atlas puts in the issue body, or by the exact title it pre-filled. A fix
  * pull request is found from the issue's timeline (Claude's PR says "Fixes #N").

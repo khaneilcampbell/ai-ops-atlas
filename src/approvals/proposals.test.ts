@@ -11,7 +11,7 @@ const run = (over: Partial<WorkflowRun> = {}): WorkflowRun => ({
 const repos = (runs: WorkflowRun[]): Record<string, RepoState> => ({ "me/site": { kind: "ok", data: { runs } as unknown as RepoSnapshot } as RepoState });
 const status = (enabled = true, list = ["me/site"], token = true): ActionsStatus => ({ config: { rerun_failed_jobs: { enabled, repos: list }, token_login: null }, token });
 const rec = (stage: AuditRecord["stage"], attempt = 1): AuditRecord => ({
-  id: "a", at: "2026-10-28T02:30:00Z", stage, action: "rerun_failed_jobs", actor: "KC", github_login: null, repo: "me/site", run_id: 11, workflow: "CI",
+  id: "a", at: "2026-10-28T02:30:00Z", stage, action: "rerun_failed_jobs", actor: "Khaneil", github_login: null, repo: "me/site", run_id: 11, workflow: "CI",
   run_number: 4, attempt_before: attempt, head_sha: null, branch: "main", reason: null, http_status: null, request_id: null, message: null,
 });
 const none = new Set<string>();

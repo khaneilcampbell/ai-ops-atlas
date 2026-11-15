@@ -9,7 +9,7 @@ const supports=(loop:{route:[number,number][];lengths:number[];length:number},ke
  const out:{x:number;z:number}[]=[];for(let d=3;d<loop.length;d+=PERIMETER_RAIL.supportSpacing){const q=supportPoint(loop,d,keep);if(q)out.push(q);}return out;
 };
 
-describe('harbour marina and rail viaduct (KC, 2026-11-07: pole on the boardwalk dock)',()=>{
+describe('harbour marina and rail viaduct (Khaneil, 2026-11-07: pole on the boardwalk dock)',()=>{
  it('had a viaduct support standing on the marina before supports kept clear',()=>{
   // The viaduct used to run offshore across the dock; since it moved onto the shore (2026-11-13) a straight test track
   // through the dock stands in for that route.

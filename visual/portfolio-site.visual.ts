@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * The Portfolio Site rebuilt as a G+8 apartment building with planted balconies (KC, 2026-11-08).
+ * The Portfolio Site rebuilt as a G+8 apartment building with planted balconies (Khaneil, 2026-11-08).
  * Writes day/night camera views around it when PORTFOLIO_SITE_SHOTS=1 (PORTFOLIO_X/Z place the
  * cameras for a 'before' run, when the generic tower has no named object).
  */

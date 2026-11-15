@@ -7,7 +7,7 @@ import { openAtlas, selectBuilding, settle, waitForScene } from "./atlas";
  * Zooming into a building must not turn the view dark (night) or washed out (day).
  *
  * The distance haze follows the camera. It used to pull in so close that, zoomed into a tower,
- * the street below counted as "far" and took the sky colour. This walks KC's path: Financial
+ * the street below counted as "far" and took the sky colour. This walks Khaneil's path: Financial
  * District, Circa, then Zoom in eight times (about as close as the map goes), and compares the close view with and without the
  * haze: the haze may only touch the far background, not the buildings and street in view. ZOOM_SHOTS=dir also saves the frames.
  */

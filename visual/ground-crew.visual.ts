@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
-/** Airport ground crew (KC, 2026-10-31). Not a baseline check: it writes close-ups of the apron to
+/** Airport ground crew (Khaneil, 2026-10-31). Not a baseline check: it writes close-ups of the apron to
  * SHOT_DIR for before/after comparison. Works on builds without the crew too (same cameras).
  * Reduced motion keeps the airport clock still, so the script sets that clock and lets frames run. */
 const out = process.env.SHOT_DIR ?? "artifacts/ground-crew";

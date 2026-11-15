@@ -134,7 +134,7 @@ export function attentionItems(
       const d = daysSince(last, now);
       // Without a live source, a missing run only means nobody filled in last_run by hand.
       const observed = !!a.observe?.githubWorkflow;
-      // An event-driven agent runs when its event happens, and a manual one runs when KC asks,
+      // An event-driven agent runs when its event happens, and a manual one runs when Khaneil asks,
       // so a quiet stretch is normal for both.
       const trigger = a.registry?.execution?.triggerType;
       const waitsForTrigger = trigger === "event" || trigger === "manual";

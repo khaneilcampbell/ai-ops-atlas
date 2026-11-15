@@ -7,7 +7,7 @@ import {buildScene} from './scene';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {catalog} from '../../catalog';
 for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps lamps outside junctions and arrows opposed in ${grouping} grouping`,()=>{
- // No highway, ramps or freight road are built (KC, 2026-11-07): no highway lamps or arrows either.
+ // No highway, ramps or freight road are built (Khaneil, 2026-11-07): no highway lamps or arrows either.
  expect(buildScene(layoutMap(catalog,[],grouping)).freight).toBeUndefined();
  expect(highwayLightPositions([],[])).toEqual([]);expect(interchangeArrows([])).toEqual([]);
 });

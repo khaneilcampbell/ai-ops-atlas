@@ -1,14 +1,14 @@
 // Inquiry to Client (B1). The benjaire.com contact Worker copies each delivered inquiry to
 // /api/hooks/inquiries (server/inquiries.ts); Atlas lists them in Mission Control, drafts a reply
-// from a fixed template per category, and reminds KC to follow up on day 3 and day 7. Nothing
-// here calls a model and nothing sends mail: "Reply" opens KC's own mail app with the draft, so
-// every message a client gets is one KC read and sent. Zero running cost.
+// from a fixed template per category, and reminds Khaneil to follow up on day 3 and day 7. Nothing
+// here calls a model and nothing sends mail: "Reply" opens Khaneil's own mail app with the draft, so
+// every message a client gets is one Khaneil read and sent. Zero running cost.
 
 export const INQUIRY_AGENT = "benjaire-inquiry-to-client";
 export const MAX_INQUIRY_BYTES = 12_000;
 /** Stored inquiries older than this are deleted (personal data, so a fixed retention). */
 export const KEEP_DAYS = 180;
-/** Days after the first reply when a follow-up is due, if KC hasn't closed it. */
+/** Days after the first reply when a follow-up is due, if Khaneil hasn't closed it. */
 export const FOLLOW_UP_DAYS = [3, 7] as const;
 
 export interface Inquiry {
@@ -48,13 +48,13 @@ export function validInquiry(x: unknown): x is Inquiry {
   );
 }
 
-/** Where KC is with one inquiry. Kept on the device (src/inquiries/state.ts), not on the site. */
+/** Where Khaneil is with one inquiry. Kept on the device (src/inquiries/state.ts), not on the site. */
 export type InquiryStage = "new" | "replied" | "closed";
 export interface InquiryProgress {
   stage: InquiryStage;
-  /** When KC marked the first reply sent. */
+  /** When Khaneil marked the first reply sent. */
   repliedAt?: string;
-  /** How many follow-ups KC has marked sent (0, 1 or 2). */
+  /** How many follow-ups Khaneil has marked sent (0, 1 or 2). */
   followUps?: number;
 }
 
@@ -100,7 +100,7 @@ const quote = (message: string) => {
   return line.length > 160 ? `${line.slice(0, 157)}...` : line;
 };
 
-/** The first reply, from a fixed template per category. KC edits it in the mail app before sending. */
+/** The first reply, from a fixed template per category. Khaneil edits it in the mail app before sending. */
 export function replyDraft(i: Inquiry): { subject: string; body: string } {
   const opener = OPENERS[i.category] ?? OPENERS.general;
   const ask = ASKS[i.category] ?? ASKS.general;
@@ -117,7 +117,7 @@ export function replyDraft(i: Inquiry): { subject: string; body: string } {
       "If it's easier to talk it through, reply with two or three times that suit you this week and I'll send an invite.",
       "",
       "Best,",
-      "KC",
+      "Khaneil",
       "Benjaire",
     ].join("\n"),
   };
@@ -127,17 +127,17 @@ export function replyDraft(i: Inquiry): { subject: string; body: string } {
 export function followUpDraft(i: Inquiry, n: 1 | 2): { subject: string; body: string } {
   const lines =
     n === 1
-      ? [`Hi ${firstName(i.name)},`, "", `Just following up on your ${i.category_label} inquiry in case my last note got buried. Happy to help whenever you're ready.`, "", "Best,", "KC"]
-      : [`Hi ${firstName(i.name)},`, "", `I'll close out your ${i.category_label} inquiry for now so I don't keep filling your inbox. If anything changes, just reply here and I'll pick it straight back up.`, "", "Best,", "KC"];
+      ? [`Hi ${firstName(i.name)},`, "", `Just following up on your ${i.category_label} inquiry in case my last note got buried. Happy to help whenever you're ready.`, "", "Best,", "Khaneil"]
+      : [`Hi ${firstName(i.name)},`, "", `I'll close out your ${i.category_label} inquiry for now so I don't keep filling your inbox. If anything changes, just reply here and I'll pick it straight back up.`, "", "Best,", "Khaneil"];
   return { subject: `Re: your ${i.category_label} inquiry`, body: lines.join("\n") };
 }
 
-/** A Gmail compose link (opens in the browser, where KC's signature and logo are added) with the draft filled in. */
+/** A Gmail compose link (opens in the browser, where Khaneil's signature and logo are added) with the draft filled in. */
 export function gmailCompose(to: string, draft: { subject: string; body: string }): string {
   return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
 }
 
-/** A mailto: link that opens KC's mail app with the draft filled in. */
+/** A mailto: link that opens Khaneil's mail app with the draft filled in. */
 export function mailto(to: string, draft: { subject: string; body: string }): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;
 }

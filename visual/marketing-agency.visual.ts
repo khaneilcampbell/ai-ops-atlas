@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Benjaire Marketing Agency exterior on the new bay lot (KC, 2026-10-31). Writes PNGs, compares nothing. */
+/** Benjaire Marketing Agency exterior on the new bay lot (Khaneil, 2026-10-31). Writes PNGs, compares nothing. */
 const out=process.env.SHOT_DIR??'artifacts/marketing-agency';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){

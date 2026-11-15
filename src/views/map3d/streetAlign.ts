@@ -2,7 +2,7 @@ import type {DistrictConnection} from './connections';
 import {pathClear,ROAD_W,type Box,type Pt} from './roads';
 
 /**
- * One street per corridor (KC, 2026-11-09: "the road marking over the street is the issue ... keep
+ * One street per corridor (Khaneil, 2026-11-09: "the road marking over the street is the issue ... keep
  * the street design consistent"). Links are routed one at a time, each with its own clearance, so two
  * links heading the same way could end up a few centimetres apart: two overlapping carriageways with
  * two sets of centre dashes, junction squares and zebras, and one link's walk painted down the middle

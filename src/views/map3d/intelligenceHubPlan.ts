@@ -8,7 +8,7 @@ import {headquartersEnvelope} from './financialPlan';
  * loggia bay per floor on the corner with a long planter of trailing green, rounded black-framed
  * windows on the side faces, upper floors cantilevered over a set-back glass ground floor with a
  * rounded soffit, and a rear wing that steps down two floors to a planted roof.
- * Design reference: KC's "Modern Residential Building" screenshots, 2026-11-08 (closest match:
+ * Design reference: Khaneil's "Modern Residential Building" screenshots, 2026-11-08 (closest match:
  * the white corner render, with the black render's warm light lines between floors at night).
  *
  * Plain data in the tower's own frame: x across, y up from the plinth top (FLOOR_BASE), z toward

@@ -23,7 +23,7 @@ import '../../styles/skyline.css';
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
 const STONE='#d9d9d4',CREAM='#efefea',INK='#2b2a28',GLASS='#a9bdc9',COURT='#2f5f63',SURROUND='#4f6670',LINE='#f3f1e6',STEEL='#f2f2ef';
-/** Seat colours: blue rows, with a brown band across the front of the upper tier (KC's reference), no team colours. */
+/** Seat colours: blue rows, with a brown band across the front of the upper tier (Khaneil's reference), no team colours. */
 const SEAT=['#2e5a86','#336394'],BAND='#7a5a48';
 
 /** All the boxes of one view in one instanced mesh, coloured per piece (the AgencyInterior pattern). */

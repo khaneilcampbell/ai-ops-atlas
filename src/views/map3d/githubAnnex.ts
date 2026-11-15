@@ -4,14 +4,14 @@ import type {Rect,Scene3D,Tower} from './scene';
 import {GITHUB_TOWER,type Box3} from './githubTowerPlan';
 
 /**
- * The GitHub tower's glass podium (KC, 2026-10-31: "missing the bottom part of the building with
+ * The GitHub tower's glass podium (Khaneil, 2026-10-31: "missing the bottom part of the building with
  * the floor to ceiling windows. expand the landscape around Github"). The GitHub terrace grows
  * outward on whichever side faces open ground, and a long, low podium of three stepped storeys of
  * floor-to-ceiling glass stands on the new land beside the tower, joined to it by a glass
  * skybridge over the tower's ring road, the way the reference's base wraps beside its towers.
  *
  * Planned last, after every district, road and neighbourhood. The new land may overlap plain
- * landscape (meadow, beach, gardens, ponds), which it simply covers (KC, 2026-10-31: "combine the
+ * landscape (meadow, beach, gardens, ponds), which it simply covers (Khaneil, 2026-10-31: "combine the
  * landscape of the area and make it overlap if it needs to"), but never another district, a
  * building or plan footprint, or any road, rail or walk. When no side is free, the tower keeps its
  * own small podium and no land is added.
