@@ -627,6 +627,16 @@
                   "audit_log": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "kill_switch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "How to stop the agent at once without a deploy, and what stops."
+                  },
+                  "caps": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Limits that are always on: sends, spend or writes per run, minute, day or week."
                   }
                 }
               },

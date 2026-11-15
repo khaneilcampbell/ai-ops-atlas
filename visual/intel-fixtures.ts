@@ -85,8 +85,8 @@ export const ecoReport: EcoReport = {
   context: {
     projects: [{ id: "commerce", name: "Commerce Pipeline", repository: COMMERCE, status: "active" }],
     agents: [
-      { id: "commerce-loop", name: "Commerce Loop", project: "Commerce Pipeline", repository: COMMERCE, kind: "autonomous", autonomy: 3, autonomy_note: null, trigger: null, permissions: [], telemetry: false, status: "active", approval: null, risk: null },
-      { id: "benjaire-contact-worker", name: "Contact Worker", project: "Benjaire", repository: BENJAIRE, kind: "worker", autonomy: 3, autonomy_note: null, trigger: null, permissions: [], telemetry: false, status: "active", approval: null, risk: null },
+      { id: "commerce-loop", name: "Commerce Loop", project: "Commerce Pipeline", repository: COMMERCE, kind: "autonomous", autonomy: 3, autonomy_note: null, trigger: null, permissions: [], telemetry: false, status: "active", approval: null, risk: null, kill_switch: null, caps: null },
+      { id: "benjaire-contact-worker", name: "Contact Worker", project: "Benjaire", repository: BENJAIRE, kind: "worker", autonomy: 3, autonomy_note: null, trigger: null, permissions: [], telemetry: false, status: "active", approval: null, risk: null, kill_switch: null, caps: null },
     ],
   },
   review: {

@@ -279,6 +279,10 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
               <dd>{orNA(p.governance.credentialOwner)}</dd>
               <dt>Audit log</dt>
               <dd>{orNA(p.governance.auditLog)}</dd>
+              <dt>Kill switch</dt>
+              <dd>{orNA(p.governance.killSwitch)}</dd>
+              <dt>Caps</dt>
+              <dd>{orNA(p.governance.caps)}</dd>
             </dl>
             <div className="reg-stack">
               <ListField title="Tool permissions" items={p.governance.permissions} />
