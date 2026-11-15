@@ -28,6 +28,7 @@ const PATHS: Record<string, string> = {
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   more: "M4.5 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M10.75 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M17 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0",
   sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41",
+  keyboard: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
   rotate: "M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5",
   // A building in section: the roof lifted off, a floor and a desk inside.
   cutaway: "M3 10l9-6 9 6M5 13v7h14v-7M5 16h14M10 20v-2h4v2M8 9.5l4-2.7 4 2.7",

@@ -275,6 +275,8 @@ agents:
         credential_owner: Khaneil (separate fine-grained token in the macOS Keychain)
         risk: medium
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
+        kill_switch: 'Switch Re-run failed jobs off in Atlas Settings (it is off by default).'
+        caps: 'One re-run per run every 10 minutes and 10 an hour, each approved in a macOS dialog.'
       docs:
         technical: docs/actions.md
         runbook: docs/runbooks/ai-ops-atlas.md#re-run-failed-jobs

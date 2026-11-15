@@ -119,6 +119,8 @@ export function parseRegistry(r: Reader, value: unknown, path: string): Registry
       credentialOwner: r.str(gov, "credential_owner", p, false),
       risk: r.oneOf(gov, "risk", p, RISK_LEVELS),
       auditLog: r.str(gov, "audit_log", p, false),
+      killSwitch: r.str(gov, "kill_switch", p, false),
+      caps: r.str(gov, "caps", p, false),
     };
   }
 

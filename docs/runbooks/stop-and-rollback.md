@@ -9,7 +9,36 @@ One page for the agents that email people or change what the public sees. Use it
 | Shop Page (n8n) | Public shop page | Switch "Commerce · Shop page and weekly sales" to inactive | Restore an earlier version in n8n |
 | Order Delivery (n8n) | Buyer emails | Switch "Shop · Flow Starter delivery" to inactive | Not reversible; follow up by hand |
 | Benjaire Flow Intake | Owner alert, sender acknowledgement | Deactivate "Flow · 1 Intake" in n8n | Not reversible; the Worker still emails `CONTACT_TO` |
-| Contact Form Worker | Email to Benjaire, n8n webhook | Roll back the Worker deployment in Cloudflare | Same page, earlier deployment |
+| Shop Buyer Follow Ups (n8n) | Day 2, day 12 and download reminder emails to buyers | Switch "Shop · Flow follow ups" to inactive | Not reversible; follow up by hand |
+| Contact Form Worker | Email to Benjaire, n8n webhook, Stripe checkout sessions | Roll back the Worker deployment in Cloudflare | Same page, earlier deployment |
+
+## Kill switches (stop without unpublishing)
+
+Each switch is off by default, so leaving it empty keeps today's behaviour. Turn it on to stop the
+sends below while everything else keeps running. All switches are live as of 2026-11-15: the four n8n
+workflows were published and the benjaire.com Worker switches were merged.
+
+| Switch | Where | What stops | What still happens |
+| --- | --- | --- | --- |
+| `customer_emails_paused` = true | n8n data table `flow_settings` (newest row) | Flow · 1 Intake acknowledgement to the sender | Inquiry saved, owner alert sent, `ack_paused` event logged |
+| `customer_emails_paused` = true | n8n data table `shop_settings` (any row) | Buyer delivery email, day 2 / day 12 follow ups, download reminders | Order saved as not delivered; the owner sale email says to send the link by hand; Atlas gets a `skipped` run |
+| `design_runs_paused` = true | n8n data table `shop_settings` (any row) | Commerce · Design product, before any Claude or Canva call | The idea stays queued for the next run |
+| `CONTACT_PAUSED` = 1 | Cloudflare → Workers & Pages → `benjaire-com` → Settings → Variables and Secrets (type **Secret**) | Inquiry email, Flow forward, Atlas inbox copy | The form tells visitors it is paused; Atlas gets a `skipped` run |
+| `CHECKOUT_PAUSED` = 1 | Same place as `CONTACT_PAUSED` | Every Stripe API call from the Worker | Buyers go to the tier's Payment Link; deactivate those in Stripe to stop sales completely |
+
+Data tables: https://khancam15.app.n8n.cloud/projects/qhAhqRqO8TimFtxs/datatables. Use the Secret
+type for the Worker switches: plain-text variables that are not in `wrangler.jsonc` are dropped by
+the next deploy. To turn a switch off, clear the cell (or delete the secret).
+
+## Caps that are always on
+
+| Agent | Cap |
+| --- | --- |
+| Contact Form Worker | 5 a minute per visitor and 20 a minute site-wide, for contact and for checkout; email only to verified Email Routing addresses |
+| Shop Buyer Follow Ups | A run with more emails due than `followup_max_per_run` (default 5) sends none, reports to Atlas and emails Khaneil |
+| Design Run | At most 2 new designs per 7 days, one per run, 3 attempts per idea |
+| Approve and Publish | Only from Khaneil's approval form with a one-time token; idempotency keys on every Stripe write |
+| Product Lab Lead | n8n agent budget $3 a month, $1.50 a session, 5 web searches a run |
 
 ## Commerce pipeline (n8n)
 
