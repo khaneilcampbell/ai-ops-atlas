@@ -176,6 +176,14 @@ with the full figure. A cap whose calls Atlas can't see shows "Spend not visible
 of a number. Subscription and local-log usage isn't billed per call, so it doesn't count. When a
 cap changes on the provider's page, change its `limitUsd` here.
 
+### Branch rules
+The Governance & Compliance Center shows how each catalog repository's default branch is guarded
+(`src/governance/rules.ts`). Atlas reads GitHub's "Get rules for a branch" (rulesets) and the
+branch's `protected` flag with its existing read-only access; the web build's GitHub proxy allows
+exactly those two paths. A branch is **guarded** when changes need a pull request and it can't be
+force pushed or deleted, **partly guarded** when only some of that applies, and **not protected**
+when nothing does. Classic branch protection details need admin access, so those branches show only
+that they are protected. Atlas never changes a rule.
 ### Publishing pipeline
 The Commerce & Product Marketplace lists every agent of the projects whose catalog file sets
 `module: commerce-product-marketplace` (today the Commerce Operations Center), worst first

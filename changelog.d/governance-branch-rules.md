@@ -1,0 +1,1 @@
+- 2026-11-10 · The Governance & Compliance Center now shows how each repository's main branch is guarded: whether merging needs a pull request, how many checks must pass, and whether force pushes and deletion are blocked. It flags any repository that isn't protected, and Atlas can't change a rule (#330)

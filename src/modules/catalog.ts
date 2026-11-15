@@ -29,8 +29,14 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "identity-governance-tower", version: V, name: "Identity & Governance Tower", productDistrict: "command-governance",
     description: "Users, roles, connector authorization and audit for a workspace.",
-    capabilities: [later("users", "Users and roles"), later("connector-auth", "Connector authorization"), later("audit", "Workspace audit log"), on("entitlements", "Module entitlements", "src/modules/workspace.ts")],
-    connectors: [], views: [], actions: [], permissions: [],
+    capabilities: [
+      later("users", "Users and roles"),
+      later("connector-auth", "Connector authorization"),
+      later("audit", "Workspace audit log"),
+      on("entitlements", "Module entitlements", "src/modules/workspace.ts"),
+      on("branch-rules", "Branch protection and merge rules", "src/governance/rules.ts useBranchRules"),
+    ],
+    connectors: ["github"], views: [], actions: [], permissions: [],
   },
   // AI & Automation
   {
