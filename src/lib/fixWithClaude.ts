@@ -1,6 +1,6 @@
 /**
  * Fix with Claude: turns one Mission Control item into a pre-filled GitHub issue link. Opening the
- * link sends nothing; KC presses Create in the browser, and the `claude-fix` label starts the
+ * link sends nothing; Khaneil presses Create in the browser, and the `claude-fix` label starts the
  * Claude Code scheduled task described in ops/fix-with-claude/README.md.
  */
 
@@ -43,7 +43,7 @@ export function fixIssueTitle(r: FixRequest): string {
 export function fixIssueBody(r: FixRequest, now = new Date()): string {
   const links = (r.links ?? []).filter((l) => /^https:\/\//.test(l.url)).slice(0, 5);
   return [
-    "Sent from Atlas with **Fix with Claude**. Claude follows `ops/fix-with-claude/prompt.md` and opens one small pull request, or explains here why it stopped. KC merges.",
+    "Sent from Atlas with **Fix with Claude**. Claude follows `ops/fix-with-claude/prompt.md` and opens one small pull request, or explains here why it stopped. Khaneil merges.",
     "",
     `- **Item:** ${clip(r.kind, 60)}`,
     `- **Title:** ${clip(r.title, 200)}`,
@@ -67,7 +67,7 @@ export function fixIssueUrl(r: FixRequest, now = new Date()): string | null {
 }
 
 /**
- * "Copy Codex prompt": the same item as Fix with Claude, as text KC pastes into Codex. Nothing is
+ * "Copy Codex prompt": the same item as Fix with Claude, as text Khaneil pastes into Codex. Nothing is
  * sent anywhere; Codex follows AGENTS.md and opens a draft pull request carrying the hidden marker,
  * which is how Atlas finds it again.
  */

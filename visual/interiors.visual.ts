@@ -38,7 +38,7 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
 });
 
 // The shared business interior (airport offices and other planned workspaces). It was shown on
-// Skyline until that district was removed (KC, 2026-11-08).
+// Skyline until that district was removed (Khaneil, 2026-11-08).
 const BUSINESS="Atlas · Operations";
 /** The name the interior shows for it (catalog/workspace/buildings.yaml). */
 const BUSINESS_NAME="Observability Center";

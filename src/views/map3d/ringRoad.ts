@@ -2,7 +2,7 @@ import type {DistrictConnection} from './connections';
 import {pathClear,ROAD_W,type Box,type Pt} from './roads';
 
 /**
- * The city ring road (KC, 2026-11-08): one closed loop of streets around the whole city, so traffic
+ * The city ring road (Khaneil, 2026-11-08): one closed loop of streets around the whole city, so traffic
  * can always drive on round instead of turning back. Most of it already exists: the west road past
  * Atlas Stadium, the Financial District street along the north, BMW's short spur, and the Marketplace
  * boulevard down the east side. This adds the two missing pieces that close the loop: north-east from

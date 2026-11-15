@@ -100,7 +100,7 @@ export interface MapInventory {
 }
 
 const PLANNED = "Planned";
-/** Manifests still say "KC" in places; the owner is Khaneil everywhere the inventory is read. */
+/** Manifests still say "Khaneil" in places; the owner is Khaneil everywhere the inventory is read. */
 const plain = (t: string) => t.replace(/\bKC\b/g, "Khaneil");
 const moduleName = (id?: ModuleTypeId | null) => (id ? MODULE_TYPES[id]?.name ?? id : "");
 /** Workspace landmark ids leave out the "service:" prefix of the map key. */

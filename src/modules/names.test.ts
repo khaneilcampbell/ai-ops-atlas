@@ -22,7 +22,7 @@ describe("workspace building names", () => {
     for (const key of Object.keys(BUILDING_NAMES)) expect(MAP_KEYS.has(key), key).toBe(true);
   });
 
-  it("applies KC's operational names, keeping each original organization as metadata", () => {
+  it("applies Khaneil's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
       [AGENCY_KEY, "Growth & Marketing Studio", "Benjaire"],
       [financialKey("residence"), "Data Intelligence Center", "Benjaire"],

@@ -6,7 +6,6 @@ import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, scheduleLabel
 import { formatDate, relative } from "../lib/time";
 import type { AgentStatus, Run } from "../intel/types";
 import { EngineeringReview } from "./EngineeringReview";
-import { GithubSteward } from "./GithubSteward";
 import { isReviewRun } from "../intel/ecosystem";
 import { formatTime } from "../lib/timezone";
 
@@ -15,7 +14,6 @@ const TABS = [
   { id: "review", label: "Engineering review" },
   { id: "activity", label: "Activity" },
   { id: "costs", label: "Costs" },
-  { id: "steward", label: "GitHub Steward" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -39,9 +37,7 @@ export function IntelligenceView() {
           ))}
         </div>
       </div>
-      {tab === "steward" ? (
-        <GithubSteward />
-      ) : !intel.available ? (
+      {!intel.available ? (
         <div className="card empty">Repository intelligence runs in the desktop app, which keeps the Anthropic key in the Keychain.</div>
       ) : !intel.status ? (
         <div className="card empty">{intel.error ?? "Loading…"}</div>

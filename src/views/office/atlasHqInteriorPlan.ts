@@ -2,7 +2,7 @@ import type {Pt} from '../map3d/roads';
 import {superellipse,wingSway} from '../map3d/atlasHqPlan';
 
 /**
- * Atlas HQ inside, matched to the outside (KC, 2026-10-31). Plain numbers, no three.js.
+ * Atlas HQ inside, matched to the outside (Khaneil, 2026-10-31). Plain numbers, no three.js.
  *
  * Each floor plate takes the tower's softly rounded plan, wrapped in a glass curtain wall with a
  * mullion every bay. The gold wing shows as the part of that wall glazed gold; where blue turns to
