@@ -1,1 +1,1 @@
-- 2026-11-15 · The private jet at the airport now stands on real landing gear (nose and main wheels) that folds away after takeoff, with a sleeker business-jet look: pointed nose, oval windows, rear engines, T-tail and a gold cheatline
+- 2026-11-15 · The private jet at the airport now stands on real landing gear (nose and main wheels) that folds away after takeoff, with a sleeker business-jet look: pointed nose, oval windows, rear engines, T-tail and a gold cheatline (#426)
