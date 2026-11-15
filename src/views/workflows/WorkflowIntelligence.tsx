@@ -15,6 +15,9 @@ import { runStore, startLiveRun, useRuns } from "../../workflows/runs";
 import { selectBuilding, selectNode, useWorkflowSelection } from "../../workflows/selection";
 import { NODE_STATUS_LABEL, type ExecutionEvent, type NodeStatus, type RunMode, type WorkflowDefinition, type WorkflowNode, type WorkflowRun } from "../../workflows/types";
 import { statusTone, WorkflowCanvas } from "./WorkflowCanvas";
+import { RunExecution, useRunLedger } from "./RunExecution";
+import { stepTiming } from "../../execution/report";
+import type { HandoffRecord } from "../../execution/types";
 import "../../styles/workflows.css";
 
 // Workflow Intelligence: pick a goal, see the agents and dependencies it needs, step through a
@@ -96,6 +99,7 @@ export function WorkflowIntelligenceView() {
   };
 
   const node = sel.nodeId ? def.nodes.find((n) => n.id === sel.nodeId) : undefined;
+  const ledger = useRunLedger(run?.id);
 
   return (
     <div className="page wf-page">
@@ -200,6 +204,7 @@ export function WorkflowIntelligenceView() {
               ) : (
                 <div className="muted small">No live run yet. Starting one creates a task per step in the Task Center, with each step's registry agent, building, dependencies and approval rules. Nothing runs until you start it there.</div>
               )}
+              {run && <RunExecution run={run} tasks={taskMap} names={names} />}
               {confirming ? (
                 <div className="wf-confirm">
                   <span>Create {def.nodes.filter((n) => n.kind !== "outcome").length} tasks in the Task Center?</span>
@@ -239,6 +244,7 @@ export function WorkflowIntelligenceView() {
               status={status.get(node.id) ?? "not_started"}
               task={run && mode === "live" ? taskMap.get(run.nodeTasks[node.id] ?? "") : undefined}
               runError={run && mode === "live" ? run.errors[node.id] : undefined}
+              handoff={run && mode === "live" ? ledger?.handoffs[node.id] : undefined}
               allTasks={taskMap}
               events={events.filter((e) => e.nodeId === node.id)}
               names={names}
@@ -361,9 +367,12 @@ interface InspectorProps {
   onFocus: (buildingId: string) => void;
   onOpenTask: (taskId: string) => void;
   mode: RunMode;
+  handoff?: HandoffRecord;
 }
 
-function Inspector({ node, def, r, status, task, runError, allTasks, events, names, onPick, onFocus, onOpenTask, mode }: InspectorProps) {
+const HANDOFF_LABEL: Record<HandoffRecord["state"], string> = { validated: "Output validated", unverified: "Completed without structured output (unverified)", waived: "Waived" };
+
+function Inspector({ node, def, r, status, task, runError, allTasks, events, names, onPick, onFocus, onOpenTask, mode, handoff }: InspectorProps) {
   const ups = upstream(def, node.id);
   const downs = downstream(def, node.id);
   const lastAttempt = task?.attempts[task.attempts.length - 1];
@@ -509,6 +518,26 @@ function Inspector({ node, def, r, status, task, runError, allTasks, events, nam
                   <Icon name="tasks" size={13} /> Open in Task Center
                 </button>
               </div>
+              {(() => {
+                const tm = stepTiming(task);
+                return tm.startedAt ? (
+                  <div className="muted small">
+                    Ran {formatDateTime(tm.startedAt)}
+                    {tm.durationMs !== undefined && ` · took ${Math.max(1, Math.round(tm.durationMs / 1000))} s`} · attempt {task.attempts.length} of {task.maxAttempts}
+                  </div>
+                ) : null;
+              })()}
+              {handoff && (
+                <div className="muted small">
+                  {HANDOFF_LABEL[handoff.state]} · {handoff.output?.schema ?? "no schema"} · by {handoff.by}
+                  {handoff.reason && ` · ${handoff.reason}`}
+                  {handoff.output?.artifacts.map((a) => (
+                    <div key={a.id}>
+                      <ExternalLink href={a.url}>{a.label}</ExternalLink>
+                    </div>
+                  ))}
+                </div>
+              )}
               {waitingOn.length > 0 && <div className="muted small">Waiting on: {waitingOn.map((id) => allTasks.get(id)?.title ?? id).join(", ")}</div>}
               {(task.error || lastAttempt?.error) && <p className="task-error">{task.error ?? lastAttempt?.error}</p>}
               {task.status === "failed" && <div className="muted small">Retry from the Task Center, which checks attempts left and asks for approval again where the step needs it.</div>}
