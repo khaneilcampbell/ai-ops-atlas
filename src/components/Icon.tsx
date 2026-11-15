@@ -38,6 +38,8 @@ const PATHS: Record<string, string> = {
   spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 1.7 1.7.8-1.7.8L19 20l-.8-1.7-1.7-.8 1.7-.8z",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   download: "M12 3v12M7 10l5 5 5-5M5 21h14",
+  // A checklist: three ticked rows.
+  tasks: "M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5",
 };
 
 export type IconName = keyof typeof PATHS;

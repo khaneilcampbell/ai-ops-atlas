@@ -19,6 +19,7 @@ import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
+import { TaskCenterView } from "./views/tasks/TaskCenter";
 import { useAutoPush } from "./usage/sync";
 import { useLiveFeed } from "./live/feed";
 import { LivePill } from "./components/LivePill";
@@ -33,6 +34,7 @@ import { formatDateTime, useTimeZone } from "./lib/timezone";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
+  { view: "tasks", label: "Task Center", icon: "tasks" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "automations", label: "Automations", icon: "network" },
   { view: "repos", label: "Repositories", icon: "repos" },
@@ -147,6 +149,7 @@ export default function App() {
         {/* Other pages still clear their own crashes when switching views. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}
+          {view === "tasks" && <TaskCenterView />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
