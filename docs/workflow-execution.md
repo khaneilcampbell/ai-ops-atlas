@@ -21,12 +21,37 @@ Workflow Intelligence → Live → **Start coordinating**. The orchestrator (`sr
 
 | Step kind | Adapter | From Atlas |
 | --- | --- | --- |
-| n8n (Product Lab research, scoring, brief, plan; Approve and Publish) | `n8nAdapter` | **Unconfigured.** Atlas holds only a read-only n8n key. Needs an allow-listed webhook per workflow, a signing secret kept on the site, an input schema per workflow, and a callback that posts reports to Atlas. |
+| n8n research and planning (market, customer and competitor research, scoring, brief, plan) | `bridgeAdapter` | **Built, not switched on.** Sent through the site to one restricted n8n step runner workflow (see below). Shows as unconfigured until the step runner is published and both bridge secrets are saved on the site. |
+| n8n Approve and Publish | `n8nAdapter` | **Never started from Atlas.** Stays the existing Approve and Publish flow in n8n; the site refuses these steps even when called directly. |
 | GitHub (Manage agents allow-list) | `githubAdapter` | Started by a person in the Task Center (Mac app, Touch ID). Listed as waiting on you. |
 | Manual, decisions, approvals | `manualAdapter` | A person, recorded in the Task Center or here. |
 | Development, quality checks | none | **Unconfigured.** No coding agent or product test workflow exists. |
 
-Until the n8n connection exists, research and planning steps show as unconfigured with the exact requirement, and a person can do them by hand, mark them done in the Task Center (recorded as an unverified handoff) or waive them.
+Until the bridge is switched on, research and planning steps show as unconfigured with the exact requirement, and a person can do them by hand, mark them done in the Task Center (recorded as an unverified handoff) or waive them.
+
+## The n8n bridge
+
+Atlas can start six steps (`BRIDGE_STEPS` in `src/execution/n8nBridge.ts`) in one n8n workflow, "Atlas · Step Runner", at webhook path `atlas-step-runner`. That workflow has no email, Notion, shop, payment or publish tools: it runs one model call with the step's prompt and posts a structured report back. The read-only n8n API key is not used or widened.
+
+```
+page (Access) ── POST /api/n8n/steps ──┐
+Mac app (sync key) ── POST /api/hooks/n8n-steps ──┤ site: allow-list, record key, daily cap
+                                                  └── POST n8n /webhook/atlas-step-runner (N8N_BRIDGE_TOKEN)
+n8n step runner ── POST /api/hooks/n8n-report (N8N_BRIDGE_CALLBACK_TOKEN) ── site D1
+page / Mac app ── GET same paths ?since= ── picked up every minute while a step runs ── orchestrator
+```
+
+Safeguards:
+- Two secrets, one per direction, each 32+ characters, kept only as Cloudflare Pages secrets and n8n credentials. The callback key can only add reports, and only for a step the site sent, under the same run and attempt.
+- Each send is recorded by idempotency key before it goes out and is never sent twice; an unclear answer is "unknown" and is reconciled by a person, never retried blindly. At most 20 sends a day.
+- Report ids are stored once; the report's source is always set by the site, so a report can't claim to be a person or an approval. Outputs are re-checked against the step's schema by the orchestrator.
+- Requests are authenticated by bearer secret over HTTPS with idempotency and report-id dedupe. There is no timestamp signature; a replayed report changes nothing because its id is already stored.
+- Run data (envelopes and reports) lives only in the private D1 database `LIVE` and is deleted after 30 days. Nothing goes to GitHub; the repository holds the code and this contract only.
+
+To switch it on (Khaneil):
+1. Save `N8N_BRIDGE_TOKEN` and `N8N_BRIDGE_CALLBACK_TOKEN` (two different random values, 32+ characters) as Pages secrets.
+2. Put the same values in the step runner's two n8n credentials (webhook header auth, and the report request's header).
+3. Publish the step runner in n8n. Until then its catalog entry stays `paused` with "draft" in the trigger.
 
 ## Limits
 

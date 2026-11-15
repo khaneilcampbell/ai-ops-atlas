@@ -9,11 +9,13 @@ import { RunStore, startLiveRun } from "../workflows/runs";
 import type { WorkflowRun } from "../workflows/types";
 import { adapterRouter, githubStatus, manualAdapter, n8nAdapter, output, simulatedAdapter, type SimulatedPlan } from "./adapters";
 import { buildEnvelope, repairOutput, validateOutput } from "./handoff";
+import { bridgeAdapter, pullReports, type BridgeClient } from "./bridgeClient";
 import { LedgerStore } from "./ledger";
+import type { StepReportBody } from "./n8nBridge";
 import { Orchestrator } from "./orchestrator";
 import { backoffMs, budgetProblem, stepPolicy } from "./policy";
 import { goalReport, runStatus, stepTiming } from "./report";
-import type { ExecutionAdapter, ExecutionReport, StepOutput } from "./types";
+import type { ExecutionAdapter, ExecutionReport, HandoffEnvelope, StepOutput } from "./types";
 
 const art = (id: string) => ({ id, label: id, url: `https://docs.google.com/document/d/${id}`, kind: "document" as const });
 const OUT: Record<string, StepOutput> = {
@@ -497,8 +499,8 @@ describe("external integration failures", () => {
     expect(n8nAdapter.available("market-research", undefined)).toMatchObject({ ok: false });
     expect((await n8nAdapter.dispatch({} as never)).state).toBe("refused");
     const route = adapterRouter(manualAdapter);
-    expect(route({ execution: { kind: "n8n" } })).toBe(n8nAdapter);
-    expect(route({ execution: { kind: "none" } })).toBe(manualAdapter);
+    expect(route({ id: "market-research", execution: { kind: "n8n" } })).toBe(n8nAdapter);
+    expect(route({ id: "develop", execution: { kind: "none" } })).toBe(manualAdapter);
     expect(githubStatus({ id: "a", requestedAt: "2026-11-15T12:00:00Z", idempotencyKey: "k" }, [], new Set())).toEqual({ state: "not_found" });
   });
 
@@ -514,5 +516,45 @@ describe("external integration failures", () => {
   it("an envelope never carries data from steps that aren't upstream", () => {
     const env = buildEnvelope(BENJAIRE_LAUNCH, { id: "r", nodeTasks: { brief: "t" } }, "brief", { number: 1, idempotencyKey: "t:1" }, { intake: { nodeId: "intake", taskId: "x", attempt: 1, at: "", state: "validated", by: "k", output: OUT.intake } }, "2026-11-15T12:00:00Z");
     expect(env.inputs).toEqual({});
+  });
+});
+
+describe("n8n bridge", () => {
+  function fakeBridge() {
+    const sent: HandoffEnvelope[] = [];
+    const stored: StepReportBody[] = [];
+    const client: BridgeClient = {
+      status: async () => true,
+      send: async (env) => (sent.push(env), { state: "accepted" }),
+      reports: async (since) => ({ reports: stored.slice(since), cursor: stored.length }),
+    };
+    return { client, sent, stored };
+  }
+
+  it("routes only allow-listed steps to the bridge; publish stays read-only", () => {
+    const b = bridgeAdapter(fakeBridge().client, () => true);
+    const route = adapterRouter(manualAdapter, b);
+    expect(route({ id: "scoring", execution: { kind: "n8n" } })).toBe(b);
+    expect(route({ id: "publish", execution: { kind: "n8n" } })).toBe(n8nAdapter);
+    expect(b.available("publish", undefined).ok).toBe(false);
+    expect(bridgeAdapter(fakeBridge().client, () => false).available("scoring", undefined).need).toMatch(/N8N_BRIDGE_TOKEN/);
+  });
+
+  it("sends research through the bridge and completes steps from picked-up reports", async () => {
+    const fb = fakeBridge();
+    const b = bridgeAdapter(fb.client, () => true);
+    const e = setup({}, { adapter: (id) => (id === "publish" ? n8nAdapter : ["market-research", "customer-research", "competitor-analysis", "scoring", "brief", "planning"].includes(id) ? b : undefined) });
+    await throughResearch(e);
+    expect(fb.sent.map((x) => x.nodeId).sort()).toEqual(["competitor-analysis", "customer-research", "market-research"]);
+    expect(fb.sent.every((x) => !!x.attemptId)).toBe(true);
+    let n = 0;
+    for (const env of fb.sent) fb.stored.push({ eventId: `e${++n}`, idempotencyKey: env.idempotencyKey, runId: env.runId, nodeId: env.nodeId as never, attemptId: env.attemptId!, kind: "succeeded", at: "2026-11-15T12:05:00Z", output: OUT[env.nodeId] });
+    let cur = 0;
+    const cursor = { read: () => cur, write: (x: number) => void (cur = x) };
+    expect(await pullReports(e.orch, fb.client, cursor)).toBe(3);
+    expect(await pullReports(e.orch, fb.client, cursor)).toBe(0);
+    expect(status(e, "market-research")).toBe("completed");
+    await e.orch.step(e.run.id);
+    expect(fb.sent.some((x) => x.nodeId === "scoring")).toBe(true);
   });
 });

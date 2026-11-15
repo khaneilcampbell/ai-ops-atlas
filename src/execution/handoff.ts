@@ -136,7 +136,7 @@ export function buildEnvelope(
   def: WorkflowDefinition,
   run: { id: string; nodeTasks: Record<string, string> },
   nodeId: string,
-  attempt: { number: number; idempotencyKey: string },
+  attempt: { number: number; idempotencyKey: string; id?: string },
   handoffs: Readonly<Record<string, HandoffRecord>>,
   at: string,
 ): HandoffEnvelope {
@@ -164,6 +164,7 @@ export function buildEnvelope(
     artifacts,
     correlationId: run.id,
     idempotencyKey: attempt.idempotencyKey,
+    ...(attempt.id ? { attemptId: attempt.id } : {}),
     at,
   };
 }

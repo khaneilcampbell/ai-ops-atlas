@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useActions } from "../../actions/state";
 import { appOrchestrator } from "../../execution/app";
+import { pullReports } from "../../execution/bridgeClient";
+import { liveAttempt } from "../../tasks/lifecycle";
 import { useLedgers, emptyLedger } from "../../execution/ledger";
 import { goalReport, RUN_STATUS_LABEL } from "../../execution/report";
 import type { RunLedger } from "../../execution/types";
@@ -41,6 +43,19 @@ export function RunExecution({ run, tasks, names }: { run: WorkflowRun; tasks: R
       live = false;
     };
   }, [orch, run.id, tasks, ledger.startedBy, ledger.cancelledAt, ledger.rev]);
+
+  // While a step is out with n8n, pick up its reports: on each change and once a minute while the
+  // window is visible. Stops by itself when nothing is out.
+  const outWithN8n = useMemo(() => Object.values(run.nodeTasks).some((id) => liveAttempt(tasks.get(id) ?? ({ attempts: [] } as unknown as StoredTask))?.executor === "n8n"), [run, tasks]);
+  useEffect(() => {
+    if (!outWithN8n) return;
+    const pull = () => {
+      if (document.visibilityState === "visible") void pullReports(orch).catch(() => {});
+    };
+    pull();
+    const t = setInterval(pull, 60_000);
+    return () => clearInterval(t);
+  }, [outWithN8n, orch]);
 
   const stuck = useMemo(() => new Map<string, "person" | "unconfigured">([...(summary?.unconfigured ?? []).map((u) => [u.nodeId, "unconfigured"] as const), ...(summary?.waitingOnPerson ?? []).map((w) => [w.nodeId, "person"] as const)]), [summary]);
   const report = useMemo(() => goalReport(run, tasks, ledger, new Date().toISOString(), stuck), [run, tasks, ledger, stuck]);

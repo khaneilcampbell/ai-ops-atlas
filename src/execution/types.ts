@@ -44,6 +44,8 @@ export interface HandoffEnvelope {
   correlationId: string;
   /** Task id + attempt number: the receiving system must treat a repeat as the same request. */
   idempotencyKey: string;
+  /** The attempt this send belongs to; reports must name it. */
+  attemptId?: string;
   at: string;
 }
 

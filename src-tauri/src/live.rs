@@ -17,6 +17,7 @@ pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 pub const N8N_PATH: &str = "/api/hooks/n8n";
 pub const REGISTRY_REFRESH_PATH: &str = "/api/hooks/registry-refresh";
 pub const SECURITY_PATH: &str = "/api/hooks/security";
+pub const N8N_STEPS_PATH: &str = "/api/hooks/n8n-steps";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
@@ -357,6 +358,77 @@ pub async fn live_publish(
     {
         Ok(r) if r.status().is_success() => Ok(()),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Step reports from the n8n bridge (server/n8nBridge.ts) after a cursor, or whether the bridge is
+/// set up (`status`). `None` when website sync isn't set up. Read-only.
+#[tauri::command]
+pub async fn live_n8n_steps(
+    since: u64,
+    status: bool,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    let query = if status {
+        "status=1".to_string()
+    } else {
+        format!("since={since}")
+    };
+    match sync
+        .http()
+        .get(format!("{url}{N8N_STEPS_PATH}?{query}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's step reports weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Asks the site to send one research or planning step to the n8n step runner. The site checks
+/// the allow-list, the daily limit and the idempotency key, and holds the n8n token; the app only
+/// sends its sync key and the step's envelope. The site's JSON answer (accepted, refused or
+/// unknown) is passed back as is, including on a refusal.
+#[tauri::command]
+pub async fn live_n8n_step_send(
+    envelope: serde_json::Value,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    if !envelope.is_object() {
+        return Err("The step must be an envelope object.".into());
+    }
+    match sync
+        .http()
+        .post(format!("{url}{N8N_STEPS_PATH}"))
+        .bearer_auth(key)
+        .json(&envelope)
+        .send()
+        .await
+    {
+        Ok(r) => {
+            let code = r.status().as_u16();
+            match r.json::<serde_json::Value>().await {
+                Ok(v) if v.get("state").is_some() => Ok(Some(v)),
+                _ if code == 403 || code == 302 => Err(
+                    "The site's login blocked the step. Add the Access bypass for /api/hooks/*."
+                        .into(),
+                ),
+                _ => Err(format!("The site answered {code} without a result.")),
+            }
+        }
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
 }

@@ -6,6 +6,7 @@ import type { ExecContext } from "../tasks/adapters";
 import { taskService } from "../tasks/store";
 import { runStore } from "../workflows/runs";
 import { adapterRouter, githubAdapter } from "./adapters";
+import { bridgeAdapter, siteBridge } from "./bridgeClient";
 import { ledgerStore } from "./ledger";
 import { Orchestrator } from "./orchestrator";
 
@@ -15,6 +16,9 @@ import { Orchestrator } from "./orchestrator";
 
 let shared: { orch: Orchestrator; key: string } | null = null;
 let recovered = false;
+/** Whether the site says the n8n bridge is set up; checked once per app start. */
+let bridgeOn = false;
+let bridgeChecked = false;
 
 export function appOrchestrator(catalog: Catalog, ctx: ExecContext): Orchestrator {
   const key = `${ctx.desktop}:${ctx.agentsToken}`;
@@ -30,7 +34,14 @@ export function appOrchestrator(catalog: Catalog, ctx: ExecContext): Orchestrato
       // GitHub attempt is held for a person to check rather than guessed.
       listRuns: async () => [],
     });
-    shared = { key, orch: new Orchestrator({ tasks: taskService(), runs: runStore(), ledger: ledgerStore(), catalog, adapterFor: adapterRouter(github) }) };
+    shared = { key, orch: new Orchestrator({ tasks: taskService(), runs: runStore(), ledger: ledgerStore(), catalog, adapterFor: adapterRouter(github, bridgeAdapter(siteBridge, () => bridgeOn)) }) };
+  }
+  if (!bridgeChecked) {
+    bridgeChecked = true;
+    void siteBridge
+      .status()
+      .then((v) => (bridgeOn = v))
+      .catch(() => (bridgeOn = false));
   }
   if (!recovered) {
     recovered = true;

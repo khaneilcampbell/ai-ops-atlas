@@ -2,6 +2,7 @@ import type { Outcome } from "../actions/types";
 import type { WorkflowRun as GithubRun } from "../github/types";
 import { managedAgent } from "../manage/manifest";
 import { N8N_READ_ONLY, githubRunUpdate, matchGithubRun, outcomeToUpdate, type ExecContext } from "../tasks/adapters";
+import { isBridgeStep } from "./n8nBridge";
 import type { DispatchResult, ExecutionAdapter, ExternalStatus, HandoffEnvelope, StepOutput } from "./types";
 
 // Execution adapters: the only way the orchestrator reaches an outside system. Each one says, from
@@ -118,11 +119,15 @@ export function simulatedAdapter(plan: SimulatedPlan = {}): ExecutionAdapter & {
 }
 
 /**
- * The app's routing, fixed by the step's execution kind: n8n steps go to the read-only n8n adapter
- * (so they show as unconfigured), GitHub steps to the Touch ID path, everything else is manual.
+ * The app's routing, fixed by the step's execution kind: allow-listed research and planning steps
+ * go to the n8n bridge when one is given, other n8n steps to the read-only n8n adapter (so they show
+ * as unconfigured), GitHub steps to the Touch ID path, everything else is manual.
  */
-export function adapterRouter(github: ExecutionAdapter): (node: { execution: { kind: string } }) => ExecutionAdapter {
-  return (node) => (node.execution.kind === "n8n" ? n8nAdapter : node.execution.kind === "github" ? github : manualAdapter);
+export function adapterRouter(github: ExecutionAdapter, bridge?: ExecutionAdapter): (node: { id: string; execution: { kind: string } }) => ExecutionAdapter {
+  return (node) => {
+    if (node.execution.kind === "n8n") return bridge && isBridgeStep(node.id) ? bridge : n8nAdapter;
+    return node.execution.kind === "github" ? github : manualAdapter;
+  };
 }
 
 /** A schema-valid output for tests. */
