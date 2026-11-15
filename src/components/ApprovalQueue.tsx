@@ -9,7 +9,7 @@ import { ExternalLink } from "./bits";
 import { Icon } from "./Icon";
 
 /**
- * Actions agents propose, each waiting for KC. Approve hands the action to the desktop app,
+ * Actions agents propose, each waiting for Khaneil. Approve hands the action to the desktop app,
  * which re-checks it, asks again in a native dialog and logs it; Dismiss hides it here only.
  */
 export function ApprovalQueue({ agentId, compact }: { agentId?: string; compact?: boolean }) {

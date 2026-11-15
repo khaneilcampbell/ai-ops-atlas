@@ -27,7 +27,7 @@ function facts(repo: string, over: Partial<Facts> = {}): Facts {
     stack: ["React", "Vite", "Tauri"],
     agent_signals: ["anthropic"],
     root_files: ["README.md", "package.json", "docs/", "SECURITY.md"],
-    activity: { commits_sampled: 30, commits_last_30d: 30, last_commit_at: AT, authors: ["KC"], recent: [{ sha: "65d9a0c1", message: "Financial District interiors", author: "KC", date: AT, url: `${url}/commit/65d9a0c1` }], branches: 40, open_prs: 20, pr_titles: [] },
+    activity: { commits_sampled: 30, commits_last_30d: 30, last_commit_at: AT, authors: ["Khaneil"], recent: [{ sha: "65d9a0c1", message: "Financial District interiors", author: "Khaneil", date: AT, url: `${url}/commit/65d9a0c1` }], branches: 40, open_prs: 20, pr_titles: [] },
     releases: { state: "assessed", data: [] },
     issues: { state: "assessed", data: { open: 3, recent: [] } },
     ci: { state: "passing", workflows: [{ run_id: 9001, name: "CI", status: "completed", conclusion: "success", branch: "main", at: AT, url: `${url}/actions/runs/9001` }], note: null },
@@ -103,7 +103,7 @@ export const ecoReport: EcoReport = {
     ],
     recommendations: [
       { priority: "now", category: "security", title: "Reduce blast radius of the commerce VPS credentials", rationale: "One compromise could spend money or email customers.", first_step: "Move commerce-loop to a non-root user with a least-privilege .env.", effort: "a_day", owner: "commerce-loop", repos: [COMMERCE], evidence: ["agent:commerce-loop", `repo:${COMMERCE}`], grounded: true },
-      { priority: "now", category: "autonomy", title: "Add kill switches and caps to L3 agents", rationale: "Autonomous agents that email or spend money have no recorded stop control.", first_step: "Add a documented kill switch to each L3 agent.", effort: "hours", owner: "KC", repos: [], evidence: ["agent:benjaire-contact-worker", "agent:commerce-loop"], grounded: true },
+      { priority: "now", category: "autonomy", title: "Add kill switches and caps to L3 agents", rationale: "Autonomous agents that email or spend money have no recorded stop control.", first_step: "Add a documented kill switch to each L3 agent.", effort: "hours", owner: "Khaneil", repos: [], evidence: ["agent:benjaire-contact-worker", "agent:commerce-loop"], grounded: true },
       { priority: "next", category: "dependencies", title: "Upgrade minimatch", rationale: "Closes the open advisory.", first_step: "Run npm update minimatch.", effort: "hours", repos: [ATLAS], evidence: ["alert:ai-ops-atlas:dependabot:17", "made-up:ref"], grounded: true },
     ],
     tools: [],
@@ -161,7 +161,7 @@ export function recKey(title: string, repo: string): string {
   return h.toString(16).padStart(8, "0");
 }
 
-// Issues KC "already created" from earlier reviews, so the screenshots show tracked states.
+// Issues Khaneil "already created" from earlier reviews, so the screenshots show tracked states.
 const vpsKey = recKey("Reduce blast radius of the commerce VPS credentials", COMMERCE);
 const minimatchKey = recKey("Upgrade minimatch", ATLAS);
 const issue = (repo: string, number: number, title: string, key: string, state: "open" | "closed") => ({

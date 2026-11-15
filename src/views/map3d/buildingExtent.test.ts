@@ -6,7 +6,7 @@ import {buildScene,type Rect} from './scene';
 import {districtRect,unionRect,wholeBuilding} from './buildingExtent';
 import {isGithubTower} from './githubTowerPlan';
 
-// One building, one district, one selection (KC, 2026-11-09). Every part of a building must sit
+// One building, one district, one selection (Khaneil, 2026-11-09). Every part of a building must sit
 // in its own project's district, and the outline a click draws must cover the whole building.
 const GROUPINGS:GroupBy[]=['district','none','status','tag'];
 const EPS=1e-6;

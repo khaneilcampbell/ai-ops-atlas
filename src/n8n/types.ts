@@ -1,5 +1,5 @@
 // Live n8n runs, as the site's server function summarizes them (server/n8n.ts). Read only: the
-// site lists the instance's workflows and recent executions with KC's read-only n8n API key, which
+// site lists the instance's workflows and recent executions with Khaneil's read-only n8n API key, which
 // lives only in the site's secrets. Nothing here can start, edit or stop a workflow.
 
 /** n8n's execution statuses. Anything else n8n adds later is kept as "unknown". */

@@ -3,7 +3,7 @@ import type { Agent } from "../catalog/types";
 import { isHostedWeb, isTauri } from "../lib/env";
 import { FAILED, type N8nSnapshot, type N8nWorkflowRuns } from "./types";
 
-// Recent n8n runs for the Workflow Automation Plant. The site reads n8n with KC's read-only key
+// Recent n8n runs for the Workflow Automation Plant. The site reads n8n with Khaneil's read-only key
 // (server/n8n.ts); the page asks /api/n8n behind Access, the Mac app asks through its Rust shell
 // with the website sync key. Neither ever sees the n8n key. Polled only while the window is
 // visible and something on screen uses it.

@@ -8,7 +8,7 @@ import {DEALERSHIP as d,SHOWROOM_FRONT,dealershipShowroom,planDealership} from '
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`places and connects the dealership safely in ${group} grouping`,()=>{
  const s=buildScene(layoutMap(catalog,[],group)),a=s.dealership!,f=s.financial!;
  expect(a).toBeDefined();
- // KC, 2026-10-31: BMW sits on the waterfront parcel right of the Financial District.
+ // Khaneil, 2026-10-31: BMW sits on the waterfront parcel right of the Financial District.
  expect(a.lot.x).toBeCloseTo(f.x+f.w);expect(a.lot.z).toBeCloseTo(f.z);expect(a.lot.d).toBeCloseTo(f.d);
  expect(a.x).toBeGreaterThanOrEqual(a.lot.x);expect(a.x+a.w).toBeLessThanOrEqual(a.lot.x+a.lot.w);expect(a.z).toBeGreaterThanOrEqual(a.lot.z);expect(a.z+a.d).toBeLessThanOrEqual(a.lot.z+a.lot.d);
  for(const r of s.land)if(r!==a.lot)expect(a.lot.x<r.x+r.w-1e-6&&a.lot.x+a.lot.w>r.x+1e-6&&a.lot.z<r.z+r.d-1e-6&&a.lot.z+a.lot.d>r.z+1e-6,`lot overlaps ${JSON.stringify(r)}`).toBe(false);
@@ -36,7 +36,7 @@ it('fits evenly spaced upper galleries below the roof',async()=>{
  expect(d.height).toBeCloseTo(3.05+2*d.mezzanineY);
 });
 for(const group of ['none','district','status','tag'] as GroupBy[])it(`scales BMW with the Financial District towers in ${group} grouping`,()=>{
- // KC, 2026-10-31: the showroom takes the district's tower footprint and stays within its skyline.
+ // Khaneil, 2026-10-31: the showroom takes the district's tower footprint and stays within its skyline.
  const s=buildScene(layoutMap(catalog,[],group)),a=s.dealership!,r=a.showroom,f=s.financial!,dims=f.buildings.map(b=>financialDimensions(b.id));
  expect(r.w).toBeCloseTo(Math.max(...dims.map(x=>x.width)));expect(r.d).toBeCloseTo(Math.max(...dims.map(x=>x.depth)));
  const lowest=Math.min(...f.buildings.map(b=>b.height));

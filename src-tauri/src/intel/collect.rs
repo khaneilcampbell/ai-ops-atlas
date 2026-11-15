@@ -980,8 +980,8 @@ pub mod tests {
                 .route(&b, 200, json!({"full_name": repo, "html_url": format!("https://github.com/{repo}"), "description": "Demo", "default_branch": "main", "visibility": "public", "size": 10, "open_issues_count": 3, "license": {"spdx_id": "MIT"}, "pushed_at": "2026-10-20T00:00:00Z"}))
                 .route(&format!("{b}/languages"), 200, json!({"TypeScript": 900, "CSS": 100}))
                 .route(&format!("{b}/commits?per_page=20&sha=main"), 200, json!([
-                    {"sha": "abc1234def", "commit": {"message": "Add feature\n\nbody", "author": {"name": "KC", "date": "2026-10-20T00:00:00Z"}}, "author": {"login": "kc"}, "html_url": "https://github.com/x/c/abc"},
-                    {"sha": "0001111222", "commit": {"message": "Initial", "author": {"name": "KC", "date": "2026-01-01T00:00:00Z"}}, "author": {"login": "kc"}}
+                    {"sha": "abc1234def", "commit": {"message": "Add feature\n\nbody", "author": {"name": "Khaneil", "date": "2026-10-20T00:00:00Z"}}, "author": {"login": "kc"}, "html_url": "https://github.com/x/c/abc"},
+                    {"sha": "0001111222", "commit": {"message": "Initial", "author": {"name": "Khaneil", "date": "2026-01-01T00:00:00Z"}}, "author": {"login": "kc"}}
                 ]))
                 .route(&format!("{b}/branches?per_page=100"), 200, json!([{"name": "main"}, {"name": "dev"}]))
                 .route(&format!("{b}/pulls?state=open&per_page=30"), 200, json!([{"number": 7, "title": "WIP"}]))
