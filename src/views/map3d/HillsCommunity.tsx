@@ -105,12 +105,8 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  // A ballast bed set into the ground; where a side runs over water the same bed is a trestle deck on piers.
  for(let i=1;i<track.route.length;i++){const a=track.route[i-1],b=track.route[i],wet=!onLand((a[0]+b[0])/2,(a[1]+b[1])/2);strip(a,b,wet?1.08:.98,C.railRise-.2,.2,wet?'#c5beaa':'#9d978b');}
  for(const offset of [-.18,.18]){const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++)strip(line[i-1],line[i],.028,C.railRise+.045,.05,'#718785');}
- const roadSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
- const crossings=railCrossings(track.route,walks,roadSegs).filter(c=>onLand(c.at[0],c.at[1]));
- const nearCrossing=(x:number,z:number)=>crossings.some(c=>Math.hypot(x-c.at[0],z-c.at[1])<c.width/2+.75);
- // On land a low fence runs along the seaward side only (the shore edge), open at each level crossing; over water both parapets.
  for(const offset of [-.51,.51]){
-  if(p.loop){for(let d=0;d<p.loop.length;d+=.5){const end=Math.min(p.loop.length,d+.5),mid=(d+end)/2;if(offset>0&&p.loop.stops.some(s=>Math.min(Math.abs(mid-s.distance),p.loop!.length-Math.abs(mid-s.distance))<4.4))continue;const a=loopPoint(p.loop,d),b=loopPoint(p.loop,end),dry=onLand((a.x+b.x)/2,(a.z+b.z)/2);if(dry&&(offset>0||nearCrossing((a.x+b.x)/2,(a.z+b.z)/2)))continue;const normal=(q:typeof a):[number,number]=>[q.x-Math.cos(q.yaw)*offset,q.z+Math.sin(q.yaw)*offset];strip(normal(a),normal(b),.035,C.railRise+(dry?.3:.45),.04,palette.green);if(dry&&Math.round(d*2)%3===0){const [px,pz]=normal(a);solid.push(box(px,0,pz,.035,C.railRise+.33,.035,palette.green));}}}
+  if(p.loop){for(let d=0;d<p.loop.length;d+=.5){const end=Math.min(p.loop.length,d+.5),mid=(d+end)/2;if(offset>0&&p.loop.stops.some(s=>Math.min(Math.abs(mid-s.distance),p.loop!.length-Math.abs(mid-s.distance))<4.4))continue;const a=loopPoint(p.loop,d),b=loopPoint(p.loop,end);if(onLand((a.x+b.x)/2,(a.z+b.z)/2))continue;const normal=(q:typeof a):[number,number]=>[q.x-Math.cos(q.yaw)*offset,q.z+Math.sin(q.yaw)*offset];strip(normal(a),normal(b),.035,C.railRise+.45,.04,palette.green);}}
   else{const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++){const at=track.lengths[i];if(at<5||at>track.length-5||onLand(line[i][0],line[i][1]))continue;strip(line[i-1],line[i],.035,C.railRise+.45,.04,palette.green);}}
  }
 
@@ -145,7 +141,8 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  }
  // Level crossings where a ground walk or a street meets the ground-level track (Khaneil, 2026-11-15), such as the
  // forecourt walk to the yacht dock: a flush deck between the rails, white edges and a signal post on each approach.
- for(const c of crossings)for(const part of railCrossingParts(c,night))solid.push({p:[part.p[0],TERRACE_H+part.p[1],part.p[2]],s:part.s,c:part.c,r:part.r});
+ const roadSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
+ for(const c of railCrossings(track.route,walks,roadSegs))if(onLand(c.at[0],c.at[1]))for(const part of railCrossingParts(c,night))solid.push({p:[part.p[0],TERRACE_H+part.p[1],part.p[2]],s:part.s,c:part.c,r:part.r});
  const streetSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
  // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (Khaneil, 2026-11-08).
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0){

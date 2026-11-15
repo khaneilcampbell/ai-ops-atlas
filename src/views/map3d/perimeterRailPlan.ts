@@ -13,10 +13,6 @@ import {stadiumGate} from './stadiumGeometry';
  * 2026-11-13: "move the train line route to the Atlas edge of the land"). A side whose shore strip is taken (a lot or
  * runway reaching the coast) keeps the old viaduct just offshore at seaMargin. clearance: deck edge to anything beside it. */
 export const PERIMETER_RAIL={margin:-.75,seaMargin:2,clearance:.4,radius:3,speed:COMMUNITY.speed,dwell:15,doorTime:1.2,platformLength:8,deckWidth:1.08,platformOffset:.85,supportSpacing:6} as const;
-/** Where a stair from the water (the yacht dock's marina stair) comes up through the shore strip, the line swings inland
- * (Khaneil, 2026-11-15, after the track went to ground level): `inset` deeper for `half` each side of the stair, easing in and
- * out over `ease`, so the stair lands on its own paved landing and the walk crosses the track on firm ground. */
-export const SHORE_BAY={inset:1.6,half:1.1,ease:2.6} as const;
 /** The station shell's footprint in station-local coordinates (x along the track, z toward the land), stairs included. */
 export const STATION_SHELL={x:3.85,z0:-.55,z1:5.95} as const;
 // Airport Station was removed from the loop (Khaneil, 2026-11-13: "remove airport station from map listing directory.
@@ -43,20 +39,7 @@ function sidewalkPoint(roads:Pt[][],p:Pt):Pt|undefined{
   const d=Math.hypot(p[0]-q[0],p[1]-q[1]);if(d>1e-6&&(!best||d<best.d))best={q,d};}
  if(!best)return;const {q,d}=best,off=ROAD_W/2+.18+.24+.02;return [q[0]+(p[0]-q[0])/d*off,q[1]+(p[1]-q[1])/d*off];
 }
-/** Bends the straight runs of the bottom (south) side inland round each bay at x; other sides and corners are untouched. */
-export function swingAroundBays(route:Pt[],bottom:number,bays:number[]):Pt[]{
- if(!bays.length)return route;const B=SHORE_BAY,out:Pt[]=[];
- const depth=(x:number)=>Math.max(0,...bays.map(c=>{const d=Math.abs(x-c);if(d<=B.half)return B.inset;if(d>=B.half+B.ease)return 0;const u=(d-B.half)/B.ease;return B.inset*(1+Math.cos(Math.PI*u))/2;}));
- const flat=(p:Pt)=>Math.abs(p[1]-bottom)<1e-9;
- for(let i=0;i<route.length;i++){const p=route[i],q=route[i+1];out.push(flat(p)?[p[0],bottom-depth(p[0])]:p);
-  if(!q||!flat(p)||!flat(q))continue;
-  // Resample this bottom segment finely where it meets a bay, lifting each sample inland.
-  const lo=Math.min(p[0],q[0]),hi=Math.max(p[0],q[0]);if(!bays.some(c=>c+B.half+B.ease>lo&&c-B.half-B.ease<hi))continue;
-  const n=Math.ceil((hi-lo)/.25);for(let k=1;k<n;k++){const x=p[0]+(q[0]-p[0])*k/n;out.push([x,bottom-depth(x)]);}
- }
- return out;
-}
-export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>&{roads?:Pt[][];bays?:number[]}):PerimeterRailPlan|undefined{
+export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airport'|'stadium'|'towers'|'kiosks'|'dealership'>&{roads?:Pt[][]}):PerimeterRailPlan|undefined{
  const e=cityEnvelope(s.land),f=s.financial,m=s.mall,a=s.airport,stadium=s.stadium;if(!e||!f||!m||!a||!stadium)return;
  const r=PERIMETER_RAIL.radius,airportLand=airportFootprint(a),front=airportPoint(a,-.7,6);
  const boxes:Box[]=[...s.towers,...s.kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size}));
@@ -74,10 +57,7 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
  // Start on the Financial stop's straight section. Rounded corners meet without a duplicate seam.
  const ring=roundedRoad([[left,top],[right,top],[right,bottom],[left,bottom],[left,top]],r,true);
  const north=ring.findIndex((p,i)=>i>0&&p[1]===top&&ring[i-1][1]===top&&p[0]>=financialX);
- // Only on a shore (not offshore) bottom side, where the bay's stair actually comes up through the strip.
- const bays=bottom===bz?(s.bays??[]).filter(x=>{const w=SHORE_BAY.half+SHORE_BAY.ease;return x-w>left+r&&x+w<right-r&&sideClear(x-w,bottom-SHORE_BAY.inset,x+w,bottom);}):[];
- // A bay whose swing would crowd a lot keeps the straight edge track.
- const route=swingAroundBays([start,...ring.slice(north,-1),...ring.slice(0,north),start],bottom,bays),lengths=measure(route),length=lengths[lengths.length-1];
+ const route=[start,...ring.slice(north,-1),...ring.slice(0,north),start],lengths=measure(route),length=lengths[lengths.length-1];
  const seeds=[
   {...LOOP_STATIONS[0],point:start,target:[f.x+21.8,f.z+11.95] as Pt},
   // Atlas Central Station is walked to from the sidewalk of the nearest street, not across the Marketplace forecourt
@@ -100,8 +80,6 @@ export function planPerimeterRail(s:Pick<Scene3D,'land'|'financial'|'mall'|'airp
    for(let t=0;t<=4;t++){const q:Pt=[a[0]+(b[0]-a[0])*t/4,a[2]+(b[2]-a[2])*t/4];if(s.roads!.some(r=>distanceToRoad(q,r)<ROAD_W/2+.18+.5))return true;}return false;});
   for(const strict of [true,false])for(const shift of [0,...Array.from({length:24},(_,k)=>(k>>1)+1).map((n,k)=>k%2?-n*1.5:n*1.5)]){
    const point:Pt=alongX?[clamp(seed.point[0]+shift,left,right),seed.point[1]]:[seed.point[0],clamp(seed.point[1]+shift,top,bottom)];
-   // A station stands on a straight run, never on the swing round a bay.
-   if(point[1]===bottom&&bays.some(c=>Math.abs(point[0]-c)<SHORE_BAY.half+SHORE_BAY.ease+STATION_SHELL.x+.2))continue;
    const distance=distanceAt(route,lengths,point),pose=loopPoint({route,lengths,length},distance),basis={point,yaw:pose.yaw},boarding=stationBoardingPath(basis),landing:Pt=[boarding[0][0],boarding[0][2]];
    if(strict&&stairOnStreet(boarding))continue;
    if(shellBlocked(basis))continue;
