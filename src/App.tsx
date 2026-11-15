@@ -19,6 +19,8 @@ import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
+import { TaskCenterView } from "./views/tasks/TaskCenter";
+import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
 import { useAutoPush } from "./usage/sync";
 import { useLiveFeed } from "./live/feed";
 import { LivePill } from "./components/LivePill";
@@ -33,6 +35,7 @@ import { formatDateTime, useTimeZone } from "./lib/timezone";
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
+  { view: "tasks", label: "Task Center", icon: "tasks" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "automations", label: "Automations", icon: "network" },
   { view: "repos", label: "Repositories", icon: "repos" },
@@ -41,6 +44,9 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
 ];
+
+/** Workflow Intelligence opens from Mission Control, so Mission stays highlighted there. */
+const onSection = (view: View, nav: View) => view === nav || (nav === "overview" && view === "workflows");
 
 /** On a phone the bar holds these four plus More; the rest open from the More sheet. */
 export const PHONE_TABS: View[] = ["map", "agents", "overview", "activity"];
@@ -124,7 +130,7 @@ export default function App() {
       ) : (
         <nav className="sidebar" aria-label="Sections">
           {NAV.map((n) => (
-            <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
+            <button key={n.view} className={`nav-item ${onSection(view, n.view) ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
               <Icon name={n.icon} size={20} />
               <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
               {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
@@ -147,6 +153,8 @@ export default function App() {
         {/* Other pages still clear their own crashes when switching views. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}
+          {view === "tasks" && <TaskCenterView />}
+          {view === "workflows" && <WorkflowIntelligenceView />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
@@ -191,7 +199,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
     <>
       <nav className="sidebar phone-tabs" aria-label="Sections">
         {tabs.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${onSection(view, n.view) && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
             {n.view === "overview" && attention > 0 && <span className="badge">{attention}</span>}
@@ -215,7 +223,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
             <ul className="more-list">
               {more.map((n) => (
                 <li key={n.view}>
-                  <button className={view === n.view ? "active" : undefined} onClick={() => go(n.view)} aria-current={view === n.view ? "page" : undefined}>
+                  <button className={onSection(view, n.view) ? "active" : undefined} onClick={() => go(n.view)} aria-current={onSection(view, n.view) ? "page" : undefined}>
                     <Icon name={n.icon} size={18} />
                     <span>{n.label}</span>
                     <span className="more-go" aria-hidden>›</span>

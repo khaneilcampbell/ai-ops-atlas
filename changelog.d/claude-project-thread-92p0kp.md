@@ -1,0 +1,1 @@
+- 2026-11-15 · New Task Center tab: create tasks, give them to agents and buildings, approve sensitive ones, run allow-listed GitHub agents from the Mac app, and see each building's tasks on the map (PR pending)

@@ -37,6 +37,7 @@ import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
+import { BuildingTasks } from "./BuildingTasks";
 import { formatDateTime } from "../lib/timezone";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
@@ -222,6 +223,7 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
+      <BuildingTasks buildingId={project.id}/>
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
@@ -267,6 +269,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         {tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <ClaudeReviewHandoff agent={agent}/>
+        <BuildingTasks agentId={agent.id}/>
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>
