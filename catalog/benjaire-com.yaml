@@ -70,7 +70,7 @@ agents:
         data_sensitivity: confidential
         credential_owner: Khaneil (Worker secrets in the Cloudflare dashboard)
         risk: medium
-        kill_switch: 'Not live yet: benjaire.com pull request "security: add contact and checkout kill switches" adds CONTACT_PAUSED and CHECKOUT_PAUSED Worker secrets. Until it merges, roll back the Worker in Cloudflare.'
+        kill_switch: 'Set the Worker secret CONTACT_PAUSED=1 (contact form) or CHECKOUT_PAUSED=1 (checkout sends buyers to the Payment Link) in Cloudflare; see docs/runbooks/kill-switches.md in benjaire.com.'
         caps: '5 a minute per visitor and 20 a minute site-wide, for the contact form and for checkout (Cloudflare rate limits). Email only reaches verified Email Routing addresses.'
       docs:
         technical: site/README.md
@@ -144,7 +144,7 @@ agents:
         credential_owner: Khaneil (n8n credentials and the flow_settings table)
         risk: medium
         audit_log: flow_events data table in n8n
-        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Saved as a draft, not yet published: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes.'
+        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Or, without unpublishing: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes.'
         caps: 'Only inquiries the contact Worker forwards (5 a minute per visitor, 20 site-wide). Spam at confidence 0.7 or more is never answered.'
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
@@ -735,7 +735,7 @@ agents:
         trigger_type: event
         environment: n8n
       governance:
-        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Saved as a draft, not yet published: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
+        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Or, without unpublishing: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
         caps: 'One delivery email per Stripe-verified paid order, duplicates skipped.'
 
   - id: benjaire-shop-follow-ups
@@ -763,7 +763,7 @@ agents:
         trigger_type: scheduled
         environment: n8n
       governance:
-        kill_switch: 'Unpublish Shop · Flow follow ups in n8n. Saved as a draft, not yet published: shop_settings.customer_emails_paused = true sends nothing that run.'
+        kill_switch: 'Unpublish Shop · Flow follow ups in n8n. Or, without unpublishing: shop_settings.customer_emails_paused = true sends nothing that run.'
         caps: 'Each email once per order. A run with more due than followup_max_per_run (default 5) is held for Khaneil and reported to Atlas.'
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or

@@ -86,7 +86,7 @@ agents:
         credential_owner: Khaneil (n8n credentials)
         risk: medium
         audit_log: n8n executions and the commerce_products data table
-        kill_switch: 'Unpublish Commerce · Design product in n8n. Saved as a draft, not yet published: shop_settings.design_runs_paused = true skips a run before any Claude or Canva call.'
+        kill_switch: 'Unpublish Commerce · Design product in n8n. Or, without unpublishing: shop_settings.design_runs_paused = true skips a run before any Claude or Canva call.'
         caps: 'At most 2 new designs per 7 days, one per run, 3 attempts per idea; the Claude brief is capped at 3,000 tokens. Emails go only to Khaneil.'
       docs:
         known_issues:
@@ -751,7 +751,7 @@ agents:
         credential_owner: Khaneil (n8n credentials)
         risk: medium
         audit_log: n8n executions
-        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Saved as a draft, not yet published: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
+        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Or, without unpublishing: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
         caps: 'One delivery email per Stripe-verified paid order, duplicates skipped. Follow ups are held for Khaneil when more are due in a run than followup_max_per_run (default 5).'
       docs:
         last_review: 2026-11-11

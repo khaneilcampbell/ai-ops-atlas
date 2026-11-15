@@ -15,9 +15,8 @@ One page for the agents that email people or change what the public sees. Use it
 ## Kill switches (stop without unpublishing)
 
 Each switch is off by default, so leaving it empty keeps today's behaviour. Turn it on to stop the
-sends below while everything else keeps running. Status on 2026-11-14: the n8n switches are saved as
-drafts and work once each workflow is published; the Worker switches work once the benjaire.com pull
-request "security: add contact and checkout kill switches" is merged.
+sends below while everything else keeps running. All switches are live as of 2026-11-15: the four n8n
+workflows were published and the benjaire.com Worker switches were merged.
 
 | Switch | Where | What stops | What still happens |
 | --- | --- | --- | --- |
