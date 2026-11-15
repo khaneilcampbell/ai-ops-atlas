@@ -24,12 +24,29 @@ type Geometry=ReturnType<typeof useGeometries>;
 type Materials=ReturnType<typeof useMaterials>;
 
 const WHEELS=[-.12,.12].flatMap(side=>[-.85,.5].map(z=>({p:[side,.09,z] as [number,number,number],s:[.055,.065,.065] as [number,number,number],c:"#202b36"})));
-/** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
 /** Edge lamps every metre down a runway, left out where an end taxiway crosses or joins it. */
 const runwayLampZ=(cz:number,len:number)=>{const out:number[]=[];for(let zz=cz-len/2+.5;zz<=cz+len/2-.5;zz+=1)if(!AIRPORT_END_TAXIWAYS.some(t=>Math.abs(zz-t.z)<t.d/2+.1))out.push(zz);return out;};
-const GEAR_TOP=.2;
 /** Fuselage tube (radius, centre height, start and end along the aircraft) and the underwing engines. */
 const FUSELAGE={radius:.19,y:.36,tubeFrom:-.95,tubeTo:.9} as const;
+/** Gear for flying aircraft hangs from the belly so it can fold up after takeoff. */
+const GEAR_TOP=.2;
+/** The gold jet's outermost gold sleeve stands this far off the tube, so its door sits on top of it. */
+const GOLD_SKIN=.012;
+const DOOR={y:FUSELAGE.y+.01,h:.14,w:.08} as const;
+/** Cabin windows, 22 a side; the left side skips the one the forward door covers. */
+function cabinWindows(side:number,x:number,c:string):Inst[]{
+  return Array.from({length:22},(_,i)=>({p:[side*x,FUSELAGE.y+.04,-.9+i*.085],s:[.012,.04,.04],c} as Inst))
+    .filter(w=>side>0||Math.abs(w.p[2]-AIRCRAFT_LAYOUT.doorZ)>DOOR.w/2+.02);
+}
+/** Forward passenger door: seam, skin-coloured panel, porthole, each a hair further out than the last. */
+function doorParts(l:Livery,skin:number,panel:string):Inst[]{
+  const x=-(FUSELAGE.radius+skin),z=AIRCRAFT_LAYOUT.doorZ;
+  return [
+    {p:[x-.003,DOOR.y,z],s:[.006,DOOR.h,DOOR.w],c:l.windows},
+    {p:[x-.006,DOOR.y,z],s:[.006,DOOR.h-.012,DOOR.w-.012],c:panel},
+    {p:[x-.009,DOOR.y+.03,z],s:[.004,.026,.022],c:l.windows},
+  ];
+}
 const ENGINE={x:.48,y:.19,z:-.5,d:.2,len:.42} as const;
 
 /** The gold private jet's extras: scaled about the forward door, gold sleeves in a polished material, clickable. */
@@ -77,9 +94,11 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
       {p:finAt(0),s:[.04,.54,.36],rx:fin,c:l.tail},
       {p:finAt(.14),s:[.045,.09,.34],rx:fin,c:l.tailLow},
       {p:finAt(.4),s:[.045,.09,.3],rx:fin,c:l.tailHigh},
-      // Forward passenger door on the skin, where the jet bridge meets it.
-      {p:[AIRCRAFT_LAYOUT.doorX+.005,y0-.1,AIRCRAFT_LAYOUT.doorZ],s:[.02,.2,.1],c:l.windows},
-      ...[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.002),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))),
+      // Forward passenger door (Khaneil, 2026-11-15: "fix jet door ... more realistic"): flush with the skin on the
+      // left side where the jet bridge meets it. A thin dark seam, a panel in the skin colour, and a small porthole,
+      // kept on the near-vertical band of the tube (window line to just below the midline) so no corner floats off it.
+      ...doorParts(l,gold?GOLD_SKIN:0,gold?GOLD_JET_FADE[GOLD_JET_FADE.length-1].c:l.fuselage),
+      ...[-1,1].flatMap(side=>cabinWindows(side,R+.002,l.windows)),
     ] as Inst[],
     // Gold private jet: a gold nose cap, gold sleeves fading back toward the white tail, and gold engine cowls.
     gold:gold?[
@@ -87,7 +106,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
       ...[-1,1].map(side=>({p:[side*ENGINE.x,ENGINE.y,ENGINE.z],s:[ENGINE.d+.008,ENGINE.len*.7,ENGINE.d+.008],rx:Math.PI/2,c:'#d4a63d'})),
     ] as Inst[]:[],
     // Cabin windows on top of the gold sleeves, so the window line runs nose to tail.
-    goldWindows:gold?[-1,1].flatMap(side=>Array.from({length:22},(_,i)=>({p:[side*(R+.015),y0+.04,-.9+i*.085],s:[.012,.04,.04],c:l.windows}))).filter(w=>w.p[2]<GOLD_JET_FADE[0].to) as Inst[]:[],
+    goldWindows:gold?[-1,1].flatMap(side=>cabinWindows(side,R+.015,l.windows)).filter(w=>w.p[2]<GOLD_JET_FADE[0].to) as Inst[]:[],
   };},[livery,parked,gold]);
   useFrame(()=>{
     if(night){

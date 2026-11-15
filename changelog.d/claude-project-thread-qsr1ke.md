@@ -1,2 +1,3 @@
 - 2026-11-15 · The private jet at the airport now stands on real landing gear (nose and main wheels) that folds away after takeoff, with a sleeker business-jet look: pointed nose, oval windows, rear engines, T-tail and a gold cheatline (#426)
 - 2026-11-15 · The private jet now has a lit cockpit and headlights with a forward beam at night, plus red, green and white wingtip lights, red beacons and white strobes like the airliners. The headlights burn while the gear is down, and the gear folds up after takeoff and comes down before landing (#427)
+- 2026-11-15 · Airliner and gold jet doors now sit flush on the fuselage: a thin seam, a skin-coloured panel and a small porthole at the window line, instead of a dark slab hanging below the body
