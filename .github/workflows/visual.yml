@@ -1,9 +1,17 @@
 name: Visual checks
 
 # Screenshots of the map, office and Mission Control compared with visual/baselines/ci.
-# Not a required check: it runs only when a pull request touches what it draws, or by hand.
+# Not a required check. It runs:
+#  - on a pull request only when it has the "visual" label (add the label to ask for it; later
+#    pushes re-run it while the label stays), and only if the PR touches what it draws,
+#  - every night on main, so a change that slipped through shows up the next morning,
+#  - by hand from the Actions tab.
+# Running it on every push used 6 runners for 35-60 minutes each time and queued every other check.
 on:
+  schedule:
+    - cron: "37 7 * * *" # 02:37 New York
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - "src/views/**"
       - "src/styles/**"
@@ -23,8 +31,10 @@ on:
 permissions:
   contents: read
 
+# Adding some other label must not cancel a screenshot run that is already going, so those
+# events get a group of their own.
 concurrency:
-  group: visual-${{ github.ref }}
+  group: visual-${{ github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'visual' && format('-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +45,7 @@ jobs:
     # so it runs as 6 shards side by side, split by spec file. Each shard takes roughly a sixth.
     # A shard that still hits 35 minutes is a real slowdown, not noise (the blank map after #148).
     timeout-minutes: 35
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'visual')
     strategy:
       fail-fast: false
       matrix:
