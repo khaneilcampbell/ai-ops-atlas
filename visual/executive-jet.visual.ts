@@ -3,17 +3,18 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
 /**
- * Executive jet screenshots (Khaneil, 2026-11-15: wheels + design upgrade). Written only when SHOT_DIR is set; no
+ * Executive jet screenshots (Khaneil, 2026-11-15: wheels + design upgrade, then cockpit lights, headlights, gear in and out). Written only when SHOT_DIR is set; no
  * baseline compare. Like gold-jet.visual.ts, it sets the airport clock to a moment in the executive jet's loop (at its
- * stand, taxiing, climbing out) and renders a camera placed beside the jet in airport-local coordinates.
+ * stand, taxiing, climbing out, on final) and renders a camera placed beside the jet in airport-local coordinates.
  */
 const out = process.env.SHOT_DIR;
-type Stage = "stand" | "taxi" | "climb";
+type Stage = "stand" | "taxi" | "climb" | "land";
 const SHOTS: { name: string; stage: Stage; eye: [number, number, number] }[] = [
   { name: "stand", stage: "stand", eye: [2.2, 1.0, 2.6] },
   { name: "stand-low", stage: "stand", eye: [-1.6, 0.35, -2.2] },
   { name: "taxi", stage: "taxi", eye: [-2.4, 1.1, 2.4] },
   { name: "climb", stage: "climb", eye: [-2.6, 0.6, 2.6] },
+  { name: "land", stage: "land", eye: [-2.2, -0.2, -2.6] },
 ];
 
 async function shoot(page: Page, phone: boolean) {
@@ -38,11 +39,13 @@ async function shoot(page: Page, phone: boolean) {
     const pose = (t: number) => schedule.executiveJetPose(t, circuit);
     // Find the moments: parked (not moving for 10 s), taxiing (moving on the ground), climbing (gear partly up).
     const at: Partial<Record<Stage, number>> = {};
-    for (let t = base; t < base + 2 * f.cycle && !(at.stand && at.taxi && at.climb); t += 0.5) {
+    for (let t = base; t < base + 2 * f.cycle && !(at.stand && at.taxi && at.climb && at.land); t += 0.5) {
       const a = pose(t), b = pose(t + 10), moving = Math.hypot(a.x - b.x, a.z - b.z) > 0.5;
       if (!at.stand && a.y === 0 && !moving) at.stand = t;
       if (!at.taxi && a.y === 0 && moving && Math.hypot(a.x - pose(t + 1).x, a.z - pose(t + 1).z) > 0.3) at.taxi = t;
       if (!at.climb && a.y > 0.4 && a.gear > 0.3 && a.gear < 0.9) at.climb = t;
+      // Final approach: back down low with the gear lowered again, well after the climb.
+      if (at.climb && !at.land && t > at.climb + 30 && a.y > 0.3 && a.y < 1.2 && a.gear > 0.98) at.land = t;
     }
     const world = ([x, y, z]: number[]) => [plan.x + (plan.west ? 8 - x : x), 0.66 + y, plan.z + z] as const;
     const clock = airport.memoizedState!.memoizedState as { current: number };

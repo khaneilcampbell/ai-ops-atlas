@@ -33,9 +33,10 @@ import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Ki
 export interface Inst {
   p: [number, number, number];
   s: [number, number, number];
-  /** Rotation about y, then x. */
+  /** Rotation about y, then x, then z (a roll, for parts that follow a curved skin). */
   r?: number;
   rx?: number;
+  rz?: number;
   c?: string;
 }
 
@@ -60,7 +61,7 @@ export function Instanced({ items, geometry, material, pick, shadow = true }: { 
     const colored = items.some((it) => it.c);
     items.forEach((it, i) => {
       o.position.set(...it.p);
-      o.rotation.set(it.rx ?? 0, it.r ?? 0, 0, "YXZ");
+      o.rotation.set(it.rx ?? 0, it.r ?? 0, it.rz ?? 0, "YXZ");
       o.scale.set(...it.s);
       o.updateMatrix();
       m.setMatrixAt(i, o.matrix);

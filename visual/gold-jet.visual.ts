@@ -10,12 +10,15 @@ import { openAtlas, settle, waitForScene } from "./atlas";
  */
 const out = process.env.SHOT_DIR;
 type Stage = "boarding" | "flight" | "taxi";
-type Shot = { name: string; stage: Stage; eye: [number, number, number]; target?: [number, number, number] };
+/** `local`: eye and target are in the jet's own frame (nose -z, left -x), turned with its heading. */
+type Shot = { name: string; stage: Stage; eye: [number, number, number]; target?: [number, number, number]; local?: boolean };
 const SHOTS: Shot[] = [
   { name: "gate", stage: "boarding", eye: [3.2, 2.6, 4.2] },
   { name: "gate-wide", stage: "boarding", eye: [7, 6, 9] },
   { name: "taxi", stage: "taxi", eye: [-3.5, 1.6, -4] },
   { name: "flight", stage: "flight", eye: [-4, 1.5, 4] },
+  // Close on the forward passenger door and the nose, from the jet's left side while it taxis.
+  { name: "door", stage: "taxi", eye: [-1.5, 0.55, -1.7], target: [-0.2, 0.3, -0.85], local: true },
 ];
 
 /** Sets the airport clock to `stage` and returns its seconds, or renders the shots when `shots` is given. */
@@ -56,7 +59,9 @@ async function shoot(page: Page, shots: Shot[], phone: boolean) {
       state.advance(performance.now());
       state.advance(performance.now());
       const pose = schedule.fleetPose(clock.current, jet.GOLD_JET_SLOT, circuit);
-      const eye = [pose.x + s.eye[0] * k, pose.y + s.eye[1] * k, pose.z + s.eye[2] * k], target = s.target ?? [pose.x, pose.y + 0.3, pose.z];
+      const turn = ([x, y, z]: number[], m: number) => s.local ? [x * m * Math.cos(pose.yaw) + z * m * Math.sin(pose.yaw), y * m, -x * m * Math.sin(pose.yaw) + z * m * Math.cos(pose.yaw)] : [x * m, y * m, z * m];
+      const at = (v: number[], m: number) => { const d = turn(v, m); return [pose.x + d[0], pose.y + d[1], pose.z + d[2]]; };
+      const eye = at(s.eye, k), target = s.target ? (s.local ? at(s.target, 1) : s.target) : [pose.x, pose.y + 0.3, pose.z];
       state.camera.position.set(...world(eye));
       state.camera.lookAt(...world(target));
       state.camera.updateMatrixWorld();
