@@ -12,6 +12,7 @@ import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
 import {goldJetRide} from "./goldJetIds";
 import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
+import {EXECUTIVE_JET_MODEL,JET_GEAR_TOP} from "./executiveJetModel";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -280,38 +281,31 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
 }
 
 /** The executive jet (it used to circle the city on its own): now it flies the airport loop in the shared slot,
- * every other loop, resting at the north remote stand in between (executiveJetPose, Khaneil 2026-11-13). */
-const EXECUTIVE_JET=({
-    body:[
-      {p:[0,.13,0],s:[1.18,.17,.19],c:"#f5f2e9"},
-      {p:[.76,.20,0],s:[.25,.10,.155],c:"#233f4c"},
-      {p:[-.64,.18,-.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.64,.18,.32],s:[.34,.12,.12],c:"#e6dfcc"},
-      {p:[-.33,.18,-.32],s:[.035,.085,.085],c:"#243b34"},
-      {p:[-.33,.18,.32],s:[.035,.085,.085],c:"#243b34"},
-      ...[-1,1].flatMap(side=>Array.from({length:6},(_,i)=>({p:[.48-i*.17,.22,side*.175],s:[.045,.045,.016],c:"#284a50"}))),
-    ] as Inst[],
-    trim:[
-      {p:[-.18,.10,-.62],s:[.37,.045,1.2],r:-.38,c:"#eee9db"},
-      {p:[-.18,.10,.62],s:[.37,.045,1.2],r:.38,c:"#eee9db"},
-      {p:[-.40,.14,-1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.40,.14,1.13],s:[.22,.18,.035],c:"#29483b"},
-      {p:[-.95,.24,0],s:[.32,.43,.055],c:"#29483b"},
-      {p:[-1.0,.64,0],s:[.32,.04,.85],c:"#eee9db"},
-      {p:[-.96,.47,.031],s:[.27,.055,.012],c:"#c9a35a"},
-      ...[-1,1].map(side=>({p:[-.05,.12,side*.187],s:[1.55,.025,.012],c:"#b8893b"})),
-    ] as Inst[],
-  });
+ * every other loop, resting at the north remote stand in between (executiveJetPose, Khaneil 2026-11-13).
+ * The model (executiveJetModel.ts) stands on its landing gear, which folds into the belly after takeoff like the airliners'. */
+const JET_GEAR={
+  balls:EXECUTIVE_JET_MODEL.gear.balls.map(w=>({...w,p:[w.p[0],w.p[1]-JET_GEAR_TOP,w.p[2]]})) as Inst[],
+  boxes:EXECUTIVE_JET_MODEL.gear.boxes.map(w=>({...w,p:[w.p[0],w.p[1]-JET_GEAR_TOP,w.p[2]]})) as Inst[],
+};
 function ExecutiveJet({g,m,clock,circuit}:{g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
-  const ref=useRef<Group>(null);
+  const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   useFrame(()=>{
     if(!ref.current)return;
     const pose=executiveJetPose(clock.current,circuit);
     ref.current.position.set(pose.x,pose.y,pose.z);
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
+    if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
-  // The model is built nose +x; turn it so the nose points -z like the airliners.
-  return <group ref={ref}><group rotation={[0,Math.PI/2,0]}><Instanced items={EXECUTIVE_JET.body} geometry={g.ball} material={m.plain}/><Instanced items={EXECUTIVE_JET.trim} geometry={g.box} material={m.plain}/></group></group>;
+  const J=EXECUTIVE_JET_MODEL;
+  return <group ref={ref}>
+    <Instanced items={J.tubes} geometry={g.cyl} material={m.plain}/>
+    <Instanced items={J.balls} geometry={g.ball} material={m.plain}/>
+    <Instanced items={J.boxes} geometry={g.box} material={m.plain}/>
+    <group ref={gearRef} position={[0,JET_GEAR_TOP,0]}>
+      <Instanced items={JET_GEAR.balls} geometry={g.ball} material={m.plain} shadow={false}/>
+      <Instanced items={JET_GEAR.boxes} geometry={g.box} material={m.plain} shadow={false}/>
+    </group>
+  </group>;
 }
 
 /** The redesigned terminal, tower and car park: ten instanced draws sharing three extra geometries. */
