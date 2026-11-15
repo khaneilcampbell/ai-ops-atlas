@@ -70,7 +70,7 @@ function commits(fullName: string, i: number) {
   return [0, 1, 2].map((k) => ({
     sha: `${(i + 1).toString(16)}${k}`.padEnd(40, "0"),
     html_url: `https://github.com/${fullName}/commit/${k}`,
-    commit: { message: ["Tidy the README", "Fix the build", "Add a feature"][k], author: { name: "KC", date: iso(30 + i * 45 + k * 240) } },
+    commit: { message: ["Tidy the README", "Fix the build", "Add a feature"][k], author: { name: "Khaneil", date: iso(30 + i * 45 + k * 240) } },
   }));
 }
 

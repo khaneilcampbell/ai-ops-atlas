@@ -72,7 +72,7 @@ export function Galleria({plan:a,g,m,pick,night=false}:{plan?:GalleriaPlan;night
   // Curtain wall: blue-grey panes, slim dark mullions, a transom, and a warm-lit interior band.
   pane:canvasTexture(64,128,x=>{const g=x.createLinearGradient(0,0,0,128);g.addColorStop(0,'#9fb8bd');g.addColorStop(.55,'#6f8f96');g.addColorStop(1,'#d8b98a');x.fillStyle=g;x.fillRect(0,0,64,128);x.fillStyle='#e9d3a6';x.fillRect(8,74,48,30);x.fillStyle='#3b4744';x.fillRect(0,0,4,128);x.fillRect(0,24,64,3);x.fillRect(0,124,64,4);}),
   paneGlow:canvasTexture(64,128,x=>{x.fillStyle='#ffd796';x.fillRect(0,0,64,128);x.fillStyle='#fff0c8';x.fillRect(8,74,48,30);x.fillStyle='#000';x.fillRect(0,0,4,128);x.fillRect(0,24,64,3);x.fillRect(0,124,64,4);}),
-  // Solid white steel (KC, 2026-11-08), with the gridshell drawn as slightly darker ribs.
+  // Solid white steel (Khaneil, 2026-11-08), with the gridshell drawn as slightly darker ribs.
   lattice:canvasTexture(64,64,x=>{x.fillStyle='#f1f2ec';x.fillRect(0,0,64,64);x.strokeStyle='#c8cdc4';x.lineWidth=5;x.strokeRect(0,0,64,64);x.beginPath();x.moveTo(0,0);x.lineTo(64,64);x.stroke();}),
  }),[]);
  tex.lattice.repeat.set(18,6);

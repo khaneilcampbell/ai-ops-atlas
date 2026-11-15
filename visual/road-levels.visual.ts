@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 /**
- * Road levels and the Commerce district streets (KC, 2026-11-07): views of the Commerce district,
+ * Road levels and the Commerce district streets (Khaneil, 2026-11-07): views of the Commerce district,
  * the Marketplace and stations, and the whole island, day and night. Cameras are placed from the live
  * layout so the same views work before and after a layout change. SHOT_DIR picks the output folder.
  */
@@ -25,7 +25,7 @@ async function shoot(page:import('@playwright/test').Page,views:View[]){
  },views);
 }
 const VIEWS=(s:Spots):View[]=>[
- // Roughly KC's camera: from the south-east, looking down over the Commerce district.
+ // Roughly Khaneil's camera: from the south-east, looking down over the Commerce district.
  ['commerce',[s.commerce.x-1,0,s.commerce.z+3],[s.commerce.x+7,12,s.commerce.z+14]],
  ['commerce-south',[s.commerce.x-2,0,s.commerce.z+8],[s.commerce.x+2,9,s.commerce.z+20]],
  ['commerce-low',[s.commerce.x-3,.6,s.commerce.z+6],[s.commerce.x+5,2.4,s.commerce.z+13]],

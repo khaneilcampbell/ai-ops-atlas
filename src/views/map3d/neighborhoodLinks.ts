@@ -51,7 +51,7 @@ export function cityEastAccess(s:Pick<Scene3D,'carBridges'|'paving'>,obstacles:B
 /**
  * Where a building stands across the boulevard's last stretch (the wider Intelligence Hub district puts its tower at the
  * city street's end), routeAround steps round it in two short jogs beside the plaza, under the pedestrian walk. End the
- * boulevard at that building's edge instead, straight on (KC, 2026-11-08): the plaza lane round the headquarters, which
+ * boulevard at that building's edge instead, straight on (Khaneil, 2026-11-08): the plaza lane round the headquarters, which
  * the street graph already joins, carries traffic the last few metres to the city street.
  */
 export function straighten(road:Pt[]|undefined,start:Pt,east:number,target:Pt,obstacles:Box[],margin:number):Pt[]|undefined{

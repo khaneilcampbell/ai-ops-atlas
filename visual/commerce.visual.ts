@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
  * Commerce Pipeline rebuilt as a twisting teardrop glass tower on a garden podium, with its district
- * widened to fit (KC, 2026-11-01). Writes day/night camera views around it; the tower's position is
+ * widened to fit (Khaneil, 2026-11-01). Writes day/night camera views around it; the tower's position is
  * read from the live layout, so the same views work before and after the district grows.
  */
 const out=process.env.SHOT_DIR??'artifacts/commerce';

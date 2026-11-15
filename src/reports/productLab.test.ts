@@ -5,7 +5,7 @@ import { scoreTotal, validProductLabReport } from "./productLab";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Mutable = any;
-// The example brief in docs/product-lab.md; KC's n8n agent sends this shape.
+// The example brief in docs/product-lab.md; Khaneil's n8n agent sends this shape.
 const fixture = () => JSON.parse(readFileSync(new URL("../../ops/product-lab/fixtures/report.json", import.meta.url), "utf8"));
 
 describe("Product Lab report check", () => {

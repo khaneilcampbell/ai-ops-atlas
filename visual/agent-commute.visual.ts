@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {goTo,openAtlas,settle,waitForScene} from './atlas';
 /**
- * AI agents walking between their Circa apartments and their workplaces (KC, 2026-11-01; see
+ * AI agents walking between their Circa apartments and their workplaces (Khaneil, 2026-11-01; see
  * docs/agent-workdays.md). Frames the camera on the agents seen walking, then on Circa and a
  * headquarters door. The map shots run only when SHOT_DIR names a folder (software WebGL is slow);
  * the Workday tab check always runs.
@@ -11,7 +11,7 @@ async function shoot(page:import('@playwright/test').Page,prefix:string,phone=fa
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
   const fiber:typeof import('@react-three/fiber')=await import(url),canvas=document.querySelector('canvas')!,state=fiber._roots.get(canvas)?.store.getState();if(!state)throw new Error('Map renderer not found');
   const mesh=state.scene.getObjectByName('rail-commuters') as import('three').InstancedMesh|undefined;if(!mesh)throw new Error('Crowd mesh not found');
-  // Agents follow KC's twelve rail commuters in the crowd mesh (HillsCommunity.tsx).
+  // Agents follow Khaneil's twelve rail commuters in the crowd mesh (HillsCommunity.tsx).
   const [data,layout,planner,jobs,commute]=await Promise.all(['/src/catalog/index.ts','/src/views/mapLayout.ts','/src/views/map3d/scene.ts','/src/catalog/agentJobs.ts','/src/views/map3d/agentCommutes.ts'].map(u=>import(u)));
   const grouping=JSON.parse(localStorage.getItem('atlas:mapProjectGrouping')??'"district"'),scene=planner.buildScene(layout.layoutMap(data.catalog,[],grouping));
   const n=commute.planAgentCommutes(scene,jobs.agentJobs(data.catalog)).commutes.length,e=mesh.instanceMatrix.array,agents:{x:number;y:number;z:number}[]=[];

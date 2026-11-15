@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { load, save } from "../lib/storage";
 import type { InquiryProgress } from "./model";
 
-// Where KC is with each inquiry (replied, follow-ups sent, closed), remembered on this device by
+// Where Khaneil is with each inquiry (replied, follow-ups sent, closed), remembered on this device by
 // inquiry id. The site only stores what the client wrote; nothing here is sent anywhere.
 
 const KEY = "inquiryProgress";

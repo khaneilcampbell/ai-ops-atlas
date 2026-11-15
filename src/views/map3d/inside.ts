@@ -14,7 +14,7 @@ import { load, save } from "../../lib/storage";
  * Pure, so the choice of buildings and the saved preference can be tested without WebGL.
  */
 
-/** The saved toolbar choice. Off unless KC turned it on. */
+/** The saved toolbar choice. Off unless Khaneil turned it on. */
 export const INSIDE_KEY = "mapInside";
 export function loadInside(): boolean {
   return load<boolean>(INSIDE_KEY, false) === true;

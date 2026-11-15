@@ -23,7 +23,7 @@ describe('Financial District sidewalk walkers',()=>{
   // Staggered: at any moment some are out on the sidewalk and some are indoors.
   const out=walkers.filter(w=>walkerAt(w,30).visible).length;expect(out).toBeGreaterThan(2);expect(out).toBeLessThan(walkers.length);
  });
- it('draws fewer people as quality drops or on Battery saver, never fewer than KC\'s twelve commuters',()=>{
+ it('draws fewer people as quality drops or on Battery saver, never fewer than Khaneil\'s twelve commuters',()=>{
   expect(crowdLimit(60,{qualityLevel:0,saver:false})).toBe(60);
   expect(crowdLimit(60,{qualityLevel:2,saver:false})).toBe(36);
   expect(crowdLimit(60,{qualityLevel:0,saver:true})).toBe(36);

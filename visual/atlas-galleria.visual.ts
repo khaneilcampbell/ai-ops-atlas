@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * Atlas Galleria (KC, 2026-11-07): the shopping mall that replaced the Marketplace Gardens. Fixed
+ * Atlas Galleria (Khaneil, 2026-11-07): the shopping mall that replaced the Marketplace Gardens. Fixed
  * camera views over the old garden lot, so the same script shoots main (before) and the branch
  * (after); the interior views run only where the Galleria exists.
  * Run: GALLERIA_SHOTS=1 SHOT_DIR=... npx playwright test -c visual atlas-galleria

@@ -61,7 +61,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
           runtime: r.runtime,
-          // While waiting on KC, the monitor shows what the agent proposes, not its last run.
+          // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
         };

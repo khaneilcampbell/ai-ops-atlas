@@ -5,7 +5,7 @@ import {COMMUNITY} from './hillsCommunityPlan';
 import {stadiumCrown} from './stadiumGeometry';
 type Pt=[number,number];
 /**
- * One skyline for the stadium centre (KC, 2026-11-09): the wheel's hub sits at the station
+ * One skyline for the stadium centre (Khaneil, 2026-11-09): the wheel's hub sits at the station
  * platform's height and its rim tops out at the stadium roof's crown, so wheel, station and
  * stadium line up. The base scales with the wheel.
  */

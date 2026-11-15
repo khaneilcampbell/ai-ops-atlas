@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Phase 2 building module panels (KC, 2026-11-10): the inspector names the module a building houses. */
+/** Phase 2 building module panels (Khaneil, 2026-11-10): the inspector names the module a building houses. */
 const out=process.env.SHOT_DIR??'artifacts/module-panel';
 const BUILDINGS:[string,string][]=[['atlas-hq','Atlas Command Center'],['benjaire-hq','Business Operations HQ'],['agency','Growth & Marketing Studio'],['marketplace','Product Marketplace'],['aldren','Data Intelligence Center']];
 for(const [file,name] of BUILDINGS)test(`Module panel: ${name}`,async({page})=>{
