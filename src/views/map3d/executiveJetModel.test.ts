@@ -21,3 +21,30 @@ describe('executive jet model',()=>{
   for(const items of [J.tubes,J.gear.balls])expect(xsOf(items)).toEqual(xsOf(items.map(b=>({...b,p:[-b.p[0],b.p[1],b.p[2]]}))));
  });
 });
+
+import {JET_LIGHTS} from './executiveJetModel';
+import {executiveJetPose,FLIGHT_SCHEDULE} from './flightSchedule';
+
+describe('executive jet lights and gear in flight',()=>{
+ it('has a lit cockpit behind the windscreen and three landing lights at the front',()=>{
+  expect(J.cockpit.length).toBe(3);
+  expect(JET_LIGHTS.cockpit.length).toBe(3);
+  for(const l of JET_LIGHTS.cockpit)expect(l.p[2]).toBeLessThan(JET_FUSELAGE.from);
+  expect(JET_LIGHTS.landing.length).toBe(3);
+  for(const l of JET_LIGHTS.landing)expect(l.p[2]).toBeLessThan(0);
+ });
+ it('folds the gear up after takeoff and lowers it before landing, never flying low with it up',()=>{
+  const span=FLIGHT_SCHEDULE.cycle*4;let ups=0,downs=0,prev=executiveJetPose(0).gear,maxY=0;
+  for(let t=0;t<span;t+=.05){
+   const p=executiveJetPose(t);
+   if(p.y<.02)expect(p.gear).toBeGreaterThan(.98);
+   if(p.gear<.02)maxY=Math.max(maxY,p.y);
+   if(prev>=.5&&p.gear<.5)ups++;
+   if(prev<.5&&p.gear>=.5)downs++;
+   prev=p.gear;
+  }
+  expect(ups).toBeGreaterThan(0);
+  expect(downs).toBe(ups);
+  expect(maxY).toBeGreaterThan(1);
+ });
+});

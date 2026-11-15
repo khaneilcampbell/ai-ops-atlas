@@ -255,7 +255,7 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
     add({ category: "Aircraft", kind: "Airliner on the flight loop", count: LOOP.count - MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/airportArrivals.ts LOOP" });
     add({ category: "Aircraft", kind: "Gold private jet on the flight loop", count: MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/goldJetPlan.ts GOLD_JET_SLOT" });
     add({ category: "Aircraft", kind: "Parked airliner", count: AIRPORT_PARKED_STANDS.length, area: "Airport", moves: false, source: "src/views/map3d/LogisticsAirport.tsx" });
-    add({ category: "Aircraft", kind: "Executive jet on the flight loop", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
+    add({ category: "Aircraft", kind: "Executive jet on the flight loop (gear folds up after takeoff and down for landing; cockpit and landing lights at night)", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
     const crew = planAirportCrew();
     for (const [role, count] of countBy(crew, (c) => c.role)) add({ category: "People", kind: `Ground crew (${role})`, count, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts" });
     add({ category: "Airport vehicles", kind: "Baggage train", count: planCrewTrains().length, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts planCrewTrains" });

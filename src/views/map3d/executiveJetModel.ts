@@ -37,9 +37,6 @@ function build(){
   const finAt=(t:number):[number,number,number]=>[0,y0+R*.5+t*Math.cos(fin),.62+t*Math.sin(fin)];
   const tipX=.55+.48*Math.cos(.45),tipZ=.02+.48*Math.sin(.45);
   const boxes:Inst[]=[
-    // Wraparound windscreen and side cockpit windows.
-    {p:[0,y0+.068,from-.05],s:[.12,.018,.1],rx:-.4,c:GLASS},
-    ...[-1,1].map(side=>({p:[side*.075,y0+.04,from-.06],s:[.012,.035,.1],c:GLASS} as Inst)),
     // Gold cheatline and a green belly line, nose to tail cone.
     ...[-1,1].flatMap(side=>[
       {p:[side*(R+.002),y0-.018,(from+to)/2-.05],s:[.006,.012,(to-from)+.25],c:GOLD},
@@ -71,7 +68,28 @@ function build(){
     // Gear doors hanging open beside each leg.
     ...[-1,1].map(side=>({p:[side*(MAIN_GEAR.x+.05),.11,MAIN_GEAR.z],s:[.008,.08,.1],c:WHITE} as Inst)),
   ];
-  return {tubes,balls,boxes,gear:{balls:gearBalls,boxes:gearBoxes}};
+  // Wraparound windscreen and side cockpit windows: glass by day, lit from inside at night.
+  const cockpit:Inst[]=[
+    {p:[0,y0+.068,from-.05],s:[.12,.018,.1],rx:-.4,c:GLASS},
+    ...[-1,1].map(side=>({p:[side*.075,y0+.04,from-.06],s:[.012,.035,.1],c:GLASS} as Inst)),
+  ];
+  return {tubes,balls,boxes,cockpit,gear:{balls:gearBalls,boxes:gearBoxes}};
 }
 
 export const EXECUTIVE_JET_MODEL=build();
+
+/** Night lighting (Khaneil, 2026-11-15: "add lights to cockpit of the jet and headlights").
+ * cockpit: warm instrument glow behind the windscreen. landing: the "headlights", one in each wing root and one
+ * on the nose gear leg; they burn while the gear is down and fold away with it. beam: forward cone from the nose. */
+const COCKPIT_GLOW="#ffd89a",LANDING="#fff4d6";
+export const JET_LIGHTS={
+  cockpit:[
+    {p:[0,JET_FUSELAGE.y+.045,JET_FUSELAGE.from-.03],s:[.1,.02,.05],c:COCKPIT_GLOW},
+    ...[-1,1].map(side=>({p:[side*.072,JET_FUSELAGE.y+.04,JET_FUSELAGE.from-.06],s:[.008,.028,.08],c:COCKPIT_GLOW} as Inst)),
+  ] as Inst[],
+  landing:[
+    ...[-1,1].map(side=>({p:[side*.15,JET_FUSELAGE.y-.09,-.1],s:[.04,.022,.02],c:LANDING} as Inst)),
+    {p:[0,.09,NOSE_GEAR_Z-.012],s:[.03,.022,.02],c:LANDING},
+  ] as Inst[],
+  beam:{length:1.1,radius:.22,y:.1,z:NOSE_GEAR_Z-.02},
+} as const;

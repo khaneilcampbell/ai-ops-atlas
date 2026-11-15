@@ -12,7 +12,7 @@ import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
 import {goldJetRide} from "./goldJetIds";
 import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
-import {EXECUTIVE_JET_MODEL,JET_GEAR_TOP} from "./executiveJetModel";
+import {EXECUTIVE_JET_MODEL,JET_GEAR_TOP,JET_LIGHTS} from "./executiveJetModel";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -274,7 +274,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
     <AirportSign x={a.x+TERMINAL_HUB.x-TERMINAL_HUB.rx-TERMINAL_ENTRANCE.outer+.08} z={a.z+TERMINAL_HUB.z} y={TERRACE_H+TERMINAL_ENTRANCE.height+.3} mirrored={a.west}/>
     <BoardingActivity x={a.x} z={a.z} g={g} m={m}/>
     <GroundCrew a={a} g={g} m={m} clock={clock}/>
-    <group position={[a.x,TERRACE_H+.06,a.z]}><ExecutiveJet g={g} m={m} clock={clock} circuit={circuit}/></group>
+    <group position={[a.x,TERRACE_H+.06,a.z]}><ExecutiveJet g={g} m={m} clock={clock} circuit={circuit} night={night} beam={beam}/></group>
     {Array.from({length:FLIGHT_SCHEDULE.count},(_,slot)=><group key={slot} position={[a.x,TERRACE_H+.06,a.z]}><Aircraft g={g} m={m} clock={clock} slot={slot} circuit={circuit} livery={slot===GOLD_JET_SLOT?GOLD_JET_LIVERY:liveryFor(slot)} night={night} beam={beam} gold={slot===GOLD_JET_SLOT?goldTrim:undefined}/></group>)}
     <GoldJetBoarding x={a.x} z={a.z} g={g} m={m} clock={clock} circuit={circuit}/>
   </group>;
@@ -282,16 +282,18 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
 
 /** The executive jet (it used to circle the city on its own): now it flies the airport loop in the shared slot,
  * every other loop, resting at the north remote stand in between (executiveJetPose, Khaneil 2026-11-13).
- * The model (executiveJetModel.ts) stands on its landing gear, which folds into the belly after takeoff like the airliners'. */
+ * The model (executiveJetModel.ts) stands on its landing gear, which folds into the belly after takeoff and drops
+ * again on approach (pose.gear). At night the cockpit glows and the landing lights burn while the gear is down. */
 const JET_GEAR={
   balls:EXECUTIVE_JET_MODEL.gear.balls.map(w=>({...w,p:[w.p[0],w.p[1]-JET_GEAR_TOP,w.p[2]]})) as Inst[],
   boxes:EXECUTIVE_JET_MODEL.gear.boxes.map(w=>({...w,p:[w.p[0],w.p[1]-JET_GEAR_TOP,w.p[2]]})) as Inst[],
 };
-function ExecutiveJet({g,m,clock,circuit}:{g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit}){
-  const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
+function ExecutiveJet({g,m,clock,circuit,night=false,beam}:{g:Geometry;m:Materials;clock:MutableRefObject<number>;circuit?:FlightCircuit;night?:boolean;beam?:THREE.Material}){
+  const ref=useRef<Group>(null),gearRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   useFrame(()=>{
     if(!ref.current)return;
     const pose=executiveJetPose(clock.current,circuit);
+    if(landingRef.current)landingRef.current.visible=pose.gear>.02;
     ref.current.position.set(pose.x,pose.y,pose.z);
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
@@ -301,6 +303,14 @@ function ExecutiveJet({g,m,clock,circuit}:{g:Geometry;m:Materials;clock:MutableR
     <Instanced items={J.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={J.balls} geometry={g.ball} material={m.plain}/>
     <Instanced items={J.boxes} geometry={g.box} material={m.plain}/>
+    <Instanced items={J.cockpit} geometry={g.box} material={m.plain} shadow={false}/>
+    {night&&<>
+      <Instanced items={JET_LIGHTS.cockpit} geometry={g.box} material={m.glow} shadow={false}/>
+      <group ref={landingRef}>
+        <Instanced items={JET_LIGHTS.landing} geometry={g.box} material={m.glow} shadow={false}/>
+        {beam&&<mesh geometry={g.cone} material={beam} position={[0,JET_LIGHTS.beam.y,JET_LIGHTS.beam.z-JET_LIGHTS.beam.length]} rotation={[Math.PI/2,0,0]} scale={[JET_LIGHTS.beam.radius*2,JET_LIGHTS.beam.length,JET_LIGHTS.beam.radius*2]} renderOrder={2}/>}
+      </group>
+    </>}
     <group ref={gearRef} position={[0,JET_GEAR_TOP,0]}>
       <Instanced items={JET_GEAR.balls} geometry={g.ball} material={m.plain} shadow={false}/>
       <Instanced items={JET_GEAR.boxes} geometry={g.box} material={m.plain} shadow={false}/>
