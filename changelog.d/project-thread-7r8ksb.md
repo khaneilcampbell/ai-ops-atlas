@@ -1,0 +1,1 @@
+- 2026-11-12 · Screenshot checks on pull requests run as 10 evenly timed groups, so they no longer stop at the 35 minute limit (#389)
