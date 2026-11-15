@@ -46,7 +46,9 @@ for(const [name,size] of [['desktop',{width:1440,height:900}],['phone',{width:39
  expect(errors).toEqual([]);
 });
 async function floorMarkers(page:import('@playwright/test').Page,count:number){
- for(let i=0;i<20&&(await page.locator('[data-floor-label]').count())!==count;i++){await page.waitForTimeout(150);await settle(page,2);}
+ // The interior is a lazy chunk; on a busy CI machine it can take well over 3 s to mount, so wait by wall-clock time.
+ const until=Date.now()+45_000;
+ while(Date.now()<until&&(await page.locator('[data-floor-label]').count())!==count){await page.waitForTimeout(250);await settle(page,2);}
  await expect(page.locator('[data-floor-label]')).toHaveCount(count);
 }
 for(const [light,size] of [['day',{width:1440,height:900}],['night',{width:1440,height:900}],['phone',{width:390,height:844}]] as const)test(`Benjaire Marketing Agency interior, ${light}`,async({page})=>{
