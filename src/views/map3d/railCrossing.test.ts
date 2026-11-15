@@ -5,7 +5,7 @@ import {buildScene} from './scene';
 import {railCrossings,railCrossingParts,RAIL_CROSSING} from './railCrossing';
 import {marinaSite,marinaFootprint} from './marinaPlan';
 import {COMMUNITY as C} from './hillsCommunityPlan';
-import {loopPoint} from './perimeterRailPlan';
+import {loopPoint,PERIMETER_RAIL} from './perimeterRailPlan';
 
 describe('ground-level shore railway and its level crossings',()=>{
  for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`crosses the walk to the yacht dock on the ground: ${grouping}`,()=>{
@@ -22,6 +22,9 @@ describe('ground-level shore railway and its level crossings',()=>{
   // Every part stands on land, short of the stair head at the shore, and the stair, pier and dock stay where they were.
   const parts=railCrossingParts(dock[0],false);
   for(const part of parts)expect(part.p[2]+part.s[2]/2,`crossing part over the shore at ${part.p}`).toBeLessThan(harbor.shoreZ-.05);
+  // The line swings inland round the marina stair: a paved landing of open ground between the stair head and the track bed.
+  expect(harbor.shoreZ-(dock[0].at[1]+PERIMETER_RAIL.deckWidth/2)).toBeGreaterThan(1.5);
+  for(let d=0;d<p.length;d+=.25){const q=loopPoint(p,d);if(Math.abs(q.x-harbor.x)<1&&q.z>harbor.shoreZ-5)expect(q.z).toBeCloseTo(dock[0].at[1],5);}
   expect(marinaFootprint(harbor)).toEqual({x:2.5-2.5,z:harbor.pierZ-2.6,w:5,d:4.2});expect(harbor.x).toBeCloseTo(2.5,5);
  });
  it('lays a flush deck between the rails with a signal post on each approach',()=>{
