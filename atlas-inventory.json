@@ -95,11 +95,12 @@
     "hub-ci",
     "agent-registry-sync",
     "atlas-agent-factory",
+    "atlas-step-runner",
     "agent-operations-lead",
     "documentation-lead"
    ],
    "ai_agents": 2,
-   "automations": 4
+   "automations": 5
   },
   {
    "id": "project:soc-lab",
@@ -1624,6 +1625,20 @@
    "source": ""
   },
   {
+   "id": "atlas-step-runner",
+   "name": "Workflow Step Runner",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:intelligence-hub",
+   "building_name": "Agent Operations Center",
+   "placement": "Runs from its project building",
+   "owned_by": "agent-operations-lead",
+   "project": "intelligence-hub",
+   "runtime": "n8n Cloud",
+   "trigger": "Webhook from the Atlas site only (draft, not published)",
+   "source": ""
+  },
+  {
    "id": "agent-operations-lead",
    "name": "Agent Operations Lead",
    "kind": "AI agent",
@@ -2059,6 +2074,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-15T20:10:00.499Z",
- "commit": "fd9a1bb651936537163c46a4f457e6cbe43352c7"
+ "generated_at": "2026-11-15T21:05:06.556Z",
+ "commit": "97597caf45b851ebf5a57d08e129a28eae4b9b1b"
 }
