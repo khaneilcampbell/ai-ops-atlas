@@ -13,6 +13,10 @@
 //! Protocol, one line each: old sends the payload, new answers `ok`; old sends `reown` (its
 //! item is removed) or `keep`; after `reown` new answers `saved` or `failed`; new sends `ready`
 //! once its window is up, and the old copy quits.
+//!
+//! If the new copy never says `ready` (it crashed, hung or was refused), the old copy stops it
+//! and restarts through LaunchServices instead, so Atlas always reopens after an update. That
+//! fallback is a cold start and asks for Touch ID once.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, Write};
@@ -59,7 +63,8 @@ fn send_line(w: &mut impl Write, line: &str) -> bool {
 }
 
 /// The old copy's side. `release` removes its vault item and `restore` adds it back.
-/// Returns once the new copy's window is up, or it stopped answering.
+/// Returns true once the new copy's window is up, false if it stopped answering first, in
+/// which case the caller must not quit without starting Atlas some other way.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn give(
     r: &mut impl BufRead,
@@ -67,12 +72,12 @@ fn give(
     payload: &Payload,
     release: impl FnOnce() -> Result<(), String>,
     restore: impl FnOnce() -> Result<(), String>,
-) {
+) -> bool {
     let Ok(json) = serde_json::to_string(payload) else {
-        return;
+        return false;
     };
     if !send_line(w, &json) || read_line(r).as_deref() != Some("ok") {
-        return;
+        return false;
     }
     if payload.secrets.is_some() && release().is_ok() {
         let saved = send_line(w, "reown") && read_line(r).as_deref() == Some("saved");
@@ -81,9 +86,9 @@ fn give(
             let _ = restore();
         }
     } else if !send_line(w, "keep") {
-        return;
+        return false;
     }
-    let _ = read_line(r);
+    read_line(r).as_deref() == Some("ready")
 }
 
 /// The new copy's side, first half: reads the payload before anything else starts.
@@ -184,7 +189,8 @@ pub fn window_ready(app: &tauri::App) {
 }
 
 /// Restarts into the update that was just installed, keeping Atlas unlocked and on the same
-/// view. Falls back to an ordinary restart if the new copy can't be started this way.
+/// view. Falls back to an ordinary restart (through LaunchServices) if the new copy can't be
+/// started this way or never reports its window up, so the app never just quits.
 #[tauri::command]
 pub async fn update_relaunch(
     app: tauri::AppHandle,
@@ -289,20 +295,27 @@ mod platform {
         };
         // Like Tauri's own restart: no shared stdout or process group, so the new copy
         // doesn't die when this one exits. Its stdin is the socket.
-        let spawned = Command::new(&exe)
+        let Ok(mut child) = Command::new(&exe)
             .env(ENV, "1")
             .stdin(Stdio::from(OwnedFd::from(theirs)))
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .process_group(0)
-            .spawn();
-        if spawned.is_err() {
+            .spawn()
+        else {
             return false;
-        }
+        };
+        // Stops a new copy that didn't come up, so the ordinary restart that follows is the
+        // only Atlas left running.
+        let mut give_up = move || {
+            let _ = child.kill();
+            let _ = child.wait();
+            false
+        };
         // The last answer waits for the new window, which can take longer than one step.
         let _ = mine.set_read_timeout(Some(READY_TIMEOUT));
         let Ok(mut w) = mine.try_clone() else {
-            return true;
+            return give_up();
         };
         let mut r = BufReader::new(mine);
         let payload = Payload {
@@ -311,10 +324,10 @@ mod platform {
             window,
         };
         let held = payload.secrets.clone();
-        give(&mut r, &mut w, &payload, secrets::release_vault, || {
+        let ready = give(&mut r, &mut w, &payload, secrets::release_vault, || {
             held.as_ref().map_or(Ok(()), secrets::add_vault)
         });
-        true
+        ready || give_up()
     }
 }
 
@@ -355,12 +368,14 @@ mod tests {
     }
 
     /// Runs the old copy's side against scripted answers from the new copy.
-    fn old_side(p: &Payload, answers: &str, release_ok: bool) -> (String, bool, bool) {
+    /// Returns what it sent, whether it released and restored the vault, and whether it saw
+    /// the new window come up.
+    fn old_side(p: &Payload, answers: &str, release_ok: bool) -> (String, bool, bool, bool) {
         let mut r = BufReader::new(Cursor::new(answers.as_bytes().to_vec()));
         let mut sent = Vec::new();
         let released = Cell::new(false);
         let restored = Cell::new(false);
-        give(
+        let ready = give(
             &mut r,
             &mut sent,
             p,
@@ -381,6 +396,7 @@ mod tests {
             String::from_utf8(sent).unwrap(),
             released.get(),
             restored.get(),
+            ready,
         )
     }
 
@@ -404,33 +420,46 @@ mod tests {
 
     #[test]
     fn new_copy_takes_over_the_vault() {
-        let (sent, released, restored) = old_side(&payload(true), "ok\nsaved\nready\n", true);
+        let (sent, released, restored, ready) =
+            old_side(&payload(true), "ok\nsaved\nready\n", true);
         assert!(sent.ends_with("\nreown\n"));
-        assert!(released && !restored);
+        assert!(released && !restored && ready);
     }
 
     #[test]
     fn old_copy_puts_the_vault_back_when_the_new_one_fails() {
-        let (_, released, restored) = old_side(&payload(true), "ok\nfailed\n", true);
-        assert!(released && restored);
+        let (_, released, restored, ready) = old_side(&payload(true), "ok\nfailed\n", true);
+        assert!(released && restored && !ready);
         // And when it stops answering altogether.
-        let (_, _, restored) = old_side(&payload(true), "ok\n", true);
-        assert!(restored);
+        let (_, _, restored, ready) = old_side(&payload(true), "ok\n", true);
+        assert!(restored && !ready);
     }
 
     #[test]
     fn a_vault_that_cant_be_released_is_kept() {
-        let (sent, released, restored) = old_side(&payload(true), "ok\nready\n", false);
+        let (sent, released, restored, ready) = old_side(&payload(true), "ok\nready\n", false);
         assert!(sent.ends_with("\nkeep\n"));
-        assert!(released && !restored);
+        assert!(released && !restored && ready);
     }
 
     #[test]
     fn nothing_is_released_without_secrets_or_an_answer() {
-        let (sent, released, _) = old_side(&payload(false), "ok\nready\n", true);
-        assert!(sent.ends_with("\nkeep\n") && !released);
-        let (sent, released, _) = old_side(&payload(true), "", true);
-        assert!(!sent.contains("reown") && !released);
+        let (sent, released, _, ready) = old_side(&payload(false), "ok\nready\n", true);
+        assert!(sent.ends_with("\nkeep\n") && !released && ready);
+        let (sent, released, _, ready) = old_side(&payload(true), "", true);
+        assert!(!sent.contains("reown") && !released && !ready);
+    }
+
+    /// The old copy only quits on its own when the new window is up; anything short of an
+    /// explicit `ready` means it must restart Atlas the ordinary way instead.
+    #[test]
+    fn only_an_explicit_ready_lets_the_old_copy_quit() {
+        for answers in ["", "ok\n", "ok\nsaved\n", "ok\nsaved\nnope\n", "nope\n"] {
+            let (_, _, _, ready) = old_side(&payload(true), answers, true);
+            assert!(!ready, "{answers:?} must not count as ready");
+        }
+        let (_, _, _, ready) = old_side(&payload(false), "ok\nready\n", true);
+        assert!(ready);
     }
 
     #[test]

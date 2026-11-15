@@ -3,6 +3,20 @@ import { check, type Update } from "@tauri-apps/plugin-updater";
 import { isTauri } from "../lib/env";
 import { useAtlas } from "../state";
 
+type InstallState = { busy: boolean; pct?: number; error?: string };
+
+/**
+ * What the button says. While the download runs it shows the percentage; once the update is
+ * installed it says Atlas is restarting, which lasts until the new copy's window is up and
+ * this one quits (a few seconds; up to about 20 if Atlas has to fall back to a cold start).
+ */
+export function updateLabel(state: InstallState): string {
+  if (state.error) return "Update failed, retry";
+  if (!state.busy) return "Update available";
+  if (state.pct !== undefined && state.pct < 100) return `Updating… ${state.pct}%`;
+  return state.pct === undefined ? "Updating…" : "Updating, restarting…";
+}
+
 const RECHECK_MS = 10 * 60 * 1000;
 // Coming back to the window checks again, but not more than once a minute.
 const FOCUS_GAP_MS = 60 * 1000;
@@ -17,7 +31,7 @@ const FOCUS_GAP_MS = 60 * 1000;
 export function UpdateButton() {
   const { view, selection } = useAtlas();
   const [update, setUpdate] = useState<Update | null>(null);
-  const [state, setState] = useState<{ busy: boolean; pct?: number; error?: string }>({ busy: false });
+  const [state, setState] = useState<InstallState>({ busy: false });
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -58,6 +72,8 @@ export function UpdateButton() {
           if (total) setState({ busy: true, pct: Math.round((done / total) * 100) });
         }
       });
+      // Installed: say so before the restart, which keeps this window up for a few seconds.
+      setState({ busy: true, pct: 100 });
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("update_relaunch", { resume: JSON.stringify({ view, selection }) });
     } catch (e) {
@@ -65,7 +81,6 @@ export function UpdateButton() {
     }
   };
 
-  const label = state.busy ? (state.pct !== undefined && state.pct < 100 ? `Updating… ${state.pct}%` : "Restarting…") : "Update available";
   return (
     <button
       className="pill-mode update"
@@ -78,7 +93,7 @@ export function UpdateButton() {
       }
     >
       <span className="dot" />
-      {state.error ? "Update failed, retry" : label}
+      {updateLabel(state)}
     </button>
   );
 }
