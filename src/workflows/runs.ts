@@ -103,6 +103,7 @@ const freeze = (d: WorkflowDefinition): WorkflowDefinition => JSON.parse(JSON.st
  * the work; nothing is marked done. Nothing is executed: work starts from the Task Center as usual.
  */
 export function startLiveRun(goal: Goal, def: WorkflowDefinition, svc: TaskService, store: RunStore, catalog: Catalog, actor: Actor, at = new Date().toISOString()): { run: WorkflowRun | null; error: string | null } {
+  if (actor.kind !== "person") return { run: null, error: `${actor.name} can't start a workflow run: only a person can.` };
   const problems = definitionProblems(def);
   if (problems.length) return { run: null, error: `The workflow definition is invalid: ${problems[0]}` };
   const snapshot = freeze(def);
