@@ -74,6 +74,10 @@ pub struct EcoAgent {
     pub status: String,
     pub approval: Option<String>,
     pub risk: Option<String>,
+    /// How to stop the agent without a deploy, from the catalog's governance.kill_switch.
+    pub kill_switch: Option<String>,
+    /// Always-on limits (sends, spend, writes), from governance.caps.
+    pub caps: Option<String>,
 }
 
 /// The catalog as the web view sees it. Untrusted like everything else in the prompt.
@@ -124,6 +128,8 @@ impl EcoContext {
                     status: tidy(&a.status, 30),
                     approval: opt(a.approval, 200),
                     risk: opt(a.risk, 20),
+                    kill_switch: opt(a.kill_switch, 240),
+                    caps: opt(a.caps, 240),
                 })
                 .collect(),
         }
@@ -786,6 +792,13 @@ fn data_block(ctx: &EcoContext, entries: &[RepoEntry], detail: u8) -> B {
         }
         if let Some(x) = &a.risk {
             parts.push(format!("risk {x}"));
+        }
+        parts.push(format!(
+            "kill switch {}",
+            a.kill_switch.as_deref().unwrap_or("not documented")
+        ));
+        if let Some(x) = &a.caps {
+            parts.push(format!("caps {x}"));
         }
         if detail > 0 {
             if let Some(x) = &a.autonomy_note {
@@ -1628,6 +1641,32 @@ pub mod tests {
         assert!(body.get("tools").is_none());
         assert_eq!(body["fallbacks"], "default");
         assert!(p.refs.contains("agent:publisher") && p.refs.contains("repo:o/r"));
+    }
+
+    #[test]
+    fn guardrails_reach_the_prompt() {
+        let mut c = ctx();
+        c.agents.push(EcoAgent {
+            id: "mailer".into(),
+            name: "Mailer".into(),
+            repository: "o/r".into(),
+            telemetry: true,
+            kill_switch: Some("Set CONTACT_PAUSED=1".into()),
+            caps: Some("20 a minute site-wide".into()),
+            ..Default::default()
+        });
+        let p = build(
+            &c.cleaned(),
+            &entries(),
+            &limits(Depth::Standard),
+            "m",
+            Depth::Standard,
+            "2026-10-28",
+        );
+        assert!(p
+            .user
+            .contains("kill switch Set CONTACT_PAUSED=1 | caps 20 a minute site-wide"));
+        assert!(p.user.contains("Publisher") && p.user.contains("kill switch not documented"));
     }
 
     #[test]

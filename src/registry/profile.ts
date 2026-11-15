@@ -38,6 +38,8 @@ export interface AgentProfile {
     credentialOwner: string | null;
     risk: Risk | null;
     auditLog: string | null;
+    killSwitch: string | null;
+    caps: string | null;
   };
   cost: { budget: string | null; notes: string | null };
   docs: { source: string | null; technical: string | null; runbook: string | null; knownIssues: string[]; improvements: string[]; lastReview: string | null };
@@ -101,6 +103,8 @@ export function toProfile(agent: Agent, project: Project | undefined): AgentProf
       credentialOwner: nn(reg?.governance?.credentialOwner),
       risk: nn(reg?.governance?.risk),
       auditLog: nn(reg?.governance?.auditLog),
+      killSwitch: nn(reg?.governance?.killSwitch),
+      caps: nn(reg?.governance?.caps),
     },
     cost: { budget: nn(reg?.cost?.budget), notes: nn(reg?.cost?.notes) },
     docs: {
