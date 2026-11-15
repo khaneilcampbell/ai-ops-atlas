@@ -1895,7 +1895,7 @@
   },
   {
    "category": "Aircraft",
-   "kind": "Executive jet on the flight loop",
+   "kind": "Executive jet on the flight loop (gear folds up after takeoff and down for landing; lit cockpit, headlights, nav lights, beacons and strobes at night)",
    "count": 1,
    "area": "Airport",
    "moves": true,
@@ -2059,6 +2059,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-15T19:10:23.237Z",
- "commit": "90e9bdbec5079f2fb2ee597af9bf5b10fe0c22f4"
+ "generated_at": "2026-11-15T19:49:26.143Z",
+ "commit": "c5d8c9ba4f9e60ca2b74ce7c0ccb14d04b5952de"
 }
