@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {EXECUTIVE_JET_MODEL as J,JET_FUSELAGE,JET_GEAR_TOP} from './executiveJetModel';
+import {EXECUTIVE_JET_MODEL as J,JET_BEAM,JET_FUSELAGE,JET_GEAR_TOP} from './executiveJetModel';
+import {NAV_GREEN,NAV_RED} from './aircraftLights';
 
 const all=[...J.tubes,...J.balls,...J.boxes,...J.gear.balls,...J.gear.boxes];
 describe('executive jet model',()=>{
@@ -20,31 +21,17 @@ describe('executive jet model',()=>{
   const xsOf=(items:typeof all)=>items.map(b=>b.p[0].toFixed(3)).sort();
   for(const items of [J.tubes,J.gear.balls])expect(xsOf(items)).toEqual(xsOf(items.map(b=>({...b,p:[-b.p[0],b.p[1],b.p[2]]}))));
  });
-});
 
-import {JET_LIGHTS} from './executiveJetModel';
-import {executiveJetPose,FLIGHT_SCHEDULE} from './flightSchedule';
-
-describe('executive jet lights and gear in flight',()=>{
- it('has a lit cockpit behind the windscreen and three landing lights at the front',()=>{
+ it('has a lit cockpit and night lights laid out like the airliners (Khaneil, 2026-11-15)',()=>{
   expect(J.cockpit.length).toBe(3);
-  expect(JET_LIGHTS.cockpit.length).toBe(3);
-  for(const l of JET_LIGHTS.cockpit)expect(l.p[2]).toBeLessThan(JET_FUSELAGE.from);
-  expect(JET_LIGHTS.landing.length).toBe(3);
-  for(const l of JET_LIGHTS.landing)expect(l.p[2]).toBeLessThan(0);
- });
- it('folds the gear up after takeoff and lowers it before landing, never flying low with it up',()=>{
-  const span=FLIGHT_SCHEDULE.cycle*4;let ups=0,downs=0,prev=executiveJetPose(0).gear,maxY=0;
-  for(let t=0;t<span;t+=.05){
-   const p=executiveJetPose(t);
-   if(p.y<.02)expect(p.gear).toBeGreaterThan(.98);
-   if(p.gear<.02)maxY=Math.max(maxY,p.y);
-   if(prev>=.5&&p.gear<.5)ups++;
-   if(prev<.5&&p.gear>=.5)downs++;
-   prev=p.gear;
-  }
-  expect(ups).toBeGreaterThan(0);
-  expect(downs).toBe(ups);
-  expect(maxY).toBeGreaterThan(1);
+  for(const c of J.cockpit)expect(c.p[2]).toBeLessThan(JET_FUSELAGE.from);
+  const red=J.lights.nav.find(l=>l.c===NAV_RED)!,green=J.lights.nav.find(l=>l.c===NAV_GREEN)!;
+  expect(red.p[0]).toBeLessThan(-.9);expect(green.p[0]).toBeGreaterThan(.9);
+  expect(J.lights.beacon).toHaveLength(3);expect(J.lights.strobe).toHaveLength(3);
+  // Headlights: two in the wing roots and one on the nose gear, all ahead of the main gear; the beam starts at the nose light.
+  expect(J.lights.landing).toHaveLength(3);
+  for(const l of J.lights.landing)expect(l.p[2]).toBeLessThan(0);
+  const nose=J.lights.landing.reduce((a,b)=>a.p[2]<b.p[2]?a:b);
+  expect(Math.abs(nose.p[2]-JET_BEAM.z)).toBeLessThan(.05);
  });
 });

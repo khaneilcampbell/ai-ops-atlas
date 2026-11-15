@@ -127,3 +127,21 @@ it('flies the executive jet every other loop in the shared slot, resting at the 
   expect([p.x,p.z]).toEqual([7,-4.6]);
  }
 });
+
+it('the executive jet tucks its gear after takeoff and lowers it before landing (Khaneil, 2026-11-15)',()=>{
+ for(const c of CIRCUITS){
+  const base=SHARED_SLOT*f.interval-f.start;
+  const k=[0,1].find(k=>{for(let t=0;t<f.cycle;t+=.5)if(executiveJetPose(base+k*f.cycle+t,c).y>1)return true;return false;})!;
+  // Gear state changes over the flying loop: down, up, down again.
+  const states:string[]=[];let lowest=1;
+  for(let t=0;t<f.cycle;t+=.1){
+   const p=executiveJetPose(base+k*f.cycle+t,c),s=p.gear>.98?'down':p.gear<.02?'up':'';
+   if(s&&states[states.length-1]!==s)states.push(s);
+   // Never on the runway or taxiway with the wheels up.
+   if(p.y<.02)expect(p.gear).toBeGreaterThan(.98);
+   if(p.y>1)lowest=Math.min(lowest,p.gear);
+  }
+  expect(states).toEqual(['down','up','down']);
+  expect(lowest).toBeLessThan(.02);
+ }
+});

@@ -1,4 +1,5 @@
 import type {Inst} from "./models";
+import {LANDING_WHITE,NAV_GREEN,NAV_RED,STROBE_WHITE} from "./aircraftLights";
 
 /**
  * The executive jet on the airport loop (Khaneil, 2026-11-15: "add wheels to private jet and design upgrade").
@@ -68,28 +69,26 @@ function build(){
     // Gear doors hanging open beside each leg.
     ...[-1,1].map(side=>({p:[side*(MAIN_GEAR.x+.05),.11,MAIN_GEAR.z],s:[.008,.08,.1],c:WHITE} as Inst)),
   ];
-  // Wraparound windscreen and side cockpit windows: glass by day, lit from inside at night.
+  // Wraparound windscreen and side cockpit windows: tinted by day, lit warm from inside at night.
   const cockpit:Inst[]=[
-    {p:[0,y0+.068,from-.05],s:[.12,.018,.1],rx:-.4,c:GLASS},
-    ...[-1,1].map(side=>({p:[side*.075,y0+.04,from-.06],s:[.012,.035,.1],c:GLASS} as Inst)),
+    {p:[0,y0+.068,from-.05],s:[.12,.018,.1],rx:-.4},
+    ...[-1,1].map(side=>({p:[side*.075,y0+.04,from-.06],s:[.012,.035,.1]} as Inst)),
   ];
-  return {tubes,balls,boxes,cockpit,gear:{balls:gearBalls,boxes:gearBoxes}};
+  // Night lights, laid out like the airliners' (aircraftLights.ts): red left tip, green right tip, white tail;
+  // red beacons top, belly and fin; white strobes; landing lights ("headlights") in the wing roots and on the nose gear.
+  const tip=(side:number,dz=0):[number,number,number]=>[side*(tipX+.012),y0-.085,tipZ-.03+dz];
+  const fy=y0+R*.5+.22*Math.cos(fin),fz=.62+.22*Math.sin(fin);
+  const lights={
+    nav:[{p:tip(-1),s:[.03,.025,.03],c:NAV_RED},{p:tip(1),s:[.03,.025,.03],c:NAV_GREEN},{p:[0,y0+.015,to+.47],s:[.025,.025,.025],c:STROBE_WHITE}] as Inst[],
+    beacon:[{p:[0,y0+R+.005,-.15],s:[.03,.02,.03],c:NAV_RED},{p:[0,y0-.12,.15],s:[.03,.02,.03],c:NAV_RED},{p:[0,fy,fz],s:[.034,.025,.03],c:NAV_RED}] as Inst[],
+    strobe:[{p:tip(-1,.06),s:[.025,.02,.025],c:STROBE_WHITE},{p:tip(1,.06),s:[.025,.02,.025],c:STROBE_WHITE},{p:[0,y0+.03,to+.49],s:[.02,.02,.02],c:STROBE_WHITE}] as Inst[],
+    landing:[...[-1,1].map(side=>({p:[side*.2,y0-.1,-.12],s:[.04,.025,.025],c:LANDING_WHITE} as Inst)),{p:[0,.11,NOSE_GEAR_Z-.02],s:[.035,.025,.025],c:LANDING_WHITE}] as Inst[],
+  };
+  return {tubes,balls,boxes,cockpit,lights,gear:{balls:gearBalls,boxes:gearBoxes}};
 }
 
 export const EXECUTIVE_JET_MODEL=build();
-
-/** Night lighting (Khaneil, 2026-11-15: "add lights to cockpit of the jet and headlights").
- * cockpit: warm instrument glow behind the windscreen. landing: the "headlights", one in each wing root and one
- * on the nose gear leg; they burn while the gear is down and fold away with it. beam: forward cone from the nose. */
-const COCKPIT_GLOW="#ffd89a",LANDING="#fff4d6";
-export const JET_LIGHTS={
-  cockpit:[
-    {p:[0,JET_FUSELAGE.y+.045,JET_FUSELAGE.from-.03],s:[.1,.02,.05],c:COCKPIT_GLOW},
-    ...[-1,1].map(side=>({p:[side*.072,JET_FUSELAGE.y+.04,JET_FUSELAGE.from-.06],s:[.008,.028,.08],c:COCKPIT_GLOW} as Inst)),
-  ] as Inst[],
-  landing:[
-    ...[-1,1].map(side=>({p:[side*.15,JET_FUSELAGE.y-.09,-.1],s:[.04,.022,.02],c:LANDING} as Inst)),
-    {p:[0,.09,NOSE_GEAR_Z-.012],s:[.03,.022,.02],c:LANDING},
-  ] as Inst[],
-  beam:{length:1.1,radius:.22,y:.1,z:NOSE_GEAR_Z-.02},
-} as const;
+/** The headlight beam: a cone from the nose-gear landing light, opening ahead of the jet (like LANDING_BEAM). */
+export const JET_BEAM={length:1.1,radius:.22,y:.1,z:NOSE_GEAR_Z-.04} as const;
+/** Cockpit glass colour by day and its warm glow at night. */
+export const JET_COCKPIT={day:GLASS,night:"#ffe2a8"} as const;
