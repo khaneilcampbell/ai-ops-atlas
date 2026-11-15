@@ -688,6 +688,7 @@ function World({
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
   // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
+  const railWalks=useMemo(()=>scene.walks.map(w=>[[w.x0,w.z0],[w.x1,w.z1]] as [[number,number],[number,number]]),[scene]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
   // Decorative travel loops (train, shuttle cars, yacht) for the perimeter-loop layout: one plan shared by all three.
@@ -1243,7 +1244,7 @@ function World({
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

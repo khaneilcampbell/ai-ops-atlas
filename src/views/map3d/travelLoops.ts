@@ -242,7 +242,7 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
  const journeys:Journey[]=[
   // By train to the Vendor & Supplier Hub (Workflow Automation Hub stop), then a short walk in.
   {id:'train-vendor',people:2,build:(tl,k)=>{if(!trainRide(tl,hub,k))return;const off=offTrain(hub),w=streetWalk(g,off[off.length-1],vendor);return w&&tl.walk([...off,...w.slice(1)]);}},
-  // By train to Events Arena Station, down the stair, along the forecourt and the marina, aboard the yacht before she sails.
+  // By train to Events Arena Station, down the ramp, along the forecourt, over the level crossing to the marina, aboard the yacht before she sails.
   {id:'train-yacht',people:4,build:(tl,k)=>trainRide(tl,arena,k)?aboardYacht(tl,stairFoot(arena)):undefined},
   // By train to Events Arena Station, then the taxi to the airport terminal; inside, they board their flight.
   {id:'train-airport',cars:[taxi],people:2,build:(tl,k)=>{if(!trainRide(tl,arena,k))return;const end=carRide(tl,taxi,0,1,arenaOff,k),w=end&&streetWalk(g,end,terminal);return w&&tl.walk(w);}},
