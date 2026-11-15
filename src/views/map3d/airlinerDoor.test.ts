@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {airlinerDoor,clearOfDoor,DOOR,doorFrame} from "./airlinerDoor";
+import {airlinerDoor,clearOfDoor,DOOR,doorCorners,doorFrame} from "./airlinerDoor";
 
 describe("airliner passenger door",()=>{
   const radius=.194,y0=.36,z=-.8,parts=airlinerDoor({radius,y0,z,skin:"#f6f2e7",glass:"#2a2620"});
@@ -10,7 +10,7 @@ describe("airliner passenger door",()=>{
       expect(out).toBeGreaterThan(0);
       expect(out).toBeLessThan(.008);
       expect(p.p[0]).toBeLessThan(0);
-      expect(p.p[2]).toBe(z);
+      expect(Math.abs(p.p[2]-z)).toBeLessThanOrEqual(DOOR.width/2+DOOR.seam);
     }
   });
   it("is a cabin-height door, not a slab down to the belly",()=>{
@@ -34,5 +34,18 @@ describe("airliner passenger door",()=>{
     // The real window stations: -0.9 + i * 0.085.
     const covered=Array.from({length:22},(_,i)=>-.9+i*.085).filter(w=>!clearOfDoor(w,z));
     expect(covered.map(w=>+w.toFixed(3))).toEqual([-.815,-.73]);
+  });
+  it("has rounded corners: a disc in each corner of the seam and the panel, flush and inside the outline",()=>{
+    const corners=doorCorners({radius,y0,z,skin:"#f6f2e7"}),f=doorFrame(radius,y0);
+    expect(corners).toHaveLength(8);
+    for(const c of corners){
+      const out=-c.p[0]*Math.cos(f.phi)+(c.p[1]-y0)*Math.sin(f.phi)-radius;
+      expect(out).toBeGreaterThan(0);
+      expect(out).toBeLessThan(.008);
+      expect(Math.abs(c.p[2]-z)+c.s[2]).toBeLessThanOrEqual(DOOR.width/2+DOOR.seam+1e-9);
+    }
+  });
+  it("is tall and narrow like a cabin door",()=>{
+    expect(DOOR.height/DOOR.width).toBeGreaterThan(1.8);
   });
 });

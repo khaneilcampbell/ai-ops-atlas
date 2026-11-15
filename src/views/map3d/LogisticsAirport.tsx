@@ -12,7 +12,7 @@ import {terminalParts,TERMINAL_HUB,TERMINAL_ENTRANCE} from "./airportTerminal";
 import {ATLAS_HQ_COLORS as HQ} from "./airportPalette";
 import {goldJetRide} from "./goldJetIds";
 import {GOLD_JET_FADE,GOLD_JET_KEY,GOLD_JET_LIVERY,GOLD_JET_PIVOT,GOLD_JET_SCALE,GOLD_JET_SLOT,goldJetLive,goldJetState,goldJetWalkers} from "./goldJetPlan";
-import {airlinerDoor,clearOfDoor} from "./airlinerDoor";
+import {airlinerDoor,clearOfDoor,doorCorners} from "./airlinerDoor";
 import {EXECUTIVE_JET_MODEL,JET_BEAM,JET_COCKPIT,JET_GEAR_TOP} from "./executiveJetModel";
 import {usePowerProfile} from "../../lib/power";
 import { useMemo, useRef, useEffect, useState, type MutableRefObject } from "react";
@@ -67,6 +67,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
       // The gold jet's nose is solid gold, the darkest step of its fade.
       {p:[0,y0,tube],s:[R,R,.42],c:gold?GOLD_JET_FADE[GOLD_JET_FADE.length-1].c:l.fuselage},
       {p:[0,y0+.02,tubeTo],s:[R*.92,R*.8,.5],c:l.fuselage},
+      ...doorCorners({radius:R+(gold?.007:.004),y0,z:AIRCRAFT_LAYOUT.doorZ,skin:gold?GOLD_JET_FADE[GOLD_JET_FADE.length-1].c:l.fuselage}),
       ...(parked?WHEELS:[]),
     ] as Inst[],
     gear:WHEELS.map(w=>({...w,p:[w.p[0],w.p[1]-GEAR_TOP,w.p[2]]})) as Inst[],
