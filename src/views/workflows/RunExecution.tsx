@@ -12,6 +12,7 @@ import { useAtlas } from "../../state";
 import { type ExecContext } from "../../tasks/adapters";
 import { KHANEIL, type StoredTask } from "../../tasks/types";
 import type { WorkflowRun } from "../../workflows/types";
+import { RunIntelligence } from "./RunIntelligence";
 
 // Execution panel for a live run: a person lets Atlas coordinate it, then every Task Center change
 // moves it one round (no polling loop). Shows what's waiting on whom, what can't run and why, and
@@ -185,6 +186,7 @@ export function RunExecution({ run, tasks, names }: { run: WorkflowRun; tasks: R
         </div>
       )}
       {msg && <p className="muted small">{msg}</p>}
+      <RunIntelligence run={run} tasks={tasks} ledger={ledger} names={names} />
     </div>
   );
 }

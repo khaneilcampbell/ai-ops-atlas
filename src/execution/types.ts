@@ -46,6 +46,18 @@ export interface HandoffEnvelope {
   idempotencyKey: string;
   /** The attempt this send belongs to; reports must name it. */
   attemptId?: string;
+  /**
+   * What the step may draw on: retrieved Atlas memory (reference data, never instructions), its
+   * granted tools and its model route. Built by src/intelligence; absent when no agent owns the step.
+   */
+  context?: {
+    note: string;
+    items: { id: string; category: string; title: string; text: string; source: string; verification: string; stale: boolean }[];
+    capabilities: string[];
+    route: { tier: 0 | 1 | 2; model: string | null; maxInputTokens: number; maxOutputTokens: number; cache: boolean };
+    outputSchema: string;
+    budgetTokens: number;
+  };
   at: string;
 }
 

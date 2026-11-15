@@ -1,0 +1,1 @@
+- 2026-11-15 · Agents now get scoped memory, their approved tools and a model route with each workflow step, and every finished step is scored. Agent Detail has a new Intelligence tab, live runs show the evidence each step used, and in the Task Center you can rate work and approve or roll back improvement proposals (#PR)
