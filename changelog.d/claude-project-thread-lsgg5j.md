@@ -1,2 +1,3 @@
 - 2026-11-15 · The Atlas Step Runner is now switched on, so Atlas shows it as active on the Agents tab (#431)
 - 2026-11-16 · Fixed "Couldn't save the run: this device's storage is full": Atlas now makes room by dropping its GitHub cache, which it can fetch again, and keeps that cache smaller (#431)
+- 2026-11-16 · A step that comes after one of your decisions now gets the ideas and scores you decided on, so the product brief and plan name the real top idea instead of saying it is unknown (#431)
