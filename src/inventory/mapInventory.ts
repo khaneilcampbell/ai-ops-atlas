@@ -26,6 +26,8 @@ import { MALL_KEY } from "../views/map3d/mallPlan";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { MAP_FLEET } from "../views/map3d/mapFleet";
 import { buildScene, TERRACE_H, type Scene3D } from "../views/map3d/scene";
+import { toolFacilities } from "../catalog/toolFacilities";
+import { planToolFacilities, type FacilityPlan } from "../views/map3d/toolFacilityPlan";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
 import { YACHT_KEY, YACHT_NAME } from "../views/map3d/yachtPlan";
 import { GOLD_JET_KEY, GOLD_JET_NAME } from "../views/map3d/goldJetIds";
@@ -47,6 +49,7 @@ export type BuildingKind =
   | "Train station"
   | "Public space"
   | "Tool office"
+  | "Tool facility"
   | "Retired building";
 
 export interface InventoryBuilding {
@@ -142,7 +145,12 @@ function areaOf(layout: Layout): Map<string, string> {
   return new Map(layout.districts.map((d) => [d.project.id, labels.get(d.group) ?? d.group]));
 }
 
-function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): InventoryBuilding[] {
+/** Satellite tool facilities exactly as the map places them when its Tool facilities toggle is on. */
+export function facilityPlanOf(catalog: Catalog, scene: Scene3D): FacilityPlan {
+  return planToolFacilities(scene, toolFacilities(catalog.projects, catalog.agents, OFF_MAP_PROJECTS));
+}
+
+function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D, facilities: FacilityPlan): InventoryBuilding[] {
   const area = areaOf(layout);
   const out: InventoryBuilding[] = [];
   const add = (b: Omit<InventoryBuilding, "agent_ids" | "ai_agents" | "automations" | "organization" | "module"> & { organization?: string; module?: string }) => {
@@ -164,6 +172,7 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
     add({ id: t.key, name: t.name, kind: "Project building", area: area.get(t.projectId) ?? "", organization: p?.organization ?? "", module: moduleName(p?.module), status: t.status, project: t.projectId, source: p?.file ? `catalog/${p.file}` : "catalog" });
   }
   for (const k of scene.kiosks) add({ id: k.key, name: k.name, kind: "Tool office", area: area.get(k.projectId) ?? "", status: PLANNED, project: k.projectId, source: "catalog tools (src/catalog/roles.ts servicesOf)" });
+  for (const p of facilities.placed) add({ id: p.facility.key, name: p.facility.name, kind: "Tool facility", area: area.get(p.facility.projectId) ?? "", status: `Shown with Tool facilities · ${p.facility.vendor}`, project: p.facility.projectId, source: "catalog tools (src/catalog/toolFacilities.ts)" });
   if (scene.financial) {
     add({ id: FINANCIAL_KEY, name: "Financial District", kind: "Public space", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
     for (const b of scene.financial.buildings) add({ id: financialKey(b.id), name: b.name, kind: "Financial District building", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
@@ -296,7 +305,8 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
 export function mapInventory(catalog: Catalog): MapInventory {
   const layout = layoutMap(catalog, [], "district");
   const scene = buildScene(layout);
-  const buildings = buildingsOf(catalog, layout, scene);
+  const facilities = facilityPlanOf(catalog, scene);
+  const buildings = buildingsOf(catalog, layout, scene, facilities);
   const agents = agentsOf(catalog, buildings);
   const byId = new Map(buildings.map((b) => [b.id, b]));
   for (const a of agents) {
@@ -307,5 +317,6 @@ export function mapInventory(catalog: Catalog): MapInventory {
     else b.automations++;
   }
   const { objects, notes } = objectsOf(scene);
+  for (const u of facilities.unplaced) notes.push(`Tool facility ${u.facility.name} (${u.facility.vendor}) for ${catalog.projects.find((p) => p.id === u.facility.projectId)?.name ?? u.facility.projectId} is not on the map: ${u.reason}`);
   return { schema: INVENTORY_SCHEMA, buildings, agents, objects, notes };
 }

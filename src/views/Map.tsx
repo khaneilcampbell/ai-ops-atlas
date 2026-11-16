@@ -19,6 +19,9 @@ import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } 
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { loadInside, saveInside } from "./map3d/inside";
+import { facilityStatus, toolFacilities, type FacilityStatus } from "../catalog/toolFacilities";
+import { OFF_MAP_PROJECTS } from "../catalog/projects";
+import { useIntegrationProbe } from "../product/probe";
 import { relative } from "../lib/time";
 import { useReducedMotion } from "../lib/motion";
 import { PHONE_QUERY, useMedia } from "../lib/media";
@@ -438,6 +441,8 @@ export function MapView({active=true}:{active?:boolean}) {
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
   const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
+  // From the whole catalog, not the filtered one, so a facility keeps its place whatever the filters show.
+  const facilityList = useMemo(() => toolFacilities(fullCatalog.projects, fullCatalog.agents, new Set(OFF_MAP_PROJECTS)), []);
   const jobs = useMemo(() => agentJobs(catalog), [catalog]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
@@ -460,6 +465,15 @@ export function MapView({active=true}:{active?:boolean}) {
     setTrafficState(on);
     save("mapTraffic", on);
   };
+  // Tool facilities (Infrastructure → Show Tool Facilities): off until switched on, so the city and
+  // its frame cost stay exactly as they were for anyone who doesn't use them.
+  const [showFacilities, setShowFacilitiesState] = useState(() => load<boolean>("mapFacilities", false) === true);
+  const setShowFacilities = (on: boolean) => {
+    setShowFacilitiesState(on);
+    save("mapFacilities", on);
+  };
+  const [facilityStates, setFacilityStates] = useState<Record<string, FacilityStatus>>({});
+  const facilities = useMemo(() => (showFacilities ? { list: facilityList, status: facilityStates } : undefined), [showFacilities, facilityList, facilityStates]);
   const is3d = mode === "3d";
   const office = useOffice();
   useEffect(() => () => leaveBuilding(true), []);
@@ -1054,6 +1068,7 @@ export function MapView({active=true}:{active?:boolean}) {
               showLocal={lens !== "infrastructure"}
               traffic={traffic}
               inside={inside}
+              facilities={facilities}
               linksMoving={!linkPrefs.paused}
             />
             </Suspense>
@@ -1223,6 +1238,18 @@ export function MapView({active=true}:{active?:boolean}) {
                 <Icon name="cutaway" size={17} />
               </button>
             )}
+            {is3d && (
+              <button
+                className={`icon-btn ${showFacilities ? "on" : ""}`}
+                onClick={() => setShowFacilities(!showFacilities)}
+                aria-pressed={showFacilities}
+                aria-label="Show Tool Facilities"
+                title={showFacilities ? "Hide the tool facilities" : "Show Tool Facilities: the tools and integrations each building's agents use, beside their building"}
+              >
+                <Icon name="facility" size={17} />
+              </button>
+            )}
+            {is3d && showFacilities && <FacilityStatusProbe facilities={facilityList} onChange={setFacilityStates} />}
             {is3d && (
               <button
                 className={`icon-btn ${light === "night" ? "on" : ""}`}
@@ -1659,4 +1686,18 @@ function capture(e: React.PointerEvent) {
 /** Midpoint and spread of two fingers. */
 function pinchOf([a, b]: Pt[]) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
+}
+
+/**
+ * Reads each tool facility's status from the Integration Center (one shared health read, cached for
+ * five minutes, nothing polls). Mounted only while tool facilities show, so the map makes no extra
+ * requests otherwise.
+ */
+function FacilityStatusProbe({ facilities, onChange }: { facilities: ReturnType<typeof toolFacilities>; onChange: (s: Record<string, FacilityStatus>) => void }) {
+  const { states } = useIntegrationProbe();
+  useEffect(() => {
+    const byId = new Map(states.map((st) => [st.def.id, st]));
+    onChange(Object.fromEntries(facilities.map((f) => [f.key, facilityStatus(f.integrationId ? byId.get(f.integrationId) : undefined)])));
+  }, [states, facilities, onChange]);
+  return null;
 }

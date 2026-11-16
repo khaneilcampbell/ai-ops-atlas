@@ -15,6 +15,9 @@ const BRANDS: Record<string, ToolBrand> = {
   "Automation Works": { primary: "#ea4b71", secondary: "#ff9a9d", wall: "#e5dfe4", roof: "#38313c" },
   "Search Desk": { primary: "#6366f1", secondary: "#38bdf8", wall: "#e0e6ee", roof: "#344257" },
   "Storefront Office": { primary: "#95bf47", secondary: "#5e8e3e", wall: "#e5eadb", roof: "#354c36", stepped: true },
+  // Tool facilities (toolFacilities.ts): a compact engineering office and a small research lab.
+  "Repository Office": { primary: "#3c4650", secondary: "#8c959f", wall: "#e4e7e6", roof: "#2b3238", stepped: true },
+  "AI Model Lab": { primary: "#c96f4f", secondary: "#e9c9a8", wall: "#efe7dc", roof: "#4a3c35", rounded: true },
 };
 export const TOOL_OFFICE_HEIGHT = 2.8;
 export const TOOL_OFFICE_TOP = TOOL_OFFICE_HEIGHT + 0.4;

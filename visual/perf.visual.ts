@@ -201,11 +201,15 @@ test.describe("perf", () => {
       { name: "desktop day inside", vp: { width: 1280, height: 800 }, storage: { mapLight: "day", mapInside: true } },
       { name: "desktop night inside close", vp: { width: 1280, height: 800 }, storage: { mapLight: "night", mapInside: true }, close: true },
       { name: "iphone day inside close", vp: { width: 390, height: 844 }, storage: { mapLight: "day", mapInside: true }, close: true },
+      // Tool facilities switched on (off by default): reported beside the default map, not budgeted.
+      // Only with PERF_FACILITIES=1, so the CI job stays as it was.
+      { name: "desktop day facilities", vp: { width: 1280, height: 800 }, storage: { mapLight: "day", mapFacilities: true } },
     ];
     const only = process.env.PERF_ONLY;
     const out: Record<string, unknown> = {};
     for (const r of runs) {
       if (r.name.includes("inside") !== !!process.env.PERF_INSIDE) continue;
+      if (r.name.includes("facilities") && !process.env.PERF_FACILITIES) continue;
       if (only && !r.name.includes(only)) continue;
       const page = await open(browser, baseURL!, r.vp, r.storage);
       if ("close" in r && r.close) await closeOnAtlasHq(page);

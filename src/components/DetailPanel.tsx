@@ -20,6 +20,8 @@ import { RepositoryNotice } from "./RepositoryNotice";
 import {ClaudeReviewHandoff} from "./ClaudeReviewHandoff";
 import { orderToolsForWorkflow } from "../views/toolWorkflowLayout";
 import { ToolWorkflow } from "./ToolWorkflow";
+import { BuildingFacilities, FacilityBody, FacilityIntegration, useFacility } from "./ToolFacilityPanel";
+import { catalog as fullCatalog } from "../catalog";
 import { isAiAgent, residentsLabel, servicesOf, SERVICE_PURPOSE } from "../catalog/roles";
 import { projectRepositories } from "../catalog/projects";
 import { useEffect, useMemo, useState } from "react";
@@ -190,8 +192,22 @@ function ServiceDetail({id}:{id:string}) {
   return <ToolDetail id={id}/>;
 }
 
+/** A satellite Tool Facility (Repository Office, AI Model Lab…) beside its building. */
+function FacilityDetail({ id }: { id: string }) {
+  const f = useFacility(id);
+  if (!f) return <Head eyebrow="Tool facility" title="Not found" />;
+  return <>
+    <Head eyebrow={`Tool facility · ${fullCatalog.projects.find(p => p.id === f.projectId)?.name ?? f.projectId}`} title={f.name}>
+      <div className="chips" style={{ marginTop: 10 }}><span className="chip">Uses {f.vendor}</span><span className="chip">{f.associatedAgentIds.length + f.associatedWorkflowIds.length} linked {f.associatedAgentIds.length + f.associatedWorkflowIds.length === 1 ? "worker" : "workers"}</span></div>
+    </Head>
+    <FacilityBody facility={f} />
+  </>;
+}
+
 function ToolDetail({ id }: { id: string }) {
   const { catalog, select } = useAtlas();
+  const facility = useFacility(id);
+  if (id.startsWith("facility:")) return <FacilityDetail id={id} />;
   const split = id.indexOf(":");
   const project = catalog.projects.find(p => p.id === id.slice(0, split));
   const service = project && servicesOf(catalog.agents.filter(a => a.projectId === project.id)).find(s => s.id === id.slice(split + 1));
@@ -203,7 +219,7 @@ function ToolDetail({ id }: { id: string }) {
       <EnterBuildingButton id={`skyline-business:${service.name}`}/>
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
-      <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p><p className="muted small" style={{ margin: "6px 0 0" }}>Uses: {service.vendor}</p></section>
+      <section><div className="section-title">Purpose</div><p style={{ margin: 0, fontSize: 14 }}>{SERVICE_PURPOSE[service.id]}</p><p className="muted small" style={{ margin: "6px 0 0" }}>Uses: {service.vendor}</p>{facility && <dl className="kv" style={{ marginTop: 8 }}><FacilityIntegration facility={facility} /></dl>}</section>
       <section><div className="section-title">Supports this project</div><button className="ghost-btn" onClick={() => select({ kind: "project", id: project.id })}><Icon name="map" size={15} />{project.name}</button></section>
       {route.length > 1 && <section><div className="section-title">Tool workflow · left to right around headquarters</div><div className="link-list">{route.map((tool, index) => <button key={tool.id} className="text-btn" aria-current={tool.id === service.id ? "step" : undefined} onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{index + 1}. {tool.name}{tool.id === service.id ? " · selected" : " →"}</button>)}</div><p className="muted small">Placement follows declared dependencies and documented workflow phases.</p></section>}
       <ToolWorkflow service={service} projectAgents={catalog.agents.filter(a => a.projectId === project.id)} />
@@ -228,6 +244,7 @@ function ProjectDetail({ id }: { id: string }) {
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
       <LinkedRepositories project={project}/>
+      <BuildingFacilities projectId={project.id}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
     </div>

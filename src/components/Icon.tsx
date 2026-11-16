@@ -44,6 +44,8 @@ const PATHS: Record<string, string> = {
   // A workflow: one step branching to two.
   briefcase: "M4 8h16v11H4zM9 8V5h6v3M4 13h16M11 13v2h2v-2",
   flow: "M3 10h5v4H3zM16 4h5v4h-5zM16 16h5v4h-5zM8 12h4M12 6v12M12 6h4M12 18h4",
+  /** A main building with two smaller tool buildings beside it (Tool facilities). */
+  facility: "M8 21V4h8v17M3 21v-7h5M16 14h5v7M2 21h20M11 8h2M11 12h2M11 16h2",
 };
 
 export type IconName = keyof typeof PATHS;

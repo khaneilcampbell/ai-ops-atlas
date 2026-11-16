@@ -44,6 +44,9 @@ import { AIRPORT_KEY, airportPoint, AIRPORT_LAYOUT } from "./airport";
 import { GOLD_JET_BOX, GOLD_JET_GATE, GOLD_JET_KEY, goldJetBounds, goldJetLive, goldJetMapPose } from "./goldJetPlan";
 import { GOLD_JET_OFFICE_ID, goldJetRide } from "./goldJetIds";
 import { TOOL_OFFICE_TOP } from "./toolBrand";
+import { FACILITY_STATUS_LABEL, type FacilityStatus, type ToolFacility } from "../../catalog/toolFacilities";
+import { planToolFacilities, rememberFacilityPlan } from "./toolFacilityPlan";
+import { FACILITY_LIGHT, FacilityLights, clearPlanting, facilityGround, facilityKiosk } from "./ToolFacilities";
 import { Suspense, forwardRef, lazy, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -163,6 +166,11 @@ interface Props {
   traffic: boolean;
   /** The toolbar's Inside toggle: nearby headquarters show their offices as cutaways (InsideView). */
   inside?: boolean;
+  /**
+   * Tool facilities to draw (the toolbar's Tool facilities toggle), with each one's Integration
+   * Center status by map key. Absent when switched off: nothing is placed or drawn.
+   */
+  facilities?: { list: ToolFacility[]; status: Readonly<Record<string, FacilityStatus>> };
 }
 
 // Camera looks down from +x+z, matching the isometric map, at a miniature-photography angle.
@@ -227,7 +235,21 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
-  const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
+  // Satellite tool facilities: placed once per layout (deterministic, toolFacilityPlan.ts), never per frame.
+  const facilityList = props.facilities?.list;
+  const facilityPlan = useMemo(() => {
+    const plan = facilityList ? planToolFacilities(scene, facilityList) : null;
+    rememberFacilityPlan(plan);
+    return plan;
+  }, [scene, facilityList]);
+  const facilityStatus = props.facilities?.status;
+  const facilityLayer = useMemo(() => (facilityPlan ? { placed: facilityPlan.placed, status: facilityStatus ?? {} } : null), [facilityPlan, facilityStatus]);
+  const landscape = useMemo(() => (facilityPlan ? clearPlanting(scene, facilityGround(facilityPlan.placed)) : scene), [scene, facilityPlan]);
+  const anchors = useMemo(() => {
+    const m = anchorsOf(scene, layout);
+    for (const p of facilityPlan?.placed ?? []) m.set(p.facility.key, { x: p.x, z: p.z, y0: TERRACE_H, y1: TERRACE_H + p.height + 0.4, w: p.size, d: p.size * 0.8, project: p.facility.projectId });
+    return m;
+  }, [scene, layout, facilityPlan]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
@@ -369,6 +391,24 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         node: k.name,
       });
     }
+    // Tool facilities name themselves like tool offices: on hover, selection, or up close in their district.
+    for (const p of facilityPlan?.placed ?? []) {
+      const k = p.facility.key, urgent = k === hover || k === selKey;
+      if (!urgent && !showResidents(p.facility.projectId)) continue;
+      const st = props.facilities?.status[k] ?? "unknown";
+      out.push({
+        id: k,
+        key: k,
+        pos: new THREE.Vector3(p.x, TERRACE_H + p.height + 0.45, p.z),
+        w: measure(p.facility.name, 11.5, SANS, 500) + 34,
+        h: 28,
+        priority: urgent ? 0.5 : 6.6,
+        className: `m3-pill quiet ${k === selKey ? "selected" : urgent ? "hover" : ""}${net.focusSet && !net.focusSet.has(p.facility.projectId) ? " dim" : ""}`,
+        onClick: () => select(k),
+        title: `${p.facility.name} · ${p.facility.vendor} · ${FACILITY_STATUS_LABEL[st]}`,
+        node: <><i className="fac-dot" style={{ background: FACILITY_LIGHT[st] }} />{p.facility.name}</>,
+      });
+    }
     for (const s of scene.strays) {
       const text = s.name.split("/")[1] ?? s.name;
       out.push({
@@ -419,7 +459,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, facilityPlan, props.facilities?.status, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -543,6 +583,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           api={api}
           pick={pick}
           kioskPick={kioskPick}
+          facilityLayer={facilityLayer}
+          landscape={landscape}
           terracePick={terracePick}
           reduced={props.reduced}
           activity={activity}
@@ -631,6 +673,8 @@ function World({
   api,
   pick,
   kioskPick,
+  facilityLayer,
+  landscape,
   terracePick,
   reduced,
   activity,
@@ -667,6 +711,10 @@ function World({
   api: React.MutableRefObject<Map3DApi | null>;
   pick: PickHandlerSet;
   kioskPick: PickHandlerSet;
+  /** Placed satellite tool facilities and every facility's status, or null when switched off. */
+  facilityLayer: { placed: ReturnType<typeof planToolFacilities>["placed"]; status: Readonly<Record<string, FacilityStatus>> } | null;
+  /** The scene's planting, cleared from under tool facilities when they show. */
+  landscape: Scene3D;
   terracePick: Pick;
   reduced: boolean;
   activity: Map<string, Illumination>;
@@ -678,6 +726,9 @@ function World({
   surface: React.RefObject<HTMLDivElement>;
 }) {
   const { camera, gl, size, scene: three, invalidate } = useThree();
+  // District tool offices and, when shown, the satellite tool facilities: one set of instanced parts.
+  const placedFacilities = facilityLayer?.placed;
+  const toolOffices = useMemo(() => [...scene.kiosks.filter((k) => !isCommerceAnnex(k)), ...(placedFacilities?.map(facilityKiosk) ?? [])], [scene, placedFacilities]);
   // Draw once after every update: much of what changes (labels, focus, day and night) is read in frames.
   useEffect(() => invalidate());
   // Before anything measures the view: in portrait, hold the horizontal angle steady (see PORTRAIT_ASPECT).
@@ -1320,9 +1371,10 @@ function World({
       {detailsReady && <GalleriaLife scene={scene} plan={galleriaLife} g={g} m={m} night={lightMode==="night"} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && riding && scene.airport && <Suspense fallback={null}><GoldJetRide plan={scene.airport} night={lightMode==="night"} controls={controls} /></Suspense>}
       {detailsReady && <Airport night={lightMode==="night"} flightAltitude={safeFlight.altitude} obstacles={safeFlight.obstacles} bounds={scene.bounds} plan={scene.airport} g={g} m={m} moving={!reduced&&traffic} pick={kioskPick.of([AIRPORT_KEY,GOLD_JET_KEY])} />}
-      {detailsReady && <Landscape scene={scene} g={g} m={m} night={lightMode==="night"} />}
+      {detailsReady && <Landscape scene={landscape} g={g} m={m} night={lightMode==="night"} />}
       <Houses houses={scene.houses} g={g} m={m} pick={pick} />
-      <Kiosks kiosks={scene.kiosks.filter((k) => !isCommerceAnnex(k))} g={g} m={m} pick={kioskPick} night={lightMode==="night"} />
+      <Kiosks kiosks={toolOffices} g={g} m={m} pick={kioskPick} night={lightMode==="night"} />
+      {facilityLayer && <FacilityLights placed={facilityLayer.placed} offices={scene.kiosks} status={facilityLayer.status} g={g} />}
       <CommerceAnnexes kiosks={scene.kiosks.filter(isCommerceAnnex)} tower={scene.towers.find((t) => isCommerceTower(t.projectId))} base={TERRACE_H + ANNEX.plinthH} g={g} pick={kioskPick} night={lightMode === "night"} />
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       {scene.towers.filter((t) => t.identity.landmark).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><AtlasHq tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
