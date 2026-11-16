@@ -73,12 +73,13 @@
     "health-report",
     "order-delivery",
     "sales-sync",
+    "atlas-sales-feed",
     "email-digest",
     "db-backup",
     "commerce-operations-manager"
    ],
    "ai_agents": 4,
-   "automations": 7
+   "automations": 8
   },
   {
    "id": "project:intelligence-hub",
@@ -1513,6 +1514,20 @@
    "source": ""
   },
   {
+   "id": "atlas-sales-feed",
+   "name": "Stripe Sales Feed",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:commerce-pipeline",
+   "building_name": "Commerce Operations Center",
+   "placement": "Runs from its project building",
+   "owned_by": "commerce-operations-manager",
+   "project": "commerce-pipeline",
+   "runtime": "n8n Cloud",
+   "trigger": "Webhook from the Atlas site only, when Khaneil syncs (draft, not published)",
+   "source": ""
+  },
+  {
    "id": "email-digest",
    "name": "Operations Reporting Coordinator",
    "kind": "Automation",
@@ -2074,6 +2089,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-16T04:50:50.344Z",
- "commit": "cc630d33669d1b3587427a0104e5fc219d681af6"
+ "generated_at": "2026-11-16T05:47:06.626Z",
+ "commit": "7392057af31c76036c88eb9ae2250ae5939f3e1d"
 }
