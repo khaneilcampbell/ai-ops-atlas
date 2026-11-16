@@ -13,6 +13,8 @@ import { commonZoneGroup, DEFAULT_TIME_ZONE, describeZone, filterZoneGroups, for
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 import { SyncSettings } from "./SyncSettings";
+import { BackupSetting } from "./BackupSetting";
+import "../styles/production.css";
 
 export function SettingsView() {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
@@ -95,6 +97,7 @@ export function SettingsView() {
             Clear and refetch
           </button>
         </div>
+        <BackupSetting />
       </section>
 
       <section className="card">

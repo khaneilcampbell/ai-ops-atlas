@@ -1,0 +1,1 @@
+- 2026-11-16 · Production health in Mission Control (site, database, GitHub, n8n and release checks that say Unknown instead of guessing), backup and restore for this device's records in Settings, and safer website routes: changes must come from the Atlas page, and refused sign-ins are logged without keys (#PR)

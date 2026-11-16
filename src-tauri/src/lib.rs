@@ -83,8 +83,10 @@ pub fn run() {
             live::live_n8n_step_send,
             live::registry_refresh,
             live::live_security,
+            live::live_health,
             live::live_inquiry_reply,
             export::save_pdf,
+            export::save_backup,
             power::power_on_battery,
         ])
         .run(tauri::generate_context!())

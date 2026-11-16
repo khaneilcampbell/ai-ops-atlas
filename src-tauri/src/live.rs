@@ -17,6 +17,7 @@ pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 pub const N8N_PATH: &str = "/api/hooks/n8n";
 pub const REGISTRY_REFRESH_PATH: &str = "/api/hooks/registry-refresh";
 pub const SECURITY_PATH: &str = "/api/hooks/security";
+pub const HEALTH_PATH: &str = "/api/hooks/health";
 pub const N8N_STEPS_PATH: &str = "/api/hooks/n8n-steps";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
@@ -296,6 +297,32 @@ pub async fn live_security(
             .await
             .map(Some)
             .map_err(|e| format!("The site's security alerts weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// The site's production health report (server/health.ts), or `None` when website sync isn't set up.
+/// Read-only: states and which credentials are set come back, never a credential's value.
+#[tauri::command]
+pub async fn live_health(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{HEALTH_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's health report wasn't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }
