@@ -1,1 +1,1 @@
-- 2026-11-16 · New Tool facilities button on the 3D map: each building gets smaller buildings beside it for the real tools its agents use (GitHub, Claude, n8n…), with their Integration Center status and a panel linking the agents and workflows that use them. Off until you switch it on.
+- 2026-11-16 · New Tool facilities button on the 3D map: each building gets smaller buildings beside it for the real tools its agents use (GitHub, Claude, n8n…), with their Integration Center status and a panel linking the agents and workflows that use them. Off until you switch it on. (#444)
