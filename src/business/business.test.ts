@@ -14,7 +14,7 @@ import { leadFromInquiry, reconcilePurchase, unconvertedInquiries, validPurchase
 import { addListingVersion, approveListing, draftProduct, moveProduct, productFromBrief, recordPublished } from "./products";
 import { canContact, conversion, customerFromLead, draftSale, followUps, moveLead, netCents, parseMoney } from "./revenue";
 import { BusinessStore, parseBusiness } from "./store";
-import { EMPTY_DATA, type BusinessData, type Expense, type Lead, type Sale } from "./types";
+import { EMPTY_DATA, type BusinessData, type Expense, type Lead, type ProductOpportunity, type Sale } from "./types";
 
 const AT = "2026-11-10T12:00:00.000Z";
 const AGENT: Actor = { kind: "agent", id: "benjaire-product-lab", name: "Product Lab" };
@@ -259,7 +259,7 @@ describe("product lifecycle and marketplace", () => {
     expect(b.ok && b.value.approvals.map((a) => a.stage)).toEqual(["build"]);
   });
   it("won't launch without an approved listing or measure without a confirmed page", () => {
-    let p = { ...make(), stage: "test" as const };
+    let p: ProductOpportunity = { ...make(), stage: "test" };
     expect(step(p, "launch").ok).toBe(false);
     const v = addListingVersion(p, "A kit", "49", "usd", KHANEIL, AT);
     if (!v.ok) throw new Error(v.error);
