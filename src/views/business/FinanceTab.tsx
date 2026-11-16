@@ -6,6 +6,8 @@ import type { BusinessFilter, Overview } from "../../business/dashboard";
 import { inPeriod, METRIC_DEFINITIONS } from "../../business/finance";
 import { draftSale, money, netCents, parseMoney } from "../../business/revenue";
 import { businessStore } from "../../business/store";
+import { fetchStripeSales } from "../../business/stripeClient";
+import { MAX_RANGE_DAYS, planSync, syncRange, type SalesFeed, type SyncPlan } from "../../business/stripeFeed";
 import { EXPENSE_CATEGORIES, EXPENSE_LABEL, type BusinessData, type Expense, type ExpenseCategory } from "../../business/types";
 import { Empty, ErrorLine, Field, ME, nowIso, Panel, pct, ProvChip, ProvenanceFields, today } from "./parts";
 
@@ -19,12 +21,14 @@ export function FinanceTab({ data, o, filter }: { data: BusinessData; o: Overvie
   return (
     <>
       <div className="biz-actions-row">
-        <p className="muted small">Figures for {filter.period.from} to {filter.period.to}. Money is kept in whole cents per currency and never converted. Payments aren't connected, so sales are entered from the payment dashboard; each sale names where it can be checked.</p>
+        <p className="muted small">Figures for {filter.period.from} to {filter.period.to}. Money is kept in whole cents per currency and never converted. Stripe sales come in with "Sync from Stripe" (read only, through n8n); anything else is entered from its own dashboard, and each sale names where it can be checked.</p>
         <div className="task-actions">
           <button className="btn primary" onClick={() => setForm("sale")}><Icon name="plus" size={14} /> Record sale</button>
           <button className="btn" onClick={() => setForm("expense")}><Icon name="plus" size={14} /> Record expense</button>
         </div>
       </div>
+
+      {!testMode && <StripeSync data={data} />}
 
       {st.currencies.length ? st.currencies.map((c) => (
         <section key={c.currency} className="card card-pad">
@@ -76,6 +80,66 @@ export function FinanceTab({ data, o, filter }: { data: BusinessData; o: Overvie
       {form === "sale" && <SaleForm data={data} testMode={testMode} onClose={() => setForm(null)} />}
       {form === "expense" && <ExpenseForm data={data} testMode={testMode} onClose={() => setForm(null)} />}
     </>
+  );
+}
+
+type SyncState = { kind: "idle" } | { kind: "busy" } | { kind: "error"; error: string; unconfigured: boolean } | { kind: "plan"; feed: SalesFeed; plan: SyncPlan } | { kind: "done"; text: string };
+
+/** Reads Stripe through the n8n sales feed, shows what would change, and records it only when Khaneil says so. */
+function StripeSync({ data }: { data: BusinessData }) {
+  const [s, setS] = useState<SyncState>({ kind: "idle" });
+  const fetchNow = async () => {
+    setS({ kind: "busy" });
+    const r = syncRange(MAX_RANGE_DAYS);
+    const a = await fetchStripeSales(r.since, r.until);
+    if (a.state !== "ok") return setS({ kind: "error", error: a.error, unconfigured: a.state === "unconfigured" });
+    setS({ kind: "plan", feed: a.feed, plan: planSync(a.feed, data.sales, ME, nowIso()) });
+  };
+  const record = () => {
+    if (s.kind !== "plan") return;
+    const store = businessStore();
+    let saved = 0;
+    const failed: string[] = [];
+    for (const sale of s.plan.create) {
+      const r = store.create("sales", sale);
+      if (r.ok) saved++;
+      else failed.push(r.error);
+    }
+    for (const u of s.plan.update) {
+      const r = store.put("sales", u.sale, u.expectedRev);
+      if (r.ok) saved++;
+      else failed.push(r.error);
+    }
+    setS({ kind: "done", text: failed.length ? `Saved ${saved}. ${failed.length} couldn't be saved: ${failed[0]}` : `Saved ${saved} change${saved === 1 ? "" : "s"} from Stripe.` });
+  };
+  const changes = s.kind === "plan" ? s.plan.create.length + s.plan.update.length : 0;
+  return (
+    <section className="card card-pad biz-stripe">
+      <div className="section-head">
+        <div className="section-title">Stripe sales</div>
+        <button className="btn" onClick={fetchNow} disabled={s.kind === "busy"}><Icon name="refresh" size={14} /> {s.kind === "busy" ? "Reading Stripe…" : "Sync from Stripe"}</button>
+      </div>
+      <p className="muted small">Reads paid checkouts from the last {MAX_RANGE_DAYS} days through the Atlas · Sales feed workflow in n8n. Read only: nothing in Stripe changes, and no buyer names or emails come into Atlas. You see what would change before anything is saved.</p>
+      {s.kind === "error" && <div className={`task-callout ${s.unconfigured ? "warn" : "bad"}`} role="status"><b>{s.unconfigured ? "Not set up yet" : "Sync failed"}</b><span>{s.error}</span></div>}
+      {s.kind === "done" && <div className="task-callout good" role="status"><span>{s.text}</span></div>}
+      {s.kind === "plan" && (
+        <div className="biz-stripe-plan">
+          <p className="small">Stripe has {s.feed.sales.length} paid checkout{s.feed.sales.length === 1 ? "" : "s"} from {s.feed.since.slice(0, 10)} to {s.feed.until.slice(0, 10)}: <b>{s.plan.create.length} new</b>, {s.plan.update.length} refund update{s.plan.update.length === 1 ? "" : "s"}, {s.plan.unchanged} already in Atlas{s.plan.skipped.length ? `, ${s.plan.skipped.length} skipped` : ""}.{s.feed.dropped ? ` ${s.feed.dropped} unreadable rows were left out.` : ""}</p>
+          {s.plan.create.length > 0 && (
+            <table className="table compact">
+              <thead><tr><th>Date</th><th>Checkout</th><th>Product</th><th>Gross</th><th>Refunds</th><th>Fees</th><th>Net</th></tr></thead>
+              <tbody>{s.plan.create.map((x) => <tr key={x.orderRef}><td>{x.date}</td><td className="small"><code>{x.orderRef.slice(0, 18)}…</code></td><td className="small">{x.productRef}</td><td>{money(x.grossCents, x.currency)}</td><td>{money(x.refundCents, x.currency)}</td><td>{money(x.feeCents, x.currency)}</td><td><b>{money(netCents(x), x.currency)}</b></td></tr>)}</tbody>
+            </table>
+          )}
+          {s.plan.skipped.length > 0 && <ul className="biz-list small">{s.plan.skipped.slice(0, 5).map((k) => <li key={k.orderRef}><code>{k.orderRef.slice(0, 18)}…</code> {k.reason}</li>)}</ul>}
+          {s.plan.feesPending > 0 && <p className="muted small">{s.plan.feesPending} sale{s.plan.feesPending === 1 ? " has" : "s have"} no Stripe fee yet, so the fee is saved as 0 until Stripe settles it.</p>}
+          <div className="task-actions">
+            <button className="btn primary" onClick={record} disabled={!changes}>{changes ? `Record ${changes} change${changes === 1 ? "" : "s"}` : "Nothing new to record"}</button>
+            <button className="btn" onClick={() => setS({ kind: "idle" })}>Close</button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -126,7 +126,7 @@ const TYPES: AtlasModuleType[] = [
       on("revenue", "Revenue reporting", "src/business/finance.ts statement"),
       later("forecasts", "Budgets and forecasts"),
     ],
-    connectors: ["usage-sync"], views: ["usage", "business"], actions: [], permissions: [],
+    connectors: ["usage-sync", "stripe-sales"], views: ["usage", "business"], actions: [], permissions: [],
   },
   {
     id: "growth-marketing-studio", version: V, name: "Growth & Marketing Studio", productDistrict: "business-operations",
@@ -142,8 +142,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
     description: "Products and releases, the pipelines that publish them, and later the catalog and orders.",
-    capabilities: [on("catalog", "Product catalog", "src/business/products.ts addListingVersion"), on("orders", "Orders", "src/business/revenue.ts draftSale"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
-    connectors: ["github", "agent-feed"], views: ["business"], actions: [], permissions: [],
+    capabilities: [on("catalog", "Product catalog", "src/business/products.ts addListingVersion"), on("orders", "Orders, with Stripe sales synced through n8n", "src/business/stripeFeed.ts planSync"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
+    connectors: ["github", "agent-feed", "stripe-sales"], views: ["business"], actions: [], permissions: [],
   },
   // Data & Intelligence
   {

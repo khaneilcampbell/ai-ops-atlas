@@ -118,7 +118,8 @@ export function reconcilePurchase(raw: unknown, confirmation: ProviderConfirmati
   if (confirmation.currency !== e.currency || confirmation.gross !== e.gross) return { kind: "rejected", reason: "The amount or currency doesn't match what the provider confirmed." };
   if (confirmation.refunds > confirmation.gross) return { kind: "rejected", reason: "The provider's refund is larger than the order." };
   const fees = e.fees ?? 0;
-  if (fees + confirmation.refunds > e.gross) return { kind: "rejected", reason: "Fees and refunds add up to more than the order." };
+  // Stripe keeps its fee when an order is refunded, so a full refund plus the fee can exceed the order (net below zero).
+  if (fees > e.gross) return { kind: "rejected", reason: "The fee is larger than the order." };
 
   const known = existing.find((s) => s.orderRef === e.orderRef && s.provenance === "real");
   if (known) {
