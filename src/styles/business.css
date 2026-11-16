@@ -77,3 +77,5 @@
   .biz-funnel li { grid-template-columns: 76px 1fr 28px; }
   .biz-funnel li small { display: none; }
 }
+.biz-stripe-plan .task-actions { margin-top: var(--space-5); }
+.biz-stripe .table { margin-top: var(--space-3); }
