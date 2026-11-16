@@ -105,7 +105,7 @@ describe("health", () => {
   const fetcher = (over: Partial<Record<"github" | "n8n", Response | Error>> = {}) =>
     vi.fn(async (url: RequestInfo | URL) => {
       const u = String(url);
-      const pick = u.includes("api.github.com") ? over.github ?? Response.json({ resources: { core: { limit: 5000, remaining: 4900 } } }) : over.n8n ?? (u.includes("/workflows") ? Response.json({ data: [{ id: "w1", name: "Flow", active: true }] }) : Response.json({ data: [{ id: "1", workflowId: "w1", status: "success", startedAt: "2026-11-16T11:00:00Z" }] }));
+      const pick = new URL(u).hostname === "api.github.com" ? over.github ?? Response.json({ resources: { core: { limit: 5000, remaining: 4900 } } }) : over.n8n ?? (u.includes("/workflows") ? Response.json({ data: [{ id: "w1", name: "Flow", active: true }] }) : Response.json({ data: [{ id: "1", workflowId: "w1", status: "success", startedAt: "2026-11-16T11:00:00Z" }] }));
       if (pick instanceof Error) throw pick;
       return pick.clone();
     }) as unknown as typeof fetch;
