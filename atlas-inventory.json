@@ -1643,14 +1643,14 @@
    "id": "atlas-step-runner",
    "name": "Workflow Step Runner",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "project:intelligence-hub",
    "building_name": "Agent Operations Center",
    "placement": "Runs from its project building",
    "owned_by": "agent-operations-lead",
    "project": "intelligence-hub",
    "runtime": "n8n Cloud",
-   "trigger": "Webhook from the Atlas site only (draft, not published)",
+   "trigger": "Webhook from the Atlas site only (published)",
    "source": ""
   },
   {
@@ -2105,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-16T08:22:22.103Z",
- "commit": "57152bac315e9852baee0287c58f064e9315fdec"
+ "generated_at": "2026-11-16T08:35:16.373Z",
+ "commit": "f1ae88a4fc5628593ddd5ed20c1ca0a6cf74c76b"
 }
