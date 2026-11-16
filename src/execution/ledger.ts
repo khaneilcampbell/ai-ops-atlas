@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Backend } from "../tasks/store";
 import type { RunLedger } from "./types";
+import { writeWithRoom } from "../lib/storage";
 
 // The execution ledger, one record per live run, kept on the same device storage as tasks and
 // runs. Every write re-reads the stored copy and refuses a stale revision (compare-and-set), so
@@ -23,7 +24,7 @@ export const localLedgerBackend: Backend = {
       return null;
     }
   },
-  write: (raw) => localStorage.setItem(KEY, raw),
+  write: (raw) => writeWithRoom(KEY, raw),
   watch: (fn) => {
     const on = (e: StorageEvent) => e.key === KEY && fn();
     window.addEventListener("storage", on);

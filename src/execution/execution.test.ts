@@ -513,6 +513,14 @@ describe("external integration failures", () => {
     expect(budgetProblem({ usage: [] }, stepPolicy(scoring))).toBeNull();
   });
 
+  it("a step after a decision gets what the decision was about, not just yes or no", () => {
+    const h = (id: string, output: StepOutput) => ({ nodeId: id, taskId: "x", attempt: 1, at: "", state: "validated" as const, by: "k", output });
+    const env = buildEnvelope(BENJAIRE_LAUNCH, { id: "r", nodeTasks: { brief: "t" } }, "brief", { number: 1, idempotencyKey: "t:1" }, { scoring: h("scoring", OUT.scoring), viability: h("viability", output("decision/1", { branch: "yes" })), intake: h("intake", OUT.intake) }, "2026-11-15T12:00:00Z");
+    expect(Object.keys(env.inputs).sort()).toEqual(["scoring", "viability"]);
+    expect(env.inputs.scoring.fields.topIdea).toBe("Inbox triage");
+    expect(env.sourceAgentIds).toContain("benjaire-product-lab-scoring");
+  });
+
   it("an envelope never carries data from steps that aren't upstream", () => {
     const env = buildEnvelope(BENJAIRE_LAUNCH, { id: "r", nodeTasks: { brief: "t" } }, "brief", { number: 1, idempotencyKey: "t:1" }, { intake: { nodeId: "intake", taskId: "x", attempt: 1, at: "", state: "validated", by: "k", output: OUT.intake } }, "2026-11-15T12:00:00Z");
     expect(env.inputs).toEqual({});

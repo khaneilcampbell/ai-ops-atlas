@@ -131,7 +131,26 @@ export function repairOutput(nodeId: string, out: unknown): StepOutput | null {
   return changed ? { schema: schemaId, fields, artifacts: Array.isArray(o.artifacts) ? o.artifacts : [] } : null;
 }
 
-/** The envelope a step receives: its upstream steps' recorded outputs, nothing else. */
+/**
+ * A decision or approval step only records go/park or a sign-off, so a step right after one also
+ * gets what that gate was deciding on (the gate's own inputs), or it would work blind. Gates in a
+ * row are followed back until a step that produced real data.
+ */
+export function withGateSources(def: Pick<WorkflowDefinition, "nodes" | "edges">, ups: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const visit = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push(id);
+    const kind = def.nodes.find((n) => n.id === id)?.kind;
+    if (kind === "decision" || kind === "approval") upstream(def, id).forEach(visit);
+  };
+  ups.forEach(visit);
+  return out;
+}
+
+/** The envelope a step receives: its upstream steps' recorded outputs (looking through gates), nothing else. */
 export function buildEnvelope(
   def: WorkflowDefinition,
   run: { id: string; nodeTasks: Record<string, string> },
@@ -141,7 +160,7 @@ export function buildEnvelope(
   at: string,
 ): HandoffEnvelope {
   const node = def.nodes.find((n) => n.id === nodeId);
-  const ups = upstream(def, nodeId);
+  const ups = withGateSources(def, upstream(def, nodeId));
   const inputs: HandoffEnvelope["inputs"] = {};
   const artifacts: ArtifactRef[] = [];
   for (const u of ups) {

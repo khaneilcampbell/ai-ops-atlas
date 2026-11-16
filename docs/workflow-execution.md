@@ -21,7 +21,7 @@ Workflow Intelligence → Live → **Start coordinating**. The orchestrator (`sr
 
 | Step kind | Adapter | From Atlas |
 | --- | --- | --- |
-| n8n research and planning (market, customer and competitor research, scoring, brief, plan) | `bridgeAdapter` | **Built, not switched on.** Sent through the site to one restricted n8n step runner workflow (see below). Shows as unconfigured until the step runner is published and both bridge secrets are saved on the site. |
+| n8n research and planning (market, customer and competitor research, scoring, brief, plan) | `bridgeAdapter` | **On since 2026-11-15.** Sent through the site to one restricted n8n step runner workflow (see below). Shows as unconfigured if either bridge secret is removed from the site. |
 | n8n Approve and Publish | `n8nAdapter` | **Never started from Atlas.** Stays the existing Approve and Publish flow in n8n; the site refuses these steps even when called directly. |
 | GitHub (Manage agents allow-list) | `githubAdapter` | Started by a person in the Task Center (Mac app, Touch ID). Listed as waiting on you. |
 | Manual, decisions, approvals | `manualAdapter` | A person, recorded in the Task Center or here. |
@@ -51,7 +51,7 @@ Safeguards:
 To switch it on (Khaneil):
 1. Save `N8N_BRIDGE_TOKEN` and `N8N_BRIDGE_CALLBACK_TOKEN` (two different random values, 32+ characters) as Pages secrets.
 2. Put the same values in the step runner's two n8n credentials (webhook header auth, and the report request's header).
-3. Publish the step runner in n8n. Until then its catalog entry stays `paused` with "draft" in the trigger.
+3. Publish the step runner in n8n. Done 2026-11-15; its catalog entry is `active`.
 
 ## Limits
 
