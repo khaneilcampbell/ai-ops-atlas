@@ -110,12 +110,12 @@ const TYPES: AtlasModuleType[] = [
       on("projects", "Associated projects", "src/catalog/types.ts Project"),
       on("apps", "Connected applications", "src/properties/registry.ts"),
       on("agents", "Related agents", "src/catalog/workplaces.ts projectOfficeAgents"),
-      later("overview", "Business workspace overview"),
+      on("overview", "Business workspace overview", "src/business/dashboard.ts overview"),
       later("assignments", "Automation assignments"),
-      later("kpis", "Operational KPIs"),
+      on("kpis", "Operational KPIs", "src/business/goals.ts goalProgress"),
       later("config", "Business-specific configuration"),
     ],
-    connectors: ["github"], views: ["map"], actions: [], permissions: [],
+    connectors: ["github"], views: ["map", "business"], actions: [], permissions: [],
   },
   {
     id: "finance-analytics-tower", version: V, name: "Finance & Analytics Tower", productDistrict: "business-operations",
@@ -123,10 +123,10 @@ const TYPES: AtlasModuleType[] = [
     capabilities: [
       on("ai-spend", "AI and API spend", "src/usage/model.ts"),
       on("caps", "Spend against caps", "src/finance/caps.ts capStatus"),
-      later("revenue", "Revenue reporting"),
+      on("revenue", "Revenue reporting", "src/business/finance.ts statement"),
       later("forecasts", "Budgets and forecasts"),
     ],
-    connectors: ["usage-sync"], views: ["usage"], actions: [], permissions: [],
+    connectors: ["usage-sync", "stripe-sales"], views: ["usage", "business"], actions: [], permissions: [],
   },
   {
     id: "growth-marketing-studio", version: V, name: "Growth & Marketing Studio", productDistrict: "business-operations",
@@ -142,8 +142,8 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "commerce-product-marketplace", version: V, name: "Commerce & Product Marketplace", productDistrict: "business-operations",
     description: "Products and releases, the pipelines that publish them, and later the catalog and orders.",
-    capabilities: [later("catalog", "Product catalog"), later("orders", "Orders"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
-    connectors: ["github", "agent-feed"], views: [], actions: [], permissions: [],
+    capabilities: [on("catalog", "Product catalog", "src/business/products.ts addListingVersion"), on("orders", "Orders, with Stripe sales synced through n8n", "src/business/stripeFeed.ts planSync"), on("pipeline", "Publishing pipeline status", "src/commerce/pipeline.ts pipelineStages")],
+    connectors: ["github", "agent-feed", "stripe-sales"], views: ["business"], actions: [], permissions: [],
   },
   // Data & Intelligence
   {

@@ -29,3 +29,12 @@ export function useWorkflowSelection(): WorkflowSelection {
     () => current,
   );
 }
+
+// A run another view asked to open (Business goals link to the runs behind them). Read once.
+let pendingRun: { goalId: string; runId: string } | null = null;
+export const focusWorkflowRun = (goalId: string, runId: string) => void (pendingRun = { goalId, runId });
+export function takeWorkflowRunFocus(): { goalId: string; runId: string } | null {
+  const r = pendingRun;
+  pendingRun = null;
+  return r;
+}

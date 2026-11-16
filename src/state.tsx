@@ -12,8 +12,8 @@ import { isTauri } from "./lib/env";
 import { applyGithubEvent } from "./live/apply";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
-export type View = "overview" | "workflows" | "tasks" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
-const VIEWS: View[] = ["overview", "workflows", "tasks", "agents", "automations", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
+export type View = "overview" | "workflows" | "tasks" | "business" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+const VIEWS: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "usage", "settings"];
 export type Selection = { kind: "agent"; id: string } | { kind: "repo"; id: string } | { kind: "project"; id: string } | { kind: "service"; id: string } | null;
 
 export interface Settings {
