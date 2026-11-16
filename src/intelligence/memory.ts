@@ -1,4 +1,5 @@
 import type { Catalog } from "../catalog/types";
+import { writeWithRoom } from "../lib/storage";
 import { SENSITIVITIES, type Sensitivity } from "../registry/types";
 import type { Backend } from "../tasks/store";
 import type { Actor } from "../tasks/types";
@@ -154,7 +155,7 @@ export const localIntelBackend: Backend = {
       return null;
     }
   },
-  write: (raw) => localStorage.setItem(KEY, raw),
+  write: (raw) => writeWithRoom(KEY, raw),
   watch: (fn) => {
     const on = (e: StorageEvent) => e.key === KEY && fn();
     window.addEventListener("storage", on);
