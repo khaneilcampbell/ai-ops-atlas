@@ -2028,6 +2028,22 @@
    "source": "src/views/map3d/HillsCommunity.tsx"
   },
   {
+   "category": "Trains",
+   "kind": "Harbour platform with a boardwalk and stair to the yacht dock",
+   "count": 1,
+   "area": "Marina",
+   "moves": false,
+   "source": "src/views/map3d/harbourPlatform.ts"
+  },
+  {
+   "category": "Trains",
+   "kind": "Transit Gateway: entrance lobby, lift and footbridge over the track to the boardwalk",
+   "count": 1,
+   "area": "Marina",
+   "moves": false,
+   "source": "src/views/map3d/transitGateway.ts"
+  },
+  {
    "category": "People",
    "kind": "Traveller (train, shuttle car and yacht loops)",
    "count": 18,
@@ -2089,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-16T06:56:51.026Z",
- "commit": "4a81812fd679c57bf71c96dfdba23825c6a40c5f"
+ "generated_at": "2026-11-16T07:10:10.538Z",
+ "commit": "3d9ba76897794b50ab7399e88d495286411371c3"
 }
