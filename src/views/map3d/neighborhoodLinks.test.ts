@@ -14,7 +14,8 @@ for(const g of ['none','district','status','tag'] as GroupBy[])it(`keeps a compa
  for(const c of s.transportConnections.filter(l=>['marketplace-city-boulevard','financial-stadium-local'].includes(l.id))){expect(pathClear(c.road,boxes,.32)).toBe(true);expect(pathClear(c.walk,boxes,.23)).toBe(true);}
  expect(pathClear(r.route,[...boxes,{x:s.dealership!.x+5,z:s.dealership!.z+4,w:10,d:8}],.6)).toBe(true);
  for(const link of s.transportConnections.filter(l=>['atlas-hills','financial-district','marketplace-city-boulevard','financial-stadium-local'].includes(l.id)))expect(pathClear(link.road,s.fountains.map(v=>({x:v.x,z:v.z,w:.95*(v.k??1),d:.95*(v.k??1)})),.32),`local street ${link.id} stays clear of fountains ${JSON.stringify(s.fountains.filter(v=>!pathClear(link.road,[{x:v.x,z:v.z,w:.95*(v.k??1),d:.95*(v.k??1)}],.32)))}`).toBe(true);
- const deckHeight=C.railRise-.2;expect(deckHeight).toBeGreaterThan(1.3);
+ // The shore railway runs on the ground (Khaneil, 2026-11-15): its bed is flush with the terrace and the platform a kerb above the rails.
+ expect(C.railRise).toBeLessThan(.15);expect(C.platformRise-C.railRise).toBeCloseTo(.26,5);
 });
 it('subtracts existing land without losing or overlapping the connecting area',()=>{
  const existing=[{x:0,z:0,w:2,d:2},{x:4,z:0,w:2,d:2}],pieces=uncoveredLand({x:0,z:0,w:6,d:2},existing);expect(pieces.reduce((n,r)=>n+r.w*r.d,0)).toBe(4);for(const p of pieces)for(const e of existing)expect(overlapsParcel(p,e)).toBe(false);

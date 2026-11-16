@@ -9,7 +9,13 @@ import type {Rect} from './scene';
 import {roundedRoad} from './highway';
 import {CITY_SPACING} from './citySpacing';
 import {HILLS} from './hillsPlan';
-export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,stationX:28,parkStopX:20.8,shoreTrackOffset:1.35,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:1.8,platformRise:2.06,trackWidth:.7,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:15,speed:3.2} as const;
+/** railRise / platformRise: the shore railway runs on the ground (Khaneil, 2026-11-15: "put the train station tracks on
+ * the ground"): the ballast bed sits flush with the terrace and the platform stays .26 above the rails, as it did on the viaduct. */
+export const COMMUNITY={streetX:21,streetZ:27,sidewalkX:20,sidewalkZ:26.35,stationX:28,parkStopX:20.8,shoreTrackOffset:1.35,trackZ:18.5,platformOffset:.85,platformWidth:1.05,platformLength:7.8,railRise:.08,platformRise:.34,trackWidth:.7,bedWidth:.98,trainLength:3.6,carriageLength:1.3,carriageSpacing:1.1,dwell:15,speed:3.2} as const;
+/** The train's clearance envelope beside and above the track centre line, in terrace heights: the carriage floor sits at
+ * railRise+.1 and the tallest parts (door leaves, .56 above the floor) reach top; halfWidth covers a door swung fully
+ * open (.26 hinge + .18 leaf). transitGateway.test.ts checks every carriage part in HillsCommunity.tsx stays inside it. */
+export const TRAIN_ENVELOPE={top:COMMUNITY.railRise+.1+.56,halfWidth:.45} as const;
 export const COMMUNITY_BUILDINGS=[
  {id:'home-1',name:'Cypress House',kind:'house',x:4,z:24,w:3.2,d:2.6,h:1.8,color:'#eee2cd',purpose:'Planned gated residence with a private garden and garage.'},
  {id:'home-2',name:'Palm House',kind:'house',x:10,z:24,w:3.2,d:2.6,h:2.2,color:'#dce3dc',purpose:'Planned two-story residence with a balcony and private garage.'},
