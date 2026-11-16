@@ -14,11 +14,9 @@ export const PARK_STATION={
  /** Shell vault: half-axes across the track (z) and up (y), length along the track, slat count. */
  shell:{across:.92,up:1.55,length:7.6,slats:13,maxAngle:72*Math.PI/180,centreZ:.4,lift:.15,glassBelow:40*Math.PI/180},
  ribs:[-3.8,-1.9,0,1.9,3.8],
- /** The lift tower stands just outside the shell's platform-side edge, so the glass never cuts through it. */
- liftZ:1.75,
- /** Glazed stair tube: stair centre line offset, half width, wall height, arch rise above the tube. */
+ /** Glazed ramp tube: ramp centre line offset, half width, wall height, arch rise above the tube. */
  bridge:{dx:1,halfWidth:.6,wall:.78,archRise:.85,archSegments:12,foot:6.1},
- colors:{shell:'#e2dccd',rib:'#f4f2ec',accent:'#c9a35a',lift:'#d8d1c1',frame:'#8f9c9c'},
+ colors:{shell:'#e2dccd',rib:'#f4f2ec',accent:'#c9a35a',frame:'#8f9c9c'},
 } as const;
 
 export interface ParkStationParts {metal:Inst[];glass:Inst[];accents:Inst[]}

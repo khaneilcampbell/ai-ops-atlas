@@ -76,7 +76,4 @@ describe('station shell structure', () => {
    expect(c.p[1]+c.s[1]).toBeCloseTo(top,5);
   }
  });
- it('keeps the lift tower outside the glass', () => {
-  expect(PARK_STATION.liftZ-.35).toBeGreaterThan(edge(s.maxAngle));
- });
 });

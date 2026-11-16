@@ -10,7 +10,9 @@ import { wake } from "../../lib/power";
 import { focusable, night } from "./materials";
 import { Instanced, type Inst, type useGeometries, type useMaterials } from "./models";
 import { TERRACE_H, WATER_Y, type Scene3D } from "./scene";
-import { marinaSite } from "./marinaPlan";
+import { marinaSite, type MarinaSite } from "./marinaPlan";
+import { planHarbourPlatform, harbourAccess, harbourParts, type HarbourPlan } from "./harbourPlatform";
+import { walkPoint } from "./hillsCommunityPlan";
 import { trafficFlow } from "./trafficFlow";
 import { harbourLoop, yachtBerth } from "./yachtPlan";
 import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
@@ -137,7 +139,8 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     const dockX=harborX, dockZ=pierZ+1.4;
     let dockU=0, nearest=Infinity;
     for(let i=0;i<=1000;i++) { const q=curve.getPointAt(i/1000); const d=Math.hypot(q.x-dockX,q.z-dockZ); if(d<nearest) { nearest=d;dockU=i/1000; } }
-    return { curve, length: curve.getLength(), dockU, dockX, dockZ, pierZ, shoreZ, cityWalkZ };
+    const harbour=planHarbourPlatform(scene.communityRail?.loop,marina);
+    return { curve, length: curve.getLength(), dockU, dockX, dockZ, pierZ, shoreZ, cityWalkZ, marina, harbour };
   }, [scene]);
 
   const o = useMemo(() => new THREE.Object3D(), []);
@@ -246,8 +249,8 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
   return (
     <group>
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
-      <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} />
-      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} />
+      <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} harbour={loop.harbour} marina={loop.marina} />
+      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} harbour={loop.harbour} />
       <FigureMeshes f={sailors} g={g} m={m} shadow={false} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={yachtDeck} args={[boatGeometry.hull,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
@@ -370,7 +373,12 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 
 /** Timber pier, berthing platform and navigation lights outside the southern shoreline. */
 /** Visitors follow the stair treads in both directions, then stroll along the pier. */
-function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"] }) {
+const LENGTHS=new WeakMap<object,number>();
+const pathLength=(p:[number,number,number][])=>{let n=LENGTHS.get(p);if(n===undefined){n=0;for(let i=1;i<p.length;i++)n+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1],p[i][2]-p[i-1][2]);LENGTHS.set(p,n||1);}return n||1;};
+function DockVisitors({ x, z, cityZ, g, m, moving, exclusion, harbour, marina }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"];harbour?:HarbourPlan;marina:MarinaSite }) {
+  // With the harbour platform, visitors go through the Transit Gateway (stair, or the lift for every fourth one), over the
+  // footbridge, along the boardwalk and down the dog-leg stair (harbourPlatform.ts, transitGateway.ts). Unnamed people only.
+  const paths = useMemo(() => harbour ? [undefined, new Set(["stair"] as const)].map(closed => [...harbourAccess(harbour, marina, closed), [x, harbour.dockY, z + 1.05] as [number, number, number]]) : undefined, [harbour, marina, x, z]);
   const people = useFigures(8);
   const elapsed = useRef(0);
   useEffect(() => {
@@ -380,6 +388,18 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:nu
   useFrame((_,dt) => {
     if(moving) elapsed.current += Math.min(dt,0.1);
     people.begin(elapsed.current);
+    if(paths) {
+      for(let i=0;i<8;i++) {
+        const path=paths[i%4===3?1:0], len=pathLength(path);
+        // Same strolling pace on the longer gateway walk (the old walk was about 12 units).
+        const t=((elapsed.current*STROLL_SPEED/len+i/8)%2+2)%2, down=t<1, u=down?t:2-t;
+        const [px,py,pz]=walkPoint(path,u), [nx,,nz]=walkPoint(path,Math.min(1,Math.max(0,u+(down?.01:-.01))));
+        const side=down?-0.12:0.12, dx=nx-px, dz=nz-pz, n=Math.hypot(dx,dz)||1;
+        const qx=px-dz/n*side, qz=pz+dx/n*side;
+        if(pedestrianAllowed(exclusion,qx,qz))people.put(i,qx,TERRACE_H+py+0.02,qz,Math.atan2(dx,dz));else people.hide(i);
+      }
+      people.commit();return;
+    }
     const start=cityZ-0.2, end=z+1.05, length=end-start;
     const cityTop=TERRACE_H+0.03, dockTop=WATER_Y+0.22;
     for(let i=0;i<8;i++) {
@@ -397,11 +417,14 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion }: { x:number; z:nu
   return <group><FigureMeshes f={people} g={g} m={m}/></group>;
 }
 
-function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M}) {
+function Marina({x,z,cityZ,shoreZ,g,m,harbour}:{x:number;z:number;cityZ:number;shoreZ:number;g:G;m:M;harbour?:HarbourPlan}) {
   const parts=useMemo(()=>{
     // Deck pieces and steps that overlap stand a few millimetres apart (and above the terrace): flush tops flickered.
     const deck:Inst[]=[{p:[x,WATER_Y+0.13,z+0.55],s:[0.5,0.096,1.1],c:"#a7835d"},{p:[x,WATER_Y+0.13,z+1.05],s:[3.6,0.09,0.38],c:"#b89569"}];
     const posts:Inst[]=[],lights:Inst[]=[];
+    // The harbour platform's boardwalk and dog-leg stair replace the old straight stair off the seawall.
+    if(harbour){const h=harbourParts(harbour);deck.push(...h.deck);posts.push(...h.rails);lights.push(...h.lamps);}
+    else {
     const dockTop=WATER_Y+0.22, cityTop=TERRACE_H+0.03;
     const count=12, run=1.8, tread=run/count;
     const stairStart=z-run;
@@ -428,11 +451,12 @@ function Marina({x,z,cityZ,shoreZ,g,m}:{x:number;z:number;cityZ:number;shoreZ:nu
         posts.push({p:[x+side*0.35,top+0.3,along],s:[0.035,0.025,tread+0.02],c:"#76b5ae"});
       }
     }
+    }
 
     for(const side of [-1,1]) for(const along of [0.15,0.95]) posts.push({p:[x+side*0.22,WATER_Y-0.45,z+along],s:[0.06,0.85,0.06],c:"#54493f"});
     for(const side of [-1,1]) { posts.push({p:[x+side*1.72,WATER_Y-0.45,z+1.05],s:[0.07,0.85,0.07],c:"#54493f"}); lights.push({p:[x+side*1.72,WATER_Y+0.42,z+1.05],s:[0.055,0.055,0.055]}); }
     return {deck,posts,lights};
-  },[x,z,cityZ,shoreZ]);
+  },[x,z,cityZ,shoreZ,harbour]);
   return <group><Instanced items={parts.deck} geometry={g.box} material={m.plain}/><Instanced items={parts.posts} geometry={g.box} material={m.plain}/><Instanced items={parts.lights} geometry={g.ball} material={m.lamp}/></group>;
 }
 
