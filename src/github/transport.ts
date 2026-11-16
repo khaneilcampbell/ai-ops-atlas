@@ -51,10 +51,33 @@ function etagCache(): EtagCache {
   return (etags ??= load<EtagCache>("etags", {}));
 }
 
+/** The cache's share of local storage, in characters. Local storage holds about 5 MB in the Mac app, and tasks and workflow runs live there too. */
+export const ETAG_BUDGET = 1_500_000;
+
+/** Drops the least recently stored responses until the cache fits the budget. Returns the JSON to save. */
+export function trimEtags(cache: EtagCache, budget = ETAG_BUDGET): string {
+  let json = JSON.stringify(cache);
+  if (json.length <= budget) return json;
+  const paths = Object.keys(cache); // oldest first: `remember` re-adds a path at the end
+  while (json.length > budget && paths.length) {
+    for (const p of paths.splice(0, Math.max(1, Math.ceil(paths.length / 10)))) delete cache[p];
+    json = JSON.stringify(cache);
+  }
+  return json;
+}
+
+function persistEtags() {
+  const cache = etagCache();
+  trimEtags(cache);
+  save("etags", cache);
+}
+
 function remember(path: string, etag: string, body: unknown) {
-  etagCache()[path] = { etag, body };
+  const cache = etagCache();
+  delete cache[path];
+  cache[path] = { etag, body };
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => save("etags", etags), 500);
+  saveTimer = setTimeout(persistEtags, 500);
 }
 
 let rate: RateLimit | null = load<RateLimit | null>("rate", null);
@@ -101,7 +124,7 @@ export function forgetEtags(match: (path: string) => boolean) {
   if (!stale.length) return;
   for (const path of stale) delete cache[path];
   clearTimeout(saveTimer);
-  save("etags", cache);
+  persistEtags();
 }
 
 export interface GetOptions {

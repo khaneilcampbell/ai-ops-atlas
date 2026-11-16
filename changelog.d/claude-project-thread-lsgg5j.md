@@ -1,1 +1,2 @@
 - 2026-11-15 · The Atlas Step Runner is now switched on, so Atlas shows it as active on the Agents tab (#431)
+- 2026-11-16 · Fixed "Couldn't save the run: this device's storage is full": Atlas now makes room by dropping its GitHub cache, which it can fetch again, and keeps that cache smaller (#431)
