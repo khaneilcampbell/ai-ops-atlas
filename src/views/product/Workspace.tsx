@@ -12,7 +12,7 @@ import { useAtlas } from "../../state";
 import { useTasks } from "../../tasks/store";
 import { KHANEIL } from "../../tasks/types";
 import { useRuns } from "../../workflows/runs";
-import { NOT_SUPPORTED, STATUS_DOT, STATUS_LABEL, type IntegrationState } from "../../product/integrations";
+import { NOT_SUPPORTED, statusBadge, type IntegrationState } from "../../product/integrations";
 import { catalogEntries, CONFIG_PRESETS, filterEntries } from "../../product/marketplace";
 import { platform, useIntegrationProbe } from "../../product/probe";
 import { checkImport, exportWorkspace, readiness } from "../../product/readiness";
@@ -271,7 +271,7 @@ export function IntegrationCard({ s, w, onChanged, compact }: { s: IntegrationSt
       <div className="card-head">
         <h3 className="grow">{s.def.label}</h3>
         <span className="health">
-          <i className={STATUS_DOT[s.status]} /> {STATUS_LABEL[s.status]}
+          <i className={statusBadge(s).dot} /> {statusBadge(s).label}
         </span>
       </div>
       <p className="muted small">{s.def.description}</p>

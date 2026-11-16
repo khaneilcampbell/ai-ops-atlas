@@ -5,7 +5,7 @@ import type { HealthLoad, HealthReport } from "../observability/health";
 import { memoryBackend } from "../tasks/store";
 import { KHANEIL, type Actor } from "../tasks/types";
 import { BENJAIRE_LAUNCH } from "../workflows/benjaireLaunch";
-import { INTEGRATION_CATALOG, integrationState, integrationStates, type ProbeInput } from "./integrations";
+import { INTEGRATION_CATALOG, integrationState, integrationStates, statusBadge, type ProbeInput } from "./integrations";
 import { catalogEntries, CONFIG_PRESETS, filterEntries } from "./marketplace";
 import { checkImport, exportWorkspace, readiness } from "./readiness";
 import { compatibility, runProblem, simulateTemplate, stepProblem, taskAgentProblem, templateById, TEMPLATES } from "./templates";
@@ -151,6 +151,10 @@ describe("integration validation", () => {
     expect(s.verifiedAt).toBeNull();
     const n8n = integrationState(INTEGRATION_CATALOG.find((d) => d.id === "n8n")!, probe());
     expect(n8n.verifiedAt).toBe(AT);
+    // The card never says "Connected" for a key no check has reached; a checked one does.
+    expect(statusBadge(s)).toEqual({ label: "Key set · not verified", dot: "h-unknown" });
+    expect(statusBadge(n8n)).toEqual({ label: "Connected", dot: "h-good" });
+    expect(statusBadge({ status: "degraded", verifiedAt: null }).label).toBe("Degraded");
   });
 
   it("maps failing checks and missing keys to the right statuses", () => {

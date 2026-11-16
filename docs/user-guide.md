@@ -49,7 +49,7 @@ A workspace holds settings only. Tasks, workflow runs, memory and business recor
 | Email alerts (Resend) | Via the hosted site | `RESEND_API_KEY`, `ALERT_EMAIL_TO` | Set only; no test email is sent |
 | Atlas site link | Settings > Website sync | Not needed | The site answering with the sync key |
 
-Statuses: **Connected** (set up; "Last successful check" says when a real request proved it), **Degraded** (a check failed or partly failed), **Disconnected** (the service didn't answer), **Configuration Required** (a key or link is missing), **Unsupported** (not on this platform, or no adapter: OpenAI, Gemini, Slack, direct Shopify). Health is read once and reused for five minutes; **Check again** forces a fresh read.
+Statuses: **Connected** (a real request proved it; "Last successful check" says when), **Key set · not verified** (the key or link is set but no check has reached the service yet; workflows may still use it), **Degraded** (a check failed or partly failed), **Disconnected** (the service didn't answer), **Configuration Required** (a key or link is missing), **Unsupported** (not on this platform, or no adapter: OpenAI, Gemini, Slack, direct Shopify). Health is read once and reused for five minutes; **Check again** forces a fresh read.
 
 Disconnect: on the Mac, **Disconnect** removes a Keychain key. Site keys are removed in the Cloudflare dashboard (Workers & Pages > ai-ops-atlas > Settings > Variables and Secrets) and take effect on the next deploy. Atlas never reads or shows a key.
 
