@@ -250,6 +250,56 @@ agents:
       cost:
         budget: Claude Opus 5.5, one proposal and $2 per 30 days, checked before each call
 
+  - id: atlas-step-runner
+    name: Atlas Step Runner
+    purpose: >-
+      Restricted n8n workflow that Atlas Workflow Intelligence can start for six research and planning
+      steps of a live run (market, customer and competitor research, scoring, brief, plan). One model
+      call per step with no tools, then a structured report back to Atlas. It cannot send email, touch
+      Notion, the shop or payments, approve or publish.
+    framework: n8n
+    owned_by: agent-operations-lead
+    model: claude-haiku-5-5 for research, claude-sonnet-5-5 for scoring, brief and plan
+    runtime: n8n Cloud
+    status: paused
+    trigger: Webhook from the Atlas site only (draft, not published)
+    last_run: null
+    history:
+      - at: 2026-11-15
+        event: Built as an unpublished n8n draft at Khaneil's choice of a new restricted step runner; waits for the bridge secrets and Khaneil's OK to publish
+    links:
+      - label: n8n workflow (Step Runner)
+        url: https://khancam15.app.n8n.cloud/workflow/tGYMec2rp0twZFxv
+    permissions:
+      - 'Webhook header auth: N8N_BRIDGE_TOKEN, held only by the Atlas site'
+      - 'Anthropic API: one call per step; the Atlas site allows at most 20 steps a day'
+      - 'Atlas report key (N8N_BRIDGE_CALLBACK_TOKEN): adds reports only for steps the site sent'
+    registry:
+      title: Workflow Step Runner
+      category: engineering
+      subcategory: Workflow automation
+      classification:
+        type: B
+        confidence: verified
+        evidence: n8n draft tGYMec2rp0twZFxv checks the step in plain code, makes one Claude call with no tools and posts the report to /api/hooks/n8n-report
+      responsibilities:
+        tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas]
+        tools: [Webhook, Claude]
+        inputs: [Handoff envelopes from the Atlas site]
+        outputs: [Step reports in the Atlas site's private database]
+      execution:
+        trigger_type: event
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Research and planning only; approvals, development and publishing stay with Khaneil and the Approve and Publish flow.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials and Cloudflare Pages secrets)
+        risk: medium
+        audit_log: n8n executions and the Atlas site's n8n_dispatch and n8n_reports tables (kept 30 days)
+      cost:
+        budget: At most 20 steps a day across all runs, enforced by the Atlas site before sending
+
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
   - id: agent-operations-lead

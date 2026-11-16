@@ -100,6 +100,10 @@ export interface RegistryManifest {
     credentialOwner?: string;
     risk?: Risk;
     auditLog?: string;
+    /** How to stop it at once without a deploy, and what stops. */
+    killSwitch?: string;
+    /** Limits that are always on (sends, spend or writes per period). */
+    caps?: string;
   };
   cost?: { budget?: string; notes?: string };
   docs?: { technical?: string; runbook?: string; knownIssues: string[]; improvements: string[]; lastReview?: string | null };

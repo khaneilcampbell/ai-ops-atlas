@@ -768,6 +768,17 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .map-menu .count { margin-left: auto; color: var(--ink-3); font-size: 12px; }
 .map-menu .text-btn { align-self: flex-start; margin-top: 2px; }
 .map-menu .text-btn:disabled { color: var(--ink-3); opacity: 0.6; cursor: default; }
+.map-menu.controls-help { width: min(560px, calc(100vw - 48px)); max-height: min(70vh, 620px); overflow-y: auto; gap: 8px; }
+.controls-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; line-height: 1.4; }
+.controls-table caption { text-align: left; font-weight: 600; color: var(--ink); padding: 2px 2px 4px; }
+.controls-table th, .controls-table td { text-align: left; vertical-align: top; padding: 4px 6px; border-top: 1px solid var(--sage-200); }
+.controls-table thead th { font-size: 11px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; border-top: 0; }
+.controls-table tbody th { font-weight: 600; color: var(--ink-2); }
+.controls-table thead th:nth-child(1) { width: 24%; }
+.controls-table thead th:nth-child(2) { width: 32%; }
+.controls-details { display: block; }
+.controls-details summary { cursor: pointer; margin-bottom: 6px; }
+.controls-details .controls-table { margin-bottom: 10px; }
 .map-menu .note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
 .swatch { display: inline-block; width: 14px; height: 4px; border-radius: 2px; flex: none; }
 .m3-labels > div.dim { opacity: 0.32; }

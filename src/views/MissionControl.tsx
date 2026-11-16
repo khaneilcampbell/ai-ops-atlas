@@ -49,6 +49,9 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
           <h1>Know what needs you next.</h1>
           <p className="lede">Review issues, check agent activity, and follow up from one place.</p>
         </div>
+        <button className="ghost-btn dark" onClick={() => setView("workflows")}>
+          <Icon name="flow" size={16} /> Workflow Intelligence
+        </button>
         <button className="ghost-btn dark" onClick={() => setView("map")}>
           <Icon name="map" size={16} /> Back to the map
         </button>

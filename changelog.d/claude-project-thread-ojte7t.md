@@ -1,0 +1,1 @@
+- 2026-11-15 · Pressing Update now always reopens Atlas by itself. If the quick restart doesn't come up, Atlas restarts the ordinary way (one Touch ID prompt) instead of just quitting, and the button says "Updating, restarting…" while it happens (#428)
