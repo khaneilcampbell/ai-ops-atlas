@@ -12,7 +12,8 @@ import { DEFINITIONS, GOALS } from "../../workflows/benjaireLaunch";
 import { buildingActivity, liveEvents, liveStatus, resolveAll, simulate, type ResolvedNode } from "../../workflows/engine";
 import { downstream, layout as layoutOf, upstream } from "../../workflows/graph";
 import { runStore, startLiveRun, useRuns } from "../../workflows/runs";
-import { selectBuilding, selectNode, useWorkflowSelection } from "../../workflows/selection";
+import { NodeBusiness } from "../business/NodeBusiness";
+import { selectBuilding, selectNode, takeWorkflowRunFocus, useWorkflowSelection } from "../../workflows/selection";
 import { NODE_STATUS_LABEL, type ExecutionEvent, type NodeStatus, type RunMode, type WorkflowDefinition, type WorkflowNode, type WorkflowRun } from "../../workflows/types";
 import { statusTone, WorkflowCanvas } from "./WorkflowCanvas";
 import { RunExecution, useRunLedger } from "./RunExecution";
@@ -38,11 +39,12 @@ export function WorkflowIntelligenceView() {
   const runs = useRuns();
   const sel = useWorkflowSelection();
 
-  const [goalId, setGoalId] = useState(GOALS[0].id);
+  const [focus] = useState(takeWorkflowRunFocus);
+  const [goalId, setGoalId] = useState(focus && GOALS.some((g) => g.id === focus.goalId) ? focus.goalId : GOALS[0].id);
   const goal = GOALS.find((g) => g.id === goalId) ?? GOALS[0];
-  const [mode, setMode] = useState<RunMode>("simulation");
+  const [mode, setMode] = useState<RunMode>(focus ? "live" : "simulation");
   const goalRuns = useMemo(() => runs.filter((r) => r.goalId === goal.id).slice().reverse(), [runs, goal.id]);
-  const [runId, setRunId] = useState<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(focus?.runId ?? null);
   const run: WorkflowRun | undefined = goalRuns.find((r) => r.id === runId) ?? goalRuns[0];
 
   // A live run reads its own frozen definition; a simulation reads the saved template.
@@ -252,6 +254,7 @@ export function WorkflowIntelligenceView() {
               onFocus={focusOnMap}
               onOpenTask={openTask}
               mode={mode}
+              runId={run && mode === "live" ? run.id : undefined}
             />
           ) : (
             <div className="wf-empty">
@@ -354,6 +357,7 @@ function Legend() {
 }
 
 interface InspectorProps {
+  runId?: string;
   node: WorkflowNode;
   def: WorkflowDefinition;
   r: ResolvedNode;
@@ -372,7 +376,7 @@ interface InspectorProps {
 
 const HANDOFF_LABEL: Record<HandoffRecord["state"], string> = { validated: "Output validated", unverified: "Completed without structured output (unverified)", waived: "Waived" };
 
-function Inspector({ node, def, r, status, task, runError, allTasks, events, names, onPick, onFocus, onOpenTask, mode, handoff }: InspectorProps) {
+function Inspector({ node, def, r, status, task, runError, allTasks, events, names, onPick, onFocus, onOpenTask, mode, handoff, runId }: InspectorProps) {
   const ups = upstream(def, node.id);
   const downs = downstream(def, node.id);
   const lastAttempt = task?.attempts[task.attempts.length - 1];
@@ -552,6 +556,8 @@ function Inspector({ node, def, r, status, task, runError, allTasks, events, nam
           )}
         </div>
       )}
+
+      {runId && <NodeBusiness runId={runId} task={task} />}
 
       <div className="section-title">Execution log</div>
       {events.length ? (

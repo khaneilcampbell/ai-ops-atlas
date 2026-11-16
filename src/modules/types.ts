@@ -64,7 +64,7 @@ export const MODULE_HEALTH = ["healthy", "warning", "critical", "unknown"] as co
 export type ModuleHealth = (typeof MODULE_HEALTH)[number];
 
 /** Existing top-level Atlas views a module can point to (state.tsx View). */
-export type ModuleView = "overview" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
+export type ModuleView = "overview" | "business" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "settings";
 
 /**
  * A platform module type: the spec's AtlasBuildingModule, minus the per-building fields
