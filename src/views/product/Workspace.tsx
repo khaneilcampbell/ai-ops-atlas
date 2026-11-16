@@ -392,7 +392,8 @@ function IntegrationsTab({ w, probe }: { w: Workspace | null; probe: Probe }) {
     <>
       <div className="product-bar">
         <span className="muted small grow">
-          {shown.filter((s) => s.status === "connected").length} of {shown.length} connected on this {platform() === "desktop" ? "Mac" : platform() === "web" ? "site" : "preview"}. Health is read once and reused for five minutes.
+          {shown.filter((s) => s.status === "connected" && s.verifiedAt).length} of {shown.length} connected and checked on this {platform() === "desktop" ? "Mac" : platform() === "web" ? "site" : "preview"}
+          {shown.some((s) => s.status === "connected" && !s.verifiedAt) ? `, ${shown.filter((s) => s.status === "connected" && !s.verifiedAt).length} with a key set but not verified` : ""}. Health is read once and reused for five minutes.
         </span>
         <button className="btn small" onClick={() => void probe.check(true)} disabled={probe.checking}>
           <Icon name="refresh" size={13} /> {probe.checking ? "Checking" : "Check again"}
