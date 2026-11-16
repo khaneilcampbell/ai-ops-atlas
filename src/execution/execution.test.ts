@@ -274,6 +274,15 @@ describe("duplicates and replays", () => {
     expect(new Set(e.sim.sent.map((x) => x.idempotencyKey)).size).toBe(3);
   });
 
+  it("a round asked for while another is going reports the real state, not an empty summary", async () => {
+    const e = setup();
+    e.orch.authorize(e.run.id, KHANEIL);
+    const [a, b, c] = await Promise.all([e.orch.step(e.run.id), e.orch.step(e.run.id), e.orch.step(e.run.id)]);
+    // Intake waits on Khaneil; every caller hears it, including the ones that overlapped.
+    for (const r of [a, b, c]) expect(r.ok && r.summary.waitingOnPerson.map((w) => w.nodeId)).toEqual(["intake"]);
+    expect(e.sim.sent).toHaveLength(0);
+  });
+
   it("an old attempt's report or a report from the wrong system can't complete a step", async () => {
     const e = setup();
     await throughResearch(e);
