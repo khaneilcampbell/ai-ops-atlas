@@ -1,0 +1,1 @@
+- 2026-11-16 · New Business view in Business Operations HQ: goals, leads, customers, products, sales, costs and evidence-based advice, from real records only. "Sync from Stripe" reads your Stripe sales through n8n, read only, and saves them only when you press Record (#434)

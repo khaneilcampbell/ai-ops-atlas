@@ -112,7 +112,7 @@ agents:
         outcomes: [A health report with verified facts kept separate from AI recommendations]
         beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Collect repository facts from GitHub read-only, Ask Claude for a structured assessment, Validate citations and drop ungrounded claims]
+        tasks: [Collect repository facts from GitHub read-only, Ask Claude for a structured assessment with its fixed instructions cached, Reuse the last assessment when the repository data is unchanged, Validate citations and drop ungrounded claims]
         tools: [GitHub REST API (read-only), Anthropic Messages API]
         inputs: [One selected repository, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved report shown in the Intel view]
@@ -189,7 +189,7 @@ agents:
         outcomes: [A ranked list of improvements across the ecosystem, with verified facts kept separate from Claude's recommendations]
         beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Gather facts for every catalog repository, reusing saved Repository Intelligence reports, Check Dependabot config, CODEOWNERS, branch rules and workflow files, Ask Claude for one structured review, Validate citations and drop invented repositories or agents]
+        tasks: [Gather facts for every catalog repository, reusing saved Repository Intelligence reports, Check Dependabot config, CODEOWNERS, branch rules and workflow files, Reuse the last review without calling Claude when only daily activity such as commit counts and push dates changed, Ask Claude for one structured review with its instructions and catalog cached, Validate citations and drop invented repositories or agents]
         tools: [GitHub REST API (read-only), Anthropic Messages API]
         inputs: [The Atlas catalog, Saved repository reports, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved review shown in Intel → Engineering review]

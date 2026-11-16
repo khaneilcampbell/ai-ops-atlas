@@ -42,6 +42,7 @@ const PATHS: Record<string, string> = {
   // A checklist: three ticked rows.
   tasks: "M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5",
   // A workflow: one step branching to two.
+  briefcase: "M4 8h16v11H4zM9 8V5h6v3M4 13h16M11 13v2h2v-2",
   flow: "M3 10h5v4H3zM16 4h5v4h-5zM16 16h5v4h-5zM8 12h4M12 6v12M12 6h4M12 18h4",
 };
 

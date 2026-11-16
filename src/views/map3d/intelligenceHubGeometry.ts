@@ -128,10 +128,10 @@ export function intelligenceHubGeometry(p:IntelligenceHubPlan):IntelligenceHubGe
  trim.push(extrudePlan(offsetPolygon(groundPoly,groundPoly.map(()=>.004*k)),soffitY-.012,soffitY,r*.7));
 
  // Black reveal bands, swelling out on the corner face: the wavy lines (instanced at each floor line).
- const band=(poly:Pt[])=>compactGeometry(extrudePlan(offsetPolygon(poly,[o,o,oc,o,o]),-h/2,h/2,r+o).toNonIndexed().deleteAttribute('uv'));
+ const band=(poly:Pt[])=>compactGeometry(extrudePlan(offsetPolygon(poly,[o,o,oc,o,o]),-h/2,h/2,r+o).deleteAttribute('uv'));
  // Corner loggia frame: deep, rounded, the same for every floor.
  const B=I.bay,bt=B.frame*k*.6,b0=p.bays[0];
- const bayRing=compactGeometry(ring(b0.w,b0.y1-b0.y0,bt,B.radius*k,B.depth*k).translate(0,0,-.004).toNonIndexed().deleteAttribute('uv'));
+ const bayRing=compactGeometry(ring(b0.w,b0.y1-b0.y0,bt,B.radius*k,B.depth*k).translate(0,0,-.004).deleteAttribute('uv'));
  const windowRings:Record<string,THREE.BufferGeometry>={};
  for(const w of p.windows){
   const key=windowKey(w);if(windowRings[key])continue;

@@ -1,0 +1,23 @@
+/* Production health panel in Mission Control. Reuses the card, health dot and stat styles. */
+.prod-health { margin: 16px 0; }
+.prod-head { padding: 0 2px 10px; gap: 10px; }
+.prod-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+@media (max-width: 1180px) { .prod-grid { grid-template-columns: minmax(0, 1fr); } }
+.prod-list { list-style: none; margin: 0; padding: 4px 20px 8px; }
+.prod-list li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--sage-100); }
+.prod-list li:first-child { border-top: 0; }
+.prod-list .label { font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+.prod-state { flex: 0 0 96px; padding-top: 2px; }
+.prod-pad { padding: 4px 20px 12px; margin: 0; }
+.prod-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 10px 20px; border-top: 1px solid var(--sage-100); }
+.prod-stats div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prod-stats b { font-size: 18px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.prod-stats b.bad { color: var(--bad); }
+.prod-stats span { font-size: 11px; color: var(--ink-3); }
+@media (max-width: 520px) {
+  .prod-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .prod-state { flex-basis: 84px; }
+  .prod-list { padding: 4px 14px 8px; }
+}
+.backup-note.good { color: var(--good); }
+.backup-note.bad { color: var(--bad); }

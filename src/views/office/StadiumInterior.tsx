@@ -151,7 +151,7 @@ export default function StadiumInterior({light}:{light:LightMode}){
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  const mid=concourseMid(),title=all?'All · Open cutaway':STADIUM_VIEWS[view];
  return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows camera={{position:VIEW_EYES[-1],fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:VIEW_EYES[-1],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.32:.75}/>

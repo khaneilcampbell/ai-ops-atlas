@@ -78,6 +78,7 @@ describe("automation categories", () => {
       ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
+        "atlas-sales-feed",
         "benjaire-contact-worker",
         "benjaire-flow-digest",
         "benjaire-flow-errors",
