@@ -261,12 +261,14 @@ agents:
     owned_by: agent-operations-lead
     model: claude-haiku-5-5 for research, claude-sonnet-5-5 for scoring, brief and plan
     runtime: n8n Cloud
-    status: paused
-    trigger: Webhook from the Atlas site only (draft, not published)
-    last_run: null
+    status: active
+    trigger: Webhook from the Atlas site only (published)
+    last_run: 2026-11-15T21:05:43Z
     history:
       - at: 2026-11-15
-        event: Built as an unpublished n8n draft at Khaneil's choice of a new restricted step runner; waits for the bridge secrets and Khaneil's OK to publish
+        event: Built as an unpublished n8n draft at Khaneil's choice of a new restricted step runner
+      - at: 2026-11-15
+        event: Khaneil published it after adding the bridge secrets; a test market research step ran and the site refused its report as expected because Atlas had not sent that step
     links:
       - label: n8n workflow (Step Runner)
         url: https://khancam15.app.n8n.cloud/workflow/tGYMec2rp0twZFxv
@@ -281,7 +283,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: n8n draft tGYMec2rp0twZFxv checks the step in plain code, makes one Claude call with no tools and posts the report to /api/hooks/n8n-report
+        evidence: n8n workflow tGYMec2rp0twZFxv (published) checks the step in plain code, makes one Claude call with no tools and posts the report to /api/hooks/n8n-report
       responsibilities:
         tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas]
         tools: [Webhook, Claude]

@@ -1,0 +1,1 @@
+- 2026-11-16 · The Stripe sales feed in n8n is switched on, so "Sync from Stripe" in Business works on the site and in the Mac app (#PR)

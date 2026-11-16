@@ -1,0 +1,1 @@
+- 2026-11-15 · The 3D map stays sharp and steady close up: shadows no longer go blocky or striped when you zoom in, a few flickering surfaces (footbridges, marina deck, tower corners) are fixed, building names stop flickering while the camera moves, and the camera glide feels the same on every screen (#425)

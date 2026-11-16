@@ -810,6 +810,57 @@ agents:
       docs:
         last_review: 2026-11-11
 
+  - id: atlas-sales-feed
+    name: Atlas Sales Feed
+    purpose: >-
+      Restricted n8n workflow that the Atlas site starts by name when Khaneil presses "Sync from Stripe"
+      in the Business view. It reads paid Stripe checkouts in a date range with the restricted Stripe
+      read key and answers with ids, amounts, refunds, Stripe fees and dates. No buyer names or emails
+      leave n8n, nothing in Stripe changes, and no email is sent.
+    framework: n8n
+    owned_by: commerce-operations-manager
+    runtime: n8n Cloud
+    status: active
+    trigger: Webhook from the Atlas site only, when Khaneil presses Sync from Stripe
+    last_run: null
+    history:
+      - at: 2026-11-16
+        event: Built as an unpublished n8n draft after Khaneil chose named n8n actions over a write-scoped n8n key; one manual test run read the live Stripe account correctly (execution 717)
+      - at: 2026-11-16
+        event: Published in n8n on Khaneil's OK, after PR #434 merged
+    links:
+      - label: n8n workflow (Sales feed)
+        url: https://khancam15.app.n8n.cloud/workflow/mlS4G62If6tl4TGv
+    permissions:
+      - 'Webhook header auth: N8N_BRIDGE_TOKEN, held only by the Atlas site'
+      - 'Stripe restricted key: reads checkout sessions, payment intents, charges and balance transactions'
+      - 'n8n data table shop_orders: reads which product each checkout bought'
+    registry:
+      title: Stripe Sales Feed
+      category: business
+      subcategory: Sales reporting
+      classification:
+        type: C
+        confidence: verified
+        evidence: n8n workflow mlS4G62If6tl4TGv (published 2026-11-16) lists paid checkout sessions from Stripe, joins shop_orders and answers the webhook; no AI model
+      responsibilities:
+        tasks: [Read paid Stripe checkouts for a date range, Answer Atlas with amounts in cents and no buyer details]
+        tools: [n8n Cloud, Stripe, n8n data tables]
+        inputs: [A date range from the Atlas site, Stripe checkout sessions, shop_orders]
+        outputs: [Verified sales Khaneil records in the Business view]
+      execution:
+        trigger_type: event
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Read only. Atlas shows what would change and Khaneil presses Record; nothing is saved without that.
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials and Cloudflare Pages secrets)
+        risk: low
+        audit_log: n8n executions (the full Stripe response stays in n8n's execution log)
+      docs:
+        last_review: 2026-11-16
+
   - id: email-digest
     name: Daily Email Digest
     purpose: Emails Khaneil a daily summary of publishes, failures, queue state and sales.

@@ -21,6 +21,7 @@ import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
 import { TaskCenterView } from "./views/tasks/TaskCenter";
 import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
+import { BusinessView } from "./views/business/Business";
 import { useAutoPush } from "./usage/sync";
 import { useLiveFeed } from "./live/feed";
 import { LivePill } from "./components/LivePill";
@@ -36,6 +37,7 @@ import { formatDateTime, useTimeZone } from "./lib/timezone";
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
   { view: "tasks", label: "Task Center", icon: "tasks" },
+  { view: "business", label: "Business", icon: "briefcase" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "automations", label: "Automations", icon: "network" },
   { view: "repos", label: "Repositories", icon: "repos" },
@@ -155,6 +157,7 @@ export default function App() {
           {view === "overview" && <MissionControl attention={attention} />}
           {view === "tasks" && <TaskCenterView />}
           {view === "workflows" && <WorkflowIntelligenceView />}
+          {view === "business" && <BusinessView />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}

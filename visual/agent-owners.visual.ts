@@ -14,7 +14,7 @@ for(const width of [1512,390]) test(`Agents own their automations ${width}`,asyn
  await expect(nested.getByRole('button')).toHaveCount(1);
  await expect(page.getByRole('list',{name:'Automations run by Senior Engineering Reviewer'})).toHaveCount(0);
  await expect(page.getByRole('list',{name:'Automations run by Client Inquiry Manager'}).getByRole('button')).toHaveCount(6);
- await expect(page.getByRole('list',{name:'Automations run by Commerce Operations Manager'}).getByRole('button')).toHaveCount(5);
+ await expect(page.getByRole('list',{name:'Automations run by Commerce Operations Manager'}).getByRole('button')).toHaveCount(6); // 6 since the Stripe sales feed was published (2026-11-16)
  await expect(page.getByRole('list',{name:'Automations run by Portfolio Web Developer'}).getByRole('button')).toHaveCount(3);
  await page.locator('.reg-row[data-id="atlas-production-coordinator"]').scrollIntoViewIfNeeded();await settle(page,1);
  await page.locator('.reg-row[data-id="atlas-production-coordinator"]').evaluate(e=>e.scrollIntoView({block:'start'}));
