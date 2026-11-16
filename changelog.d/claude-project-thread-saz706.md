@@ -1,0 +1,1 @@
+- 2026-11-16 · The contact form's automatic thank-you email no longer repeats anything a visitor types (except a first name), and is held for you when the AI spam check is down, so it can't be used to send spam from benjaire.com (#PR)
