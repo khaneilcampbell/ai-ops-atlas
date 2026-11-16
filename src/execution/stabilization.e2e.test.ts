@@ -72,7 +72,7 @@ describe("stabilization: Benjaire research workflow end to end", () => {
     // A memory record for another building, worded to match the research query. It must never
     // reach this workflow's agents.
     const other = app.intel.write(
-      { category: "operational", scope: { project: "portfolio-site" }, title: "Market research on portfolio visitors", content: "Portfolio market research notes: ideas, demand signals.", tags: ["research", "market"], source: { kind: "manual", ref: "e2e" } },
+      { category: "operational", scope: { project: "portfolio-site" }, title: "Market research on portfolio visitors", content: "Portfolio market research notes: ideas, demand signals.", tags: ["research", "market"], source: { kind: "person", ref: "e2e" } },
       KHANEIL,
     );
     expect(other.ok).toBe(true);
