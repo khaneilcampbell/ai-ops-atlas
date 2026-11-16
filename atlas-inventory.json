@@ -1517,14 +1517,14 @@
    "id": "atlas-sales-feed",
    "name": "Stripe Sales Feed",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "project:commerce-pipeline",
    "building_name": "Commerce Operations Center",
    "placement": "Runs from its project building",
    "owned_by": "commerce-operations-manager",
    "project": "commerce-pipeline",
    "runtime": "n8n Cloud",
-   "trigger": "Webhook from the Atlas site only, when Khaneil syncs (draft, not published)",
+   "trigger": "Webhook from the Atlas site only, when Khaneil presses Sync from Stripe",
    "source": ""
   },
   {
@@ -2105,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-16T07:10:10.538Z",
- "commit": "3d9ba76897794b50ab7399e88d495286411371c3"
+ "generated_at": "2026-11-16T08:22:22.103Z",
+ "commit": "57152bac315e9852baee0287c58f064e9315fdec"
 }
