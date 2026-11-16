@@ -1,1 +1,2 @@
 - 2026-11-15 · The train line and its stations now run on the ground, with a level crossing on the walk to the yacht dock (#433)
+- 2026-11-16 · Events Arena Station has a harbour-side platform that runs on as a boardwalk to a stair down to the yacht dock. The train opens its doors on both sides there, and yacht guests walk straight from the train to the dock (#433)

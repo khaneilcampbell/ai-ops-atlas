@@ -11,6 +11,9 @@ type View=[string,[number,number,number],[number,number,number]];
 const VIEWS:View[]=[
  ['arena-station',[-2,0,55],[9,9,71]],
  ['marina-crossing',[2.5,.6,57.6],[7,3.6,63]],
+ // Harbour platform (Khaneil, 2026-11-16): the seaward platform face, its boardwalk and the dog-leg stair to the pier.
+ ['harbour-platform',[-1.5,.4,58.9],[1.5,4.4,66]],
+ ['harbour-stair',[1.2,-.4,59.7],[6,2.4,64]],
  ['station-close',[-6.3,.8,57.4],[-1.5,3,63.5]],
  ['station-ramp',[-5.3,.3,54.5],[-0.5,3.4,47.5]],
  ['shore-corner',[44,0,55],[54,7,66]],

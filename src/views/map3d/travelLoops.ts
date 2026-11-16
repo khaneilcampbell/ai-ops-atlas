@@ -5,6 +5,7 @@ import {buildStreetGraph,streetLines,streetRoute,type StreetGraph} from './stree
 import {drivingGraph,loopLegs,JUNCTION_STOP,type Leg,type VehicleKind,type VehiclePlan} from './vehicles';
 import {marinaSite} from './marinaPlan';
 import {yachtBerth,boardingRoute,type YachtBerth} from './yachtPlan';
+import {planHarbourPlatform,harbourAccess,harbourAlight} from './harbourPlatform';
 import {airportCargoPoint,airportPoint} from './airport';
 import {stadiumGate} from './stadiumGeometry';
 import {TERRACE_H,type Scene3D} from './scene';
@@ -195,10 +196,13 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
  const plaza=scene.stationPlaza,marinaTop:Point3=[marina.x,0,marina.cityWalkZ];
  const ground=(i:number)=>toTrain(i).filter((p,j,all)=>p[1]===0&&(!j||flat(p,all[j-1])>1e-6));
  const stairFoot=(i:number)=>{const off=offTrain(i);return off.slice(0,off.findIndex(p=>p[1]===0)+1);};
+ // Events Arena Station's harbour platform: the seaward doors open onto a boardwalk that leads down to the dock (harbourPlatform.ts).
+ const harbour=planHarbourPlatform(loop,marina);
+ const pierOn=boardingRoute(marina,berth).slice(3).map(([x,y,z]):Point3=>[x,y-TERRACE_H,z]);
  const yachtWalk=((): Point3[]|undefined=>{
   if(!plaza)return;const w=plaza.walk,west=ground(arena)[ground(arena).length-1],shore=w[1];
   if(Math.hypot(w[w.length-1][0]-west[0],w[w.length-1][1]-west[2])>.05)return;
-  const aboard=boardingRoute(marina,berth).map(([x,y,z]):Point3=>[x,y-TERRACE_H,z]);
+  const aboard=boardingRoute(marina,berth,harbour&&harbourAccess(harbour,marina).map(([x,y,z]):[number,number,number]=>[x,y+TERRACE_H,z])).map(([x,y,z]):Point3=>[x,y-TERRACE_H,z]);
   return [west,[west[0],0,shore[1]],[marina.x,0,shore[1]],marinaTop,...aboard.slice(1)];
  })();
  /** Board the train at stop `from` in its dwell that opens at or after `t` - dwell; alight at `to`. */
@@ -242,8 +246,9 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
  const journeys:Journey[]=[
   // By train to the Vendor & Supplier Hub (Workflow Automation Hub stop), then a short walk in.
   {id:'train-vendor',people:2,build:(tl,k)=>{if(!trainRide(tl,hub,k))return;const off=offTrain(hub),w=streetWalk(g,off[off.length-1],vendor);return w&&tl.walk([...off,...w.slice(1)]);}},
-  // By train to Events Arena Station, down the ramp, along the forecourt, over the level crossing to the marina, aboard the yacht before she sails.
-  {id:'train-yacht',people:4,build:(tl,k)=>trainRide(tl,arena,k)?aboardYacht(tl,stairFoot(arena)):undefined},
+  // By train to Events Arena Station and aboard the yacht before she sails.
+  // With the harbour platform they step off the seaward doors instead, walk the boardwalk and take the stair down to the dock.
+  {id:'train-yacht',people:4,build:(tl,k)=>{if(!trainRide(tl,arena,k))return;if(!harbour)return aboardYacht(tl,stairFoot(arena));if(!yachtWalk)return;tl.walk([...harbourAlight(harbour,marina,loop.stops[arena]),...pierOn],'absolute');yachtArrivals.push(tl.t);return tl;}},
   // By train to Events Arena Station, then the taxi to the airport terminal; inside, they board their flight.
   {id:'train-airport',cars:[taxi],people:2,build:(tl,k)=>{if(!trainRide(tl,arena,k))return;const end=carRide(tl,taxi,0,1,arenaOff,k),w=end&&streetWalk(g,end,terminal);return w&&tl.walk(w);}},
   // By car from Team Residence Towers to the arena gate.
