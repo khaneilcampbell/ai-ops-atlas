@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TaskIntelligence } from "./TaskIntelligence";
 import { actionsApi } from "../../actions/api";
 import { useActions } from "../../actions/state";
 import { CopyValue, ExternalLink } from "../../components/bits";
@@ -685,6 +686,8 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
               </p>
             )}
           </section>
+
+          <TaskIntelligence task={task} />
 
           <section>
             <div className="section-title">History</div>

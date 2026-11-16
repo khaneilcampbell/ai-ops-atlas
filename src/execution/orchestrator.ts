@@ -8,7 +8,7 @@ import type { WorkflowNode, WorkflowRun } from "../workflows/types";
 import { buildEnvelope, repairOutput, schemaFor, validateOutput } from "./handoff";
 import type { LedgerStore } from "./ledger";
 import { backoffMs, budgetProblem, MAX_CONCURRENT, MAX_REPAIRS, stepPolicy } from "./policy";
-import type { BusinessOutcome, DispatchResult, ExecutionAdapter, ExecutionReport, ExternalStatus, HandoffRecord, RunLedger, StepOutput } from "./types";
+import type { BusinessOutcome, DispatchResult, ExecutionAdapter, HandoffEnvelope, ExecutionReport, ExternalStatus, HandoffRecord, RunLedger, StepOutput } from "./types";
 
 // The execution orchestrator. It moves an authorised live workflow run forward with fixed rules
 // and no model calls: release steps whose dependencies completed, ask for approvals, dispatch
@@ -27,6 +27,8 @@ export interface OrchestratorDeps {
   adapterFor(node: WorkflowNode, task: StoredTask): ExecutionAdapter;
   now?: () => string;
   maxConcurrent?: number;
+  /** Context for a step about to be sent (retrieved knowledge, tools, model route). Optional. */
+  context?: (run: WorkflowRun, nodeId: string, task: StoredTask, attempt: number) => HandoffEnvelope["context"] | undefined;
 }
 
 export type Ok<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -248,6 +250,15 @@ export class Orchestrator {
       const claimed = this.d.ledger.update(run.id, (l) => (l.dispatched.includes(attempt.idempotencyKey) ? "already sent" : { ...l, dispatched: [...l.dispatched, attempt.idempotencyKey] }));
       if (!claimed.ok) continue;
       const env = buildEnvelope(run.snapshot, run, nodeId, attempt, claimed.ledger.handoffs, this.now());
+      // Context is best effort: a failure here never blocks or changes the send itself.
+      if (this.d.context) {
+        try {
+          const c = this.d.context(run, nodeId, begun.task, attempt.number);
+          if (c) env.context = c;
+        } catch {
+          /* sent without context */
+        }
+      }
       s.dispatched.push(nodeId);
       sends.push(
         adapter
