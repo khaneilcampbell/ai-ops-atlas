@@ -129,7 +129,12 @@ export interface DispatchResult {
 }
 
 /** What the outside system says about an attempt Atlas lost track of. */
-export type ExternalStatus = { state: "running" } | { state: "succeeded"; output?: StepOutput } | { state: "failed"; error: string } | { state: "not_found" } | { state: "unknown" };
+/**
+ * What the outside system says about an attempt. "not_sent" is proof it never received the step (the
+ * site records every send before it goes out), so it's safe to send again; "not_found" is only "no
+ * run is visible", which a person must check.
+ */
+export type ExternalStatus = { state: "running" } | { state: "succeeded"; output?: StepOutput; eventId?: string } | { state: "failed"; error: string; transient?: boolean; eventId?: string } | { state: "not_found" } | { state: "not_sent" } | { state: "unknown"; why?: string };
 
 export interface AdapterAvailability {
   ok: boolean;

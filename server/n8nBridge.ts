@@ -69,6 +69,13 @@ async function prune(db: D1, now: number) {
   await db.batch([db.prepare("DELETE FROM n8n_dispatch WHERE created_at < ?").bind(cutoff), db.prepare("DELETE FROM n8n_reports WHERE at < ?").bind(cutoff)]);
 }
 
+/** Rows a write changed, from D1's answer (meta.changes) or SQLite's (changes). Undefined when it can't tell. */
+function changesOf(res: unknown): number | undefined {
+  const r = res as { meta?: { changes?: unknown }; changes?: unknown } | null;
+  const n = r?.meta?.changes ?? r?.changes;
+  return typeof n === "number" || typeof n === "bigint" ? Number(n) : undefined;
+}
+
 export type DispatchAnswer = { state: "accepted" | "refused" | "unknown"; error?: string; duplicate?: boolean };
 
 /** Sends one allow-listed step to the step runner. The caller is already authenticated (Access or sync key). */
@@ -88,8 +95,11 @@ export async function dispatchStep(req: Request, env: BridgeEnv, fetcher: Fetche
   const since = new Date(now - DAY_MS).toISOString();
   const count = Number((await db.prepare("SELECT COUNT(*) AS n FROM n8n_dispatch WHERE created_at >= ? AND state != 'refused'").bind(since).all<{ n: number }>()).results[0]?.n ?? 0);
   if (count >= DAILY_DISPATCH_CAP) return reply(429, { state: "refused", error: `The daily limit of ${DAILY_DISPATCH_CAP} n8n steps is reached. Try again tomorrow.` } satisfies DispatchAnswer);
-  // Record the key before sending. A second request with the same key is answered from here.
-  await db.prepare("INSERT OR IGNORE INTO n8n_dispatch (idem, run_id, node_id, attempt_id, created_at, state) VALUES (?, ?, ?, ?, ?, 'sending')").bind(env0.idempotencyKey, env0.runId, env0.nodeId, env0.attemptId!, new Date(now).toISOString()).run();
+  // Record the key before sending. A second request with the same key is answered from here. The
+  // insert is the claim: two requests that both passed the check above can't both send, because
+  // only one of them inserts the row.
+  const claim = await db.prepare("INSERT OR IGNORE INTO n8n_dispatch (idem, run_id, node_id, attempt_id, created_at, state) VALUES (?, ?, ?, ?, ?, 'sending')").bind(env0.idempotencyKey, env0.runId, env0.nodeId, env0.attemptId!, new Date(now).toISOString()).run();
+  if (changesOf(claim) === 0) return reply(200, { state: "unknown", error: "Another request is sending this step right now.", duplicate: true } satisfies DispatchAnswer);
   let answer: DispatchAnswer;
   try {
     const r = await fetcher(`${instanceOf(env)}/webhook/${STEP_RUNNER_PATH}`, {
@@ -132,9 +142,11 @@ export async function readStepReports(url: URL, env: BridgeEnv): Promise<Respons
   const configured = bridgeConfigured(env);
   if (url.searchParams.get("status")) return reply(200, { configured });
   if (!configured) return reply(200, { configured, reports: [], cursor: 0 });
-  const since = Math.max(0, Math.floor(Number(url.searchParams.get("since") ?? 0)) || 0);
   const db = env.LIVE!;
   await ensureSchema(db);
+  const idem = url.searchParams.get("idem");
+  if (idem !== null) return lookupStep(db, idem);
+  const since = Math.max(0, Math.floor(Number(url.searchParams.get("since") ?? 0)) || 0);
   const rows = (await db.prepare("SELECT id, body FROM n8n_reports WHERE id > ? ORDER BY id LIMIT ?").bind(since, READ_LIMIT).all<{ id: number; body: string }>()).results;
   const reports: StepReportBody[] = [];
   for (const row of rows) {
@@ -145,6 +157,32 @@ export async function readStepReports(url: URL, env: BridgeEnv): Promise<Respons
     }
   }
   return reply(200, { configured, reports, cursor: rows.length ? rows[rows.length - 1].id : since });
+}
+
+/**
+ * One step's record, for the app to settle an attempt it isn't sure about (after a restart, an
+ * unclear answer or a timeout): whether the site ever sent it, and every report n8n posted for it.
+ * No record means the site never sent it, because the record is written before the send.
+ */
+async function lookupStep(db: D1, idem: string): Promise<Response> {
+  if (!/^[\w:-]{3,120}$/.test(idem)) return reply(400, { message: "Bad idempotency key." });
+  const d = (await db.prepare("SELECT state, detail, created_at FROM n8n_dispatch WHERE idem = ?").bind(idem).all<{ state: string; detail: string | null; created_at: string }>()).results[0];
+  const rows = (await db.prepare("SELECT body FROM n8n_reports WHERE idem = ? ORDER BY id").bind(idem).all<{ body: string }>()).results;
+  const reports: StepReportBody[] = [];
+  for (const row of rows) {
+    try {
+      reports.push(JSON.parse(row.body) as StepReportBody);
+    } catch {
+      /* skipped, never guessed */
+    }
+  }
+  return reply(200, { configured: true, dispatch: d ? { state: d.state, createdAt: d.created_at, ...(d.detail ? { detail: d.detail } : {}) } : null, reports } satisfies StepLookup);
+}
+
+export interface StepLookup {
+  configured: boolean;
+  dispatch: { state: string; createdAt: string; detail?: string } | null;
+  reports: StepReportBody[];
 }
 
 /** The Mac app's routes: same as the page's, with the sync key instead of Access. */

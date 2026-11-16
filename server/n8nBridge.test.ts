@@ -9,7 +9,7 @@ function sqliteD1(): D1 {
   const db = new DatabaseSync(":memory:");
   const stmt = (sql: string, args: unknown[] = []): D1Statement => ({
     bind: (...a) => stmt(sql, a),
-    run: async () => db.prepare(sql).run(...(args as never[])),
+    run: async () => ({ meta: { changes: Number(db.prepare(sql).run(...(args as never[])).changes) } }),
     all: async <T,>() => ({ results: db.prepare(sql).all(...(args as never[])) as T[] }),
   });
   return { prepare: (sql) => stmt(sql), batch: async (s) => Promise.all(s.map((x) => x.run())) };
@@ -42,6 +42,27 @@ const post = (url: string, body: unknown, auth?: string) => new Request(url, { m
 const ok = () => vi.fn(async () => new Response("{}", { status: 200 }));
 
 describe("dispatch", () => {
+  it("requests racing with the same key reach n8n once", async () => {
+    const e = env();
+    const f = ok();
+    const answers = await Promise.all([1, 2, 3].map(async () => (await dispatchStep(post("https://x/api/n8n/steps", envelope()), e, f, NOW)).json()));
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(answers.filter((a) => a.state === "accepted" && !a.duplicate)).toHaveLength(1);
+  });
+
+  it("looks up one step: no record before it was sent, then its send state and reports", async () => {
+    const e = env();
+    const look = async () => (await readStepReports(new URL("https://x/api/n8n/steps?idem=task_1:1"), e)).json();
+    expect(await look()).toEqual({ configured: true, dispatch: null, reports: [] });
+    await dispatchStep(post("https://x", envelope()), e, ok(), NOW);
+    await receiveStepReport(post("https://x", { eventId: "e1", idempotencyKey: "task_1:1", runId: "wfrun_1", nodeId: "market-research", attemptId: "run_1", kind: "failed", error: "The model call failed.", transient: true, at: "2026-11-15T12:01:00Z" }, CALLBACK), e, NOW);
+    const l = await look();
+    expect(l.dispatch).toMatchObject({ state: "accepted" });
+    expect(l.reports.map((r: { eventId: string }) => r.eventId)).toEqual(["e1"]);
+    expect((await readStepReports(new URL("https://x/api/n8n/steps?idem=bad%20key"), e)).status).toBe(400);
+    expect(await (await readStepReports(new URL("https://x/api/n8n/steps?idem=task_1:1"), { LIVE: sqliteD1() })).json()).not.toHaveProperty("dispatch");
+  });
+
   it("sends an allow-listed step once, with the token, and answers repeats from the record", async () => {
     const e = env();
     const f = ok();
