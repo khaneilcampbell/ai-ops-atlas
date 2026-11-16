@@ -47,6 +47,14 @@ Safeguards:
 - Report ids are stored once; the report's source is always set by the site, so a report can't claim to be a person or an approval. Outputs are re-checked against the step's schema by the orchestrator.
 - Requests are authenticated by bearer secret over HTTPS with idempotency and report-id dedupe. There is no timestamp signature; a replayed report changes nothing because its id is already stored.
 - Run data (envelopes and reports) lives only in the private D1 database `LIVE` and is deleted after 30 days. Nothing goes to GitHub; the repository holds the code and this contract only.
+- The step runner saves no execution data in n8n (success or error, set 2026-11-16). n8n stores a webhook's request headers with each saved run, which would keep `N8N_BRIDGE_TOKEN` in plain text. Results reach Atlas through the report, not the n8n run page.
+- Atlas checks before and after each step:
+  - It won't start a live run for a goal with no objective.
+  - A goal intake marked done by hand passes on the goal it was created with.
+  - A step whose earlier steps passed on nothing is not sent, so it costs no model call.
+  - An answer that says it couldn't do the step (for example "not determinable" or "no product was provided") fails validation instead of counting as done.
+
+To change the bridge password: make a new random value, save it as the Pages secret `N8N_BRIDGE_TOKEN`, then set the n8n credential "Atlas bridge (webhook)" to `Bearer ` followed by the same value. The site uses the new secret from its next deploy.
 
 To switch it on (Khaneil):
 1. Save `N8N_BRIDGE_TOKEN` and `N8N_BRIDGE_CALLBACK_TOKEN` (two different random values, 32+ characters) as Pages secrets.

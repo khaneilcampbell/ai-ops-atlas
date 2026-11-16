@@ -105,6 +105,7 @@ const freeze = (d: WorkflowDefinition): WorkflowDefinition => JSON.parse(JSON.st
  */
 export function startLiveRun(goal: Goal, def: WorkflowDefinition, svc: TaskService, store: RunStore, catalog: Catalog, actor: Actor, at = new Date().toISOString()): { run: WorkflowRun | null; error: string | null } {
   if (actor.kind !== "person") return { run: null, error: `${actor.name} can't start a workflow run: only a person can.` };
+  if (!goal.objective?.trim()) return { run: null, error: "This goal has no objective, so the steps would have nothing to work on. Add one first." };
   const problems = definitionProblems(def);
   if (problems.length) return { run: null, error: `The workflow definition is invalid: ${problems[0]}` };
   const snapshot = freeze(def);

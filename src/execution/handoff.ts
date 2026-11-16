@@ -53,6 +53,8 @@ const MAX_ITEM = 500;
 const MAX_ARTIFACTS = 20;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+/** An answer that says it couldn't do the step ("not determinable", "no product was given") is not a result. */
+export const NO_ANSWER = /\b(not determinable|undeterminable|can(?:not|'t|’t) (?:be )?determined?|(?:unable|impossible) to determine|could(?:n't| not) (?:be )?determined?|no (?:product|idea|goal)s?\b[^.]{0,40}\b(?:given|provided|supplied|included|described))/i;
 
 export function validArtifact(a: unknown): a is ArtifactRef {
   if (!a || typeof a !== "object") return false;
@@ -95,6 +97,11 @@ export function validateOutput(nodeId: string, out: unknown): string[] {
       else if (v.length < (spec.min ?? 0) || v.length > (spec.max ?? 50)) errors.push(`"${k}" needs ${spec.min ?? 0} to ${spec.max ?? 50} items.`);
       else if (v.some((x) => x.length > MAX_ITEM || CONTROL.test(x))) errors.push(`An item in "${k}" is too long or has control characters.`);
     }
+  }
+  for (const [k, v] of Object.entries(fields as Record<string, unknown>)) {
+    const texts = typeof v === "string" ? [v] : Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+    const hit = texts.find((x) => NO_ANSWER.test(x));
+    if (hit) errors.push(`"${k}" says the step couldn't be done ("${hit.slice(0, 80)}"), so it doesn't count as a result.`);
   }
   const arts = Array.isArray(o.artifacts) ? o.artifacts : [];
   if (o.artifacts !== undefined && !Array.isArray(o.artifacts)) errors.push("Artifacts must be a list.");
@@ -148,6 +155,13 @@ export function withGateSources(def: Pick<WorkflowDefinition, "nodes" | "edges">
   };
   ups.forEach(visit);
   return out;
+}
+
+/** True when a step has earlier steps but none of them passed on any data: sending it would only get "can't determine" back. */
+export function nothingToWorkOn(env: HandoffEnvelope): boolean {
+  const inputs = Object.values(env.inputs);
+  if (env.inputSchema === "goal/1") return false;
+  return inputs.every((i) => !Object.values(i.fields).some((v) => v !== "" && v !== null && v !== undefined && !(Array.isArray(v) && !v.length)));
 }
 
 /** The envelope a step receives: its upstream steps' recorded outputs (looking through gates), nothing else. */
