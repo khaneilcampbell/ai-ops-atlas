@@ -27,6 +27,11 @@ export interface OrchestratorDeps {
   adapterFor(node: WorkflowNode, task: StoredTask): ExecutionAdapter;
   now?: () => string;
   maxConcurrent?: number;
+  /**
+   * Extra reason a step's agent can't take new work right now (the workspace turned it off or
+   * limits its models), checked before every attempt on top of the registry. Optional.
+   */
+  agentGate?: (node: WorkflowNode) => string | null;
   /** Context for a step about to be sent (retrieved knowledge, tools, model route). Optional. */
   context?: (run: WorkflowRun, nodeId: string, task: StoredTask, attempt: number) => HandoffEnvelope["context"] | undefined;
 }
@@ -71,7 +76,7 @@ export class Orchestrator {
     return id ? this.d.tasks.repo.get(id) : undefined;
   }
   private agentProblem(node: WorkflowNode): string | null {
-    return resolveNode(node, this.d.catalog).problem;
+    return resolveNode(node, this.d.catalog).problem ?? this.d.agentGate?.(node) ?? null;
   }
   private ledgerOf(runId: string): RunLedger {
     return this.d.ledger.get(runId);
@@ -185,6 +190,13 @@ export class Orchestrator {
       if (node.kind === "outcome") continue;
       if (node.unconfigured) {
         s.unconfigured.push({ nodeId, need: node.unconfigured });
+        continue;
+      }
+      // A retired, removed or switched-off agent gets no new attempt. Said here, so the step shows
+      // why it waits instead of being skipped without a word when the attempt is refused.
+      const agentIssue = this.agentProblem(node);
+      if (agentIssue) {
+        s.held.push({ nodeId, why: agentIssue });
         continue;
       }
       if (this.reuse(run, node, t)) continue;

@@ -63,6 +63,11 @@ export function WorkspaceView() {
           </label>
         )}
       </div>
+      {product.workspaces.length > 1 && (
+        <p className="muted small pf-tenancy-note">
+          Workspaces on this device share one set of tasks, workflow runs, agent memory and business records. They are setups for one owner, not separate customer accounts, so don't use one to run work for another business.
+        </p>
+      )}
       <div className="tabs product-tabs" role="tablist" aria-label="Workspace sections">
         {WORKSPACE_TABS.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>

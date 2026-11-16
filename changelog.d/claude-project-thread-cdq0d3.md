@@ -1,0 +1,1 @@
+- 2026-11-16 · Turning an agent off in Workspace now also holds its steps in runs that already started, and the Task Center won't start new tasks for it. Workspaces say plainly that they share one set of records (#PR)
