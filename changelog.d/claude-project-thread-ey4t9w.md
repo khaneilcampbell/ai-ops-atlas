@@ -1,1 +1,1 @@
-- 2026-11-16 · New Business view in Business Operations HQ: goals, leads, customers, products, sales, costs and evidence-based advice, from real records only (#PR)
+- 2026-11-16 · New Business view in Business Operations HQ: goals, leads, customers, products, sales, costs and evidence-based advice, from real records only (#434)
