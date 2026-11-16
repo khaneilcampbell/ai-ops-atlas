@@ -1,1 +1,1 @@
-- 2026-11-16 · Turning an agent off in Workspace now also holds its steps in runs that already started, and the Task Center won't start new tasks for it. Workspaces say plainly that they share one set of records (#PR)
+- 2026-11-16 · Stabilization: turning an agent off now also holds its steps in runs already going and its Task Center tasks; integration cards say "Key set · not verified" until a real check passes; the Run panel no longer loses the "waiting on you" list when two updates overlap; Workspace says plainly that workspaces share one set of records (#PR)
