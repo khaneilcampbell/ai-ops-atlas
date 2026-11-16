@@ -12,6 +12,8 @@ import { DEFINITIONS, GOALS } from "../../workflows/benjaireLaunch";
 import { buildingActivity, liveEvents, liveStatus, resolveAll, simulate, type ResolvedNode } from "../../workflows/engine";
 import { downstream, layout as layoutOf, upstream } from "../../workflows/graph";
 import { runStore, startLiveRun, useRuns } from "../../workflows/runs";
+import { runProblem } from "../../product/templates";
+import { useWorkspace } from "../../product/workspace";
 import { NodeBusiness } from "../business/NodeBusiness";
 import { selectBuilding, selectNode, takeWorkflowRunFocus, useWorkflowSelection } from "../../workflows/selection";
 import { NODE_STATUS_LABEL, type ExecutionEvent, type NodeStatus, type RunMode, type WorkflowDefinition, type WorkflowNode, type WorkflowRun } from "../../workflows/types";
@@ -90,7 +92,15 @@ export function WorkflowIntelligenceView() {
 
   const [confirming, setConfirming] = useState(false);
   const [startMsg, setStartMsg] = useState<string | null>(null);
+  const workspace = useWorkspace();
   const start = () => {
+    // The active workspace can turn agents off or cap their model tier; such a run never starts.
+    const blocked = runProblem(DEFINITIONS[goal.definitionId], workspace, catalog);
+    if (blocked) {
+      setConfirming(false);
+      setStartMsg(blocked);
+      return;
+    }
     const r = startLiveRun(goal, DEFINITIONS[goal.definitionId], taskService(), runStore(), catalog, KHANEIL);
     setConfirming(false);
     setStartMsg(r.error);
