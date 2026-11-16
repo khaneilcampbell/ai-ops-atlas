@@ -8,7 +8,7 @@ import {COMMUNITY as C} from './hillsCommunityPlan';
 import {loopPoint} from './perimeterRailPlan';
 
 describe('ground-level shore railway and its level crossings',()=>{
- for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`crosses the walk to the yacht dock on the ground: ${grouping}`,()=>{
+ for(const grouping of ['none','district','status','tag'] as GroupBy[])it(`keeps every walk crossing on land, and none at the yacht dock: ${grouping}`,()=>{
   const s=buildScene(layoutMap(catalog,[],grouping)),p=s.communityRail!.loop!;
   const walks=s.walks.map(w=>[[w.x0,w.z0],[w.x1,w.z1]] as [[number,number],[number,number]]);
   const crossings=railCrossings(p.route,walks,s.transportConnections.flatMap(c=>c.road.slice(1).map((b,k)=>[c.road[k],b] as [[number,number],[number,number]])));
@@ -16,12 +16,10 @@ describe('ground-level shore railway and its level crossings',()=>{
   expect(crossings.filter(c=>c.kind==='road')).toEqual([]);
   for(const c of crossings)expect(s.land.some(r=>c.at[0]>=r.x&&c.at[0]<=r.x+r.w&&c.at[1]>=r.z&&c.at[1]<=r.z+r.d)).toBe(true);
   if(grouping!=='district')return;
-  // The Events Arena forecourt's walk to the marina stair crosses once, clear of the stair, pier and dock.
+  // The Events Arena forecourt's walk to the marina used to cross here; it now ends at the Transit Gateway's door and goes
+  // over the track on the footbridge (transitGateway.ts), so there is no level crossing at the marina any more.
   const harbor=marinaSite(s,.6),dock=crossings.filter(c=>Math.abs(c.at[0]-harbor.x)<.05);
-  expect(dock).toHaveLength(1);
-  // Every part stands on land, short of the stair head at the shore, and the stair, pier and dock stay where they were.
-  const parts=railCrossingParts(dock[0],false);
-  for(const part of parts)expect(part.p[2]+part.s[2]/2,`crossing part over the shore at ${part.p}`).toBeLessThan(harbor.shoreZ-.05);
+  expect(dock).toHaveLength(0);
   expect(marinaFootprint(harbor)).toEqual({x:2.5-2.5,z:harbor.pierZ-2.6,w:5,d:4.2});expect(harbor.x).toBeCloseTo(2.5,5);
  });
  it('lays a flush deck between the rails with a signal post on each approach',()=>{

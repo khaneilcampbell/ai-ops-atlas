@@ -373,9 +373,12 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
 
 /** Timber pier, berthing platform and navigation lights outside the southern shoreline. */
 /** Visitors follow the stair treads in both directions, then stroll along the pier. */
+const LENGTHS=new WeakMap<object,number>();
+const pathLength=(p:[number,number,number][])=>{let n=LENGTHS.get(p);if(n===undefined){n=0;for(let i=1;i<p.length;i++)n+=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1],p[i][2]-p[i-1][2]);LENGTHS.set(p,n||1);}return n||1;};
 function DockVisitors({ x, z, cityZ, g, m, moving, exclusion, harbour, marina }: { x:number; z:number; cityZ:number; g:G; m:M; moving:boolean;exclusion?:Scene3D["pedestrianExclusion"];harbour?:HarbourPlan;marina:MarinaSite }) {
-  // With the harbour platform, visitors cross the track, walk the boardwalk and take the dog-leg stair (harbourPlatform.ts).
-  const path = useMemo(() => harbour ? [...harbourAccess(harbour, marina), [x, harbour.dockY, z + 1.05] as [number, number, number]] : undefined, [harbour, marina, x, z]);
+  // With the harbour platform, visitors go through the Transit Gateway (stair, or the lift for every fourth one), over the
+  // footbridge, along the boardwalk and down the dog-leg stair (harbourPlatform.ts, transitGateway.ts). Unnamed people only.
+  const paths = useMemo(() => harbour ? [undefined, new Set(["stair"] as const)].map(closed => [...harbourAccess(harbour, marina, closed), [x, harbour.dockY, z + 1.05] as [number, number, number]]) : undefined, [harbour, marina, x, z]);
   const people = useFigures(8);
   const elapsed = useRef(0);
   useEffect(() => {
@@ -385,9 +388,11 @@ function DockVisitors({ x, z, cityZ, g, m, moving, exclusion, harbour, marina }:
   useFrame((_,dt) => {
     if(moving) elapsed.current += Math.min(dt,0.1);
     people.begin(elapsed.current);
-    if(path) {
+    if(paths) {
       for(let i=0;i<8;i++) {
-        const t=((elapsed.current*STROLL_SPEED/12+i/8)%2+2)%2, down=t<1, u=down?t:2-t;
+        const path=paths[i%4===3?1:0], len=pathLength(path);
+        // Same strolling pace on the longer gateway walk (the old walk was about 12 units).
+        const t=((elapsed.current*STROLL_SPEED/len+i/8)%2+2)%2, down=t<1, u=down?t:2-t;
         const [px,py,pz]=walkPoint(path,u), [nx,,nz]=walkPoint(path,Math.min(1,Math.max(0,u+(down?.01:-.01))));
         const side=down?-0.12:0.12, dx=nx-px, dz=nz-pz, n=Math.hypot(dx,dz)||1;
         const qx=px-dz/n*side, qz=pz+dx/n*side;

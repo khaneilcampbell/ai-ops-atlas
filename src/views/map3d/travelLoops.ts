@@ -203,7 +203,8 @@ export function planTravel(scene:Scene3D):TravelPlan|undefined{
   if(!plaza)return;const w=plaza.walk,west=ground(arena)[ground(arena).length-1],shore=w[1];
   if(Math.hypot(w[w.length-1][0]-west[0],w[w.length-1][1]-west[2])>.05)return;
   const aboard=boardingRoute(marina,berth,harbour&&harbourAccess(harbour,marina).map(([x,y,z]):[number,number,number]=>[x,y+TERRACE_H,z])).map(([x,y,z]):Point3=>[x,y-TERRACE_H,z]);
-  return [west,[west[0],0,shore[1]],[marina.x,0,shore[1]],marinaTop,...aboard.slice(1)];
+  // Through the Transit Gateway when there is one: its route starts on the forecourt walk, just short of the door.
+  return harbour?[west,[west[0],0,shore[1]],[marina.x,0,shore[1]],...aboard]:[west,[west[0],0,shore[1]],[marina.x,0,shore[1]],marinaTop,...aboard.slice(1)];
  })();
  /** Board the train at stop `from` in its dwell that opens at or after `t` - dwell; alight at `to`. */
  const train=(from:number,to:number,t:number,k:number)=>{const open=nextAt(t-dwell+TRAVEL.boardBy,loop.stops[from].arrival,lap),leave=open+dwell;

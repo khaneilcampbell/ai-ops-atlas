@@ -14,12 +14,17 @@ const VIEWS:View[]=[
  // Harbour platform (Khaneil, 2026-11-16): the seaward platform face, its boardwalk and the dog-leg stair to the pier.
  ['harbour-platform',[-1.5,.4,58.9],[1.5,4.4,66]],
  ['harbour-stair',[1.2,-.4,59.7],[6,2.4,64]],
+ ['gateway-city',[3.1,.8,56.3],[7.5,3.2,51]],
+ ['gateway-bridge',[3.4,.9,57.9],[9.5,3.2,55.5]],
+ ['gateway-boardwalk',[3,.6,58.9],[6.5,2.6,63.5]],
  ['station-close',[-6.3,.8,57.4],[-1.5,3,63.5]],
  ['station-ramp',[-5.3,.3,54.5],[-0.5,3.4,47.5]],
  ['shore-corner',[44,0,55],[54,7,66]],
  ['financial-station',[12,.6,-19.5],[16,5,-28]],
  ['overview',[9,0,22],[9,60,100]],
 ];
+// VIEWS=a,b takes only the named views.
+const only=process.env.VIEWS?.split(',');
 for(const light of ['day','night'] as const)test(`ground railway, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
@@ -29,7 +34,7 @@ for(const light of ['day','night'] as const)test(`ground railway, ${light}`,asyn
   const list:{name:string;png:string}[]=[];
   for(const [name,target,eye]of views){state.camera.position.set(...eye);state.camera.lookAt(...target);state.camera.updateMatrixWorld();state.gl.shadowMap.needsUpdate=true;state.gl.render(state.scene,state.camera);list.push({name,png:canvas.toDataURL('image/png')});}
   return list;
- },VIEWS);
+ },only?VIEWS.filter(v=>only.includes(v[0])):VIEWS);
  for(const s of shots)writeFileSync(`${out}/${s.name}-${light}${suffix}.png`,Buffer.from(s.png.split(',')[1],'base64'));
  expect(errors).toEqual([]);
 });

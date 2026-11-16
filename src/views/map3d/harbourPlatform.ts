@@ -4,6 +4,7 @@ import {stationPoint} from './perimeterRailPlan';
 import type {MarinaSite} from './marinaPlan';
 import {COMMUNITY,type Point3} from './hillsCommunityPlan';
 import {TERRACE_H,WATER_Y} from './scene';
+import {planTransitGateway,gatewayRoute,type GatewayPlan,type Walkable} from './transitGateway';
 
 /**
  * Harbour platform at Events Arena Station (Khaneil, 2026-11-16: "integrate the dock and train station so people can
@@ -11,9 +12,10 @@ import {TERRACE_H,WATER_Y} from './scene';
  * here, so the station gets a second, seaward platform face built out over the seawall: trains open their doors on both
  * sides, and the seaward platform runs on as a timber harbour boardwalk to the yacht dock. A dog-leg stair hangs off the
  * boardwalk's sea edge, parallel to the shore, and lands on the existing pier root, so the pier, dock and yacht stay put
- * and the stair never meets the rails. People from the city reach the boardwalk over the existing level crossing.
+ * and the stair never meets the rails. People from the city reach the boardwalk through the Transit Gateway's footbridge
+ * over the track (transitGateway.ts), which replaced the level crossing.
  */
-export const HARBOUR={stationId:'service:stadium-station',edge:.325,depth:1.05,steps:12,stairRun:2.4,stairWidth:.7,stairGap:.05,landing:.8,topLanding:.6,pastCrossing:.5,pileSpacing:1.2,railHeight:.32} as const;
+export const HARBOUR={stationId:'service:stadium-station',edge:.325,depth:1.05,steps:12,stairRun:2.4,stairWidth:.7,stairGap:.05,landing:.8,topLanding:.6,pileSpacing:1.2,railHeight:.32} as const;
 
 /** All x/z are world units; y values are heights above the terrace top. The track runs along world x here. */
 export interface HarbourPlan {
@@ -25,6 +27,8 @@ export interface HarbourPlan {
  /** Stair down to the pier root, along x from top (at deck height) to bottom (dock level), in band zs0..zs1. */
  stair:{top:number;bottom:number;zs0:number;zs1:number};topLanding:[number,number];landing:{x0:number;x1:number;z0:number;z1:number};
  crossingX:number;shoreZ:number;dockY:number;
+ /** Entrance lobby and footbridge from the city side, landing on this boardwalk. */
+ gateway:GatewayPlan;
 }
 
 const lo=(a:number,b:number)=>Math.min(a,b),hi=(a:number,b:number)=>Math.max(a,b);
@@ -39,13 +43,14 @@ export function planHarbourPlatform(loop:Pick<PerimeterRailPlan,'stops'>|undefin
  if(gap<.4||gap>1.2||span<COMMUNITY.platformLength/2+HARBOUR.stairRun+2||span>16)return;
  const dir:1|-1=m.x>sx?1:-1,half=COMMUNITY.platformLength/2;
  const z0=trackZ+HARBOUR.edge,z1=z0+HARBOUR.depth,dockY=WATER_Y+.22-TERRACE_H;
- const far=m.x+dir*(HARBOUR.pastCrossing+.31);
+ // The boardwalk runs on past the old crossing to where the gateway's footbridge comes down.
+ const gateway=planTransitGateway(trackZ,dir,m,{y:COMMUNITY.platformRise,z0,z1}),far=dir>0?gateway.bridge.x1+.1:gateway.bridge.x0-.1;
  const bottom=m.x-dir*HARBOUR.landing/2,top=bottom-dir*HARBOUR.stairRun;
  const zs0=z1+HARBOUR.stairGap,zs1=zs0+HARBOUR.stairWidth;
  return {stopId:stop.id,stop:[sx,trackZ],trackZ,dir,y:COMMUNITY.platformRise,z0,z1,
   platform:[sx-half,sx+half],deck:[lo(sx-dir*half,far),hi(sx-dir*half,far)],
   stair:{top,bottom,zs0,zs1},topLanding:[lo(top,top-dir*HARBOUR.topLanding),hi(top,top-dir*HARBOUR.topLanding)],
-  landing:{x0:m.x-HARBOUR.landing/2,x1:m.x+HARBOUR.landing/2,z0:zs0,z1:m.pierZ+.12},crossingX:m.x,shoreZ:m.shoreZ,dockY};
+  landing:{x0:m.x-HARBOUR.landing/2,x1:m.x+HARBOUR.landing/2,z0:zs0,z1:m.pierZ+.12},crossingX:m.x,shoreZ:m.shoreZ,dockY,gateway};
 }
 
 /** Walking line along the deck, then down the stair and onto the pier root (heights above the terrace). */
@@ -53,10 +58,22 @@ function toPier(h:HarbourPlan,m:MarinaSite):Point3[]{
  const mid=(h.z0+h.z1)/2,sz=(h.stair.zs0+h.stair.zs1)/2,turn=h.stair.top-h.dir*HARBOUR.topLanding/2;
  return [[turn,h.y,mid],[turn,h.y,sz],[h.stair.top,h.y,sz],[h.stair.bottom,h.dockY,sz],[m.x,h.dockY,sz],[m.x,h.dockY,m.pierZ]];
 }
-/** From the city promenade over the level crossing onto the boardwalk, then down to the pier root. */
-export function harbourAccess(h:HarbourPlan,m:MarinaSite):Point3[]{
- const mid=(h.z0+h.z1)/2;
- return [[m.x,.03,m.cityWalkZ],[m.x,.15,h.trackZ],[m.x,h.y,mid],...toPier(h,m)];
+/** From the station plaza through the Transit Gateway and over the footbridge onto the boardwalk, then down to the pier root.
+ * `closed` closes gateway ways (a closed stair reroutes by the lift). */
+export function harbourAccess(h:HarbourPlan,m:MarinaSite,closed?:Parameters<typeof gatewayRoute>[3]):Point3[]{
+ const way=gatewayRoute(h.gateway,'station_plaza','waterfront_boardwalk',closed)??[];
+ return [...way,...toPier(h,m)];
+}
+/** Walkable surfaces beyond the gateway: boardwalk, stair head, the stair down and the dock landing on to the pier root. */
+export function harbourWalkable(h:HarbourPlan,m:MarinaSite):Walkable[]{
+ const [d0,d1]=h.deck,[t0,t1]=h.topLanding,s=h.stair,L=h.landing;
+ return [
+  {name:'harbour boardwalk',x0:d0,x1:d1,z0:h.z0,z1:h.z1,y0:h.y,y1:h.y,kind:'floor'},
+  {name:'stair head',x0:t0,x1:t1,z0:h.z1-.02,z1:s.zs1,y0:h.y,y1:h.y,kind:'floor'},
+  {name:'stair to the dock',x0:lo(s.top,s.bottom),x1:hi(s.top,s.bottom),z0:s.zs0,z1:s.zs1,y0:h.dockY,y1:h.y,kind:'stair',rises:h.dir>0?-1:1},
+  {name:'dock landing',x0:L.x0,x1:L.x1,z0:L.z0,z1:L.z1,y0:h.dockY,y1:h.dockY,kind:'floor'},
+  {name:'pier root',x0:m.x-.25,x1:m.x+.25,z0:L.z0,z1:m.pierZ+.3,y0:h.dockY,y1:h.dockY,kind:'floor'},
+ ];
 }
 /** Off the train's seaward doors onto the harbour platform, along the boardwalk and down to the pier root. */
 export function harbourAlight(h:HarbourPlan,m:MarinaSite,stop:Parameters<typeof stationPoint>[0]):Point3[]{
@@ -75,11 +92,7 @@ export function harbourParts(h:HarbourPlan):{deck:Inst[];rails:Inst[];lamps:Inst
  box(p0,p1,y+.005,y+.02,z0+.03,z0+.1,'#d0ad69');
  // The boardwalk continues the same band in timber, on the quay and then out over the water.
  for(const [a,b] of [[d0,p0],[p1,d1]] as [number,number][])if(b-a>.01){
-  // Leave the level crossing's deck clear and step up from it onto the boardwalk.
-  const cx0=h.crossingX-.31,cx1=h.crossingX+.31;
-  const span=(u:number,v:number,from:number)=>{if(v-u<.01)return;box(u,v,y-.1,y,from,z1,'#b08a5e');box(u,v,-.02,y-.1,from,lo(z1,h.shoreZ),'#c9c2ae');};
-  if(cx1>a&&cx0<b){span(a,cx0,z0);span(cx1,b,z0);span(hi(a,cx0),lo(b,cx1),z0+.37);box(hi(a,cx0),lo(b,cx1),-.02,.25,z0+.23,z0+.37,'#cfc9ba');}
-  else span(a,b,z0);
+  box(a,b,y-.1,y,z0,z1,'#b08a5e');box(a,b,-.02,y-.1,z0,lo(z1,h.shoreZ),'#c9c2ae');
  }
  // Dark fascia on the sea edge and piles down into the water wherever the deck is past the seawall.
  box(d0,d1,y-.2,y-.08,z1-.04,z1,'#5f5144');
@@ -95,13 +108,13 @@ export function harbourParts(h:HarbourPlan):{deck:Inst[];rails:Inst[];lamps:Inst
  const L=h.landing;box(L.x0,L.x1,dockY-.09,dockY,L.z0,L.z1,'#b89569');
  for(const [px,pz] of [[L.x0+.06,L.z0+.06],[L.x1-.06,L.z0+.06],[L.x0+.06,L.z1-.2],[L.x1-.06,L.z1-.2]])box(px-.04,px+.04,water,dockY-.09,pz-.04,pz+.04,'#54493f');
  // Railings: green posts and a teal top rail like the old marina stair. Sea edge along the whole deck except the
- // stair top; land edge only along the boardwalk away from the train, open at the level crossing.
+ // stair top; land edge along the whole boardwalk away from the train (nobody crosses the track at rail level any more).
  const R=HARBOUR.railHeight;
  const railX=(a:number,b:number,z:number,base:number)=>{if(b-a<.05)return;box(a,b,base+R-.02,base+R+.01,z-.017,z+.017,'#76b5ae',rails);const n=Math.max(1,Math.ceil((b-a)/.3));for(let i=0;i<=n;i++){const x=a+(b-a)*i/n;box(x-.012,x+.012,base,base+R,z-.012,z+.012,'#335b58',rails);}};
  railX(d0,t0,z1-.03,y);railX(t1,d1,z1-.03,y);
  railX(t0,t1,zs1-.03,y);
  const away=h.dir>0?[p1,d1]:[d0,p0];
- railX(away[0],lo(away[1],h.crossingX-.45),z0+.03,y);railX(hi(away[0],h.crossingX+.45),away[1],z0+.03,y);
+ railX(away[0],away[1],z0+.03,y);
  // Stair handrails on both sides follow the treads down.
  for(const z of [zs0+.03,zs1-.03])for(let i=0;i<HARBOUR.steps;i++){const top=y-(y-dockY)*(i+1)/HARBOUR.steps,x=h.stair.top+h.dir*(i+.5)*tread;box(x-.012,x+.012,top,top+R,z-.012,z+.012,'#335b58',rails);box(x-tread/2-.01,x+tread/2+.01,top+R-.02,top+R+.01,z-.017,z+.017,'#76b5ae',rails);}
  railX(L.x0,L.x1,L.z0+.03,dockY);

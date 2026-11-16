@@ -4,6 +4,7 @@ import Commons from './Commons';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
 import {planHarbourPlatform} from './harbourPlatform';
+import {TransitGateway} from './TransitGatewayBuilding';
 import {YACHT_KEY,YACHT_NAME,YACHT_OFFICE_ID,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
 import {YACHT_BOX,yachtBoundsAt,yachtLivePose} from './yachtRidePlan';
 import {riding as rideActive,yachtRide} from './yachtRide';
@@ -689,7 +690,8 @@ function World({
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
   // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
-  const harbourStop=useMemo(()=>{const loop=scene.communityRail?.loop,h=planHarbourPlatform(loop,marina);return h&&loop?loop.stops.findIndex(s=>s.id===h.stopId):undefined;},[scene,marina]);
+  const harbourPlan=useMemo(()=>planHarbourPlatform(scene.communityRail?.loop,marina),[scene,marina]);
+  const harbourStop=useMemo(()=>{const loop=scene.communityRail?.loop,h=harbourPlan;return h&&loop?loop.stops.findIndex(s=>s.id===h.stopId):undefined;},[scene,harbourPlan]);
   const railWalks=useMemo(()=>scene.walks.map(w=>[[w.x0,w.z0],[w.x1,w.z1]] as [[number,number],[number,number]]),[scene]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
@@ -1251,6 +1253,7 @@ function World({
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
+      {detailsReady && harbourPlan && <TransitGateway plan={harbourPlan.gateway} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
       {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}

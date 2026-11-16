@@ -271,6 +271,8 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   if (rail) add({ category: "Trains", kind: "Passenger train (3 cars)", count: 1, area: rail.loop ? "Perimeter rail loop" : "Atlas Hills line", moves: true, source: "src/views/map3d/HillsCommunity.tsx" });
   // Stadium Station's harbour-side platform, boardwalk and stair down to the yacht dock (harbourPlatform.ts, Khaneil 2026-11-16).
   if (rail?.loop && planHarbourPlatform(rail.loop, marinaSite(scene, TERRACE_H))) add({ category: "Trains", kind: "Harbour platform with a boardwalk and stair to the yacht dock", count: 1, area: "Marina", moves: false, source: "src/views/map3d/harbourPlatform.ts" });
+  // Transit Gateway: entrance lobby, stair, lift and enclosed footbridge over the track to the harbour boardwalk (transitGateway.ts, Khaneil 2026-11-16).
+  if (rail?.loop && planHarbourPlatform(rail.loop, marinaSite(scene, TERRACE_H))) add({ category: "Trains", kind: "Transit Gateway: entrance lobby, lift and footbridge over the track to the boardwalk", count: 1, area: "Marina", moves: false, source: "src/views/map3d/transitGateway.ts" });
   if (rail?.loop) add({ category: "People", kind: "Traveller (train, shuttle car and yacht loops)", count: travel?.travellers.length ?? 0, area: "Perimeter rail loop", moves: true, source: "src/views/map3d/travelLoops.ts" });
   else {
     const commuters = planRailCommuters(scene.community, scene.financial, rail);

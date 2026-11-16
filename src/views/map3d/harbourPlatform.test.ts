@@ -21,7 +21,7 @@ describe('Events Arena harbour platform joins the station and the yacht dock',()
   expect(h.z1).toBeGreaterThan(m.shoreZ);
  });
 
- it('runs the boardwalk on to the level crossing and lands the stair on the unchanged pier',()=>{
+ it('runs the boardwalk on to the gateway footbridge and lands the stair on the unchanged pier',()=>{
   expect(h.deck[0]).toBeLessThanOrEqual(h.platform[0]);
   expect(h.deck[1]).toBeGreaterThan(m.x+.31);
   // The stair hangs off the boardwalk's sea edge, parallel to the shore, never over the track bed.
@@ -36,8 +36,8 @@ describe('Events Arena harbour platform joins the station and the yacht dock',()
   const {deck,rails}=harbourParts(h);
   for(const b of [...deck,...rails]){
    const z0=b.p[2]-b.s[2]/2;
-   // The track bed is .98 wide; only the step from the crossing deck reaches back to it, at the crossing itself.
-   if(Math.abs(b.p[0]-m.x)>.32)expect(z0).toBeGreaterThanOrEqual(h.trackZ+.3);
+   // The track bed is .98 wide; with the level crossing gone nothing of the harbour platform reaches back over it.
+   expect(z0).toBeGreaterThanOrEqual(h.trackZ+.3);
   }
   const treads=deck.filter(b=>Math.abs(b.p[2]-(h.stair.zs0+h.stair.zs1)/2)<1e-6&&Math.abs(b.s[2]-HARBOUR.stairWidth)<1e-6&&b.p[0]>Math.min(h.stair.top,h.stair.bottom)&&b.p[0]<Math.max(h.stair.top,h.stair.bottom));
   expect(treads).toHaveLength(HARBOUR.steps);
@@ -47,7 +47,8 @@ describe('Events Arena harbour platform joins the station and the yacht dock',()
  it('walks people from the city and off the train down to the pier root',()=>{
   const a=harbourAccess(h,m),t=harbourAlight(h,m,stop),end=a[a.length-1];
   expect(end).toEqual([m.x,h.dockY,m.pierZ]);expect(t[t.length-1]).toEqual(end);
-  expect(a[0]).toEqual([m.x,.03,m.cityWalkZ]);
+  // From the forecourt walk through the Transit Gateway (transitGateway.test.ts covers the gateway itself).
+  expect(a[0]).toEqual(h.gateway.nodes.station_plaza);expect(a).toContainEqual(h.gateway.nodes.protected_crossing);
   // Off the seaward doors: start beside the train at platform height on the sea side of the track.
   expect(t[0][1]).toBe(h.y);expect(t[0][2]).toBeGreaterThan(h.trackZ);expect(t[1][2]).toBeGreaterThan(h.z0);
   // Yacht guests from the train take the boardwalk, not the forecourt and level crossing.

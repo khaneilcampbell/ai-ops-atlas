@@ -76,7 +76,13 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/></>;
 }
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
-const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
+export const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
+/** The rest of each carriage, in the carriage's frame (floor at C.railRise+.1): roof cap (ball), door leaf (hinged at
+ * door.x, swings out a quarter turn), and the end cars' nose and windscreen (balls). Exported so the Transit Gateway can
+ * size the train's clearance envelope from the real shapes (transitGateway.test.ts). */
+export const TRAIN_ROOF:Inst={p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'};
+export const TRAIN_DOOR={x:.26,y:.16,z:.24,leaf:{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'} as Inst};
+export const TRAIN_NOSE=(end:1|-1):Inst[]=>[{p:[0,.2,end*.5],s:[.25,.27,.8],c:'#f4f4ef'},{p:[0,.4,end*.7],s:[.18,.09,.34]}];
 const NO_WALKS:[[number,number],[number,number]][]=[];
 /** Ground-level track, platforms and ramps share the same sampled route as the train. */
 export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],land,walks=NO_WALKS,bothSides,g,m,pick,moving,night}:{plan?:RailPlan;
@@ -105,7 +111,7 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[x,TERRACE_H+y,z],s:[w,h,d],c});
  const strip=(a:[number,number],b:[number,number],w:number,y:number,h:number,c:string,target=solid)=>target.push({p:[(a[0]+b[0])/2,TERRACE_H+y,(a[1]+b[1])/2],s:[w,h,Math.hypot(b[0]-a[0],b[1]-a[1])+.015],r:Math.atan2(b[0]-a[0],b[1]-a[1]),c});
  // A ballast bed set into the ground; where a side runs over water the same bed is a trestle deck on piers.
- for(let i=1;i<track.route.length;i++){const a=track.route[i-1],b=track.route[i],wet=!onLand((a[0]+b[0])/2,(a[1]+b[1])/2);strip(a,b,wet?1.08:.98,C.railRise-.2,.2,wet?'#c5beaa':'#9d978b');}
+ for(let i=1;i<track.route.length;i++){const a=track.route[i-1],b=track.route[i],wet=!onLand((a[0]+b[0])/2,(a[1]+b[1])/2);strip(a,b,wet?1.08:C.bedWidth,C.railRise-.2,.2,wet?'#c5beaa':'#9d978b');}
  for(const offset of [-.18,.18]){const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++)strip(line[i-1],line[i],.028,C.railRise+.045,.05,'#718785');}
  for(const offset of [-.51,.51]){
   if(p.loop){for(let d=0;d<p.loop.length;d+=.5){const end=Math.min(p.loop.length,d+.5),mid=(d+end)/2;if(offset>0&&p.loop.stops.some(s=>Math.min(Math.abs(mid-s.distance),p.loop!.length-Math.abs(mid-s.distance))<4.4))continue;const a=loopPoint(p.loop,d),b=loopPoint(p.loop,end);if(onLand((a.x+b.x)/2,(a.z+b.z)/2))continue;const normal=(q:typeof a):[number,number]=>[q.x-Math.cos(q.yaw)*offset,q.z+Math.sin(q.yaw)*offset];strip(normal(a),normal(b),.035,C.railRise+.45,.04,palette.green);}}
@@ -196,11 +202,11 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  <group name="atlas-passenger-train" ref={service}>{[0,1,2].map(i=>{const start=p.loop?loopPoint(p.loop,(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
   {/* Bullet train: low white body, a continuous window band, gold line, and gangways between cars. */}
   <Instanced geometry={g.box} material={m.plain} items={BULLET_BODY(palette.gold)}/>
-  <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'}]}/>
+  <Instanced geometry={g.ball} material={m.plain} items={[TRAIN_ROOF]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.256,.2,0],s:[.015,.24,.9],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
-  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.26,.16,.24]} rotation={[0,0,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
+  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*TRAIN_DOOR.x,TRAIN_DOOR.y,TRAIN_DOOR.z]} rotation={[0,0,0]}><Instanced geometry={g.box} material={m.plain} items={[TRAIN_DOOR.leaf]}/></group>)}
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.bead} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
-  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
+  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[TRAIN_NOSE(i===0?-1:1)[0]]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[TRAIN_NOSE(i===0?-1:1)[1]]}/></>}
  </group>;})}</group>
  {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/><instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
  </>;
