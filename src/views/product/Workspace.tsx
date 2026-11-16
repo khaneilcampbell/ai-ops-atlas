@@ -12,7 +12,7 @@ import { useAtlas } from "../../state";
 import { useTasks } from "../../tasks/store";
 import { KHANEIL } from "../../tasks/types";
 import { useRuns } from "../../workflows/runs";
-import { NOT_SUPPORTED, STATUS_DOT, STATUS_LABEL, type IntegrationState } from "../../product/integrations";
+import { NOT_SUPPORTED, statusBadge, type IntegrationState } from "../../product/integrations";
 import { catalogEntries, CONFIG_PRESETS, filterEntries } from "../../product/marketplace";
 import { platform, useIntegrationProbe } from "../../product/probe";
 import { checkImport, exportWorkspace, readiness } from "../../product/readiness";
@@ -63,6 +63,11 @@ export function WorkspaceView() {
           </label>
         )}
       </div>
+      {product.workspaces.length > 1 && (
+        <p className="muted small pf-tenancy-note">
+          Workspaces on this device share one set of tasks, workflow runs, agent memory and business records. They are setups for one owner, not separate customer accounts, so don't use one to run work for another business.
+        </p>
+      )}
       <div className="tabs product-tabs" role="tablist" aria-label="Workspace sections">
         {WORKSPACE_TABS.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
@@ -266,7 +271,7 @@ export function IntegrationCard({ s, w, onChanged, compact }: { s: IntegrationSt
       <div className="card-head">
         <h3 className="grow">{s.def.label}</h3>
         <span className="health">
-          <i className={STATUS_DOT[s.status]} /> {STATUS_LABEL[s.status]}
+          <i className={statusBadge(s).dot} /> {statusBadge(s).label}
         </span>
       </div>
       <p className="muted small">{s.def.description}</p>
@@ -387,7 +392,8 @@ function IntegrationsTab({ w, probe }: { w: Workspace | null; probe: Probe }) {
     <>
       <div className="product-bar">
         <span className="muted small grow">
-          {shown.filter((s) => s.status === "connected").length} of {shown.length} connected on this {platform() === "desktop" ? "Mac" : platform() === "web" ? "site" : "preview"}. Health is read once and reused for five minutes.
+          {shown.filter((s) => s.status === "connected" && s.verifiedAt).length} of {shown.length} connected and checked on this {platform() === "desktop" ? "Mac" : platform() === "web" ? "site" : "preview"}
+          {shown.some((s) => s.status === "connected" && !s.verifiedAt) ? `, ${shown.filter((s) => s.status === "connected" && !s.verifiedAt).length} with a key set but not verified` : ""}. Health is read once and reused for five minutes.
         </span>
         <button className="btn small" onClick={() => void probe.check(true)} disabled={probe.checking}>
           <Icon name="refresh" size={13} /> {probe.checking ? "Checking" : "Check again"}

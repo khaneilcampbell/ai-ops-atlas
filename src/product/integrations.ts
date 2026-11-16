@@ -18,6 +18,16 @@ export const STATUS_LABEL: Record<IntegrationStatus, string> = {
 };
 export const STATUS_DOT: Record<IntegrationStatus, string> = { connected: "h-good", disconnected: "h-bad", degraded: "h-warn", configuration_required: "h-unknown", unsupported: "h-unknown" };
 
+/**
+ * What the card shows. A key that is set but that no real check has reached yet is not called
+ * "Connected": it reads "Key set · not verified" with a neutral dot. It still counts as usable
+ * for workflows (`usable`), because Atlas won't spend money or send email just to test a key.
+ */
+export function statusBadge(s: Pick<IntegrationState, "status" | "verifiedAt">): { label: string; dot: string } {
+  if (s.status === "connected" && !s.verifiedAt) return { label: "Key set · not verified", dot: "h-unknown" };
+  return { label: STATUS_LABEL[s.status], dot: STATUS_DOT[s.status] };
+}
+
 /** Where a person sets the credential up. `keychain` ones can be set from inside the Mac app. */
 export type SetupKind = "keychain-github" | "keychain-anthropic" | "site-secret" | "settings-sync";
 

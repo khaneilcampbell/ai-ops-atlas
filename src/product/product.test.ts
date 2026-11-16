@@ -5,10 +5,10 @@ import type { HealthLoad, HealthReport } from "../observability/health";
 import { memoryBackend } from "../tasks/store";
 import { KHANEIL, type Actor } from "../tasks/types";
 import { BENJAIRE_LAUNCH } from "../workflows/benjaireLaunch";
-import { INTEGRATION_CATALOG, integrationState, integrationStates, type ProbeInput } from "./integrations";
+import { INTEGRATION_CATALOG, integrationState, integrationStates, statusBadge, type ProbeInput } from "./integrations";
 import { catalogEntries, CONFIG_PRESETS, filterEntries } from "./marketplace";
 import { checkImport, exportWorkspace, readiness } from "./readiness";
-import { compatibility, runProblem, simulateTemplate, templateById, TEMPLATES } from "./templates";
+import { compatibility, runProblem, simulateTemplate, stepProblem, taskAgentProblem, templateById, TEMPLATES } from "./templates";
 import { agentBlocked, agentSettingsProblem, existingWorkspace, hasExistingData, parseProduct, ProductStore, workspaceProblem, type WorkspaceInput } from "./workspace";
 
 const AT = "2026-11-16T12:00:00.000Z";
@@ -151,6 +151,10 @@ describe("integration validation", () => {
     expect(s.verifiedAt).toBeNull();
     const n8n = integrationState(INTEGRATION_CATALOG.find((d) => d.id === "n8n")!, probe());
     expect(n8n.verifiedAt).toBe(AT);
+    // The card never says "Connected" for a key no check has reached; a checked one does.
+    expect(statusBadge(s)).toEqual({ label: "Key set · not verified", dot: "h-unknown" });
+    expect(statusBadge(n8n)).toEqual({ label: "Connected", dot: "h-good" });
+    expect(statusBadge({ status: "degraded", verifiedAt: null }).label).toBe("Degraded");
   });
 
   it("maps failing checks and missing keys to the right statuses", () => {
@@ -224,6 +228,21 @@ describe("agent configuration permissions", () => {
     expect(runProblem(BENJAIRE_LAUNCH, w, catalog)).toMatch(/limited to Tier 0/);
     s.configureAgent(w.id, w.rev, "benjaire-product-lab-scoring", { enabled: false, maxModelTier: 2, note: "" }, KHANEIL, AT);
     expect(runProblem(BENJAIRE_LAUNCH, s.active()!, catalog)).toMatch(/turned off/);
+  });
+
+  it("the same switch holds single steps and Task Center tasks, not only the Start button", () => {
+    const { s } = readyWorkspace();
+    const w = s.active()!;
+    const scoring = BENJAIRE_LAUNCH.nodes.find((n) => n.id === "scoring")!;
+    expect(stepProblem(scoring, w, catalog)).toBeNull();
+    expect(taskAgentProblem("benjaire-product-lab-scoring", w, catalog)).toBeNull();
+    s.configureAgent(w.id, w.rev, "benjaire-product-lab-scoring", { enabled: false, maxModelTier: 2, note: "" }, KHANEIL, AT);
+    expect(stepProblem(scoring, s.active()!, catalog)).toMatch(/turned off/);
+    expect(taskAgentProblem("benjaire-product-lab-scoring", s.active()!, catalog)).toMatch(/can't take new tasks/);
+    // Another agent's step and a task with no agent are untouched; no workspace means no limits.
+    expect(stepProblem(BENJAIRE_LAUNCH.nodes.find((n) => n.id === "brief")!, s.active()!, catalog)).toBeNull();
+    expect(taskAgentProblem(undefined, s.active()!, catalog)).toBeNull();
+    expect(stepProblem(scoring, null, catalog)).toBeNull();
   });
 
   it("presets are only the allowed settings", () => {

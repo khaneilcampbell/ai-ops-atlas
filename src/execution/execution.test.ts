@@ -48,7 +48,7 @@ interface Env {
   report(nodeId: string, kind: ExecutionReport["kind"], extra?: Partial<ExecutionReport>): ExecutionReport;
 }
 
-function setup(plan: SimulatedPlan = {}, opts: { maxConcurrent?: number; adapter?: (nodeId: string) => ExecutionAdapter | undefined; backends?: Env["backends"]; existingRun?: WorkflowRun } = {}): Env {
+function setup(plan: SimulatedPlan = {}, opts: { agentGate?: (n: { agentId?: string }) => string | null; maxConcurrent?: number; adapter?: (nodeId: string) => ExecutionAdapter | undefined; backends?: Env["backends"]; existingRun?: WorkflowRun } = {}): Env {
   let clock = Date.parse("2026-11-15T12:00:00Z");
   const now = () => new Date(clock).toISOString();
   const backends = opts.backends ?? { tasks: memoryBackend(), runs: memoryBackend(), ledger: memoryBackend() };
@@ -63,6 +63,7 @@ function setup(plan: SimulatedPlan = {}, opts: { maxConcurrent?: number; adapter
     catalog,
     now,
     maxConcurrent: opts.maxConcurrent,
+    agentGate: opts.agentGate,
     adapterFor: (n) => opts.adapter?.(n.id) ?? (n.id === "publish" ? n8nAdapter : n.execution.kind === "n8n" ? sim : manualAdapter),
   });
   let run = opts.existingRun;
@@ -152,6 +153,40 @@ describe("dependencies and parallel work", () => {
   });
 });
 
+describe("agents switched off or retired", () => {
+  it("a step whose agent is turned off mid-run is held with the reason and never sent; turning it back on sends it once", async () => {
+    let off = new Set(["benjaire-product-lab-customers"]);
+    const e = setup({}, { agentGate: (n) => (n.agentId && off.has(n.agentId) ? "Customer research is turned off in the Benjaire workspace." : null) });
+    e.orch.authorize(e.run.id, KHANEIL);
+    await e.orch.step(e.run.id);
+    e.orch.recordOutput(e.run.id, "intake", OUT.intake, KHANEIL);
+    const s = await e.orch.step(e.run.id);
+    expect(s.ok && s.summary.dispatched.sort()).toEqual(["competitor-analysis", "market-research"]);
+    expect(s.ok && s.summary.held).toContainEqual({ nodeId: "customer-research", why: "Customer research is turned off in the Benjaire workspace." });
+    expect(status(e, "customer-research")).toBe("queued");
+    expect(e.task("customer-research")!.attempts).toHaveLength(0);
+    // A person can't record its output by hand either while the agent is off.
+    expect(e.orch.recordOutput(e.run.id, "customer-research", OUT["customer-research"], KHANEIL).ok).toBe(false);
+    off = new Set();
+    await e.orch.step(e.run.id);
+    await e.orch.step(e.run.id);
+    expect(e.sim.sent.filter((x) => x.nodeId === "customer-research")).toHaveLength(1);
+  });
+
+  it("a retired catalog agent's step says why it waits instead of being skipped silently", async () => {
+    const retired = { ...catalog, agents: catalog.agents.map((a) => (a.id === "benjaire-product-lab-research" ? { ...a, status: "retired" as const } : a)) };
+    const e = setup();
+    const orch = new Orchestrator({ tasks: e.svc, runs: e.runs, ledger: e.ledger, catalog: retired, adapterFor: () => e.sim });
+    orch.authorize(e.run.id, KHANEIL);
+    orch.recordOutput(e.run.id, "intake", OUT.intake, KHANEIL);
+    const s = await orch.step(e.run.id);
+    expect(s.ok && s.summary.held.find((h) => h.nodeId === "market-research")?.why).toMatch(/retired/);
+    expect(e.sim.sent.some((x) => x.nodeId === "market-research")).toBe(false);
+    // History stays: the task and its run are still there, only no new attempt.
+    expect(e.task("market-research")!.status).toBe("queued");
+  });
+});
+
 describe("structured handoffs", () => {
   it("the next step receives validated upstream outputs in a standard envelope", async () => {
     const e = setup();
@@ -237,6 +272,15 @@ describe("duplicates and replays", () => {
     await Promise.all([e.orch.step(e.run.id), e.orch.step(e.run.id), e.orch.step(e.run.id)]);
     expect(e.sim.sent).toHaveLength(3);
     expect(new Set(e.sim.sent.map((x) => x.idempotencyKey)).size).toBe(3);
+  });
+
+  it("a round asked for while another is going reports the real state, not an empty summary", async () => {
+    const e = setup();
+    e.orch.authorize(e.run.id, KHANEIL);
+    const [a, b, c] = await Promise.all([e.orch.step(e.run.id), e.orch.step(e.run.id), e.orch.step(e.run.id)]);
+    // Intake waits on Khaneil; every caller hears it, including the ones that overlapped.
+    for (const r of [a, b, c]) expect(r.ok && r.summary.waitingOnPerson.map((w) => w.nodeId)).toEqual(["intake"]);
+    expect(e.sim.sent).toHaveLength(0);
   });
 
   it("an old attempt's report or a report from the wrong system can't complete a step", async () => {

@@ -35,7 +35,7 @@ Open **Workspace** in the sidebar (on a phone: More > Workspace).
 - **Templates**: the workflow template library.
 - **Administration**: general settings links, workflow limits, usage, system information, export and import.
 
-A workspace holds settings only. Tasks, workflow runs, memory and business records stay in their own stores on the device. More than one workspace can exist; the picker at the top switches the active one.
+A workspace holds settings only. Tasks, workflow runs, memory and business records stay in their own stores on the device. More than one workspace can exist; the picker at the top switches the active one. Every workspace on a device sees the same tasks, runs, memory and business records: workspaces are setups for one owner, not separate customer accounts. Atlas has no customer sign-in or tenant isolation yet, so don't use a workspace to run work for another business.
 
 ## Integrations
 
@@ -49,7 +49,7 @@ A workspace holds settings only. Tasks, workflow runs, memory and business recor
 | Email alerts (Resend) | Via the hosted site | `RESEND_API_KEY`, `ALERT_EMAIL_TO` | Set only; no test email is sent |
 | Atlas site link | Settings > Website sync | Not needed | The site answering with the sync key |
 
-Statuses: **Connected** (set up; "Last successful check" says when a real request proved it), **Degraded** (a check failed or partly failed), **Disconnected** (the service didn't answer), **Configuration Required** (a key or link is missing), **Unsupported** (not on this platform, or no adapter: OpenAI, Gemini, Slack, direct Shopify). Health is read once and reused for five minutes; **Check again** forces a fresh read.
+Statuses: **Connected** (a real request proved it; "Last successful check" says when), **Key set · not verified** (the key or link is set but no check has reached the service yet; workflows may still use it), **Degraded** (a check failed or partly failed), **Disconnected** (the service didn't answer), **Configuration Required** (a key or link is missing), **Unsupported** (not on this platform, or no adapter: OpenAI, Gemini, Slack, direct Shopify). Health is read once and reused for five minutes; **Check again** forces a fresh read.
 
 Disconnect: on the Mac, **Disconnect** removes a Keychain key. Site keys are removed in the Cloudflare dashboard (Workers & Pages > ai-ops-atlas > Settings > Variables and Secrets) and take effect on the next deploy. Atlas never reads or shows a key.
 
@@ -59,7 +59,7 @@ Open an agent to see its purpose, building, capabilities, granted tools, permiss
 
 Tools, permissions, memory scope and building are protected. They change only through a reviewed pull request to the Agent Registry (`catalog/*.yaml`, `src/intelligence/capabilities.ts`).
 
-A turned-off agent, or a step that needs a higher model tier than its limit, stops Workflow Intelligence from starting a run that uses it, with the reason shown.
+A turned-off agent, or a step that needs a higher model tier than its limit, stops Workflow Intelligence from starting a run that uses it, with the reason shown. Turning an agent off while a run is going holds that agent's next steps (they show the reason and are never sent) until it is turned back on, and the Task Center won't start new tasks for it. Work already sent finishes and stays in history.
 
 The **Agent catalog** lists every registered agent not yet in the workspace. **Add** only lets the workspace use it: nothing is downloaded and no outside code runs.
 

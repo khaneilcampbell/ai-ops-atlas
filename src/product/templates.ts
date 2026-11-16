@@ -4,7 +4,7 @@ import type { SensitiveCategory } from "../tasks/types";
 import { DEFINITIONS } from "../workflows/benjaireLaunch";
 import { simPhases, simulate, type SimState } from "../workflows/engine";
 import { definitionProblems } from "../workflows/graph";
-import type { WorkflowDefinition } from "../workflows/types";
+import type { WorkflowDefinition, WorkflowNode } from "../workflows/types";
 import { usable, type IntegrationState } from "./integrations";
 import { agentBlocked, settingsFor, type Workspace } from "./workspace";
 
@@ -165,22 +165,41 @@ export function compatibility(t: WorkflowTemplate, w: Workspace | null, catalog:
 }
 
 /**
+ * Why the workspace stops this step's agent from taking new work, or null when it may. Checked by
+ * Workflow Intelligence's Start button and again by the orchestrator before every send, so turning
+ * an agent off (or lowering its model limit) also holds steps of runs that already started.
+ */
+export function stepProblem(n: Pick<WorkflowNode, "id" | "kind" | "execution" | "agentId" | "title">, w: Workspace | null, catalog: Catalog): string | null {
+  if (!w || !n.agentId) return null;
+  const name = catalog.agents.find((a) => a.id === n.agentId)?.name ?? n.agentId;
+  const blocked = agentBlocked(w, n.agentId);
+  if (blocked) return `${name} ${blocked}. Turn it on in Workspace > Agents to let it run.`;
+  const tier = routeForStep(n, undefined, catalog).tier;
+  const limit = settingsFor(w, n.agentId).maxModelTier;
+  if (tier > limit) return `${n.title} needs Tier ${tier} models, but ${name} is limited to Tier ${limit} in this workspace.`;
+  return null;
+}
+
+/**
  * Why a live run of this definition can't start in this workspace, or null when it can. Checked by
  * Workflow Intelligence's Start button: disabled agents never get tasks, and a step whose model
  * route needs a tier above the workspace's limit for that agent holds the whole run.
  */
 export function runProblem(def: WorkflowDefinition, w: Workspace | null, catalog: Catalog): string | null {
-  if (!w) return null;
   for (const n of def.nodes) {
-    if (!n.agentId) continue;
-    const name = catalog.agents.find((a) => a.id === n.agentId)?.name ?? n.agentId;
-    const blocked = agentBlocked(w, n.agentId);
-    if (blocked) return `${name} ${blocked}. Turn it on in Workspace > Agents, or the run can't start.`;
-    const tier = routeForStep(n, undefined, catalog).tier;
-    const limit = settingsFor(w, n.agentId).maxModelTier;
-    if (tier > limit) return `${n.title} needs Tier ${tier} models, but ${name} is limited to Tier ${limit} in this workspace.`;
+    const p = stepProblem(n, w, catalog);
+    if (p) return p;
   }
   return null;
+}
+
+/** Why the workspace stops this agent from taking a new Task Center task, or null. */
+export function taskAgentProblem(agentId: string | undefined, w: Workspace | null, catalog: Catalog): string | null {
+  if (!agentId) return null;
+  const blocked = agentBlocked(w, agentId);
+  if (!blocked) return null;
+  const name = catalog.agents.find((a) => a.id === agentId)?.name ?? agentId;
+  return `${name} ${blocked}, so it can't take new tasks. Turn it on in Workspace > Agents.`;
 }
 
 /** A dry run of the whole template: computed, never saved, no tasks and no outside calls. */
