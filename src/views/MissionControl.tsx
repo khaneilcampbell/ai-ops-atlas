@@ -17,6 +17,8 @@ import { AgentAlerts } from "./AgentAlerts";
 import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
 import { WebsiteManagement } from "./WebsiteManagement";
+import { ProductionHealth } from "./ProductionHealth";
+import "../styles/production.css";
 import { formatDateTime } from "../lib/timezone";
 
 /** GitHub reports what is left; people read a full bar as nearly maxed out, so show what was used. */
@@ -97,6 +99,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
           tone={m.failing.length ? "bad" : "accent"}
         />
       </div>
+
+      <ProductionHealth />
 
       <div className="grid mc-row">
         <section className="card">

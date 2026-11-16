@@ -10,6 +10,7 @@ import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityP
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {alignStreets,joinStreetEnds} from './streetAlign';
 import {marinaSite} from './marinaPlan';
+import {planHarbourPlatform} from './harbourPlatform';
 import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,financialParkPlanting,type FinancialPlan} from "./financialPlan";
@@ -907,8 +908,10 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
     // The forecourt's front walk runs on along the shore to the harbour marina's stair, so the
     // station plaza joins the boat dock (Khaneil, 2026-11-13). Only on open land and clear of streets.
+    // With the harbour platform it ends at the Transit Gateway's door, which takes people over the track (transitGateway.ts).
     const harbor=marinaSite({terraces,land,paving,bounds:{x0:0,z0:0,x1:0,z1:0}},top),front=stationPlaza.walk[1];
-    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,harbor.shoreZ-.2]];
+    const gateway=planHarbourPlatform(communityRail?.loop,harbor)?.gateway;
+    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,gateway?gateway.z0:harbor.shoreZ-.2]];
     const onLand=(x:number,z:number)=>land.some(l=>inRect(l,x,z));
     if(harbor.x>front[0]&&dock.every(([x,z])=>onLand(x,z))&&dock.slice(1).every((b,i)=>connections.every(c=>[c.road,...(c.frontage?[c.frontage]:[])].every(r=>roadIntersections([dock[i],b],r).length===0&&distanceToRoad(b,r)>STREET_CLEAR)))){
       for(let i=1;i<dock.length;i++){const a=dock[i-1],b=dock[i];if(Math.hypot(b[0]-a[0],b[1]-a[1])<.05)continue;paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}

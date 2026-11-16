@@ -6,6 +6,7 @@ import {ROAD_W,type Pt} from './roads';
 import {buildScene,TERRACE_H} from './scene';
 import {distanceToRoad,roadIntersections} from './highway';
 import {marinaSite} from './marinaPlan';
+import {planHarbourPlatform} from './harbourPlatform';
 import {plazaRings} from './streetGraph';
 import {bridgeStreetSidewalks,SIDEWALK,streetPavement,walkOffCarriageways,walkOffStreets} from './streetPavement';
 
@@ -66,10 +67,12 @@ describe('station plaza to the boat dock',()=>{
   const walk:Pt[]=[[m.x,m.cityWalkZ],[m.x,m.shoreZ]];
   expect(streets.filter(r=>distanceToRoad(walk[0],r)<ROAD_W/2+.3||roadIntersections(walk,r).length)).toEqual([]);
  });
- it('paves a walk from the station forecourt to the marina stair',()=>{
+ it('paves a walk from the station forecourt to the Transit Gateway door',()=>{
   const p=scene.stationPlaza!,w=scene.walks;
   expect(w.some(s=>Math.abs(s.x0-(p.bounds.x+p.bounds.w))<1e-6&&s.x1===m.x)).toBe(true);
-  expect(w.some(s=>s.x0===m.x&&s.x1===m.x&&Math.max(s.z0,s.z1)>=m.cityWalkZ)).toBe(true);
+  // It runs south to the Transit Gateway's door, which takes people over the track (transitGateway.ts).
+  const door=planHarbourPlatform(scene.communityRail?.loop,m)!.gateway.z0;
+  expect(w.some(s=>s.x0===m.x&&s.x1===m.x&&Math.abs(Math.max(s.z0,s.z1)-door)<1e-6)).toBe(true);
  });
 });
 

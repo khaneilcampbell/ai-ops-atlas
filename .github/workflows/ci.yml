@@ -97,6 +97,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --ignore-scripts
+      - name: Secret scan (tracked files; prints locations, never values)
+        run: node scripts/secret-scan.mjs
       - run: python3 -m unittest discover -s ops/security -p 'test_*.py'
       - run: python3 -m unittest discover -s ops/merge-flow -p 'test_*.py'
       - run: python3 -m unittest discover -s apps/benjaire-flow/evals -p 'test_*.py'

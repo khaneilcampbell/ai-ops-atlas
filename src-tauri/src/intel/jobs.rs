@@ -1847,7 +1847,7 @@ pub mod tests {
         );
         let body = r.model.bodies.lock().unwrap()[0].clone();
         assert!(body.get("tools").is_none());
-        assert!(body["system"]
+        assert!(body["system"][0]["text"]
             .as_str()
             .unwrap()
             .contains("Senior Engineering Reviewer"));
