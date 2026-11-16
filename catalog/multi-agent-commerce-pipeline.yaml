@@ -765,8 +765,17 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Shop page visits, and Monday 9am for the sales email
+    observe:
+      agent_feed: true
+    # Flow Missed Run Check reports the Monday email daily (on time or late) and Flow Error Alerts
+    # reports failed runs.
+    alerts:
+      failures: true
+      report_within: 26h
     last_run: null
     history:
+      - at: 2026-11-16
+        event: Flow Error Alerts set as its error workflow (it had none, so failures went unseen); failed runs and missed Monday emails now report to the Atlas feed
       - at: 2026-11-11
         event: Moved to n8n Cloud
     links:

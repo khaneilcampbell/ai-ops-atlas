@@ -1,0 +1,1 @@
+- 2026-11-16 · Customer-facing n8n workflows now report into Atlas: any failed run turns its agent red, and a daily heartbeat flags buyer emails, reminders, the digest or the weekly sales email that stop running (#PR)
