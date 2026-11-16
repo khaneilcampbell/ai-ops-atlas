@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
-import { approvalRefusal, decideApproval, liveAttempt } from "../tasks/lifecycle";
+import { approvalRefusal, beginAttempt, decideApproval, liveAttempt, updateAttempt } from "../tasks/lifecycle";
 import { byId, LocalTaskRepository, memoryBackend, TaskService, type Backend } from "../tasks/store";
 import { KHANEIL, type Actor } from "../tasks/types";
 import { BENJAIRE_LAUNCH, BENJAIRE_LAUNCH_GOAL } from "../workflows/benjaireLaunch";
@@ -8,7 +8,7 @@ import { buildingActivity, liveStatus, resolveAll } from "../workflows/engine";
 import { RunStore, startLiveRun } from "../workflows/runs";
 import type { WorkflowRun } from "../workflows/types";
 import { adapterRouter, githubStatus, manualAdapter, n8nAdapter, output, simulatedAdapter, type SimulatedPlan } from "./adapters";
-import { buildEnvelope, repairOutput, validateOutput } from "./handoff";
+import { buildEnvelope, nothingToWorkOn, repairOutput, validateOutput } from "./handoff";
 import { bridgeAdapter, pullReports, type BridgeClient } from "./bridgeClient";
 import { LedgerStore } from "./ledger";
 import type { StepReportBody } from "./n8nBridge";
@@ -564,5 +564,42 @@ describe("n8n bridge", () => {
     expect(status(e, "market-research")).toBe("completed");
     await e.orch.step(e.run.id);
     expect(fb.sent.some((x) => x.nodeId === "scoring")).toBe(true);
+  });
+
+  it("goal intake marked done by hand still passes the goal on to research", async () => {
+    const fb = fakeBridge();
+    const b = bridgeAdapter(fb.client, () => true);
+    const e = setup({}, { adapter: (id) => (["market-research", "customer-research", "competitor-analysis"].includes(id) ? b : undefined) });
+    expect(e.orch.authorize(e.run.id, KHANEIL).ok).toBe(true);
+    await e.orch.step(e.run.id);
+    // What the Task Center does: Khaneil starts the manual step, then presses "Mark completed" with no output.
+    const id = e.run.nodeTasks.intake;
+    expect(e.svc.apply(id, (t, all, at) => beginAttempt(t, all, "manual", KHANEIL, at, null)).ok).toBe(true);
+    const live = liveAttempt(e.svc.repo.get(id)!)!;
+    expect(e.svc.apply(id, (t, _a, at) => updateAttempt(t, live.id, { state: "succeeded" }, KHANEIL, at)).ok).toBe(true);
+    await e.orch.step(e.run.id);
+    const sent = fb.sent.find((x) => x.nodeId === "market-research")!;
+    expect(sent.inputs.intake.fields.goal).toBe(BENJAIRE_LAUNCH_GOAL.objective);
+    expect(nothingToWorkOn(sent)).toBe(false);
+  });
+});
+
+describe("empty goals and non-answers", () => {
+  it("won't start a run for a goal with no objective", () => {
+    const e = setup();
+    expect(startLiveRun({ ...BENJAIRE_LAUNCH_GOAL, objective: "  " }, BENJAIRE_LAUNCH, e.svc, e.runs, catalog, KHANEIL).error).toMatch(/no objective/);
+  });
+
+  it("a step whose earlier steps passed on nothing isn't sent", () => {
+    const env = buildEnvelope(BENJAIRE_LAUNCH, { id: "r", nodeTasks: {} }, "market-research", { number: 1, idempotencyKey: "t:1" }, { intake: { nodeId: "intake", taskId: "x", attempt: 1, at: "", state: "unverified", by: "k" } }, "2026-11-16T05:00:00Z");
+    expect(nothingToWorkOn(env)).toBe(true);
+  });
+
+  it("an answer saying it can't determine the result fails validation", () => {
+    const brief = output("product-brief/1", { audience: "Not determinable yet. The earlier step included no description of the top idea.", mvpScope: ["Confirm which idea is the top idea"] });
+    expect(validateOutput("brief", brief).join(" ")).toMatch(/couldn't be done/);
+    expect(validateOutput("brief", output("product-brief/1", { audience: "No product was provided in the inputs.", mvpScope: ["x"] })).length).toBeGreaterThan(0);
+    expect(validateOutput("brief", OUT.brief)).toEqual([]);
+    expect(validateOutput("planning", OUT.planning)).toEqual([]);
   });
 });

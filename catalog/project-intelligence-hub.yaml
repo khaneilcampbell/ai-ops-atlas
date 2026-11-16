@@ -263,17 +263,22 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the Atlas site only (published)
-    last_run: 2026-11-15T21:05:43Z
+    last_run: 2026-11-16T06:23:49Z
     history:
       - at: 2026-11-15
         event: Built as an unpublished n8n draft at Khaneil's choice of a new restricted step runner
       - at: 2026-11-15
         event: Khaneil published it after adding the bridge secrets; a test market research step ran and the site refused its report as expected because Atlas had not sent that step
+      - at: 2026-11-16
+        event: First live run from the Atlas Mac app; all research, scoring, brief and plan steps ran and reported back (n8n runs 719 to 726). The brief and plan could not name the idea because no goal reached them, fixed in Atlas
+      - at: 2026-11-16
+        event: n8n no longer saves run data for this workflow, because saved runs included the webhook password in the request headers; the password is being replaced
     links:
       - label: n8n workflow (Step Runner)
         url: https://khancam15.app.n8n.cloud/workflow/tGYMec2rp0twZFxv
     permissions:
       - 'Webhook header auth: N8N_BRIDGE_TOKEN, held only by the Atlas site'
+      - 'n8n keeps no run data for this workflow (success or error), so the password is never stored with a run'
       - 'Anthropic API: one call per step; the Atlas site allows at most 20 steps a day'
       - 'Atlas report key (N8N_BRIDGE_CALLBACK_TOKEN): adds reports only for steps the site sent'
     registry:

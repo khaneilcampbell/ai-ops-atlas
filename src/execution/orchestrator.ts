@@ -5,7 +5,7 @@ import { ATLAS, type Actor, type ExecutionAttempt, type StoredTask, type Workflo
 import { resolveNode, skippedBy } from "../workflows/engine";
 import { topoOrder } from "../workflows/graph";
 import type { WorkflowNode, WorkflowRun } from "../workflows/types";
-import { buildEnvelope, repairOutput, schemaFor, validateOutput } from "./handoff";
+import { buildEnvelope, nothingToWorkOn, repairOutput, schemaFor, validateOutput } from "./handoff";
 import type { LedgerStore } from "./ledger";
 import { backoffMs, budgetProblem, MAX_CONCURRENT, MAX_REPAIRS, stepPolicy } from "./policy";
 import type { BusinessOutcome, DispatchResult, ExecutionAdapter, ExecutionReport, ExternalStatus, HandoffRecord, RunLedger, StepOutput } from "./types";
@@ -135,7 +135,9 @@ export class Orchestrator {
       const t = this.d.tasks.repo.get(taskId);
       if (t?.status !== "completed" || l.handoffs[nodeId]) continue;
       const a = t.attempts[t.attempts.length - 1];
-      this.recordHandoff(run.id, { nodeId, taskId, attempt: a?.number ?? 0, at: t.completedAt ?? this.now(), state: "unverified", by: t.events[t.events.length - 1]?.actor.name ?? "unknown", reason: "Completed outside the orchestrator with no structured output." });
+      // Goal intake done by hand still passes on the goal it was created with, so later steps know what they're for.
+      const goal = schemaFor(nodeId).id === "goal-intake/1" ? t.objective?.trim() : "";
+      this.recordHandoff(run.id, { nodeId, taskId, attempt: a?.number ?? 0, at: t.completedAt ?? this.now(), state: "unverified", by: t.events[t.events.length - 1]?.actor.name ?? "unknown", reason: "Completed outside the orchestrator with no structured output.", ...(goal ? { output: { schema: "goal-intake/1", fields: { goal }, artifacts: [] } } : {}) });
     }
   }
 
@@ -248,6 +250,10 @@ export class Orchestrator {
       const claimed = this.d.ledger.update(run.id, (l) => (l.dispatched.includes(attempt.idempotencyKey) ? "already sent" : { ...l, dispatched: [...l.dispatched, attempt.idempotencyKey] }));
       if (!claimed.ok) continue;
       const env = buildEnvelope(run.snapshot, run, nodeId, attempt, claimed.ledger.handoffs, this.now());
+      if (nothingToWorkOn(env)) {
+        this.applyDispatch(run, nodeId, t.id, attempt, { state: "refused", error: "earlier steps passed on nothing to work on (no goal or results), so Atlas didn't spend a model call on it." }, adapter);
+        continue;
+      }
       s.dispatched.push(nodeId);
       sends.push(
         adapter
