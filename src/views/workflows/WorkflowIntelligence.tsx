@@ -19,7 +19,12 @@ import { selectBuilding, selectNode, takeWorkflowRunFocus, useWorkflowSelection 
 import { NODE_STATUS_LABEL, type ExecutionEvent, type NodeStatus, type RunMode, type WorkflowDefinition, type WorkflowNode, type WorkflowRun } from "../../workflows/types";
 import { statusTone, WorkflowCanvas } from "./WorkflowCanvas";
 import { RunExecution, useRunLedger } from "./RunExecution";
-import { stepTiming } from "../../execution/report";
+import { RUN_STATUS_LABEL, runStatus, stepTiming } from "../../execution/report";
+import { useIntel } from "../../intelligence/app";
+import { liveOutputs } from "../../outputs/live";
+import { simRunId, simulatedOutputs } from "../../outputs/simulation";
+import { scopeOutputs } from "../../outputs/validate";
+import { OutputStudio, useStableOutputs } from "./OutputStudio";
 import type { HandoffRecord } from "../../execution/types";
 import "../../styles/workflows.css";
 
@@ -112,6 +117,23 @@ export function WorkflowIntelligenceView() {
 
   const node = sel.nodeId ? def.nodes.find((n) => n.id === sel.nodeId) : undefined;
   const ledger = useRunLedger(run?.id);
+
+  // Agent Output Studio: live outputs only from this run's records, simulated ones only from the
+  // fixed samples, each scoped to its own run id so the two can't mix.
+  const { file: intel } = useIntel(catalog);
+  const simNodes = useMemo(
+    () => ({ started: new Set(sim.events.filter((e) => e.type !== "skipped").map((e) => e.nodeId)), completed: new Set(sim.events.filter((e) => e.type === "completed").map((e) => e.nodeId)) }),
+    [sim.events],
+  );
+  const rawOutputs = useMemo(() => {
+    if (mode === "simulation") return simulatedOutputs(def, sim.status, { standIn, startedNodes: simNodes.started, completedNodes: simNodes.completed });
+    return run ? liveOutputs({ run, tasks: taskMap, ledger, contexts: intel.contexts, evaluations: intel.evaluations }) : [];
+  }, [mode, def, sim.status, standIn, simNodes, run, taskMap, ledger, intel.contexts, intel.evaluations]);
+  const outputs = useStableOutputs(useMemo(() => scopeOutputs(rawOutputs, { mode, runIds: new Set(mode === "simulation" ? [simRunId(def.id)] : run ? [run.id] : []) }), [rawOutputs, mode, def.id, run]));
+  const runLabel = mode === "simulation" ? (sim.step === 0 ? "Preview, not started" : `Simulation step ${sim.step} of ${sim.maxStep}`) : run && ledger ? RUN_STATUS_LABEL[runStatus(run, taskMap, ledger)] : "No live run";
+  const pickOutput = (id: string) => {
+    if (sel.nodeId !== id) selectNode(id, resolved.get(id)?.buildingId ?? null);
+  };
 
   return (
     <div className="page wf-page">
@@ -274,6 +296,20 @@ export function WorkflowIntelligenceView() {
           )}
         </aside>
       </div>
+
+      <OutputStudio
+        mode={mode}
+        goal={goal}
+        def={def}
+        outputs={outputs}
+        status={status}
+        names={names}
+        runLabel={runLabel}
+        hasRun={!!run}
+        selectedNodeId={sel.nodeId}
+        onSelect={pickOutput}
+        onOpenTask={openTask}
+      />
 
       <div className="wf-lower">
         <section className="card wf-timeline" aria-label="Execution timeline">
