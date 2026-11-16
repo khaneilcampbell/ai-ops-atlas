@@ -621,8 +621,12 @@ export interface LabelBox {
  * Greedy placement: labels are taken in priority order. Each tries its preferred spot, then its
  * alternatives, and is hidden only when every spot overlaps a label already placed. A coarse grid
  * keeps this near linear for hundreds of labels. Returns the chosen vertical offset per shown label.
+ *
+ * `prev` is the last placement. While the camera moves, a label that was shown keeps its spot and
+ * needs only half the padding to stay, so labels at the edge of a collision don't flicker on and
+ * off or hop between spots from one frame to the next.
  */
-export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
+export function placeLabels(boxes: LabelBox[], pad = 4, prev?: ReadonlyMap<string, number>): Map<string, number> {
   const CELL = 160;
   const grid = new Map<string, LabelBox[]>();
   const shown = new Map<string, number>();
@@ -632,13 +636,16 @@ export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
       for (let cy = Math.floor((b.top - pad) / CELL); cy <= Math.floor((b.bottom + pad) / CELL); cy++) out.push(`${cx},${cy}`);
     return out;
   };
-  const hits = (a: LabelBox, b: LabelBox) =>
-    Math.abs(a.x - b.x) * 2 < a.w + b.w + pad * 2 && a.top < b.bottom + pad && b.top < a.bottom + pad;
+  const hits = (a: LabelBox, b: LabelBox, gap: number) =>
+    Math.abs(a.x - b.x) * 2 < a.w + b.w + gap * 2 && a.top < b.bottom + gap && b.top < a.bottom + gap;
   for (const b of [...boxes].sort((p, q) => p.priority - q.priority)) {
-    for (const dy of [0, ...(b.alts ?? [])]) {
+    const was = prev?.get(b.id);
+    const spots = [0, ...(b.alts ?? [])];
+    for (const dy of was === undefined ? spots : [was, ...spots.filter((s) => s !== was)]) {
       const c = { ...b, top: b.top + dy, bottom: b.bottom + dy };
       const keys = cells(c);
-      if (keys.some((k) => grid.get(k)?.some((o) => hits(c, o)))) continue;
+      const gap = dy === was ? pad / 2 : pad;
+      if (keys.some((k) => grid.get(k)?.some((o) => hits(c, o, gap)))) continue;
       shown.set(b.id, dy);
       for (const k of keys) grid.set(k, [...(grid.get(k) ?? []), c]);
       break;

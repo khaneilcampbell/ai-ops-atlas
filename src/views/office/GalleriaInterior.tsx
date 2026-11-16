@@ -249,7 +249,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
  return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>
