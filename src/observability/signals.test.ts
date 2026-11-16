@@ -20,7 +20,8 @@ describe("connected signals", () => {
     expect(rows.map((r) => r.id)).toEqual([...INTEGRATION_IDS]);
     expect(rows.find((r) => r.id === "github")).toMatchObject({ state: "loading", detail: "No repository fetched yet" });
     expect(rows.find((r) => r.id === "atlas-intel")).toMatchObject({ state: "off", detail: "Runs in the Mac app" });
-    expect(signalCounts(rows)).toMatchObject({ loading: 4, off: 3 });
+    expect(signalCounts(rows)).toMatchObject({ loading: 4, off: 4 });
+    expect(rows.find((r) => r.id === "stripe-sales")).toMatchObject({ state: "off", detail: "Read on demand from Business, Finance" });
   });
 
   it("calls GitHub answering, stale or failing from the repositories' own sync state", () => {

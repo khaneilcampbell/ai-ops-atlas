@@ -15,7 +15,7 @@ import { MODULE_HEALTH, ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
 
 /** Labels match the app's navigation (App.tsx NAV). */
 const VIEW_LABEL: Record<ModuleView, string> = {
-  map: "Projects", agents: "Agents", automations: "Automations", repos: "Repositories", overview: "Mission",
+  map: "Projects", business: "Business", agents: "Agents", automations: "Automations", repos: "Repositories", overview: "Mission",
   activity: "Activity", intel: "Intel", usage: "API Usage", settings: "Settings", grid: "Grid",
 };
 

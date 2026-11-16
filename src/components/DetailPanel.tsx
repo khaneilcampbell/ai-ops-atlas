@@ -37,6 +37,7 @@ import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
+import { BusinessLink } from "./BusinessLink";
 import { BuildingTasks } from "./BuildingTasks";
 import { formatDateTime } from "../lib/timezone";
 
@@ -224,6 +225,7 @@ function ProjectDetail({ id }: { id: string }) {
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
       <BuildingTasks buildingId={project.id}/>
+      {project.module === "business-operations-hq" && <BusinessLink/>}
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}

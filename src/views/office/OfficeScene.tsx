@@ -58,7 +58,7 @@ export default function OfficeScene(props: Props) {
   const power = usePowerProfile();
   const visible = usePageVisible();
   return (
-    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
+    <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows="percentage" dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
       <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>

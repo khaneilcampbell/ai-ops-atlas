@@ -126,6 +126,25 @@ describe("placeLabels", () => {
     ]);
     expect(shown.get("agent")).toBe(40);
   });
+
+  it("keeps a label in last frame's spot while it still fits, instead of hopping back", () => {
+    const boxes = [
+      { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
+      { id: "agent", x: 200, top: 0, bottom: 20, w: 80, priority: 6, alts: [40] },
+    ];
+    expect(placeLabels(boxes).get("agent")).toBe(0);
+    expect(placeLabels(boxes, 4, new Map([["repo", 0], ["agent", 40]])).get("agent")).toBe(40);
+  });
+
+  it("lets a shown label stay at the edge of a collision, so it doesn't flicker", () => {
+    // 83 apart: overlaps with the full 4 px padding, clears with half of it.
+    const boxes = [
+      { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
+      { id: "agent", x: 83, top: 0, bottom: 20, w: 80, priority: 6 },
+    ];
+    expect(placeLabels(boxes).has("agent")).toBe(false);
+    expect(placeLabels(boxes, 4, new Map([["repo", 0], ["agent", 0]])).has("agent")).toBe(true);
+  });
 });
 
 describe("walkways", () => {
