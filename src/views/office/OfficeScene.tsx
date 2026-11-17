@@ -14,11 +14,13 @@ import { useInteriorTrackpad } from "./useInteriorTrackpad";
 import CutawayWall from "./CutawayWall";
 import CityOutside from "./CityOutside";
 import AtlasHqShell from "./AtlasHqShell";
-import { isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
+import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
 import { OFFICE_COLORS as C } from "./palette";
+import { AgentHologram, OrgBands } from "./AgentHologram";
+import { orgBands, type HologramData } from "./officeOrg";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -31,6 +33,8 @@ export interface DeskData {
   /** The task line on the monitor: the label of the execution the state rests on, or null. */
   task: string | null;
   when: string | null;
+  /** The glass data view shown over the desk on hover or selection, from verified data only. */
+  holo?: HologramData;
 }
 
 export interface OfficeApi {
@@ -61,7 +65,7 @@ export default function OfficeScene(props: Props) {
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows="percentage" dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} elevation={Math.max(0,props.floor??0)*3.4}/>
+      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} clearSpan={isAtlasHq(props.plan.projectId)?hqClearSpan(props.plan.w,props.plan.d):undefined} elevation={Math.max(0,props.floor??0)*3.4}/>
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
@@ -70,12 +74,19 @@ export default function OfficeScene(props: Props) {
         <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
-        {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
+        {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
+        {desks.some(d=>(d.floor??4)===level)&&<LevelBands desks={desks} level={level}/>}
         {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
       </group>)}
     </Canvas>
   );
+}
+
+/** The role-tier rows of one floor, outlined and signed (officeOrg.ts). */
+function LevelBands({desks,level}:{desks:DeskData[];level:number}) {
+  const bands=useMemo(()=>orgBands(desks.filter(d=>(d.floor??4)===level)),[desks,level]);
+  return <OrgBands bands={bands}/>;
 }
 
 function SharedFloor({plan,floor}:{plan:OfficePlan;floor:number}) {
@@ -163,11 +174,11 @@ function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:bool
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controls, home]);
 
-  // Selecting a desk leans the view toward it; clearing the selection leaves the camera alone.
+  // Selecting a desk leans the view toward it, high enough to keep its data hologram in view; clearing the selection leaves the camera alone.
   useEffect(() => {
     if (!focus) return;
     const c = current();
-    glide({ ...c, target: new THREE.Vector3(focus.x * 0.6, allFloors?14.4:0.8, focus.z * 0.6 + 0.2), r: Math.min(c.r, home.r * 0.82) });
+    glide({ ...c, target: new THREE.Vector3(focus.x * 0.85, allFloors?15.2:1.6, focus.z * 0.85 + 0.2), r: Math.min(c.r, home.r * 0.82) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.id]);
 
@@ -417,6 +428,7 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       <AgentStatusIndicator state={state} reduced={reduced} />
       <Chair />
       <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
+      {(hover || selected) && d.holo && <AgentHologram data={d.holo} reduced={reduced} />}
     </group>
   );
 }

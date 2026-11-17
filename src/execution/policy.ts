@@ -1,5 +1,6 @@
 import type { StoredTask } from "../tasks/types";
 import type { WorkflowNode } from "../workflows/types";
+import { isBridgeStep } from "./n8nBridge";
 
 // Execution policy: fixed rules, no model calls. Which model tier a step may use, how much it may
 // spend, how long a run may take before Atlas checks on it, and how retries back off.
@@ -17,6 +18,11 @@ export interface StepPolicy {
 }
 
 const HOUR = 3_600_000;
+/**
+ * The n8n step runner makes one model call (at most 1,500 tokens) and reports back, about a minute.
+ * After this long with no report, Atlas asks the site what happened instead of waiting hours.
+ */
+export const BRIDGE_TIMEOUT_MS = 20 * 60_000;
 
 /** Scoring and planning are the reasoning-heavy steps; other agent steps get a small model; routing, approvals and decisions use no model. */
 const ADVANCED = new Set(["scoring", "planning"]);
@@ -28,7 +34,7 @@ export function stepPolicy(n: Pick<WorkflowNode, "id" | "kind" | "execution">): 
   return {
     tier,
     capUsd: tier === "none" ? 0 : tier === "advanced" ? 3 : 1,
-    timeoutMs: n.execution.kind === "github" ? 2 * HOUR : 6 * HOUR,
+    timeoutMs: n.execution.kind === "github" ? 2 * HOUR : n.execution.kind === "n8n" && isBridgeStep(n.id) ? BRIDGE_TIMEOUT_MS : 6 * HOUR,
     reuseDays: REUSABLE.has(n.id) ? 30 : 0,
   };
 }

@@ -4,6 +4,8 @@ import { TIER_INFO } from "./taxonomy";
 import type { Agent, Catalog } from "./types";
 import type { TriggerType } from "../registry/types";
 import { buildingDisplayName } from "../modules/names";
+import { getAssignments, presenceAt, type PresenceAssignment, type PresencePlace } from "./agentPresence";
+import { financialBrand } from "../views/map3d/financialBrands";
 
 // Each AI agent's job: a role, an owner, a home, a workplace, a shift, a budget and the output it
 // owes at the end of the day. Everything is read from the agent's manifest or worked out by the
@@ -48,6 +50,8 @@ export interface AgentJob {
   offDuty: OffDuty | null;
   /** Works only through the automations it owns, so it keeps its desk and is not drawn walking. */
   deskOnly?: boolean;
+  /** Khaneil's saved presence schedule; when set, the map follows the real clock instead of the simulated day. */
+  presence?: PresenceAssignment;
 }
 
 const declared = <T,>(value: T, reason: string): Decided<T> => ({ value, provenance: "declared", reason });
@@ -93,10 +97,16 @@ export function apartments(ids: string[]): Map<string, AgentJob["home"]> {
 }
 
 /** The job of every AI agent in the catalog (types A, B and F), in catalog order. Automations have no job card. */
-export function agentJobs(catalog: Catalog): AgentJob[] {
+export function agentJobs(catalog: Catalog, assignments: Record<string, PresenceAssignment> = {}): AgentJob[] {
   const agents = catalog.agents.filter(isAiAgent);
   const homes = apartments(agents.map((a) => a.id));
   return agents.map((a) => {
+    const job = baseJob(a);
+    const p = assignments[a.id], at = p && catalog.projects.find((x) => x.id === p.work);
+    if (!p || !at) return job;
+    return { ...job, presence: p, deskOnly: undefined, home: { building: p.home, unit: "", label: homeLabel(p.home) }, work: { kind: "headquarters", projectId: at.id, building: at.id, label: `${at.name} headquarters` } };
+  });
+  function baseJob(a: Agent): AgentJob {
     const project = catalog.projects.find((p) => p.id === a.projectId);
     const tier = tierOf(a, catalog);
     const budget = a.registry?.cost?.budget?.trim();
@@ -118,11 +128,36 @@ export function agentJobs(catalog: Catalog): AgentJob[] {
       offDuty,
       ...(worksThroughAutomations(a) ? { deskOnly: true } : {}),
     };
-  });
+  }
 }
+
+/** A Financial District building's name, as the map's nameplate writes it. */
+export const homeLabel = (id: string) => buildingDisplayName(`service:financial:${id}`, id === AGENT_RESIDENCE.id ? AGENT_RESIDENCE.name : financialBrand(id)?.name ?? id);
 
 /** "9:30" for 9.5 hours. */
 export function clock(hours: number) {
   const h = ((Math.floor(hours) % 24) + 24) % 24, m = Math.round((hours - Math.floor(hours)) * 60);
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+/** What a hover card or nameplate needs about where an agent belongs and where it is now. */
+export interface AgentPlacement {
+  agentId: string;
+  home: { building: string; label: string };
+  /** "schedule" when Khaneil saved one; otherwise "default", from the agent's project or declared workplace. */
+  work: { building: string; label: string; source: "schedule" | "default" };
+  /** Where its presence schedule puts it now; null without a schedule (it follows the simulated map day). */
+  place: PresencePlace | null;
+}
+
+/** Home, workplace and current place for one AI agent, or undefined for automations and unknown ids. */
+export function agentPlacement(catalog: Catalog, agentId: string, assignments: Record<string, PresenceAssignment> = getAssignments(), now = new Date()): AgentPlacement | undefined {
+  const job = agentJobs(catalog, assignments).find((j) => j.agentId === agentId);
+  if (!job) return undefined;
+  return {
+    agentId,
+    home: { building: job.home.building, label: job.home.label },
+    work: { building: job.work.building, label: job.work.label, source: job.presence ? "schedule" : "default" },
+    place: job.presence ? presenceAt(job.presence, now).place : null,
+  };
 }

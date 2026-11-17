@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Atlas HQ rebuilt as a curving glass tower (Khaneil, 2026-10-31). Writes day/night camera views around it. */
+/** Atlas Command Center, a corporate HQ with a lobby and four office floors (Khaneil, 2026-11-17). Writes day/night camera views around it. */
 const out=process.env.SHOT_DIR??'artifacts/atlas-hq';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){
@@ -11,8 +11,9 @@ async function views(page:import('@playwright/test').Page,list:View[]){
   return shots;
  },list);
 }
-// Atlas HQ stands at (2.5, 14.75) in the default "By district" layout; the map looks at it from +x/+z.
-const VIEWS:View[]=[['front',[2.5,3,14.75],[11,7.5,27]],['close',[2.6,1,15.4],[5.2,1.8,19.6]],['roof',[2.5,2.5,14.75],[6.5,9,19.5]],['side',[2.5,2.6,14.5],[11,4,15.5]],['context',[4,1,13],[15,13,29]]];
+// Atlas HQ stands at (40.73, 14.39) in the default "By district" layout; the map looks at it from +x/+z.
+const X=40.73,Z=14.39;
+const VIEWS:View[]=[['front',[X,3,Z],[X+9,8,Z+13]],['close',[X,1.1,Z+.6],[X+3.5,3.6,Z+8.6]],['roof',[X,1.6,Z],[X+5,9.5,Z+6]],['side',[X,1.2,Z],[X+9.5,3.2,Z+1.5]],['context',[X+1.5,1,Z-1.5],[X+12.5,13,Z+14.5]]];
 for(const light of ['day','night'] as const)test(`Atlas HQ, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
@@ -27,5 +28,5 @@ test('Atlas HQ nameplate still opens its panel',async({page})=>{
 test('Atlas HQ on a phone',async({page})=>{
  mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
- for(const s of await views(page,[['phone',[2.5,2.4,14.75],[9,6,24]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ for(const s of await views(page,[['phone',[X,2.4,Z],[X+6.5,6,Z+9.6]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });
