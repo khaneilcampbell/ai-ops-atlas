@@ -13,6 +13,15 @@ export const LENS_INFO: Record<MapLens, { label: string; hint: string; empty: st
   automations: { label: "Automation flow", hint: "Repositories to the automations they host, and n8n flows", empty: "No automations with a source or workflow yet" },
 };
 
+/** The connection colors each view can draw, in key order. Its key lists only these, so every
+ * line on the map has a swatch and no swatch names a line the view never shows. */
+export const LENS_TYPES: Record<MapLens, readonly ConnectionType[]> = {
+  infrastructure: ["github", "agent", "n8n", "dependency"],
+  agents: ["agent", "n8n", "dependency"],
+  // GitHub here: the repository that hosts each automation's source or workflow.
+  automations: ["github", "n8n"],
+};
+
 export interface LensLink {
   id: string;
   type: ConnectionType;
@@ -37,7 +46,7 @@ export interface LensContext {
 
 export function lensLinks<T extends LensLink>(all: T[], lens: MapLens, ctx: LensContext): T[] {
   const enabled=all.filter(l=>ctx.types[l.type]);
-  if (lens === "agents") return enabled.filter((l) => l.type === "agent" || l.type === "n8n" || l.type === "dependency");
+  if (lens === "agents") return enabled.filter((l) => LENS_TYPES.agents.includes(l.type));
   // "repo:<agent id>" links say which repository hosts an item's source or workflow.
   if (lens === "automations") return enabled.filter((l) => l.type === "n8n" || (l.id.startsWith("repo:") && ctx.automations.has(l.id.slice(5))));
   if (ctx.showAll) return enabled;
