@@ -139,12 +139,12 @@ agents:
         environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: 'Emails the owner and the sender without approval, within fixed rules: key check, validation, honeypot, and spam marked only at confidence 0.7 or more and never answered.'
+        autonomy_note: 'Emails the owner and the sender without approval, within fixed rules: key check, validation, honeypot, and spam marked only at confidence 0.7 or more and never answered. Since 2026-11-16 the sender acknowledgement is a fixed template that repeats no visitor text except a letters-only first name, and it is held when Claude sorting is unavailable.'
         data_sensitivity: confidential
         credential_owner: Khaneil (n8n credentials and the flow_settings table)
         risk: medium
         audit_log: flow_events data table in n8n
-        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Or, without unpublishing: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes.'
+        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Or, without unpublishing: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes. The acknowledgement is also held automatically when Claude sorting fails (flow_events ack_paused).'
         caps: 'Only inquiries the contact Worker forwards (5 a minute per visitor, 20 site-wide). Spam at confidence 0.7 or more is never answered.'
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
@@ -160,7 +160,7 @@ agents:
           - Expire status tokens after 90 days
           - Add a retention schedule and a privacy notice on the form
           - Connect n8n executions to Atlas
-        last_review: 2026-10-28
+        last_review: 2026-11-16
 
   - id: benjaire-inquiry-to-client
     name: Inquiry to Client

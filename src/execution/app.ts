@@ -9,6 +9,11 @@ import { adapterRouter, githubAdapter } from "./adapters";
 import { bridgeAdapter, siteBridge } from "./bridgeClient";
 import { ledgerStore } from "./ledger";
 import { Orchestrator } from "./orchestrator";
+import { intelStore } from "../intelligence/app";
+import { buildStepContext } from "../intelligence/benjaire";
+import { productStore } from "../product/workspace";
+import { stepProblem } from "../product/templates";
+import { emergencyStopReason } from "../operations/store";
 
 // The app's orchestrator: the device's task, run and ledger stores, with the real adapters. GitHub
 // runs keep their Touch ID path in the Task Center (a person starts them); n8n stays read-only.
@@ -34,7 +39,25 @@ export function appOrchestrator(catalog: Catalog, ctx: ExecContext): Orchestrato
       // GitHub attempt is held for a person to check rather than guessed.
       listRuns: async () => [],
     });
-    shared = { key, orch: new Orchestrator({ tasks: taskService(), runs: runStore(), ledger: ledgerStore(), catalog, adapterFor: adapterRouter(github, bridgeAdapter(siteBridge, () => bridgeOn)) }) };
+    shared = {
+      key,
+      orch: new Orchestrator({
+        tasks: taskService(),
+        runs: runStore(),
+        ledger: ledgerStore(),
+        catalog,
+        adapterFor: adapterRouter(github, bridgeAdapter(siteBridge, () => bridgeOn)),
+        // The active workspace's agent switches and model limits, read fresh before every send.
+        agentGate: (node) => {
+          const f = productStore().snapshot;
+          return stepProblem(node, f.workspaces.find((w) => w.id === f.activeId) ?? null, catalog);
+        },
+        // Retrieved knowledge, granted tools and the model route travel with each step sent.
+        context: (run, nodeId, task, attempt) => buildStepContext(intelStore(catalog), run, nodeId, task, attempt),
+        // Phase 9: Mission Control's emergency stop holds every new send and automatic retry.
+        emergencyStop: emergencyStopReason,
+      }),
+    };
   }
   if (!bridgeChecked) {
     bridgeChecked = true;

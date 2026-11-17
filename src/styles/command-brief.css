@@ -1,0 +1,14 @@
+.command-brief { margin-bottom: 20px; }
+.command-brief .card-head { flex-wrap: wrap; gap: 4px 16px; }
+.command-brief ul { list-style: none; margin: 0; padding: 0 12px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+.command-brief li { border-left: 3px solid var(--sage-300); border-radius: var(--radius-sm); min-width: 0; }
+.command-brief li.brief-warn { border-left-color: var(--warn); }
+.command-brief li.brief-ok { border-left-color: var(--good); }
+.brief-row { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; background: none; border: 0; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+.brief-row:hover, .brief-row:focus-visible { background: rgba(0, 0, 0, 0.03); }
+.brief-q { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--forest-700); font-weight: 600; }
+.brief-a { font-size: var(--text-sm); line-height: 1.4; overflow-wrap: anywhere; }
+.brief-quiet .brief-a { color: var(--ink-3); }
+@media (max-width: 640px) {
+  .command-brief ul { grid-template-columns: minmax(0, 1fr); padding: 0 8px 10px; }
+}

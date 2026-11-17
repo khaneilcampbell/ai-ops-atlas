@@ -7,6 +7,7 @@ import { ATLAS, type Actor } from "../tasks/types";
 import { resolveNode } from "./engine";
 import { definitionProblems, topoOrder, upstream } from "./graph";
 import type { Goal, WorkflowDefinition, WorkflowRun } from "./types";
+import { writeWithRoom } from "../lib/storage";
 
 // Live workflow runs. A run is only a list of pointers: node -> Task Center task, plus a frozen copy
 // of the definition. Status, approvals and history stay in the Task Center, which also enforces
@@ -27,7 +28,7 @@ export const localRunBackend: Backend = {
       return null;
     }
   },
-  write: (raw) => localStorage.setItem(KEY, raw),
+  write: (raw) => writeWithRoom(KEY, raw),
   watch: (fn) => {
     const on = (e: StorageEvent) => e.key === KEY && fn();
     window.addEventListener("storage", on);

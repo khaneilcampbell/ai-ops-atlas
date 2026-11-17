@@ -57,7 +57,7 @@ publish, switch on or off, or delete anything in n8n. The read-only `N8N_API_KEY
   confirmation (`planSync`): new orders, refunds that went up, fees Stripe settled later. Test-mode
   checkouts are skipped. Nothing is saved until Khaneil presses Record.
 - Stripe keeps its fee on a refund, so a fully refunded order has a negative net (the fee).
-- Setup: publish the n8n workflow. No new secret is needed.
+- Published in n8n on 2026-11-16. No new secret is needed.
 
 ## Not connected yet (needs Khaneil)
 

@@ -8,7 +8,7 @@ import type { WorkflowNode, WorkflowRun } from "../workflows/types";
 import { buildEnvelope, repairOutput, schemaFor, validateOutput } from "./handoff";
 import type { LedgerStore } from "./ledger";
 import { backoffMs, budgetProblem, MAX_CONCURRENT, MAX_REPAIRS, stepPolicy } from "./policy";
-import type { BusinessOutcome, DispatchResult, ExecutionAdapter, ExecutionReport, ExternalStatus, HandoffRecord, RunLedger, StepOutput } from "./types";
+import type { BusinessOutcome, DispatchResult, ExecutionAdapter, HandoffEnvelope, ExecutionReport, ExternalStatus, HandoffRecord, RunLedger, StepOutput } from "./types";
 
 // The execution orchestrator. It moves an authorised live workflow run forward with fixed rules
 // and no model calls: release steps whose dependencies completed, ask for approvals, dispatch
@@ -27,6 +27,15 @@ export interface OrchestratorDeps {
   adapterFor(node: WorkflowNode, task: StoredTask): ExecutionAdapter;
   now?: () => string;
   maxConcurrent?: number;
+  /**
+   * Extra reason a step's agent can't take new work right now (the workspace turned it off or
+   * limits its models), checked before every attempt on top of the registry. Optional.
+   */
+  agentGate?: (node: WorkflowNode) => string | null;
+  /** Context for a step about to be sent (retrieved knowledge, tools, model route). Optional. */
+  context?: (run: WorkflowRun, nodeId: string, task: StoredTask, attempt: number) => HandoffEnvelope["context"] | undefined;
+  /** Phase 9 emergency stop: when it returns a reason, no new step is sent and no automatic retry is queued. */
+  emergencyStop?: () => string | null;
 }
 
 export type Ok<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -54,6 +63,9 @@ const safeToRepeat = (a: ExecutionAdapter) => !a.sideEffects || a.idempotent;
 export class Orchestrator {
   private now: () => string;
   private busy = new Set<string>();
+  /** The round running now for each run, and the one queued to follow it (at most one). */
+  private current = new Map<string, Promise<void>>();
+  private followUp = new Map<string, Promise<Ok<{ summary: StepSummary }>>>();
   constructor(private d: OrchestratorDeps) {
     this.now = d.now ?? (() => new Date().toISOString());
   }
@@ -69,7 +81,7 @@ export class Orchestrator {
     return id ? this.d.tasks.repo.get(id) : undefined;
   }
   private agentProblem(node: WorkflowNode): string | null {
-    return resolveNode(node, this.d.catalog).problem;
+    return resolveNode(node, this.d.catalog).problem ?? this.d.agentGate?.(node) ?? null;
   }
   private ledgerOf(runId: string): RunLedger {
     return this.d.ledger.get(runId);
@@ -105,6 +117,25 @@ export class Orchestrator {
    * by the attempt's idempotency key and recorded before it goes out, and the task store refuses
    * stale writes, so overlapping calls can't send a step twice.
    */
+  /**
+   * Phase 9 recovery: only asks the outside systems about runs past their timeout and records
+   * completions. Sends nothing, retries nothing, approves nothing.
+   */
+  async reconcile(runId: string): Promise<Ok<{ stale: string[] }>> {
+    const run = this.run(runId);
+    if (!run) return { ok: false, error: "No such run." };
+    if (this.busy.has(runId)) return { ok: false, error: "A round is running for this workflow; try again shortly." };
+    this.busy.add(runId);
+    try {
+      const summary: StepSummary = { dispatched: [], approvalsRequested: [], approvalsCompleted: [], retried: [], waitingOnPerson: [], unconfigured: [], held: [], stale: [] };
+      this.syncCompletions(run);
+      await this.checkStale(run, summary);
+      return { ok: true, stale: summary.stale };
+    } finally {
+      this.busy.delete(runId);
+    }
+  }
+
   async step(runId: string): Promise<Ok<{ summary: StepSummary }>> {
     const run = this.run(runId);
     if (!run) return { ok: false, error: "No such run." };
@@ -112,8 +143,12 @@ export class Orchestrator {
     if (!ledger.startedBy) return { ok: false, error: "A person hasn't started this run yet." };
     const summary: StepSummary = { dispatched: [], approvalsRequested: [], approvalsCompleted: [], retried: [], waitingOnPerson: [], unconfigured: [], held: [], stale: [] };
     if (ledger.cancelledAt) return { ok: true, summary };
-    if (this.busy.has(runId)) return { ok: true, summary };
+    // A round is already going: wait for it, then run one more, so the caller gets a true summary
+    // of the state after its change instead of an empty one (which read as "nothing waiting").
+    if (this.busy.has(runId)) return this.afterCurrent(runId);
     this.busy.add(runId);
+    let finished!: () => void;
+    this.current.set(runId, new Promise<void>((r) => (finished = r)));
     try {
       this.d.tasks.reconcile();
       this.syncCompletions(run);
@@ -125,7 +160,22 @@ export class Orchestrator {
       return { ok: true, summary };
     } finally {
       this.busy.delete(runId);
+      this.current.delete(runId);
+      finished();
     }
+  }
+
+  /** Overlapping callers share one follow-up round after the current one. */
+  private afterCurrent(runId: string): Promise<Ok<{ summary: StepSummary }>> {
+    let next = this.followUp.get(runId);
+    if (!next) {
+      next = (this.current.get(runId) ?? Promise.resolve()).then(() => {
+        this.followUp.delete(runId);
+        return this.step(runId);
+      });
+      this.followUp.set(runId, next);
+    }
+    return next;
   }
 
   /** Steps completed elsewhere (the Task Center, a GitHub run) get an "unverified" handoff, never an invented output. */
@@ -185,6 +235,13 @@ export class Orchestrator {
         s.unconfigured.push({ nodeId, need: node.unconfigured });
         continue;
       }
+      // A retired, removed or switched-off agent gets no new attempt. Said here, so the step shows
+      // why it waits instead of being skipped without a word when the attempt is refused.
+      const agentIssue = this.agentProblem(node);
+      if (agentIssue) {
+        s.held.push({ nodeId, why: agentIssue });
+        continue;
+      }
       if (this.reuse(run, node, t)) continue;
       const adapter = this.d.adapterFor(node, t);
       const avail = adapter.available(nodeId, node.agentId);
@@ -194,6 +251,11 @@ export class Orchestrator {
       }
       if (adapter.personStarts) {
         s.waitingOnPerson.push({ nodeId, why: adapter.kind === "github" ? "Start it in the Task Center (Touch ID)." : "A person does this step and marks it done in the Task Center." });
+        continue;
+      }
+      const stop = this.d.emergencyStop?.();
+      if (stop) {
+        s.held.push({ nodeId, why: stop });
         continue;
       }
       const policy = stepPolicy(node);
@@ -248,6 +310,15 @@ export class Orchestrator {
       const claimed = this.d.ledger.update(run.id, (l) => (l.dispatched.includes(attempt.idempotencyKey) ? "already sent" : { ...l, dispatched: [...l.dispatched, attempt.idempotencyKey] }));
       if (!claimed.ok) continue;
       const env = buildEnvelope(run.snapshot, run, nodeId, attempt, claimed.ledger.handoffs, this.now());
+      // Context is best effort: a failure here never blocks or changes the send itself.
+      if (this.d.context) {
+        try {
+          const c = this.d.context(run, nodeId, begun.task, attempt.number);
+          if (c) env.context = c;
+        } catch {
+          /* sent without context */
+        }
+      }
       s.dispatched.push(nodeId);
       sends.push(
         adapter
@@ -304,7 +375,12 @@ export class Orchestrator {
   }
 
   private autoRetry(run: WorkflowRun, s: StepSummary) {
+    const stop = this.d.emergencyStop?.();
     const l = this.ledgerOf(run.id);
+    if (stop) {
+      for (const nodeId of Object.keys(l.retryAfter)) s.held.push({ nodeId, why: stop });
+      return;
+    }
     const now = this.now();
     for (const [nodeId, after] of Object.entries(l.retryAfter)) {
       const t = this.taskOf(run, nodeId);

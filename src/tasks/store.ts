@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { DEFAULT_MAX_ATTEMPTS, newId, unblock, withEvent, wouldCycle, type Result } from "./lifecycle";
 import type { Actor, SensitiveCategory, StoredTask, TaskPriority, TaskSource, WorkflowRef } from "./types";
 import { ATLAS } from "./types";
+import { writeWithRoom } from "../lib/storage";
 
 // Where tasks are kept. The first version keeps them on this device (the Mac app's or the
 // browser's local storage), behind TaskRepository so a server-side store can replace it later
@@ -41,7 +42,7 @@ export const localBackend: Backend = {
       return null;
     }
   },
-  write: (raw) => localStorage.setItem(KEY, raw),
+  write: (raw) => writeWithRoom(KEY, raw),
   watch: (fn) => {
     const on = (e: StorageEvent) => e.key === KEY && fn();
     window.addEventListener("storage", on);

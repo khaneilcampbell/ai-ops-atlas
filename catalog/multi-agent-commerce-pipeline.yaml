@@ -829,12 +829,14 @@ agents:
     framework: n8n
     owned_by: commerce-operations-manager
     runtime: n8n Cloud
-    status: paused
-    trigger: Webhook from the Atlas site only, when Khaneil syncs (draft, not published)
+    status: active
+    trigger: Webhook from the Atlas site only, when Khaneil presses Sync from Stripe
     last_run: null
     history:
       - at: 2026-11-16
         event: Built as an unpublished n8n draft after Khaneil chose named n8n actions over a write-scoped n8n key; one manual test run read the live Stripe account correctly (execution 717)
+      - at: 2026-11-16
+        event: Published in n8n on Khaneil's OK, after PR #434 merged
     links:
       - label: n8n workflow (Sales feed)
         url: https://khancam15.app.n8n.cloud/workflow/mlS4G62If6tl4TGv
@@ -849,7 +851,7 @@ agents:
       classification:
         type: C
         confidence: verified
-        evidence: n8n draft mlS4G62If6tl4TGv lists paid checkout sessions from Stripe, joins shop_orders and answers the webhook; no AI model
+        evidence: n8n workflow mlS4G62If6tl4TGv (published 2026-11-16) lists paid checkout sessions from Stripe, joins shop_orders and answers the webhook; no AI model
       responsibilities:
         tasks: [Read paid Stripe checkouts for a date range, Answer Atlas with amounts in cents and no buyer details]
         tools: [n8n Cloud, Stripe, n8n data tables]
