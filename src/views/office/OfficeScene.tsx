@@ -19,6 +19,8 @@ import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
 import { OFFICE_COLORS as C } from "./palette";
+import { AgentHologram, OrgBands } from "./AgentHologram";
+import { orgBands, type HologramData } from "./officeOrg";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -31,6 +33,8 @@ export interface DeskData {
   /** The task line on the monitor: the label of the execution the state rests on, or null. */
   task: string | null;
   when: string | null;
+  /** The glass data view shown over the desk on hover or selection, from verified data only. */
+  holo?: HologramData;
 }
 
 export interface OfficeApi {
@@ -72,10 +76,17 @@ export default function OfficeScene(props: Props) {
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
+        {desks.some(d=>(d.floor??4)===level)&&<LevelBands desks={desks} level={level}/>}
         {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
       </group>)}
     </Canvas>
   );
+}
+
+/** The role-tier rows of one floor, outlined and signed (officeOrg.ts). */
+function LevelBands({desks,level}:{desks:DeskData[];level:number}) {
+  const bands=useMemo(()=>orgBands(desks.filter(d=>(d.floor??4)===level)),[desks,level]);
+  return <OrgBands bands={bands}/>;
 }
 
 function SharedFloor({plan,floor}:{plan:OfficePlan;floor:number}) {
@@ -163,11 +174,11 @@ function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:bool
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controls, home]);
 
-  // Selecting a desk leans the view toward it; clearing the selection leaves the camera alone.
+  // Selecting a desk leans the view toward it, high enough to keep its data hologram in view; clearing the selection leaves the camera alone.
   useEffect(() => {
     if (!focus) return;
     const c = current();
-    glide({ ...c, target: new THREE.Vector3(focus.x * 0.6, allFloors?14.4:0.8, focus.z * 0.6 + 0.2), r: Math.min(c.r, home.r * 0.82) });
+    glide({ ...c, target: new THREE.Vector3(focus.x * 0.85, allFloors?15.2:1.6, focus.z * 0.85 + 0.2), r: Math.min(c.r, home.r * 0.82) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.id]);
 
@@ -417,6 +428,7 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       <AgentStatusIndicator state={state} reduced={reduced} />
       <Chair />
       <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
+      {(hover || selected) && d.holo && <AgentHologram data={d.holo} reduced={reduced} />}
     </group>
   );
 }

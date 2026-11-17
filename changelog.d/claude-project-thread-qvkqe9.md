@@ -1,0 +1,1 @@
+- 2026-11-17 · Inside an agent office, each row has a glass sign naming its team (Central operations, Coordinators, Specialists), and the agent list is grouped the same way. Point at or pick an agent to see a glass panel over its desk with its status, recent runs, goal and duties. Every value comes from real run data or the agent's profile. (#PR)

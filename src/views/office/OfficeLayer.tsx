@@ -22,6 +22,7 @@ import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
 import { officeRows, type OfficeRow } from "./officeRows";
 import { leaveBuilding, useOffice } from "./store";
 import { STATE_COLOR } from "./textures";
+import { byTier, hologramData } from "./officeOrg";
 import "../../styles/office.css";
 import { formatDateTime } from "../../lib/timezone";
 
@@ -64,6 +65,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
+          holo: hologramData({ name: r.entry.profile.title, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile }),
         };
       }),
     [plan, rows, agents, pending],
@@ -131,11 +133,16 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           <details className="office-roster" aria-label="Select an agent">
             <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
             <div className="office-roster-list">
-            {visibleDesks.map((d) => (
-              <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
-                <i style={{ background: STATE_COLOR[d.runtime.state] }} />
-                {d.name}
-              </button>
+            {byTier(visibleDesks, (d) => d.ws.tier).map((g) => (
+              <div key={g.tier} className="office-roster-group" role="group" aria-label={g.label}>
+                <div className="office-roster-tier">{g.label} <span>{g.items.length}</span></div>
+                {g.items.map((d) => (
+                  <button key={d.ws.id} className={picked === d.ws.agentId ? "on" : ""} onClick={() => setPicked(picked === d.ws.agentId ? null : d.ws.agentId)} title={`${d.name}: ${RUNTIME_LABEL[d.runtime.state]}`}>
+                    <i style={{ background: STATE_COLOR[d.runtime.state] }} />
+                    {d.name}
+                  </button>
+                ))}
+              </div>
             ))}
             </div>
           </details>
