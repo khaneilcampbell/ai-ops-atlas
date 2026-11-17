@@ -43,7 +43,8 @@ export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'|'la'>):LaTree|null{
 /** Mostly clipped hedges, with agave, bird of paradise and bougainvillea as accents. */
 export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
  const p=key(b.x,b.z,'shrub');
- return p<.55?'hedge':p<.7?'agave':p<.85?'paradise':'bougainvillea';
+ // Fuller hedges and more flowering shrubs, like the beds in Khaneil's city artwork (2026-11-17).
+ return p<.5?'hedge':p<.58?'agave':p<.76?'paradise':'bougainvillea';
 }
 
 export const LA_COLORS={
