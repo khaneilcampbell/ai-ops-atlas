@@ -27,8 +27,9 @@ test("a reported failure raises an alert until it is dismissed", async ({ page }
   await expect(card.locator(".watch.not-running")).toHaveCount(0);
   // This browser isn't reading the live feed, so the intake's state is unknown, not healthy, and so is
   // each building agent's (Marketplace Steward, Signal Watch, Dataset Census) and the two n8n commerce
-  // agents' (Order Delivery, Approve and Publish).
-  await expect(card.locator(".watch.no-source")).toHaveCount(6);
+  // agents' (Order Delivery, Approve and Publish), and the seven Flow, Shop and Commerce workflows
+  // that report through Flow Error Alerts and the Missed Run Check.
+  await expect(card.locator(".watch.no-source")).toHaveCount(13);
   await shot(page, "1-mission");
   await card.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(pill).toHaveCount(0);
