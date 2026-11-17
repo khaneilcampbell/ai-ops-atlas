@@ -4,48 +4,57 @@ import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene,TERRACE_H} from './scene';
+import {headquartersEnvelope} from './financialPlan';
+import {CUSTOM_TOWER_SHARE} from './customTowers';
 import {towerTop} from './models';
-import {HQ,core,entrance,footprint,hqPieceCount,hqTop,outline,plateScale,storey} from './atlasHqPlan';
+import {HQ,footprint,hqPieceCount,towerOutline,towerRoof,wingSway} from './atlasHqPlan';
 import {hqGeometry,hqTriangles} from './atlasHqGeometry';
-import {planOffice} from '../office/model';
-import {HQ_INTERIOR,shellAxes,shellOutline} from '../office/atlasHqInteriorPlan';
 
 describe('Atlas HQ',()=>{
  it('fits inside the old square footprint, so the plaza, fountain, roads and links stay put',()=>{
-  for(const k of [.8,1,1.5])for(const [x,z] of footprint(k)){
+  for(const k of [.8,1,1.3])for(const [x,z] of footprint(k)){
    expect(Math.abs(x)).toBeLessThanOrEqual(HQ.refSize*k/2);
    expect(Math.abs(z)).toBeLessThanOrEqual(HQ.refSize*k/2);
   }
  });
- it('is the interior floor plate at map scale: same outline, mullions, level spacing and floors',()=>{
-  const project=catalog.projects.find(p=>p.id==='ai-ops-atlas')!,plan=planOffice(project,catalog.agents.filter(a=>a.projectId===project.id));
-  const {a,b}=shellAxes(plan.w,plan.d);
-  // The plate HQ.plate records is the current interior's (within a desk's width as the plan grows).
-  expect(Math.abs(HQ.plate.a-a)).toBeLessThan(.8);expect(Math.abs(HQ.plate.b-b)).toBeLessThan(.8);
-  expect(Math.abs(HQ.plate.a/HQ.plate.b-a/b)).toBeLessThan(.05);
-  const s=plateScale(1.5),inside=shellOutline(plan.w,plan.d),out=outline(1.5);
-  expect(out).toHaveLength(inside.length);expect(HQ_INTERIOR.points).toBe(HQ.plate.points);
-  out.forEach(([x,z],i)=>{expect(x/(HQ.plate.a*s)).toBeCloseTo(inside[i][0]/a,6);expect(z/(HQ.plate.b*s)).toBeCloseTo(inside[i][1]/b,6);});
-  // A lobby and four office floors at the interior's 3.4 level spacing; the entrance on the +z front, like inside.
-  expect(HQ.plate.levels).toBe(HQ_INTERIOR.floors);expect(hqTop(1.5)/storey(1.5)).toBe(5);
-  expect(entrance(1.5).z0).toBeLessThan(HQ.plate.b*s);expect(entrance(1.5).z1).toBeGreaterThan(HQ.plate.b*s);
-  // The lift core stands at the back, inside the glass, and rises through the roof.
-  const c=core(1.5);expect(c.z-c.d/2).toBeGreaterThan(-HQ.plate.b*s);expect(c.z).toBeLessThan(0);expect(c.h).toBeGreaterThan(hqTop(1.5));
+ it('keeps 21 storeys of 3.6 m under a roof sloping from 81 m to 74 m',()=>{
+  expect(HQ.floors*HQ.floor).toBeLessThan(HQ.roofLow);
+  const xs=towerOutline().map(([x])=>x);
+  expect(towerRoof(Math.min(...xs))).toBeCloseTo(HQ.roofHigh,1);
+  expect(towerRoof(Math.max(...xs))).toBeLessThan(HQ.roofHigh);
+  // 81.2 m / 74 m in the elevations.
+  expect(HQ.roofLow/HQ.roofHigh).toBeCloseTo(74/81.2,1);
+  expect(HQ.wingTop).toBeLessThan(HQ.roofLow);
  });
- it('stands as tall as its floors in every grouping, with the label and hit area on top of it',()=>{
+ it('sways the gold wing in an S that leans into the tower and back out',()=>{
+  const at=(t:number)=>wingSway(t).x;
+  expect(at(.25)).toBeLessThan(at(0));
+  expect(at(.75)).toBeGreaterThan(at(0));
+  // At its deepest the wing overlaps the tower, so the two read as one building.
+  const towerEast=Math.max(...towerOutline().map(([x])=>x));
+  expect(at(.25)-.27).toBeLessThan(towerEast);
+ });
+ it('stays the tallest project building, among the Financial District towers',()=>{
   for(const grouping of ['none','district','status','tag'] as GroupBy[]){
    const scene=buildScene(layoutMap(catalog,[],grouping)),hq=scene.towers.find(t=>t.projectId==='ai-ops-atlas')!;
    expect(hq.identity.landmark).toBe(true);
-   const k=hq.size/HQ.refSize;
-   expect(hq.customHeight).toBeCloseTo(core(k).h);
-   expect(towerTop(hq)).toBeGreaterThan(TERRACE_H+hqTop(k));
+   const top=towerTop(hq);
+   for(const t of scene.towers.filter(t=>t!==hq))expect(top).toBeGreaterThan(towerTop(t));
+   // Financial towers stand on the terrace; their heights are measured from it.
+   // Since the district came down to the map's scale (2026-11-09) Atlas HQ stands among its towers:
+   // above its shortest, under its tallest and under Ellipse Residences.
+   const heights=(scene.financial?.buildings??[]).map(b=>b.height);
+   if(scene.financial){expect(top-TERRACE_H).toBeGreaterThan(Math.min(...heights));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights.slice(0,-1)));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights));}
+   expect(hq.customHeight).toBeCloseTo(headquartersEnvelope(scene.towers)*CUSTOM_TOWER_SHARE.atlas);
   }
  });
- it('stays inside its performance budget: under a dozen merged meshes, few instances, no lights',()=>{
-  const pieces=hqPieceCount(),geo=hqGeometry(2);
-  expect(pieces.meshes).toBeLessThanOrEqual(12);
-  expect(pieces.instances).toBeLessThan(20);
-  expect(hqTriangles(geo)).toBeLessThan(6000);
+ it('stays inside its performance budget: a dozen merged meshes, few instances, no lights',()=>{
+  // At the tallest the city scale can make it: twice the reference drawing's height.
+  const pieces=hqPieceCount(),geo=hqGeometry(1,2);
+  expect(pieces.meshes).toBeLessThanOrEqual(14);
+  expect(pieces.instances).toBeLessThan(120);
+  expect(geo.podiumFins.length+geo.trees.length*2).toBeLessThan(120);
+  expect(hqTriangles(geo)).toBeLessThan(26000);
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);

@@ -86,8 +86,7 @@ describe("Atlas Stadium",()=>{
     expect(gate[0]-cx).toBeCloseTo(S.gate.foot*STADIUM_SCALE);expect(gate[0]).toBeLessThan(a.x+a.w+2);
     expect(stadiumCrown()).toBeCloseTo((S.roof.high+2.5*S.roof.curl)*STADIUM_SCALE);
     expect(stadiumCrown()).toBeLessThan(MALL.levels*MALL.floor);
-    // Every HQ but Atlas HQ, which stands at its lobby and four floors since 2026-11-17 (atlasHq.test.ts).
-    for(const t of s.towers.filter(t=>!t.identity.landmark))expect(TERRACE_H+stadiumCrown()).toBeLessThan(towerTop(t));
+    for(const t of s.towers)expect(TERRACE_H+stadiumCrown()).toBeLessThan(towerTop(t));
     // Roads and walks that serve the stadium end at the main gate, or on a road that does.
     const links=s.transportConnections.filter(l=>l.id.includes("stadium"));
     const atGate=(p:Pt)=>Math.hypot(p[0]-gate[0],p[1]-gate[1]);

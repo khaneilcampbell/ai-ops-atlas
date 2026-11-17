@@ -1,1 +1,1 @@
-- 2026-11-17 · Atlas Command Center now looks like one corporate headquarters inside and out: the map building is a lobby and four office floors drawn from the same floor plan as the inside, with matching glass, cream stone, dark green panels and brass trim (#452)
+- 2026-11-17 · Inside Atlas Command Center now looks like the curved glass tower outside: each floor has the tower's proportions and rounded corners, the walls use the tower's own blue and gold glass with the same window grid, and the lobby has the tower's white wavy entrance canopy (#452)

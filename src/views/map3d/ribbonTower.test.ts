@@ -26,10 +26,10 @@ describe('Benjaire HQ ribbon tower',()=>{
   const w=Array.from({length:21},(_,i)=>waist(i/20));expect(Math.max(...w)-Math.min(...w)).toBeGreaterThan(.12);
   expect(ribbonHeights().length).toBeGreaterThan(36);
  });
- it('stays under the Financial District\'s tallest towers',()=>{
+ it('stays under Atlas HQ and the Financial District\'s tallest towers',()=>{
   for(const grouping of ['none','district','status','tag'] as GroupBy[]){
-   const scene=buildScene(layoutMap(catalog,[],grouping)),b=scene.towers.find(t=>isRibbonTower(t.projectId))!;
-   // Atlas HQ stands at its lobby and four floors since 2026-11-17 (atlasHq.test.ts), no longer the height reference.
+   const scene=buildScene(layoutMap(catalog,[],grouping)),b=scene.towers.find(t=>isRibbonTower(t.projectId))!,atlas=scene.towers.find(t=>t.identity.landmark)!;
+   expect(towerTop(b)).toBeLessThan(towerTop(atlas));
    if(scene.financial)expect(Math.max(...scene.financial.buildings.filter(f=>f.id!=='circa').map(f=>f.height))).toBeGreaterThan(towerTop(b));
   }
  });

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries,mergeVertices} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {Pt} from './roads';
-import {HQ,core,entrance,hqTop,outline,storey,trees,type Pt3} from './atlasHqPlan';
+import {HQ,canopyAt,hqFloors,lobby,podiumHeight,podiumOutline,roofGarden,superellipse,towerLevels,wingLevels,type Pt3} from './atlasHqPlan';
 
 /**
  * Atlas HQ geometry, built once into a few merged meshes. Levels are closed outlines with the
@@ -49,14 +49,12 @@ function normals(pts:Pt[]):Pt[]{
 
 /**
  * Glass skin between levels. UVs run along the outline in bays and up in floors, so the facade
- * texture puts a mullion every bay and a spandrel every floor on any curve. With `perPoint` set, u
- * steps that much at every outline point instead, so mullions stand on the points; `tile` is the
- * height one texture tile (four floors) covers.
+ * texture puts a mullion every bay and a spandrel every floor on any curve.
  */
-export function skin(levels:Pt3[][],perPoint=0,tile=HQ.floor*4){
+export function skin(levels:Pt3[][]){
  const pos:number[]=[],uv:number[]=[],n=levels[0].length;
  const run=[0];for(let i=1;i<=n;i++){const [ax,,az]=levels[0][i-1],[bx,,bz]=levels[0][i%n];run.push(run[i-1]+Math.hypot(bx-ax,bz-az));}
- const U=(i:number)=>perPoint?i*perPoint:run[i]/(HQ.bay*4),V=(y:number)=>y/tile;
+ const U=(i:number)=>run[i]/(HQ.bay*4),V=(y:number)=>y/(HQ.floor*4);
  for(let l=0;l<levels.length-1;l++)for(let i=0;i<n;i++){
   const j=(i+1)%n,a=levels[l][i],b=levels[l][j],c=levels[l+1][j],d=levels[l+1][i];
   quad(pos,a,b,c,d);
@@ -110,32 +108,81 @@ export function bands(outline:(y:number)=>Pt3[]|null,heights:number[]){
  return mesh(pos);
 }
 
-/** Everything static, grouped by material. Positions are local to the building centre and floor base. */
-export function hqGeometry(k=1){
- const pts=outline(k),h=storey(k),top=hqTop(k),ring=(y:number):Pt3[]=>pts.map(([x,z])=>[x,y,z]);
- const flat=ring(Infinity),lobbyLevels=[ring(0),ring(h)],office=[ring(h),ring(top)];
- // One bay per outline point, like the interior's mullions; one texture tile is four storeys.
- const bay=1/4,tile=h*4;
- const box=(w:number,bh:number,d:number,x:number,y:number,z:number)=>new THREE.BoxGeometry(w,bh,d).translate(x,y+bh/2,z).toNonIndexed();
- const c=core(k),cn=entrance(k),ph=cn.t*1.4;
+/**
+ * A level ring at height y, interpolated between the levels around it. Each point carries its
+ * own roof height as y, so bands stop where a sloped or curved top cuts them off.
+ */
+function ringAt(levels:Pt3[][],y:number):Pt3[]|null{
+ const n=levels.length,tops=levels[n-1];
+ for(let l=0;l<n-1;l++){
+  const y0=levels[l][0][1],y1=l+1===n-1?Math.min(...tops.map(p=>p[1])):levels[l+1][0][1];
+  if(y<y0||(y>y1&&l<n-2))continue;
+  const t=Math.min(1,Math.max(0,(y-y0)/((y1-y0)||1)));
+  return levels[l].map((p,i)=>[p[0]+(levels[l+1][i][0]-p[0])*t,tops[i][1],p[2]+(levels[l+1][i][2]-p[2])*t]);
+ }
+ return null;
+}
+
+/** A canopy: a thin wavy lid, front edge rippling, plus a fascia strip along the front. */
+export function canopy(k=1){
+ const top:number[]=[],steps=24,T=.04*k,rows:{x:number;front:number;back:number;y:number}[]=[];
+ for(let i=0;i<=steps;i++)rows.push(canopyAt(i/steps,k));
+ for(let i=0;i<steps;i++){
+  const a=rows[i],b=rows[i+1];
+  const A:Pt3=[a.x,a.y,a.back],B:Pt3=[b.x,b.y,b.back],C:Pt3=[b.x,b.y,b.front],D:Pt3=[a.x,a.y,a.front];
+  // Top (faces up), underside (faces down), and the front fascia.
+  quad(top,A,D,C,B);
+  const dn=(p:Pt3):Pt3=>[p[0],p[1]-T,p[2]];
+  quad(top,dn(A),dn(B),dn(C),dn(D));
+  quad(top,dn(D),dn(C),C,D);
+ }
+ return mesh(top);
+}
+
+/** Lobby glass: a curved wall across the tower front, bulging a little toward the plaza. */
+export function lobbyGlass(k=1){
+ const L=lobby(k),pos:number[]=[],uv:number[]=[],steps=16;
+ for(let i=0;i<steps;i++){
+  const x0=L.x0+(L.x1-L.x0)*i/steps,x1=L.x0+(L.x1-L.x0)*(i+1)/steps;
+  const z=(x:number)=>L.z+.05*k*Math.sin((x-L.x0)/(L.x1-L.x0)*Math.PI);
+  quad(pos,[x0,0,z(x0)],[x1,0,z(x1)],[x1,L.h,z(x1)],[x0,L.h,z(x0)]);
+  const u0=i/steps*3,u1=(i+1)/steps*3;uv.push(u0,0,u1,0,u1,.5,u0,0,u1,.5,u0,.5);
+ }
+ return mesh(pos,uv);
+}
+
+/** Everything static, grouped by material. Positions are local to the tower centre and floor base. */
+export function hqGeometry(k=1,v=1){
+ const tower=towerLevels(k,v),wing=wingLevels(k,v);
+ const podium=podiumOutline(k),ph=podiumHeight(k),pRing=(y:number):Pt3[]=>podium.map(([x,z])=>[x,y,z]);
+ const podiumLevels=[pRing(0),pRing(ph)];
+ const floors=Array.from({length:hqFloors(v)},(_,i)=>(i+1)*HQ.floor*k);
+ const podiumFloors=Array.from({length:HQ.podiumLevels},(_,i)=>(i+1)*HQ.podiumFloor*k);
+ // Blades: the wing's two narrow tips, where the bright S-curved edges run.
+ const blades=[0,HQ.ring/2];
+ const garden=roofGarden(k);
+ const lawn=lid(superellipse(.4*k,-.24*k,.42*k,.6*k,3.2).map(([x,z])=>[x,garden.y+.012*k,z] as Pt3));
+ const pools=mergeGeometries(garden.pools.map(p=>lid(superellipse(p.x,p.z,p.a,p.b,2.2,24,p.turn).map(([x,z])=>[x,garden.y+.02*k,z] as Pt3))))!;
  return compact({
-  lobby:skin(lobbyLevels,bay,tile),
-  glass:skin(office,bay,tile),
-  // Cream stone: a slab edge at every floor, the parapet, the lift core and the canopy.
-  stone:mergeGeometries([
-   bands(()=>flat,Array.from({length:HQ.plate.levels-1},(_,i)=>(i+1)*h)),
-   bands(()=>flat,[top-HQ.bandHeight]),
-   box(c.w,c.h,c.d,c.x,0,c.z),
-   box(cn.w,cn.t,cn.z1-cn.z0,0,cn.y,(cn.z0+cn.z1)/2),
+  towerGlass:skin(tower),
+  wingGlass:skin(wing),
+  podiumGlass:skin(podiumLevels),
+  roofs:mergeGeometries([lid(tower[1],.02*k),lid(wing[wing.length-1]),lid(podiumLevels[1])])!,
+  bands:mergeGeometries([
+   bands(y=>ringAt(tower,y),floors),
+   bands(y=>ringAt(wing,y),floors.filter(y=>y<HQ.wingTop*k*v)),
+   bands(y=>y<=ph?pRing(Infinity):null,podiumFloors),
   ])!,
-  panels:fins(office,HQ.panelEvery,HQ.panelDepth),
-  // Brass: the canopy fascia and its two slim posts.
-  brass:mergeGeometries([
-   box(cn.w+.02*k,ph,.018*k,0,cn.y-(ph-cn.t)/2,cn.z1),
-   ...[-1,1].map(s=>box(.022*k,cn.y,.022*k,s*(cn.w/2-.02*k),0,cn.z1-.02*k)),
-  ])!,
-  roof:lid(ring(top-.005*k)),
-  trees:trees(k).map(([x,z])=>({x,z})),
+  fins:mergeGeometries([fins(tower,HQ.finEvery,HQ.finDepth),fins(wing,HQ.finEvery,HQ.finDepth,blades,HQ.bladeDepth)])!,
+  podiumFins:podium.flatMap(([x,z],i)=>{
+   // Two slim ribs per outline point on the podium, the ribbed glass of the reference.
+   const n=normals(podium)[i],next=podium[(i+1)%podium.length];
+   return [0,.5].map(t=>({p:[x+(next[0]-x)*t+n[0]*.012*k,0,z+(next[1]-z)*t+n[1]*.012*k] as [number,number,number],r:Math.atan2(n[0],n[1])}));
+  }),
+  lobby:lobbyGlass(k),
+  canopy:canopy(k),
+  lawn,pools,
+  trees:garden.trees.map(([x,z])=>({x,z,y:garden.y})),
  });
 }
 export type HqGeometry=ReturnType<typeof hqGeometry>;
