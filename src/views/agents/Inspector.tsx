@@ -17,6 +17,8 @@ import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/
 import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 import { formatDateTime } from "../../lib/timezone";
+import { usePresenceAssignments } from "../../catalog/agentPresence";
+import { PresenceEditor } from "./PresenceEditor";
 import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
 
 type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
@@ -41,7 +43,8 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   const { profile: p, telemetry: t } = entry;
   // Agents that store full reports open on them: that's what they're for.
   const reports = isReportAgent(p.id) ? p.id : null;
-  const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === p.id), [catalog, p.id]);
+  const assignments = usePresenceAssignments();
+  const job = useMemo(() => agentJobs(catalog, assignments).find((j) => j.agentId === p.id), [catalog, assignments, p.id]);
   const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job) && (x.id !== "intelligence" || hasIntelligence(p.id)));
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
@@ -199,7 +202,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
           </div>
         )}
 
-        {tab === "workday" && job && <WorkdayTab job={job} />}
+        {tab === "workday" && job && <WorkdayTab job={job} editor={<PresenceEditor key={p.id} job={job} agent={agent} catalog={catalog} telemetry={t} />} />}
 
         {tab === "goals" && <GoalsTab kpis={p.goals.kpis} objective={p.goals.objective} review={p.goals.reviewFrequency} t={t} />}
 
@@ -362,7 +365,7 @@ function Basis({ d }: { d: Decided<unknown> }) {
 }
 
 /** The agent's job: home, workplace, shift, budget, owner and the output it owes each day. Read-only. */
-function WorkdayTab({ job }: { job: AgentJob }) {
+function WorkdayTab({ job, editor }: { job: AgentJob; editor: React.ReactNode }) {
   return (
     <div className="reg-cols">
       <dl className="kv">
@@ -376,7 +379,8 @@ function WorkdayTab({ job }: { job: AgentJob }) {
         <dd>{job.work.label}</dd>
         <dt>Shift</dt>
         <dd>
-          {clock(job.shift.value.start)} to {clock(job.shift.value.end)}
+          {job.presence && <div>{job.presence.start} to {job.presence.end}, {job.presence.timeZone} · presence schedule</div>}
+          {job.presence ? "Simulated map day: " : ""}{clock(job.shift.value.start)} to {clock(job.shift.value.end)}
           <Basis d={job.shift} />
           {job.shift.declared && <div className="muted small">Schedule in the manifest: {job.shift.declared}</div>}
         </dd>
@@ -388,7 +392,9 @@ function WorkdayTab({ job }: { job: AgentJob }) {
       <div className="reg-stack">
         <div className="section-title">On the map</div>
         <p className="small">
-          {job.offDuty
+          {job.presence && !job.offDuty
+            ? `Follows its presence schedule on the real clock (${job.presence.timeZone}): home, a walk to ${job.work.label}, and back.`
+            : job.offDuty
             ? OFF_DUTY[job.offDuty]
             : job.deskOnly
             ? `Works through the automations it owns, so it keeps its desk at ${job.work.label} and is not drawn walking.`
@@ -397,6 +403,7 @@ function WorkdayTab({ job }: { job: AgentJob }) {
             : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}
         </p>
         <p className="muted small">This is a simulation of the job as written, not a live run. Runs Atlas has actually seen are on the Operations tab.</p>
+        {editor}
       </div>
     </div>
   );
