@@ -32,7 +32,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Monday and Thursday 10am, at most 2 new designs per 7 days
-    last_run: null
+    last_run: 2026-11-16T15:00:00Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -67,6 +67,15 @@ agents:
         tools: [n8n Cloud, Claude (claude-sonnet-5-5), Canva, n8n data tables, Resend]
         inputs: [Ideas from the Add product idea form]
         outputs: [Canva product and listing images, Draft row in commerce_products, Approval email]
+        dependencies:
+          - Add product idea form
+          - Claude (claude-sonnet-5-5)
+          - Canva
+          - Resend
+        limitations:
+          - At most 2 new designs per 7 days
+          - Canva often returns links without thumbnails, so the approval email may show no picture
+          - Nothing is published until Khaneil approves
       goals:
         objective: Turn each idea into a product ready for Khaneil's review.
         kpis:
@@ -74,6 +83,7 @@ agents:
             kind: throughput
             target: At most 2
             basis: WEEKLY_CAP in the Pick Next Idea step
+        review_frequency: Monthly
       execution:
         trigger_type: scheduled
         schedule: Monday and Thursday 10am
@@ -96,6 +106,7 @@ agents:
           - Connect n8n executions to Atlas
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#design-run
   - id: niche-scout
     name: Shopify Niche Scout
     purpose: >-
@@ -137,6 +148,18 @@ agents:
         tools: [CrewAI, Claude API, Serper search]
         inputs: [Serper search results]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - Serper search
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Pick one data-backed niche for a new digital product store. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -201,6 +224,18 @@ agents:
         tools: [CrewAI, Claude API, Serper search]
         inputs: [The chosen niche, Serper search results]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - niche-scout
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Describe the chosen niche's best sellers, styles, prices and buyer language. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -262,6 +297,18 @@ agents:
         tools: [CrewAI, Claude API]
         inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - market-analyst
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Set the store's name, persona, positioning and tone. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -322,6 +369,18 @@ agents:
         tools: [CrewAI, Claude API]
         inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - brand-strategist
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Choose the brand's palette, type and logo direction. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -384,6 +443,18 @@ agents:
         tools: [CrewAI, Claude API]
         inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - visual-director
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Write the brand voice, listing template and SEO tags. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -444,6 +515,18 @@ agents:
         tools: [CrewAI, Claude API]
         inputs: [Earlier agents' output in the crew]
         outputs: [Contribution to outputs/brand_guide.md]
+        dependencies:
+          - copy-strategist
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Compile the brand guide and a 30-day launch checklist. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 1, at most once every 7 days
@@ -504,6 +587,16 @@ agents:
         inputs: [Next undesigned product from outputs/master.txt]
         outputs: [Mockup images, Queue row]
         dependencies: [commerce-loop]
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Produce six product images per listing. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 3, every build or design cycle
@@ -540,7 +633,7 @@ agents:
     # failed one raises an alert. It runs only when Khaneil approves, so there is no silence window.
     alerts:
       failures: true
-    last_run: null
+    last_run: 2026-11-12T15:07:31Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -568,6 +661,21 @@ agents:
         inputs: [Approve form from Khaneil]
         outputs: [Stripe product, price and payment link, Live row in commerce_products]
         dependencies: [commerce-loop]
+        limitations:
+          - Runs only when Khaneil submits the approve form
+          - Publishes to Stripe only; the old Shopify store is no longer used
+      goals:
+        objective: Publish only what Khaneil approves, exactly once.
+        review_frequency: Monthly
+        kpis:
+          - name: Duplicate Stripe products
+            kind: quality
+            target: Zero
+            basis: Idempotency keys on every Stripe call
+          - name: Published without approval
+            kind: quality
+            target: Zero
+            basis: Runs only from the approval form with a one-time token
       execution:
         trigger_type: manual
         environment: n8n
@@ -583,6 +691,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#approve-and-publish
   - id: seo-maintainer
     name: SEO Maintainer
     purpose: >-
@@ -620,6 +729,18 @@ agents:
         tools: [Serper API, SQLite]
         inputs: [Published product name]
         outputs: [Updated listing tags and meta text, seo_review row, Storefront rebuild on gh-pages]
+        dependencies:
+          - copy-strategist
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Keep each listing's tags and SEO text competitive. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 6, every maintain cycle
@@ -677,6 +798,18 @@ agents:
         tools: [SQLite]
         inputs: [outputs/pipeline.db]
         outputs: [Plain-text summary captured by n8n]
+        dependencies:
+          - Pipeline database (outputs/pipeline.db)
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Summarise the pipeline's daily health. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Phase 7, daily via an n8n summary workflow
@@ -713,7 +846,7 @@ agents:
     # order, so a quiet stretch is normal and there is no silence window.
     alerts:
       failures: true
-    last_run: null
+    last_run: 2026-11-12T15:07:57Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -741,6 +874,27 @@ agents:
         tools: [n8n Cloud, Stripe, Resend, n8n data tables]
         inputs: [Paid Stripe checkout]
         outputs: [Buyer email with the template link]
+        dependencies:
+          - Stripe paid checkout
+          - Resend
+          - n8n data tables
+        limitations:
+          - Delivers only after Stripe confirms payment
+          - Last saved run is 2026-11-12
+      goals:
+        objective: Every paid order delivered once.
+        review_frequency: Monthly
+        kpis:
+          - name: Paid orders delivered
+            kind: reliability
+            target: 100% of Stripe-verified paid orders
+            basis: It is the only way buyers receive their product
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves a paying buyer waiting
       execution:
         trigger_type: event
         environment: n8n
@@ -756,6 +910,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#order-delivery
   - id: sales-sync
     name: Shop Page and Weekly Sales
     purpose: >-
@@ -772,7 +927,7 @@ agents:
     alerts:
       failures: true
       report_within: 26h
-    last_run: null
+    last_run: 2026-11-16T14:00:00Z
     history:
       - at: 2026-11-16
         event: Flow Error Alerts set as its error workflow (it had none, so failures went unseen); failed runs and missed Monday emails now report to the Atlas feed
@@ -805,6 +960,27 @@ agents:
         tools: [n8n Cloud, Stripe, Resend, n8n data tables]
         inputs: [commerce_products, Stripe checkout sessions]
         outputs: [Shop page, Monday sales email]
+        dependencies:
+          - Stripe checkout sessions
+          - commerce_products data table
+          - Resend
+        limitations:
+          - The sales email is weekly, Mondays 9am
+          - Reads Stripe; it never changes prices or orders
+      goals:
+        objective: A live shop page and an accurate Monday sales email.
+        review_frequency: Monthly
+        kpis:
+          - name: Monday email sent
+            kind: reliability
+            target: Every Monday at 9am
+            basis: n8n execution 737 on 2026-11-16
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run hides last week's sales
       execution:
         trigger_type: scheduled
         schedule: Monday 9am
@@ -819,6 +995,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#shop-page-and-weekly-sales
   - id: atlas-sales-feed
     name: Atlas Sales Feed
     purpose: >-
@@ -831,7 +1008,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the Atlas site only, when Khaneil presses Sync from Stripe
-    last_run: null
+    last_run: 2026-11-16T05:22:25Z
     history:
       - at: 2026-11-16
         event: Built as an unpublished n8n draft after Khaneil chose named n8n actions over a write-scoped n8n key; one manual test run read the live Stripe account correctly (execution 717)
@@ -852,11 +1029,39 @@ agents:
         type: C
         confidence: verified
         evidence: n8n workflow mlS4G62If6tl4TGv (published 2026-11-16) lists paid checkout sessions from Stripe, joins shop_orders and answers the webhook; no AI model
+      mission:
+        problem: Atlas's Business view needs real Stripe sales without giving the site a Stripe key or exposing buyer details.
+        outcomes:
+          - Khaneil can sync paid checkouts into Atlas on demand
+          - No buyer names or emails leave n8n and nothing in Stripe changes
+        beneficiaries:
+          - Khaneil
       responsibilities:
-        tasks: [Read paid Stripe checkouts for a date range, Answer Atlas with amounts in cents and no buyer details]
+        tasks: [Read paid Stripe checkouts for a date range, Answer Atlas with amounts in cents and no buyer details, Refuse requests that do not come from the Atlas site]
         tools: [n8n Cloud, Stripe, n8n data tables]
         inputs: [A date range from the Atlas site, Stripe checkout sessions, shop_orders]
         outputs: [Verified sales Khaneil records in the Business view]
+        dependencies:
+          - Atlas site Sync from Stripe button
+          - Restricted Stripe read key
+          - shop_orders data table
+        limitations:
+          - Runs only when Khaneil presses Sync from Stripe
+          - Returns amounts only, never buyer details
+      goals:
+        objective: Accurate sales figures in Atlas with no buyer data exposed.
+        review_frequency: Monthly
+        kpis:
+          - name: Buyer details returned
+            kind: quality
+            target: Zero names or emails in any answer
+            basis: Its whole design
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed sync leaves the Business view behind
       execution:
         trigger_type: event
         environment: n8n
@@ -870,6 +1075,7 @@ agents:
       docs:
         last_review: 2026-11-16
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#atlas-sales-feed
   - id: email-digest
     name: Daily Email Digest
     purpose: Emails Khaneil a daily summary of publishes, failures, queue state and sales.
@@ -907,6 +1113,18 @@ agents:
         tools: [SQLite, SMTP]
         inputs: [outputs/master.txt, outputs/brand_guide.md, outputs/pipeline.db]
         outputs: [Daily email to Khaneil]
+        dependencies:
+          - health-report
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Email Khaneil a daily pipeline and sales summary. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Once per UTC day from loop.sh
@@ -963,6 +1181,18 @@ agents:
         tools: [SQLite]
         inputs: [outputs/pipeline.db]
         outputs: [Dated copy of outputs/pipeline.db]
+        dependencies:
+          - Pipeline database (outputs/pipeline.db)
+        limitations:
+          - Retired; it no longer runs and has no live credentials
+      goals:
+        objective: Keep a dated daily copy of the pipeline database for 14 days. Retired 2026-11-11; the n8n pipeline replaced it.
+        review_frequency: None while retired
+        kpis:
+          - name: Runs since retirement
+            kind: other
+            target: 0 (retired 2026-11-11)
+            basis: Retired in the catalog on 2026-11-11; Atlas has no live data for it
       execution:
         trigger_type: scheduled
         schedule: Once per UTC day from loop.sh
@@ -1014,13 +1244,19 @@ agents:
         tools: [GitHub Actions, ruff, pytest]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Tests the repository code, not the live n8n workflows
       goals:
         objective: Block merges that break the pipeline.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -1054,6 +1290,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Commerce Operations Coordinator, Product Publishing Coordinator, Digital Fulfillment Coordinator, Sales Reporting Specialist, Commerce Quality Engineer, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Commerce Operations Manager
       category: business
@@ -1064,10 +1302,44 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: The commerce pipeline has five steps across n8n and GitHub, and each must hold for a product to go from idea to delivered order.
+        outcomes:
+          - New product drafts twice a week at most
+          - Products go live only after Khaneil approves
+          - Every order delivered and Monday sales reported
+        beneficiaries:
+          - Khaneil
+          - Benjaire shop buyers
       responsibilities:
         tasks: [Draft the next product listing and design brief, Publish a product after Khaneil approves it, Deliver each order, Email the Monday sales summary, Test the pipeline scripts]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Product ideas
+          - Khaneil's approvals
+          - Stripe checkouts
+        dependencies:
+          - commerce-loop
+          - shopify-publisher
+          - order-delivery
+          - sales-sync
+          - atlas-sales-feed
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Every new product needs Khaneil's approval
+      goals:
+        objective: Run the pipeline from idea to delivered order with Khaneil approving every launch.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Launches without approval
+            kind: quality
+            target: Zero
+            basis: Approve and Publish runs only from Khaneil's form
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -1075,5 +1347,9 @@ agents:
         autonomy: 1
         autonomy_note: Products go live only after Khaneil approves them.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#commerce-operations-manager
+        last_review: 2026-11-17
