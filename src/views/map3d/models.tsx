@@ -191,8 +191,8 @@ export function useMaterials() {
     const cliff = patterned("#b39874", "cliff");
     const wall = patterned("#d6cbb2", "wall");
     const set = {
-      land: [cliff, cliff, patterned("#7aae4f", "grass"), cliff, cliff, cliff],
-      terrace: [wall, wall, patterned("#86b958", "grass"), wall, wall, wall],
+      land: [cliff, cliff, patterned("#6d9a45", "grass"), cliff, cliff, cliff],
+      terrace: [wall, wall, patterned("#76a24b", "grass"), wall, wall, wall],
       sand: patterned("#e4d3a3", "sand"),
       foam: new THREE.MeshStandardMaterial({ color: "#d9eee8", roughness: 1 }),
       surf: patterned("#e8f6f2", "foam", { roughness: 1, transparent: true, depthWrite: false }),
@@ -215,7 +215,7 @@ export function useMaterials() {
       metal: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.35, metalness: 0.65 }),
       glow: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
       darkGlass: new THREE.MeshStandardMaterial({ color: "#4d6878", roughness: 0.12, metalness: 0.45 }),
-      lawn: patterned("#7fb356", "grass"),
+      lawn: patterned("#72a049", "grass"),
       glass: new THREE.MeshStandardMaterial({ color: "#f3dc95", emissive: "#e9c46a", emissiveIntensity: 0.35, roughness: 0.3 }),
       solar: new THREE.MeshStandardMaterial({ color: "#2e4660", roughness: 0.25, metalness: 0.4 }),
       foliage: swaying(new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 })),

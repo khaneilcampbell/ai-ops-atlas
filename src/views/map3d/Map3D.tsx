@@ -1069,7 +1069,8 @@ function World({
   useEffect(() => {
     const l = light.current;
     if (!l) return;
-    l.position.copy(center).add(new THREE.Vector3(-ext * 0.7, ext * 1.2, ext * 0.25));
+    // A lower late-afternoon sun from the west-south-west: longer, softer shadows across the lawns.
+    l.position.copy(center).add(new THREE.Vector3(-ext * 0.85, ext * 0.85, ext * 0.4));
     l.target.position.copy(center);
     three.add(l.target);
     const c = l.shadow.camera;
@@ -1104,7 +1105,7 @@ function World({
     wake();
   }, [shadowSize, gl]);
 
-  const fog = useMemo(() => new THREE.Fog("#d3e4de", 40, 120), []);
+  const fog = useMemo(() => new THREE.Fog("#dde2d3", 40, 120), []);
   useEffect(() => {
     three.fog = fog;
     return () => {
@@ -1305,7 +1306,7 @@ function World({
       <MapRenderer />
       {detailsReady && <Traffic scene={scene} g={g} m={m} moving={!reduced} />}
       {detailsReady && traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} />
+      <directionalLight ref={light} castShadow intensity={2.85} color="#ffdcaa" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}

@@ -24,7 +24,9 @@ type M = ReturnType<typeof useMaterials>;
 export type LightMode = "day" | "night";
 
 const c = (hex: string) => new THREE.Color(hex);
-const DAY = { bg: c("#d3e4de"), sky: c("#fff7e6"), ground: c("#6b8456"), hemi: 1.35, amb: c("#ffffff"), ambI: 0.2, sun: c("#fff0d2"), sunI: 2.5 };
+// Day is late afternoon, about an hour before golden hour (Khaneil's city artwork, 2026-11-17):
+// a warm low sun, a soft warm haze and a slightly cooler sky fill, so shadows stay readable.
+const DAY = { bg: c("#dde2d3"), sky: c("#f6f1e2"), ground: c("#5f7a47"), hemi: 1.15, amb: c("#fff4e2"), ambI: 0.2, sun: c("#ffdcaa"), sunI: 2.85 };
 const NIGHT = { bg: c("#0f1a2e"), sky: c("#8ea2d6"), ground: c("#24323f"), hemi: 0.52, amb: c("#6f86c0"), ambI: 0.16, sun: c("#a9bcff"), sunI: 0.45 };
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
