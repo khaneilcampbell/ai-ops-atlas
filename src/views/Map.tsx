@@ -14,7 +14,8 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, liveLandmarkConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { useRuntimes } from "./office/activity";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
 import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
@@ -484,7 +485,12 @@ export function MapView({active=true}:{active?:boolean}) {
   const [linkSel, setLinkSel] = useState<string | null>(null);
   // Live landmarks drive both their status dots and their line to Atlas Command Center.
   const live = useLiveLandmarks();
-  const connections = useMemo(() => [...buildConnections(catalog, repos), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live]);
+  // Flow lines (feed reports, n8n workflows) carry their agents' live states, as their desks do.
+  // Keyed by the states themselves, so a feed tick that changes nothing doesn't rebuild the lines.
+  const runtimeMap = useRuntimes();
+  const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
+  const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
