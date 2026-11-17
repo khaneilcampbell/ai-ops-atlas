@@ -506,7 +506,7 @@ function buildCity(layout: Layout): Scene3D {
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.24 + (s.r - 7) * 0.025, kind: pick < 0.2 ? "cone" : pick > 0.95 ? "blossom" : "round" });
     }
-    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 2.2))) {
+    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 3.6))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
     }
