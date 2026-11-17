@@ -18,6 +18,7 @@ import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
 import { CommandBrief } from "./CommandBrief";
 import { ExecutiveGoals } from "./executive/ExecutiveGoals";
+import { AutonomousOperations } from "./operations/AutonomousOperations";
 import { WebsiteManagement } from "./WebsiteManagement";
 import { ProductionHealth } from "./ProductionHealth";
 import "../styles/production.css";
@@ -64,6 +65,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <CommandBrief attention={attention.length} />
 
       <ExecutiveGoals />
+
+      <AutonomousOperations />
 
       <MissionFocus attention={attention} />
 

@@ -11,6 +11,10 @@ import { CATEGORY_LABEL, KHANEIL, STATUS_LABEL, type StoredTask } from "../../ta
 import { DEFINITIONS as SAVED_DEFINITIONS, GOALS as SAVED_GOALS } from "../../workflows/benjaireLaunch";
 import { executiveWorkflows } from "../../executive/coordinator";
 import { useExecutive } from "../../executive/store";
+import { ownerOf } from "../../operations/engine";
+import { useOps } from "../../operations/store";
+import { incidentEvents, incidentOf, incidentOutputs, incidentStatus, incidentWorkflows } from "../../operations/workflow";
+import { INCIDENT_STATE_LABEL } from "../../operations/types";
 import { buildingActivity, liveEvents, liveStatus, resolveAll, simulate, type ResolvedNode } from "../../workflows/engine";
 import { downstream, layout as layoutOf, upstream } from "../../workflows/graph";
 import { runStore, startLiveRun, useRuns } from "../../workflows/runs";
@@ -50,14 +54,18 @@ export function WorkflowIntelligenceView() {
 
   // Saved goals plus every executive goal with a plan (Mission Control > Executive goals).
   const executive = useExecutive();
+  // Phase 9: recent incidents, each as its fixed recovery workflow (Mission Control > Autonomous operations).
+  const ops = useOps();
   const { GOALS, DEFINITIONS } = useMemo(() => {
     const x = executiveWorkflows(executive.goals);
-    return { GOALS: [...SAVED_GOALS, ...x.goals], DEFINITIONS: { ...SAVED_DEFINITIONS, ...x.definitions } };
-  }, [executive.goals]);
+    const inc = incidentWorkflows(ops, ownerOf);
+    return { GOALS: [...SAVED_GOALS, ...x.goals, ...inc.goals], DEFINITIONS: { ...SAVED_DEFINITIONS, ...x.definitions, ...inc.definitions } };
+  }, [executive.goals, ops]);
   const [focus] = useState(takeWorkflowRunFocus);
   const [goalId, setGoalId] = useState(focus && GOALS.some((g) => g.id === focus.goalId) ? focus.goalId : GOALS[0].id);
   const goal = GOALS.find((g) => g.id === goalId) ?? GOALS[0];
-  const isExecutive = !SAVED_GOALS.some((g) => g.id === goal.id);
+  const incident = incidentOf(ops, goal.id);
+  const isExecutive = !incident && !SAVED_GOALS.some((g) => g.id === goal.id);
   const [mode, setMode] = useState<RunMode>(focus ? "live" : "simulation");
   const goalRuns = useMemo(() => runs.filter((r) => r.goalId === goal.id).slice().reverse(), [runs, goal.id]);
   const [runId, setRunId] = useState<string | null>(focus?.runId ?? null);
@@ -80,9 +88,10 @@ export function WorkflowIntelligenceView() {
     [def, decisionIds, viable, standIn, step, names],
   );
   const live = useMemo(() => {
+    if (mode === "live" && incident) return { status: incidentStatus(incident, ops), events: incidentEvents(incident, ops) };
     if (mode !== "live" || !run) return null;
     return { status: liveStatus(def, run, taskMap), events: liveEvents(run, taskMap) };
-  }, [mode, run, def, taskMap]);
+  }, [mode, run, def, taskMap, incident, ops]);
 
   const status = useMemo<ReadonlyMap<string, NodeStatus>>(
     () => live?.status ?? (mode === "live" ? new Map(def.nodes.map((n) => [n.id, n.unconfigured ? "unconfigured" : "not_started"] as const)) : sim.status),
@@ -136,10 +145,11 @@ export function WorkflowIntelligenceView() {
   );
   const rawOutputs = useMemo(() => {
     if (mode === "simulation") return simulatedOutputs(def, sim.status, { standIn, startedNodes: simNodes.started, completedNodes: simNodes.completed });
+    if (incident) return incidentOutputs(incident, ops, incident.resolution ? [] : incident.escalation ? ["Khaneil decides the next step; Atlas won't retry further on its own."] : []);
     return run ? liveOutputs({ run, tasks: taskMap, ledger, contexts: intel.contexts, evaluations: intel.evaluations }) : [];
-  }, [mode, def, sim.status, standIn, simNodes, run, taskMap, ledger, intel.contexts, intel.evaluations]);
-  const outputs = useStableOutputs(useMemo(() => scopeOutputs(rawOutputs, { mode, runIds: new Set(mode === "simulation" ? [simRunId(def.id)] : run ? [run.id] : []) }), [rawOutputs, mode, def.id, run]));
-  const runLabel = mode === "simulation" ? (sim.step === 0 ? "Preview, not started" : `Simulation step ${sim.step} of ${sim.maxStep}`) : run && ledger ? RUN_STATUS_LABEL[runStatus(run, taskMap, ledger)] : "No live run";
+  }, [mode, def, sim.status, standIn, simNodes, run, taskMap, ledger, intel.contexts, intel.evaluations, incident, ops]);
+  const outputs = useStableOutputs(useMemo(() => scopeOutputs(rawOutputs, { mode, runIds: new Set(mode === "simulation" ? [simRunId(def.id)] : incident ? [def.id] : run ? [run.id] : []) }), [rawOutputs, mode, def.id, run, incident]));
+  const runLabel = mode === "simulation" ? (sim.step === 0 ? "Preview, not started" : `Simulation step ${sim.step} of ${sim.maxStep}`) : incident ? `Incident · ${INCIDENT_STATE_LABEL[incident.state]}` : run && ledger ? RUN_STATUS_LABEL[runStatus(run, taskMap, ledger)] : "No live run";
   const pickOutput = (id: string) => {
     if (sel.nodeId !== id) selectNode(id, resolved.get(id)?.buildingId ?? null);
   };
@@ -239,7 +249,9 @@ export function WorkflowIntelligenceView() {
                   </select>
                 </label>
               )}
-              {run ? (
+              {incident ? (
+                <div className="muted small">Live incident, from this device's operations records: detected {formatDateTime(incident.firstAt)}, {incident.count} report{incident.count === 1 ? "" : "s"}, severity {incident.severity}. Recovery starts from Mission Control, Autonomous operations.</div>
+              ) : run ? (
                 <div className="muted small">
                   Started {relative(run.createdAt)} by {run.createdBy} on template v{run.definitionVersion}
                   {run.definitionVersion !== DEFINITIONS[goal.definitionId].version && " (the template has changed since; this run keeps its own copy)"}. Statuses are read from the Task Center on this device.
@@ -248,7 +260,7 @@ export function WorkflowIntelligenceView() {
                 <div className="muted small">No live run yet. Starting one creates a task per step in the Task Center, with each step's registry agent, building, dependencies and approval rules. Nothing runs until you start it there.</div>
               )}
               {run && <RunExecution run={run} tasks={taskMap} names={names} />}
-              {isExecutive ? (
+              {incident ? null : isExecutive ? (
                 <p className="muted small">This is an executive goal: its plan starts from Mission Control after you approve it there, so its autonomy level and budget are checked.</p>
               ) : confirming ? (
                 <div className="wf-confirm">
@@ -316,7 +328,7 @@ export function WorkflowIntelligenceView() {
         status={status}
         names={names}
         runLabel={runLabel}
-        hasRun={!!run}
+        hasRun={!!run || !!incident}
         selectedNodeId={sel.nodeId}
         onSelect={pickOutput}
         onOpenTask={openTask}
