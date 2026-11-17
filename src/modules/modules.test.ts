@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { buildCatalog } from "../catalog/parse";
 import { CORE_MODULES, MODULE_TYPE_LIST, MODULE_TYPE_SOURCE, MODULE_TYPES, isModuleType, moduleAvailability } from "./catalog";
-import { buildingInstances, instancesOf, landmarkInstances, moduleHealth, workspaceBuildings } from "./instances";
+import { buildingInstance, buildingInstances, instancesOf, landmarkInstances, moduleHealth, workspaceBuildings } from "./instances";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
@@ -74,7 +74,10 @@ describe("building instances", () => {
   });
 
   it("leaves buildings without a module as personal buildings, and switches on modules with a working capability", () => {
-    expect(instances.find((i) => i.id === "portfolio-site")).toMatchObject({ moduleType: null, moduleProvenance: "none", enabled: false });
+    const portfolio = catalog.projects.find((p) => p.id === "portfolio-site")!;
+    expect(buildingInstance({ ...portfolio, module: undefined }, catalog)).toMatchObject({ moduleType: null, moduleProvenance: "none", enabled: false });
+    // Khaneil gave Portfolio Web Studio the Development & Repository Hub module (2026-11-17).
+    expect(instances.find((i) => i.id === "portfolio-site")).toMatchObject({ moduleType: "development-repository-hub", moduleProvenance: "declared" });
     expect(instances.find((i) => i.id === "soc-lab")).toMatchObject({ moduleType: "security-operations-center", enabled: true });
   });
 

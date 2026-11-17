@@ -143,7 +143,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           </div>
           <div className="agents-split">
             <div className="card agent-list reg-list-pane" aria-label="Essential roles">
-              <Roles agents={allCatalog.agents} entries={allEntries} view={prefs.view as RoleView} query={filters.query} current={current?.profile.id} pick={(id) => select({ kind: "agent", id })} />
+              <Roles agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} view={prefs.view as RoleView} query={filters.query} current={current?.profile.id} pick={(id) => select({ kind: "agent", id })} />
             </div>
             {current ? <Inspector key={current.profile.id} entry={current} /> : <div className="card empty">Open a role and pick an agent or automation to see its details.</div>}
           </div>

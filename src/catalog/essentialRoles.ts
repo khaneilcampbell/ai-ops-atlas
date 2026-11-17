@@ -1,5 +1,6 @@
 import { isAiAgent, worksThroughAutomations } from "./roles";
-import type { Agent } from "./types";
+import type { Agent, Project } from "./types";
+import { moduleType } from "../modules/catalog";
 import type { Operational } from "../registry/types";
 
 // The Agents tab groups every entry under one of a few essential roles (Khaneil, 2026-11-17). A role
@@ -92,4 +93,11 @@ export function roleActivity(entries: { operational: Operational; lastVerifiedAt
     else act.verified++;
   }
   return act;
+}
+
+/** Where an entry works: its project's building and that building's module, both read from the
+ *  catalog and never changed by its role. Module is null where the building houses none. */
+export function placement(a: Pick<Agent, "projectId">, projects: Pick<Project, "id" | "name" | "module">[]) {
+  const p = projects.find((x) => x.id === a.projectId);
+  return { building: p?.name ?? null, module: moduleType(p?.module)?.name ?? null };
 }

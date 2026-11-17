@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { ESSENTIAL_ROLES, memberKind, roleActivity, roleDirectory, roleOf } from "../../catalog/essentialRoles";
-import type { Agent } from "../../catalog/types";
+import { ESSENTIAL_ROLES, memberKind, placement, roleActivity, roleDirectory, roleOf } from "../../catalog/essentialRoles";
+import type { Agent, Project } from "../../catalog/types";
 import { filterEntries, EMPTY_FILTER, type RegistryEntry } from "../../registry/registry";
 import { OPERATIONAL_LABEL } from "../../registry/telemetry";
 
@@ -8,13 +8,18 @@ export type RoleView = "roles" | "inactive" | "archived";
 const NAME = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
 
 /** Essential roles with their agents and automations nested underneath, plus Inactive and Archived. */
-export function Roles({ agents, entries, view, query, current, pick }: { agents: Agent[]; entries: RegistryEntry[]; view: RoleView; query: string; current?: string; pick: (id: string) => void }) {
+export function Roles({ agents, projects, entries, view, query, current, pick }: { agents: Agent[]; projects: Project[]; entries: RegistryEntry[]; view: RoleView; query: string; current?: string; pick: (id: string) => void }) {
   const dir = useMemo(() => roleDirectory(agents), [agents]);
   const roles = useMemo(() => roleOf(agents), [agents]);
   const byId = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
   const entry = useMemo(() => new Map(entries.map((e) => [e.profile.id, e])), [entries]);
   const hits = useMemo(() => new Set(filterEntries(entries, { ...EMPTY_FILTER, query }).map((e) => e.profile.id)), [entries, query]);
   const show = (ids: string[]) => ids.filter((id) => entry.has(id) && hits.has(id));
+  const where = (a: Pick<Agent, "projectId">) => {
+    const p = placement(a, projects);
+    const b = p.building ?? "No building";
+    return !p.module ? `${b} · No module` : p.module === b ? `${b} (module)` : `${b} · ${p.module} module`;
+  };
   const row = (id: string, withRole = false) => {
     const e = entry.get(id)!;
     const a = byId.get(id)!;
@@ -25,7 +30,7 @@ export function Roles({ agents, entries, view, query, current, pick }: { agents:
           <i className={`op-dot op-${e.operational}`} aria-hidden />
           <span className="grow">
             {e.profile.title}
-            <span className="muted small role-meta">{memberKind(a)} · {e.profile.project.name}{withRole ? ` · ${a.status === "retired" ? "Archived" : (NAME.get(roles.get(id) ?? "") ?? "No owning role")}` : ""}</span>
+            <span className="muted small role-meta">{memberKind(a)} · {where(a)}{withRole ? ` · ${a.status === "retired" ? "Archived" : (NAME.get(roles.get(id) ?? "") ?? "No owning role")}` : ""}</span>
           </span>
           <span className="muted small">{OPERATIONAL_LABEL[e.operational]}{last ? ` · ${last.at.slice(0, 10)}` : ""}</span>
         </button>
@@ -52,6 +57,7 @@ export function Roles({ agents, entries, view, query, current, pick }: { agents:
             <summary>
               <span className="title">{r.name} <span className="class-badge" title="An organizational grouping, not an AI runtime">Role</span></span>
               <span className="meta">{r.purpose}</span>
+              <span className="muted small">Home: {where(byId.get(r.id)!)}</span>
               <span className="muted small">
                 {plural(all.length - autos, "agent")} · {plural(autos, "automation")} · {act.verified} verified{act.failing ? ` · ${act.failing} failed` : ""}{act.stale ? ` · ${act.stale} stale` : ""}{act.unknown ? ` · ${act.unknown} unknown` : ""} · {act.noEvidence} no run evidence
               </span>

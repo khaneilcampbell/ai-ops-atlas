@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "./index";
-import { ESSENTIAL_ROLES, isInactive, memberKind, roleActivity, roleDirectory, roleOf } from "./essentialRoles";
+import { ESSENTIAL_ROLES, isInactive, memberKind, placement, roleActivity, roleDirectory, roleOf } from "./essentialRoles";
 import { isAiAgent } from "./roles";
 import { buildRegistry, filterEntries, EMPTY_FILTER } from "../registry/registry";
 
@@ -63,6 +63,17 @@ describe("essential roles directory", () => {
   it("derives activity from observed runs, never from an enabled schedule", () => {
     const now = Date.parse("2026-11-17T00:00:00Z");
     expect(roleActivity([{ operational: "configured", lastVerifiedAt: null }, { operational: "failing", lastVerifiedAt: null }, { operational: "unknown", lastVerifiedAt: null }, { operational: "verified", lastVerifiedAt: "2026-11-16T00:00:00Z" }, { operational: "verified", lastVerifiedAt: "2026-09-01T00:00:00Z" }], now)).toEqual({ verified: 1, failing: 1, unknown: 1, stale: 1, noEvidence: 1 });
+  });
+
+  it("shows every entry's building and module from the catalog; every building houses a module", () => {
+    const noModule = new Set<string>();
+    for (const a of catalog.agents) {
+      const p = placement(a, catalog.projects);
+      expect(p.building, a.id).toBeTruthy();
+      if (!p.module) noModule.add(a.projectId);
+    }
+    expect([...noModule]).toEqual([]);
+    expect(placement(byId.get("benjaire-product-lab-brief")!, catalog.projects)).toEqual({ building: "Business Operations HQ", module: "Business Operations HQ" });
   });
 
   it("counts roles, automations and archived entries separately", () => {
