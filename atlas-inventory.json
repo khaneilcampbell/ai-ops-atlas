@@ -1076,7 +1076,7 @@
    "owned_by": "benjaire-ops-monitor",
    "project": "benjaire-site",
    "runtime": "n8n Cloud",
-   "trigger": "Error trigger from any Flow or Shop workflow",
+   "trigger": "Error trigger from any Flow, Shop or Commerce workflow",
    "source": ""
   },
   {
@@ -2105,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-17T08:23:22.145Z",
- "commit": "d4e683b306975f3f123cec1968d3e92ad67917f8"
+ "generated_at": "2026-11-17T09:16:40.594Z",
+ "commit": "d683a6f2cda810c6545cff000e6ce90183f3d946"
 }
