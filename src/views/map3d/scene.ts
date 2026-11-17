@@ -202,6 +202,8 @@ export interface Scene3D {
   freight?: FreightPlan;
   /** Area reserved by an interior cutaway; outdoor crowds must stay outside. */
   pedestrianExclusion?: Rect;
+  /** Wider area an interior keeps clear of tall street palms, which would otherwise stand in front of its floors. */
+  palmExclusion?: Rect;
   land: Rect[];
   /** Land-backed neighborhood connections share the terrace elevation. */
   neighborhoodLand?: Rect[];
