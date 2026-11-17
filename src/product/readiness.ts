@@ -120,5 +120,6 @@ export function checkImport(text: string, catalog: Catalog): ImportResult {
   w.enabledIntegrations = keep(w.enabledIntegrations, integrations, "Integration");
   w.templates = keep(w.templates, templates, "Template");
   for (const id of Object.keys(w.agentSettings)) if (!w.allowedAgents.includes(id)) delete w.agentSettings[id];
+  for (const id of Object.keys(w.categoryOverrides)) if (!projects.has(id)) delete w.categoryOverrides[id];
   return { ok: true, workspace: w, dropped };
 }

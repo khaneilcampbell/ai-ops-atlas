@@ -1,6 +1,6 @@
 # Atlas user guide
 
-Atlas is an intelligent operations platform that connects your AI agents, workflows, infrastructure and business systems in one environment. It shows them as buildings on a city map, tracks their work in the Task Center, and runs reviewed workflows with your approval at every risky step.
+Atlas is Khaneil's private, single-owner AI command center: one place to oversee businesses (Benjaire), projects, repositories, AI agents, n8n workflows, infrastructure and personal work. It is not a public SaaS product: there is no account registration, no organizations or invitations, and no subscription plans. It shows them as buildings on a city map, tracks their work in the Task Center, and runs reviewed workflows with your approval at every risky step.
 
 This guide is task-first. For how each part works inside, see the linked docs.
 
@@ -16,24 +16,28 @@ The Mac app is signed with Atlas's own certificate, not an Apple Developer ID, a
 
 ## First run
 
-A fresh install opens **guided setup** (six steps). Each step is saved, so you can close the window and pick up later. An install that already has Atlas data skips it and keeps everything in a workspace named after your existing business.
+A fresh install opens **personal setup** (six steps). Each step is saved, so you can close the window and pick up later. An install that already has Atlas data skips it and keeps everything in a workspace named after your existing business.
 
-1. **Welcome**: Create Workspace, Configure Integrations, or Explore Atlas (skips setup; open it again from Workspace > Setup).
-2. **Workspace**: name, purpose, the business or project it runs for, environment, time zone, optional description.
-3. **Integrations**: turn on the services this workspace uses. Only services Atlas has adapters for are listed.
+1. **Owner**: Set Up My Workspace, Connect Tools, or Explore Atlas (skips setup; open it again from Workspace > Setup).
+2. **Workspace**: name, purpose (Business operations, AI engineering, Infrastructure, Personal operations, or something else), the business or project it runs for, environment, time zone, optional description.
+3. **Tools**: turn on the services this workspace uses. Only services Atlas has adapters for are listed.
 4. **Agents**: add registered agents. Each keeps the tools and permissions its registry entry grants.
 5. **Workflows**: pick templates. *Executable* ones are backed by a real workflow definition; *Design only* ones aren't runnable yet.
-6. **Check**: integrations connected, agents available, workflows ready, what's missing, security warnings, and the recommended first action. Nothing runs during setup.
+6. **Health check**: integrations connected, agents available, workflows ready, what's missing, security warnings, and the recommended first action. Nothing runs during setup.
+
+## Mission Control
+
+Mission Control opens with a **Command brief**: eight plain answers (what agents are doing, which workflows are running, what needs you, which projects moved, which systems have problems, what agents produced, what is costing money, which business goals need action). Each one opens the screen with the detail. It reads only records already in Atlas and adds no polling or model calls.
 
 ## Workspace
 
 Open **Workspace** in the sidebar (on a phone: More > Workspace).
 
-- **Setup**: the readiness check, workspace details and the guided setup.
-- **Integrations**: status, setup steps, permissions, diagnostics and disconnect for each service.
-- **Agents**: the agents in this workspace and the agent catalog.
-- **Templates**: the workflow template library.
-- **Administration**: general settings links, workflow limits, usage, system information, export and import.
+- **Setup**: the readiness check, workspace details, **Businesses and projects** (every building grouped by category, then business, with its repositories, agents, workflows, open tasks and outputs; you can move a building to another category without moving it on the map) and the personal setup.
+- **Tools**: your private tool library. Status, last check, the projects, agents and workflows that use each tool, setup steps, permissions, diagnostics and disconnect.
+- **Agents**: the agents in this workspace and the agent library.
+- **Workflows**: the workflow template library.
+- **Owner controls**: general settings links, workflow limits, usage, system information, export and import.
 
 A workspace holds settings only. Tasks, workflow runs, memory and business records stay in their own stores on the device. More than one workspace can exist; the picker at the top switches the active one. Every workspace on a device sees the same tasks, runs, memory and business records: workspaces are setups for one owner, not separate customer accounts. Atlas has no customer sign-in or tenant isolation yet, so don't use a workspace to run work for another business.
 
@@ -61,7 +65,7 @@ Tools, permissions, memory scope and building are protected. They change only th
 
 A turned-off agent, or a step that needs a higher model tier than its limit, stops Workflow Intelligence from starting a run that uses it, with the reason shown. Turning an agent off while a run is going holds that agent's next steps (they show the reason and are never sent) until it is turned back on, and the Task Center won't start new tasks for it. Work already sent finishes and stays in history.
 
-The **Agent catalog** lists every registered agent not yet in the workspace. **Add** only lets the workspace use it: nothing is downloaded and no outside code runs.
+The **Agent library** lists every registered agent not yet in the workspace. It is private, not a marketplace. **Add** only lets the workspace use it: nothing is downloaded and no outside code runs.
 
 ## Workflows
 
