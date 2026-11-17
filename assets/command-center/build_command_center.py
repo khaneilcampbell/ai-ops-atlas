@@ -19,9 +19,18 @@ The numbers match src/views/map3d/commandCenterPlan.ts; src/views/map3d/atlasHq.
 the GLB and checks its footprint and heights against that plan.
 
 One object per material, so the map draws the whole building in eight draw calls. The map swaps
-each material for its own by name (cc_glass, cc_lobby, cc_stone, ...); the colours here are
-the same palette, so the GLB also looks right on its own. No textures in the file: the window
-texture is drawn by the app (commandCenterTextures.ts), which reads the UVs laid here.
+each material for its own by name (cc_glass, cc_lobby, cc_stone, ...) and takes this file's
+textures onto them; the colours here are the same palette, so the GLB also looks right on its own.
+
+Baked lighting and real materials (2026-11-17, after the concept close-up): Cycles bakes soft
+ambient occlusion (shadow under each stone ledge, darker joints and corners, contact shadow at the
+base) into the colour of every solid part, on a UV set laid for it. The stone is Poly Haven's
+Marble 01 (CC0, assets/command-center/textures), box-mapped at its real 1.5 m tile and graded to
+the palette's cream; the brass is brushed (vertical streaks, made here). A second bake lights the
+stone and the green sills with the warm offices and gold lobby only, so the window glow spills onto
+the slabs: the map shows it as emissive, softly by day and fully at night. Glass and lobby keep the
+app's window texture on their first UVs and take an occlusion map on the second. Textures are
+JPEG/PNG (not WebP): the map decodes them without blob: URLs, which the CSP does not allow.
 """
 
 import hashlib
@@ -315,6 +324,338 @@ def to_object(name, part, coll):
     return ob
 
 
+# --- Baked lighting and materials -------------------------------------------------------------
+
+TEX = os.path.join(HERE, "textures")
+# Poly Haven "Marble 01" by Rob Tuytel (CC0): cream limestone cladding, a 1.5 m square tile.
+STONE_TEX = os.path.join(TEX, "marble_01_diff_1k.jpg")
+STONE_TILE = 1.5 / 10   # metres to map units (10 m per unit)
+STONE_CONTRAST = 0.75   # veining kept subtle at map scale
+AO_DISTANCE = 0.12      # how far occlusion reaches: a little more than three slab depths
+SHADOW = (0.34, 0.31, 0.28)  # linear multiplier where the AO is fully closed (warm, never black)
+# Baked texture size per part, in pixels (square). The stone carries the most visible detail.
+BAKE_SIZE = {"cc_stone": 1024, "cc_frame": 512, "cc_roof": 512, "cc_glass": 512,
+             "cc_lobby": 256, "cc_brass": 256, "cc_hedge": 256, "cc_lawn": 256}
+SEE_THROUGH = ("cc_glass", "cc_lobby")  # keep the app's window texture; occlusion only
+# Window light for the glow bake (colour, strength): warm offices, a brighter gold lobby.
+WINDOW_LIGHT = {"cc_glass": ("#ffd49a", 3.0), "cc_lobby": ("#ffc46e", 7.0)}
+GLOW_PARTS = ("cc_stone", "cc_frame")
+GLOW_PERCENTILE = 85  # which lit stone texel the glow map scales to 1
+
+
+def lin(hexa):
+    rgb = [int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    return [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+
+
+def select_only(ob):
+    for o in bpy.context.view_layer.objects:
+        o.select_set(o == ob)
+    bpy.context.view_layer.objects.active = ob
+
+
+def new_image(name, size, float_buffer=True, srgb=False):
+    img = bpy.data.images.new(name, size, size, alpha=False, float_buffer=float_buffer)
+    img.colorspace_settings.name = "sRGB" if srgb else "Non-Color"
+    return img
+
+
+def pixels(img):
+    import numpy as np
+    a = np.empty(img.size[0] * img.size[1] * 4, np.float32)
+    img.pixels.foreach_get(a)
+    return a.reshape(-1, 4)
+
+
+def to_srgb(a):
+    import numpy as np
+    a = np.clip(a, 0, 1)
+    return np.where(a <= 0.0031308, a * 12.92, 1.055 * np.power(a, 1 / 2.4) - 0.055)
+
+
+def final_image(name, linear, size, srgb=True):
+    """A packed 8-bit image from linear float pixels: what the GLB carries."""
+    img = new_image(name, size, float_buffer=False, srgb=srgb)
+    out = linear.copy()
+    out[:, :3] = to_srgb(out[:, :3]) if srgb else out[:, :3].clip(0, 1)
+    out[:, 3] = 1
+    img.pixels.foreach_set(out.ravel())
+    img.pack()
+    return img
+
+
+def bake_uvs(ob):
+    """A non-overlapping UV set for the bake: the only one on solid parts, the second on the glass."""
+    me = ob.data
+    if ob.name not in SEE_THROUGH:
+        while me.uv_layers:
+            me.uv_layers.remove(me.uv_layers[0])
+        # Cut each slab ring's top and bottom into quarters: a ring is one hollow island that wastes
+        # the middle of the texture, quarters pack tightly. Shape and shading are unchanged.
+        cy = -(Z0 + ZF_RIGHT) / 2
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.normal_update()
+
+        quarters = {}
+        for f in bm.faces:
+            if abs(f.normal.z) > 0.9:
+                c = f.calc_center_median()
+                quarters.setdefault((c.x > 0, c.y > cy), []).append(f)
+        for faces in quarters.values():
+            bmesh.ops.split(bm, geom=faces, use_only_faces=False)
+        bm.to_mesh(me)
+        bm.free()
+    layer = me.uv_layers.new(name="Bake" if ob.name in SEE_THROUGH else "UVMap")
+    me.uv_layers.active = layer
+    select_only(ob)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004, scale_to_bounds=True)
+    # Concave packing nests the small islands inside the slab rings' empty middles.
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(udim_source="CLOSEST_UDIM", rotate=True, shape_method="CONCAVE",
+                            margin_method="SCALED", margin=0.004)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    return layer.name
+
+
+def graded_stone():
+    """Marble 01 in linear float, contrast eased and its average graded to the palette's cream."""
+    src = bpy.data.images.load(STONE_TEX)
+    src.colorspace_settings.name = "sRGB"
+    a = pixels(src)  # sRGB-encoded bytes as floats
+    rgb = a[:, :3]
+    rgb = (rgb <= 0.04045) * rgb / 12.92 + (rgb > 0.04045) * ((rgb + 0.055) / 1.055) ** 2.4
+    mean = rgb.mean(axis=0)
+    rgb = (mean + (rgb - mean) * STONE_CONTRAST) * (lin(PALETTE["cc_stone"][0]) / mean)
+    a[:, :3] = rgb
+    img = new_image("cc_stone_albedo", src.size[0])
+    img.pixels.foreach_set(a.ravel())
+    bpy.data.images.remove(src)
+    return img
+
+
+def albedo(nt, name, stone):
+    """The part's colour as a shader socket: box-mapped marble, brushed brass, or the palette."""
+    n, link = nt.nodes, nt.links
+    if name == "cc_stone":
+        tc, mp, tex = n.new("ShaderNodeTexCoord"), n.new("ShaderNodeMapping"), n.new("ShaderNodeTexImage")
+        mp.inputs["Scale"].default_value = (1 / STONE_TILE,) * 3
+        tex.image, tex.projection, tex.projection_blend = stone, "BOX", 0.25
+        link.new(tc.outputs["Object"], mp.inputs["Vector"])
+        link.new(mp.outputs["Vector"], tex.inputs["Vector"])
+        return tex.outputs["Color"], None
+    if name == "cc_brass":
+        # Fine vertical streaks: noise stretched up the mullions.
+        tc, mp, noise = n.new("ShaderNodeTexCoord"), n.new("ShaderNodeMapping"), n.new("ShaderNodeTexNoise")
+        mp.inputs["Scale"].default_value = (900, 900, 6)
+        noise.inputs["Detail"].default_value = 6
+        link.new(tc.outputs["Object"], mp.inputs["Vector"])
+        link.new(mp.outputs["Vector"], noise.inputs["Vector"])
+        tint = n.new("ShaderNodeMix")
+        tint.data_type = "RGBA"
+        tint.inputs["A"].default_value = (*[c * 0.78 for c in lin(PALETTE[name][0])], 1)
+        tint.inputs["B"].default_value = (*[min(1, c * 1.2) for c in lin(PALETTE[name][0])], 1)
+        link.new(noise.outputs["Fac"], tint.inputs["Factor"])
+        rough = n.new("ShaderNodeMapRange")
+        rough.inputs["To Min"].default_value, rough.inputs["To Max"].default_value = 0.26, 0.5
+        link.new(noise.outputs["Fac"], rough.inputs["Value"])
+        return tint.outputs["Result"], rough.outputs["Result"]
+    rgb = n.new("ShaderNodeRGB")
+    rgb.outputs[0].default_value = (*lin(PALETTE[name][0]), 1)
+    return rgb.outputs[0], None
+
+
+def run_bake(ob, img, kind, uv, **kw):
+    nt = ob.active_material.node_tree
+    node = nt.nodes.new("ShaderNodeTexImage")
+    node.image = img
+    nt.nodes.active = node
+    select_only(ob)
+    bpy.ops.object.bake(type=kind, uv_layer=uv, margin=4, use_clear=True, **kw)
+    nt.nodes.remove(node)
+
+
+def gltf_output(nt):
+    """The exporter's glTF Material Output group, for the occlusion map."""
+    g = bpy.data.node_groups.get("glTF Material Output")
+    if not g:
+        g = bpy.data.node_groups.new("glTF Material Output", "ShaderNodeTree")
+        g.interface.new_socket("Occlusion", in_out="INPUT", socket_type="NodeSocketFloat")
+    node = nt.nodes.new("ShaderNodeGroup")
+    node.node_tree = g
+    return node
+
+
+def bake(scene, coll):
+    import numpy as np
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 128
+    scene.render.bake.margin_type = "EXTEND"
+    world = bpy.data.worlds.new("bake")
+    world.use_nodes = True
+    scene.world = world
+    world.light_settings.distance = AO_DISTANCE
+    sky = world.node_tree.nodes["Background"]
+
+    # A ground for the bake only, so the base darkens where it meets the plaza.
+    gm = bpy.data.meshes.new("bake_ground")
+    gm.from_pydata([(-4, -4, 0), (4, -4, 0), (4, 4, 0), (-4, 4, 0)], [], [(0, 1, 2, 3)])
+    ground = bpy.data.objects.new("bake_ground", gm)
+    scene.collection.objects.link(ground)
+    gmat = bpy.data.materials.new("bake_ground")
+    gmat.use_nodes = True
+    gmat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (*lin("#c9c3b4"), 1)
+    gm.materials.append(gmat)
+
+    obs = {o.name: o for o in coll.objects}
+    uv = {name: bake_uvs(ob) for name, ob in obs.items()}
+    stone = graded_stone()
+    sources = {}
+    for name, ob in obs.items():
+        nt = ob.active_material.node_tree
+        bsdf = nt.nodes["Principled BSDF"]
+        col, rough = albedo(nt, name, stone)
+        sources[name] = (col, rough)
+        nt.links.new(col, bsdf.inputs["Base Color"])
+        if rough:
+            nt.links.new(rough, bsdf.inputs["Roughness"])
+
+    # 1. Soft occlusion for every part.
+    ao = {}
+    for name, ob in obs.items():
+        ao[name] = new_image(f"{name}_ao_bake", BAKE_SIZE[name])
+        run_bake(ob, ao[name], "AO", uv[name])
+
+    # 2. Window glow alone: a black sky, the offices and lobby lit warm.
+    sky.inputs["Strength"].default_value = 0
+    for name, (hexa, strength) in WINDOW_LIGHT.items():
+        b = obs[name].active_material.node_tree.nodes["Principled BSDF"]
+        b.inputs["Emission Color"].default_value = (*lin(hexa), 1)
+        b.inputs["Emission Strength"].default_value = strength
+    scene.cycles.samples = 256
+    glow = {}
+    for name in GLOW_PARTS:
+        glow[name] = new_image(f"{name}_glow_bake", BAKE_SIZE[name])
+        run_bake(obs[name], glow[name], "DIFFUSE", uv[name], pass_filter={"DIRECT", "INDIRECT", "COLOR"})
+    # One scale for both, so the stone and the sills glow alike. The typical lit slab face reaches
+    # full warmth (the bay right over the lobby is brighter still and clips), so the spill reads
+    # on every floor at night, not only by the entrance.
+    stone_glow = pixels(glow["cc_stone"])[:, :3]
+    lum = stone_glow.max(axis=1)
+    peak = float(np.percentile(lum[lum > 1e-3], GLOW_PERCENTILE)) if (lum > 1e-3).any() else 1.0
+    for name in WINDOW_LIGHT:
+        obs[name].active_material.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 0
+
+    # 3. The final colour: the part's albedo darkened by its occlusion, baked through an emission.
+    finals = {}
+    for name, ob in obs.items():
+        size = BAKE_SIZE[name]
+        if name in SEE_THROUGH:
+            finals[name] = {"ao": final_image(f"{name}_occlusion", pixels(ao[name]), size, srgb=False)}
+            continue
+        nt = ob.active_material.node_tree
+        n, link = nt.nodes, nt.links
+        aon, uvn = n.new("ShaderNodeTexImage"), n.new("ShaderNodeUVMap")
+        aon.image, uvn.uv_map = ao[name], uv[name]
+        link.new(uvn.outputs["UV"], aon.inputs["Vector"])
+        shade = n.new("ShaderNodeMix")
+        shade.data_type = "RGBA"
+        shade.inputs["A"].default_value = (*SHADOW, 1)
+        shade.inputs["B"].default_value = (1, 1, 1, 1)
+        link.new(aon.outputs["Color"], shade.inputs["Factor"])
+        mul = n.new("ShaderNodeMix")
+        mul.data_type, mul.blend_type = "RGBA", "MULTIPLY"
+        mul.inputs["Factor"].default_value = 1
+        link.new(sources[name][0], mul.inputs["A"])
+        link.new(shade.outputs["Result"], mul.inputs["B"])
+        emit, out = n.new("ShaderNodeEmission"), n.new("ShaderNodeOutputMaterial")
+        link.new(mul.outputs["Result"], emit.inputs["Color"])
+        link.new(emit.outputs["Emission"], out.inputs["Surface"])
+        nt.nodes.active = out
+        out.is_active_output = True
+        color = new_image(f"{name}_color_bake", size)
+        run_bake(ob, color, "EMIT", uv[name])
+        finals[name] = {"color": final_image(f"{name}_color", pixels(color), size)}
+        if sources[name][1]:
+            link.new(sources[name][1], emit.inputs["Color"])
+            rough = new_image(f"{name}_rough_bake", size)
+            run_bake(ob, rough, "EMIT", uv[name])
+            finals[name]["rough"] = final_image(f"{name}_roughness", pixels(rough), size, srgb=False)
+        if name in glow:
+            g = pixels(glow[name])
+            g[:, :3] /= peak
+            finals[name]["glow"] = final_image(f"{name}_glow", g, size)
+
+    # 4. Final materials: the baked maps on the bake UVs, the palette's roughness and metalness.
+    for name, ob in obs.items():
+        hexa, r, m = PALETTE[name]
+        mat = ob.active_material
+        nt = mat.node_tree
+        nt.nodes.clear()
+        n, link = nt.nodes, nt.links
+        bsdf, out = n.new("ShaderNodeBsdfPrincipled"), n.new("ShaderNodeOutputMaterial")
+        link.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
+        bsdf.inputs["Base Color"].default_value = (*lin(hexa), 1)
+        bsdf.inputs["Roughness"].default_value = r
+        bsdf.inputs["Metallic"].default_value = m
+        uvn = n.new("ShaderNodeUVMap")
+        uvn.uv_map = uv[name]
+
+        def tex(img, socket, channel=None):
+            t = n.new("ShaderNodeTexImage")
+            t.image = img
+            link.new(uvn.outputs["UV"], t.inputs["Vector"])
+            if channel is None:
+                link.new(t.outputs["Color"], socket)
+            else:
+                sep = n.new("ShaderNodeSeparateColor")
+                link.new(t.outputs["Color"], sep.inputs["Color"])
+                link.new(sep.outputs[channel], socket)
+
+        f = finals[name]
+        if "color" in f:
+            tex(f["color"], bsdf.inputs["Base Color"])
+        if "rough" in f:
+            tex(f["rough"], bsdf.inputs["Roughness"], "Green")
+        if "glow" in f:
+            tex(f["glow"], bsdf.inputs["Emission Color"])
+            bsdf.inputs["Emission Strength"].default_value = 1
+        if "ao" in f:
+            tex(f["ao"], gltf_output(nt).inputs["Occlusion"], "Red")
+
+    # Only the packed finals stay in the file.
+    keep = {img for f in finals.values() for img in f.values()}
+    for img in list(bpy.data.images):
+        if img not in keep:
+            bpy.data.images.remove(img)
+    bpy.data.objects.remove(ground)
+    bpy.data.meshes.remove(gm)
+    bpy.data.materials.remove(gmat)
+    bpy.data.worlds.remove(world)
+
+
+def fix_occlusion_uvs(path):
+    """The exporter writes the glass's occlusion map on its first UVs (the window grid); point it at
+    the second, the bake UVs. Only the GLB's JSON chunk changes."""
+    import struct
+    with open(path, "rb") as f:
+        data = f.read()
+    n = struct.unpack_from("<I", data, 12)[0]
+    gltf = json.loads(data[20:20 + n])
+    for m in gltf["materials"]:
+        if m["name"] in SEE_THROUGH and "occlusionTexture" in m:
+            m["occlusionTexture"]["texCoord"] = 1
+    text = json.dumps(gltf, separators=(",", ":")).encode()
+    text += b" " * (-len(text) % 4)
+    rest = data[20 + n:]
+    out = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(text) + len(rest)) + struct.pack("<II", len(text), 0x4E4F534A) + text + rest
+    with open(path, "wb") as f:
+        f.write(out)
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.preferences.filepaths.save_version = 0  # no .blend1 backup next to the source
@@ -344,6 +685,8 @@ def main():
         if part["f"]:
             to_object(name, part, coll)
 
+    bake(scene, coll)
+
     os.makedirs(os.path.dirname(GLB), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND, compress=True)
     bpy.ops.export_scene.gltf(
@@ -354,13 +697,15 @@ def main():
         export_texcoords=True,
         export_normals=True,
         export_materials="EXPORT",
-        export_image_format="NONE",
+        export_image_format="JPEG",
+        export_image_quality=88,
         export_cameras=False,
         export_lights=False,
         export_extras=False,
         export_animations=False,
         export_draco_mesh_compression_enable=False,
     )
+    fix_occlusion_uvs(GLB)
     tris = sum(len(o.data.polygons) for o in coll.objects)
 
     def sha(path):

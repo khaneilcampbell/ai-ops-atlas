@@ -9,15 +9,18 @@ import {HQ} from './atlasHqPlan';
 import {HQ_PALETTE as P} from './atlasHqPalette';
 import {ccGlassTexture,ccLobbyTexture,ccNameplate} from './commandCenterTextures';
 import {CC,ccBay,ccEntrance,ccGrounds,ccRoof,type CcBox} from './commandCenterPlan';
+import {decodeEmbeddedTextures} from './glbTextures';
 
 const noRaycast=()=>null;
 
 /**
  * The building itself: a Blender model (assets/command-center/build_command_center.py), one mesh
- * per material. Plain glTF, no Draco or Meshopt, so the strict CSP stays as it is.
+ * per material, with textures baked in Blender (stone, brass, occlusion, window glow). Plain glTF,
+ * no Draco or Meshopt, and its JPEG/PNG textures decoded without blob: URLs, so the strict CSP
+ * stays as it is.
  */
 export const CC_MODEL_URL=`${import.meta.env.BASE_URL}models/map/command-center.glb`;
-useGLTF.preload(CC_MODEL_URL,false,false);
+useGLTF.preload(CC_MODEL_URL,false,false,decodeEmbeddedTextures);
 /** The model's meshes, by name. */
 export const CC_PARTS=['cc_glass','cc_lobby','cc_stone','cc_roof','cc_frame','cc_brass','cc_hedge','cc_lawn'] as const;
 type Part=(typeof CC_PARTS)[number];
@@ -50,10 +53,17 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
    cc_hedge:std({color:P.hedge,roughness:.9,flatShading:true}),
    cc_lawn:std({color:P.lawn,roughness:.95}),
   };
-  return {byPart,textures:[office.map,office.glow,warm.map,warm.glow]};
+  // Until the model has loaded (or if it cannot): plain stone, without the model's baked maps.
+  const block=std({color:P.stone,roughness:.78,metalness:0});
+  return {byPart,block,textures:[office.map,office.glow,warm.map,warm.glow]};
  },[]);
- useEffect(()=>{mats.byPart.cc_glass.emissiveIntensity=night?1.1:.45;mats.byPart.cc_lobby.emissiveIntensity=night?1.4:.55;},[mats,night]);
- useEffect(()=>()=>{for(const x of Object.values(mats.byPart))x.dispose();for(const x of mats.textures)x.dispose();},[mats]);
+ // The baked window glow on the stone slabs and green sills: a soft warmth by day, full at night.
+ useEffect(()=>{
+  const b=mats.byPart;
+  b.cc_glass.emissiveIntensity=night?1.1:.45;b.cc_lobby.emissiveIntensity=night?1.4:.55;
+  b.cc_stone.emissiveIntensity=b.cc_frame.emissiveIntensity=night?1:.12;
+ },[mats,night]);
+ useEffect(()=>()=>{for(const x of [...Object.values(mats.byPart),mats.block])x.dispose();for(const x of mats.textures)x.dispose();},[mats]);
 
  const signs=useMemo(()=>{
   const name=ccNameplate();
@@ -80,7 +90,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  // The gold mark and name fill the stone bay's face, above the brass canopy.
  const bay=ccBay(k),face=bay.front+.004*k;
  // Until the model has loaded (or if it cannot), a plain stone block of the same size keeps the building pickable.
- const block=<mesh geometry={g.box} material={mats.byPart.cc_stone} position={[0,ccRoof(k)/2,CC.cz*k]} scale={[2*CC.a*k,ccRoof(k),2*CC.b*k]} {...handlers}/>;
+ const block=<mesh geometry={g.box} material={mats.block} position={[0,ccRoof(k)/2,CC.cz*k]} scale={[2*CC.a*k,ccRoof(k),2*CC.b*k]} {...handlers}/>;
  return <group>
   <group position={[t.x,base,t.z]}>
    <ModelBoundary fallback={block}><Suspense fallback={block}><Model k={k} mats={mats.byPart} handlers={handlers}/></Suspense></ModelBoundary>
@@ -94,19 +104,37 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  </group>;
 }
 
-/** The model's meshes, each drawn with the map's own material for its name. */
+/**
+ * The model's meshes, each drawn with the map's own material for its name, carrying the model's
+ * baked maps: colour (the stone, brass and palette with Blender's occlusion in it), roughness,
+ * the glass's occlusion on its second UVs and the window glow on the slabs.
+ */
 function Model({k,mats,handlers}:{k:number;mats:Record<Part,THREE.MeshStandardMaterial>;handlers:Handlers}){
- const {scene}=useGLTF(CC_MODEL_URL,false,false);
+ const {scene}=useGLTF(CC_MODEL_URL,false,false,decodeEmbeddedTextures);
  const meshes=useMemo(()=>{
   const out:{name:Part;geometry:THREE.BufferGeometry}[]=[];
-  scene.traverse(o=>{const mesh=o as THREE.Mesh;if(mesh.isMesh&&(CC_PARTS as readonly string[]).includes(mesh.name))out.push({name:mesh.name as Part,geometry:mesh.geometry});});
+  scene.traverse(o=>{
+   const mesh=o as THREE.Mesh;
+   if(!mesh.isMesh||!(CC_PARTS as readonly string[]).includes(mesh.name))return;
+   out.push({name:mesh.name as Part,geometry:mesh.geometry});
+   takeMaps(mats[mesh.name as Part],mesh.material as THREE.MeshStandardMaterial);
+  });
   return out;
- },[scene]);
+ },[scene,mats]);
  return <group scale={k}>
   {meshes.map(({name,geometry})=>PICKED.has(name)
    ?<mesh key={name} geometry={geometry} material={mats[name]} castShadow receiveShadow {...handlers}/>
    :<mesh key={name} geometry={geometry} material={mats[name]} castShadow={name!=='cc_lawn'} receiveShadow raycast={noRaycast}/>)}
  </group>;
+}
+
+/** The GLB material's maps onto the map's material. The app's own window texture on the glass stays. */
+function takeMaps(to:THREE.MeshStandardMaterial,from:THREE.MeshStandardMaterial){
+ if(from.map&&!to.map){to.map=from.map;to.color.set('#ffffff');}
+ if(from.aoMap){to.aoMap=from.aoMap;to.aoMapIntensity=1;}
+ if(from.roughnessMap)to.roughnessMap=from.roughnessMap;
+ if(from.emissiveMap&&!to.emissiveMap){to.emissiveMap=from.emissiveMap;to.emissive.set('#ffffff');}
+ to.needsUpdate=true;
 }
 
 class ModelBoundary extends Component<{children:ReactNode;fallback:ReactNode},{failed:boolean}>{

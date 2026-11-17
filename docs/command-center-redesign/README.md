@@ -62,6 +62,36 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
 - `src/views/map3d/atlasHqPalette.ts`: the shared colours; the interior shell
   (`src/views/office/AtlasHqShell.tsx`) reads the same palette and the block's proportions.
 
+## Baked lighting and real materials
+
+Added 2026-11-17 to bring the map building closer to the concept close-up. All of it happens in
+`build_command_center.py` with Cycles, so `npm run model:command-center` remakes it:
+
+- **Soft baked lighting.** Ambient occlusion (reach 0.12 map units, a little over three slab depths)
+  is baked into the colour of every solid part: a shadow under each stone ledge, darker joints
+  where the slabs meet the glass and the bay, darker corners on the roof and plant room. A ground
+  plane is present for the bake only, so the base darkens where it meets the plaza. Glass and
+  lobby keep the app's window texture and take the occlusion as an `aoMap` on a second UV set.
+- **Window glow on the stone.** A second bake lights the stone and the green sills with nothing
+  but the warm offices and the gold lobby. The map shows it as an emissive map: soft by day
+  (0.12), full at night (1.0), so the slabs and the entrance bay catch the light from the floors.
+- **Real stone.** The slabs, parapet, bay and plant room use Poly Haven's *Marble 01* (a cream
+  limestone cladding), box-mapped at its real 1.5 m tile, contrast eased to 75% and graded to the
+  palette's cream so the veining stays subtle at map scale.
+- **Brushed brass.** Poly Haven has no brushed brass (its metals are rusty or dark plate), so the
+  brass is made in the script: fine vertical streaks in its colour and roughness.
+- **Green glass** stays reflective (roughness 0.3, metalness 0.1) and keeps the lit offices.
+
+Textures are baked on a UV set laid by the script (slab rings cut into quarters so they pack
+tightly) and ship inside the GLB as JPEG: stone 1024 px, frame, roof and glass 512 px, the rest
+256 px. They are not WebP: GLTFLoader decodes WebP through a `blob:` URL, which the hosted CSP
+(`img-src 'self' data:`, `connect-src 'self'`) blocks. `src/views/map3d/glbTextures.ts` decodes
+the GLB's JPEG and PNG textures straight from its bytes instead, so the CSP is unchanged.
+`AtlasHq.tsx` puts the GLB's maps on the map's own materials by part name.
+
+Credits: *Marble 01* by Rob Tuytel, [Poly Haven](https://polyhaven.com/a/marble_01), CC0. The
+1k diffuse map is kept in `assets/command-center/textures/` as the bake's source.
+
 ## Changing the design
 
 1. Edit `assets/command-center/build_command_center.py` (the source; hand edits in the .blend are
@@ -87,7 +117,13 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
   context; night 760 draws, 894,154 triangles; iPhone day 733 draws, 875,740 triangles. After
   leaving and re-entering the map, 8 more buffers stay alive (the loaded model, which drei keeps
   cached so it is not fetched again); textures and programs return to where they were.
-- The model: 6,300 triangles (the procedural block allowed 12,000), eight meshes, about 390 KB.
+- The model: 6,300 triangles (the procedural block allowed 12,000), eight meshes, about 390 KB
+  before the bake.
+- Baked lighting and materials (same budget, passed): desktop day 734 draws of 800, 881,368
+  triangles, 75 programs, 105 textures, 6.7 MB geometry; night 752 draws, 882,068 triangles,
+  80 programs (the budget's limit; 73 before, since the stone and sills now carry an emissive map);
+  iPhone day 733 draws, 875,740 triangles. The GLB is 1.19 MB with eleven JPEG textures
+  (about 0.8 MB of it); the draw and triangle counts do not change.
 - `npm run lint`, `npm run typecheck` and `npm test` pass (1,902 tests; the 300-repository timing
   test passes on its own and is load-sensitive in the full parallel run).
 - Map layout guards updated on purpose: Command Center's headquarters is `ATLAS_HQ_SIZE` (4) instead

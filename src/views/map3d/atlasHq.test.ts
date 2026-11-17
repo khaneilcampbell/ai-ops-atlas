@@ -18,9 +18,10 @@ const GLB=join(__dirname,'../../../public/models/map/command-center.glb');
 function glb(){
  const b=readFileSync(GLB),len=b.readUInt32LE(12);
  type Accessor={count:number;min?:number[];max?:number[]};
- const j=JSON.parse(b.subarray(20,20+len).toString('utf8')) as {meshes:{name:string;primitives:{attributes:{POSITION:number};indices:number}[]}[];accessors:Accessor[];images?:unknown[];extensionsUsed?:string[]};
+ const j=JSON.parse(b.subarray(20,20+len).toString('utf8')) as {meshes:{name:string;primitives:{attributes:{POSITION:number};indices:number}[]}[];accessors:Accessor[];images?:{name:string;mimeType:string;bufferView:number}[];bufferViews:{byteLength:number}[];extensionsUsed?:string[]};
  const meshes=j.meshes.map(m=>{const p=m.primitives[0],pos=j.accessors[p.attributes.POSITION];return {name:m.name,primitives:m.primitives.length,triangles:j.accessors[p.indices].count/3,min:pos.min!,max:pos.max!};});
- return {bytes:b.length,meshes,images:j.images?.length??0,extensions:j.extensionsUsed??[]};
+ const images=(j.images??[]).map(i=>({name:i.name,mime:i.mimeType,bytes:j.bufferViews[i.bufferView].byteLength}));
+ return {bytes:b.length,meshes,images,extensions:j.extensionsUsed??[]};
 }
 
 describe('Atlas Command Center',()=>{
@@ -55,16 +56,26 @@ describe('Atlas Command Center',()=>{
    expect(door.s[0]).toBeLessThan(ccBay(k).w);
   }
  });
- it('is a light Blender model: one mesh per material, no textures, no decoders, under the old triangle budget',()=>{
+ it('is a light Blender model: one mesh per material, small baked textures, no decoders, under the old triangle budget',()=>{
   const m=glb();
   expect(m.meshes.map(x=>x.name).sort()).toEqual(['cc_brass','cc_frame','cc_glass','cc_hedge','cc_lawn','cc_lobby','cc_roof','cc_stone']);
   for(const x of m.meshes)expect(x.primitives).toBe(1);
   expect(m.meshes.reduce((n,x)=>n+x.triangles,0)).toBeLessThan(12000);
-  expect(m.images).toBe(0);
+  // Baked in Blender: every solid part's colour (stone, brass, palette with its occlusion), the brass
+  // roughness, the glass's occlusion and the window glow on the slabs and sills. Capped so the
+  // map's 8 MB budget keeps its room.
+  expect(m.images.map(i=>i.name).sort()).toEqual(['cc_brass_color','cc_brass_roughness','cc_frame_color','cc_frame_glow','cc_glass_occlusion','cc_hedge_color','cc_lawn_color','cc_lobby_occlusion','cc_roof_color','cc_stone_color','cc_stone_glow']);
+  for(const i of m.images)expect(i.bytes,i.name).toBeLessThan(400_000);
+  expect(m.images.reduce((n,i)=>n+i.bytes,0)).toBeLessThan(1_300_000);
+  // JPEG or PNG only: decodeEmbeddedTextures reads those without blob: URLs, which the CSP blocks.
+  // (A WebP or KTX2 texture would go through GLTFLoader's own blob: path and vanish when hosted.)
+  for(const i of m.images)expect(i.mime).toMatch(/^image\/(jpeg|png)$/);
   // No Draco or Meshopt: their decoders need a CDN or WebAssembly, which the CSP does not allow.
-  expect(m.extensions.filter(e=>/draco|meshopt/i.test(e))).toEqual([]);
-  expect(m.bytes).toBeLessThan(400_000);
+  expect(m.extensions.filter(e=>/draco|meshopt|webp|basisu|avif/i.test(e))).toEqual([]);
+  expect(m.bytes).toBeLessThan(1_600_000);
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
+  // Every load of the model (the preload and the hook) decodes its textures the CSP-safe way.
+  expect(source.match(/useGLTF(\.preload)?\(CC_MODEL_URL,false,false,decodeEmbeddedTextures\)/g)).toHaveLength(2);
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);
   const e=ccEntrance(2),gr=ccGrounds(2);expect(e.boxes.length+e.lamps.length+gr.boxes.length+gr.blobs.length+gr.trunks.length).toBeLessThan(80);
@@ -89,7 +100,9 @@ describe('Atlas Command Center',()=>{
  });
  it('rebuilds from a Blender script kept next to the editable source',()=>{
   const dir=join(__dirname,'../../../assets/command-center');
-  expect(readdirSync(dir).sort()).toEqual(['build.json','build_command_center.py','command-center.blend']);
+  expect(readdirSync(dir).sort()).toEqual(['build.json','build_command_center.py','command-center.blend','textures']);
+  // The stone's source: Poly Haven's Marble 01 (CC0), credited in docs/command-center-redesign.
+  expect(readdirSync(join(dir,'textures'))).toEqual(['marble_01_diff_1k.jpg']);
   const script=readFileSync(join(dir,'build_command_center.py'),'utf8');
   expect(script).toContain('public/models/map/command-center.glb'.split('/').pop());
   expect(script).toMatch(/LOBBY = 3\.3 \/ 10/);expect(script).toMatch(/STOREY = 2\.7 \/ 10/);expect(script).toMatch(/FLOORS = 4/);
