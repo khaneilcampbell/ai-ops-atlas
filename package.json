@@ -21,6 +21,7 @@
     "visual:compare": "node visual/compare.mjs",
     "measure:power": "POWER=1 playwright test -c visual power",
     "measure:perf": "PERF=1 playwright test -c visual perf",
+    "model:command-center-floor": "\"${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}\" --background --factory-startup --python assets/command-center-office/build_office_floor.py",
     "preview:properties": "vite --config visual/properties.preview.config.ts"
   },
   "dependencies": {

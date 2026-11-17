@@ -1,0 +1,1 @@
+- 2026-11-17 · Floor 4 of Atlas Command Center is now a furnished office built in Blender: warm wood desks with green screens, a glass meeting room, a lounge, storage, planting and a service core. Agents keep their desks and their real status

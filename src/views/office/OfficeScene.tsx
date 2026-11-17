@@ -21,6 +21,9 @@ import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./text
 import { OFFICE_COLORS as C } from "./palette";
 import { AgentHologram, OrgBands } from "./AgentHologram";
 import { orgBands, type HologramData } from "./officeOrg";
+import { Swap } from "./models";
+import { DeskKit, FurnishedFloor } from "./CommandCenterFloor";
+import { isFurnishedFloor, KIT_ANCHORS } from "./commandCenterFloorPlan";
 
 /** One desk's worth of display data, prepared by the office layer from verified sources. */
 export interface DeskData {
@@ -71,13 +74,13 @@ export default function OfficeScene(props: Props) {
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
-        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} furnished={isFurnishedFloor(props.plan.projectId,level)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
         {desks.some(d=>(d.floor??4)===level)&&<LevelBands desks={desks} level={level}/>}
-        {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
+        {desks.filter(d=>(d.floor??4)===level).map(d=><AgentWorkstation key={d.ws.id} d={d} kit={isFurnishedFloor(props.plan.projectId,level)} reduced={reduced} night={props.light==="night"} selected={props.selected===d.ws.agentId} onSelect={props.onSelect}/>)}
       </group>)}
     </Canvas>
   );
@@ -251,7 +254,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean; shell?: boolean }) {
+function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=false, furnished=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean; shell?: boolean; furnished?: boolean }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -283,7 +286,9 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=fals
       {night && [-1,1].map(side=><group key={side}><pointLight position={[0,2.3,side*d*0.24]} intensity={30} distance={Math.max(w,d)*1.3} decay={1.6} color="#ffe1af"/><mesh position={[0,2.6,side*d*0.24]}><boxGeometry args={[1.2,0.045,0.5]}/><meshStandardMaterial color="#f1e3c4" emissive="#ffe2aa" emissiveIntensity={1.5}/></mesh></group>)}
 
 
-      <Box p={[0, 0.006, 0.25]} s={[w - 2.6, 0.012, d - 3]} m={MAT.rug} />
+      {/* A furnished floor (Command Center Floor 4, from Blender) brings its own carpet, storage and
+          planting; the box-built ones stand in while it loads or if it fails. */}
+      {furnished ? <Swap fallback={<Decor w={w} d={d} shell={shell} />}><FurnishedFloor /></Swap> : <Decor w={w} d={d} shell={shell} />}
       {/* A building with its own shell (Atlas HQ) draws its own slab, glass and core instead. */}
       {!shell&&<>
       <Box p={[0, -0.06, 0]} s={[w + T * 2, 0.12, d + T * 2]} m={MAT.floor} />
@@ -332,6 +337,15 @@ function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=fals
       </group>
       </CutawayWall>
 
+    </group>
+  );
+}
+
+/** The box-built room furniture: rug, server rack and plants. */
+function Decor({ w, d, shell }: { w: number; d: number; shell: boolean }) {
+  return (
+    <group>
+      <Box p={[0, 0.006, 0.25]} s={[w - 2.6, 0.012, d - 3]} m={MAT.rug} />
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
       <group position={shell ? [-w / 2 + 1.0, 0, -d / 2 + 1.0] : [-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
         <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
@@ -363,7 +377,7 @@ function Plant({ p, s }: { p: [number, number, number]; s: number }) {
 // ---------------------------------------------------------------- workstation
 
 /** AgentWorkstation: desk, monitor, keyboard, chair, nameplate, the agent and its status. */
-function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskData; reduced: boolean; night: boolean; selected: boolean; onSelect: (id: string | null) => void }) {
+function AgentWorkstation({ d, kit = false, reduced, night, selected, onSelect }: { d: DeskData; kit?: boolean; reduced: boolean; night: boolean; selected: boolean; onSelect: (id: string | null) => void }) {
   const [hover, setHover] = useState(false);
   const { state } = d.runtime;
   const screen = useMemo(() => screenTexture({ name: d.name, icon: d.icon, accent: d.accent, state, task: d.task, when: d.when }), [d.name, d.icon, d.accent, state, d.task, d.when]);
@@ -400,16 +414,11 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
           <meshBasicMaterial color={selected ? "#c9a35a" : "#fff6d8"} transparent opacity={selected ? 0.95 : 0.7} depthWrite={false} />
         </mesh>
       )}
-      {/* Desk */}
-      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
-      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
-      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
-      {/* Monitor and its soft spill on the desk */}
-      <Box p={[0, 0.82, -0.2]} s={[0.22, 0.02, 0.16]} m={MAT.dark} />
-      <Box p={[0, 0.94, -0.24]} s={[0.05, 0.22, 0.04]} m={MAT.dark} />
-      <Box p={[0, 1.18, -0.22]} s={[0.84, 0.5, 0.04]} m={MAT.dark} />
-      <mesh position={[0, 1.18, -0.198]}>
+      {/* Desk, chair and monitor housing: the Blender kit on a furnished floor, boxes elsewhere
+          and while the kit loads. Furniture only; what the desk shows comes from telemetry below. */}
+      {kit ? <Swap fallback={<DeskFurniture />}><DeskKit /></Swap> : <DeskFurniture />}
+      {/* The monitor's screen and its soft spill on the desk */}
+      <mesh position={KIT_ANCHORS.anchor_screen}>
         <planeGeometry args={[0.78, 0.44]} />
         <meshBasicMaterial map={screen} toneMapped={false} color={dim ? "#555" : "#fff"} />
       </mesh>
@@ -421,14 +430,29 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       <Box p={[0.38, 0.775, 0.1]} s={[0.07, 0.02, 0.11]} m={MAT.key} />
       <mesh geometry={CYL} material={MAT.key} position={[-0.52, 0.81, -0.05]} scale={[0.08, 0.1, 0.08]} {...shadow} />
       {/* Nameplate on top of the monitor */}
-      <mesh position={[0, 1.6, -0.22]} rotation={[-0.12, 0, 0]}>
+      <mesh position={KIT_ANCHORS.anchor_label} rotation={[-0.12, 0, 0]}>
         <planeGeometry args={[1.12, 0.21]} />
         <meshBasicMaterial map={plate} toneMapped={false} transparent />
       </mesh>
       <AgentStatusIndicator state={state} reduced={reduced} />
-      <Chair />
       <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
       {(hover || selected) && d.holo && <AgentHologram data={d.holo} reduced={reduced} />}
+    </group>
+  );
+}
+
+/** The box-built desk, monitor housing and chair. */
+function DeskFurniture() {
+  return (
+    <group>
+      <Box p={[0, 0.74, 0]} s={[1.5, 0.05, 0.76]} m={MAT.oak} />
+      <Box p={[-0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0.7, 0.36, 0]} s={[0.05, 0.72, 0.7]} m={MAT.steel} />
+      <Box p={[0, 0.5, -0.33]} s={[1.36, 0.36, 0.03]} m={MAT.steel} />
+      <Box p={[0, 0.82, -0.2]} s={[0.22, 0.02, 0.16]} m={MAT.dark} />
+      <Box p={[0, 0.94, -0.24]} s={[0.05, 0.22, 0.04]} m={MAT.dark} />
+      <Box p={[0, 1.18, -0.22]} s={[0.84, 0.5, 0.04]} m={MAT.dark} />
+      <Chair />
     </group>
   );
 }
