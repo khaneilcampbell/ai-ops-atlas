@@ -13,6 +13,7 @@ project:
   repository: khaneilcampbell/khaneilcampbell.com
   tags: [portfolio, static-site, github-pages, claude]
   district: career-portfolio
+  module: development-repository-hub   # Khaneil chose 2026-11-17
   links:
     - label: Live site
       url: https://khaneilcampbell.com
