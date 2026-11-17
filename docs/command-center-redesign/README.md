@@ -48,6 +48,8 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
 
 - Map performance, unchanged budget (`PERF_BUDGET=1 npm run measure:perf`): desktop day 730 draw
   calls of 800, 867,604 triangles of 1.2M, 73 programs of 80, 6.4 MB, one context, no leak.
+  After the second pass: desktop day 735 draws, 877,483 triangles, 72 programs, 6.4 MB, no leak;
+  night 765 draws, 894,635 triangles; iPhone day 740 draws, 880,141 triangles.
   The building itself is under 12k triangles (was under 26k).
 - Lint, typecheck and tests pass, except the 300-repository timing test, which also fails on
   plain `main` in this container (1.88 s against 1.5 s).
