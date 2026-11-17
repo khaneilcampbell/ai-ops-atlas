@@ -29,7 +29,8 @@ describe('Benjaire HQ ribbon tower',()=>{
  it('stays under Atlas HQ and the Financial District\'s tallest towers',()=>{
   for(const grouping of ['none','district','status','tag'] as GroupBy[]){
    const scene=buildScene(layoutMap(catalog,[],grouping)),b=scene.towers.find(t=>isRibbonTower(t.projectId))!,atlas=scene.towers.find(t=>t.identity.landmark)!;
-   expect(towerTop(b)).toBeLessThan(towerTop(atlas));
+   // Atlas Command Center became a five-storey building (2026-11-17); its height share stays the reference the HQs are measured from.
+   expect(b.customHeight!).toBeLessThan(atlas.customHeight!);
    if(scene.financial)expect(Math.max(...scene.financial.buildings.filter(f=>f.id!=='circa').map(f=>f.height))).toBeGreaterThan(towerTop(b));
   }
  });

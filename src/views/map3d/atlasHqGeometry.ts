@@ -49,12 +49,13 @@ function normals(pts:Pt[]):Pt[]{
 
 /**
  * Glass skin between levels. UVs run along the outline in bays and up in floors, so the facade
- * texture puts a mullion every bay and a spandrel every floor on any curve.
+ * texture puts a mullion every bay and a spandrel every floor on any curve. `storey` and `offset`
+ * set the floor grid for buildings whose storeys differ from the tower's.
  */
-export function skin(levels:Pt3[][]){
+export function skin(levels:Pt3[][],storey:number=HQ.floor,offset=0){
  const pos:number[]=[],uv:number[]=[],n=levels[0].length;
  const run=[0];for(let i=1;i<=n;i++){const [ax,,az]=levels[0][i-1],[bx,,bz]=levels[0][i%n];run.push(run[i-1]+Math.hypot(bx-ax,bz-az));}
- const U=(i:number)=>run[i]/(HQ.bay*4),V=(y:number)=>y/(HQ.floor*4);
+ const U=(i:number)=>run[i]/(HQ.bay*4),V=(y:number)=>(y-offset)/(storey*4);
  for(let l=0;l<levels.length-1;l++)for(let i=0;i<n;i++){
   const j=(i+1)%n,a=levels[l][i],b=levels[l][j],c=levels[l+1][j],d=levels[l+1][i];
   quad(pos,a,b,c,d);
@@ -92,8 +93,8 @@ export function fins(levels:Pt3[][],every:number,depth:number,blades:number[]=[]
 }
 
 /** Floor bands: a thin ledge round an outline at each height, clipped to the outline's top. */
-export function bands(outline:(y:number)=>Pt3[]|null,heights:number[]){
- const pos:number[]=[],D=HQ.bandDepth,H=HQ.bandHeight;
+export function bands(outline:(y:number)=>Pt3[]|null,heights:number[],D:number=HQ.bandDepth,H:number=HQ.bandHeight){
+ const pos:number[]=[];
  for(const y of heights){
   const pts=outline(y);if(!pts)continue;
   const n=pts.length,ns=normals(pts.map(([x,,z])=>[x,z]));

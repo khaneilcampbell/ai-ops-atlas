@@ -66,7 +66,9 @@ describe('Commerce Pipeline teardrop tower',()=>{
   for(const grouping of GROUPINGS){
    const scene=buildScene(layoutMap(catalog,[],grouping)),c=scene.towers.find(t=>isCommerceTower(t.projectId))!;
    const b=scene.towers.find(t=>isRibbonTower(t.projectId))!,atlas=scene.towers.find(t=>t.identity.landmark)!;
-   expect(towerTop(c)).toBeLessThan(towerTop(b));expect(towerTop(c)).toBeLessThan(towerTop(atlas));
+   expect(towerTop(c)).toBeLessThan(towerTop(b));
+   // Atlas Command Center became a five-storey building (2026-11-17); its height share stays the reference the HQs are measured from.
+   expect(c.customHeight!).toBeLessThan(atlas.customHeight!);
    for(const k of scene.kiosks)expect(k.height!).toBeLessThan(c.customHeight!);
    if(scene.financial)expect(Math.max(...scene.financial.buildings.filter(f=>f.id!=='circa').map(f=>f.height))).toBeGreaterThan(towerTop(c));
   }

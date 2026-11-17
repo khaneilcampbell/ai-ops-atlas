@@ -2,42 +2,36 @@ import {useEffect,useLayoutEffect,useMemo,useRef} from 'react';
 import * as THREE from 'three';
 import {patterned} from '../map3d/materials';
 import {glassTexture} from '../map3d/atlasHqTextures';
-import {HQ_INTERIOR as H,core,facadeBay,floorDoor,glassHeight,isGold,isTall,shellAxes,shellOutline,terrace,wallPieces} from './atlasHqInteriorPlan';
+import {HQ_PALETTE as P} from '../map3d/atlasHqPalette';
+import {HQ_INTERIOR as H,core,facadeBay,floorDoor,glassHeight,isGold,isTall,shellAxes,shellOutline,wallPieces} from './atlasHqInteriorPlan';
 
 /**
- * Atlas HQ's floor shell, matching the curving glass tower outside: a rounded slab in the tower's
- * proportions, a curtain wall in the facade's own glass (blue, gold where the wing wraps this
- * floor) with its window grid and spandrels at the same bay and storey, white mullions and floor
- * band, a gold fin screen behind the gold glass, a stone core at the back, the white wavy canopy
- * over the lobby entrance and, on Floor 3, the podium roof garden.
+ * Atlas Command Center's floor shell, matching the building on the map: a rounded slab in the
+ * block's proportions, a curtain wall in the facade's own green glass (warm glass in the lobby)
+ * with its window grid and spandrels at the same bay and storey, cream stone mullions, floor band
+ * and lobby piers, a stone core at the back and a slim brass canopy over the lobby entrance.
  * A handful of merged meshes and two instanced sets per floor; no lights of its own.
  */
 const MAT={
  blue:new THREE.MeshStandardMaterial({transparent:true,opacity:.8,roughness:.2,metalness:.18,depthWrite:false,side:THREE.DoubleSide,emissive:'#d6e4ff',emissiveIntensity:0}),
  gold:new THREE.MeshStandardMaterial({transparent:true,opacity:.82,roughness:.2,metalness:.18,depthWrite:false,side:THREE.DoubleSide,emissive:'#ffcf86',emissiveIntensity:0}),
- white:new THREE.MeshStandardMaterial({color:'#eef1f2',roughness:.35,metalness:.35}),
- fin:new THREE.MeshStandardMaterial({color:'#d9b778',roughness:.35,metalness:.55}),
+ white:new THREE.MeshStandardMaterial({color:P.stone,roughness:.75,metalness:0}),
+ fin:new THREE.MeshStandardMaterial({color:P.stone,roughness:.75,metalness:0}),
  slab:patterned('#e4e0d6','stone',{roughness:.7}),
- core:new THREE.MeshStandardMaterial({color:'#cfc8ba',roughness:.85}),
- lawn:patterned('#8fae6a','grass'),
- pool:new THREE.MeshStandardMaterial({color:'#6fb7c9',roughness:.1,metalness:.1,emissive:'#3d7f99',emissiveIntensity:0}),
- trunk:new THREE.MeshStandardMaterial({color:'#6d5a45',roughness:.9}),
- olive:new THREE.MeshStandardMaterial({color:'#8fa37f',roughness:.9,flatShading:true}),
- brass:new THREE.MeshStandardMaterial({color:'#b99a59',roughness:.3,metalness:.55}),
+ core:new THREE.MeshStandardMaterial({color:P.stoneShade,roughness:.85}),
+ brass:new THREE.MeshStandardMaterial({color:P.brass,roughness:.36,metalness:.6}),
  clear:new THREE.MeshPhysicalMaterial({color:'#d8ecf2',transparent:true,opacity:.28,roughness:.08,metalness:.1,depthWrite:false}),
  mat:new THREE.MeshStandardMaterial({color:'#234937',roughness:.9}),
- rail:new THREE.MeshStandardMaterial({color:'#cfe6f2',transparent:true,opacity:.3,depthWrite:false,roughness:.1}),
 };
-/** The facade's glass textures, the same ones the tower wears outside, made once on first use. */
+/** The facade's glass textures, the same ones the building wears outside, made once on first use. */
 let facade=false;
 function ensureFacadeGlass(){
  if(facade)return;facade=true;
- const blue=glassTexture('#5f93bd','#c6deee','#40627f',11),gold=glassTexture('#dcb978','#f8ecc8','#c29c62',29);
+ const blue=glassTexture(...P.towerGlass,11,P.mullion),gold=glassTexture('#e9dcb8','#fbf2dc','#d9ccb0',29,P.mullion);
  Object.assign(MAT.blue,{map:blue.map,emissiveMap:blue.glow});Object.assign(MAT.gold,{map:gold.map,emissiveMap:gold.glow});
  MAT.blue.needsUpdate=MAT.gold.needsUpdate=true;
 }
 const BOX=new THREE.BoxGeometry(1,1,1).translate(0,.5,0);
-const CROWN=new THREE.IcosahedronGeometry(.5,1);
 
 /** Vertical panes between outline points, each from y0 up to its own top. */
 type Cut=(i:number)=>[[number,number],[number,number]][];
@@ -76,27 +70,22 @@ function Instances({items,geometry,material}:{items:Inst[];geometry:THREE.Buffer
 
 export default function AtlasHqShell({w,d,level,night}:{w:number;d:number;level:number;night:boolean}){
  ensureFacadeGlass();
- useEffect(()=>{MAT.blue.emissiveIntensity=night?.5:0;MAT.gold.emissiveIntensity=night?.7:0;MAT.pool.emissiveIntensity=night?.6:0;},[night]);
+ useEffect(()=>{MAT.blue.emissiveIntensity=night?.5:0;MAT.gold.emissiveIntensity=night?.7:0;},[night]);
  const pts=useMemo(()=>shellOutline(w,d),[w,d]);
  const top=useMemo(()=>(x:number,i:number)=>isTall(i)?glassHeight(x,level,w,d):H.sill,[level,w,d]);
  // Floors 1 to 4 leave the doorway out of the front glass; the lobby has its own entrance there.
  const cut=useMemo<Cut>(()=>(i:number)=>wallPieces(pts[i],pts[(i+1)%pts.length],level,w,d),[pts,level,w,d]);
  const geo=useMemo(()=>{
   const gold=(i:number)=>isGold(i,level);
-  const T=terrace(w,d);
   return {
    slab:plate(pts,-.004,.14),
    blue:panes(pts,i=>!gold(i),top,cut),
    gold:panes(pts,gold,top,cut),
-   terrace:level===H.terraceFloor?plate([[T.x0,T.z0],[T.x1,T.z0],[T.x1,T.z1],[T.x0,T.z1]],-.004,.3):null,
-   lawn:level===H.terraceFloor?plate([[T.x0+.25,T.z0+.25],[T.x1-.25,T.z0+.25],[T.x1-.25,T.z1-.25],[T.x0+.25,T.z1-.25]],.02,.02):null,
    canopy:level===0?(()=>{
-    // The tower's white wavy canopy over the lobby doors: its front edge ripples like the one outside.
-    const {a,b}=shellAxes(w,d),L=Math.min(a*.6,4.5),edge:[number,number][]=[];
-    for(let i=0;i<=16;i++){const u=i/16;edge.push([-L+2*L*u,b+2.2+.6*Math.sin(u*Math.PI*2.4)]);}
-    return plate([[L,b-.3],[-L,b-.3],...edge],H.lobbyHeight-.6,.18);
+    // The slim brass canopy over the lobby doors, as outside.
+    const {b}=shellAxes(w,d),L=2.2;
+    return plate([[L,b-.3],[-L,b-.3],[-L,b+1.9],[L,b+1.9]],H.lobbyHeight-.6,.1);
    })():null,
-   pool:level===H.terraceFloor?(()=>{const g=new THREE.CylinderGeometry(1,1,.03,32);g.scale(T.pool.rx,1,T.pool.rz);g.translate(T.pool.x,.035,T.pool.z);return g;})():null,
   };
  },[pts,top,cut,level,w,d]);
  // Floor-edge band along the top of the glass (a rail on the low glass).
@@ -116,18 +105,13 @@ export default function AtlasHqShell({w,d,level,night}:{w:number;d:number;level:
    const h=Math.max(top(x,i),top(x,(i+n-1)%n));
    // No mullion stands in a doorway.
    if(level===0||z<=0||Math.abs(x)>floorDoor(w,d).width/2+.12)mullions.push({p:[x,0,z],s:[.05,h,.05]});
-   if(isGold(i,level)&&isTall(i)){
-    // The wing's gold fins, stood just inside the glass and turned to face out.
+   if(isGold(i,level)&&isTall(i)&&i%4===0){
+    // Cream stone piers round the lobby, stood just inside the glass and turned to face out.
     const r=Math.atan2(x,z);
     fins.push({p:[x*.975,0,z*.975],s:[.035,h,.16],r});
    }
   });
-  const T=terrace(w,d),trees:Inst[]=[],crowns:Inst[]=[],rails:Inst[]=[];
-  if(level===H.terraceFloor){
-   for(const [x,z] of T.trees){trees.push({p:[x,0,z],s:[.09,.75,.09]});crowns.push({p:[x,.95,z],s:[.95,.55,.85]});}
-   rails.push({p:[T.x1,0,(T.z0+T.z1)/2],s:[.04,.9,T.z1-T.z0]},{p:[(T.x0+T.x1)/2+.3,0,T.z0],s:[T.x1-T.x0-.6,.9,.04]},{p:[(T.x0+T.x1)/2+.3,0,T.z1],s:[T.x1-T.x0-.6,.9,.04]});
-  }
-  return {mullions,fins,trees,crowns,rails};
+  return {mullions,fins};
  },[pts,top,level,w,d]);
  const c=core(d);
  return <group>
@@ -139,13 +123,7 @@ export default function AtlasHqShell({w,d,level,night}:{w:number;d:number;level:
   <Instances items={parts.fins} geometry={BOX} material={MAT.fin}/>
   <mesh geometry={BOX} material={MAT.core} position={[c.x,0,c.z]} scale={[c.w,glassHeight(0,level,w,d),c.depth]} castShadow receiveShadow/>
   {level>0&&<FloorDoor {...floorDoor(w,d)}/>}
-  {geo.canopy&&<mesh geometry={geo.canopy} material={MAT.white} castShadow receiveShadow/>}
-  {geo.terrace&&<mesh geometry={geo.terrace} material={MAT.slab} receiveShadow/>}
-  {geo.lawn&&<mesh geometry={geo.lawn} material={MAT.lawn} receiveShadow/>}
-  {geo.pool&&<mesh geometry={geo.pool} material={MAT.pool}/>}
-  <Instances items={parts.trees} geometry={BOX} material={MAT.trunk}/>
-  <Instances items={parts.crowns} geometry={CROWN} material={MAT.olive}/>
-  <Instances items={parts.rails} geometry={BOX} material={MAT.rail}/>
+  {geo.canopy&&<mesh geometry={geo.canopy} material={MAT.brass} castShadow receiveShadow/>}
  </group>;
 }
 

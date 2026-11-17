@@ -3,75 +3,57 @@ import {join} from 'node:path';
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {layoutMap,type GroupBy} from '../mapLayout';
-import {buildScene,TERRACE_H} from './scene';
-import {headquartersEnvelope} from './financialPlan';
-import {CUSTOM_TOWER_SHARE} from './customTowers';
-import {towerTop} from './models';
-import {HQ,canopyAt,entrance,footprint,hqPieceCount,lobby,towerOutline,towerRoof,wingSway} from './atlasHqPlan';
-import {hqGeometry,hqTriangles} from './atlasHqGeometry';
+import {buildScene} from './scene';
+import {FLOOR_BASE,towerTop} from './models';
+import {HQ} from './atlasHqPlan';
+import {CC,ccBay,ccDoor,ccEntrance,ccFootprint,ccLedges,ccRoof,ccTop} from './commandCenterPlan';
+import {ccGeometry,ccTriangles} from './commandCenterGeometry';
+import {HQ_INTERIOR} from '../office/atlasHqInteriorPlan';
+import {HQ_PALETTE} from './atlasHqPalette';
 
-describe('Atlas HQ',()=>{
- it('fits inside the old square footprint, so the plaza, fountain, roads and links stay put',()=>{
-  for(const k of [.8,1,1.3])for(const [x,z] of footprint(k)){
+describe('Atlas Command Center',()=>{
+ it('fits inside the old square footprint, so the parcel, plaza, roads and links stay put',()=>{
+  for(const k of [.8,1,1.3])for(const [x,z] of ccFootprint(k)){
    expect(Math.abs(x)).toBeLessThanOrEqual(HQ.refSize*k/2);
    expect(Math.abs(z)).toBeLessThanOrEqual(HQ.refSize*k/2);
   }
  });
- it('keeps 21 storeys of 3.6 m under a roof sloping from 81 m to 74 m',()=>{
-  expect(HQ.floors*HQ.floor).toBeLessThan(HQ.roofLow);
-  const xs=towerOutline().map(([x])=>x);
-  expect(towerRoof(Math.min(...xs))).toBeCloseTo(HQ.roofHigh,1);
-  expect(towerRoof(Math.max(...xs))).toBeLessThan(HQ.roofHigh);
-  // 81.2 m / 74 m in the elevations.
-  expect(HQ.roofLow/HQ.roofHigh).toBeCloseTo(74/81.2,1);
-  expect(HQ.wingTop).toBeLessThan(HQ.roofLow);
+ it('is the lobby and four office floors you walk through inside, at the interior\'s own storey heights',()=>{
+  expect(CC.floors).toBe(HQ_INTERIOR.floors-1);
+  expect(CC.lobby*HQ_INTERIOR.scale).toBeCloseTo(HQ_INTERIOR.lobbyHeight);
+  expect(CC.storey*HQ_INTERIOR.scale).toBeCloseTo(HQ_INTERIOR.height);
+  // A stone ledge over the lobby and over each office floor; the last one is the roof.
+  const k=1.4,l=ccLedges(k);
+  expect(l).toHaveLength(5);expect(l[0]).toBeCloseTo(CC.lobby*k);expect(l[4]).toBeCloseTo(ccRoof(k));
+  // The plan keeps the floor plates' proportions: wider than deep, rounded corners.
+  expect(CC.roundness).toBe(HQ_INTERIOR.roundness);
  });
- it('sways the gold wing in an S that leans into the tower and back out',()=>{
-  const at=(t:number)=>wingSway(t).x;
-  expect(at(.25)).toBeLessThan(at(0));
-  expect(at(.75)).toBeGreaterThan(at(0));
-  // At its deepest the wing overlaps the tower, so the two read as one building.
-  const towerEast=Math.max(...towerOutline().map(([x])=>x));
-  expect(at(.25)-.27).toBeLessThan(towerEast);
- });
- it('stays the tallest project building, among the Financial District towers',()=>{
+ it('puts its nameplate, selection box and inside view on its real roof, for every grouping',()=>{
   for(const grouping of ['none','district','status','tag'] as GroupBy[]){
    const scene=buildScene(layoutMap(catalog,[],grouping)),hq=scene.towers.find(t=>t.projectId==='ai-ops-atlas')!;
    expect(hq.identity.landmark).toBe(true);
-   const top=towerTop(hq);
-   for(const t of scene.towers.filter(t=>t!==hq))expect(top).toBeGreaterThan(towerTop(t));
-   // Financial towers stand on the terrace; their heights are measured from it.
-   // Since the district came down to the map's scale (2026-11-09) Atlas HQ stands among its towers:
-   // above its shortest, under its tallest and under Ellipse Residences.
-   const heights=(scene.financial?.buildings??[]).map(b=>b.height);
-   if(scene.financial){expect(top-TERRACE_H).toBeGreaterThan(Math.min(...heights));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights.slice(0,-1)));expect(top-TERRACE_H).toBeLessThan(Math.max(...heights));}
-   expect(hq.customHeight).toBeCloseTo(headquartersEnvelope(scene.towers)*CUSTOM_TOWER_SHARE.atlas);
+   expect(towerTop(hq)).toBeCloseTo(FLOOR_BASE+ccTop(hq.size/HQ.refSize)+.04);
+   // The shared opening glass doors stand in the stone bay's face, centred on it.
+   const door=ccDoor(hq,FLOOR_BASE),k=hq.size/HQ.refSize;
+   expect(door.p[0]).toBeCloseTo(hq.x);expect(door.p[2]-hq.z).toBeGreaterThanOrEqual(ccBay(k).front);
+   expect(door.s[0]).toBeLessThan(ccBay(k).w);
   }
  });
- it('stays inside its performance budget: a dozen merged meshes, few instances, no lights',()=>{
-  // At the tallest the city scale can make it: twice the reference drawing's height.
-  const pieces=hqPieceCount(),geo=hqGeometry(1,2);
-  expect(pieces.meshes).toBeLessThanOrEqual(14);
-  expect(pieces.instances).toBeLessThan(120);
-  expect(geo.podiumFins.length+geo.trees.length*2).toBeLessThan(120);
-  expect(hqTriangles(geo)).toBeLessThan(26000);
+ it('stays inside its performance budget: a handful of merged meshes, few instances, no lights',()=>{
+  const geo=ccGeometry(2),meshes=Object.values(geo).filter(v=>typeof v==='object'&&'isBufferGeometry' in v).length;
+  expect(meshes).toBeLessThanOrEqual(8);
+  const e=ccEntrance(2);
+  expect(e.boxes.length+e.lamps.length+geo.trees.length*2+4).toBeLessThan(40);
+  expect(ccTriangles(geo)).toBeLessThan(12000);
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);
  });
- it('dresses the front door like the Financial District entrances, under the canopy and on the lobby front',()=>{
-  const k=1,{boxes,lamps}=entrance(k),L=lobby(k);
-  const top=Math.max(...boxes.map(([,y,,,h])=>y+h)),door=boxes.filter(b=>b[6]==='#bcd6dc');
-  // A double glass door, centred under the ATLAS HQ lettering, standing on the lobby glass line.
-  expect(door).toHaveLength(2);expect((door[0][0]+door[1][0])/2).toBeCloseTo(-.32*k);
-  for(const b of door){expect(b[2]).toBeGreaterThanOrEqual(L.z);expect(b[1]+b[4]).toBeLessThan(L.h);}
-  // Everything sits below the wavy canopy and inside the lobby's width.
-  expect(top).toBeLessThan(Math.min(...Array.from({length:11},(_,i)=>canopyAt(i/10,k).y)));
-  for(const [x,,,w] of [...boxes,...lamps]){expect(x-w/2).toBeGreaterThanOrEqual(L.x0-1e-9);expect(x+w/2).toBeLessThanOrEqual(L.x1+1e-9);}
-  // The planters stand clear of the landing, so the way in stays open.
-  const landing=boxes.find(b=>b[6]==='#e5dfd0')!;
-  for(const p of boxes.filter(b=>b[6]==='#3f6b4f'))expect(Math.abs(p[0]-landing[0])).toBeGreaterThan((p[3]+landing[3])/2);
-  expect(lamps).toHaveLength(2);
+ it('keeps brass restrained: one hairline, the door header and canopy, the lettering',()=>{
+  const brass=ccEntrance(1).boxes.filter(b=>b[6]===HQ_PALETTE.brass);
+  expect(brass).toHaveLength(2);
+  const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
+  expect(source.match(/mats\.brass/g)).toHaveLength(1);
  });
  it('has file names that stay distinct on a case-insensitive Mac disk',()=>{
   const seen=new Map<string,string>();
