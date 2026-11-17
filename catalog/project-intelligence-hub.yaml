@@ -267,10 +267,12 @@ agents:
     trigger: Mondays 8am ET, at most one proposal per 7 days
     last_run: 2026-11-16T13:00:00Z
     history:
+      - at: 2026-11-17
+        event: Renamed in n8n from "Atlas · Agent Factory (draft)" to "Atlas · Agent Factory" at Khaneil's request (same workflow id)
       - at: 2026-11-12
         event: Published in n8n; first run proposed a Business Ops HQ Daily Rollup and emailed Khaneil
     links:
-      - label: n8n workflow
+      - label: n8n workflow (Atlas · Agent Factory)
         url: https://khancam15.app.n8n.cloud/workflow/FTCanpGAYPIr3OGe
     permissions:
       - 'GitHub: public reads of catalog/*.yaml, no key'

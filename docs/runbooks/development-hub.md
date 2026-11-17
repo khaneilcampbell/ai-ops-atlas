@@ -8,9 +8,9 @@ An owning agent with no model of its own. Its automations are Design Consistency
 
 ## GitHub Profile Manager
 
-An unpublished n8n agent ("Atlas – GitHub Profile Manager", id I4i0qQm5g0bfEID8, Claude Sonnet 5). Read on 2026-11-17. It keeps the profile README in khaneilcampbell/khaneilcampbell current for Forward Deployed Engineer roles. It does not run yet: its GitHub MCP server has no credential attached.
+A published n8n agent ("Development Hub – GitHub Profile Manager", id I4i0qQm5g0bfEID8, Claude Sonnet 5). Khaneil attached its GitHub credential and published it on 2026-11-17. It keeps the profile README in khaneilcampbell/khaneilcampbell current for Forward Deployed Engineer roles.
 
-**Its task, every 6 hours once published** ("Sync profile README with recent repo changes", cron `0 */6 * * *`, New York time):
+**Its task, every 6 hours** ("Sync profile README with recent repo changes", cron `0 */6 * * *`, New York time):
 
 1. Get the GitHub username and find the profile repository named after it.
 2. Read README.md and the date of its last commit (no commits yet: look back 30 days).
@@ -21,7 +21,7 @@ An unpublished n8n agent ("Atlas – GitHub Profile Manager", id I4i0qQm5g0bfEID
 
 Rules: writes only to the profile repository, never invents projects, metrics or clients, never names private repositories, no commit for trivial changes. Tools: GitHub MCP server and Anthropic web search (5 per run). Memory and prompt caching are on.
 
-- **Make it live:** in n8n attach a GitHub OAuth credential to the agent's GitHub MCP server, run the task once by hand and read the commit it makes, then publish the agent and set its catalog status to active.
-- **Know before publishing:** it commits straight to the default branch with no pull request, 4 times a day.
+- **Healthy:** the profile repository gets a README commit only after meaningful project changes, and n8n shows the agent's runs without errors.
+- **Know:** it commits straight to the default branch with no pull request, up to 4 times a day.
 - **Stop it:** unpublish the agent in n8n or disable its task. To remove it for good, archive it in n8n and mark its catalog entry retired.
 

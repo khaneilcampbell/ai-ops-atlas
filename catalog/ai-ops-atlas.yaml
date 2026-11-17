@@ -478,6 +478,8 @@ agents:
     history:
       - at: 2026-11-14
         event: Now works with the Atlas Production Coordinator, at Khaneil's request
+      - at: 2026-11-17
+        event: Renamed in n8n to "Atlas Command Center – Release Coordinator" at Khaneil's request (same agent id)
     permissions:
       - 'None: the n8n agent has no tools; it answers in chat only'
     registry:
