@@ -887,14 +887,14 @@
    "id": "atlas-data-inventory",
    "name": "Atlas Data Inventory",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "service:financial:residence",
    "building_name": "Data Intelligence Center",
    "placement": "Operates this building",
    "owned_by": "atlas-health-monitor",
    "project": "ai-ops-atlas",
    "runtime": "n8n Cloud",
-   "trigger": "Daily at 7am New York time once published (n8n draft, not published yet)",
+   "trigger": "Daily at 7:20am New York time (n8n, published 2026-11-13), after the Map inventory GitHub Action writes atlas-inventory.json on each merge",
    "source": "src/inventory/mapInventory.ts"
   },
   {
@@ -1307,14 +1307,14 @@
    "id": "github-profile-manager",
    "name": "GitHub Profile Manager",
    "kind": "AI agent",
-   "status": "paused",
+   "status": "active",
    "building_id": "project:github-profile",
    "building_name": "Development Hub",
    "placement": "Desk in its project building",
    "owned_by": "",
    "project": "github-profile",
    "runtime": "n8n Cloud",
-   "trigger": "None until it is published",
+   "trigger": "Every 6 hours (New York time), task \"Sync profile README with recent repo changes\"",
    "source": ""
   },
   {
@@ -2105,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-17T12:44:08.738Z",
- "commit": "b668a9fe8627f107b0792e86876114064fa41503"
+ "generated_at": "2026-11-17T13:17:32.462Z",
+ "commit": "8501ee9a4d8c17f92865b8fed68a5df927acabe7"
 }
