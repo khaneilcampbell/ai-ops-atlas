@@ -1,0 +1,1 @@
+- 2026-11-17 · Atlas Command Center now looks like one corporate headquarters inside and out: the map building is a lobby and four office floors drawn from the same floor plan as the inside, with matching glass, cream stone, dark green panels and brass trim (#PR)
