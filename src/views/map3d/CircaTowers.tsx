@@ -42,7 +42,7 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   const half=new THREE.CylinderGeometry(.5,.5,1,24,1,false,-Math.PI/2,Math.PI).translate(0,.5,0);
   const texture=screenTexture(),screen=screenGeometry();
   return {palette,ellipse,half,texture,screen,
-   glass:new THREE.MeshStandardMaterial({color:'#8fb3cc',roughness:.18,metalness:.45,emissive:'#ffcf86',emissiveIntensity:0}),
+   glass:new THREE.MeshStandardMaterial({color:'#8fb3cc',roughness:.18,metalness:.2,emissive:'#ffcf86',emissiveIntensity:0}),
    storefront:new THREE.MeshStandardMaterial({color:'#36525e',roughness:.2,metalness:.3,emissive:'#ffd9a0',emissiveIntensity:0}),
    floors:new THREE.MeshStandardMaterial({color:'#f2f1ec',roughness:.6,emissive:'#ffd59a',emissiveIntensity:0}),
    entry:new THREE.MeshStandardMaterial({color:'#e6f2f7',roughness:.06,metalness:0,transparent:true,opacity:.14,depthWrite:false}),
