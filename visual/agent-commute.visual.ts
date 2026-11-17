@@ -41,7 +41,7 @@ test('Agent commutes, phone',async({page})=>{
 
 // The Workday tab is in the desktop inspector; the phone's agent sheet (DetailPanel) does not show it yet.
 test('Workday tab, desktop',async({page})=>{
- await page.setViewportSize({width:1512,height:900});await openAtlas(page);await goTo(page,'Agents');
+ await page.setViewportSize({width:1512,height:900});await openAtlas(page,{storage:{'registry-prefs-agents':{view:'all'}}});await goTo(page,'Agents');
  await page.getByRole('textbox',{name:'Search agents',exact:true}).fill('repo-intelligence');await settle(page,1);
  await page.locator('.reg-row[data-id="repo-intelligence"]').click();await settle(page,1);
  await page.getByRole('tab',{name:'Workday',exact:true}).click();await settle(page,1);

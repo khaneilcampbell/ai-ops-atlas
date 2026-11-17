@@ -15,7 +15,7 @@ for (const width of [1512, 390])
     test.setTimeout(180_000);
     mkdirSync(out, { recursive: true });
     await page.setViewportSize({ width, height: 900 });
-    await openAtlas(page);
+    await openAtlas(page, { storage: { "registry-prefs-agents": { view: "all" } } }); // the flat list (Essential roles is the default since 2026-11-17)
 
     // Agent Detail → Intelligence
     await goTo(page, "Agents");

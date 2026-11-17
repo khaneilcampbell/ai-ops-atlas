@@ -1,0 +1,1 @@
+- 2026-11-17 · The Agents tab now opens on eight essential roles, each with its agents and automations tucked underneath and honest run evidence; paused and draft entries sit under Inactive, retired ones under Archived, and the old full list is still there under All entries (#PR)
