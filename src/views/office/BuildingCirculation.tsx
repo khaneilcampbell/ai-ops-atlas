@@ -8,8 +8,11 @@ import {Box,Person} from "./InteriorPrimitives";
 /** Lift finishes. The default is the Skyline green and sand; buildings with their own interior palette pass one. */
 export type LiftFinish={pad:string;back:string;sides:string;trim:string;doors:string;button:string;car:string;carWall:string};
 export const DEFAULT_LIFT:LiftFinish={pad:"#d4c7aa",back:"#294c3e",sides:"#d4cbb8",trim:"#b69b60",doors:"#7f9289",button:"#c5a35c",car:"#bba36f",carWall:"#4f6b5d"};
-/** `top`/`offset` pick the lift's timeline (elevatorAt); `visitor` is the stand-in rider for buildings without walkers. */
-export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c",name,finish=DEFAULT_LIFT,top=4,offset=0,visitor:showVisitor=true}:{level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string;name?:string;finish?:LiftFinish;top?:number;offset?:number;visitor?:boolean}) {
+/**
+ * `top`/`offset` pick the lift's timeline (elevatorAt); `visitor` is the stand-in rider for buildings without walkers.
+ * `door` is the x of a floor door on the runner: the visitor walks between the lift and that door, then in through it.
+ */
+export function ElevatorLanding({door,level,reduced,labels,lobbyWalk=true,runner="#315c49",edge="#c5a35c",name,finish=DEFAULT_LIFT,top=4,offset=0,visitor:showVisitor=true}:{door?:number;level:number;reduced:boolean;labels:boolean;lobbyWalk?:boolean;runner?:string;edge?:string;name?:string;finish?:LiftFinish;top?:number;offset?:number;visitor?:boolean}) {
   const doors=useRef<THREE.Group>(null),visitor=useRef<THREE.Group>(null);
   useFrame((state)=>{
     const lift=elevatorAt(reduced?0:state.clock.elapsedTime,top,offset);
@@ -17,8 +20,10 @@ export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#31
     const f=phase<2?phase/2:phase<3?1:Math.max(0,1-(phase-3)/2);
     if(visitor.current){
       if(level===0&&lobbyWalk){const approach=Math.min(1,f/0.42);visitor.current.position.set(f<0.42?0:(f-0.42)/0.58*8.3,0,5.6*(1-approach));}
+      else if(door!==undefined){const p=doorWalk(f,door);visitor.current.position.set(p.x,0,p.z);}
       else visitor.current.position.set(-4+f*12.3,0,0);
-      visitor.current.rotation.y=level===0&&lobbyWalk&&f<0.42?(phase<3?Math.PI:0):(phase<3?Math.PI/2:-Math.PI/2);
+      const inDoor=door!==undefined&&!(level===0&&lobbyWalk)&&doorWalk(f,door).inside;
+      visitor.current.rotation.y=inDoor?(phase<3?0:Math.PI):level===0&&lobbyWalk&&f<0.42?(phase<3?Math.PI:0):(phase<3?Math.PI/2:-Math.PI/2);
       visitor.current.visible=showVisitor&&!reduced&&lift.landing===level&&(phase<2||phase>3);
     }
     const open=!reduced&&lift.landing===level;
@@ -36,6 +41,11 @@ export function ElevatorLanding({level,reduced,labels,lobbyWalk=true,runner="#31
     <Box p={[0,0.055,0]} s={[15.5,0.04,1.9]} color={runner}/>
     {[-1,1].map(side=><Box key={side} p={[0,0.09,side*0.92]} s={[15.5,0.025,0.035]} color={edge}/>)}
   </group>;
+}
+/** The visitor's route with a floor door: from inside the floor (f 0) out through the door, then along the runner to the lift (f 1). */
+export function doorWalk(f:number,door:number){
+ const turn=0.3,inside=-1.6;
+ return f<turn?{x:door,z:inside*(1-f/turn),inside:true}:{x:door+(f-turn)/(1-turn)*(8.3-door),z:0,inside:false};
 }
 export function MovingLift({reduced,finish=DEFAULT_LIFT,top=4,offset=0}:{reduced:boolean;finish?:LiftFinish;top?:number;offset?:number}) {
   const car=useRef<THREE.Group>(null);
