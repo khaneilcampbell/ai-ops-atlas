@@ -7,7 +7,7 @@ import {buildScene,TERRACE_H} from './scene';
 import {headquartersEnvelope} from './financialPlan';
 import {CUSTOM_TOWER_SHARE} from './customTowers';
 import {towerTop} from './models';
-import {HQ,footprint,hqPieceCount,towerOutline,towerRoof,wingSway} from './atlasHqPlan';
+import {HQ,canopyAt,entrance,footprint,hqPieceCount,lobby,towerOutline,towerRoof,wingSway} from './atlasHqPlan';
 import {hqGeometry,hqTriangles} from './atlasHqGeometry';
 
 describe('Atlas HQ',()=>{
@@ -58,6 +58,20 @@ describe('Atlas HQ',()=>{
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);
+ });
+ it('dresses the front door like the Financial District entrances, under the canopy and on the lobby front',()=>{
+  const k=1,{boxes,lamps}=entrance(k),L=lobby(k);
+  const top=Math.max(...boxes.map(([,y,,,h])=>y+h)),door=boxes.filter(b=>b[6]==='#bcd6dc');
+  // A double glass door, centred under the ATLAS HQ lettering, standing on the lobby glass line.
+  expect(door).toHaveLength(2);expect((door[0][0]+door[1][0])/2).toBeCloseTo(-.32*k);
+  for(const b of door){expect(b[2]).toBeGreaterThanOrEqual(L.z);expect(b[1]+b[4]).toBeLessThan(L.h);}
+  // Everything sits below the wavy canopy and inside the lobby's width.
+  expect(top).toBeLessThan(Math.min(...Array.from({length:11},(_,i)=>canopyAt(i/10,k).y)));
+  for(const [x,,,w] of [...boxes,...lamps]){expect(x-w/2).toBeGreaterThanOrEqual(L.x0-1e-9);expect(x+w/2).toBeLessThanOrEqual(L.x1+1e-9);}
+  // The planters stand clear of the landing, so the way in stays open.
+  const landing=boxes.find(b=>b[6]==='#e5dfd0')!;
+  for(const p of boxes.filter(b=>b[6]==='#3f6b4f'))expect(Math.abs(p[0]-landing[0])).toBeGreaterThan((p[3]+landing[3])/2);
+  expect(lamps).toHaveLength(2);
  });
  it('has file names that stay distinct on a case-insensitive Mac disk',()=>{
   const seen=new Map<string,string>();
