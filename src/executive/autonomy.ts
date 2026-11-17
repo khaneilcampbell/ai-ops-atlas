@@ -39,6 +39,12 @@ export const ROUTINES: Readonly<Record<string, { name: string; perDay: number }>
   "docs-freshness-check": { name: "Documentation freshness check", perDay: 2 },
   "status-monitor": { name: "Non-destructive status monitoring", perDay: 24 },
   "approved-report": { name: "Approved reporting workflow", perDay: 2 },
+  // Phase 9 recovery playbooks (src/operations/playbooks.ts): read-only or device-local only.
+  "recovery-refresh-status": { name: "Refresh stale read-only service status", perDay: 24 },
+  "recovery-reconcile-execution": { name: "Reconcile an uncertain workflow execution", perDay: 12 },
+  "recovery-retry-readonly": { name: "Retry a verified idempotent read-only task", perDay: 6 },
+  "recovery-rebuild-cache": { name: "Rebuild the local repository cache", perDay: 4 },
+  "recovery-recheck-integration": { name: "Recheck an integration after a transient failure", perDay: 24 },
 };
 
 const isLevel = (n: unknown): n is AutonomyLevel => AUTONOMY_LEVELS.includes(n as AutonomyLevel);

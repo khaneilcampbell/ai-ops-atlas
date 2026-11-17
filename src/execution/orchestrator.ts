@@ -34,6 +34,8 @@ export interface OrchestratorDeps {
   agentGate?: (node: WorkflowNode) => string | null;
   /** Context for a step about to be sent (retrieved knowledge, tools, model route). Optional. */
   context?: (run: WorkflowRun, nodeId: string, task: StoredTask, attempt: number) => HandoffEnvelope["context"] | undefined;
+  /** Phase 9 emergency stop: when it returns a reason, no new step is sent and no automatic retry is queued. */
+  emergencyStop?: () => string | null;
 }
 
 export type Ok<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -115,6 +117,25 @@ export class Orchestrator {
    * by the attempt's idempotency key and recorded before it goes out, and the task store refuses
    * stale writes, so overlapping calls can't send a step twice.
    */
+  /**
+   * Phase 9 recovery: only asks the outside systems about runs past their timeout and records
+   * completions. Sends nothing, retries nothing, approves nothing.
+   */
+  async reconcile(runId: string): Promise<Ok<{ stale: string[] }>> {
+    const run = this.run(runId);
+    if (!run) return { ok: false, error: "No such run." };
+    if (this.busy.has(runId)) return { ok: false, error: "A round is running for this workflow; try again shortly." };
+    this.busy.add(runId);
+    try {
+      const summary: StepSummary = { dispatched: [], approvalsRequested: [], approvalsCompleted: [], retried: [], waitingOnPerson: [], unconfigured: [], held: [], stale: [] };
+      this.syncCompletions(run);
+      await this.checkStale(run, summary);
+      return { ok: true, stale: summary.stale };
+    } finally {
+      this.busy.delete(runId);
+    }
+  }
+
   async step(runId: string): Promise<Ok<{ summary: StepSummary }>> {
     const run = this.run(runId);
     if (!run) return { ok: false, error: "No such run." };
@@ -230,6 +251,11 @@ export class Orchestrator {
       }
       if (adapter.personStarts) {
         s.waitingOnPerson.push({ nodeId, why: adapter.kind === "github" ? "Start it in the Task Center (Touch ID)." : "A person does this step and marks it done in the Task Center." });
+        continue;
+      }
+      const stop = this.d.emergencyStop?.();
+      if (stop) {
+        s.held.push({ nodeId, why: stop });
         continue;
       }
       const policy = stepPolicy(node);
@@ -349,7 +375,12 @@ export class Orchestrator {
   }
 
   private autoRetry(run: WorkflowRun, s: StepSummary) {
+    const stop = this.d.emergencyStop?.();
     const l = this.ledgerOf(run.id);
+    if (stop) {
+      for (const nodeId of Object.keys(l.retryAfter)) s.held.push({ nodeId, why: stop });
+      return;
+    }
     const now = this.now();
     for (const [nodeId, after] of Object.entries(l.retryAfter)) {
       const t = this.taskOf(run, nodeId);

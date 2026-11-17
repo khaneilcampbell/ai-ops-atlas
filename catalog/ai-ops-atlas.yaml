@@ -624,6 +624,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Signal Watch, Dataset Census, Atlas Data Inventory, at Khaneil's request
+      - at: 2026-11-17
+        event: Supervises autonomous operations (Phase 9) in Mission Control. Turns verified events into incidents with fixed rules, and runs only approved read-only recovery playbooks, automatically only under a policy Khaneil enabled at autonomy level 3
     registry:
       title: Atlas Health Monitor
       category: infrastructure
@@ -635,9 +637,9 @@ agents:
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
       responsibilities:
-        tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current]
+        tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current, Group verified operational events into incidents, Run and verify approved read-only recovery playbooks]
         tools: [Its automations]
-        outputs: [The results of its automations]
+        outputs: [The results of its automations, Incidents and recovery logs in Mission Control]
       execution:
         trigger_type: scheduled
         environment: Through its automations

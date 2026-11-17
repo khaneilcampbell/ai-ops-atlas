@@ -1,0 +1,1 @@
+- 2026-11-17 · Mission Control has Autonomous operations: Atlas turns failures into incidents, suggests safe read-only recovery steps you approve, and has an emergency stop (#PR)

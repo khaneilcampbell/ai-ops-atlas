@@ -319,6 +319,8 @@ agents:
         event: Added as the owning agent of Agent Registry Clerk, Agent Factory, at Khaneil's request
       - at: 2026-11-17
         event: Coordinates executive goals in Mission Control (Phase 8). Plans come from fixed templates, start only after Khaneil approves, and default to autonomy level 1
+      - at: 2026-11-17
+        event: Carries agent, task and goal incident tasks from Mission Control's Autonomous operations (Phase 9). Creates them on its own only at autonomy level 2 or above; at level 1 Khaneil creates them
     registry:
       title: Agent Operations Lead
       category: engineering
@@ -330,7 +332,7 @@ agents:
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
       responsibilities:
-        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records]
+        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records, "Carry agent, task and goal incident tasks"]
         tools: [Its automations]
         outputs: [The results of its automations, Executive goal plans, Executive briefings]
       execution:
