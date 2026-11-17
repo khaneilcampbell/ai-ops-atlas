@@ -4,7 +4,7 @@ import { TIER_INFO } from "./taxonomy";
 import type { Agent, Catalog } from "./types";
 import type { TriggerType } from "../registry/types";
 import { buildingDisplayName } from "../modules/names";
-import type { PresenceAssignment } from "./agentPresence";
+import { getAssignments, presenceAt, type PresenceAssignment, type PresencePlace } from "./agentPresence";
 import { financialBrand } from "../views/map3d/financialBrands";
 
 // Each AI agent's job: a role, an owner, a home, a workplace, a shift, a budget and the output it
@@ -138,4 +138,26 @@ export const homeLabel = (id: string) => buildingDisplayName(`service:financial:
 export function clock(hours: number) {
   const h = ((Math.floor(hours) % 24) + 24) % 24, m = Math.round((hours - Math.floor(hours)) * 60);
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+/** What a hover card or nameplate needs about where an agent belongs and where it is now. */
+export interface AgentPlacement {
+  agentId: string;
+  home: { building: string; label: string };
+  /** "schedule" when Khaneil saved one; otherwise "default", from the agent's project or declared workplace. */
+  work: { building: string; label: string; source: "schedule" | "default" };
+  /** Where its presence schedule puts it now; null without a schedule (it follows the simulated map day). */
+  place: PresencePlace | null;
+}
+
+/** Home, workplace and current place for one AI agent, or undefined for automations and unknown ids. */
+export function agentPlacement(catalog: Catalog, agentId: string, assignments: Record<string, PresenceAssignment> = getAssignments(), now = new Date()): AgentPlacement | undefined {
+  const job = agentJobs(catalog, assignments).find((j) => j.agentId === agentId);
+  if (!job) return undefined;
+  return {
+    agentId,
+    home: { building: job.home.building, label: job.home.label },
+    work: { building: job.work.building, label: job.work.label, source: job.presence ? "schedule" : "default" },
+    place: job.presence ? presenceAt(job.presence, now).place : null,
+  };
 }

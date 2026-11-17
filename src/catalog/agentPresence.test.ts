@@ -100,3 +100,20 @@ describe("assignments", () => {
     expect(runtimeFor({ id: agent.id, status: "active" }, t).state).toBe("failed");
   });
 });
+
+describe("agentPlacement", async () => {
+  const { agentPlacement } = await import("./agentJobs");
+  const agent = catalog.agents.find((a) => agentJobs(catalog).some((j) => j.agentId === a.id))!;
+  const project = catalog.projects[0];
+  it("gives a default workplace from the agent's own project when no schedule is saved", () => {
+    const p = agentPlacement(catalog, agent.id, {})!;
+    expect(p).toMatchObject({ work: { building: agent.projectId, source: "default" }, place: null });
+    expect(p.home.label).toBeTruthy();
+  });
+  it("follows a saved schedule, with the current place", () => {
+    expect(agentPlacement(catalog, agent.id, { [agent.id]: { ...day, work: project.id } }, ny("08:50"))).toMatchObject({ work: { building: project.id, source: "schedule" }, place: "to-work" });
+  });
+  it("is undefined for automations and unknown ids", () => {
+    expect(agentPlacement(catalog, "no-such-agent", {})).toBeUndefined();
+  });
+});
