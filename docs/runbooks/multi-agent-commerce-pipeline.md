@@ -56,6 +56,18 @@ n8n workflow [Shop · Flow follow ups](https://khancam15.app.n8n.cloud/workflow/
 - **Healthy:** latest run on `main` is green.
 - **Stop it:** disable the workflow in Actions.
 
+## Atlas Sales Feed
+
+n8n workflow [Atlas · Sales feed](https://khancam15.app.n8n.cloud/workflow/mlS4G62If6tl4TGv), started only by the Atlas site with the `N8N_BRIDGE_TOKEN` header when Khaneil presses **Sync from Stripe** in the Business view. Read only: no buyer names or emails leave n8n and nothing in Stripe changes.
+
+- **Healthy:** Sync from Stripe shows the paid checkouts for the range, and Khaneil presses Record to save them.
+- **When it fails:** `401` from n8n means the bridge token on the site and in the workflow don't match. A Stripe `403` means the restricted read key lost a permission.
+- **Stop it:** unpublish the workflow in n8n; the button then reports that the feed is unavailable.
+
+## Commerce Operations Manager
+
+An owning agent with no model of its own. Its automations are Design Run, Approve and Publish, Order Delivery, Shop Page and Weekly Sales, Atlas Sales Feed and Pipeline Tests (sections above). Nothing goes on sale until Khaneil approves it.
+
 ## Retired agents
 
 The CrewAI brand crew (Niche Scout, Market Research Analyst, Brand Strategist, Visual Identity Director, Copywriter and SEO Strategist, Launch Asset Planner), the Canva Mockup Generator, SEO Maintainer, Health Dashboard Report, Daily Email Digest and Database Backup were retired on 2026-11-11 when the pipeline moved to n8n. They do not run anywhere, so there is nothing to start or stop.

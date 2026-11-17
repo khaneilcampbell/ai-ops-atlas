@@ -34,7 +34,7 @@ for (const width of [1512, 390])
     await expect(page.getByRole("list", { name: "Archived entries" }).getByRole("button")).toHaveCount(11);
     await page.screenshot({ path: `${out}/archived-${width}.png` });
     await page.getByRole("tab", { name: /^Inactive/ }).click();
-    await expect(page.getByRole("list", { name: "Inactive entries" }).getByRole("button")).toHaveCount(2);
+    await expect(page.getByText("Nothing inactive matches.")).toBeVisible(); // GitHub Profile Manager published 2026-11-17, Data Inventory 2026-11-13
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);

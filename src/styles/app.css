@@ -922,3 +922,15 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .m3-plaque .hm-unverified{width:6px;height:6px;margin-right:1px;border:0;background:rgba(201,190,160,.4)}
 .m3-labels > div.dim{opacity:.28}
 .m3-pill.hood.district{height:20px;line-height:20px;padding:0 14px;border-radius:0;background:linear-gradient(90deg,rgba(8,16,18,0),rgba(8,16,18,.66) 16%,rgba(8,16,18,.66) 84%,rgba(8,16,18,0));border:0;color:#e2c27a;font-size:9.5px;font-weight:600;letter-spacing:.24em;text-shadow:0 1px 2px rgba(0,0,0,.8);box-shadow:none}
+
+/* Card over an agent walking on the map (map3d/AgentTag.tsx): identity, live state, home and work. */
+.m3-agent-tag { width: 230px; padding: 10px 12px; border-radius: 12px; background: rgba(10, 46, 58, 0.86); border: 1px solid rgba(150, 236, 255, 0.85); color: #effcff; font: 12px/1.35 Inter, -apple-system, "Segoe UI", sans-serif; box-shadow: 0 6px 22px #0005; backdrop-filter: blur(4px); user-select: none; transform: translate(-50%, calc(-100% - 6px)); }
+.m3-agent-tag .n { font-weight: 700; font-size: 13.5px; }
+.m3-agent-tag .r { color: rgba(220, 244, 252, 0.74); font-size: 11px; }
+.m3-agent-tag .st { margin-top: 6px; font-weight: 600; }
+.m3-agent-tag .st i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.m3-agent-tag .st span { font-weight: 400; color: rgba(220, 244, 252, 0.74); }
+.m3-agent-tag dl { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; }
+.m3-agent-tag dt { color: rgba(220, 244, 252, 0.74); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 1px; }
+.m3-agent-tag dd { margin: 0; }
+.m3-agent-tag em { font-style: normal; color: #ffe2a6; }

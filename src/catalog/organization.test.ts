@@ -60,7 +60,7 @@ describe("agent tiers", () => {
 
   it("makes orchestrators coordinators", () => {
     expect(tiers("coordinator")).toEqual([
-      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "soc-detection-lead",
+      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "site-builder", "soc-detection-lead",
     ]);
   });
 

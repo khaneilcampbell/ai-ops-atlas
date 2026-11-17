@@ -152,6 +152,7 @@ export class Orchestrator {
     try {
       this.d.tasks.reconcile();
       this.syncCompletions(run);
+      await this.settleUncertain(run);
       await this.checkStale(run, summary);
       this.autoRetry(run, summary);
       this.d.tasks.reconcile();
@@ -340,6 +341,34 @@ export class Orchestrator {
     if (res.state === "unknown") this.d.ledger.update(run.id, (l) => ({ ...l, needsReconcile: { ...l.needsReconcile, [nodeId]: "The send may have gone out. Check the outside system, then record whether it ran." } }));
   }
 
+  /**
+   * Attempts Atlas isn't sure about (a restart mid-send, an unclear answer): ask the outside system
+   * each round when it can answer. Settled ones go on; the rest stay with a person.
+   */
+  private async settleUncertain(run: WorkflowRun) {
+    for (const [nodeId, taskId] of Object.entries(run.nodeTasks)) {
+      const t = this.d.tasks.repo.get(taskId);
+      const a = t && liveAttempt(t);
+      if (!t || !a || a.state !== "unknown" || a.executor === "manual") continue;
+      const node = this.node(run, nodeId)!;
+      const adapter = this.d.adapterFor(node, t);
+      if (!adapter.status) continue;
+      const st = await adapter.status(a, { nodeId, agentId: node.agentId }).catch((): ExternalStatus => ({ state: "unknown" }));
+      if (st.state === "not_found" || (st.state === "unknown" && !st.why)) continue;
+      this.applyExternal(run, nodeId, t, a, st, adapter);
+    }
+  }
+
+  private clearReconcile(runId: string, nodeId: string) {
+    this.d.ledger.update(runId, (l) => (l.needsReconcile[nodeId] ? { ...l, needsReconcile: Object.fromEntries(Object.entries(l.needsReconcile).filter(([k]) => k !== nodeId)) } : "unchanged"));
+  }
+
+  private scheduleRetry(runId: string, nodeId: string, attemptNumber: number, task: StoredTask, adapter: ExecutionAdapter, immediately = false) {
+    if (!safeToRepeat(adapter) || task.attempts.length >= task.maxAttempts) return;
+    const when = new Date(Date.parse(this.now()) + (immediately ? 0 : backoffMs(attemptNumber))).toISOString();
+    this.d.ledger.update(runId, (x) => ({ ...x, retryAfter: { ...x.retryAfter, [nodeId]: when } }));
+  }
+
   /** Runs past their timeout: ask the outside system. Never assume a timed-out run failed or stopped. */
   private async checkStale(run: WorkflowRun, s: StepSummary) {
     const now = Date.parse(this.now());
@@ -351,6 +380,8 @@ export class Orchestrator {
       if (now - Date.parse(a.startedAt ?? a.requestedAt) < stepPolicy(node).timeoutMs) continue;
       s.stale.push(nodeId);
       const adapter = this.d.adapterFor(node, t);
+      // Already uncertain and asked this round by settleUncertain.
+      if (a.state === "unknown" && adapter.status) continue;
       let st: ExternalStatus = { state: "unknown" };
       if (adapter.status) st = await adapter.status(a, { nodeId, agentId: node.agentId }).catch((): ExternalStatus => ({ state: "unknown" }));
       this.applyExternal(run, nodeId, t, a, st, adapter);
@@ -359,17 +390,44 @@ export class Orchestrator {
 
   private applyExternal(run: WorkflowRun, nodeId: string, t: StoredTask, a: ExecutionAttempt, st: ExternalStatus, adapter: ExecutionAdapter) {
     const actor: Actor = { kind: "system", id: "atlas-reconcile", name: "Atlas (reconciled)" };
-    if (st.state === "running") return;
+    const processed = (eventId?: string) => eventId && this.d.ledger.update(run.id, (x) => (x.processedEvents.includes(eventId) ? "unchanged" : { ...x, processedEvents: [...x.processedEvents, eventId] }));
+    if (st.state === "running") {
+      if (a.state === "unknown") {
+        const r = this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "running" }, actor, at));
+        if (r.ok) this.clearReconcile(run.id, nodeId);
+      }
+      return;
+    }
     if (st.state === "succeeded") {
-      if (st.output) return void this.acceptOutput(run, nodeId, t.id, a, st.output, actor, adapter);
-      this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "succeeded" }, actor, at));
+      if (st.output) {
+        // The output is validated like any report: an empty or invalid one fails the step, it never completes it.
+        const r = this.acceptOutput(run, nodeId, t.id, a, st.output, actor, adapter);
+        if (r.ok) {
+          processed(st.eventId);
+          this.clearReconcile(run.id, nodeId);
+        }
+        return;
+      }
+      const r = this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "succeeded" }, actor, at));
+      if (r.ok) this.clearReconcile(run.id, nodeId);
       return;
     }
-    if (st.state === "failed") {
-      this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "failed", error: st.error }, actor, at));
+    if (st.state === "failed" || st.state === "not_sent") {
+      const error = st.state === "not_sent" ? "The site has no record of this send, so it never reached n8n. Safe to send again." : st.error;
+      const r = this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "failed", error }, actor, at));
+      if (!r.ok) return;
+      if (st.state === "failed") processed(st.eventId);
+      this.clearReconcile(run.id, nodeId);
+      if (st.state === "not_sent") this.scheduleRetry(run.id, nodeId, a.number, r.task, adapter, true);
+      else if (st.transient) this.scheduleRetry(run.id, nodeId, a.number, r.task, adapter);
       return;
     }
-    const why = st.state === "not_found" ? "Past its timeout and the outside system shows no run for it. Check there, then record whether it ran." : "Past its timeout and its status can't be read. Check the outside system, then record whether it ran.";
+    const why =
+      st.state === "unknown" && st.why
+        ? `${st.why} Then record whether it ran.`
+        : st.state === "not_found"
+          ? "Past its timeout and the outside system shows no run for it. Check there, then record whether it ran."
+          : "Past its timeout and its status can't be read. Check the outside system, then record whether it ran.";
     if (a.state !== "unknown") this.d.tasks.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, { state: "unknown", error: why }, actor, at));
     this.d.ledger.update(run.id, (l) => (l.needsReconcile[nodeId] === why ? "unchanged" : { ...l, needsReconcile: { ...l.needsReconcile, [nodeId]: why } }));
   }
@@ -436,11 +494,10 @@ export class Orchestrator {
     } else {
       const r = this.d.tasks.apply(t.id, (x, _a, at) => updateAttempt(x, a.id, { state: "failed", error: rep.error ?? "Reported failed.", externalId: rep.externalId }, rep.source, at));
       if (!r.ok) return r;
-      if (rep.transient && safeToRepeat(adapter) && r.task.attempts.length < r.task.maxAttempts) {
-        const when = new Date(Date.parse(this.now()) + backoffMs(a.number)).toISOString();
-        this.d.ledger.update(rep.runId, (x) => ({ ...x, retryAfter: { ...x.retryAfter, [rep.nodeId]: when } }));
-      }
+      if (rep.transient) this.scheduleRetry(rep.runId, rep.nodeId, a.number, r.task, adapter);
     }
+    // The system answered, so whatever made the attempt uncertain is settled.
+    this.clearReconcile(rep.runId, rep.nodeId);
     this.d.ledger.update(rep.runId, (x) => ({ ...x, processedEvents: [...x.processedEvents, rep.eventId] }));
     return out;
   }

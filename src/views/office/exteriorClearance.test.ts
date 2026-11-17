@@ -19,3 +19,17 @@ it("puts every lobby, Financial District included, on the map's ground plane",()
   expect(interiorGroundY()).toBe(TERRACE_H);
   expect(Math.abs(LAND_TOP-interiorGroundY())).toBeLessThan(.01);
 });
+it("keeps the street palms out of Atlas HQ's cutaway, so none stands up through its floors",async()=>{
+  const {avenuePlanting}=await import("../map3d/models");
+  const {planOffice}=await import("./model");
+  const {hqClearSpan}=await import("./atlasHqInteriorPlan");
+  const project=catalog.projects.find(p=>p.id==="ai-ops-atlas")!,plan=planOffice(project,catalog.agents.filter(a=>a.projectId===project.id));
+  const source=buildScene(layoutMap(catalog)),t=source.towers.find(t=>t.projectId==="ai-ops-atlas")!;
+  // As CityOutside sizes it: interior units per map unit, and the cleared half-width in map units.
+  const scale=Math.max(4,Math.max(plan.w,plan.d)/4),r=(hqClearSpan(plan.w,plan.d)/2+2)/scale;
+  const inside=(p:{x:number;z:number})=>Math.abs(p.x-t.x)<=r&&Math.abs(p.z-t.z)<=r;
+  // The city has street palms there (the one Khaneil saw through the floors, 2026-11-17)...
+  expect(avenuePlanting(source).some(inside)).toBe(true);
+  // ...and none once the interior clears its ground.
+  expect(avenuePlanting(clearInteriorFootprint(source,t.x,t.z,r)).some(inside)).toBe(false);
+});
