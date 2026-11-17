@@ -1,1 +1,1 @@
-- 2026-11-17 · Groundwork for separate customer organizations, switched off: organizations, members and roles, records each organization can only see, safe credential storage, usage counts and limits. Nothing changes in Atlas until it is set up by hand.
+- 2026-11-17 · Groundwork for separate customer organizations, switched off: organizations, members and roles, records each organization can only see, safe credential storage, usage counts and limits. Nothing changes in Atlas until it is set up by hand. (#446)
