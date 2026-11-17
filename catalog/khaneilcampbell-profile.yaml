@@ -276,14 +276,29 @@ agents:
   - id: github-profile-manager
     name: GitHub Profile Manager
     purpose: >-
-      Draft n8n agent for managing the GitHub profile. Not published, so it does not run.
+      Keeps Khaneil's GitHub profile README (the khaneilcampbell/khaneilcampbell repository) current with recent
+      project work, presented for Forward Deployed Engineer roles. Unpublished draft, so it does not run yet.
     framework: n8n Agent
+    model: Claude (claude-sonnet-5)
     runtime: n8n Cloud
     status: paused
-    trigger: None until it is published
+    trigger: Draft, not published. Once published, its task "Sync profile README with recent repo changes" runs every 6 hours (New York time)
     last_run: null
+    history:
+      - at: 2026-11-08
+        event: Created as an unpublished n8n agent draft with one scheduled task
+      - at: 2026-11-17
+        event: Configuration read for the first time after Khaneil turned on MCP access; GitHub credential still missing, so it cannot run
+    capabilities:
+      - Read the profile README and the date of its last commit
+      - Review Khaneil's own public repositories for changes since then
+      - Sort each change into meaningful or trivial
+      - Rewrite the README sections that changed and commit README.md
+      - Report which repositories triggered the update and the commit link
     permissions:
       - 'None while unpublished: the draft agent cannot run'
+      - Once a GitHub credential is attached, reads Khaneil's repositories and commits README.md to the profile repository's default branch only
+      - Anthropic web search, at most 5 searches per run
     registry:
       title: GitHub Profile Manager
       category: career
@@ -291,20 +306,70 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: Unpublished n8n agent I4i0qQm5g0bfEID8, checked read-only on 2026-11-11
+        evidence: n8n agent I4i0qQm5g0bfEID8 read on 2026-11-17 (Claude Sonnet 5, GitHub MCP server, one task on cron 0 */6 * * *), unpublished
+      mission:
+        problem: The GitHub profile page falls behind the work Khaneil ships, so recruiters see an out-of-date picture.
+        outcomes:
+          - A profile README that reflects every meaningful project change within 6 hours
+          - No commit when only trivial changes happened
+        beneficiaries:
+          - Khaneil
+          - Recruiters and clients reading the GitHub profile
+      responsibilities:
+        tasks:
+          - Find the profile repository named after the GitHub username
+          - Read README.md and the date of its last commit (or look back 30 days)
+          - Review new repositories, commits, merged pull requests, releases and README changes since then
+          - Classify each change as meaningful or trivial
+          - Rewrite the headline, What I do, Featured projects, Recent activity, Tech stack and Contact sections as needed
+          - Commit README.md to the default branch and reply with the commit link
+        tools: [Claude (claude-sonnet-5), GitHub MCP server, Anthropic web search]
+        inputs:
+          - Khaneil's own public, non-fork repositories
+          - The current profile README.md
+        outputs:
+          - One README.md commit per run with changes, or a reply saying the profile is already current
+        dependencies:
+          - GitHub OAuth credential on the agent's GitHub MCP server (not attached yet)
+          - khaneilcampbell/khaneilcampbell profile repository
+        limitations:
+          - Cannot run until a GitHub credential is attached and the agent is published
+          - Commits straight to the default branch, with no pull request to review first
+          - Never mentions private repositories or invents projects, metrics or clients
+      goals:
+        objective: Keep the GitHub profile accurate and current with no manual edits.
+        review_frequency: Monthly
+        kpis:
+          - name: Profile updated after meaningful changes
+            kind: quality
+            target: Within 6 hours of a meaningful change
+            basis: Task schedule (every 6 hours); checked against the profile repository's commit history once published
+          - name: Commits for trivial changes
+            kind: quality
+            target: '0'
+            basis: The task's own rule; checked by reading its commits once published
       execution:
-        trigger_type: manual
+        trigger_type: scheduled
+        schedule: Every 6 hours, cron 0 */6 * * * (America/New_York), once published
         environment: n8n
       governance:
         autonomy: 0
-        autonomy_note: Unpublished draft; it cannot act. Its tools could not be read (the agent is not available to the n8n MCP connection).
-        credential_owner: Khaneil (n8n account)
+        autonomy_note: Unpublished draft; it cannot act. Once published it would commit to the profile repository on its own every 6 hours.
+        data_sensitivity: public
+        approval: Khaneil attaches the GitHub credential, tests one run by hand and publishes it
+        credential_owner: Khaneil (n8n account; GitHub OAuth credential not attached yet)
         risk: low
+        kill_switch: Unpublish the agent in n8n, or disable its task
+      cost:
+        notes: Claude Sonnet 5 with up to 5 web searches per run, 4 runs a day once published; prompt caching is on
       docs:
         runbook: docs/runbooks/development-hub.md#github-profile-manager
         last_review: 2026-11-17
         known_issues:
-          - The draft's instructions and tools cannot be read from Atlas's n8n connection (availableInMCP is off), so its mission is not documented
+          - The GitHub MCP server has no credential attached, so n8n reports the agent as not runnable
+          - Commits go straight to the default branch with no pull request
+        improvements:
+          - Open a pull request instead of committing directly, so Khaneil reviews each profile change
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.

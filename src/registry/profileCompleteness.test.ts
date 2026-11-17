@@ -9,13 +9,14 @@ import { documentationScore, toProfile } from "./profile";
 // and every runbook link points at a heading that exists.
 
 const project = (id: string) => catalog.projects.find((p) => p.agentIds.includes(id));
-const working = catalog.agents.filter((a) => a.status !== "retired" && a.status !== "paused");
+const working = catalog.agents.filter((a) => a.status !== "retired");
 
 // Paused drafts whose configuration Atlas cannot read stay partly "Not documented" rather than guessed.
-const UNREADABLE_DRAFTS = ["github-profile-manager"];
+// GitHub Profile Manager was read on 2026-11-17 once Khaneil turned on its MCP access, so none are left.
+const UNREADABLE_DRAFTS: string[] = [];
 
 describe("agent profile completeness", () => {
-  it("keeps every active or on-demand entry fully documented", () => {
+  it("keeps every active, on-demand or draft entry fully documented", () => {
     const gaps = working
       .map((a) => ({ id: a.id, s: documentationScore(toProfile(a, project(a.id))) }))
       .filter(({ s }) => s.done < s.total)
