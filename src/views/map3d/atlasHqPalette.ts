@@ -14,6 +14,11 @@ export const HQ_PALETTE={
  mullion:'rgba(236,226,204,.9)',
  /** Office floors: forest-green glass, cream spandrels. [top, bottom, spandrel] */
  towerGlass:['#2f5a48','#86ab98','#d9ccb0'],
+ /** Mullions and the sill line over each slab: the dark green of the concept's frames. */
+ frame:'#2c4a3b',
+ /** Roof planting: clipped hedges and the lawn inside them. */
+ hedge:'#4f7a52',
+ lawn:'#8fae6a',
  /** Night window glow: soft in the offices, warm in the lobby. */
  towerGlow:'#f4ead0',
  wingGlow:'#ffd99a',

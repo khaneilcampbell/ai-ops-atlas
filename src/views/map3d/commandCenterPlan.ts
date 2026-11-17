@@ -1,12 +1,15 @@
 import type {Pt} from './roads';
-import {HQ,superellipse} from './atlasHqPlan';
+import {HQ} from './atlasHqPlan';
 import {HQ_PALETTE} from './atlasHqPalette';
 
 /**
- * Atlas Command Center on the map, redesigned as its own building (Khaneil, 2026-11-17): the
- * double-height lobby and the four office floors you walk through inside, stacked as a cream stone
- * and green glass block with softly rounded corners, a stone entrance bay carrying the name, a
- * restrained brass canopy and door, and a planted roof.
+ * Atlas Command Center on the map, after Khaneil's concept (2026-11-17): the double-height lobby
+ * and the four office floors you walk through inside. A glass wing on the right turns the front
+ * corner in a wide curve, the left wing stands a step back, and the stone entrance bay covers the
+ * joint, rising above the roof with the name. The building itself is a Blender model
+ * (assets/command-center/build_command_center.py, exported to public/models/map/command-center.glb);
+ * this plan holds the same numbers for everything the map places around it, and atlasHq.test.ts
+ * checks the model against them.
  *
  * The storeys are the interior's own (3.3 lobby, 2.7 floors) at the interior's scale of 12 office
  * units per map unit, so the outside is exactly the building the floor navigation shows.
@@ -21,17 +24,16 @@ export const CC={
  lobby:3.3/12,
  storey:2.7/12,
  floors:4,
- /** The block: a near-square rounded rectangle, set back a little so the entrance has room in front. */
- cx:0,cz:-.1,a:.76,b:.5,roundness:9,ring:48,
- /** Stone pilasters stand on every `pierEvery`-th outline point. */
- pierEvery:4,pierDepth:.022,
- /** Thick cream stone floor slabs, the horizontal half of the stone grid. */
- ledgeDepth:.045,ledgeHeight:.034,
- parapet:.08,coping:.025,
+ /** The block's extent: centre, half width, half depth (x -0.76..0.76, z -0.6..0.4). The interior reads its proportions. */
+ cx:0,cz:-.1,a:.76,b:.5,roundness:9,
+ /** The left wing's front stands this far behind the right wing's; the step is at x = joint. */
+ leftStep:.08,joint:-.24,
+ /** Corner radii: the right wing's wide curves and the left wing's softer ones. */
+ rightRadius:.2,leftRadius:.12,
+ /** Cream stone floor slabs stand this far proud of the glass. */
+ slab:.04,
  /** The stone entrance bay, proud of the front, rising above the roof with the logo and name on it. */
  bayHalf:.24,bayProud:.09,bayRise:.14,
- /** One window column of the stone facade (map units at k = 1); the texture tile is 4 of them. */
- bay:.19,
 } as const;
 
 export const ccRoof=(k=1)=>(CC.lobby+CC.floors*CC.storey)*k;
@@ -39,7 +41,13 @@ export const ccRoof=(k=1)=>(CC.lobby+CC.floors*CC.storey)*k;
 export const ccTop=(k=1)=>ccRoof(k)+CC.bayRise*k;
 /** Heights of the stone ledges: over the lobby, then over each office floor (the last is the roof). */
 export const ccLedges=(k=1)=>Array.from({length:CC.floors+1},(_,i)=>(CC.lobby+i*CC.storey)*k);
-export function ccOutline(k=1):Pt[]{return superellipse(CC.cx*k,CC.cz*k,CC.a*k,CC.b*k,CC.roundness,CC.ring);}
+/** The glass line at ground level, as the Blender script draws it (8 points per corner arc). */
+export function ccOutline(k=1):Pt[]{
+ const x0=(CC.cx-CC.a)*k,x1=(CC.cx+CC.a)*k,z0=(CC.cz-CC.b)*k,zr=(CC.cz+CC.b)*k,zl=zr-CC.leftStep*k,j=CC.joint*k;
+ const R=CC.rightRadius*k,r=CC.leftRadius*k,h=Math.PI/2;
+ const arc=(cx:number,cz:number,rad:number,a0:number,a1:number):Pt[]=>Array.from({length:9},(_,i)=>[cx+rad*Math.cos(a0+(a1-a0)*i/8),cz+rad*Math.sin(a0+(a1-a0)*i/8)]);
+ return [[j,zr],...arc(x1-R,zr-R,R,h,0),...arc(x1-R,z0+R,R,0,-h),...arc(x0+r,z0+r,r,-h,-2*h),...arc(x0+r,zl-r,r,Math.PI,h),[j,zl]];
+}
 export const ccFront=(k=1)=>(CC.cz+CC.b)*k;
 /**
  * The entrance bay, as a box: centre x/z, width, depth, height. Its stone starts over the lobby
@@ -69,29 +77,12 @@ export function ccEntrance(k=1){
   [0,.02*k+dh,z+.012*k,dw+.05*k,.02*k,.026*k,brass],
   // The canopy: wider than the bay, a gold slab over the steps.
   [0,.05*k+dh,z+.08*k,bay.w+.1*k,.018*k,.2*k,brass],
-  // Clipped hedges in stone planters along the front, either side of the entrance.
-  ...[-1,1].map(side=>[side*.5*k,0,f+.045*k,.42*k,.035*k,.07*k,stone] as CcBox),
-  ...[-1,1].map(side=>[side*.5*k,.035*k,f+.045*k,.4*k,.045*k,.055*k,'#4f7a52'] as CcBox),
+  // Clipped hedges in stone planters along the front of each wing, either side of the entrance.
+  ...[-1,1].map(side=>[side*.5*k,0,(side<0?f-CC.leftStep*k:f)+.07*k,.42*k,.035*k,.07*k,stone] as CcBox),
+  ...[-1,1].map(side=>[side*.5*k,.035*k,(side<0?f-CC.leftStep*k:f)+.07*k,.4*k,.045*k,.055*k,'#4f7a52'] as CcBox),
  ];
  const lamps:CcBox[]=[-1,1].map(side=>[side*.15*k,.02*k,z+.05*k,.014*k,.045*k,.014*k,'#ffffff']);
  return {boxes,lamps};
-}
-
-/**
- * Roof garden: a lawn inset from the parapet, planters full of shrubs right round its edge (so
- * they show over the parapet, as in the concept) and a few olive trees.
- */
-export function ccRoofGarden(k=1){
- const y=ccRoof(k),hedges:CcBox[]=[],g='#4f7a52',ix=(CC.a-.1)*k,iz=(CC.b-.1)*k,cz=CC.cz*k;
- for(const side of [-1,1]){
-  hedges.push([side*ix,y,cz,.07*k,.07*k,2*iz,g]);
-  hedges.push([0,y,cz+side*iz,2*ix,.07*k,.07*k,g]);
- }
- const shrubs:Pt[]=[];
- for(let i=0;i<7;i++){const x=(-.6+i*.2)*k;shrubs.push([x,cz+iz],[x,cz-iz]);}
- for(const side of [-1,1])for(const t of [-.2,.2])shrubs.push([side*ix,cz+t*k]);
- const trees:Pt[]=[[-.4*k,(CC.cz+.12)*k],[.4*k,(CC.cz+.12)*k],[0,(CC.cz-.18)*k]];
- return {y,hedges,shrubs,trees};
 }
 
 /** Every point the building puts on the ground, for clearance checks. */

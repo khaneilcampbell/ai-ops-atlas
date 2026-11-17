@@ -5,11 +5,16 @@ forest-green glass and subtle brass; the outside is the lobby and four office fl
 through inside. Parcel, roads, selection, building entry, floor navigation, agents and telemetry
 unchanged. The concept images were references, not geometry: everything here is the running app.
 
-Second pass, same day: Khaneil said the first version "look nothing like the image". It now
-follows the concept's architecture, not just its colours: a grid of thick cream stone floor
-slabs and piers framing warm-lit, green-framed windows; a squarer block; a wider stone entrance
-bay with the gold Atlas mark and the name in large serif letters; a gold-lit glass lobby under a
-wide brass canopy with steps; planters along the front; and shrubs right round the roof.
+Second pass, same day: Khaneil said the first version "look nothing like the image". The second
+pass painted the concept's stone grid and windows onto the old rounded block as a texture.
+
+Third pass, same day: the concept image reached the repo (`concept/`) and Blender was installed on
+Khaneil's Mac, so the building is now a model built in Blender after the concept, not a painted
+block. What it takes from the concept as geometry: continuous glass behind slim dark green
+mullions; thick cream stone floor slabs with a dark green sill line, standing proud of the glass;
+a glass wing on the right that turns the front corner in a wide curve; the left wing a step back;
+the stone entrance bay over the joint, rising above the roof; a gold-lit lobby behind brass
+mullions; a stone parapet with hedges and shrubs right round the roof and a low plant room.
 
 ![Concept image next to the running map](concept-vs-map.jpg)
 
@@ -17,43 +22,50 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
 
 ## How it is built
 
-- **Existing stack, no new tool or dependency.** The map is React Three Fiber on three.js, and
-  every landmark is generated in code: a plain-number plan (`*Plan.ts`), merged geometry
-  (`*Geometry.ts`) and a component that picks materials. Atlas's only GLB pipeline is the office
-  furniture (`public/models/office/`, loaded with drei's `useGLTF`). A Blender GLB was not needed:
-  this building is a rounded block, ledges, piers, a parapet and a box, which the shared helpers in
-  `atlasHqGeometry.ts` (`skin`, `bands`, `fins`, `lid`) already build into a few merged meshes. A
-  GLB would add a loader request, a second source of truth for storey heights and no saving.
-- `src/views/map3d/commandCenterPlan.ts`: the plan. Storeys are the interior's own (lobby 3.3,
-  floors 2.7) at its scale of 12 office units per map unit; it fits the old square footprint.
-- `src/views/map3d/commandCenterGeometry.ts`: the stone-and-window facade, gold-lit lobby glass,
-  cream stone, one brass hairline, roof and lawn, each one merged mesh.
-- `src/views/map3d/commandCenterTextures.ts`: the facade, lobby and nameplate, drawn once on
-  canvases (the stone grid and windows are texture on one skin, not extra geometry).
+- **Why Blender.** Atlas's landmarks are generated in code from shared helpers that make rounded
+  walls, bands, fins and flat lids. The concept needs a stepped plan with mixed corner radii,
+  hundreds of mullions following the curves, slabs and sills offset from the glass and roof
+  planting: possible in code, but it would mean new hand-written geometry. A script that builds
+  the model in Blender keeps it reproducible and editable, and Atlas already loads GLBs (the
+  office furniture, with drei's `useGLTF`, no Draco or Meshopt so the CSP stays strict).
+- `assets/command-center/build_command_center.py`: the source. It rebuilds
+  `assets/command-center/command-center.blend` (editable) and exports
+  `public/models/map/command-center.glb` (about 300 KB, 5.3k triangles, eight meshes, no
+  textures). Run: `/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup
+  --python assets/command-center/build_command_center.py`.
+- One mesh per material (`cc_glass`, `cc_lobby`, `cc_stone`, `cc_roof`, `cc_frame`, `cc_brass`,
+  `cc_hedge`, `cc_lawn`). `AtlasHq.tsx` draws each with the map's own material for that name, so
+  focus dimming and night lighting work as on every other building; until the model arrives (or if
+  it fails) a plain stone block of the same size stands in and stays clickable.
+- `src/views/map3d/commandCenterPlan.ts`: the same numbers for everything the map places around
+  the model (footprint, storeys, bay, doors, canopy, planters, nameplate). `atlasHq.test.ts` reads
+  the GLB and checks its footprint, storey heights, roof and bay against the plan, its triangle
+  budget, that it has no textures or decoders, and that the Blender source sits next to it.
+- `src/views/map3d/commandCenterTextures.ts`: what is seen through the glass (green sky
+  reflection over warm offices, a tile of 8 panes by 4 storeys) and the gold lobby, plus the
+  nameplate. The procedural `commandCenterGeometry.ts` is gone.
 - `src/views/map3d/atlasHqPalette.ts`: the shared colours; the interior shell
   (`src/views/office/AtlasHqShell.tsx`) reads the same palette and the block's proportions.
-- `src/views/map3d/AtlasHq.tsx` draws it. The map's shared opening glass doors now stand in the
-  stone bay (`ccDoor`), and the nameplate and inside view use the building's real roof (`towerTop`).
 
 ## What changed on purpose
 
-- The building is now a five-storey block, lower than before. Three height guards that said "Atlas
-  HQ is the tallest" now compare Benjaire HQ and Commerce with Atlas's height share instead, and
-  the stadium check leaves Atlas out. The other buildings' heights do not change.
+- The building is a five-storey block, lower than the old tower. Three height guards that said
+  "Atlas HQ is the tallest" now compare Benjaire HQ and Commerce with Atlas's height share instead,
+  and the stadium check leaves Atlas out. The other buildings' heights do not change.
 - Inside: green glass on every office floor, warm glass in the lobby, cream stone piers and
-  mullions, a slim brass canopy, a flat top floor. The Floor 3 podium terrace is gone, as the new
-  building has no podium (its garden is on the roof).
+  mullions, a slim brass canopy, a flat top floor. The Floor 3 podium terrace is gone.
 
 ## Validation
 
-- Map performance, unchanged budget (`PERF_BUDGET=1 npm run measure:perf`): desktop day 730 draw
-  calls of 800, 867,604 triangles of 1.2M, 73 programs of 80, 6.4 MB, one context, no leak.
-  After the second pass: desktop day 735 draws, 877,483 triangles, 72 programs, 6.4 MB, no leak;
-  night 765 draws, 894,635 triangles; iPhone day 740 draws, 880,141 triangles.
-  The building itself is under 12k triangles (was under 26k).
-- Lint, typecheck and tests pass, except the 300-repository timing test, which also fails on
-  plain `main` in this container (1.88 s against 1.5 s).
-- Screenshots: `npm run visual -- atlas-hq` with `SHOT_DIR`; before is `main` at 62eba93.
+- Map performance, unchanged budget (`PERF_BUDGET=1 npm run measure:perf`), passed: desktop day
+  734 draw calls of 800, 887,228 triangles of 1.2M, 73 programs of 80, 6.6 MB geometry, one
+  context; night 755 draws, 891,735 triangles; iPhone day 731 draws, 877,272 triangles. After
+  leaving and re-entering the map, 8 more buffers stay alive (the loaded model, which drei keeps
+  cached so it is not fetched again); textures and programs return to where they were.
+- The model: 5,336 triangles (the procedural block allowed 12,000), eight meshes, about 300 KB.
+- `npm run lint`, `npm run typecheck` and `npm test` (1,901 of 1,901) pass.
+- Screenshots: `npm run visual -- atlas-hq atlas-hq-interior` with `SHOT_DIR`. Before is `main`
+  at 62eba93; the second pass (painted block) is kept in [second-pass/](second-pass/) for comparison.
 
 | | Before | After |
 | --- | --- | --- |

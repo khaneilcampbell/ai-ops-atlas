@@ -2,72 +2,57 @@ import * as THREE from 'three';
 import {HQ_PALETTE as P} from './atlasHqPalette';
 
 /**
- * Atlas Command Center facade textures, drawn once on canvases (Khaneil's concept, 2026-11-17).
- * One tile is 4 window columns by 4 storeys, laid on by skin(): cream stone piers and floor
- * slabs framing recessed windows with dark green frames, green sky reflection over warm,
- * gold-lit offices. The glow map lights the offices (softly by day, fully at night).
+ * Atlas Command Center window textures, drawn once on canvases (Khaneil's concept, 2026-11-17).
+ * The Blender model carries the stone, slabs and mullions as geometry; these only paint what is
+ * seen through the glass. glTF UVs run downward, so row 0 of a canvas is the top of a storey.
+ * The glow map lights the offices (softly by day, fully at night).
  */
 function canvasTexture(draw:(g:CanvasRenderingContext2D)=>void){
  const c=document.createElement('canvas');c.width=256;c.height=256;draw(c.getContext('2d')!);
  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;
- // skin() runs v upward; unflipped, row 0 of the canvas is the bottom of a storey.
  t.flipY=false;return t;
 }
-const FRAME='#2c4a3b';
 
-/** Office floors: stone grid with punched windows. Row y counts from the floor upward. */
-export function ccFacadeTexture(seed=17){
+/**
+ * Office glass: one tile is 8 panes by 4 storeys (the model's UVs). Green sky reflection across
+ * the top of each pane, warm-lit offices below with a darker band of desks, varied pane by pane.
+ */
+export function ccGlassTexture(seed=17){
  let s=seed;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
- const lit=Array.from({length:16},()=>.55+rnd()*.45);
- // Window inside one 64 px cell: a stone sill/slab below, a thin stone head above.
- const W={x:5,y:15,w:54,h:46};
+ const lit=Array.from({length:32},()=>.5+rnd()*.5);
  const map=canvasTexture(g=>{
-  g.fillStyle=P.stone;g.fillRect(0,0,256,256);
-  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
-   const x=c*64+W.x,y=r*64+W.y,b=lit[r*4+c];
-   // Shadowed reveal round the opening, so it reads recessed.
-   g.fillStyle='rgba(120,100,70,.35)';g.fillRect(x-3,y-2,W.w+6,W.h+5);
-   const gr=g.createLinearGradient(0,y,0,y+W.h);
-   // Canvas rows run up the storey: warm offices low in the pane, green sky reflection above.
-   gr.addColorStop(0,`rgba(${Math.round(215+30*b)},${Math.round(178+30*b)},${Math.round(105+25*b)},1)`);
-   gr.addColorStop(.4,'#9aac82');gr.addColorStop(1,'#3f6f58');
-   g.fillStyle=gr;g.fillRect(x,y,W.w,W.h);
-   g.fillStyle=FRAME;
-   g.fillRect(x,y,W.w,3);g.fillRect(x,y+W.h-3,W.w,3);g.fillRect(x,y,3,W.h);g.fillRect(x+W.w-3,y,3,W.h);
-   g.fillRect(x+W.w/3-1,y,2,W.h);g.fillRect(x+2*W.w/3-1,y,2,W.h);g.fillRect(x,y+W.h-12,W.w,2);
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){
+   const x=c*32,y=r*64,b=lit[r*8+c];
+   const gr=g.createLinearGradient(0,y,0,y+64);
+   gr.addColorStop(0,'#2f5a48');gr.addColorStop(.28,'#5f8c74');
+   gr.addColorStop(.36,`rgb(${Math.round(226+24*b)},${Math.round(176+30*b)},${Math.round(92+30*b)})`);
+   gr.addColorStop(1,`rgb(${Math.round(190+30*b)},${Math.round(132+30*b)},${Math.round(70+20*b)})`);
+   g.fillStyle=gr;g.fillRect(x,y,32,64);
+   // Desks and people: a soft darker band low in the room.
+   g.fillStyle='rgba(90,70,45,.35)';g.fillRect(x+3,y+44,26,8);
+   // A slim transom where the sky reflection ends.
+   g.fillStyle='rgba(44,74,59,.8)';g.fillRect(x,y+18,32,2);
   }
-  // A darker line at each slab's lower edge, under the projecting stone ledge.
-  g.fillStyle='rgba(140,120,90,.4)';for(let r=0;r<4;r++)g.fillRect(0,r*64+12,256,2);
  });
  const glow=canvasTexture(g=>{
   g.fillStyle='#000';g.fillRect(0,0,256,256);
-  for(let r=0;r<4;r++)for(let c=0;c<4;c++){
-   const x=c*64+W.x,y=r*64+W.y,b=lit[r*4+c];
-   g.fillStyle=`rgba(255,${Math.round(190+40*b)},${Math.round(110+40*b)},${b})`;g.fillRect(x+3,y+3,W.w-6,W.h*.55);
-  }
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const b=lit[r*8+c];g.fillStyle=`rgba(255,${Math.round(200+40*b)},${Math.round(120+40*b)},${b})`;g.fillRect(c*32+2,r*64+22,28,38);}
  });
  return {map,glow};
 }
 
-/** The lobby: tall gold-lit glass in brass frames over a stone sill, one pane per column. */
+/** The lobby: tall gold-lit glass, four panes per tile, one tile the lobby's height. */
 export function ccLobbyTexture(){
- const pane=(g:CanvasRenderingContext2D,x:number,y:number)=>{
-  const gr=g.createLinearGradient(0,y,0,y+58);gr.addColorStop(0,'#f6dc9c');gr.addColorStop(1,'#e2b867');
-  g.fillStyle=gr;g.fillRect(x,y,64,58);
- };
  const map=canvasTexture(g=>{
-  for(let r=0;r<4;r++){
-   const y=r*64;g.fillStyle=P.stone;g.fillRect(0,y,256,64);
-   for(let c=0;c<4;c++)pane(g,c*64,y+5);
-   g.fillStyle=P.brass;
-   for(let c=0;c<4;c++){g.fillRect(c*64,y+5,4,58);g.fillRect(c*64+31,y+5,2,58);}
-   g.fillRect(0,y+46,256,3);g.fillRect(0,y+60,256,4);
+  for(let c=0;c<4;c++){
+   const x=c*64,gr=g.createLinearGradient(0,0,0,256);
+   gr.addColorStop(0,'#f8e2a8');gr.addColorStop(.7,'#f0cd85');gr.addColorStop(1,'#d9ad62');
+   g.fillStyle=gr;g.fillRect(x,0,64,256);
+   g.fillStyle='rgba(120,90,50,.25)';g.fillRect(x+6,200,52,30);
   }
+  g.fillStyle=P.brass;g.fillRect(0,52,256,4);g.fillRect(0,246,256,10);
  });
- const glow=canvasTexture(g=>{
-  g.fillStyle='#000';g.fillRect(0,0,256,256);
-  for(let r=0;r<4;r++)for(let c=0;c<4;c++){g.fillStyle='#ffd88f';g.fillRect(c*64+5,r*64+8,58,36);}
- });
+ const glow=canvasTexture(g=>{g.fillStyle='#000';g.fillRect(0,0,256,256);g.fillStyle='#ffd88f';g.fillRect(0,60,256,180);});
  return {map,glow};
 }
 
