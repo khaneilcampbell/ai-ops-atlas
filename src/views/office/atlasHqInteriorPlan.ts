@@ -108,3 +108,12 @@ export function wallPieces(a:Pt,b:Pt,level:number,w:number,d:number):[Pt,Pt][]{
  for(const piece of fromLow?[low,high]:[high,low])if(piece)out.push(piece);
  return out;
 }
+
+/**
+ * Width of ground the city outside keeps clear around the HQ cutaway: the curved glass, the Floor 3
+ * roof garden off the east side and the lift landing and canopy in front. The city's own palms and
+ * trees used to stand inside it and push up through the floors (Khaneil, 2026-11-17).
+ */
+export function hqClearSpan(w:number,d:number){
+ const {a,b}=shellAxes(w,d),T=terrace(w,d);return 2*Math.max(a,T.x1,b+2.8);
+}
