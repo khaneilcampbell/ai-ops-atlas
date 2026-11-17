@@ -1,1 +1,1 @@
-- 2026-11-17 · Map lines now show what flows into Atlas Command Center, not only linked repos: each building's run reports, its n8n workflows into the Workflow Automation Hub, and its agents' live state (#PR)
+- 2026-11-17 · Map lines now show what flows into Atlas Command Center, not only linked repos: each building's run reports, its n8n workflows into the Workflow Automation Hub, and its agents' live state (#454)
