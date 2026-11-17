@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lensLinks, type LensContext, type LensLink } from "./lenses";
+import { LENS_TYPES, lensLinks, MAP_LENSES, type LensContext, type LensLink } from "./lenses";
 
 const links: LensLink[] = [
   { id: "repo:site-ci", type: "github", a: "repo:me/site", b: "agent:site-ci", pa: "site", pb: "site" },
@@ -13,6 +13,11 @@ const ctx: LensContext = { showAll: false, types: { github: true, agent: true, n
 const ids = (l: LensLink[]) => l.map((x) => x.id);
 
 describe("map lenses", () => {
+  it("only draws colors that the view's key lists", () => {
+    const all = { ...ctx, showAll: true, selKey: "repo:me/site", selProject: "site" };
+    for (const lens of MAP_LENSES) for (const l of lensLinks(links, lens, all)) expect(LENS_TYPES[lens]).toContain(l.type);
+  });
+
   it("keeps the infrastructure view free of lines at rest", () => {
     expect(lensLinks(links, "infrastructure", ctx)).toEqual([]);
   });

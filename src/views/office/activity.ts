@@ -47,16 +47,22 @@ export function isFresh(state: RepoState | undefined): boolean {
   return state?.kind === "ok" && !state.stale;
 }
 
-/** Live illumination for every building, from the catalog, GitHub snapshots and the app's own logs. */
-export function useBuildingActivity(): Map<string, Illumination> {
+/** Every agent's runtime state, the same one its desk shows, recomputed on each live feed tick. */
+export function useRuntimes(): Map<string, Runtime> {
   const { catalog, repos } = useAtlas();
   const { telemetry: intel } = useIntel();
   const actions = useActions();
-  const runtimes = useMemo(() => {
+  return useMemo(() => {
     const data = { available: actions.available, status: actions.status, audit: actions.audit };
     const byId = new Map(catalog.agents.map((a) => [a.id, a]));
     return new Map(buildRegistry(catalog, repos, intel).map((e) => [e.profile.id, runtimeFor(byId.get(e.profile.id)!, e.telemetry, data)]));
   }, [catalog, repos, intel, actions.available, actions.status, actions.audit]);
+}
+
+/** Live illumination for every building, from the catalog, GitHub snapshots and the app's own logs. */
+export function useBuildingActivity(): Map<string, Illumination> {
+  const { catalog, repos } = useAtlas();
+  const runtimes = useRuntimes();
 
   // A completion is a transition Atlas observed in this session, never inferred from history.
   const prev = useRef(runtimes);

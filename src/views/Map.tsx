@@ -15,9 +15,10 @@ import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, liveLandmarkConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { useRuntimes } from "./office/activity";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
-import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
+import { LENS_INFO, LENS_TYPES, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
@@ -486,7 +487,12 @@ export function MapView({active=true}:{active?:boolean}) {
   const [linkSel, setLinkSel] = useState<string | null>(null);
   // Live landmarks drive both their status dots and their line to Atlas Command Center.
   const live = useLiveLandmarks();
-  const connections = useMemo(() => [...buildConnections(catalog, repos), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live]);
+  // Flow lines (feed reports, n8n workflows) carry their agents' live states, as their desks do.
+  // Keyed by the states themselves, so a feed tick that changes nothing doesn't rebuild the lines.
+  const runtimeMap = useRuntimes();
+  const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
+  const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
@@ -1257,6 +1263,7 @@ export function MapView({active=true}:{active?:boolean}) {
                   <ConnectionsMenu
                     prefs={{...linkPrefs,on:linkPrefs.on||lens!=="infrastructure"}}
                     counts={linkCounts}
+                    types={LENS_TYPES[lens]}
                     picked={!!pickedLink}
                     onChange={p=>{setLinkPrefs(p);if(p.on===false){setLensState("infrastructure");save("mapLens","infrastructure");}setLinkSel(null);}}
                     onClear={() => setLinkSel(null)}
@@ -1355,9 +1362,11 @@ interface LinkPrefs {
 const LINK_DEFAULTS: LinkPrefs = { on: false, types: { github: true, agent: true, n8n: true, dependency: true }, focus: true, paused: false };
 
 /** The toolbar's Connections popover: what to draw, focus mode and animation. */
-function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: {
+function ConnectionsMenu({ prefs, counts, types, picked, onChange, onClear, onClose }: {
   prefs: LinkPrefs;
   counts: Record<ConnectionType, number>;
+  /** The colors this view draws; the key shows only these, plus red for failures. */
+  types: readonly ConnectionType[];
   picked: boolean;
   onChange: (p: Partial<LinkPrefs>) => void;
   onClear: () => void;
@@ -1374,7 +1383,7 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
       window.removeEventListener("keydown", esc);
     };
   }, [onClose]);
-  const missing = CONNECTION_TYPES.filter((t) => !counts[t]);
+  const missing = types.filter((t) => !counts[t]);
   return (
     <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
       <label className="row strong">
@@ -1382,7 +1391,7 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
         Show all connections in this view
       </label>
       <div className="group">
-        {CONNECTION_TYPES.map((t) => (
+        {types.map((t) => (
           <label key={t} className="row">
             <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
             <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
@@ -1390,6 +1399,10 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
         ))}
+        <div className="row key">
+          <i className="swatch" style={{ background: LINK_COLORS.unhealthy.day }} />
+          Failing, any kind
+        </div>
       </div>
       <label className="row">
         <input type="checkbox" checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />

@@ -249,6 +249,66 @@ export function liveLandmarkConnections(catalog: Catalog, live: readonly LiveLan
 }
 
 /** Projects an endpoint belongs to, for focus highlighting. */
+/** What a desk shows for one agent: enough of the office runtime to colour a line. */
+export interface LiveRuntime { state: string; basis: { at: string } | null }
+
+const LIVE_WORD: Record<string, string> = { working: "running", failed: "failed", stale: "stale", idle: "idle", awaiting: "awaiting approval", unknown: "not connected" };
+/** The Workflow Automation Hub: the landmark that houses n8n (catalog/workspace/workspace.yaml). */
+export const WORKFLOW_HUB = "atlas-station";
+
+/** One line's status from its agents' live states, the same ones their desks show. */
+function liveStatus(agents: Agent[], runtimes: ReadonlyMap<string, LiveRuntime>): { status: ConnectionStatus; note: string; at: string | null; details: string[] } {
+  const word = (a: Agent) => LIVE_WORD[runtimes.get(a.id)?.state ?? "unknown"] ?? "not connected";
+  const count = (w: string) => agents.filter((a) => word(a) === w).length;
+  const note = ["failed", "running", "awaiting approval", "stale", "idle", "not connected"].filter(count).map((w) => `${count(w)} ${w}`).join(", ");
+  const at = agents.map((a) => runtimes.get(a.id)?.basis?.at).filter((x): x is string => !!x).sort().pop() ?? null;
+  const status: ConnectionStatus = count("failed") ? "unhealthy" : count("running") || count("idle") || count("awaiting approval") ? "active" : count("stale") ? "inactive" : "unknown";
+  return { status, note: `Live: ${note}`, at, details: agents.map((a) => `${a.name}: ${word(a)}`) };
+}
+
+/** The n8n workflows behind these agents, named by the agent that runs each (as elsewhere here). */
+const n8nWorkflows = (agents: Agent[]) => agents.filter((a) => isN8n(a) || a.links.some((l) => /n8n/i.test(l.label))).map((a) => `n8n: ${a.name}`);
+
+/**
+ * What actually flows between buildings, beyond "Atlas reads this repository": each project's
+ * run reports into Atlas Command Center over the live feed, and the n8n workflows it runs in the
+ * Workflow Automation Hub. Only manifest facts make a line (`observe.agent_feed`, n8n framework or
+ * links labelled n8n); the live states of the agents on it decide its colour.
+ */
+export function flowConnections(catalog: Catalog, runtimes: ReadonlyMap<string, LiveRuntime>): Connection[] {
+  const atlas = catalog.projects.find((p) => p.id === ATLAS_PROJECT);
+  if (!atlas) return [];
+  const fileOf = (id: string) => `catalog/${catalog.projects.find((p) => p.id === id)?.file ?? `${id}.yaml`}`;
+  const nameOf = (e: Endpoint) => (e.kind === "landmark" ? e.name : catalog.projects.find((p) => p.id === e.id)?.name) ?? e.id;
+  const out: Connection[] = [];
+  for (const p of catalog.projects) {
+    const mine = catalog.agents.filter((a) => a.projectId === p.id && a.status !== "retired");
+    const feed = p.id === atlas.id ? [] : mine.filter((a) => a.observe?.agentFeed);
+    if (feed.length) {
+      const l = liveStatus(feed, runtimes);
+      out.push({
+        id: `feed:${p.id}`, source: { kind: "project", id: p.id }, target: { kind: "project", id: atlas.id },
+        type: feed.some(isN8n) ? "n8n" : "agent", directed: true, relation: "reports runs to",
+        evidence: [`${fileOf(p.id)}: observe.agent_feed on ${feed.length} ${feed.length === 1 ? "agent" : "agents"}`, "Run results arrive through the live feed (/api/hooks/agents)"],
+        status: l.status, statusNote: l.note, lastVerified: l.at, repositories: [p.repository],
+        agents: feed.map((a) => a.name), workflows: n8nWorkflows(feed), details: l.details,
+      });
+    }
+    const flows = mine.filter((a) => isN8n(a) || a.links.some((x) => /n8n/i.test(x.label)));
+    if (flows.length) {
+      const l = liveStatus(flows, runtimes);
+      out.push({
+        id: `n8n:${p.id}`, source: { kind: "project", id: p.id }, target: { kind: "landmark", id: WORKFLOW_HUB, name: "Workflow Automation Hub" },
+        type: "n8n", directed: true, relation: "runs workflows in",
+        evidence: [`${fileOf(p.id)}: ${flows.length} n8n ${flows.length === 1 ? "agent" : "agents"} (framework or links labelled n8n)`],
+        status: l.status, statusNote: l.note, lastVerified: l.at, repositories: [p.repository],
+        agents: flows.map((a) => a.name), workflows: n8nWorkflows(flows), details: l.details,
+      });
+    }
+  }
+  return out.map((c) => ({ ...c, relation: `${nameOf(c.source)} ${c.relation} ${nameOf(c.target)}` }));
+}
+
 export function projectOfEndpoint(catalog: Catalog, e: Endpoint): Project | undefined {
   if (e.kind === "landmark") return undefined;
   const id = e.kind === "project" ? e.id : catalog.agents.find((a) => a.id === e.id)?.projectId;
