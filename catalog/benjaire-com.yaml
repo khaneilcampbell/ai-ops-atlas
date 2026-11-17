@@ -61,6 +61,9 @@ agents:
         inputs: [Contact form POST, Checkout request]
         outputs: [Email to Benjaire, Webhook call to n8n, Stripe checkout redirect]
         dependencies: [benjaire-flow-intake]
+        limitations:
+          - Forwards to Benjaire Flow once with a 10 second timeout; a failed forward is only logged
+          - Turnstile blocks bots but cannot judge whether a real inquiry is serious
       goals:
         review_frequency: Monthly
         kpis:
@@ -146,6 +149,10 @@ agents:
         inputs: [Inquiry webhook from the contact Worker]
         outputs: [flow_inquiries row, flow_events audit rows, Owner alert email, Acknowledgement email]
         dependencies: [benjaire-contact-worker]
+        limitations:
+          - No rate limit of its own; it relies on the Worker in front
+          - Claude Haiku sorts inquiries but can misjudge urgency, so Khaneil reviews the alert
+          - The repository export is updated by hand and can drift from n8n
       goals:
         objective: Sort, save and acknowledge every valid inquiry.
         review_frequency: Monthly
@@ -227,6 +234,9 @@ agents:
         inputs: [Inquiry from the contact Worker]
         outputs: [Mission Control inbox, Reply and follow-up drafts in Khaneil's mail app]
         dependencies: [benjaire-contact-worker]
+        limitations:
+          - Reply progress is saved per device, so it does not sync between the Mac and iPhone
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         review_frequency: Monthly
         kpis:
@@ -291,13 +301,21 @@ agents:
         tools: [GitHub Actions, npm, Playwright]
         inputs: [Pushes and pull requests to main]
         outputs: [Check results]
+        dependencies:
+          - GitHub Actions runners
+          - Playwright
+        limitations:
+          - Checks build, links, SEO and accessibility, not how pages look
+          - Actions are pinned by version tag, not commit
       goals:
         objective: Block site changes that break the build, links, SEO or accessibility.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -358,6 +376,10 @@ agents:
         inputs: [Monthly schedule, A topic from Khaneil in chat]
         outputs: [Monthly next-product brief by email, Notion page]
         dependencies: [benjaire-product-lab-research, benjaire-product-lab-competitors, benjaire-product-lab-customers, benjaire-product-lab-scoring, benjaire-product-lab-brief]
+        limitations:
+          - Monthly; between runs only Khaneil's chat questions start it
+          - Web research can be out of date or wrong; the brief is advice for Khaneil, not a decision
+          - High reasoning plus memory on every run is its main cost
       goals:
         review_frequency: Monthly
         kpis:
@@ -433,6 +455,9 @@ agents:
         outputs:
           - 'Long list of 6 to 10 ideas with source links'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
       goals:
         objective: A long list of 6 to 10 ideas, each with dated demand signals
         review_frequency: Monthly
@@ -502,6 +527,9 @@ agents:
           - 'Competitor table per idea with links and the date prices were checked'
           - 'Saturation and differentiation angle'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
       goals:
         objective: Each shortlisted idea has its top 3 to 5 competitors mapped
         review_frequency: Monthly
@@ -571,6 +599,9 @@ agents:
         outputs:
           - 'Personas, quoted pains, triggers, channels and a headline per idea'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
       goals:
         objective: 1 to 2 specific personas per idea with real quoted pains
         review_frequency: Monthly
@@ -639,6 +670,9 @@ agents:
           - 'Scorecard table sorted highest first'
           - 'Top pick and two runners-up'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
       goals:
         objective: One top recommendation and two runners-up from the weighted scorecard
         review_frequency: Monthly
@@ -708,6 +742,9 @@ agents:
           - 'Notion page Product Lab – <topic> – <date>'
           - 'Email to Khaneil'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
       goals:
         objective: A decision-ready brief of about 900 words
         review_frequency: Monthly
@@ -782,6 +819,12 @@ agents:
           - n8n error trigger from a failed workflow
         outputs:
           - Error alert email to the ops address
+        dependencies:
+          - Every Flow, Shop and Commerce n8n workflow (error trigger)
+          - Resend
+        limitations:
+          - Alerts only; it does not retry the failed workflow
+          - Only sees failures n8n catches; a workflow that never starts sends nothing (Missed Run Check covers that)
       goals:
         objective: No Flow or Shop failure goes unnoticed.
         review_frequency: Monthly
@@ -867,6 +910,13 @@ agents:
           - Updated flow_inquiries status
           - flow_events audit row
           - Welcome and onboarding email on a first win
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries data table
+          - Resend
+        limitations:
+          - Status links never expire
+          - No saved run since 2026-10-18, so it has not been proven recently
       goals:
         objective: Keep every inquiry's status accurate with one click.
         review_frequency: Monthly
@@ -954,6 +1004,13 @@ agents:
         outputs:
           - Reminder email to the owner
           - reminded flag on the inquiry
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries and flow_settings data tables
+          - Resend
+        limitations:
+          - Checks three times on weekdays only, so weekend inquiries wait until Monday 9am
+          - Reminds; it does not reply to the client
       goals:
         objective: No inquiry waits past its reply target unnoticed.
         review_frequency: Monthly
@@ -1036,6 +1093,13 @@ agents:
           - flow_inquiries rows
         outputs:
           - Monday digest email to the owner
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries data table
+          - Resend
+        limitations:
+          - Weekly only, Mondays 8am
+          - Summarises what is in the table; it does not check inboxes
       goals:
         objective: One reliable weekly summary of the inquiry pipeline.
         review_frequency: Quarterly
@@ -1118,6 +1182,12 @@ agents:
           - n8n executions of the three watched workflows
         outputs:
           - Missed-run alert email to ops, only when one is late
+        dependencies:
+          - n8n execution history
+          - Resend
+        limitations:
+          - Watches three workflows only
+          - Daily, so a missed run can go unnoticed for up to a day
       goals:
         objective: Catch silent schedule failures within a day.
         review_frequency: Monthly
@@ -1205,6 +1275,13 @@ agents:
           - Order row
           - Delivery email to the buyer
           - Kit download
+        dependencies:
+          - Stripe checkout.session.completed webhook
+          - Resend
+          - shop_orders data table
+        limitations:
+          - No paid order has run through it yet; the last saved run is a test on 2026-11-12
+          - Delivers only after Stripe confirms payment
       goals:
         objective: Deliver every paid order once, safely.
         review_frequency: Monthly
@@ -1295,6 +1372,13 @@ agents:
           - Day 2 and day 12 buyer emails
           - Sent markers on each order
           - Batch report to Atlas
+        dependencies:
+          - benjaire-shop-delivery
+          - shop_settings caps and pause flag
+          - Resend
+        limitations:
+          - Every 4 hours, so a follow up can be up to 4 hours late
+          - Sends each follow up once per order and stops when shop_settings is paused
       goals:
         objective: Every buyer is checked on at day 2 and day 12, exactly once.
         review_frequency: Monthly
@@ -1366,6 +1450,15 @@ agents:
           - Contact form submissions
           - Status link clicks
           - Its automations' schedules
+        dependencies:
+          - benjaire-contact-worker
+          - benjaire-flow-intake
+          - benjaire-flow-status
+          - benjaire-flow-reminders
+          - benjaire-flow-digest
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Khaneil writes every reply to a client
       goals:
         objective: Answer every inquiry within its reply target.
         review_frequency: Monthly
@@ -1428,12 +1521,18 @@ agents:
           - Benjaire shop buyers
           - Khaneil
       responsibilities:
-        tasks: [Verify each checkout and deliver the download, Send the day 2 and day 12 follow ups once per order]
+        tasks: [Verify each checkout and deliver the download, Send the day 2 and day 12 follow ups once per order, Stop follow ups when the shop is paused or a cap is reached]
         tools: [Its automations]
         outputs: [The results of its automations]
         inputs:
           - Stripe completed checkouts
           - Its automations' schedules
+        dependencies:
+          - benjaire-shop-delivery
+          - benjaire-shop-follow-ups
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Refunds and buyer questions go to Khaneil
       goals:
         objective: Every buyer gets their product and support on time.
         review_frequency: Monthly
@@ -1504,6 +1603,13 @@ agents:
           - Pull requests and pushes
           - n8n error triggers
           - n8n run history
+        dependencies:
+          - benjaire-site-ci
+          - benjaire-flow-errors
+          - benjaire-flow-missed-runs
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Alerts Khaneil; it does not fix failures
       goals:
         objective: Find every Benjaire failure before a customer does.
         review_frequency: Monthly

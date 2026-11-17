@@ -343,12 +343,18 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
+        tasks: [Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes, Open a fix pull request when drift is found]
         tools: [Its automations]
         outputs: [The results of its automations]
         inputs:
           - Atlas source on GitHub
           - The agent registry
+        dependencies:
+          - github-design-consistency
+          - github-opportunity-scout
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Proposals and fixes still go through pull requests Khaneil merges
       goals:
         objective: Turn the Development Hub's scheduled checks into actions Khaneil can take.
         review_frequency: Monthly

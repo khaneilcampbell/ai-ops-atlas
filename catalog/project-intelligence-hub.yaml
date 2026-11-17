@@ -41,10 +41,18 @@ agents:
         outcomes:
           - One styled DOCX per Markdown source, beside Source/
       responsibilities:
-        tasks: [Render each project's Markdown sources to styled DOCX]
+        tasks: [Render each project's Markdown sources to styled DOCX, Apply the house styles to every DOCX]
         tools: [pandoc, python-docx]
         inputs: [Source/project.json and Source/*.md]
         outputs: [One DOCX per Markdown file]
+        dependencies:
+          - pandoc
+          - python-docx
+          - hub-ci
+        limitations:
+          - Runs only by hand
+          - Uses macOS fonts; other systems substitute them
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         review_frequency: Quarterly
         kpis:
@@ -105,13 +113,20 @@ agents:
         tools: [GitHub Actions, pandoc, python-docx, ruff]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request, Rendered DOCX when requested]
+        dependencies:
+          - GitHub Actions runners
+          - docs-builder
+        limitations:
+          - Proves the sources render, not that committed DOCX files are current
       goals:
         objective: Block merges that break a project's documents.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -193,6 +208,15 @@ agents:
         tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
         inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
         outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
+        dependencies:
+          - catalog/*.yaml on main
+          - n8n executions
+          - Atlas live feed
+          - Atlas Agent Registry Google Sheet
+        limitations:
+          - The Atlas feed covers only about the last 6 hours
+          - Finds sheet tabs by name, so renaming a tab breaks it
+          - Successful runs are not saved in n8n
       goals:
         objective: One current row per agent in the registry sheet.
         review_frequency: Monthly
@@ -285,6 +309,14 @@ agents:
         outputs:
           - agent_factory_proposals row
           - Proposal email to Khaneil
+        dependencies:
+          - catalog/*.yaml on main
+          - n8n failed runs
+          - Claude (claude-opus-5-5)
+          - Resend
+        limitations:
+          - At most one proposal per 7 days
+          - Proposes only; Khaneil approves or rejects by email before anything is built
       goals:
         objective: Propose the single most useful next agent each week.
         review_frequency: Monthly
@@ -354,10 +386,16 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas]
+        tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas, Refuse any step that is not on the allow list]
         tools: [Webhook, Claude]
         inputs: [Handoff envelopes from the Atlas site]
         outputs: [Step reports in the Atlas site's private database]
+        dependencies:
+          - Atlas site Workflow Intelligence
+          - Claude
+        limitations:
+          - Runs only the six allow-listed steps
+          - One model call per step, started only by the Atlas site
       goals:
         objective: Run allow-listed steps safely and report back every time.
         review_frequency: Monthly
@@ -436,6 +474,13 @@ agents:
           - n8n runs
           - The Atlas feed
           - Khaneil's goals and approvals
+        dependencies:
+          - agent-registry-sync
+          - atlas-agent-factory
+          - atlas-step-runner
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - New agents need Khaneil's approval
       goals:
         objective: Keep Atlas's agent workforce known, current and growing only with Khaneil's approval.
         review_frequency: Monthly
@@ -497,11 +542,17 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Render project Markdown to DOCX, Check every source renders on each change]
+        tasks: [Render project Markdown to DOCX, Check every source renders on each change, Flag a source that fails to render]
         tools: [Its automations]
         outputs: [The results of its automations]
         inputs:
           - Project Markdown sources
+        dependencies:
+          - docs-builder
+          - hub-ci
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - DOCX rendering is still started by hand
       goals:
         objective: Keep project documents current and renderable.
         review_frequency: Quarterly

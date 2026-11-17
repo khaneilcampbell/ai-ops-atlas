@@ -116,10 +116,15 @@ agents:
         outcomes:
           - One row per account and source over the threshold, rated by severity
       responsibilities:
-        tasks: [Flag repeated failed SMB logons from one source]
+        tasks: [Flag repeated failed SMB logons from one source, Rate each source's severity by failed logon count]
         tools: [Splunk SPL]
         inputs: [WinEventLog:Security in index main]
         outputs: ["Rows with account, source address, count and severity"]
+        dependencies:
+          - Splunk index main (WinEventLog:Security)
+        limitations:
+          - Fixed 5 minute buckets can split one burst and miss it
+          - Whether it runs as a scheduled alert is not in the repository
       goals:
         review_frequency: Quarterly
         kpis:
@@ -179,13 +184,19 @@ agents:
         tools: [GitHub Actions, ruff, pytest]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Tests the detection logic, not a live Splunk instance
       goals:
         objective: Catch broken detection or reporting logic before merge.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -245,6 +256,13 @@ agents:
         outputs: [The results of its automations]
         inputs:
           - Windows Security events in Splunk
+        dependencies:
+          - bruteforce-detection
+          - soc-case-notes
+          - soc-lab-ci
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Detection and case notes are still run by hand
       goals:
         objective: Keep the brute-force detection lab working and documented.
         review_frequency: Quarterly

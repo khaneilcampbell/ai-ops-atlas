@@ -50,10 +50,17 @@ agents:
         outcomes: ["Reviewed pull requests for copy, design and link changes"]
         beneficiaries: [Khaneil, Site visitors]
       responsibilities:
-        tasks: [Draft page copy and design changes, Open pull requests for review]
+        tasks: [Draft page copy and design changes, Open pull requests for review, Run the site checks before asking for review]
         tools: [Claude Code, Git, GitHub]
         inputs: [Khaneil's request]
         outputs: [Pull requests]
+        dependencies:
+          - site-ci
+          - security-check
+          - site-audit
+        limitations:
+          - Works only when Khaneil asks
+          - Opens pull requests; Khaneil reviews and merges them
       goals:
         review_frequency: Quarterly
         kpis:
@@ -118,6 +125,12 @@ agents:
         tools: [Python standard library]
         inputs: [Site root folder]
         outputs: [Audit findings and an exit code]
+        dependencies:
+          - Python 3 on the machine running it
+        limitations:
+          - Runs only by hand
+          - Checks the _headers file, which GitHub Pages ignores
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         review_frequency: Quarterly
         kpis:
@@ -178,17 +191,24 @@ agents:
         outcomes:
           - A failed check whenever a page misses its policy
       responsibilities:
-        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules]
+        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules, Fail the run when a page is missing its policy]
         tools: [GitHub Actions, shell]
         inputs: [Pushes and pull requests to main]
         outputs: [Check results]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Checks only pages at the repository root
+          - No permissions block, so the token gets the repository default
       goals:
         objective: No page ships without its security policy.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -243,13 +263,20 @@ agents:
         tools: [GitHub Actions, Python, ruff]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request, Site zip and inventory when requested]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Actions are pinned by version tag, not commit
+          - Checks code and links, not how pages look
       goals:
         objective: Block merges that break the published site.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner

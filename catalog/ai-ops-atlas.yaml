@@ -55,13 +55,23 @@ agents:
         outputs:
           - Check results on the pull request
           - Signed macOS app on main-build after approval; unsigned artifact for manual branch builds
+        dependencies:
+          - GitHub Actions runners
+          - TAURI_SIGNING_PRIVATE_KEY repository secret
+          - Protected release environment (Khaneil approves)
+        limitations:
+          - Pull requests do not build the macOS app; that runs only on main or by hand
+          - A signed update ships only after Khaneil approves the release environment
+          - Cannot judge whether a change looks right; visual checks cover that separately
       goals:
         objective: Block merges that break the app.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -117,6 +127,9 @@ agents:
         inputs: [One selected repository, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved report shown in the Intel view]
         limitations: [Reads one repository per run, Sends repository data to Anthropic when run]
+        dependencies:
+          - GitHub REST API (read-only token in Keychain)
+          - Anthropic API key in Keychain
       goals:
         objective: Accurate, grounded repository reports within the spending limits.
         kpis:
@@ -124,15 +137,18 @@ agents:
             kind: reliability
             measure: run_success_rate
             basis: Observed from the app's run log
+            target: At least 90% of runs succeed
           - name: Average run duration
             kind: quality
             measure: avg_duration_minutes
             basis: Observed from the app's run log
+            target: Under 3 minutes per report
           - name: Spend this month
             kind: cost
             target: Within the monthly budget set in Intel settings
             measure: month_spend_usd
             basis: Budget and spend come from the app's settings and run log
+        review_frequency: Monthly
       execution:
         trigger_type: manual
         schedule: Optional, off by default; runs only while the app is open
@@ -194,6 +210,10 @@ agents:
         inputs: [The Atlas catalog, Saved repository reports, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved review shown in Intel → Engineering review]
         limitations: [Recommends only and changes nothing, Reads at most 30 repositories and 6 workflow files each, Sends catalog and repository facts to Anthropic when run]
+        dependencies:
+          - repo-intelligence
+          - GitHub REST API (read-only token in Keychain)
+          - Anthropic API key in Keychain
       goals:
         objective: Grounded, proportionate recommendations within the spending limits.
         kpis:
@@ -201,11 +221,13 @@ agents:
             kind: reliability
             measure: run_success_rate
             basis: Observed from the app's run log
+            target: At least 90% of runs succeed
           - name: Spend this month
             kind: cost
             target: Within the monthly budget shared with Repository Intelligence
             measure: month_spend_usd
             basis: Budget and spend come from the app's settings and run log
+        review_frequency: Monthly
       execution:
         trigger_type: manual
         schedule: Optional weekly, off by default; runs only while the app is open
@@ -261,6 +283,9 @@ agents:
         inputs: [A failed run Khaneil chose, Actions token from Keychain, Repository list in Settings]
         outputs: [A new run attempt on GitHub, Audit records in the Activity Center]
         limitations: [Off by default, Desktop only, At most one re-run per run every 10 minutes and 10 an hour]
+        dependencies:
+          - Actions token in Keychain
+          - Repository list in Settings
       goals:
         objective: Retry flaky failures safely, with every write approved and recorded.
         review_frequency: Quarterly
@@ -326,6 +351,10 @@ agents:
         inputs: [An open pull request Khaneil chose, That repository's merge token from Keychain, Repository list in Settings]
         outputs: [A merged pull request on GitHub, Audit records in the Activity Center]
         limitations: [Off by default, Desktop only, Never on the website or iPhone, No override of checks or reviews, Never proposed or approved automatically, At most one merge per pull request every 10 minutes and 5 an hour]
+        dependencies:
+          - Per-repository merge token in Keychain
+          - Touch ID
+          - github-merge-flow
       goals:
         objective: Merge ready pull requests safely, with every merge approved by Khaneil and recorded.
         review_frequency: Quarterly
@@ -405,6 +434,10 @@ agents:
         inputs:
           - Open pull requests and their checks (through Merge Flow)
           - Evidence Khaneil supplies
+        limitations:
+          - Runs only when Khaneil asks; no schedule
+          - Cannot merge or release on its own; Khaneil approves each step
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
       goals:
         objective: Shorten the time from merge to installed update without skipping a gate.
         review_frequency: Monthly
@@ -476,6 +509,13 @@ agents:
           - Issues, pull requests, CI results and drafts Khaneil pastes into chat
         outputs:
           - 'Chat answer: priority, bottleneck, next safe action'
+        dependencies:
+          - n8n Cloud chat
+          - Claude (claude-sonnet-5-5)
+        limitations:
+          - Works only on what Khaneil pastes into its n8n chat; it cannot read GitHub itself
+          - Drafts and checklists only; it cannot merge, tag or publish
+          - Last used 2026-11-05, so its advice may lag recent pipeline changes
       goals:
         objective: Give the fastest compliant release path from evidence.
         review_frequency: Quarterly
@@ -550,6 +590,14 @@ agents:
           - latest.json
         outputs:
           - Live feed report for the Product Marketplace
+        dependencies:
+          - atlas-ci
+          - main-build release (latest.json)
+          - Atlas live feed
+        limitations:
+          - Reads release metadata only; it never edits latest.json
+          - Hourly, so a broken release can go unnoticed for up to an hour
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         objective: The Product Marketplace shows whether the latest signed Atlas build is published
         review_frequency: Monthly
@@ -627,6 +675,14 @@ agents:
           - Atlas site response
         outputs:
           - Live feed report for the Observability Center
+        dependencies:
+          - GitHub Actions run history
+          - Atlas site
+          - Atlas live feed
+        limitations:
+          - Checks every 30 minutes, so a short outage between checks can be missed
+          - Reports problems; it does not fix them
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         objective: The Observability Center shows how many main-branch workflows are failing and whether the site answers
         review_frequency: Monthly
@@ -704,6 +760,14 @@ agents:
           - GitHub repository metadata
         outputs:
           - Live feed report for the Data Intelligence Center
+        dependencies:
+          - catalog/*.yaml on main
+          - GitHub repository metadata
+          - Atlas live feed
+        limitations:
+          - Every 3 hours, so counts can lag a merge
+          - Counts what the catalog says; it does not prove an agent is running
+          - No AI model, so it cannot judge content; it only follows its fixed rules
       goals:
         objective: The Data Intelligence Center shows how many catalog repositories are fresh or stale
         review_frequency: Monthly
@@ -796,6 +860,14 @@ agents:
           - Registry tab of the Atlas Agent Registry sheet
         outputs:
           - Buildings, Agents by Building, Map Objects and Inventory Summary tabs
+        dependencies:
+          - Map inventory GitHub Action (atlas-inventory.json)
+          - Atlas Agent Registry Google Sheet
+          - agent-registry-sync
+        limitations:
+          - Google Sheets allows only so many writes per minute; it pauses 30 seconds and retries up to 5 times
+          - Daily, so the sheet can lag a merge by up to a day
+          - Successful runs are not saved in n8n, so only failures show there
       goals:
         objective: Keep the map inventory in the registry sheet current every day.
         review_frequency: Monthly
@@ -872,6 +944,14 @@ agents:
           - Pull requests and pushes
           - Khaneil's button presses in Atlas
           - The main-build release
+        dependencies:
+          - atlas-ci
+          - atlas-rerun-failed
+          - atlas-merge-pr
+          - marketplace-steward
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Every merge and signed release still needs Khaneil
       goals:
         objective: Ship every tested change safely to the installed app.
         review_frequency: Monthly
@@ -943,6 +1023,13 @@ agents:
           - GitHub Actions runs
           - The Atlas site
           - The catalog and map inventory
+        dependencies:
+          - signal-watch
+          - dataset-census
+          - atlas-data-inventory
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Reports health; it does not repair anything
       goals:
         objective: Know Atlas is healthy before relying on it.
         review_frequency: Monthly

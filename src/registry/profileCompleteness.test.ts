@@ -23,6 +23,27 @@ describe("agent profile completeness", () => {
     expect(gaps).toEqual([]);
   });
 
+  it("fills every Responsibilities and Goals field the profile shows", () => {
+    const gaps: string[] = [];
+    for (const a of catalog.agents) {
+      if (UNREADABLE_DRAFTS.includes(a.id)) continue;
+      const p = toProfile(a, project(a.id));
+      const r = p.responsibilities;
+      const g = p.goals;
+      const miss = [
+        !r.tasks.length && "tasks",
+        !r.dependencies.length && "dependencies",
+        !r.limitations.length && "limitations",
+        !g.objective && "objective",
+        !g.reviewFrequency && "review frequency",
+        !g.kpis.length && "KPIs",
+        g.kpis.some((k) => !k.target) && "KPI target",
+      ].filter(Boolean);
+      if (miss.length) gaps.push(`${a.id}: ${miss.join(", ")}`);
+    }
+    expect(gaps).toEqual([]);
+  });
+
   it("documents a draft only as far as the evidence goes", () => {
     for (const id of UNREADABLE_DRAFTS) {
       const a = catalog.agents.find((x) => x.id === id)!;
