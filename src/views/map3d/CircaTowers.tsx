@@ -42,7 +42,7 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
   const half=new THREE.CylinderGeometry(.5,.5,1,24,1,false,-Math.PI/2,Math.PI).translate(0,.5,0);
   const texture=screenTexture(),screen=screenGeometry();
   return {palette,ellipse,half,texture,screen,
-   glass:new THREE.MeshStandardMaterial({color:'#7fa58f',roughness:.18,metalness:.45,emissive:'#ffcf86',emissiveIntensity:0}),
+   glass:new THREE.MeshStandardMaterial({color:'#8fb3cc',roughness:.18,metalness:.45,emissive:'#ffcf86',emissiveIntensity:0}),
    storefront:new THREE.MeshStandardMaterial({color:'#36525e',roughness:.2,metalness:.3,emissive:'#ffd9a0',emissiveIntensity:0}),
    floors:new THREE.MeshStandardMaterial({color:'#f2f1ec',roughness:.6,emissive:'#ffd59a',emissiveIntensity:0}),
    entry:new THREE.MeshStandardMaterial({color:'#e6f2f7',roughness:.06,metalness:0,transparent:true,opacity:.14,depthWrite:false}),
@@ -51,8 +51,8 @@ export function CircaTowers({plan:a,g,m,night,pick,moving}:{plan?:FinancialPlan;
    water:new THREE.MeshStandardMaterial({color:'#46c3cf',roughness:.25,emissive:'#1a7f8c',emissiveIntensity:.05}),
    led:new THREE.MeshStandardMaterial({color:'#000000',emissive:'#ffffff',emissiveMap:texture,emissiveIntensity:.85,roughness:.5,side:THREE.DoubleSide})};
  },[]);
-  // Soft green day glass and deep green night glass, like the rest of the restyled district (city artwork, 2026-11-17).
- useEffect(()=>{res.glass.color.set(night?'#2c4a3e':'#86ac96');res.glass.emissive.set(night?'#5d9a80':'#000000');res.glass.emissiveIntensity=night?.35:0;res.floors.emissiveIntensity=night?.55:0;res.entry.opacity=night?.1:.14;res.lobby.emissiveIntensity=night?1.2:.45;res.finish.emissiveIntensity=night?.3:.06;res.storefront.emissiveIntensity=night?.7:0;res.water.emissiveIntensity=night?.5:.05;res.led.emissiveIntensity=night?1.15:.85;},[night,res]);
+  // Cream stone with soft sky-blue glass, Khaneil's pick for the Ellipse Residences (2026-11-17).
+ useEffect(()=>{res.glass.color.set(night?'#2c4868':'#97bcd4');res.glass.emissive.set(night?'#5d82b3':'#000000');res.glass.emissiveIntensity=night?.35:0;res.floors.emissiveIntensity=night?.55:0;res.entry.opacity=night?.1:.14;res.lobby.emissiveIntensity=night?1.2:.45;res.finish.emissiveIntensity=night?.3:.06;res.storefront.emissiveIntensity=night?.7:0;res.water.emissiveIntensity=night?.5:.05;res.led.emissiveIntensity=night?1.15:.85;},[night,res]);
  useEffect(()=>()=>{res.ellipse.dispose();res.half.dispose();res.texture.dispose();res.screen.dispose();res.glass.dispose();res.storefront.dispose();res.water.dispose();res.entry.dispose();res.lobby.dispose();res.finish.dispose();res.floors.dispose();res.led.dispose();},[res]);
  // The screen scrolls only on frames the pacer already draws, and holds still for reduced motion.
  useFrame((_,delta)=>{if(moving&&b)res.texture.offset.x=(res.texture.offset.x+Math.min(delta,.1)*.025)%1;});
