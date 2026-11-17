@@ -107,7 +107,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           onSelect={setPicked}
           api={api}
         />
-        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":n===3&&projectId==="ai-ops-atlas"?"Floor 3 · Production":n===4?"Floor 4 · Agents":`Floor ${n}`}</button>)}</nav>
+        <nav className="skyline-floor-picker office-floor-nav" aria-label="Building floor navigation"><strong>Floor navigation</strong>{[-1,4,3,2,1,0].map(n=><button key={n} aria-pressed={floor===n} onClick={()=>{setFloor(n);setPicked(null);}}>{n===-1?"All floors":n===0?"Lobby":`Floor ${n}`}</button>)}</nav>
         <div className="office-head">
           <button className="office-back" onClick={exit}>
             <span aria-hidden>‹</span> Exit building

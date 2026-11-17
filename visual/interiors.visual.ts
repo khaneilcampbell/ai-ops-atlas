@@ -29,7 +29,7 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,2);await waitForOffice(page);
   await expect(page.locator(".office-roster")).toHaveCount(0);
   await shot(page,"interior-project-lobby");
-  await nav.getByRole("button",{name:"Floor 4 · Agents",exact:true}).click();await settle(page,2);await waitForOffice(page);
+  await nav.getByRole("button",{name:"Floor 4",exact:true}).click();await settle(page,2);await waitForOffice(page);
   await expect(page.locator(".office-roster")).toBeVisible();
   await shot(page,"interior-project-agents");
   await page.getByRole("button",{name:"Exit building",exact:true}).click();await settle(page,4);
@@ -73,9 +73,9 @@ test("phone: floor navigation and exit stay accessible",async({page})=>{
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,4);await waitForOffice(page);
   const nav=page.getByRole("navigation",{name:"Building floor navigation"});
   await expect(page.getByRole("button",{name:"Enter building",exact:true})).toHaveCount(0);
-  await expect(nav.getByRole("button",{name:"Floor 4 · Agents",exact:true})).toBeInViewport();
-  await nav.getByRole("button",{name:"Floor 4 · Agents",exact:true}).click();await settle(page,2);
-  await expect(nav.getByRole("button",{name:"Floor 4 · Agents",exact:true})).toHaveAttribute("aria-pressed","true");
+  await expect(nav.getByRole("button",{name:"Floor 4",exact:true})).toBeInViewport();
+  await nav.getByRole("button",{name:"Floor 4",exact:true}).click();await settle(page,2);
+  await expect(nav.getByRole("button",{name:"Floor 4",exact:true})).toHaveAttribute("aria-pressed","true");
   await nav.getByRole("button",{name:"Lobby",exact:true}).click();await settle(page,3);await waitForOffice(page);
   await shot(page,"interior-phone-lobby");
   await expect(page.getByRole("button",{name:"Exit building",exact:true})).toBeInViewport();
@@ -103,7 +103,7 @@ test("floor switching preserves the renderer in project and business buildings",
     const canvas=await region.locator("canvas").elementHandle();
     expect(canvas).not.toBeNull();
     const nav=region.getByRole("navigation");
-    for(const name of ["Lobby",kind==="office"?"Floor 4 · Agents":"Floor 4","All floors","Floor 2","All floors"]){
+    for(const name of ["Lobby","Floor 4","All floors","Floor 2","All floors"]){
       await nav.getByRole("button",{name,exact:true}).click();await settle(page,1);
       await expect(nav.getByRole("button",{name,exact:true})).toHaveAttribute("aria-pressed","true");
       const current=await region.locator("canvas").elementHandle();

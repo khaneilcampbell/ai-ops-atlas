@@ -390,22 +390,20 @@ pub async fn live_publish(
     }
 }
 
-/// Step reports from the n8n bridge (server/n8nBridge.ts) after a cursor, or whether the bridge is
-/// set up (`status`). `None` when website sync isn't set up. Read-only.
+/// Step reports from the n8n bridge (server/n8nBridge.ts) after a cursor, whether the bridge is
+/// set up (`status`), or one step's send record and reports (`idem`, its idempotency key). `None`
+/// when website sync isn't set up. Read-only.
 #[tauri::command]
 pub async fn live_n8n_steps(
     since: u64,
     status: bool,
+    idem: Option<String>,
     sync: tauri::State<'_, UsageSync>,
 ) -> Result<Option<serde_json::Value>, String> {
     let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
         return Ok(None);
     };
-    let query = if status {
-        "status=1".to_string()
-    } else {
-        format!("since={since}")
-    };
+    let query = steps_query(since, status, idem.as_deref())?;
     match sync
         .http()
         .get(format!("{url}{N8N_STEPS_PATH}?{query}"))
@@ -420,6 +418,27 @@ pub async fn live_n8n_steps(
             .map_err(|e| format!("The site's step reports weren't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// The query for `live_n8n_steps`. An idempotency key is checked here as well as on the site, so
+/// nothing but `[A-Za-z0-9_:-]` ever reaches the URL.
+fn steps_query(since: u64, status: bool, idem: Option<&str>) -> Result<String, String> {
+    if status {
+        return Ok("status=1".to_string());
+    }
+    match idem {
+        Some(k) => {
+            let ok = (3..=120).contains(&k.len())
+                && k.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-');
+            if ok {
+                Ok(format!("idem={k}"))
+            } else {
+                Err("Bad idempotency key.".into())
+            }
+        }
+        None => Ok(format!("since={since}")),
     }
 }
 
@@ -501,7 +520,19 @@ pub async fn live_stripe_sales(
 
 #[cfg(test)]
 mod tests {
-    use super::security_repos;
+    use super::{security_repos, steps_query};
+
+    #[test]
+    fn steps_query_only_passes_clean_keys() {
+        assert_eq!(steps_query(7, true, Some("x")).unwrap(), "status=1");
+        assert_eq!(steps_query(7, false, None).unwrap(), "since=7");
+        assert_eq!(
+            steps_query(0, false, Some("task_abc:2")).unwrap(),
+            "idem=task_abc:2"
+        );
+        assert!(steps_query(0, false, Some("a&since=0")).is_err());
+        assert!(steps_query(0, false, Some("ab")).is_err());
+    }
 
     #[test]
     fn security_repos_keeps_only_well_formed_names() {
