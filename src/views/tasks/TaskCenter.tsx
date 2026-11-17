@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TaskIntelligence } from "./TaskIntelligence";
 import { actionsApi } from "../../actions/api";
 import { useActions } from "../../actions/state";
 import { CopyValue, ExternalLink } from "../../components/bits";
@@ -17,6 +18,8 @@ import { takeTaskFocus } from "../../tasks/focus";
 import { githubFailureEvents, intake, n8nFailureEvents } from "../../tasks/intake";
 import { approvalFor, beginAttempt, block, cancel, decideApproval, liveAttempt, needsApproval, requestApproval, retry, startProblem, unmetDependencies, updateAttempt } from "../../tasks/lifecycle";
 import { agentProblem, agentProfile, agentProfiles, taskBuildings } from "../../tasks/registry";
+import { taskAgentProblem } from "../../product/templates";
+import { useWorkspace } from "../../product/workspace";
 import { ruleRouter } from "../../tasks/routing";
 import { EMPTY_FILTER, lastExecution, matches, page, sortTasks, summarize, type TaskFilter } from "../../tasks/select";
 import { addArtifact, byId, taskService, useTasks } from "../../tasks/store";
@@ -354,6 +357,7 @@ function Kv({ label, children }: { label: string; children: React.ReactNode }) {
 function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: ExecContext; onClose: () => void; onEdit: (t: StoredTask) => void; onOpen: (id: string) => void }) {
   const tasks = useTasks();
   const { catalog, repos, select, setView } = useAtlas();
+  const workspace = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [failNote, setFailNote] = useState("");
@@ -372,7 +376,8 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
   const svc = taskService();
   const catalogAgent = task.agentId ? catalog.agents.find((a) => a.id === task.agentId) : undefined;
   const profile = catalogAgent ? agentProfile(catalogAgent, catalog.projects) : null;
-  const problemForAgent = task.agentId ? agentProblem(catalogAgent) : null;
+  // The registry (retired or removed agents) first, then the active workspace (agent turned off).
+  const problemForAgent = task.agentId ? (agentProblem(catalogAgent) ?? taskAgentProblem(task.agentId, workspace, catalog)) : null;
   const avail = availability(task, ctx);
   const live = liveAttempt(task);
   const startBlock = task.status === "queued" ? startProblem(task, all, problemForAgent) : null;
@@ -685,6 +690,8 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
               </p>
             )}
           </section>
+
+          <TaskIntelligence task={task} />
 
           <section>
             <div className="section-title">History</div>

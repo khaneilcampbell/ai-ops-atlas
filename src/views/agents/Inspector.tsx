@@ -17,8 +17,9 @@ import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/
 import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 import { formatDateTime } from "../../lib/timezone";
+import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
 
-type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "operations" | "governance" | "docs";
+type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "report", label: "Reports" },
   { id: "overview", label: "Overview" },
@@ -26,6 +27,7 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "workday", label: "Workday" },
   { id: "goals", label: "Goals" },
   { id: "workflow", label: "Workflow" },
+  { id: "intelligence", label: "Intelligence" },
   { id: "operations", label: "Operations" },
   { id: "governance", label: "Governance" },
   { id: "docs", label: "Documentation" },
@@ -40,7 +42,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   // Agents that store full reports open on them: that's what they're for.
   const reports = isReportAgent(p.id) ? p.id : null;
   const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === p.id), [catalog, p.id]);
-  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job));
+  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job) && (x.id !== "intelligence" || hasIntelligence(p.id)));
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
   const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
@@ -259,6 +261,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
 
         {tab === "operations" && <OperationsTab entry={entry} flags={flags.map((f) => ({ id: f.id, severity: f.severity, detail: f.detail }))} history={agent.history} manifestLastRun={agent.lastRun} />}
 
+        {tab === "intelligence" && <IntelligenceTab agentId={p.id} />}
         {tab === "governance" && (
           <div className="reg-cols">
             <dl className="kv">

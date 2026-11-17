@@ -35,6 +35,11 @@ export function dismiss(keys: string[]) {
   emit();
 }
 
+/** Dismissed alert keys (also used by Mission Control's executive attention list). */
+export function useDismissedKeys(): ReadonlySet<string> {
+  return useSyncExternalStore(subscribe, () => dismissed, () => dismissed);
+}
+
 export function setNotifyOn(on: boolean) {
   notifyOn = on;
   save(NOTIFY_KEY, on);

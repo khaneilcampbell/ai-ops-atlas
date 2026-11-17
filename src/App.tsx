@@ -1,6 +1,6 @@
 import {financialBuildingMatches,financialBuildingAliases,financialDisplayName,landmarkMatches} from './lib/financialSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -33,6 +33,11 @@ import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { InstallHint } from "./components/InstallHint";
 import { formatDateTime, useTimeZone } from "./lib/timezone";
+import { decideFirstRun, useOnboardingOpen } from "./views/product/onboardingState";
+
+// Setup and administration load only when opened, so the map's first paint doesn't wait on them.
+const WorkspaceView = lazy(() => import("./views/product/Workspace").then((m) => ({ default: m.WorkspaceView })));
+const Onboarding = lazy(() => import("./views/product/Onboarding").then((m) => ({ default: m.Onboarding })));
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -45,6 +50,7 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
+  { view: "workspace", label: "Workspace", icon: "compass" },
 ];
 
 /** Workflow Intelligence opens from Mission Control, so Mission stays highlighted there. */
@@ -65,6 +71,9 @@ export default function App() {
   useEffect(() => publishWatches(watches), [watches]);
   usePropertyPolling();
   usePropertyNotifications(usePropertyIncidents().open);
+  // First launch on a fresh device opens setup; an existing install is migrated into a workspace.
+  useEffect(() => decideFirstRun(), []);
+  const onboarding = useOnboardingOpen();
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
@@ -165,9 +174,22 @@ export default function App() {
           {view === "repos" && <ReposView />}
           {view === "intel" && <IntelligenceView />}
           {view === "usage" && <UsageView />}
+          {view === "workspace" && (
+            <Suspense fallback={<div className="page muted">Loading…</div>}>
+              <WorkspaceView />
+            </Suspense>
+          )}
           {view === "settings" && <SettingsView />}
         </ErrorBoundary>
       </main>
+
+      {onboarding && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <Onboarding />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
       {selection && view !== "map" && !((view === "agents" || view === "automations") && selection.kind === "agent" && !phone) && <DetailPanel />}

@@ -17,6 +17,7 @@
 import { DAILY_DISPATCH_CAP, dispatchProblem, KEEP_DAYS, MAX_ENVELOPE_BYTES, MAX_REPORT_BYTES, parseStepReport, STEP_RUNNER_PATH, type StepReportBody } from "../src/execution/n8nBridge";
 import type { HandoffEnvelope } from "../src/execution/types";
 import { bearerOk, type D1 } from "./live";
+import { stopRefusal } from "./opsControl";
 import { reply } from "./http";
 import { instanceOf } from "./n8n";
 
@@ -88,6 +89,10 @@ export async function dispatchStep(req: Request, env: BridgeEnv, fetcher: Fetche
   const env0 = body.value as HandoffEnvelope;
   const db = env.LIVE!;
   await ensureSchema(db);
+  // Phase 9 emergency stop: no new send while it's on. Checked before the duplicate lookup so a
+  // retried request can't slip through either; it fails closed if the state can't be read.
+  const stopped = await stopRefusal(db);
+  if (stopped) return reply(423, { state: "refused", error: stopped } satisfies DispatchAnswer);
   await prune(db, now);
   const prior = (await db.prepare("SELECT state, detail FROM n8n_dispatch WHERE idem = ?").bind(env0.idempotencyKey).all<{ state: string; detail: string | null }>()).results[0];
   // A record still "sending" means an earlier request stopped mid-send: it may have gone out.

@@ -21,7 +21,7 @@ export const BENJAIRE_LAUNCH: WorkflowDefinition = {
       inputs: ["The goal and its objective"],
       outputs: ["One Task Center task per workflow step"],
       execution: { kind: "manual", note: "Starting a live run creates the tasks in the Task Center from this view. No automation does the delegation." },
-      caveat: "Agent Operations Lead's registry duties are the Agent Registry sheet and agent proposals; delegating product goals isn't one of them, so this step is recorded by hand.",
+      caveat: "Agent Operations Lead coordinates the goal; Atlas creates the tasks when Khaneil starts the run, and this step is then recorded by hand. No model is called.",
     },
     {
       id: "market-research",

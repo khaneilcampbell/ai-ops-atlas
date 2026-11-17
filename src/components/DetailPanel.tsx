@@ -13,6 +13,7 @@ import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
 import { AgentOutput } from "./AgentOutput";
+import { hasIntelligence, IntelligenceTab } from "../views/agents/IntelligenceTab";
 import { BenjaireFinance } from "./BenjaireFinance";
 import { buildingFinance } from "../finance/benjaire";
 import { RepositoryNotice } from "./RepositoryNotice";
@@ -238,8 +239,9 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
 }
 
 export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) {
-  const [tab, setTab] = useState<"overview" | "output">("overview");
+  const [tab, setTab] = useState<"overview" | "output" | "intelligence">("overview");
   const { catalog, repos, select } = useAtlas();
+  const tabs = hasIntelligence(id) ? (["overview", "output", "intelligence"] as const) : (["overview", "output"] as const);
   const agent = catalog.agents.find((a) => a.id === id);
   const history = useMemo(() => activityFeed(catalog, repos, { agent: id }), [catalog, repos, id]);
   if (!agent) return <Head eyebrow="Agent" title="Not found" />;
@@ -259,16 +261,16 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         </div>
       </Head>
       <div className="panel-tabs" role="tablist" aria-label={`${itemLabel} sections`}>
-        {(["overview", "output"] as const).map((name) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
+        {tabs.map((name, i) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
-          const next = event.key === "Home" ? "overview" : event.key === "End" ? "output" : name === "overview" ? "output" : "overview";
+          const next = event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[tabs.length - 1] : tabs[(i + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
           setTab(next);
           document.getElementById(`agent-${id}-${next}-tab`)?.focus();
-        }}>{name === "overview" ? "Overview" : "Output"}</button>)}
+        }}>{name === "overview" ? "Overview" : name === "output" ? "Output" : "Intelligence"}</button>)}
       </div>
       <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
-        {tab === "output" ? <AgentOutput agent={agent}/> : <>
+        {tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <ClaudeReviewHandoff agent={agent}/>
         <BuildingTasks agentId={agent.id}/>

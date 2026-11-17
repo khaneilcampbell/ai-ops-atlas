@@ -15,6 +15,8 @@ import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
+import { Roles, type RoleView } from "./agents/Roles";
+import { roleDirectory } from "../catalog/essentialRoles";
 import "../styles/registry.css";
 
 type Sub = "directory" | "portfolio" | "goals" | "manage";
@@ -33,8 +35,10 @@ interface Prefs {
   classification: string;
   operational: string;
   runtime: string;
+  /** Agents tab only: essential roles (default), Inactive, Archived, or the flat list of all agents. */
+  view: RoleView | "all";
 }
-const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
+const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
 
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
@@ -70,7 +74,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   );
   const groups = useMemo(() => groupEntries(rows, prefs.group, owners), [rows, prefs.group, owners]);
   const flat = groups.flatMap((g) => g.entries);
-  const current = (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
+  const roleView = kind === "agents" && prefs.view !== "all";
+  const counts = useMemo(() => roleDirectory(allCatalog.agents).counts, [allCatalog]);
+  const current = roleView ? (selection?.kind === "agent" ? byId.get(selection.id) : undefined) : (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
 
   const open = (id: string) => {
     select({ kind: "agent", id });
@@ -119,7 +125,31 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
       {prefs.sub === "manage" && kind === "agents" && <Manage open={open} />}
 
-      {prefs.sub === "directory" && (
+      {prefs.sub === "directory" && kind === "agents" && (
+        <div className="seg role-views" role="tablist" aria-label="Directory views">
+          {([["roles", `Essential roles ${counts.roles}`], ["inactive", `Inactive ${counts.inactive}`], ["archived", `Archived ${counts.archived}`], ["all", "All entries"]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={prefs.view === v} className={prefs.view === v ? "on" : ""} onClick={() => set({ view: v })}>{label}</button>
+          ))}
+          <span className="muted small">{counts.aiAgents} agents · {counts.automations} automations in use</span>
+        </div>
+      )}
+      {prefs.sub === "directory" && roleView && (
+        <>
+          <div className="filters" role="search">
+            <label className="field">
+              <Icon name="search" size={14} />
+              <input value={filters.query} onChange={(e) => setFilters({ query: e.target.value })} placeholder="Search names, ids, projects" aria-label="Search roles" />
+            </label>
+          </div>
+          <div className="agents-split">
+            <div className="card agent-list reg-list-pane" aria-label="Essential roles">
+              <Roles agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} view={prefs.view as RoleView} query={filters.query} current={current?.profile.id} pick={(id) => select({ kind: "agent", id })} />
+            </div>
+            {current ? <Inspector key={current.profile.id} entry={current} /> : <div className="card empty">Open a role and pick an agent or automation to see its details.</div>}
+          </div>
+        </>
+      )}
+      {prefs.sub === "directory" && !roleView && (
         <>
           <div className="filters" role="search">
             <label className="field">
