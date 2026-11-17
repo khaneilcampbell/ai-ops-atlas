@@ -128,7 +128,7 @@
    "kind": "Project building",
    "area": "Career & Portfolio",
    "organization": "",
-   "module": "",
+   "module": "Development & Repository Hub",
    "status": "active",
    "project": "portfolio-site",
    "source": "catalog/khaneilcampbell-com.yaml",
@@ -2105,6 +2105,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-17T09:16:40.594Z",
- "commit": "d683a6f2cda810c6545cff000e6ce90183f3d946"
+ "generated_at": "2026-11-17T10:33:25.413Z",
+ "commit": "0dfdd2b0c98e510b00da1abf2d6165df459932a8"
 }
