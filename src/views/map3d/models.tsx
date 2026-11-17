@@ -1,4 +1,5 @@
 import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
+import { distantHills } from "./distantHills";
 import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_ASPHALT,STREET_LINE,TRANSPORT} from "./transportScale";
 export {STREET_LINE};
@@ -469,6 +470,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
         <planeGeometry args={[OCEAN_SPAN, OCEAN_SPAN]} />
       </mesh>
+      <DistantHills scene={scene} />
       <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
@@ -503,6 +505,14 @@ export function avenuePlanting(scene: Scene3D) {
   const clear = (p: { x: number; z: number }) => !keep || p.x < keep.x - m || p.x > keep.x + keep.w + m || p.z < keep.z - m || p.z > keep.z + keep.d + m;
   const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear);
   return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];
+}
+
+/** Forested hills far across the water (distantHills.ts): flat-shaded, shadowless and not clickable. */
+function DistantHills({ scene }: { scene: Scene3D }) {
+  const items = useMemo(() => distantHills(scene.bounds, WATER_Y), [scene.bounds]);
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 1, flatShading: true }), []);
+  return <Instanced items={items} geometry={geometry} material={material} shadow={false} />;
 }
 
 export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G; m: M; night?: boolean }) {
