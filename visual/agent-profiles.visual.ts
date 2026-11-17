@@ -23,11 +23,14 @@ for (const width of [1512, 390])
       await goTo(page, section);
       await page.locator(`.reg-row[data-id="${id}"]`).click();
       await settle(page, 1);
+      // On a phone the agent opens in a sheet with Overview and Output only; shoot the sheet.
       const tab = page.getByRole("tab", { name: /Documentation/ });
-      await tab.click();
-      await settle(page, 1);
-      await tab.evaluate((e) => e.scrollIntoView({ block: "start" }));
-      await settle(page, 1);
+      if (await tab.isVisible().catch(() => false)) {
+        await tab.click();
+        await settle(page, 1);
+        await tab.evaluate((e) => e.scrollIntoView({ block: "start" }));
+        await settle(page, 1);
+      }
       await page.screenshot({ path: `${out}/${id}-${width}.png` });
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     });
