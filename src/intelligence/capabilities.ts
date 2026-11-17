@@ -50,21 +50,30 @@ export const CAPABILITIES: readonly Capability[] = [
   { id: "decision.record", name: "Record a recommendation", description: "A decision summary with evidence, alternatives and uncertainty. High-impact ones go to Khaneil.", input: { recommendation: "string", evidence: "EvidenceRef[]" }, output: { id: "string", review: "string" }, permissions: ["Write decision records"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 5_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["recommend", "decision"] },
   { id: "improvement.propose", name: "Propose an improvement", description: "Suggest a prompt, knowledge, workflow or validation change for Khaneil to review.", input: { kind: "ProposalKind", change: "string" }, output: { id: "string" }, permissions: ["Write improvement proposals"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 5_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["improve", "proposal"] },
   { id: "tasks.delegate", name: "Delegate workflow steps", description: "Create Task Center tasks for each workflow step with owner and dependencies.", input: { goal: "Goal" }, output: { taskIds: "string[]" }, permissions: ["Create Task Center tasks"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 10_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["delegate", "intake", "coordinate"] },
+  { id: "status.read", name: "Read Atlas status records", description: "Repository, CI, health, Task Center and n8n run records Atlas already fetches. Changes nothing.", input: { resource: "string" }, output: { records: "StatusRecord[]" }, permissions: ["Read records already on this device"], adapter: "atlas", sideEffect: "none", timeoutMs: 10_000, retry: { max: 1, backoff: "none", onlyTransient: true }, intents: ["status", "health", "review", "monitor"] },
   { id: "github.run_workflow", name: "Run a GitHub workflow", description: "Start an allow-listed GitHub Actions workflow after Touch ID in the Mac app.", input: { agentId: "string" }, output: { runId: "string" }, permissions: ["Manage agents token (Mac Keychain)", "Touch ID"], adapter: "github-touchid", sideEffect: "external_write", timeoutMs: 2 * 60 * MIN, retry: { max: 0, backoff: "none", onlyTransient: true }, approval: ["repository_change"], intents: ["build", "ci"] },
   { id: "shop.publish", name: "Publish a product", description: "Approve and Publish (n8n). Runs only from Khaneil's approval form.", input: { productId: "string" }, output: { listing: "string" }, permissions: ["Shopify write (n8n credential)"], adapter: "none", sideEffect: "publish", timeoutMs: 10 * MIN, retry: { max: 0, backoff: "none", onlyTransient: true }, approval: ["customer_message", "financial"], neverFromAtlas: true, intents: ["publish", "launch"] },
 ];
 
 const RESEARCHER = ["memory.retrieve", "memory.write_working", "memory.propose_operational", "research.web_search", "model.light", "model.advanced", "handoff.report", "improvement.propose"];
 
-/** What each Benjaire launch agent may use. An agent not listed has no capabilities through Atlas. */
+const ENGINEERING_READ = ["memory.retrieve", "memory.write_working", "status.read", "decision.record"];
+
+/** What each agent in a saved plan may use (Benjaire launch, Phase 8 executive plans). An agent not listed has no capabilities through Atlas. */
 export const AGENT_GRANTS: Readonly<Record<string, readonly string[]>> = {
-  "agent-operations-lead": ["memory.retrieve", "memory.write_working", "memory.propose_operational", "tasks.delegate", "decision.record", "improvement.propose"],
+  "agent-operations-lead": ["memory.retrieve", "memory.write_working", "memory.propose_operational", "tasks.delegate", "decision.record", "improvement.propose", "status.read"],
   "benjaire-product-lab-research": RESEARCHER,
   "benjaire-product-lab-customers": RESEARCHER,
   "benjaire-product-lab-competitors": RESEARCHER,
   "benjaire-product-lab-scoring": ["memory.retrieve", "memory.write_working", "model.advanced", "handoff.report", "decision.record", "improvement.propose"],
   "benjaire-product-lab-brief": ["memory.retrieve", "memory.write_working", "model.light", "model.advanced", "handoff.report", "improvement.propose"],
   "benjaire-product-lab": ["memory.retrieve", "memory.write_working", "memory.propose_operational", "model.advanced", "handoff.report", "decision.record", "improvement.propose"],
+  // Phase 8 executive plans: read-only status work. None of these may change a repository through Atlas.
+  "repo-intelligence": ENGINEERING_READ,
+  "atlas-ci": ENGINEERING_READ,
+  "atlas-health-monitor": ENGINEERING_READ,
+  "atlas-release-manager": ENGINEERING_READ,
+  "documentation-lead": ENGINEERING_READ,
 };
 
 export const capability = (id: string) => CAPABILITIES.find((c) => c.id === id);

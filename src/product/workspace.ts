@@ -4,9 +4,10 @@ import type { Actor } from "../tasks/types";
 import { looksSecret } from "../lib/secretPatterns";
 import { writeWithRoom } from "../lib/storage";
 
-// Workspaces: the configuration layer that turns Atlas from one owner's dashboard into a product a
-// new person can set up. A workspace names the business it runs for and chooses which registered
-// agents, integrations and workflow templates it uses. It holds no secrets (those stay in the
+// Workspaces: the owner's own configuration layer. Atlas is a private, single-owner command center;
+// a workspace is one of the owner's setups (a business, an engineering area, a personal area), never
+// a customer account. It names what it runs for and chooses which registered agents, integrations
+// and workflow templates it uses, and which portfolio category each building sits in. It holds no secrets (those stay in the
 // Keychain or Cloudflare secrets) and no records of its own: tasks, runs and business records keep
 // their own device stores. Saved on this device under atlas:product, compare-and-set on `rev`.
 
@@ -18,15 +19,25 @@ export const ENVIRONMENTS = ["production", "staging", "development"] as const;
 export type Environment = (typeof ENVIRONMENTS)[number];
 export const ENVIRONMENT_LABEL: Record<Environment, string> = { production: "Production", staging: "Staging", development: "Development" };
 
-export const PURPOSES = ["business", "engineering", "agency", "personal", "other"] as const;
+// "agency" (AI work for clients) came from the Phase 6 product framing. It stays a valid stored
+// value so a saved workspace that used it still loads, but it is no longer offered: Atlas manages
+// the owner's own businesses, it doesn't run work for clients.
+export const PURPOSES = ["business", "engineering", "infrastructure", "personal", "other", "agency"] as const;
 export type Purpose = (typeof PURPOSES)[number];
+/** The purposes offered when creating or editing a workspace. */
+export const OFFERED_PURPOSES: readonly Purpose[] = ["business", "engineering", "infrastructure", "personal", "other"];
 export const PURPOSE_LABEL: Record<Purpose, string> = {
-  business: "Run a business's AI operations",
-  engineering: "Watch repositories and engineering agents",
-  agency: "Run AI work for clients",
-  personal: "Personal projects",
+  business: "Business operations",
+  engineering: "AI engineering",
+  infrastructure: "Infrastructure",
+  personal: "Personal operations",
   other: "Something else",
+  agency: "Business operations (older setting)",
 };
+
+/** Portfolio categories a building can sit in. Defaults come from its map district. */
+export const CATEGORIES = ["business-operations", "ai-engineering", "infrastructure", "personal-operations"] as const;
+export type Category = (typeof CATEGORIES)[number];
 
 /** Settings an owner may change for one agent inside a workspace. Everything else is protected. */
 export interface AgentSettings {
@@ -74,6 +85,8 @@ export interface Workspace {
   templates: string[];
   defaults: WorkspaceDefaults;
   agentSettings: Record<string, AgentSettings>;
+  /** Owner's portfolio placements: project id -> category, where it differs from the district default. */
+  categoryOverrides: Record<string, Category>;
   history: ConfigChange[];
 }
 
@@ -156,6 +169,14 @@ export function agentSettingsProblem(s: unknown): string | null {
 const ids = (xs: unknown): string[] => (Array.isArray(xs) ? [...new Set(xs.filter((x): x is string => typeof x === "string" && ID.test(x)))] : []);
 
 /** Reads one stored or imported workspace; anything malformed is dropped, never repaired by guessing. */
+/** Keeps only well-formed project ids mapped to known categories; anything else is dropped. */
+export function parseOverrides(raw: unknown): Record<string, Category> {
+  const out: Record<string, Category> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [id, c] of Object.entries(raw)) if (ID.test(id) && (CATEGORIES as readonly unknown[]).includes(c)) out[id] = c as Category;
+  return out;
+}
+
 export function parseWorkspace(raw: unknown): Workspace | null {
   if (!raw || typeof raw !== "object") return null;
   const w = raw as Partial<Workspace>;
@@ -181,6 +202,7 @@ export function parseWorkspace(raw: unknown): Workspace | null {
     templates: ids(w.templates),
     defaults: { timeZone: w.defaults!.timeZone, tips: w.defaults?.tips !== false },
     agentSettings,
+    categoryOverrides: parseOverrides(w.categoryOverrides),
     history: Array.isArray(w.history) ? w.history.filter((h) => h && typeof h.agentId === "string" && !agentSettingsProblem(h.before) && !agentSettingsProblem(h.after)).slice(-MAX_HISTORY) : [],
   };
 }
@@ -240,6 +262,7 @@ export function existingWorkspace(src: MigrationSource, actor: Actor, at: string
     templates: src.templates,
     defaults: { timeZone: validTimeZone(src.timeZone) ? src.timeZone : "America/New_York", tips: false },
     agentSettings: {},
+    categoryOverrides: {},
     history: [],
   };
 }
@@ -339,6 +362,7 @@ export class ProductStore {
         templates: ids(picks.templates),
         defaults: { timeZone: input.timeZone, tips: true },
         agentSettings: {},
+        categoryOverrides: {},
         history: [],
       });
       f.activeId = id;
@@ -348,7 +372,7 @@ export class ProductStore {
   }
 
   /** Edits workspace details or lists. `rev` must match the stored copy. */
-  update(id: string, rev: number, patch: Partial<WorkspaceInput> & Partial<Pick<Workspace, "projects" | "allowedAgents" | "enabledIntegrations" | "templates">> & { tips?: boolean }, actor: Actor, at: string): Ok {
+  update(id: string, rev: number, patch: Partial<WorkspaceInput> & Partial<Pick<Workspace, "projects" | "allowedAgents" | "enabledIntegrations" | "templates" | "categoryOverrides">> & { tips?: boolean }, actor: Actor, at: string): Ok {
     if (actor.kind !== "person") return { ok: false, error: "Only a person can change a workspace." };
     return this.commit((f) => {
       const w = f.workspaces.find((x) => x.id === id);
@@ -375,6 +399,7 @@ export class ProductStore {
         updatedAt: at,
       });
       if (patch.projects) w.projects = ids(patch.projects);
+      if (patch.categoryOverrides) w.categoryOverrides = parseOverrides(patch.categoryOverrides);
       if (patch.allowedAgents) w.allowedAgents = ids(patch.allowedAgents);
       if (patch.enabledIntegrations) w.enabledIntegrations = ids(patch.enabledIntegrations);
       if (patch.templates) w.templates = ids(patch.templates);

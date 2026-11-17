@@ -16,6 +16,8 @@ import { rollup, usd } from "../intel/format";
 import { AgentAlerts } from "./AgentAlerts";
 import { ClientInquiries } from "./ClientInquiries";
 import { MissionFocus } from "./MissionFocus";
+import { CommandBrief } from "./CommandBrief";
+import { ExecutiveGoals } from "./executive/ExecutiveGoals";
 import { WebsiteManagement } from "./WebsiteManagement";
 import { ProductionHealth } from "./ProductionHealth";
 import "../styles/production.css";
@@ -49,7 +51,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
         <div className="grow">
           <div className="eyebrow">Mission Control</div>
           <h1>Know what needs you next.</h1>
-          <p className="lede">Review issues, check agent activity, and follow up from one place.</p>
+          <p className="lede">Your private command center: agents, workflows, projects, systems, outputs, costs and business goals in one place.</p>
         </div>
         <button className="ghost-btn dark" onClick={() => setView("workflows")}>
           <Icon name="flow" size={16} /> Workflow Intelligence
@@ -58,6 +60,10 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
           <Icon name="map" size={16} /> Back to the map
         </button>
       </div>
+
+      <CommandBrief attention={attention.length} />
+
+      <ExecutiveGoals />
 
       <MissionFocus attention={attention} />
 

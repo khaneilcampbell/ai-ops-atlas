@@ -307,7 +307,7 @@ agents:
   - id: agent-operations-lead
     name: Agent Operations Lead
     purpose: >-
-      Keeps track of every Atlas agent and what to build next: keeps the Agent Registry sheet current and proposes at most one new agent a week for Khaneil to approve or reject. It has no model of its own yet; it works through the automations it owns.
+      Keeps track of every Atlas agent and what to build next: keeps the Agent Registry sheet current and proposes at most one new agent a week for Khaneil to approve or reject. Since Phase 8 it also coordinates Khaneil's executive goals in Mission Control: it turns a goal into a plan of registered agents from fixed templates, checks the plan, and after Khaneil approves it creates the plan's Task Center tasks. It has no model of its own yet; it works through the automations it owns and Atlas's own rules.
     framework: Atlas owning agent (runs through its automations)
     model: None of its own; each automation it owns keeps its own model and cap
     runtime: Through its automations
@@ -317,6 +317,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Agent Registry Clerk, Agent Factory, at Khaneil's request
+      - at: 2026-11-17
+        event: Coordinates executive goals in Mission Control (Phase 8). Plans come from fixed templates, start only after Khaneil approves, and default to autonomy level 1
     registry:
       title: Agent Operations Lead
       category: engineering
@@ -328,15 +330,15 @@ agents:
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
       responsibilities:
-        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week]
+        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records]
         tools: [Its automations]
-        outputs: [The results of its automations]
+        outputs: [The results of its automations, Executive goal plans, Executive briefings]
       execution:
         trigger_type: scheduled
         environment: Through its automations
       governance:
         autonomy: 1
-        autonomy_note: Proposes only; approving a proposal builds nothing.
+        autonomy_note: Proposes only; approving a proposal builds nothing. Executive plans start only when Khaneil approves and starts them; sensitive steps keep their own approvals.
         risk: low
       cost:
         budget: No model calls of its own; each automation keeps its own cap.

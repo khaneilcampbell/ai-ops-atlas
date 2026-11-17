@@ -8,7 +8,9 @@ import { focusTasks } from "../../tasks/focus";
 import { unmetDependencies } from "../../tasks/lifecycle";
 import { byId, taskService, useTasks } from "../../tasks/store";
 import { CATEGORY_LABEL, KHANEIL, STATUS_LABEL, type StoredTask } from "../../tasks/types";
-import { DEFINITIONS, GOALS } from "../../workflows/benjaireLaunch";
+import { DEFINITIONS as SAVED_DEFINITIONS, GOALS as SAVED_GOALS } from "../../workflows/benjaireLaunch";
+import { executiveWorkflows } from "../../executive/coordinator";
+import { useExecutive } from "../../executive/store";
 import { buildingActivity, liveEvents, liveStatus, resolveAll, simulate, type ResolvedNode } from "../../workflows/engine";
 import { downstream, layout as layoutOf, upstream } from "../../workflows/graph";
 import { runStore, startLiveRun, useRuns } from "../../workflows/runs";
@@ -46,9 +48,16 @@ export function WorkflowIntelligenceView() {
   const runs = useRuns();
   const sel = useWorkflowSelection();
 
+  // Saved goals plus every executive goal with a plan (Mission Control > Executive goals).
+  const executive = useExecutive();
+  const { GOALS, DEFINITIONS } = useMemo(() => {
+    const x = executiveWorkflows(executive.goals);
+    return { GOALS: [...SAVED_GOALS, ...x.goals], DEFINITIONS: { ...SAVED_DEFINITIONS, ...x.definitions } };
+  }, [executive.goals]);
   const [focus] = useState(takeWorkflowRunFocus);
   const [goalId, setGoalId] = useState(focus && GOALS.some((g) => g.id === focus.goalId) ? focus.goalId : GOALS[0].id);
   const goal = GOALS.find((g) => g.id === goalId) ?? GOALS[0];
+  const isExecutive = !SAVED_GOALS.some((g) => g.id === goal.id);
   const [mode, setMode] = useState<RunMode>(focus ? "live" : "simulation");
   const goalRuns = useMemo(() => runs.filter((r) => r.goalId === goal.id).slice().reverse(), [runs, goal.id]);
   const [runId, setRunId] = useState<string | null>(focus?.runId ?? null);
@@ -239,7 +248,9 @@ export function WorkflowIntelligenceView() {
                 <div className="muted small">No live run yet. Starting one creates a task per step in the Task Center, with each step's registry agent, building, dependencies and approval rules. Nothing runs until you start it there.</div>
               )}
               {run && <RunExecution run={run} tasks={taskMap} names={names} />}
-              {confirming ? (
+              {isExecutive ? (
+                <p className="muted small">This is an executive goal: its plan starts from Mission Control after you approve it there, so its autonomy level and budget are checked.</p>
+              ) : confirming ? (
                 <div className="wf-confirm">
                   <span>Create {def.nodes.filter((n) => n.kind !== "outcome").length} tasks in the Task Center?</span>
                   <button className="btn small primary" onClick={start}>

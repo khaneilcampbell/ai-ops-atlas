@@ -15,8 +15,8 @@ import "../../styles/product.css";
 // The first-run setup: six steps, each saved as it's finished, so closing the window halfway picks
 // up where it stopped. No step calls a model or starts anything outside Atlas.
 
-const STEPS = ["Welcome", "Workspace", "Integrations", "Agents", "Workflows", "Check"] as const;
-export const WELCOME = "Atlas is an intelligent operations platform that connects your AI agents, workflows, infrastructure and business systems in one environment.";
+const STEPS = ["Owner", "Workspace", "Tools", "Agents", "Workflows", "Health check"] as const;
+export const WELCOME = "Atlas is your private command center: one place to oversee your businesses, projects, AI agents, workflows and infrastructure. You are its only owner, so there are no accounts to register or people to invite.";
 
 export function Onboarding() {
   const product = useProduct();
@@ -67,10 +67,10 @@ export function Onboarding() {
               <p className="muted small">Setup takes a few minutes. Keys go to the Mac Keychain or your site's Cloudflare secrets, never into this page, and nothing outside Atlas runs until you start it.</p>
               <div className="onb-actions">
                 <button className="btn primary" onClick={() => setStep(1)}>
-                  Create Workspace
+                  Set Up My Workspace
                 </button>
-                <button className="btn" onClick={() => setStep(w ? 2 : 1)} title="Integrations belong to a workspace, so this starts with one if you have none.">
-                  Configure Integrations
+                <button className="btn" onClick={() => setStep(w ? 2 : 1)} title="Tools belong to a workspace, so this starts with one if you have none.">
+                  Connect Tools
                 </button>
                 <button className="btn" onClick={() => finish("skipped")}>
                   Explore Atlas
