@@ -26,7 +26,7 @@ Three n8n workflows write the [Atlas Agent Registry sheet](https://docs.google.c
 - **Healthy:** no failed executions, and the sheet's rows match the Agents tab. Successful runs of the first two are not saved in n8n, so a quiet Executions list is normal.
 - **Run it:** the Agents tab's **Refresh registry sheet** button, or run the workflow by hand.
 - **When it fails:** "Flow · 0 Error alerts" emails ops. A Google Sheets quota error clears on the next run.
-- **Stop it:** unpublish the workflow in n8n. Rows are never deleted, only marked Retired.
+- **Stop it:** unpublish the workflow in n8n. Rows are never deleted: retired agents move to the Retired tab.
 
 ## Agent Factory
 

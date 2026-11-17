@@ -151,7 +151,8 @@ agents:
     purpose: >-
       n8n workflow that keeps the Atlas Agent Registry Google Sheet in the Benjaire Drive current:
       one row per agent and n8n workflow, with building, where it runs, status, schedule, last run,
-      health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
+      health, cost cap and links. Working agents are on the Registry tab; retired and removed agents
+      move to the Retired tab with the date they were retired, never deleted.
       Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
       building next in the sheet's Top 10 Agents tab, with one capped Claude call.
       Every morning at 7am a third workflow rewrites the sheet's Business Structure tab: who reports
@@ -164,6 +165,8 @@ agents:
     trigger: Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET
     last_run: 2026-11-15T14:00:00Z
     history:
+      - at: 2026-11-17
+        event: Retired agents moved to their own Retired tab and off the Registry tab, at Khaneil's request (55 retired, 66 working)
       - at: 2026-11-12
         event: Published in n8n; added the daily Business Structure workflow and the Refresh registry sheet button
       - at: 2026-11-12
@@ -201,13 +204,13 @@ agents:
           - A ranked list of the 10 agents most worth building next, refreshed every Sunday
         beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date, Rank the top 10 agents to build every Sunday]
+        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Move retired and removed agents to the Retired tab with a date, Rank the top 10 agents to build every Sunday]
         # Framework and runtime say n8n. The tools list leaves the vendor name out on purpose: naming it
         # here would add an Automation Works kiosk to this district and reshape its land (Khaneil chose
         # to keep the map as it is, 2026-11-12).
         tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
         inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
-        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
+        outputs: [Rows in the Atlas Agent Registry sheet, Retired tab in the same sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
         dependencies:
           - catalog/*.yaml on main
           - n8n executions
@@ -244,7 +247,7 @@ agents:
       docs:
         known_issues:
           - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
-          - The workflows find the sheet's tabs by name (Registry, Top 10 Agents, Business Structure), so renaming a tab breaks them
+          - The workflows find the sheet's tabs by name (Registry, Retired, Top 10 Agents, Business Structure), so renaming a tab breaks them
           - n8n does not keep successful scheduled runs of the registry sync, so Atlas cannot show its last run
         last_review: 2026-11-12
 
