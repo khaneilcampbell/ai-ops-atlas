@@ -1,0 +1,1 @@
+- 2026-11-17 · Agents can be given a home, a workplace, working days, hours and a time zone on the Workday tab; on the map they walk to work and home on the real clock. This only moves them on the map: it never starts an automation

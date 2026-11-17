@@ -4,6 +4,8 @@ import { TIER_INFO } from "./taxonomy";
 import type { Agent, Catalog } from "./types";
 import type { TriggerType } from "../registry/types";
 import { buildingDisplayName } from "../modules/names";
+import type { PresenceAssignment } from "./agentPresence";
+import { financialBrand } from "../views/map3d/financialBrands";
 
 // Each AI agent's job: a role, an owner, a home, a workplace, a shift, a budget and the output it
 // owes at the end of the day. Everything is read from the agent's manifest or worked out by the
@@ -48,6 +50,8 @@ export interface AgentJob {
   offDuty: OffDuty | null;
   /** Works only through the automations it owns, so it keeps its desk and is not drawn walking. */
   deskOnly?: boolean;
+  /** Khaneil's saved presence schedule; when set, the map follows the real clock instead of the simulated day. */
+  presence?: PresenceAssignment;
 }
 
 const declared = <T,>(value: T, reason: string): Decided<T> => ({ value, provenance: "declared", reason });
@@ -93,10 +97,16 @@ export function apartments(ids: string[]): Map<string, AgentJob["home"]> {
 }
 
 /** The job of every AI agent in the catalog (types A, B and F), in catalog order. Automations have no job card. */
-export function agentJobs(catalog: Catalog): AgentJob[] {
+export function agentJobs(catalog: Catalog, assignments: Record<string, PresenceAssignment> = {}): AgentJob[] {
   const agents = catalog.agents.filter(isAiAgent);
   const homes = apartments(agents.map((a) => a.id));
   return agents.map((a) => {
+    const job = baseJob(a);
+    const p = assignments[a.id], at = p && catalog.projects.find((x) => x.id === p.work);
+    if (!p || !at) return job;
+    return { ...job, presence: p, deskOnly: undefined, home: { building: p.home, unit: "", label: homeLabel(p.home) }, work: { kind: "headquarters", projectId: at.id, building: at.id, label: `${at.name} headquarters` } };
+  });
+  function baseJob(a: Agent): AgentJob {
     const project = catalog.projects.find((p) => p.id === a.projectId);
     const tier = tierOf(a, catalog);
     const budget = a.registry?.cost?.budget?.trim();
@@ -118,8 +128,11 @@ export function agentJobs(catalog: Catalog): AgentJob[] {
       offDuty,
       ...(worksThroughAutomations(a) ? { deskOnly: true } : {}),
     };
-  });
+  }
 }
+
+/** A Financial District building's name, as the map's nameplate writes it. */
+export const homeLabel = (id: string) => buildingDisplayName(`service:financial:${id}`, id === AGENT_RESIDENCE.id ? AGENT_RESIDENCE.name : financialBrand(id)?.name ?? id);
 
 /** "9:30" for 9.5 hours. */
 export function clock(hours: number) {
