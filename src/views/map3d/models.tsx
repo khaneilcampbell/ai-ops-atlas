@@ -629,7 +629,7 @@ export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[];
     const one = (k: Kiosk) => {
       const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
       const brand = toolBrand(k.name), w = k.size, d = w * 0.8, f = brand.facade;
-      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#fff5d9", glassSide = f?.glass[1] ?? "#e5e8e1";
+      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#e9efd9", glassSide = f?.glass[1] ?? "#c9d8c4"; // soft green-tinted glass (city artwork, 2026-11-17)
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });
