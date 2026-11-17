@@ -21,16 +21,17 @@ export const CC={
  lobby:3.3/12,
  storey:2.7/12,
  floors:4,
- /** The block: a rounded rectangle, set back a little so the entrance has room in front. */
- cx:0,cz:-.1,a:.76,b:.5,roundness:5,ring:48,
+ /** The block: a near-square rounded rectangle, set back a little so the entrance has room in front. */
+ cx:0,cz:-.1,a:.76,b:.5,roundness:9,ring:48,
  /** Stone pilasters stand on every `pierEvery`-th outline point. */
  pierEvery:4,pierDepth:.022,
- ledgeDepth:.03,ledgeHeight:.022,
- parapet:.07,coping:.025,
- /** The stone entrance bay, proud of the front, rising above the roof with the name on it. */
- bayHalf:.2,bayProud:.07,bayRise:.2,
- /** Glass texture: one tile is 4 bays by 4 storeys. */
- bay:HQ.bay,
+ /** Thick cream stone floor slabs, the horizontal half of the stone grid. */
+ ledgeDepth:.045,ledgeHeight:.034,
+ parapet:.08,coping:.025,
+ /** The stone entrance bay, proud of the front, rising above the roof with the logo and name on it. */
+ bayHalf:.24,bayProud:.09,bayRise:.14,
+ /** One window column of the stone facade (map units at k = 1); the texture tile is 4 of them. */
+ bay:.19,
 } as const;
 
 export const ccRoof=(k=1)=>(CC.lobby+CC.floors*CC.storey)*k;
@@ -40,42 +41,57 @@ export const ccTop=(k=1)=>ccRoof(k)+CC.bayRise*k;
 export const ccLedges=(k=1)=>Array.from({length:CC.floors+1},(_,i)=>(CC.lobby+i*CC.storey)*k);
 export function ccOutline(k=1):Pt[]{return superellipse(CC.cx*k,CC.cz*k,CC.a*k,CC.b*k,CC.roundness,CC.ring);}
 export const ccFront=(k=1)=>(CC.cz+CC.b)*k;
-/** The entrance bay, as a box: centre x/z, width, depth, height. */
+/**
+ * The entrance bay, as a box: centre x/z, width, depth, height. Its stone starts over the lobby
+ * (`y`), carried on two stone posts, so the gold-lit lobby glass runs on underneath it.
+ */
 export function ccBay(k=1){
  const front=ccFront(k)+CC.bayProud*k,back=ccFront(k)-.12*k;
- return {x:0,z:(front+back)/2,w:2*CC.bayHalf*k,d:front-back,h:ccTop(k),front};
+ return {x:0,z:(front+back)/2,w:2*CC.bayHalf*k,d:front-back,y:CC.lobby*k,h:ccTop(k),front};
 }
 
 /**
- * The front door's dressing, under the stone bay: a stone landing out to the plaza, dark green
+ * The front door's dressing, under the stone bay: two steps out to the plaza, dark green
  * jambs under a brass header (the opening glass doors themselves are the map's shared
- * EntranceDoors, placed by ccDoor), a thin brass canopy, planters either side and two door
+ * EntranceDoors, placed by ccDoor), a wide brass canopy, planters along the front and two door
  * lamps that light at night. Boxes as [x, y, z, w, h, d, colour], y the bottom; lamps listed apart.
  */
 export type CcBox=[number,number,number,number,number,number,string];
 export function ccEntrance(k=1){
- const z=ccBay(k).front,dw=.22*k,dh=.2*k,brass=HQ_PALETTE.brass;
+ const bay=ccBay(k),z=bay.front,dw=.22*k,dh=.2*k,brass=HQ_PALETTE.brass,stone=HQ_PALETTE.stone,f=ccFront(k);
  const boxes:CcBox[]=[
-  [0,0,z+.12*k,.5*k,.02*k,.24*k,'#e5dccb'],
+  // Two broad steps down to the plaza.
+  [0,0,z+.1*k,.62*k,.012*k,.2*k,'#e5dccb'],
+  [0,0,z+.035*k,.54*k,.022*k,.07*k,'#ede4d2'],
+  // The stone posts that carry the bay down to the ground.
+  ...[-1,1].map(side=>[side*(bay.w/2-.025*k),0,bay.z,.05*k,bay.y,bay.d,stone] as CcBox),
   ...[-1,1].map(side=>[side*(dw/2+.01*k),.02*k,z+.012*k,.018*k,dh+.02*k,.024*k,'#2f5d4a'] as CcBox),
   [0,.02*k+dh,z+.012*k,dw+.05*k,.02*k,.026*k,brass],
-  [0,.05*k+dh,z+.08*k,dw+.16*k,.01*k,.16*k,brass],
-  ...[-1,1].map(side=>[side*.23*k,.02*k,z+.17*k,.06*k,.05*k,.06*k,'#3f6b4f'] as CcBox),
-  ...[-1,1].map(side=>[side*.23*k,.07*k,z+.17*k,.05*k,.045*k,.05*k,'#6f9a62'] as CcBox),
+  // The canopy: wider than the bay, a gold slab over the steps.
+  [0,.05*k+dh,z+.08*k,bay.w+.1*k,.018*k,.2*k,brass],
+  // Clipped hedges in stone planters along the front, either side of the entrance.
+  ...[-1,1].map(side=>[side*.5*k,0,f+.045*k,.42*k,.035*k,.07*k,stone] as CcBox),
+  ...[-1,1].map(side=>[side*.5*k,.035*k,f+.045*k,.4*k,.045*k,.055*k,'#4f7a52'] as CcBox),
  ];
  const lamps:CcBox[]=[-1,1].map(side=>[side*.15*k,.02*k,z+.05*k,.014*k,.045*k,.014*k,'#ffffff']);
  return {boxes,lamps};
 }
 
-/** Roof garden: a lawn inset from the parapet, low hedges along its edge and a few olive trees. */
+/**
+ * Roof garden: a lawn inset from the parapet, planters full of shrubs right round its edge (so
+ * they show over the parapet, as in the concept) and a few olive trees.
+ */
 export function ccRoofGarden(k=1){
- const y=ccRoof(k),hedges:CcBox[]=[];
+ const y=ccRoof(k),hedges:CcBox[]=[],g='#4f7a52',ix=(CC.a-.1)*k,iz=(CC.b-.1)*k,cz=CC.cz*k;
  for(const side of [-1,1]){
-  hedges.push([side*.52*k,y,CC.cz*k,.08*k,.05*k,.62*k,'#4f7a52']);
-  hedges.push([side*.26*k,y,(CC.cz-.36)*k,.36*k,.05*k,.07*k,'#4f7a52']);
+  hedges.push([side*ix,y,cz,.07*k,.07*k,2*iz,g]);
+  hedges.push([0,y,cz+side*iz,2*ix,.07*k,.07*k,g]);
  }
- const trees:Pt[]=[[-.4*k,(CC.cz+.16)*k],[.4*k,(CC.cz+.16)*k],[0,(CC.cz-.2)*k]];
- return {y,hedges,trees};
+ const shrubs:Pt[]=[];
+ for(let i=0;i<7;i++){const x=(-.6+i*.2)*k;shrubs.push([x,cz+iz],[x,cz-iz]);}
+ for(const side of [-1,1])for(const t of [-.2,.2])shrubs.push([side*ix,cz+t*k]);
+ const trees:Pt[]=[[-.4*k,(CC.cz+.12)*k],[.4*k,(CC.cz+.12)*k],[0,(CC.cz-.18)*k]];
+ return {y,hedges,shrubs,trees};
 }
 
 /** Every point the building puts on the ground, for clearance checks. */

@@ -6,9 +6,9 @@ import {bands,compact,fins,lid,skin} from './atlasHqGeometry';
 import {CC,ccBay,ccLedges,ccOutline,ccRoof,ccRoofGarden} from './commandCenterPlan';
 
 /**
- * Atlas Command Center geometry, built once into a few merged meshes grouped by material: green
- * glass for the office floors, warm glass for the lobby, cream stone (ledges, pilasters, parapet,
- * entrance bay), one brass line over the lobby, the roof and its lawn.
+ * Atlas Command Center geometry, built once into a few merged meshes grouped by material: the
+ * stone-and-window facade of the office floors, the gold-lit lobby glass, cream stone (floor slabs,
+ * pilasters, parapet, entrance bay), one brass line over the lobby, the roof and its lawn.
  */
 
 /** A parapet wall round an outline: outer face, inner face and the coping on top. */
@@ -38,15 +38,16 @@ export function ccGeometry(k=1){
  const ledges=ccLedges(k).slice(0,-1),bay=ccBay(k),garden=ccRoofGarden(k);
  const lawn=lid(superellipse(CC.cx*k,CC.cz*k,(CC.a-.08)*k,(CC.b-.08)*k,CC.roundness,CC.ring).map(([x,z])=>[x,garden.y+.012*k,z] as Pt3));
  return compact({
-  // Office floors: the storey grid starts on the lobby's top, so spandrels meet the stone ledges.
-  glass:skin([ring(lobby),ring(roof)],CC.storey*k,lobby),
-  // Lobby: one tall pane per bay, no spandrel (its v runs only over the glass part of one tile row).
-  lobby:skin([ring(0),ring(lobby)],lobby*1.25,0),
+  // Office floors: the storey grid starts on the lobby's top, so each storey's stone slab meets its ledge.
+  glass:skin([ring(lobby),ring(roof)],CC.storey*k,lobby,CC.bay*k),
+  // Lobby: one tall gold-lit pane per column, a single texture row over its height.
+  lobby:skin([ring(0),ring(lobby)],lobby,0,CC.bay*k),
   stone:mergeGeometries([
    bands(tall,ledges,CC.ledgeDepth*k,CC.ledgeHeight*k),
    fins([ring(0),ring(roof)],CC.pierEvery,CC.pierDepth*k),
    parapet(ring(roof),roof,CC.parapet*k,.03*k),
-   box(bay.x,0,bay.z,bay.w,bay.h,bay.d),
+   // The bay's stone starts over the lobby; ccEntrance's posts carry it to the ground.
+   box(bay.x,bay.y,bay.z,bay.w,bay.h-bay.y,bay.d),
    // A thin coping cap on the bay, a little proud of it.
    box(bay.x,bay.h,bay.z,bay.w+.03*k,CC.coping*k,bay.d+.03*k),
   ])!,
@@ -55,6 +56,7 @@ export function ccGeometry(k=1){
   roof:lid(ring(roof+.004*k)),
   lawn,
   trees:garden.trees.map(([x,z])=>({x,z,y:garden.y})),
+  shrubs:garden.shrubs.map(([x,z])=>({x,z,y:garden.y+.06*k})),
  });
 }
 export type CcGeometry=ReturnType<typeof ccGeometry>;

@@ -52,10 +52,10 @@ function normals(pts:Pt[]):Pt[]{
  * texture puts a mullion every bay and a spandrel every floor on any curve. `storey` and `offset`
  * set the floor grid for buildings whose storeys differ from the tower's.
  */
-export function skin(levels:Pt3[][],storey:number=HQ.floor,offset=0){
+export function skin(levels:Pt3[][],storey:number=HQ.floor,offset=0,bay:number=HQ.bay){
  const pos:number[]=[],uv:number[]=[],n=levels[0].length;
  const run=[0];for(let i=1;i<=n;i++){const [ax,,az]=levels[0][i-1],[bx,,bz]=levels[0][i%n];run.push(run[i-1]+Math.hypot(bx-ax,bz-az));}
- const U=(i:number)=>run[i]/(HQ.bay*4),V=(y:number)=>(y-offset)/(storey*4);
+ const U=(i:number)=>run[i]/(bay*4),V=(y:number)=>(y-offset)/(storey*4);
  for(let l=0;l<levels.length-1;l++)for(let i=0;i<n;i++){
   const j=(i+1)%n,a=levels[l][i],b=levels[l][j],c=levels[l+1][j],d=levels[l+1][i];
   quad(pos,a,b,c,d);

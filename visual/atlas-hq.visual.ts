@@ -19,7 +19,7 @@ async function views(page:import('@playwright/test').Page,list:View[]){
 }
 // Atlas HQ stands at (40.73, 14.39) in the default "By district" layout; the map looks at it from +x/+z.
 const X=40.73,Z=14.39;
-const VIEWS:View[]=[['front',[X,1.4,Z],[X+5.5,5,Z+8]],['close',[X,1.5,Z+.6],[X+2.4,3,Z+4.4]],['roof',[X,1.6,Z],[X+3.5,6.5,Z+4.5]],['side',[X,1.2,Z],[X+6.5,2.6,Z+1.5]],['context',[X+1.5,1,Z-1.5],[X+12.5,13,Z+14.5]]];
+const VIEWS:View[]=[['concept',[X,.7,Z],[X+2.6,6.2,Z+7.2]],['front',[X,1.4,Z],[X+5.5,5,Z+8]],['close',[X,1.5,Z+.6],[X+2.4,3,Z+4.4]],['roof',[X,1.6,Z],[X+3.5,6.5,Z+4.5]],['side',[X,1.2,Z],[X+6.5,2.6,Z+1.5]],['context',[X+1.5,1,Z-1.5],[X+12.5,13,Z+14.5]]];
 for(const light of ['day','night'] as const)test(`Atlas HQ, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);

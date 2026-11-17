@@ -5,6 +5,16 @@ forest-green glass and subtle brass; the outside is the lobby and four office fl
 through inside. Parcel, roads, selection, building entry, floor navigation, agents and telemetry
 unchanged. The concept images were references, not geometry: everything here is the running app.
 
+Second pass, same day: Khaneil said the first version "look nothing like the image". It now
+follows the concept's architecture, not just its colours: a grid of thick cream stone floor
+slabs and piers framing warm-lit, green-framed windows; a squarer block; a wider stone entrance
+bay with the gold Atlas mark and the name in large serif letters; a gold-lit glass lobby under a
+wide brass canopy with steps; planters along the front; and shrubs right round the roof.
+
+![Concept image next to the running map](concept-vs-map.jpg)
+
+Left: the AI-generated concept (not the app). Right: a capture of the running Atlas map.
+
 ## How it is built
 
 - **Existing stack, no new tool or dependency.** The map is React Three Fiber on three.js, and
@@ -16,8 +26,10 @@ unchanged. The concept images were references, not geometry: everything here is 
   GLB would add a loader request, a second source of truth for storey heights and no saving.
 - `src/views/map3d/commandCenterPlan.ts`: the plan. Storeys are the interior's own (lobby 3.3,
   floors 2.7) at its scale of 12 office units per map unit; it fits the old square footprint.
-- `src/views/map3d/commandCenterGeometry.ts`: green glass, warm lobby glass, cream stone, one brass
-  hairline, roof and lawn, each one merged mesh.
+- `src/views/map3d/commandCenterGeometry.ts`: the stone-and-window facade, gold-lit lobby glass,
+  cream stone, one brass hairline, roof and lawn, each one merged mesh.
+- `src/views/map3d/commandCenterTextures.ts`: the facade, lobby and nameplate, drawn once on
+  canvases (the stone grid and windows are texture on one skin, not extra geometry).
 - `src/views/map3d/atlasHqPalette.ts`: the shared colours; the interior shell
   (`src/views/office/AtlasHqShell.tsx`) reads the same palette and the block's proportions.
 - `src/views/map3d/AtlasHq.tsx` draws it. The map's shared opening glass doors now stand in the
@@ -43,6 +55,7 @@ unchanged. The concept images were references, not geometry: everything here is 
 
 | | Before | After |
 | --- | --- | --- |
+| Concept angle | (concept image above) | [day](after/concept-day.jpg), [night](after/concept-night.jpg) |
 | Map as it opens | [before](before/map-day.jpg) | [after](after/map-day.jpg) |
 | Exterior | [before](before/front-day.jpg) | [after](after/front-day.jpg) |
 | Closer exterior | [before](before/close-day.jpg) | [after](after/close-day.jpg) |
