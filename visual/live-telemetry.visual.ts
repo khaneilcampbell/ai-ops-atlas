@@ -4,17 +4,17 @@ import { expect, test, type Page } from "@playwright/test";
 import { openAtlas, selectBuilding, settle, waitForOffice } from "./atlas";
 import { NOW } from "./github";
 
-// Live telemetry states in the building module and the office inspector. Signal Watch last
-// reported 2 hours ago against a 90-minute window, so its success has expired. Shots: visual/out/telemetry-*.png.
+// Live telemetry states in the building module and the office inspector. Marketplace Steward last
+// reported 4 hours ago against a 3-hour window, so its success has expired. Shots: visual/out/telemetry-*.png.
 const OUT = join(import.meta.dirname, "out");
-const reports = [{ id: 1, project: "ai-ops-atlas", agents: ["signal-watch"], phase: "signal-watch", status: "ok", detail: "", at: new Date(NOW - 2 * 3_600_000).toISOString() }];
+const reports = [{ id: 1, project: "ai-ops-atlas", agents: ["marketplace-steward"], phase: "marketplace-steward", status: "ok", detail: "", at: new Date(NOW - 4 * 3_600_000).toISOString() }];
 
 async function run(page: Page, tag: string) {
   mkdirSync(OUT, { recursive: true });
   await openAtlas(page, { storage: { liveAgentRuns: reports } });
-  await selectBuilding(page, "Observability Center");
+  await selectBuilding(page, "Product Marketplace");
   const mod = page.locator(".module-section");
-  await expect(mod).toContainText("Signal Watch");
+  await expect(mod).toContainText("Marketplace Steward");
   await mod.scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(OUT, `telemetry-module-${tag}.png`) });
   await selectBuilding(page, "Atlas Command Center");
