@@ -32,7 +32,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Monday and Thursday 10am, at most 2 new designs per 7 days
-    last_run: null
+    last_run: 2026-11-16T15:00:00Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -96,6 +96,7 @@ agents:
           - Connect n8n executions to Atlas
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#design-run
   - id: niche-scout
     name: Shopify Niche Scout
     purpose: >-
@@ -540,7 +541,7 @@ agents:
     # failed one raises an alert. It runs only when Khaneil approves, so there is no silence window.
     alerts:
       failures: true
-    last_run: null
+    last_run: 2026-11-12T15:07:31Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -568,6 +569,18 @@ agents:
         inputs: [Approve form from Khaneil]
         outputs: [Stripe product, price and payment link, Live row in commerce_products]
         dependencies: [commerce-loop]
+      goals:
+        objective: Publish only what Khaneil approves, exactly once.
+        review_frequency: Monthly
+        kpis:
+          - name: Duplicate Stripe products
+            kind: quality
+            target: Zero
+            basis: Idempotency keys on every Stripe call
+          - name: Published without approval
+            kind: quality
+            target: Zero
+            basis: Runs only from the approval form with a one-time token
       execution:
         trigger_type: manual
         environment: n8n
@@ -583,6 +596,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#approve-and-publish
   - id: seo-maintainer
     name: SEO Maintainer
     purpose: >-
@@ -713,7 +727,7 @@ agents:
     # order, so a quiet stretch is normal and there is no silence window.
     alerts:
       failures: true
-    last_run: null
+    last_run: 2026-11-12T15:07:57Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -741,6 +755,20 @@ agents:
         tools: [n8n Cloud, Stripe, Resend, n8n data tables]
         inputs: [Paid Stripe checkout]
         outputs: [Buyer email with the template link]
+      goals:
+        objective: Every paid order delivered once.
+        review_frequency: Monthly
+        kpis:
+          - name: Paid orders delivered
+            kind: reliability
+            target: 100% of Stripe-verified paid orders
+            basis: It is the only way buyers receive their product
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves a paying buyer waiting
       execution:
         trigger_type: event
         environment: n8n
@@ -756,6 +784,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#order-delivery
   - id: sales-sync
     name: Shop Page and Weekly Sales
     purpose: >-
@@ -765,7 +794,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Shop page visits, and Monday 9am for the sales email
-    last_run: null
+    last_run: 2026-11-16T14:00:00Z
     history:
       - at: 2026-11-11
         event: Moved to n8n Cloud
@@ -796,6 +825,20 @@ agents:
         tools: [n8n Cloud, Stripe, Resend, n8n data tables]
         inputs: [commerce_products, Stripe checkout sessions]
         outputs: [Shop page, Monday sales email]
+      goals:
+        objective: A live shop page and an accurate Monday sales email.
+        review_frequency: Monthly
+        kpis:
+          - name: Monday email sent
+            kind: reliability
+            target: Every Monday at 9am
+            basis: n8n execution 737 on 2026-11-16
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run hides last week's sales
       execution:
         trigger_type: scheduled
         schedule: Monday 9am
@@ -810,6 +853,7 @@ agents:
       docs:
         last_review: 2026-11-11
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#shop-page-and-weekly-sales
   - id: atlas-sales-feed
     name: Atlas Sales Feed
     purpose: >-
@@ -822,7 +866,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the Atlas site only, when Khaneil presses Sync from Stripe
-    last_run: null
+    last_run: 2026-11-16T05:22:25Z
     history:
       - at: 2026-11-16
         event: Built as an unpublished n8n draft after Khaneil chose named n8n actions over a write-scoped n8n key; one manual test run read the live Stripe account correctly (execution 717)
@@ -843,11 +887,32 @@ agents:
         type: C
         confidence: verified
         evidence: n8n workflow mlS4G62If6tl4TGv (published 2026-11-16) lists paid checkout sessions from Stripe, joins shop_orders and answers the webhook; no AI model
+      mission:
+        problem: Atlas's Business view needs real Stripe sales without giving the site a Stripe key or exposing buyer details.
+        outcomes:
+          - Khaneil can sync paid checkouts into Atlas on demand
+          - No buyer names or emails leave n8n and nothing in Stripe changes
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Read paid Stripe checkouts for a date range, Answer Atlas with amounts in cents and no buyer details]
         tools: [n8n Cloud, Stripe, n8n data tables]
         inputs: [A date range from the Atlas site, Stripe checkout sessions, shop_orders]
         outputs: [Verified sales Khaneil records in the Business view]
+      goals:
+        objective: Accurate sales figures in Atlas with no buyer data exposed.
+        review_frequency: Monthly
+        kpis:
+          - name: Buyer details returned
+            kind: quality
+            target: Zero names or emails in any answer
+            basis: Its whole design
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed sync leaves the Business view behind
       execution:
         trigger_type: event
         environment: n8n
@@ -861,6 +926,7 @@ agents:
       docs:
         last_review: 2026-11-16
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#atlas-sales-feed
   - id: email-digest
     name: Daily Email Digest
     purpose: Emails Khaneil a daily summary of publishes, failures, queue state and sales.
@@ -1045,6 +1111,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Commerce Operations Coordinator, Product Publishing Coordinator, Digital Fulfillment Coordinator, Sales Reporting Specialist, Commerce Quality Engineer, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Commerce Operations Manager
       category: business
@@ -1055,10 +1123,35 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: The commerce pipeline has five steps across n8n and GitHub, and each must hold for a product to go from idea to delivered order.
+        outcomes:
+          - New product drafts twice a week at most
+          - Products go live only after Khaneil approves
+          - Every order delivered and Monday sales reported
+        beneficiaries:
+          - Khaneil
+          - Benjaire shop buyers
       responsibilities:
         tasks: [Draft the next product listing and design brief, Publish a product after Khaneil approves it, Deliver each order, Email the Monday sales summary, Test the pipeline scripts]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Product ideas
+          - Khaneil's approvals
+          - Stripe checkouts
+      goals:
+        objective: Run the pipeline from idea to delivered order with Khaneil approving every launch.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Launches without approval
+            kind: quality
+            target: Zero
+            basis: Approve and Publish runs only from Khaneil's form
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -1066,5 +1159,9 @@ agents:
         autonomy: 1
         autonomy_note: Products go live only after Khaneil approves them.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#commerce-operations-manager
+        last_review: 2026-11-17

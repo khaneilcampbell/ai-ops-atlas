@@ -54,6 +54,18 @@ agents:
         tools: [Claude Code, Git, GitHub]
         inputs: [Khaneil's request]
         outputs: [Pull requests]
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Pull requests reviewed before merge
+            kind: quality
+            target: 100%
+            basis: Only Khaneil merges
+          - name: Site checks pass
+            kind: reliability
+            target: Site CI and Security Check green on every pull request it opens
+            basis: Both are required checks
+        objective: Ship site improvements Khaneil approves, through reviewed pull requests.
       execution:
         trigger_type: manual
         environment: Claude Code sessions
@@ -106,6 +118,18 @@ agents:
         tools: [Python standard library]
         inputs: [Site root folder]
         outputs: [Audit findings and an exit code]
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Findings on main
+            kind: quality
+            target: Zero failing header, accessibility or link checks
+            basis: The audit's own checks
+          - name: Credential-shaped values
+            kind: quality
+            target: Zero
+            basis: The audit flags them
+        objective: Keep the static site's headers, accessibility and links clean.
       execution:
         trigger_type: manual
         environment: Local

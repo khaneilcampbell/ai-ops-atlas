@@ -282,6 +282,8 @@ agents:
     status: paused
     trigger: None until it is published
     last_run: null
+    permissions:
+      - 'None while unpublished: the draft agent cannot run'
     registry:
       title: GitHub Profile Manager
       category: career
@@ -293,6 +295,16 @@ agents:
       execution:
         trigger_type: manual
         environment: n8n
+      governance:
+        autonomy: 0
+        autonomy_note: Unpublished draft; it cannot act. Its tools could not be read (the agent is not available to the n8n MCP connection).
+        credential_owner: Khaneil (n8n account)
+        risk: low
+      docs:
+        runbook: docs/runbooks/development-hub.md#github-profile-manager
+        last_review: 2026-11-17
+        known_issues:
+          - The draft's instructions and tools cannot be read from Atlas's n8n connection (availableInMCP is off), so its mission is not documented
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -311,6 +323,8 @@ agents:
         event: Added as the owning agent of Merge Flow Coordinator, Design Consistency, Opportunity Scout, at Khaneil's request
       - at: 2026-11-14
         event: Merge Flow moved to the Atlas Production Coordinator, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Development Hub Lead
       category: engineering
@@ -321,10 +335,32 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Cross-repository routines (design drift, earning ideas, pull request triage) need one owner so their results are acted on.
+        outcomes:
+          - Design drift in Atlas is reported
+          - Up to 3 scored earning ideas when the registry changes
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Atlas source on GitHub
+          - The agent registry
+      goals:
+        objective: Turn the Development Hub's scheduled checks into actions Khaneil can take.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Ideas per registry change
+            kind: throughput
+            target: At most 3 scored ideas
+            basis: Opportunity Scout's own cap
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -332,5 +368,9 @@ agents:
         autonomy: 1
         autonomy_note: Recommends and reports; merging stays with Khaneil.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: docs/runbooks/development-hub.md#development-hub-lead
+        last_review: 2026-11-17

@@ -40,7 +40,9 @@ describe("essential roles directory", () => {
 
   it("keeps retired entries in Archived and paused or draft entries in Inactive", () => {
     expect(dir.archived).toEqual(catalog.agents.filter((a) => a.status === "retired").map((a) => a.id));
-    expect(dir.inactive).toEqual(expect.arrayContaining(["github-profile-manager", "atlas-data-inventory"]));
+    expect(dir.inactive).toEqual(expect.arrayContaining(["github-profile-manager"]));
+    // Data Inventory was published in n8n on 2026-11-13, so it works in its role, not Inactive.
+    expect(dir.inactive).not.toContain("atlas-data-inventory");
     expect(isInactive({ id: "x", status: "active", trigger: "None until it is published" })).toBe(true);
     expect([...dir.members.values()].flat().some((id) => byId.get(id)!.status === "retired" || byId.get(id)!.status === "paused")).toBe(false);
   });
