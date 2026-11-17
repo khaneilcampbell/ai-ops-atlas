@@ -1,5 +1,6 @@
 import type { ExecutionRecord } from "../../registry/types";
 import type { AgentProfile } from "../../registry/profile";
+import type { AgentPlaces, Place } from "../../catalog/agentPlaces";
 import { RUNTIME_LABEL, type Runtime, type RuntimeState, type Workstation } from "./model";
 
 /**
@@ -91,6 +92,9 @@ export interface HologramData {
   /** The declared objective, else the mission purpose, else null. */
   goal: string | null;
   autonomy: number | null;
+  /** Where it lives and works (agentPlaces.ts); null when not given. Placement, never activity. */
+  home: Place | null;
+  work: Place | null;
 }
 
 export const RUN_SLOTS = 12;
@@ -101,6 +105,7 @@ export function hologramData(o: {
   runtime: Runtime;
   history: ExecutionRecord[];
   profile: Pick<AgentProfile, "responsibilities" | "goals" | "mission" | "governance">;
+  places?: AgentPlaces;
 }): HologramData {
   const recent = o.history.slice(0, RUN_SLOTS);
   const runs = recent.map((e) => e.result).reverse();
@@ -130,5 +135,7 @@ export function hologramData(o: {
     tasks: o.profile.responsibilities.tasks.filter((t) => t.trim()).slice(0, 3),
     goal,
     autonomy: o.profile.governance.autonomy ?? null,
+    home: o.places?.home ?? null,
+    work: o.places?.work ?? null,
   };
 }

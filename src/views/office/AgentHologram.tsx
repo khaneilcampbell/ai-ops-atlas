@@ -114,7 +114,7 @@ function runBars(ctx: CanvasRenderingContext2D, runs: RunMark[], x: number, y: n
 /** The main panel: identity and team, verified state, run strip, latest run, goal and tasks. */
 export function hologramTexture(d: HologramData) {
   const W = 1024;
-  const H = 640;
+  const H = 760;
   const [c, ctx] = makeCanvas(W, H);
   glassCard(ctx, 8, 8, W - 16, H - 16, 26);
   const state = STATE_COLOR[d.state];
@@ -203,6 +203,24 @@ export function hologramTexture(d: HologramData) {
     ctx.font = `500 20px ${FONT}`;
     ctx.fillText(`Autonomy level ${d.autonomy} of 4`, 540, 588);
   }
+
+  // Home and work: who this is and where it belongs, wherever it is drawn. Placement only.
+  ctx.strokeStyle = "rgba(214,247,255,0.35)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(40, 616);
+  ctx.lineTo(W - 40, 616);
+  ctx.stroke();
+  const place = (title: string, p: HologramData["home"], x: number) => {
+    ctx.fillStyle = SOFT;
+    ctx.font = `600 20px ${FONT}`;
+    ctx.fillText(p?.source === "assigned" ? `${title} · ASSIGNED BY ATLAS` : title, x, 650);
+    ctx.fillStyle = INK;
+    ctx.font = `500 22px ${FONT}`;
+    wrap(ctx, p?.label ?? "Not documented", 440, 2).forEach((l, i) => ctx.fillText(l, x, 682 + i * 28));
+  };
+  place("HOME", d.home, 40);
+  place("WORK BUILDING", d.work, 540);
   return tex(c);
 }
 
@@ -267,7 +285,7 @@ function streamTexture() {
   return t;
 }
 
-const PANEL_Y = 2.8;
+const PANEL_Y = 2.95;
 
 /** Turns a child to face the camera, undoing its parents' rotation. */
 function useFaceCamera(ref: React.RefObject<THREE.Object3D>) {
@@ -297,7 +315,7 @@ export function AgentHologram({ data, reduced }: { data: HologramData; reduced: 
   const running = data.state === "working";
   // Rising from the monitor (desk-local), curling once, into the bottom of the panel.
   const tube = useMemo(() => {
-    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 1.45, -0.22), new THREE.Vector3(0.35, 1.7, 0.05), new THREE.Vector3(-0.3, 1.86, 0.15), new THREE.Vector3(0.05, 2.02, 0)]);
+    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 1.45, -0.22), new THREE.Vector3(0.35, 1.7, 0.05), new THREE.Vector3(-0.3, 1.86, 0.15), new THREE.Vector3(0.05, 2.03, 0)]);
     return new THREE.TubeGeometry(curve, 48, 0.012, 6, false);
   }, []);
   useEffect(() => () => tube.dispose(), [tube]);
@@ -314,7 +332,7 @@ export function AgentHologram({ data, reduced }: { data: HologramData; reduced: 
       <group ref={float}>
         <group ref={face} position={[0, PANEL_Y, 0]}>
           <mesh renderOrder={10} raycast={() => null}>
-            <planeGeometry args={[2.5, 1.5625]} />
+            <planeGeometry args={[2.5, 1.855]} />
             <meshBasicMaterial map={panel} transparent depthWrite={false} depthTest={false} toneMapped={false} side={THREE.DoubleSide} />
           </mesh>
           <mesh position={[-1.66, -0.22, -0.12]} renderOrder={10} raycast={() => null}>
@@ -325,7 +343,7 @@ export function AgentHologram({ data, reduced }: { data: HologramData; reduced: 
             <planeGeometry args={[0.66, 0.66]} />
             <meshBasicMaterial map={doc} transparent opacity={0.92} depthWrite={false} depthTest={false} toneMapped={false} side={THREE.DoubleSide} />
           </mesh>
-          <mesh position={[0, -0.82, -0.01]} raycast={() => null}>
+          <mesh position={[0, -0.97, -0.01]} raycast={() => null}>
             <planeGeometry args={[1.6, 0.012]} />
             <meshBasicMaterial color={GLASS} transparent opacity={0.6} depthWrite={false} toneMapped={false} />
           </mesh>

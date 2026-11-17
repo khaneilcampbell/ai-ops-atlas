@@ -7,7 +7,10 @@ import {agentAt,type CommutePlan} from './agentCommutes';
 import {crowdLimit,planDistrictWalkers,walkerAt} from './districtWalkers';
 import {useQualityLevel} from '../../lib/governor';
 import type {FinancialPlan} from './financialPlan';
-import {useMemo,useRef,useEffect} from 'react';
+import {useMemo,useRef,useEffect,useState} from 'react';
+import {AgentTag} from './AgentTag';
+import type {AgentTagInfo} from './agentTagInfo';
+import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
@@ -85,7 +88,9 @@ export const TRAIN_DOOR={x:.26,y:.16,z:.24,leaf:{p:[0,0,.09],s:[.014,.4,.18],c:'
 export const TRAIN_NOSE=(end:1|-1):Inst[]=>[{p:[0,.2,end*.5],s:[.25,.27,.8],c:'#f4f4ef'},{p:[0,.4,end*.7],s:[.18,.09,.34]}];
 const NO_WALKS:[[number,number],[number,number]][]=[];
 /** Ground-level track, platforms and ramps share the same sampled route as the train. */
-export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],land,walks=NO_WALKS,bothSides,g,m,pick,moving,night}:{plan?:RailPlan;
+export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],land,walks=NO_WALKS,bothSides,g,m,pick,moving,night,agentTag,onAgentHover}:{plan?:RailPlan;
+  /** The card for the agent under the pointer (map3d/agentTag.ts), and who is under it. */
+  agentTag?:AgentTagInfo|null;onAgentHover?:(agentId:string|null)=>void;
   /** Loop stop with a platform on both sides (Events Arena Station's harbour platform): the train opens its doors both ways there. */
   bothSides?:number;travel?:TravelPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
   /** The city's land: the track runs on the ground here and on a low trestle with piers only where it is over water. */
@@ -191,9 +196,15 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
    figureParts(at.x,y,at.z,at.yaw,stepGait(gait,at.x,at.z,dt),figure);if(i<glowing){body.setMatrixAt(i,hidden);glowShirts.current?.setMatrixAt(i,figure.torso);}else body.setMatrixAt(i,figure.torso);head.setMatrixAt(i,figure.head);
    for(const k of [0,1]){leg.setMatrixAt(i*2+k,figure.legs[k]);arm.setMatrixAt(i*2+k,figure.arms[k]);}
   }
-  for(const mesh of [body,head,leg,arm,glowShirts.current])if(mesh)mesh.instanceMatrix.needsUpdate=true;return {outbound,back};
+  for(const mesh of [body,head,leg,arm,glowShirts.current])if(mesh)mesh.instanceMatrix.needsUpdate=true;
+  // People move every frame, so the pointer's hit test re-measures them (only when Khaneil points).
+  body.boundingSphere=head.boundingSphere=null;return {outbound,back};
  };
  useEffect(()=>{placePeople(elapsed.current);});
+ // Pointing at (or on a phone tapping) an AI agent walking outside names it (AgentTag), so it is known away from its desk.
+ const [tagIndex,setTagIndex]=useState<number|null>(null);
+ const overAgent=(e:ThreeEvent<PointerEvent|MouseEvent>)=>{const i=e.instanceId,agent=i!=null&&i<limit?people[i]?.agent:undefined;if(!agent||i==null)return;e.stopPropagation();if(i!==tagIndex){setTagIndex(i);onAgentHover?.(agent.agentId);}};
+ const leaveAgent=()=>{if(tagIndex===null)return;setTagIndex(null);onAgentHover?.(null);};
  useEffect(()=>()=>{TRAVEL_CLOCK.live=false;},[]);
  useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);if(p.loop){TRAVEL_CLOCK.t=elapsed.current;TRAVEL_CLOCK.live=true;}const state=p.loop?loopState(elapsed.current,p.loop):railServiceState(elapsed.current,p),aboard=placePeople(elapsed.current);if(service.current&&p.loop)service.current.userData={visualSimulation:true,elapsed:elapsed.current,station:'station' in state?state.station:-1};riders.current.forEach(r=>{if(r)r.visible=p.loop?aboard.outbound||aboard.back:('phase' in state&&((state.phase==='outbound'||state.phase==='airport-outbound')&&aboard.outbound||(state.phase==='return'||state.phase==='airport-return')&&aboard.back));});carriages.current.forEach((car,i)=>{if(!car)return;const q=p.loop?loopPoint(p.loop,state.distance+(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});const both=p.loop&&'station' in state&&bothSides!==undefined&&state.station===bothSides;doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(p.loop&&!both?(i%2?0:-1):(i%2?1:-1));});});
  if(!p||!deck)return null;
@@ -208,6 +219,6 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.bead} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
   {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[TRAIN_NOSE(i===0?-1:1)[0]]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[TRAIN_NOSE(i===0?-1:1)[1]]}/></>}
  </group>;})}</group>
- {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/><instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
+ {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false} onPointerMove={agentCount?overAgent:undefined} onClick={agentCount?overAgent:undefined} onPointerOut={agentCount?leaveAgent:undefined}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false} onPointerMove={agentCount?overAgent:undefined} onClick={agentCount?overAgent:undefined} onPointerOut={agentCount?leaveAgent:undefined}/>{tagIndex!==null&&agentTag&&people[tagIndex]?.agent?.agentId===agentTag.agentId&&<AgentTag mesh={bodies} index={tagIndex} info={agentTag}/>}<instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
  </>;
 }
