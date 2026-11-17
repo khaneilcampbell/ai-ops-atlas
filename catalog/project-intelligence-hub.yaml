@@ -41,10 +41,26 @@ agents:
         outcomes:
           - One styled DOCX per Markdown source, beside Source/
       responsibilities:
-        tasks: [Render each project's Markdown sources to styled DOCX]
+        tasks: [Render each project's Markdown sources to styled DOCX, Apply the house styles to every DOCX]
         tools: [pandoc, python-docx]
         inputs: [Source/project.json and Source/*.md]
         outputs: [One DOCX per Markdown file]
+        dependencies:
+          - pandoc
+          - python-docx
+          - hub-ci
+        limitations:
+          - Runs only by hand
+          - Uses macOS fonts; other systems substitute them
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Sources rendered
+            kind: reliability
+            target: Every project's Markdown renders to DOCX
+            basis: Hub CI renders every project on each change
+        objective: Turn every project's Markdown into styled DOCX on request.
       execution:
         trigger_type: manual
         environment: Local
@@ -97,13 +113,20 @@ agents:
         tools: [GitHub Actions, pandoc, python-docx, ruff]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request, Rendered DOCX when requested]
+        dependencies:
+          - GitHub Actions runners
+          - docs-builder
+        limitations:
+          - Proves the sources render, not that committed DOCX files are current
       goals:
         objective: Block merges that break a project's documents.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -128,7 +151,8 @@ agents:
     purpose: >-
       n8n workflow that keeps the Atlas Agent Registry Google Sheet in the Benjaire Drive current:
       one row per agent and n8n workflow, with building, where it runs, status, schedule, last run,
-      health, cost cap and links. Removed agents are marked Retired with a date, never deleted.
+      health, cost cap and links. Working agents are on the Registry tab; retired and removed agents
+      move to the Retired tab with the date they were retired, never deleted.
       Every Sunday at 9am a second workflow reads the same Atlas data and ranks the top 10 agents worth
       building next in the sheet's Top 10 Agents tab, with one capped Claude call.
       Every morning at 7am a third workflow rewrites the sheet's Business Structure tab: who reports
@@ -139,8 +163,10 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET
-    last_run: null
+    last_run: 2026-11-15T14:00:00Z
     history:
+      - at: 2026-11-17
+        event: Retired agents moved to their own Retired tab and off the Registry tab, at Khaneil's request (55 retired, 66 working)
       - at: 2026-11-12
         event: Published in n8n; added the daily Business Structure workflow and the Refresh registry sheet button
       - at: 2026-11-12
@@ -178,13 +204,34 @@ agents:
           - A ranked list of the 10 agents most worth building next, refreshed every Sunday
         beneficiaries: [Khaneil]
       responsibilities:
-        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Mark removed agents Retired with a date, Rank the top 10 agents to build every Sunday]
+        tasks: [Read the Atlas catalog, Read n8n workflows and recent runs, Read the Atlas live feed, Upsert new or changed rows by agent_id, Move retired and removed agents to the Retired tab with a date, Rank the top 10 agents to build every Sunday]
         # Framework and runtime say n8n. The tools list leaves the vendor name out on purpose: naming it
         # here would add an Automation Works kiosk to this district and reshape its land (Khaneil chose
         # to keep the map as it is, 2026-11-12).
         tools: [Scheduled workflow, Google Sheets, GitHub public reads, Atlas live feed]
         inputs: [catalog/*.yaml, n8n workflows and executions, Atlas feed events]
-        outputs: [Rows in the Atlas Agent Registry sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
+        outputs: [Rows in the Atlas Agent Registry sheet, Retired tab in the same sheet, Top 10 Agents tab in the same sheet, Business Structure tab in the same sheet]
+        dependencies:
+          - catalog/*.yaml on main
+          - n8n executions
+          - Atlas live feed
+          - Atlas Agent Registry Google Sheet
+        limitations:
+          - The Atlas feed covers only about the last 6 hours
+          - Finds sheet tabs by name, so renaming a tab breaks it
+          - Successful runs are not saved in n8n
+      goals:
+        objective: One current row per agent in the registry sheet.
+        review_frequency: Monthly
+        kpis:
+          - name: Sheet freshness
+            kind: reliability
+            target: No row more than 4 hours behind Atlas
+            basis: Every 4 hours schedule
+          - name: Top 10 spend
+            kind: cost
+            target: Under $3 per 30 days
+            basis: Cap on the weekly ranking call
       execution:
         trigger_type: scheduled
         environment: n8n
@@ -200,10 +247,11 @@ agents:
       docs:
         known_issues:
           - The Atlas feed only covers about the last 6 hours, so on-demand agents show No recent runs until they run
-          - The workflows find the sheet's tabs by name (Registry, Top 10 Agents, Business Structure), so renaming a tab breaks them
+          - The workflows find the sheet's tabs by name (Registry, Retired, Top 10 Agents, Business Structure), so renaming a tab breaks them
           - n8n does not keep successful scheduled runs of the registry sync, so Atlas cannot show its last run
         last_review: 2026-11-12
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#agent-registry-sync
   - id: atlas-agent-factory
     name: Agent Factory
     purpose: >-
@@ -217,12 +265,14 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Mondays 8am ET, at most one proposal per 7 days
-    last_run: 2026-11-12T11:27:50Z
+    last_run: 2026-11-16T13:00:00Z
     history:
+      - at: 2026-11-17
+        event: Renamed in n8n from "Atlas · Agent Factory (draft)" to "Atlas · Agent Factory" at Khaneil's request (same workflow id)
       - at: 2026-11-12
         event: Published in n8n; first run proposed a Business Ops HQ Daily Rollup and emailed Khaneil
     links:
-      - label: n8n workflow
+      - label: n8n workflow (Atlas · Agent Factory)
         url: https://khancam15.app.n8n.cloud/workflow/FTCanpGAYPIr3OGe
     permissions:
       - 'GitHub: public reads of catalog/*.yaml, no key'
@@ -239,6 +289,51 @@ agents:
         type: B
         confidence: verified
         evidence: Live n8n workflow FTCanpGAYPIr3OGe ranks gaps in plain code and makes one Claude call to draft the spec
+      mission:
+        problem: Gaps (buildings without agents, failing workflows, quiet feeds) pile up unless something looks for them every week.
+        outcomes:
+          - At most one ranked new-agent proposal a week
+          - Khaneil approves or rejects; nothing is built automatically
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Scan the catalog, n8n failures and the Atlas feed for gaps in plain code
+          - Rank the gaps
+          - Draft one agent spec with one capped Claude call
+          - Email Khaneil Approve or Reject
+          - Record the decision
+        tools:
+          - Scheduled workflow
+          - Claude (claude-opus-5-5)
+          - Resend
+        inputs:
+          - catalog/*.yaml
+          - n8n failed runs
+          - Atlas live feed
+        outputs:
+          - agent_factory_proposals row
+          - Proposal email to Khaneil
+        dependencies:
+          - catalog/*.yaml on main
+          - n8n failed runs
+          - Claude (claude-opus-5-5)
+          - Resend
+        limitations:
+          - At most one proposal per 7 days
+          - Proposes only; Khaneil approves or rejects by email before anything is built
+      goals:
+        objective: Propose the single most useful next agent each week.
+        review_frequency: Monthly
+        kpis:
+          - name: Proposals per week
+            kind: throughput
+            target: At most 1
+            basis: Its own cap
+          - name: Spend
+            kind: cost
+            target: Under $2 per 30 days
+            basis: Its own cap
       execution:
         trigger_type: scheduled
         environment: n8n
@@ -247,9 +342,13 @@ agents:
         autonomy_note: Proposes only; Khaneil approves or rejects, and approval builds nothing.
         risk: low
         audit_log: n8n executions and the agent_factory_proposals table
+        credential_owner: Khaneil (n8n credentials)
       cost:
         budget: Claude Opus 5.5, one proposal and $2 per 30 days, checked before each call
 
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#agent-factory
+        last_review: 2026-11-17
   - id: atlas-step-runner
     name: Atlas Step Runner
     purpose: >-
@@ -263,7 +362,7 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Webhook from the Atlas site only (published)
-    last_run: 2026-11-15T21:05:43Z
+    last_run: 2026-11-16T16:17:55Z
     history:
       - at: 2026-11-15
         event: Built as an unpublished n8n draft at Khaneil's choice of a new restricted step runner
@@ -284,11 +383,38 @@ agents:
         type: B
         confidence: verified
         evidence: n8n workflow tGYMec2rp0twZFxv (published) checks the step in plain code, makes one Claude call with no tools and posts the report to /api/hooks/n8n-report
+      mission:
+        problem: Workflow Intelligence needs a few research and planning steps run by a model without giving that model tools or reach.
+        outcomes:
+          - Each allow-listed step returns a structured report to Atlas
+          - No step can send, publish or pay
+        beneficiaries:
+          - Khaneil
       responsibilities:
-        tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas]
+        tasks: [Run allow-listed research and planning steps, Report each step's structured output back to Atlas, Refuse any step that is not on the allow list]
         tools: [Webhook, Claude]
         inputs: [Handoff envelopes from the Atlas site]
         outputs: [Step reports in the Atlas site's private database]
+        dependencies:
+          - Atlas site Workflow Intelligence
+          - Claude
+        limitations:
+          - Runs only the six allow-listed steps
+          - One model call per step, started only by the Atlas site
+      goals:
+        objective: Run allow-listed steps safely and report back every time.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed step stalls the live run in Atlas
+          - name: Steps per day
+            kind: cost
+            target: At most 20
+            basis: The Atlas site's daily cap
       execution:
         trigger_type: event
         environment: n8n
@@ -301,6 +427,9 @@ agents:
         audit_log: n8n executions and the Atlas site's n8n_dispatch and n8n_reports tables (kept 30 days)
       cost:
         budget: At most 20 steps a day across all runs, enforced by the Atlas site before sending
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#atlas-step-runner
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -321,6 +450,8 @@ agents:
         event: Coordinates executive goals in Mission Control (Phase 8). Plans come from fixed templates, start only after Khaneil approves, and default to autonomy level 1
       - at: 2026-11-17
         event: Carries agent, task and goal incident tasks from Mission Control's Autonomous operations (Phase 9). Creates them on its own only at autonomy level 2 or above; at level 1 Khaneil creates them
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Agent Operations Lead
       category: engineering
@@ -331,10 +462,42 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: With dozens of agents, someone must keep the registry true, decide what to build next and turn Khaneil's goals into plans.
+        outcomes:
+          - The registry sheet matches Atlas
+          - At most one new-agent proposal a week
+          - Approved goal plans become Task Center tasks
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records, "Carry agent, task and goal incident tasks"]
         tools: [Its automations]
         outputs: [The results of its automations, Executive goal plans, Executive briefings]
+        inputs:
+          - The catalog
+          - n8n runs
+          - The Atlas feed
+          - Khaneil's goals and approvals
+        dependencies:
+          - agent-registry-sync
+          - atlas-agent-factory
+          - atlas-step-runner
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - New agents need Khaneil's approval
+      goals:
+        objective: Keep Atlas's agent workforce known, current and growing only with Khaneil's approval.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Plans started without approval
+            kind: quality
+            target: Zero
+            basis: Executive plans start only when Khaneil approves
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -342,8 +505,12 @@ agents:
         autonomy: 1
         autonomy_note: Proposes only; approving a proposal builds nothing. Executive plans start only when Khaneil approves and starts them; sensitive steps keep their own approvals.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#agent-operations-lead
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -360,6 +527,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Technical Documentation Specialist, Documentation Quality Engineer, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Documentation Lead
       category: data
@@ -370,10 +539,33 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Project documents drift from their Markdown sources unless rendering and checks run on every change.
+        outcomes:
+          - Every source renders on each change
+          - Styled DOCX on request
+        beneficiaries:
+          - Khaneil
       responsibilities:
-        tasks: [Render project Markdown to DOCX, Check every source renders on each change]
+        tasks: [Render project Markdown to DOCX, Check every source renders on each change, Flag a source that fails to render]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Project Markdown sources
+        dependencies:
+          - docs-builder
+          - hub-ci
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - DOCX rendering is still started by hand
+      goals:
+        objective: Keep project documents current and renderable.
+        review_frequency: Quarterly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
       execution:
         trigger_type: event
         environment: Through its automations
@@ -381,5 +573,9 @@ agents:
         autonomy: 0
         autonomy_note: Renders and checks documents only.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#documentation-lead
+        last_review: 2026-11-17

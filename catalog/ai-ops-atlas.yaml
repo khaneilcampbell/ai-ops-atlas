@@ -55,13 +55,23 @@ agents:
         outputs:
           - Check results on the pull request
           - Signed macOS app on main-build after approval; unsigned artifact for manual branch builds
+        dependencies:
+          - GitHub Actions runners
+          - TAURI_SIGNING_PRIVATE_KEY repository secret
+          - Protected release environment (Khaneil approves)
+        limitations:
+          - Pull requests do not build the macOS app; that runs only on main or by hand
+          - A signed update ships only after Khaneil approves the release environment
+          - Cannot judge whether a change looks right; visual checks cover that separately
       goals:
         objective: Block merges that break the app.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -117,6 +127,9 @@ agents:
         inputs: [One selected repository, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved report shown in the Intel view]
         limitations: [Reads one repository per run, Sends repository data to Anthropic when run]
+        dependencies:
+          - GitHub REST API (read-only token in Keychain)
+          - Anthropic API key in Keychain
       goals:
         objective: Accurate, grounded repository reports within the spending limits.
         kpis:
@@ -124,15 +137,18 @@ agents:
             kind: reliability
             measure: run_success_rate
             basis: Observed from the app's run log
+            target: At least 90% of runs succeed
           - name: Average run duration
             kind: quality
             measure: avg_duration_minutes
             basis: Observed from the app's run log
+            target: Under 3 minutes per report
           - name: Spend this month
             kind: cost
             target: Within the monthly budget set in Intel settings
             measure: month_spend_usd
             basis: Budget and spend come from the app's settings and run log
+        review_frequency: Monthly
       execution:
         trigger_type: manual
         schedule: Optional, off by default; runs only while the app is open
@@ -194,6 +210,10 @@ agents:
         inputs: [The Atlas catalog, Saved repository reports, GitHub token from Keychain, Anthropic API key from Keychain]
         outputs: [Saved review shown in Intel → Engineering review]
         limitations: [Recommends only and changes nothing, Reads at most 30 repositories and 6 workflow files each, Sends catalog and repository facts to Anthropic when run]
+        dependencies:
+          - repo-intelligence
+          - GitHub REST API (read-only token in Keychain)
+          - Anthropic API key in Keychain
       goals:
         objective: Grounded, proportionate recommendations within the spending limits.
         kpis:
@@ -201,11 +221,13 @@ agents:
             kind: reliability
             measure: run_success_rate
             basis: Observed from the app's run log
+            target: At least 90% of runs succeed
           - name: Spend this month
             kind: cost
             target: Within the monthly budget shared with Repository Intelligence
             measure: month_spend_usd
             basis: Budget and spend come from the app's settings and run log
+        review_frequency: Monthly
       execution:
         trigger_type: manual
         schedule: Optional weekly, off by default; runs only while the app is open
@@ -261,8 +283,21 @@ agents:
         inputs: [A failed run Khaneil chose, Actions token from Keychain, Repository list in Settings]
         outputs: [A new run attempt on GitHub, Audit records in the Activity Center]
         limitations: [Off by default, Desktop only, At most one re-run per run every 10 minutes and 10 an hour]
+        dependencies:
+          - Actions token in Keychain
+          - Repository list in Settings
       goals:
         objective: Retry flaky failures safely, with every write approved and recorded.
+        review_frequency: Quarterly
+        kpis:
+          - name: Approved before sending
+            kind: quality
+            target: 100% of re-runs approved in the macOS dialog
+            basis: Every write is approved and logged
+          - name: Refusals explained
+            kind: quality
+            target: Every refused re-run shows its reason in the Activity Center
+            basis: Nothing is sent when a rule refuses
       execution:
         trigger_type: manual
         environment: Inside the desktop app (Rust side)
@@ -316,8 +351,22 @@ agents:
         inputs: [An open pull request Khaneil chose, That repository's merge token from Keychain, Repository list in Settings]
         outputs: [A merged pull request on GitHub, Audit records in the Activity Center]
         limitations: [Off by default, Desktop only, Never on the website or iPhone, No override of checks or reviews, Never proposed or approved automatically, At most one merge per pull request every 10 minutes and 5 an hour]
+        dependencies:
+          - Per-repository merge token in Keychain
+          - Touch ID
+          - github-merge-flow
       goals:
         objective: Merge ready pull requests safely, with every merge approved by Khaneil and recorded.
+        review_frequency: Quarterly
+        kpis:
+          - name: Merges approved
+            kind: quality
+            target: 100% of merges confirmed in the dialog and with Touch ID
+            basis: Merges are irreversible
+          - name: Merges of unready pull requests
+            kind: quality
+            target: Zero
+            basis: GitHub must report the pull request ready before anything is sent
       execution:
         trigger_type: manual
         environment: Inside the desktop app (Rust side)
@@ -370,11 +419,37 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent of Merge Flow (github-merge-flow names it in owned_by since 2026-11-14), plus a manual deterministic handoff runner and fixture workflow; no external creation, publication or schedule of its own.
+      mission:
+        problem: Merged changes only help once they reach Khaneil's installed Mac app and the web page, and the path there has many gates that are easy to stall on.
+        outcomes:
+          - Every open pull request has one lane and a named next move
+          - The shortest safe path to an installed update, on request
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Sort open pull requests into lanes through Merge Flow, Answer release questions with the Release Coordinator, Recommend the next safe step to an installed update on request]
         tools: [Merge Flow, Release Coordinator, Claude Code on request]
         dependencies: [github-merge-flow, atlas-release-coordinator]
         outputs: [Merge Flow lane summaries, Manual production review reports]
+        inputs:
+          - Open pull requests and their checks (through Merge Flow)
+          - Evidence Khaneil supplies
+        limitations:
+          - Runs only when Khaneil asks; no schedule
+          - Cannot merge or release on its own; Khaneil approves each step
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+      goals:
+        objective: Shorten the time from merge to installed update without skipping a gate.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Merge Flow is its main step
+          - name: Gates bypassed
+            kind: quality
+            target: Zero required checks or approvals skipped
+            basis: It never merges, deploys or bypasses checks
       execution:
         trigger_type: manual
         environment: Merge Flow on GitHub Actions; maintainer-started local handoff or GitHub Actions fixture
@@ -383,21 +458,30 @@ agents:
         autonomy: 1
         autonomy_note: Local draft handoff and evidence only. Approval never authorizes publishing or external actions.
         risk: low
+        credential_owner: Khaneil (Merge Flow's GitHub and Anthropic secrets; Claude Code on request)
       cost:
         budget: No scheduled runs or automatic model calls. Reuse existing CI evidence. Manual reviews consume allowance only on explicit request.
 
+      docs:
+        runbook: docs/runbooks/ai-ops-atlas.md#production-coordinator
+        last_review: 2026-11-17
   - id: atlas-release-coordinator
     name: Atlas Release Coordinator
     purpose: >-
       n8n chat agent Khaneil asks about Atlas releases. Chat only, no tools, capped at $1 a month. Works with the Atlas Production Coordinator, which owns the merge and release path.
     framework: n8n Agent
+    model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
     trigger: Khaneil asks it in n8n chat
-    last_run: null
+    last_run: 2026-11-05T06:53:26Z
     history:
       - at: 2026-11-14
         event: Now works with the Atlas Production Coordinator, at Khaneil's request
+      - at: 2026-11-17
+        event: Renamed in n8n to "Atlas Command Center – Release Coordinator" at Khaneil's request (same agent id)
+    permissions:
+      - 'None: the n8n agent has no tools; it answers in chat only'
     registry:
       title: Release Coordinator
       category: engineering
@@ -408,12 +492,56 @@ agents:
         type: A
         confidence: verified
         evidence: Published n8n agent xwPwuboturejm9hz, checked read-only on 2026-11-11
+      mission:
+        problem: Release questions (what to ship first, which check to re-run, what blocks an update) need a careful answer from evidence, without anyone bypassing a gate.
+        outcomes:
+          - A ranked answer with the next safe step
+          - Web deploy and Mac update kept separate in every answer
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Rank production issues from supplied evidence
+          - Name the review or CI bottleneck
+          - Say which checks can be reused or must re-run
+          - Walk a supplied draft through review and version-bound approval
+        tools:
+          - Claude (claude-sonnet-5-5)
+        inputs:
+          - Issues, pull requests, CI results and drafts Khaneil pastes into chat
+        outputs:
+          - 'Chat answer: priority, bottleneck, next safe action'
+        dependencies:
+          - n8n Cloud chat
+          - Claude (claude-sonnet-5-5)
+        limitations:
+          - Works only on what Khaneil pastes into its n8n chat; it cannot read GitHub itself
+          - Drafts and checklists only; it cannot merge, tag or publish
+          - Last used 2026-11-05, so its advice may lag recent pipeline changes
+      goals:
+        objective: Give the fastest compliant release path from evidence.
+        review_frequency: Quarterly
+        kpis:
+          - name: Spend
+            kind: cost
+            target: Under $1 a month and $0.25 a session
+            basis: n8n agent budget guardrail
+          - name: Gates bypassed
+            kind: quality
+            target: Zero recommendations to skip a required check or approval
+            basis: Its instructions forbid it
       execution:
         trigger_type: manual
         environment: n8n
       governance:
         autonomy: 1
         autonomy_note: Answers in chat only; it has no tools and changes nothing.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n account; model through n8n's managed AI gateway)
+        risk: low
+      docs:
+        runbook: docs/runbooks/ai-ops-atlas.md#release-coordinator
+        last_review: 2026-11-17
   # Building operators (2026-11-12): one scheduled, model-free check per building that reports to
   # the live feed. Their reports are what turn Product Marketplace, Observability Center and Data
   # Intelligence Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
@@ -443,6 +571,50 @@ agents:
         type: D
         confidence: verified
         evidence: ops/building-agents/agents.py marketplace; no AI model
+      mission:
+        problem: Atlas is itself a product; if the signed Mac update or its latest.json goes missing, installed copies stop updating and nobody sees it.
+        outcomes:
+          - The Product Marketplace shows whether the latest signed Atlas build is published
+          - A missing or stale release is visible within an hour
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Read the main-build release and latest.json
+          - Check the version, date and signed Mac update
+          - Report to the live feed
+        tools:
+          - GitHub Actions
+          - Python standard library
+          - Atlas live feed
+        inputs:
+          - main-build release metadata
+          - latest.json
+        outputs:
+          - Live feed report for the Product Marketplace
+        dependencies:
+          - atlas-ci
+          - main-build release (latest.json)
+          - Atlas live feed
+        limitations:
+          - Reads release metadata only; it never edits latest.json
+          - Hourly, so a broken release can go unnoticed for up to an hour
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        objective: The Product Marketplace shows whether the latest signed Atlas build is published
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed check leaves its building's status stale
+            measure: run_success_rate
+          - name: Report freshness
+            kind: reliability
+            target: A report at least every hour
+            basis: Cron 5 * * * * in building-agents.yml
       execution:
         trigger_type: scheduled
         environment: GitHub-hosted runner
@@ -450,9 +622,14 @@ agents:
         autonomy: 1
         autonomy_note: Reads and reports only.
         risk: low
+        credential_owner: Khaneil (ATLAS_FEED_TOKEN repository secret; GITHUB_TOKEN is per run)
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
 
+      docs:
+        technical: .github/workflows/building-agents.yml
+        runbook: docs/runbooks/ai-ops-atlas.md#building-operators
+        last_review: 2026-11-17
   - id: signal-watch
     name: Signal Watch
     purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
@@ -479,6 +656,50 @@ agents:
         type: D
         confidence: verified
         evidence: ops/building-agents/agents.py signals; no AI model
+      mission:
+        problem: Atlas depends on its GitHub workflows and its site; a red workflow or a down site should show in Atlas without anyone checking by hand.
+        outcomes:
+          - The Observability Center shows how many main-branch workflows are failing and whether the site answers
+          - A new failure shows within 30 minutes
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Read the latest main-branch run of each workflow
+          - Check the Atlas site answers
+          - Report the counts to the live feed
+        tools:
+          - GitHub Actions
+          - Python standard library
+          - Atlas live feed
+        inputs:
+          - GitHub Actions workflow runs
+          - Atlas site response
+        outputs:
+          - Live feed report for the Observability Center
+        dependencies:
+          - GitHub Actions run history
+          - Atlas site
+          - Atlas live feed
+        limitations:
+          - Checks every 30 minutes, so a short outage between checks can be missed
+          - Reports problems; it does not fix them
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        objective: The Observability Center shows how many main-branch workflows are failing and whether the site answers
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed check leaves its building's status stale
+            measure: run_success_rate
+          - name: Report freshness
+            kind: reliability
+            target: A report at least every 30 minutes
+            basis: Cron 15,45 * * * * in building-agents.yml
       execution:
         trigger_type: scheduled
         environment: GitHub-hosted runner
@@ -486,9 +707,14 @@ agents:
         autonomy: 1
         autonomy_note: Reads and reports only.
         risk: low
+        credential_owner: Khaneil (ATLAS_FEED_TOKEN repository secret; GITHUB_TOKEN is per run)
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
 
+      docs:
+        technical: .github/workflows/building-agents.yml
+        runbook: docs/runbooks/ai-ops-atlas.md#building-operators
+        last_review: 2026-11-17
   - id: dataset-census
     name: Dataset Census
     purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
@@ -515,6 +741,50 @@ agents:
         type: D
         confidence: verified
         evidence: ops/building-agents/agents.py census; no AI model
+      mission:
+        problem: Atlas is only as current as the catalog and repositories it reads; stale data should be visible.
+        outcomes:
+          - The Data Intelligence Center shows how many catalog repositories are fresh or stale
+          - Counts refresh every 3 hours
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Parse the catalog projects, agents and repositories
+          - Read each repository's last push
+          - Report fresh and stale counts to the live feed
+        tools:
+          - GitHub Actions
+          - Python standard library
+          - Atlas live feed
+        inputs:
+          - catalog/*.yaml
+          - GitHub repository metadata
+        outputs:
+          - Live feed report for the Data Intelligence Center
+        dependencies:
+          - catalog/*.yaml on main
+          - GitHub repository metadata
+          - Atlas live feed
+        limitations:
+          - Every 3 hours, so counts can lag a merge
+          - Counts what the catalog says; it does not prove an agent is running
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        objective: The Data Intelligence Center shows how many catalog repositories are fresh or stale
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed check leaves its building's status stale
+            measure: run_success_rate
+          - name: Report freshness
+            kind: reliability
+            target: A report at least every 3 hours
+            basis: Cron 10 */3 * * * in building-agents.yml
       execution:
         trigger_type: scheduled
         environment: GitHub-hosted runner
@@ -522,9 +792,14 @@ agents:
         autonomy: 1
         autonomy_note: Reads and reports only.
         risk: low
+        credential_owner: Khaneil (ATLAS_FEED_TOKEN repository secret; GITHUB_TOKEN is per run)
       cost:
         budget: No model calls. GitHub Actions minutes on a public repository.
 
+      docs:
+        technical: .github/workflows/building-agents.yml
+        runbook: docs/runbooks/ai-ops-atlas.md#building-operators
+        last_review: 2026-11-17
   - id: atlas-data-inventory
     name: Atlas Data Inventory
     purpose: >-
@@ -536,15 +811,21 @@ agents:
     framework: n8n + GitHub Actions (Node, no model)
     owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
-    status: paused
-    trigger: Daily at 7am New York time once published (n8n draft, not published yet)
+    status: active
+    trigger: Daily at 7:20am New York time (n8n, published 2026-11-13), after the Map inventory GitHub Action writes atlas-inventory.json on each merge
     source: src/inventory/mapInventory.ts
-    last_run: null
+    last_run: 2026-11-16T12:00:31Z
     history:
+      - at: 2026-11-17
+        event: 'At Khaneil''s OK: moved to 7:20am, a 30 second pause before the Map Objects rewrite, and up to 5 retries on each sheet write'
+      - at: 2026-11-16
+        event: 'Daily run failed at Write Map Objects: Google Sheets write quota per minute exceeded (n8n exec 730); Flow Error Alerts emailed ops'
+      - at: 2026-11-13
+        event: Published in n8n (version "Settings and groups"); daily schedule live
       - at: 2026-11-13
         event: Designed with Khaneil; placed in the Data Intelligence Center beside Dataset Census
     links:
-      - label: n8n workflow (draft)
+      - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/Hua0wdGB5WSDjSGB
       - label: Registry sheet
         url: https://docs.google.com/spreadsheets/d/1OcCD-k4ob_9lwpiQN3CazE7mkgQz0ExCzqLtHXrPAQA/edit
@@ -560,6 +841,49 @@ agents:
         type: D
         confidence: verified
         evidence: src/inventory/mapInventory.ts reads the catalog and the map's own plans; the n8n workflow copies rows with no AI model
+      mission:
+        problem: Nobody had one list of everything on the Atlas map (buildings, agents per building, vehicles and people), so drift went unnoticed.
+        outcomes:
+          - The registry sheet's inventory tabs match main every morning
+          - Retired buildings and vacant lots stay listed
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Write atlas-inventory.json after each merge (GitHub Action)
+          - Read it and the Registry tab every morning
+          - Rewrite the Buildings, Agents by Building, Map Objects and Inventory Summary tabs
+        tools:
+          - GitHub Actions
+          - Scheduled workflow
+          - Google Sheets
+        inputs:
+          - atlas-inventory.json on the atlas-inventory branch
+          - Registry tab of the Atlas Agent Registry sheet
+        outputs:
+          - Buildings, Agents by Building, Map Objects and Inventory Summary tabs
+        dependencies:
+          - Map inventory GitHub Action (atlas-inventory.json)
+          - Atlas Agent Registry Google Sheet
+          - agent-registry-sync
+        limitations:
+          - Google Sheets allows only so many writes per minute; it pauses 30 seconds and retries up to 5 times
+          - Daily, so the sheet can lag a merge by up to a day
+          - Successful runs are not saved in n8n, so only failures show there
+      goals:
+        objective: Keep the map inventory in the registry sheet current every day.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves yesterday's inventory in the sheet
+          - name: Inventory age
+            kind: reliability
+            target: Sheet tabs no more than 1 day behind main
+            basis: Daily 7am schedule; the GitHub Action runs on every merge
       execution:
         trigger_type: scheduled
         environment: n8n
@@ -567,8 +891,17 @@ agents:
         autonomy: 1
         autonomy_note: Reads and reports only.
         risk: low
+        credential_owner: Khaneil (n8n Google Sheets credential; GitHub Actions token per run)
       cost:
         budget: No model calls. About 30 n8n runs a month and a few GitHub Actions minutes per merge.
+      docs:
+        runbook: docs/runbooks/ai-ops-atlas.md#atlas-data-inventory
+        known_issues:
+          - 2026-11-16 run hit the Google Sheets write-per-minute quota at Write Map Objects (fixed 2026-11-17 with a later start, a pause and retries)
+          - Successful runs are not saved in n8n, so only failures show in its Executions
+        improvements:
+          - Save successful runs, or report each run to the Atlas feed, so Atlas can show its last success
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -585,6 +918,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Build and Release Engineer, CI Recovery Specialist, Pull Request Integration Coordinator, Marketplace Steward, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Atlas Release Manager
       category: engineering
@@ -595,10 +930,42 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Every merge is a production release to Khaneil's Mac and the web page, so testing, re-runs, merges and publish checks must all hold.
+        outcomes:
+          - Every change is tested before it can merge
+          - Merges and re-runs happen only when Khaneil asks
+          - The signed Mac update is confirmed published
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Test every pull request and push, Re-run failed jobs when Khaneil asks, Merge a ready pull request when Khaneil asks, Confirm the signed Mac update is published]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Pull requests and pushes
+          - Khaneil's button presses in Atlas
+          - The main-build release
+        dependencies:
+          - atlas-ci
+          - atlas-rerun-failed
+          - atlas-merge-pr
+          - marketplace-steward
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Every merge and signed release still needs Khaneil
+      goals:
+        objective: Ship every tested change safely to the installed app.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Main branch green
+            kind: reliability
+            target: Latest Atlas CI run on main succeeds
+            basis: A red main blocks every release
       execution:
         trigger_type: event
         environment: Through its automations
@@ -606,8 +973,12 @@ agents:
         autonomy: 1
         autonomy_note: Its merge and re-run steps act only after Khaneil asks in Atlas; the rest test and report.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: docs/runbooks/ai-ops-atlas.md#release-manager
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -626,6 +997,8 @@ agents:
         event: Added as the owning agent of Signal Watch, Dataset Census, Atlas Data Inventory, at Khaneil's request
       - at: 2026-11-17
         event: Supervises autonomous operations (Phase 9) in Mission Control. Turns verified events into incidents with fixed rules, and runs only approved read-only recovery playbooks, automatically only under a policy Khaneil enabled at autonomy level 3
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       title: Atlas Health Monitor
       category: infrastructure
@@ -636,10 +1009,41 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Atlas reports on everything else, so a broken Atlas signal, stale data or an out-of-date map list would mislead every tab.
+        outcomes:
+          - Atlas's own build and site signals are checked every 30 minutes
+          - Catalog freshness every 3 hours
+          - The map inventory every day
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current, Group verified operational events into incidents, Run and verify approved read-only recovery playbooks]
         tools: [Its automations]
         outputs: [The results of its automations, Incidents and recovery logs in Mission Control]
+        inputs:
+          - GitHub Actions runs
+          - The Atlas site
+          - The catalog and map inventory
+        dependencies:
+          - signal-watch
+          - dataset-census
+          - atlas-data-inventory
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Reports health; it does not repair anything
+      goals:
+        objective: Know Atlas is healthy before relying on it.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Signal freshness
+            kind: reliability
+            target: Observability Center report no older than 1 hour
+            basis: Signal Watch runs every 30 minutes
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -647,5 +1051,9 @@ agents:
         autonomy: 1
         autonomy_note: Reads and reports only.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: docs/runbooks/ai-ops-atlas.md#health-monitor
+        last_review: 2026-11-17
