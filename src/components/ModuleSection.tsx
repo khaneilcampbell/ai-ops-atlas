@@ -75,6 +75,7 @@ export function ModuleSection() {
           {feed ? (
             <dd data-state={feed.state} aria-label="Live feed">
               <HealthBadge health={feed.health} /> <span className="muted small">{feed.summary}</span>
+              <div className="muted small">Source: live agent feed · updates automatically</div>
               <ul className="module-feed">
                 {feed.watches.map((w) => (
                   <li key={w.agent.id} className="muted small">

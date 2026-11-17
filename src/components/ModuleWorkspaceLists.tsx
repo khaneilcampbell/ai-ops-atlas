@@ -507,7 +507,7 @@ function ResearchBriefs() {
   );
 }
 
-const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Silent", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
+const STAGE_LABEL: Record<StageState, string> = { failing: "Failed", silent: "Stale", ok: "Healthy", "not-running": "Not running", unknown: "Unknown" };
 
 function Suppliers() {
   const { catalog, repos } = useAtlas();
