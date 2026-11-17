@@ -52,11 +52,13 @@ GLB = os.path.join(ROOT, "public", "models", "map", "command-center.glb")
 STAMP = os.path.join(HERE, "build.json")
 
 # Storeys: the interior's own (lobby 3.3, floors 2.7) at 10 office units per map unit of plan. On
-# the campus the map scales the model by about 2.35, so the roof stands about 3.3 map units up, with
-# the Growth & Marketing Studio and the Vendor & Supplier Hub.
+# the campus the map scales the model by about 2.35, so the roof stands about 9.7 map units up,
+# with the Agent Operations Center (9.9).
 LOBBY = 3.3 / 10
 STOREY = 2.7 / 10
-FLOORS = 4
+# Office floors outside (Khaneil, 2026-11-17: as tall as the Agent Operations Center). The four
+# you walk through inside are the interior's; the rest are the same floors, stacked.
+FLOORS = 14
 ROOF = LOBBY + FLOORS * STOREY
 
 # Footprint (within the parcel's square: x -0.82..0.82, z -0.62..0.38). A taller glass wing on the right
@@ -334,12 +336,13 @@ STONE_CONTRAST = 0.75   # veining kept subtle at map scale
 AO_DISTANCE = 0.12      # how far occlusion reaches: a little more than three slab depths
 SHADOW = (0.34, 0.31, 0.28)  # linear multiplier where the AO is fully closed (warm, never black)
 # Baked texture size per part, in pixels (square). The stone carries the most visible detail.
-BAKE_SIZE = {"cc_stone": 1024, "cc_frame": 512, "cc_roof": 512, "cc_glass": 512,
+BAKE_SIZE = {"cc_stone": 1536, "cc_frame": 1024, "cc_roof": 512, "cc_glass": 1024,
              "cc_lobby": 256, "cc_brass": 256, "cc_hedge": 256, "cc_lawn": 256}
 SEE_THROUGH = ("cc_glass", "cc_lobby")  # keep the app's window texture; occlusion only
 # Window light for the glow bake (colour, strength): warm offices, a brighter gold lobby.
 WINDOW_LIGHT = {"cc_glass": ("#ffd49a", 3.0), "cc_lobby": ("#ffc46e", 7.0)}
 GLOW_PARTS = ("cc_stone", "cc_frame")
+GLOW_HALF = True     # the glow is smooth: shipped at half the bake size
 GLOW_PERCENTILE = 85  # which lit stone texel the glow map scales to 1
 
 
@@ -373,8 +376,11 @@ def to_srgb(a):
     return np.where(a <= 0.0031308, a * 12.92, 1.055 * np.power(a, 1 / 2.4) - 0.055)
 
 
-def final_image(name, linear, size, srgb=True):
-    """A packed 8-bit image from linear float pixels: what the GLB carries."""
+def final_image(name, linear, size, srgb=True, half=False):
+    """A packed 8-bit image from linear float pixels: what the GLB carries (optionally half size)."""
+    if half:
+        linear = linear.reshape(size // 2, 2, size // 2, 2, 4).mean(axis=(1, 3)).reshape(-1, 4)
+        size //= 2
     img = new_image(name, size, float_buffer=False, srgb=srgb)
     out = linear.copy()
     out[:, :3] = to_srgb(out[:, :3]) if srgb else out[:, :3].clip(0, 1)
@@ -587,7 +593,7 @@ def bake(scene, coll):
         if name in glow:
             g = pixels(glow[name])
             g[:, :3] /= peak
-            finals[name]["glow"] = final_image(f"{name}_glow", g, size)
+            finals[name]["glow"] = final_image(f"{name}_glow", g, size, half=GLOW_HALF)
 
     # 4. Final materials: the baked maps on the bake UVs, the palette's roughness and metalness.
     for name, ob in obs.items():
@@ -698,7 +704,7 @@ def main():
         export_normals=True,
         export_materials="EXPORT",
         export_image_format="JPEG",
-        export_image_quality=88,
+        export_image_quality=80,
         export_cameras=False,
         export_lights=False,
         export_extras=False,

@@ -30,8 +30,8 @@ const PICKED:ReadonlySet<Part>=new Set(['cc_glass','cc_lobby','cc_stone']);
 type Handlers={onPointerOver:(e:ThreeEvent<PointerEvent>)=>void;onPointerOut:()=>void;onClick:(e:ThreeEvent<MouseEvent>)=>void};
 
 /**
- * Atlas Command Center (Khaneil, 2026-11-17, after his concept image): the lobby and four office
- * floors you enter. Green-framed glass with warm-lit offices between thick cream stone slabs, a
+ * Atlas Command Center (Khaneil, 2026-11-17, after his concept image): the lobby and fourteen
+ * office floors, as tall as the Agent Operations Center (the four inside are the ones you enter). Green-framed glass with warm-lit offices between thick cream stone slabs, a
  * glass wing turning the front corner in a wide curve, a stone entrance bay with the gold Atlas
  * mark and name, a gold-lit lobby under a brass canopy and planting round the roof.
  * Eight model meshes plus a few instanced sets: about a dozen draw calls and no lights of its
@@ -94,7 +94,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  return <group>
   <group position={[t.x,base,t.z]}>
    <ModelBoundary fallback={block}><Suspense fallback={block}><Model k={k} mats={mats.byPart} handlers={handlers}/></Suspense></ModelBoundary>
-   <mesh geometry={g.plane} material={signs.nameMat} position={[0,(CC.lobby+3.1*CC.storey)*k,face]} scale={[.44*k,.55*k,1]} raycast={noRaycast}/>
+   <mesh geometry={g.plane} material={signs.nameMat} position={[0,ccRoof(k)-.9*CC.storey*k,face]} scale={[.44*k,.55*k,1]} raycast={noRaycast}/>
    {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[.55*k,.4*k,(CC.cz+CC.b+CC.slab)*k+.03*k]} scale={[.16*k,.16*k,1]} raycast={noRaycast}/>}
   </group>
   <Instanced items={parts.door} geometry={g.box} material={m.plain}/>

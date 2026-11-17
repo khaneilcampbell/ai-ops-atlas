@@ -10,8 +10,6 @@ import {HQ} from './atlasHqPlan';
 import {CC,ccBay,ccDoor,ccEntrance,ccFootprint,ccGrounds,ccLedges,ccOutline,ccRoof,ccTop} from './commandCenterPlan';
 import {HQ_INTERIOR} from '../office/atlasHqInteriorPlan';
 import {HQ_PALETTE} from './atlasHqPalette';
-import {AGENCY} from './marketingAgencyPlan';
-import {GALLERIA} from './galleriaPlan';
 
 /** The Blender model as the map loads it: its JSON chunk, read without three.js. */
 const GLB=join(__dirname,'../../../public/models/map/command-center.glb');
@@ -36,12 +34,17 @@ describe('Atlas Command Center',()=>{
   // The interior's storeys at 10 interior units per map unit of plan: the interior's own proportions.
   expect(CC.lobby*10).toBeCloseTo(HQ_INTERIOR.lobbyHeight);
   expect(CC.storey*10).toBeCloseTo(HQ_INTERIOR.height);
-  // At the map's size it stands with the Growth & Marketing Studio (3.1 to 3.84) and the Vendor & Supplier Hub (4.55).
-  const hq=buildScene(layoutMap(catalog,[],'district')).towers.find(t=>t.projectId==='ai-ops-atlas')!,kk=hq.size/HQ.refSize;
-  expect(ccRoof(kk)).toBeGreaterThanOrEqual(AGENCY.westH);expect(ccTop(kk)).toBeLessThanOrEqual(GALLERIA.storeys.reduce((a,b)=>a+b,0));
-  // A stone ledge over the lobby and over each office floor; the last one is the roof.
+  // Outside it stands as tall as the Agent Operations Center (Khaneil, 2026-11-17): its roof within
+  // one storey of that building's roof, with fourteen office floors; the four inside stay.
+  const towers=buildScene(layoutMap(catalog,[],'district')).towers;
+  const hq=towers.find(t=>t.projectId==='ai-ops-atlas')!,kk=hq.size/HQ.refSize;
+  const agentOps=towers.find(t=>t.projectId==='intelligence-hub')!;
+  expect(agentOps.name).toBe('Agent Operations Center');
+  expect(Math.abs(ccRoof(kk)-(agentOps.customHeight??agentOps.height))).toBeLessThan(CC.storey*kk);
+  expect(CC.outsideFloors).toBe(14);
+  // A stone ledge over the lobby and over each office floor outside; the last one is the roof.
   const k=1.4,l=ccLedges(k);
-  expect(l).toHaveLength(5);expect(l[0]).toBeCloseTo(CC.lobby*k);expect(l[4]).toBeCloseTo(ccRoof(k));
+  expect(l).toHaveLength(CC.outsideFloors+1);expect(l[0]).toBeCloseTo(CC.lobby*k);expect(l[CC.outsideFloors]).toBeCloseTo(ccRoof(k));
   // The plan keeps the floor plates' proportions: wider than deep, rounded corners.
   expect(CC.roundness).toBe(HQ_INTERIOR.roundness);
  });
@@ -60,19 +63,19 @@ describe('Atlas Command Center',()=>{
   const m=glb();
   expect(m.meshes.map(x=>x.name).sort()).toEqual(['cc_brass','cc_frame','cc_glass','cc_hedge','cc_lawn','cc_lobby','cc_roof','cc_stone']);
   for(const x of m.meshes)expect(x.primitives).toBe(1);
-  expect(m.meshes.reduce((n,x)=>n+x.triangles,0)).toBeLessThan(12000);
+  expect(m.meshes.reduce((n,x)=>n+x.triangles,0)).toBeLessThan(14000);
   // Baked in Blender: every solid part's colour (stone, brass, palette with its occlusion), the brass
   // roughness, the glass's occlusion and the window glow on the slabs and sills. Capped so the
   // map's 8 MB budget keeps its room.
   expect(m.images.map(i=>i.name).sort()).toEqual(['cc_brass_color','cc_brass_roughness','cc_frame_color','cc_frame_glow','cc_glass_occlusion','cc_hedge_color','cc_lawn_color','cc_lobby_occlusion','cc_roof_color','cc_stone_color','cc_stone_glow']);
-  for(const i of m.images)expect(i.bytes,i.name).toBeLessThan(400_000);
-  expect(m.images.reduce((n,i)=>n+i.bytes,0)).toBeLessThan(1_300_000);
+  for(const i of m.images)expect(i.bytes,i.name).toBeLessThan(600_000);
+  expect(m.images.reduce((n,i)=>n+i.bytes,0)).toBeLessThan(1_200_000);
   // JPEG or PNG only: decodeEmbeddedTextures reads those without blob: URLs, which the CSP blocks.
   // (A WebP or KTX2 texture would go through GLTFLoader's own blob: path and vanish when hosted.)
   for(const i of m.images)expect(i.mime).toMatch(/^image\/(jpeg|png)$/);
   // No Draco or Meshopt: their decoders need a CDN or WebAssembly, which the CSP does not allow.
   expect(m.extensions.filter(e=>/draco|meshopt|webp|basisu|avif/i.test(e))).toEqual([]);
-  expect(m.bytes).toBeLessThan(1_600_000);
+  expect(m.bytes).toBeLessThan(2_000_000);
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   // Every load of the model (the preload and the hook) decodes its textures the CSP-safe way.
   expect(source.match(/useGLTF(\.preload)?\(CC_MODEL_URL,false,false,decodeEmbeddedTextures\)/g)).toHaveLength(2);
@@ -105,7 +108,7 @@ describe('Atlas Command Center',()=>{
   expect(readdirSync(join(dir,'textures'))).toEqual(['marble_01_diff_1k.jpg']);
   const script=readFileSync(join(dir,'build_command_center.py'),'utf8');
   expect(script).toContain('public/models/map/command-center.glb'.split('/').pop());
-  expect(script).toMatch(/LOBBY = 3\.3 \/ 10/);expect(script).toMatch(/STOREY = 2\.7 \/ 10/);expect(script).toMatch(/FLOORS = 4/);
+  expect(script).toMatch(/LOBBY = 3\.3 \/ 10/);expect(script).toMatch(/STOREY = 2\.7 \/ 10/);expect(script).toMatch(new RegExp(`FLOORS = ${CC.outsideFloors}\\n`));
  });
  it('keeps brass restrained: lobby mullions and one line in the model, the door header, canopy and its columns outside it',()=>{
   // Header, canopy and its two slim columns.

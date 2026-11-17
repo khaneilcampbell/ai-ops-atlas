@@ -29,6 +29,18 @@ The windows show lit offices with people at desks and screens; the front has bro
 under a deep brass canopy on brass columns, stone-kerbed flower beds, potted trees by the door and
 round trees at the corners (`ccEntrance`, `ccGrounds`).
 
+Fifth pass, same day: Khaneil asked for Atlas Command Center to be "the same height as" the Agent
+Operations Center (the former Intelligence Hub, in AI Engineering) and chose fourteen office
+floors outside with the four walk-in floors inside unchanged. `CC.floors` stays 4 (the interior
+and the floor buttons); `CC.outsideFloors` is 14, at the same storey height. On the campus the
+roof now stands 9.7 map units up against the Agent Operations Center's 9.9 (15 floors would be
+10.3), and the test keeps it within one storey of that roof. Footprint, parcel and neighbours do
+not move. The nameplate sits just under the roof on the stone bay. The model is now 12,380
+triangles and 1.73 MB: the stone bakes at 1536 px, glass and frame at 1024 px, the window glow
+at half size, JPEG quality 80. Perf budget (`PERF_BUDGET=1 npm run measure:perf`) passed:
+desktop day 737 draws of 800, 894,008 triangles of 1.2M, 75 programs, 6.9 MB geometry; night 760
+draws, 902,370 triangles, 79 programs of 80; iPhone day 733 draws, 883,900 triangles.
+
 ![Concept image next to the running map](concept-vs-map.jpg)
 
 Left: the AI-generated concept (not the app). Right: a capture of the running Atlas map.
@@ -83,8 +95,8 @@ Added 2026-11-17 to bring the map building closer to the concept close-up. All o
 - **Green glass** stays reflective (roughness 0.3, metalness 0.1) and keeps the lit offices.
 
 Textures are baked on a UV set laid by the script (slab rings cut into quarters so they pack
-tightly) and ship inside the GLB as JPEG: stone 1024 px, frame, roof and glass 512 px, the rest
-256 px. They are not WebP: GLTFLoader decodes WebP through a `blob:` URL, which the hosted CSP
+tightly) and ship inside the GLB as JPEG: stone 1536 px, frame and glass 1024 px, roof 512 px,
+the rest 256 px, the window glow at half its bake size (sizes since the fifth pass). They are not WebP: GLTFLoader decodes WebP through a `blob:` URL, which the hosted CSP
 (`img-src 'self' data:`, `connect-src 'self'`) blocks. `src/views/map3d/glbTextures.ts` decodes
 the GLB's JPEG and PNG textures straight from its bytes instead, so the CSP is unchanged.
 `AtlasHq.tsx` puts the GLB's maps on the map's own materials by part name.

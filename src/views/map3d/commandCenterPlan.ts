@@ -4,7 +4,8 @@ import {HQ_PALETTE} from './atlasHqPalette';
 
 /**
  * Atlas Command Center on the map, after Khaneil's concept (2026-11-17): the double-height lobby
- * and the four office floors you walk through inside. A glass wing on the right turns the front
+ * and, since Khaneil's call the same day, fourteen office floors outside so it stands as tall as
+ * the Agent Operations Center; the four you walk through inside stay as they are. A glass wing on the right turns the front
  * corner in a wide curve, the left wing stands a step back, and the stone entrance bay covers the
  * joint, rising above the roof with the name. The building itself is a Blender model
  * (assets/command-center/build_command_center.py, exported to public/models/map/command-center.glb);
@@ -23,12 +24,18 @@ export const CC={
  /**
   * The interior's storeys (atlasHqInteriorPlan: lobby 3.3, floors 2.7) at 10 interior units per
   * map unit of plan (Khaneil, 2026-11-17: the concept's size, with the Growth & Marketing Studio
-  * and the Vendor & Supplier Hub). On the campus (k about 2.35) the roof stands about 3.3 map
-  * units up, inside the Studio's 3.1 to 3.8, and the lobby keeps the interior's proportions.
+  * and the Vendor & Supplier Hub). The lobby and every floor keep the interior's proportions.
   */
  lobby:3.3/10,
  storey:2.7/10,
+ /** The office floors you walk through inside (the floor buttons): Floors 1 to 4. */
  floors:4,
+ /**
+  * The office floors on the outside (Khaneil, 2026-11-17: "the same height as" the Agent
+  * Operations Center). On the campus (k about 2.35) the roof stands 9.7 map units up, the
+  * Agent Operations Center's 9.9; 15 floors would overshoot to 10.3.
+  */
+ outsideFloors:14,
  /** The block's extent: centre, half width, half depth (x -0.82..0.82, z -0.62..0.38). The interior reads its proportions. */
  cx:0,cz:-.12,a:.82,b:.5,roundness:9,
  /** The left wing's front stands this far behind the right wing's; the step is at x = joint. */
@@ -41,11 +48,11 @@ export const CC={
  bayHalf:.26,bayProud:.08,bayRise:.14,
 } as const;
 
-export const ccRoof=(k=1)=>(CC.lobby+CC.floors*CC.storey)*k;
+export const ccRoof=(k=1)=>(CC.lobby+CC.outsideFloors*CC.storey)*k;
 /** The highest point: the entrance bay's top. */
 export const ccTop=(k=1)=>ccRoof(k)+CC.bayRise*k;
-/** Heights of the stone ledges: over the lobby, then over each office floor (the last is the roof). */
-export const ccLedges=(k=1)=>Array.from({length:CC.floors+1},(_,i)=>(CC.lobby+i*CC.storey)*k);
+/** Heights of the stone ledges: over the lobby, then over each office floor outside (the last is the roof). */
+export const ccLedges=(k=1)=>Array.from({length:CC.outsideFloors+1},(_,i)=>(CC.lobby+i*CC.storey)*k);
 /** The glass line at ground level, as the Blender script draws it (8 points per corner arc). */
 export function ccOutline(k=1):Pt[]{
  const x0=(CC.cx-CC.a)*k,x1=(CC.cx+CC.a)*k,z0=(CC.cz-CC.b)*k,zr=(CC.cz+CC.b)*k,zl=zr-CC.leftStep*k,j=CC.joint*k;
