@@ -496,10 +496,10 @@ const palmHalo = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: tr
 
 /**
  * The lawn trees (palms only inside the palm zones), less any standing in a palm avenue's row, plus the avenues and the airport's sidewalk palms.
- * Inside a building (scene.pedestrianExclusion set) street palms keep out of the cutaway, like every other tree there.
+ * Inside a building (scene.palmExclusion set) street palms keep out of the cutaway and the street in front of it (Khaneil, 2026-11-17).
  */
 export function avenuePlanting(scene: Scene3D) {
-  const keep = scene.pedestrianExclusion, m = 0.5;
+  const keep = scene.palmExclusion ?? scene.pedestrianExclusion, m = 0.5;
   const clear = (p: { x: number; z: number }) => !keep || p.x < keep.x - m || p.x > keep.x + keep.w + m || p.z < keep.z - m || p.z > keep.z + keep.d + m;
   const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear);
   return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];

@@ -2,7 +2,7 @@ import {it,expect} from "vitest";
 import {catalog} from "../../catalog";
 import {layoutMap} from "../mapLayout";
 import {buildScene,LAND_TOP,TERRACE_H} from "../map3d/scene";
-import {clearInteriorFootprint,interiorGroundY} from "./exteriorClearance";
+import {PALM_CLEARANCE,clearInteriorFootprint,interiorGroundY} from "./exteriorClearance";
 it("excludes exterior walkers and fountains from rooms without changing the city source",()=>{
   const source=buildScene(layoutMap(catalog));
   const park=source.parks[0],x=park.x+park.w/2,z=park.z+park.d/2;
@@ -19,17 +19,19 @@ it("puts every lobby, Financial District included, on the map's ground plane",()
   expect(interiorGroundY()).toBe(TERRACE_H);
   expect(Math.abs(LAND_TOP-interiorGroundY())).toBeLessThan(.01);
 });
-it("keeps the street palms out of Atlas HQ's cutaway, so none stands up through its floors",async()=>{
+it("keeps the street palms out of Atlas HQ's cutaway and the street in front, so none stands in front of its floors",async()=>{
   const {avenuePlanting}=await import("../map3d/models");
   const {planOffice}=await import("./model");
   const {hqClearSpan}=await import("./atlasHqInteriorPlan");
+  const {keepRemovedLots}=await import("../mapLayout");
   const project=catalog.projects.find(p=>p.id==="ai-ops-atlas")!,plan=planOffice(project,catalog.agents.filter(a=>a.projectId===project.id));
-  const source=buildScene(layoutMap(catalog)),t=source.towers.find(t=>t.projectId==="ai-ops-atlas")!;
+  // The app's default "By district" map, where Khaneil saw palms in front of the floors (2026-11-17).
+  const source=buildScene(layoutMap(keepRemovedLots(catalog,catalog),[],"district")),t=source.towers.find(t=>t.projectId==="ai-ops-atlas")!;
   // As CityOutside sizes it: interior units per map unit, and the cleared half-width in map units.
-  const scale=Math.max(4,Math.max(plan.w,plan.d)/4),r=(hqClearSpan(plan.w,plan.d)/2+2)/scale;
-  const inside=(p:{x:number;z:number})=>Math.abs(p.x-t.x)<=r&&Math.abs(p.z-t.z)<=r;
-  // The city has street palms there (the one Khaneil saw through the floors, 2026-11-17)...
-  expect(avenuePlanting(source).some(inside)).toBe(true);
+  const scale=Math.max(4,Math.max(plan.w,plan.d)/4),r=(hqClearSpan(plan.w,plan.d)/2+2)/scale,R=r+PALM_CLEARANCE;
+  const near=(p:{x:number;z:number;kind?:string})=>p.kind==="avenue"&&Math.abs(p.x-t.x)<=R&&Math.abs(p.z-t.z)<=R;
+  // The city has avenue palms there (lawn trees stay: they are low and kept off the room itself)...
+  expect(avenuePlanting(source).some(near)).toBe(true);
   // ...and none once the interior clears its ground.
-  expect(avenuePlanting(clearInteriorFootprint(source,t.x,t.z,r)).some(inside)).toBe(false);
+  expect(avenuePlanting(clearInteriorFootprint(source,t.x,t.z,r)).some(near)).toBe(false);
 });

@@ -5,11 +5,14 @@ import {TERRACE_H,type Scene3D} from "../map3d/scene";
  * or sinks below the city drawn outside it.
  */
 export function interiorGroundY():number{return TERRACE_H;}
+/** How much farther than the room tall street palms keep away, in map units: past the street in front, so none stands in front of the floors. */
+export const PALM_CLEARANCE=3.5;
 /** Exterior pedestrians and landscaping must never occupy the cutaway's room footprint. */
 export function clearInteriorFootprint(scene:Scene3D,x:number,z:number,r:number):Scene3D {
   const outside=(p:{x:number;z:number},margin=0)=>Math.abs(p.x-x)>r+margin||Math.abs(p.z-z)>r+margin;
   return {...scene,
     pedestrianExclusion:{x:x-r,z:z-r,w:r*2,d:r*2},
+    palmExclusion:{x:x-r-PALM_CLEARANCE,z:z-r-PALM_CLEARANCE,w:(r+PALM_CLEARANCE)*2,d:(r+PALM_CLEARANCE)*2},
     rocks:scene.rocks.filter(p=>outside(p,0.4)),
     bollards:scene.bollards.filter(p=>outside(p,0.3)),
     trees:scene.trees.filter(p=>outside(p,0.5)),bushes:scene.bushes.filter(p=>outside(p,0.3)),
