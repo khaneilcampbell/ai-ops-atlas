@@ -20,20 +20,25 @@ import {HQ_PALETTE} from './atlasHqPalette';
  * plaza, roads and links around it stay where they are.
  */
 export const CC={
- /** Interior storeys over the interior scale (atlasHqInteriorPlan: height 2.7, lobby 3.3, scale 12). */
- lobby:3.3/12,
- storey:2.7/12,
+ /**
+  * The interior's storeys (atlasHqInteriorPlan: lobby 3.3, floors 2.7) at 10 interior units per
+  * map unit of plan (Khaneil, 2026-11-17: the concept's size, with the Growth & Marketing Studio
+  * and the Vendor & Supplier Hub). On the campus (k about 2.35) the roof stands about 3.3 map
+  * units up, inside the Studio's 3.1 to 3.8, and the lobby keeps the interior's proportions.
+  */
+ lobby:3.3/10,
+ storey:2.7/10,
  floors:4,
- /** The block's extent: centre, half width, half depth (x -0.76..0.76, z -0.6..0.4). The interior reads its proportions. */
- cx:0,cz:-.1,a:.76,b:.5,roundness:9,
+ /** The block's extent: centre, half width, half depth (x -0.82..0.82, z -0.62..0.38). The interior reads its proportions. */
+ cx:0,cz:-.12,a:.82,b:.5,roundness:9,
  /** The left wing's front stands this far behind the right wing's; the step is at x = joint. */
- leftStep:.08,joint:-.24,
+ leftStep:.07,joint:-.26,
  /** Corner radii: the right wing's wide curves and the left wing's softer ones. */
- rightRadius:.2,leftRadius:.12,
+ rightRadius:.22,leftRadius:.12,
  /** Cream stone floor slabs stand this far proud of the glass. */
- slab:.04,
+ slab:.035,
  /** The stone entrance bay, proud of the front, rising above the roof with the logo and name on it. */
- bayHalf:.24,bayProud:.09,bayRise:.14,
+ bayHalf:.26,bayProud:.08,bayRise:.14,
 } as const;
 
 export const ccRoof=(k=1)=>(CC.lobby+CC.floors*CC.storey)*k;
@@ -59,30 +64,62 @@ export function ccBay(k=1){
 }
 
 /**
- * The front door's dressing, under the stone bay: two steps out to the plaza, dark green
- * jambs under a brass header (the opening glass doors themselves are the map's shared
- * EntranceDoors, placed by ccDoor), a wide brass canopy, planters along the front and two door
- * lamps that light at night. Boxes as [x, y, z, w, h, d, colour], y the bottom; lamps listed apart.
+ * The front door's dressing, as in the concept: a broad stone staircase of four steps out to the
+ * plaza, the stone bay carried on two posts, dark green jambs under a brass header (the opening
+ * glass doors themselves are the map's shared EntranceDoors, placed by ccDoor), a deep brass
+ * canopy on two slim brass columns, and two door lamps that light at night.
+ * Boxes as [x, y, z, w, h, d, colour], y the bottom; lamps listed apart.
  */
 export type CcBox=[number,number,number,number,number,number,string];
 export function ccEntrance(k=1){
- const bay=ccBay(k),z=bay.front,dw=.22*k,dh=.2*k,brass=HQ_PALETTE.brass,stone=HQ_PALETTE.stone,f=ccFront(k);
+ const bay=ccBay(k),z=bay.front,dw=.24*k,dh=.21*k,brass=HQ_PALETTE.brass,stone=HQ_PALETTE.stone;
+ const stairW=bay.w+.14*k,tread=.04*k,rise=.01*k,canopyY=dh+.05*k,canopyD=.24*k;
  const boxes:CcBox[]=[
-  // Two broad steps down to the plaza.
-  [0,0,z+.1*k,.62*k,.012*k,.2*k,'#e5dccb'],
-  [0,0,z+.035*k,.54*k,.022*k,.07*k,'#ede4d2'],
+  // Four steps: each one shorter in depth and a riser higher, so they climb toward the door.
+  ...[0,1,2,3].map(i=>[0,0,z+tread*(4-i)/2,stairW-.03*k*i,rise*(i+1),tread*(4-i),i%2?'#ede4d2':'#e5dccb'] as CcBox),
   // The stone posts that carry the bay down to the ground.
   ...[-1,1].map(side=>[side*(bay.w/2-.025*k),0,bay.z,.05*k,bay.y,bay.d,stone] as CcBox),
   ...[-1,1].map(side=>[side*(dw/2+.01*k),.02*k,z+.012*k,.018*k,dh+.02*k,.024*k,'#2f5d4a'] as CcBox),
   [0,.02*k+dh,z+.012*k,dw+.05*k,.02*k,.026*k,brass],
-  // The canopy: wider than the bay, a gold slab over the steps.
-  [0,.05*k+dh,z+.08*k,bay.w+.1*k,.018*k,.2*k,brass],
-  // Clipped hedges in stone planters along the front of each wing, either side of the entrance.
-  ...[-1,1].map(side=>[side*.5*k,0,(side<0?f-CC.leftStep*k:f)+.07*k,.42*k,.035*k,.07*k,stone] as CcBox),
-  ...[-1,1].map(side=>[side*.5*k,.035*k,(side<0?f-CC.leftStep*k:f)+.07*k,.4*k,.045*k,.055*k,'#4f7a52'] as CcBox),
+  // The canopy: wider than the bay, a deep gold slab over the steps on two slim brass columns.
+  [0,canopyY,z+canopyD/2,bay.w+.12*k,.018*k,canopyD,brass],
+  ...[-1,1].map(side=>[side*(bay.w/2+.03*k),rise*4,z+canopyD-.02*k,.014*k,canopyY-rise*4,.014*k,brass] as CcBox),
  ];
- const lamps:CcBox[]=[-1,1].map(side=>[side*.15*k,.02*k,z+.05*k,.014*k,.045*k,.014*k,'#ffffff']);
+ const lamps:CcBox[]=[-1,1].map(side=>[side*.17*k,.03*k,z+.05*k,.014*k,.045*k,.014*k,'#ffffff']);
  return {boxes,lamps};
+}
+
+/**
+ * The grounds round the building, as in the concept: stone-kerbed flower beds along the front of
+ * each wing (clipped hedge with pink, purple and white flowers), a potted tree either side of the
+ * stairs and small round trees at the front corners. Kept inside the parcel, clear of the street
+ * ring. Boxes as CcBox; blobs [x, y, z, sx, sy, sz, colour] for flowers and crowns; trunks as CcBox.
+ */
+export function ccGrounds(k=1){
+ const f=ccFront(k)+CC.slab*k,bay=ccBay(k),stone=HQ_PALETTE.stone,hedge=HQ_PALETTE.hedge;
+ const boxes:CcBox[]=[],blobs:CcBox[]=[],trunks:CcBox[]=[];
+ const flowers=['#d98cc0','#a77fd0','#f3eef4','#e7a3c9'];
+ // One bed in front of each wing: left wing a step back, right wing up to where its corner curves.
+ const beds:[number,number,number][]=[[-(CC.a-.02)*k,-(bay.w/2+.16*k),f-CC.leftStep*k+.06*k],[bay.w/2+.16*k,(CC.a-CC.rightRadius+.05)*k,f+.06*k]];
+ beds.forEach(([x0,x1,z],b)=>{
+  const w=x1-x0,cx=(x0+x1)/2;
+  boxes.push([cx,0,z,w+.02*k,.03*k,.09*k,stone],[cx,.03*k,z-.012*k,w-.02*k,.03*k,.04*k,hedge]);
+  const n=Math.max(3,Math.round(w/(.045*k)));
+  for(let i=0;i<n;i++){const x=x0+.02*k+(w-.04*k)*i/(n-1);blobs.push([x,.04*k,z+.022*k,.026*k,.02*k,.026*k,flowers[(i+b)%flowers.length]]);}
+ });
+ // Potted trees either side of the stairs.
+ for(const side of [-1,1]){
+  const x=side*(bay.w/2+.09*k),z=bay.front+.13*k;
+  boxes.push([x,0,z,.06*k,.05*k,.06*k,stone]);
+  trunks.push([x,.05*k,z,.012*k,.08*k,.012*k,'#6d5a45']);
+  blobs.push([x,.15*k,z,.055*k,.065*k,.055*k,'#5f8a55']);
+ }
+ // Small round trees at the front corners of the parcel.
+ for(const [x,z] of [[-.74,.74],[.74,.74],[-.8,.5]] as Pt[]){
+  trunks.push([x*k,0,z*k,.016*k,.1*k,.016*k,'#6d5a45']);
+  blobs.push([x*k,.14*k,z*k,.075*k,.08*k,.075*k,'#6f9a62']);
+ }
+ return {boxes,blobs,trunks};
 }
 
 /** Every point the building puts on the ground, for clearance checks. */

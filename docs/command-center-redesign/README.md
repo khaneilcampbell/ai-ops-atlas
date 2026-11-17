@@ -16,9 +16,24 @@ a glass wing on the right that turns the front corner in a wide curve; the left 
 the stone entrance bay over the joint, rising above the roof; a gold-lit lobby behind brass
 mullions; a stone parapet with hedges and shrubs right round the roof and a low plant room.
 
+Fourth pass, same day: Khaneil asked for the concept's size ("align with the sizing on the growth
+studio and vendor supplier building", then "expand building dimension to match the images
+design"), the concept's grounds, stairs and window lighting, and the Blender file always kept in
+step. The headquarters grows from 2.55 to 4 map units (`ATLAS_HQ_SIZE` in `mapLayout.ts`) inside
+Command Center's own empty 10 by 10 parcel, about its centre line toward the south, so its north
+street stays in line with Commerce's and no other district, building or street moves (3.8 to 4.1
+is the range where every neighbouring plan, the Marketplace, Galleria, Commons and rail loop,
+still lays out unchanged). The plan is wider and lower (storeys at 10 interior units per plan
+unit), so on the campus the roof stands about 3.3 map units up, with the Studio's 3.1 to 3.8.
+The windows show lit offices with people at desks and screens; the front has broad stone stairs
+under a deep brass canopy on brass columns, stone-kerbed flower beds, potted trees by the door and
+round trees at the corners (`ccEntrance`, `ccGrounds`).
+
 ![Concept image next to the running map](concept-vs-map.jpg)
 
 Left: the AI-generated concept (not the app). Right: a capture of the running Atlas map.
+
+![Concept on the map next to the running map](concept-vs-map-context.jpg)
 
 ## How it is built
 
@@ -47,6 +62,16 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
 - `src/views/map3d/atlasHqPalette.ts`: the shared colours; the interior shell
   (`src/views/office/AtlasHqShell.tsx`) reads the same palette and the block's proportions.
 
+## Changing the design
+
+1. Edit `assets/command-center/build_command_center.py` (the source; hand edits in the .blend are
+   overwritten by the next build). Footprint, storey or bay changes also go in `commandCenterPlan.ts`.
+2. Run `npm run model:command-center`. It rebuilds the .blend and the GLB together and writes
+   `assets/command-center/build.json`, a fingerprint of the script, the .blend and the GLB.
+3. Commit all four files. `npm test` fails if the script, .blend or GLB changed without a rebuild,
+   or if the GLB no longer matches the plan, so the Blender file always matches what the map shows.
+   If the .blend is open in Blender, File > Revert shows the rebuilt one.
+
 ## What changed on purpose
 
 - The building is a five-storey block, lower than the old tower. Three height guards that said
@@ -58,12 +83,16 @@ Left: the AI-generated concept (not the app). Right: a capture of the running At
 ## Validation
 
 - Map performance, unchanged budget (`PERF_BUDGET=1 npm run measure:perf`), passed: desktop day
-  734 draw calls of 800, 887,228 triangles of 1.2M, 73 programs of 80, 6.6 MB geometry, one
-  context; night 755 draws, 891,735 triangles; iPhone day 731 draws, 877,272 triangles. After
+  734 draw calls of 800, 881,368 triangles of 1.2M, 73 programs of 80, 6.7 MB geometry, one
+  context; night 760 draws, 894,154 triangles; iPhone day 733 draws, 875,740 triangles. After
   leaving and re-entering the map, 8 more buffers stay alive (the loaded model, which drei keeps
   cached so it is not fetched again); textures and programs return to where they were.
-- The model: 5,336 triangles (the procedural block allowed 12,000), eight meshes, about 300 KB.
-- `npm run lint`, `npm run typecheck` and `npm test` (1,901 of 1,901) pass.
+- The model: 6,300 triangles (the procedural block allowed 12,000), eight meshes, about 390 KB.
+- `npm run lint`, `npm run typecheck` and `npm test` pass (1,902 tests; the 300-repository timing
+  test passes on its own and is load-sensitive in the full parallel run).
+- Map layout guards updated on purpose: Command Center's headquarters is `ATLAS_HQ_SIZE` (4) instead
+  of the shared 2.55, and the test checks it stays inside its own parcel; every other parcel,
+  headquarters size and street-reserve check is unchanged.
 - Screenshots: `npm run visual -- atlas-hq atlas-hq-interior` with `SHOT_DIR`. Before is `main`
   at 62eba93; the second pass (painted block) is kept in [second-pass/](second-pass/) for comparison.
 

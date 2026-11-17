@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {describe,expect,it} from 'vitest';
@@ -6,9 +7,11 @@ import {layoutMap,type GroupBy} from '../mapLayout';
 import {buildScene} from './scene';
 import {FLOOR_BASE,towerTop} from './models';
 import {HQ} from './atlasHqPlan';
-import {CC,ccBay,ccDoor,ccEntrance,ccFootprint,ccLedges,ccOutline,ccRoof,ccTop} from './commandCenterPlan';
+import {CC,ccBay,ccDoor,ccEntrance,ccFootprint,ccGrounds,ccLedges,ccOutline,ccRoof,ccTop} from './commandCenterPlan';
 import {HQ_INTERIOR} from '../office/atlasHqInteriorPlan';
 import {HQ_PALETTE} from './atlasHqPalette';
+import {AGENCY} from './marketingAgencyPlan';
+import {GALLERIA} from './galleriaPlan';
 
 /** The Blender model as the map loads it: its JSON chunk, read without three.js. */
 const GLB=join(__dirname,'../../../public/models/map/command-center.glb');
@@ -27,10 +30,14 @@ describe('Atlas Command Center',()=>{
    expect(Math.abs(z)).toBeLessThanOrEqual(HQ.refSize*k/2);
   }
  });
- it('is the lobby and four office floors you walk through inside, at the interior\'s own storey heights',()=>{
+ it('is the lobby and four office floors you walk through inside, at the interior\'s proportions and the neighbours\' size',()=>{
   expect(CC.floors).toBe(HQ_INTERIOR.floors-1);
-  expect(CC.lobby*HQ_INTERIOR.scale).toBeCloseTo(HQ_INTERIOR.lobbyHeight);
-  expect(CC.storey*HQ_INTERIOR.scale).toBeCloseTo(HQ_INTERIOR.height);
+  // The interior's storeys at 10 interior units per map unit of plan: the interior's own proportions.
+  expect(CC.lobby*10).toBeCloseTo(HQ_INTERIOR.lobbyHeight);
+  expect(CC.storey*10).toBeCloseTo(HQ_INTERIOR.height);
+  // At the map's size it stands with the Growth & Marketing Studio (3.1 to 3.84) and the Vendor & Supplier Hub (4.55).
+  const hq=buildScene(layoutMap(catalog,[],'district')).towers.find(t=>t.projectId==='ai-ops-atlas')!,kk=hq.size/HQ.refSize;
+  expect(ccRoof(kk)).toBeGreaterThanOrEqual(AGENCY.westH);expect(ccTop(kk)).toBeLessThanOrEqual(GALLERIA.storeys.reduce((a,b)=>a+b,0));
   // A stone ledge over the lobby and over each office floor; the last one is the roof.
   const k=1.4,l=ccLedges(k);
   expect(l).toHaveLength(5);expect(l[0]).toBeCloseTo(CC.lobby*k);expect(l[4]).toBeCloseTo(ccRoof(k));
@@ -60,7 +67,7 @@ describe('Atlas Command Center',()=>{
   const source=readFileSync(join(__dirname,'AtlasHq.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);
   expect(source).not.toMatch(/useFrame/);
-  const e=ccEntrance(2);expect(e.boxes.length+e.lamps.length).toBeLessThan(40);
+  const e=ccEntrance(2),gr=ccGrounds(2);expect(e.boxes.length+e.lamps.length+gr.boxes.length+gr.blobs.length+gr.trunks.length).toBeLessThan(80);
  });
  it('matches the plan the map places everything by: footprint, storeys, roof and entrance bay',()=>{
   const by=Object.fromEntries(glb().meshes.map(x=>[x.name,x]));
@@ -73,7 +80,7 @@ describe('Atlas Command Center',()=>{
   expect(by.cc_lobby.min[1]).toBeCloseTo(0,4);expect(by.cc_lobby.max[1]).toBeCloseTo(CC.lobby,4);
   expect(by.cc_glass.max[1]).toBeCloseTo(ccRoof(1),4);
   // The stone bay's top is the building's top, and its face is where the doors and nameplate go.
-  expect(by.cc_stone.max[1]).toBeCloseTo(ccTop(1)+.025,3);
+  expect(by.cc_stone.max[1]).toBeCloseTo(ccTop(1)+.02,3);
   expect(by.cc_stone.max[2]).toBeGreaterThanOrEqual(ccBay(1).front);
   expect(by.cc_stone.max[2]).toBeLessThan(ccBay(1).front+.02);
   // Slabs stand proud of the glass by the plan's amount, and nothing leaves the old square.
@@ -82,16 +89,26 @@ describe('Atlas Command Center',()=>{
  });
  it('rebuilds from a Blender script kept next to the editable source',()=>{
   const dir=join(__dirname,'../../../assets/command-center');
-  expect(readdirSync(dir).sort()).toEqual(['build_command_center.py','command-center.blend']);
+  expect(readdirSync(dir).sort()).toEqual(['build.json','build_command_center.py','command-center.blend']);
   const script=readFileSync(join(dir,'build_command_center.py'),'utf8');
   expect(script).toContain('public/models/map/command-center.glb'.split('/').pop());
-  expect(script).toMatch(/LOBBY = 3\.3 \/ 12/);expect(script).toMatch(/STOREY = 2\.7 \/ 12/);expect(script).toMatch(/FLOORS = 4/);
+  expect(script).toMatch(/LOBBY = 3\.3 \/ 10/);expect(script).toMatch(/STOREY = 2\.7 \/ 10/);expect(script).toMatch(/FLOORS = 4/);
  });
- it('keeps brass restrained: lobby mullions and one line in the model, the door header and canopy outside it',()=>{
-  expect(ccEntrance(1).boxes.filter(b=>b[6]===HQ_PALETTE.brass)).toHaveLength(2);
+ it('keeps brass restrained: lobby mullions and one line in the model, the door header, canopy and its columns outside it',()=>{
+  // Header, canopy and its two slim columns.
+  expect(ccEntrance(1).boxes.filter(b=>b[6]===HQ_PALETTE.brass)).toHaveLength(4);
   const brass=glb().meshes.find(x=>x.name==='cc_brass')!;
   // Nothing brass above the lobby.
   expect(brass.max[1]).toBeLessThanOrEqual(CC.lobby+1e-4);
+ });
+ it('keeps the Blender file and the GLB in step with the script: a design change means a rebuild',()=>{
+  const dir=join(__dirname,'../../../assets/command-center');
+  const sha=(f:string)=>createHash('sha256').update(readFileSync(f)).digest('hex');
+  const stamp=JSON.parse(readFileSync(join(dir,'build.json'),'utf8')) as {script:string;blend:string;glb:string};
+  // If one of these fails, run `npm run model:command-center` and commit all three files.
+  expect(sha(join(dir,'build_command_center.py')),'script changed since the last build').toBe(stamp.script);
+  expect(sha(join(dir,'command-center.blend')),'.blend changed without a rebuild').toBe(stamp.blend);
+  expect(sha(GLB),'GLB changed without a rebuild').toBe(stamp.glb);
  });
  it('has file names that stay distinct on a case-insensitive Mac disk',()=>{
   const seen=new Map<string,string>();

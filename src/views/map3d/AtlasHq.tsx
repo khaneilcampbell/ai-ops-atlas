@@ -8,7 +8,7 @@ import {focusable,signTexture} from './materials';
 import {HQ} from './atlasHqPlan';
 import {HQ_PALETTE as P} from './atlasHqPalette';
 import {ccGlassTexture,ccLobbyTexture,ccNameplate} from './commandCenterTextures';
-import {CC,ccBay,ccEntrance,ccRoof,type CcBox} from './commandCenterPlan';
+import {CC,ccBay,ccEntrance,ccGrounds,ccRoof,type CcBox} from './commandCenterPlan';
 
 const noRaycast=()=>null;
 
@@ -40,7 +40,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
   const office=ccGlassTexture(),warm=ccLobbyTexture();
   const std=(o:THREE.MeshStandardMaterialParameters)=>focusable(new THREE.MeshStandardMaterial(o));
   const byPart:Record<Part,THREE.MeshStandardMaterial>={
-   cc_glass:std({map:office.map,emissiveMap:office.glow,emissive:P.towerGlow,emissiveIntensity:.3,roughness:.3,metalness:.1}),
+   cc_glass:std({map:office.map,emissiveMap:office.glow,emissive:P.towerGlow,emissiveIntensity:.45,roughness:.3,metalness:.1}),
    cc_lobby:std({map:warm.map,emissiveMap:warm.glow,emissive:P.wingGlow,emissiveIntensity:.55,roughness:.35,metalness:.1}),
    // Honed stone: rough and not metallic, so it reads cream in daylight.
    cc_stone:std({color:P.stone,roughness:.78,metalness:0}),
@@ -52,7 +52,7 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
   };
   return {byPart,textures:[office.map,office.glow,warm.map,warm.glow]};
  },[]);
- useEffect(()=>{mats.byPart.cc_glass.emissiveIntensity=night?1:.3;mats.byPart.cc_lobby.emissiveIntensity=night?1.4:.55;},[mats,night]);
+ useEffect(()=>{mats.byPart.cc_glass.emissiveIntensity=night?1.1:.45;mats.byPart.cc_lobby.emissiveIntensity=night?1.4:.55;},[mats,night]);
  useEffect(()=>()=>{for(const x of Object.values(mats.byPart))x.dispose();for(const x of mats.textures)x.dispose();},[mats]);
 
  const signs=useMemo(()=>{
@@ -66,8 +66,9 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
 
  const parts=useMemo(()=>{
   const place=([x,y,z,w,h,d,c]:CcBox):Inst=>({p:[t.x+x,base+y,t.z+z],s:[w,h,d],c});
-  const door=ccEntrance(k);
-  return {door:door.boxes.map(place),lamps:door.lamps.map(place)};
+  const door=ccEntrance(k),grounds=ccGrounds(k);
+  return {door:[...door.boxes,...grounds.boxes].map(place),lamps:door.lamps.map(place),
+   blobs:grounds.blobs.map((b,i)=>({...place(b),r:i})),trunks:grounds.trunks.map(place)};
  },[t.x,t.z,base,k]);
 
  const handlers=useMemo<Handlers>(()=>({
@@ -83,11 +84,13 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
  return <group>
   <group position={[t.x,base,t.z]}>
    <ModelBoundary fallback={block}><Suspense fallback={block}><Model k={k} mats={mats.byPart} handlers={handlers}/></Suspense></ModelBoundary>
-   <mesh geometry={g.plane} material={signs.nameMat} position={[0,(CC.lobby+3.1*CC.storey)*k,face]} scale={[.4*k,.5*k,1]} raycast={noRaycast}/>
+   <mesh geometry={g.plane} material={signs.nameMat} position={[0,(CC.lobby+3.1*CC.storey)*k,face]} scale={[.44*k,.55*k,1]} raycast={noRaycast}/>
    {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[.55*k,.4*k,(CC.cz+CC.b+CC.slab)*k+.03*k]} scale={[.16*k,.16*k,1]} raycast={noRaycast}/>}
   </group>
   <Instanced items={parts.door} geometry={g.box} material={m.plain}/>
   <Instanced items={parts.lamps} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/>
+  <Instanced items={parts.trunks} geometry={g.cyl} material={m.plain}/>
+  <Instanced items={parts.blobs} geometry={g.blob} material={m.foliage}/>
  </group>;
 }
 

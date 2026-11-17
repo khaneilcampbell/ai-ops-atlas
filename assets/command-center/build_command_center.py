@@ -1,9 +1,13 @@
 """Atlas Command Center: the map building, built in Blender from Khaneil's concept (2026-11-17).
 
-Reproducible: this script is the source. It rebuilds the .blend and the GLB from nothing.
+Reproducible: this script is the source. It rebuilds the .blend and the GLB from nothing, so
+every design change is made here and both files are rebuilt together:
 
-    /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
-        --python assets/command-center/build_command_center.py
+    npm run model:command-center
+
+(Blender from /Applications, or set BLENDER to its binary.) Edits made by hand in the .blend are
+overwritten by the next build: make them here instead. build.json records a fingerprint of all
+three files, and the tests fail when they drift apart.
 
 Writes assets/command-center/command-center.blend (editable) and
 public/models/map/command-center.glb (what the map loads).
@@ -20,6 +24,8 @@ the same palette, so the GLB also looks right on its own. No textures in the fil
 texture is drawn by the app (commandCenterTextures.ts), which reads the UVs laid here.
 """
 
+import hashlib
+import json
 import math
 import os
 
@@ -31,29 +37,35 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 BLEND = os.path.join(HERE, "command-center.blend")
 GLB = os.path.join(ROOT, "public", "models", "map", "command-center.glb")
+# Written last, with a fingerprint of this script, the .blend and the GLB. atlasHq.test.ts checks
+# it, so a design change to this script that was not rebuilt (or a .blend or GLB edited on its
+# own) fails the tests until `npm run model:command-center` is run.
+STAMP = os.path.join(HERE, "build.json")
 
-# Storeys: the interior's own (lobby 3.3, floors 2.7) over its scale of 12 office units per map unit.
-LOBBY = 3.3 / 12
-STOREY = 2.7 / 12
+# Storeys: the interior's own (lobby 3.3, floors 2.7) at 10 office units per map unit of plan. On
+# the campus the map scales the model by about 2.35, so the roof stands about 3.3 map units up, with
+# the Growth & Marketing Studio and the Vendor & Supplier Hub.
+LOBBY = 3.3 / 10
+STOREY = 2.7 / 10
 FLOORS = 4
 ROOF = LOBBY + FLOORS * STOREY
 
-# Footprint (within the old square: x -0.76..0.76, z -0.6..0.4). A taller glass wing on the right
+# Footprint (within the parcel's square: x -0.82..0.82, z -0.62..0.38). A taller glass wing on the right
 # turns the front corner in a wide curve; the left wing stands a step back; the stone entrance bay
 # covers the joint between them, as in the concept.
-X0, X1, Z0, ZF_RIGHT, ZF_LEFT, JOINT = -0.76, 0.76, -0.6, 0.4, 0.32, -0.24
-R_RIGHT, R_LEFT, ARC = 0.2, 0.12, 8
+X0, X1, Z0, ZF_RIGHT, ZF_LEFT, JOINT = -0.82, 0.82, -0.62, 0.38, 0.31, -0.26
+R_RIGHT, R_LEFT, ARC = 0.22, 0.12, 8
 
 # The stone entrance bay (ccBay): proud of the front, rising above the roof.
-BAY_HALF, BAY_PROUD, BAY_BACK, BAY_RISE, COPING = 0.24, 0.09, 0.12, 0.14, 0.025
+BAY_HALF, BAY_PROUD, BAY_BACK, BAY_RISE, COPING = 0.26, 0.08, 0.12, 0.14, 0.02
 
 # Floor slabs, spandrels, mullions, parapet, roof planting.
-SLAB_OUT, SLAB_H = 0.04, 0.036
-SILL_OUT, SILL_H = 0.008, 0.028
-MULLION, MULLION_W, MULLION_D = 0.065, 0.009, 0.012
-LOBBY_MULLION = 0.13
-PARAPET_H, PARAPET_IN = 0.07, 0.025
-PLANTER_IN, PLANTER_H = 0.09, 0.05
+SLAB_OUT, SLAB_H = 0.035, 0.034
+SILL_OUT, SILL_H = 0.006, 0.024
+MULLION, MULLION_W, MULLION_D = 0.05, 0.006, 0.008
+LOBBY_MULLION = 0.09
+PARAPET_H, PARAPET_IN = 0.055, 0.02
+PLANTER_IN, PLANTER_H = 0.07, 0.035
 
 PALETTE = {
     "cc_glass": ("#86ab98", 0.25, 0.1),
@@ -246,8 +258,8 @@ def build():
     B.ring("cc_hedge", inner, planter_in, ROOF, ROOF + PLANTER_H)
     B.poly("cc_lawn", offset(glass, -PLANTER_IN - 0.01), ROOF + 0.012)
     # A low stone plant room set back on the roof, as in the concept.
-    B.box("cc_stone", 0.25, ROOF, -0.28, 0.5, 0.08, 0.32)
-    B.box("cc_roof", 0.25, ROOF + 0.08, -0.28, 0.54, 0.012, 0.36)
+    B.box("cc_stone", 0.28, ROOF, -0.3, 0.5, 0.07, 0.3)
+    B.box("cc_roof", 0.28, ROOF + 0.07, -0.3, 0.53, 0.01, 0.33)
 
     # Mullions: slim dark green on the office floors, brass in the lobby.
     for x, z, yaw in along(glass, MULLION, behind_bay):
@@ -259,10 +271,10 @@ def build():
     B.box("cc_stone", 0, LOBBY, (bay_front + bay_back) / 2, 2 * BAY_HALF, top - LOBBY, bay_front - bay_back)
     B.box("cc_stone", 0, top, (bay_front + bay_back) / 2, 2 * BAY_HALF + 0.03, COPING, bay_front - bay_back + 0.03)
     # A brass line under the bay's first stone course, over the canopy.
-    B.box("cc_brass", 0, LOBBY - 0.012, bay_front + 0.002, 2 * BAY_HALF, 0.012, 0.008)
+    B.box("cc_brass", 0, LOBBY - 0.012, bay_front + 0.002, 2 * BAY_HALF, 0.012, 0.006)
 
     # Shrubs along the roof planters, low icospheres showing over the parapet.
-    shrubs = along(offset(glass, -(PARAPET_IN + PLANTER_IN) / 2), 0.11)
+    shrubs = along(offset(glass, -(PARAPET_IN + PLANTER_IN) / 2), 0.075)
     return B, shrubs, top
 
 
@@ -315,7 +327,7 @@ def main():
     # Shrubs join the hedge mesh: one low icosphere each, varied a little in size.
     bm = bmesh.new()
     for i, (x, z, _) in enumerate(shrubs):
-        s = 0.032 + 0.008 * ((i * 7) % 3) / 2
+        s = 0.022 + 0.006 * ((i * 7) % 3) / 2
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1, matrix=(
             Matrix.Translation((x, -z, ROOF + PLANTER_H + s * 0.4)) @ Matrix.Diagonal((s, s, s * 0.8, 1))))
     hedge = B.parts["cc_hedge"]
@@ -350,6 +362,15 @@ def main():
         export_draco_mesh_compression_enable=False,
     )
     tris = sum(len(o.data.polygons) for o in coll.objects)
+
+    def sha(path):
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    with open(STAMP, "w") as f:
+        json.dump({"blender": bpy.app.version_string, "script": sha(os.path.abspath(__file__)), "blend": sha(BLEND),
+                   "glb": sha(GLB), "triangles": tris}, f, indent=1)
+        f.write("\n")
     print(f"COMMAND_CENTER_OK objects={len(coll.objects)} triangles={tris} glb={os.path.getsize(GLB)}")
 
 

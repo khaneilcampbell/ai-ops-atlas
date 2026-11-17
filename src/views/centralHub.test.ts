@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {catalog} from '../catalog';
-import {layoutMap} from './mapLayout';
+import {ATLAS_HQ_SIZE,layoutMap} from './mapLayout';
 import {buildScene} from './map3d/scene';
 describe('central command district',()=>{
  const layout=layoutMap(catalog,[],'district'),scene=buildScene(layout);
@@ -21,7 +21,11 @@ describe('central command district',()=>{
  it('widens headquarters and expands Portfolio into its available parcel',()=>{
   const get=(id:string)=>layout.districts.find(d=>d.project.id===id)!;
   const reference=get('intelligence-hub');
-  for(const id of ['ai-ops-atlas','benjaire-site','portfolio-site','github-profile','soc-lab'])expect(get(id).hq.size).toBeCloseTo(reference.hq.size);
+  for(const id of ['benjaire-site','portfolio-site','github-profile','soc-lab'])expect(get(id).hq.size).toBeCloseTo(reference.hq.size);
+  // Command Center is drawn at its concept's size (Khaneil, 2026-11-17), inside its own parcel.
+  expect(get('ai-ops-atlas').hq.size).toBeCloseTo(ATLAS_HQ_SIZE);
+  const hub=get('ai-ops-atlas');expect(hub.hq.gx).toBeGreaterThan(hub.ox);expect(hub.hq.gy).toBeGreaterThan(hub.oy);
+  expect(hub.hq.gx+hub.hq.size).toBeLessThan(hub.ox+hub.size);expect(hub.hq.gy+hub.hq.size).toBeLessThan(hub.oy+hub.size);
   expect(get('commerce-pipeline').hq.size).toBeCloseTo(3.6);
   expect(get('commerce-pipeline').size).toBe(10);expect(get('benjaire-site').size).toBe(7.5);
   expect(get('portfolio-site').size).toBe(7.5);expect(get('github-profile').size).toBe(5);expect(get('soc-lab').size).toBe(7.5);

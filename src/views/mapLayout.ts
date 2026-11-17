@@ -262,6 +262,8 @@ export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
  * the tower (Khaneil, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
+/** Command Center's headquarters size in the full campus: its tower is about 5.2 map units across. */
+export const ATLAS_HQ_SIZE = 4;
 export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
 const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
 
@@ -515,6 +517,14 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const hubLane = northRoad(hub), commerceLane = northRoad(commerce);
       const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
       resize(hub, x, y, x + commerce.size / 2, hubZ);
+      // Command Center at its concept's size (Khaneil, 2026-11-17: "expand building dimension to
+      // match the images design"), alongside the Growth & Marketing Studio and the Vendor &
+      // Supplier Hub. It grows about its centre line toward the south of its own empty parcel, so
+      // its north lane stays in line with Commerce's and no other district or street moves.
+      const ring = (s: number) => s * 1.02 * CITY_SCALE.hq.footprint / 2 + .55;
+      const lane = hub.hq.gy + hub.hq.size / 2 - ring(hub.hq.size), grown = ATLAS_HQ_SIZE;
+      const cx = hub.hq.gx + hub.hq.size / 2, cz = lane + ring(grown);
+      Object.assign(hub.hq, { size: grown, gx: cx - grown / 2, gy: cz - grown / 2 });
       resize(operations, x + GAP, y + commerce.size + GAP, x + GAP + commerce.size / 2, y + commerce.size * 1.5 + GAP);
     }
   }

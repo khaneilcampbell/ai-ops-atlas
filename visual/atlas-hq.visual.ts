@@ -17,9 +17,11 @@ async function views(page:import('@playwright/test').Page,list:View[]){
   return shots;
  },list);
 }
-// Atlas HQ stands at (40.73, 14.39) in the default "By district" layout; the map looks at it from +x/+z.
-const X=40.73,Z=14.39;
-const VIEWS:View[]=[['concept',[X,.7,Z],[X+2.6,6.2,Z+7.2]],['front',[X,1.4,Z],[X+5.5,5,Z+8]],['close',[X,1.5,Z+.6],[X+2.4,3,Z+4.4]],['roof',[X,1.6,Z],[X+3.5,6.5,Z+4.5]],['side',[X,1.2,Z],[X+6.5,2.6,Z+1.5]],['context',[X+1.5,1,Z-1.5],[X+12.5,13,Z+14.5]]];
+// Atlas HQ stands at (40.73, 15.13) in the default "By district" layout, about 4 map units across
+// (ATLAS_HQ_SIZE); the map looks at it from +x/+z. Views are framed for that size.
+const X=40.73,Z=15.13,F=1.6;
+const v=(t:[number,number,number],e:[number,number,number]):[[number,number,number],[number,number,number]]=>[[X+t[0]*F,t[1]*F,Z+t[2]*F],[X+e[0]*F,e[1]*F,Z+e[2]*F]];
+const VIEWS:View[]=[['concept',...v([0,.7,0],[2.6,6.2,7.2])],['front',...v([0,1.4,0],[5.5,5,8])],['close',...v([0,1.2,.6],[2.4,3,4.4])],['roof',...v([0,1.6,0],[3.5,6.5,4.5])],['side',...v([0,1.2,0],[6.5,2.6,1.5])],['context',...v([1.5,1,-1.5],[12.5,13,14.5])]];
 for(const light of ['day','night'] as const)test(`Atlas HQ, ${light}`,async({page})=>{
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light});await waitForScene(page);await settle(page,2);
@@ -37,5 +39,5 @@ test('Atlas HQ on a phone',async({page})=>{
  mkdirSync(out,{recursive:true});await page.setViewportSize({width:390,height:844});
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await page.screenshot({path:`${out}/phone-map.png`});
- for(const s of await views(page,[['phone',[X,1.2,Z],[X+4,4.2,Z+7]]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
+ for(const s of await views(page,[['phone',...v([0,1.2,0],[4,4.2,7])]]))writeFileSync(`${out}/${s.name}.png`,Buffer.from(s.png.split(',')[1],'base64'));
 });

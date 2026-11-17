@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {catalog} from '../catalog';
-import {layoutMap,OPERATIONS_DISTRICTS} from './mapLayout';
+import {ATLAS_HQ_SIZE,layoutMap,OPERATIONS_DISTRICTS} from './mapLayout';
 import {buildScene,type Rect} from './map3d/scene';
 import {districtRect} from './map3d/buildingExtent';
 import {towerRing,pathClear} from './map3d/roads';
@@ -38,7 +38,9 @@ describe('Commerce-sized operations campus',()=>{
   expect(district('github-profile')).toMatchObject({ox:9.75,oy:29.25,size:5});
   expect(district('benjaire-site')).toMatchObject({ox:7.25,oy:0,size:7.5});
   expect(district('soc-lab')).toMatchObject({ox:0,oy:30.75,size:7.5});
-  for(const id of ['ai-ops-atlas','intelligence-hub','github-profile'])expect(district(id).hq.size).toBeCloseTo(2.55);
+  for(const id of ['intelligence-hub','github-profile'])expect(district(id).hq.size).toBeCloseTo(2.55);
+  // Command Center is drawn at its concept's size (Khaneil, 2026-11-17); its parcel and neighbours stay.
+  expect(district('ai-ops-atlas').hq.size).toBeCloseTo(ATLAS_HQ_SIZE);
   expect(district('commerce-pipeline').hq.size).toBeCloseTo(3.6);
   expect(scene.githubAnnex).toBeDefined();
   expect(scene.clearedLots!.find(t=>t.projectId==='street-reserve:ai-ops-atlas')!.size).toBeCloseTo(2.601,10);

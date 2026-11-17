@@ -7,37 +7,56 @@ import {HQ_PALETTE as P} from './atlasHqPalette';
  * seen through the glass. glTF UVs run downward, so row 0 of a canvas is the top of a storey.
  * The glow map lights the offices (softly by day, fully at night).
  */
-function canvasTexture(draw:(g:CanvasRenderingContext2D)=>void){
- const c=document.createElement('canvas');c.width=256;c.height=256;draw(c.getContext('2d')!);
+function canvasTexture(draw:(g:CanvasRenderingContext2D)=>void,size=256){
+ const c=document.createElement('canvas');c.width=size;c.height=size;draw(c.getContext('2d')!);
  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;
  t.flipY=false;return t;
 }
 
 /**
- * Office glass: one tile is 8 panes by 4 storeys (the model's UVs). Green sky reflection across
- * the top of each pane, warm-lit offices below with a darker band of desks, varied pane by pane.
+ * Office glass: one tile is 8 panes by 4 storeys (the model's UVs), as in the concept: a band of
+ * green sky reflection at the head of each pane, then bright warm-lit offices with a ceiling
+ * light, desks with screens and people at them, varied pane by pane. Panes are tall and narrow on
+ * the building, so things are drawn squat here and stretch upright on the glass.
  */
 export function ccGlassTexture(seed=17){
  let s=seed;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
- const lit=Array.from({length:32},()=>.5+rnd()*.5);
+ const W=64,H=128,lit=Array.from({length:32},()=>.6+rnd()*.4),seats=Array.from({length:32},()=>rnd());
  const map=canvasTexture(g=>{
   for(let r=0;r<4;r++)for(let c=0;c<8;c++){
-   const x=c*32,y=r*64,b=lit[r*8+c];
-   const gr=g.createLinearGradient(0,y,0,y+64);
-   gr.addColorStop(0,'#2f5a48');gr.addColorStop(.28,'#5f8c74');
-   gr.addColorStop(.36,`rgb(${Math.round(226+24*b)},${Math.round(176+30*b)},${Math.round(92+30*b)})`);
-   gr.addColorStop(1,`rgb(${Math.round(190+30*b)},${Math.round(132+30*b)},${Math.round(70+20*b)})`);
-   g.fillStyle=gr;g.fillRect(x,y,32,64);
-   // Desks and people: a soft darker band low in the room.
-   g.fillStyle='rgba(90,70,45,.35)';g.fillRect(x+3,y+44,26,8);
-   // A slim transom where the sky reflection ends.
-   g.fillStyle='rgba(44,74,59,.8)';g.fillRect(x,y+18,32,2);
+   const x=c*W,y=r*H,b=lit[r*8+c],seat=seats[r*8+c];
+   // Sky reflection over the head of the pane.
+   const sky=g.createLinearGradient(0,y,0,y+H*.22);sky.addColorStop(0,'#2f5a48');sky.addColorStop(1,'#6f9a80');
+   g.fillStyle=sky;g.fillRect(x,y,W,H*.22);
+   // The room: warm light, brighter near the ceiling.
+   const room=g.createLinearGradient(0,y+H*.22,0,y+H);
+   room.addColorStop(0,`rgb(255,${Math.round(214+30*b)},${Math.round(140+40*b)})`);
+   room.addColorStop(.55,`rgb(${Math.round(240+15*b)},${Math.round(182+30*b)},${Math.round(98+30*b)})`);
+   room.addColorStop(1,`rgb(${Math.round(196+30*b)},${Math.round(136+25*b)},${Math.round(70+20*b)})`);
+   g.fillStyle=room;g.fillRect(x,y+H*.22,W,H*.78);
+   // Ceiling light.
+   g.fillStyle='rgba(255,250,225,.95)';g.fillRect(x+8,y+H*.25,W-16,4);
+   // Back wall shelving or a plant, every other pane.
+   if(seat<.5){g.fillStyle='rgba(110,75,40,.7)';g.fillRect(x+6,y+H*.38,W*.35,H*.2);}
+   else{g.fillStyle='#3f6e3a';g.beginPath();g.ellipse(x+W*.78,y+H*.6,7,9,0,0,Math.PI*2);g.fill();}
+   // A person at a desk with a screen.
+   const px=x+W*(.3+.4*seat);
+   g.fillStyle='#2b231d';g.beginPath();g.ellipse(px,y+H*.66,5,5,0,0,Math.PI*2);g.fill();
+   g.fillStyle=seat<.5?'#2f5a48':'#7a3f3a';g.fillRect(px-7,y+H*.7,14,H*.1);
+   g.fillStyle='#3a3a3a';g.fillRect(px+8,y+H*.68,12,8);
+   g.fillStyle='rgba(200,230,255,.9)';g.fillRect(px+9,y+H*.68+1,10,5);
+   g.fillStyle='#5a3d22';g.fillRect(x+4,y+H*.79,W-8,6);
+   g.fillStyle='rgba(80,55,35,.6)';g.fillRect(x+8,y+H*.79+5,3,H*.12);g.fillRect(x+W-11,y+H*.79+5,3,H*.12);
   }
- });
+ },512);
  const glow=canvasTexture(g=>{
-  g.fillStyle='#000';g.fillRect(0,0,256,256);
-  for(let r=0;r<4;r++)for(let c=0;c<8;c++){const b=lit[r*8+c];g.fillStyle=`rgba(255,${Math.round(200+40*b)},${Math.round(120+40*b)},${b})`;g.fillRect(c*32+2,r*64+22,28,38);}
- });
+  g.fillStyle='#000';g.fillRect(0,0,512,512);
+  for(let r=0;r<4;r++)for(let c=0;c<8;c++){
+   const b=lit[r*8+c],x=c*W,y=r*H,gr=g.createLinearGradient(0,y+H*.22,0,y+H);
+   gr.addColorStop(0,`rgba(255,${Math.round(225+30*b)},${Math.round(160+40*b)},1)`);gr.addColorStop(1,`rgba(255,${Math.round(190+30*b)},${Math.round(110+40*b)},${.55*b})`);
+   g.fillStyle=gr;g.fillRect(x,y+H*.22,W,H*.78);
+  }
+ },512);
  return {map,glow};
 }
 
