@@ -58,6 +58,13 @@ An agent is watched when its manifest has an `alerts` block (see
 | dataset-census | yes | 7 hours (runs every 3 h) | watched |
 | order-delivery | yes | none (runs per order) | watched once n8n reports |
 | shopify-publisher | yes | none (runs per approval) | watched once n8n reports |
+| benjaire-flow-missed-runs | yes | 26 hours (posts a heartbeat daily at 11am ET) | watched |
+| benjaire-shop-follow-ups | yes | 26 hours (heartbeat from the missed run check) | watched |
+| benjaire-flow-reminders | yes | 26 hours (heartbeat; "skipped" at weekends) | watched |
+| benjaire-flow-digest | yes | 26 hours (heartbeat from the missed run check) | watched |
+| sales-sync | yes | 26 hours (heartbeat from the missed run check) | watched |
+| benjaire-shop-delivery | yes | none (runs per order) | watched |
+| benjaire-flow-status | yes | none (runs per status click) | watched |
 
 The last three are the building operators (`ops/building-agents/agents.py`, run by
 `.github/workflows/building-agents.yml`, no model calls). Each operates one landmark through
@@ -72,6 +79,21 @@ approval form). Their n8n workflows post one report per send or publish to `/api
 with the n8n credential "Atlas reports". A report that fails to post never blocks the email or
 the Stripe call. Design Run and the weekly sales email only email Khaneil and keep emailing
 their own failures.
+
+The Benjaire Flow, Shop and Commerce n8n workflows report through two shared workflows, with no
+model calls and no customer data:
+
+- **Flow · 0 Error alerts** is the error workflow for every Flow, Shop and Commerce workflow
+  that faces customers. Besides emailing ops, it posts one `failed` report for the failed
+  workflow's agents (workflow name, failing step and run id; never the error text, which can
+  hold a buyer's address). Its workflow-to-agent map is in its "Build Atlas Report" node; keep
+  it in step with the catalog when a workflow is added.
+- **Flow · 5 Missed run check** runs daily at 11am ET and posts a heartbeat: the schedules that
+  ran on time as `ok`, late ones as `failed`, and Reply reminders as `skipped` at weekends. The
+  check itself is in the `ok` report, so if it stops, its agents go silent after 26 hours.
+
+A failed post never blocks the email. Neither can catch a full n8n outage on its own, but the
+26-hour silence windows do: Atlas shows the agents as Silent when no heartbeat arrives.
 
 The benjaire.com agents only show reports once their Worker and n8n workflow send them to
 `/api/hooks/agents` ([live-updates.md](live-updates.md#pipeline-runs-outside-atlas)). Until
