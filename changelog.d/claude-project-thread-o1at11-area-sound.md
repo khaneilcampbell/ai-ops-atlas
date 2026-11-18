@@ -1,1 +1,2 @@
 - 2026-11-18 · City sound now follows where you zoom: at the airport you hear jets start their engines, roll down the runway, take off, touch down and reverse thrust; the station, marina, stadium and Commons each have their own quiet sounds, and the city traffic steps back while you are close in (#PR)
+- 2026-11-18 · Quieter, calmer city sound: no more wind-like rush. The wind layer is gone, the traffic bed is lower and deeper, and jets are heard as they pass near instead of as a constant roar (#PR)

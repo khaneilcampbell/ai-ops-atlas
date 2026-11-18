@@ -77,9 +77,9 @@ export class ZoneSounds {
     gain.gain.value = 0;
     gain.connect(this.host.out);
     if (kind === "airport") {
-      // Distant turbines at idle: a low rumble and two faint whines that drift a little.
+      // Distant turbines at idle: a low rumble and two faint whines that drift a little. No high hiss band:
+      // steady bright noise reads as wind.
       this.noiseThrough(gain, "bandpass", 150, 0.9, 1);
-      this.noiseThrough(gain, "bandpass", 2400, 3, 0.25);
       for (const [f, a] of [[1460, 0.012], [2190, 0.007]] as const) {
         const o = ctx.createOscillator();
         o.type = "triangle";
@@ -95,21 +95,21 @@ export class ZoneSounds {
         o.start();
         lfo.start();
       }
-      bed = { gain, level: 0.35 };
+      bed = { gain, level: 0.16 };
     } else if (kind === "station") {
       this.noiseThrough(gain, "bandpass", 650, 0.7, 1);
-      bed = { gain, level: 0.12, mod: (t) => 0.8 + 0.2 * Math.sin(t * 0.31) * Math.sin(t * 0.11 + 2) };
+      bed = { gain, level: 0.06, mod: (t) => 0.8 + 0.2 * Math.sin(t * 0.31) * Math.sin(t * 0.11 + 2) };
     } else if (kind === "marina") {
       // Water against the pier: low, soft, rising and falling like small waves.
-      this.noiseThrough(gain, "lowpass", 520, 0.5, 1);
-      bed = { gain, level: 0.22, mod: (t) => 0.55 + 0.45 * Math.max(0, Math.sin(t * 1.25)) * (0.7 + 0.3 * Math.sin(t * 0.37)) };
+      this.noiseThrough(gain, "lowpass", 380, 0.5, 1);
+      bed = { gain, level: 0.11, mod: (t) => 0.55 + 0.45 * Math.max(0, Math.sin(t * 1.25)) * (0.7 + 0.3 * Math.sin(t * 0.37)) };
     } else if (kind === "stadium") {
       this.noiseThrough(gain, "bandpass", 950, 0.5, 1);
-      bed = { gain, level: 0.12, mod: (t) => 0.85 + 0.15 * Math.sin(t * 0.17) };
+      bed = { gain, level: 0.06, mod: (t) => 0.85 + 0.15 * Math.sin(t * 0.17) };
     } else {
-      // Leaves: a high, airy rustle that comes and goes with the wind.
+      // Leaves: a faint, airy rustle that comes and goes. Kept very quiet so it never sounds like wind.
       this.noiseThrough(gain, "highpass", 2600, 0.6, 1);
-      bed = { gain, level: 0.05, mod: (t) => 0.4 + 0.6 * Math.max(0, Math.sin(t * 0.23) * Math.sin(t * 0.61 + 1)) };
+      bed = { gain, level: 0.015, mod: (t) => 0.4 + 0.6 * Math.max(0, Math.sin(t * 0.23) * Math.sin(t * 0.61 + 1)) };
     }
     this.beds.set(kind, bed);
     return bed;
