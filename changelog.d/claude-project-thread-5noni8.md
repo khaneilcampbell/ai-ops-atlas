@@ -1,1 +1,1 @@
-- 2026-11-18 · The Automation Plaza now shows the Product Lab hand-off workflow as Benjaire Product Lab's work in the Benjaire Marketing Agency, instead of "No agent named" (#PR)
+- 2026-11-18 · The Automation Plaza now shows the Product Lab hand-off workflow as Benjaire Product Lab's work in the Benjaire Marketing Agency, instead of "No agent named" (#477)
