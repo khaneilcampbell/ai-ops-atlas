@@ -1,1 +1,1 @@
-- 2026-11-18 · Your agents now have names and portraits, such as Claire Dubois, Client Inquiry Manager, each marked as an AI agent, on agent cards, the task agent picker, task details, Activity, results and the office (#PR)
+- 2026-11-18 · Your agents now have names and portraits, such as Claire Dubois, Client Inquiry Manager, each marked as an AI agent, on agent cards, the task agent picker, task details, Activity, results and the office (#467)
