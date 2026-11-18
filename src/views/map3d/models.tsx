@@ -18,6 +18,7 @@ import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads"
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
 import { laPlanting } from "./laPlanting";
+import { PLAZA } from "./plazaPlan";
 import { airportSidewalkPalms, calmLawnPalms, clearForAvenues, palmZones, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
@@ -503,8 +504,10 @@ const palmHalo = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: tr
 export function avenuePlanting(scene: Scene3D) {
   const keep = scene.pedestrianExclusion, m = 0.5;
   const clear = (p: { x: number; z: number }) => !keep || p.x < keep.x - m || p.x > keep.x + keep.w + m || p.z < keep.z - m || p.z > keep.z + keep.d + m;
-  const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear);
-  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];
+  // Nothing grows on the Automation Plaza's disc and steps, or right against them (Khaneil, 2026-11-18).
+  const pz = scene.plaza, offPlaza = (p: { x: number; z: number }) => !pz || Math.hypot(p.x - pz.cx, p.z - pz.cz) > PLAZA.stepsOuter + 0.45;
+  const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear).filter(offPlaza);
+  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms].filter(offPlaza);
 }
 
 /** Forested hills far across the water (distantHills.ts): flat-shaded, shadowless and not clickable. */
