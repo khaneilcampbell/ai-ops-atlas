@@ -140,3 +140,99 @@ export class EventLimiter {
     this.played = [];
   }
 }
+
+/**
+ * How much of a place's own sound to play: 1 when the view is zoomed in on it, fading out as the
+ * spot the camera looks at moves away from it or the camera pulls back above the city.
+ * `focus` is that spot on the ground; the zone is a centre and radius in the same units.
+ */
+export const ZONE_ZOOM = { near: 28, far: 95 } as const;
+export function zoneWeight(focus: { x: number; z: number }, view: number, zone: { x: number; z: number; r: number }): number {
+  const zoom = 1 - smoothstep(ZONE_ZOOM.near, ZONE_ZOOM.far, view);
+  if (zoom <= 0) return 0;
+  const d = Math.hypot(focus.x - zone.x, focus.z - zone.z);
+  // The edge of the place, plus a margin that grows with the view, so nearby places blend in.
+  const reach = zone.r + Math.max(8, view * 0.35);
+  const near = 1 - smoothstep(zone.r * 0.6, reach, d);
+  return zoom * near;
+}
+
+export const smoothstep = (a: number, b: number, v: number) => {
+  const x = clamp01((v - a) / (b - a));
+  return x * x * (3 - 2 * x);
+};
+
+/** One-shot sounds of a jet's working life, on top of its running engine. */
+export type FlightSound = "spoolup" | "takeoff" | "touchdown";
+
+export interface FlightState {
+  ground: boolean | null;
+  speed: number;
+  /** When it came to a stop, in seconds, or null while moving. */
+  stillSince: number | null;
+  rolling: boolean;
+  landedAt: number;
+  last: Record<FlightSound, number>;
+}
+
+export const newFlightState = (): FlightState => ({ ground: null, speed: 0, stillSince: null, rolling: false, landedAt: -Infinity, last: { spoolup: -Infinity, takeoff: -Infinity, touchdown: -Infinity } });
+
+/**
+ * Speeds in world units per second, from the flight schedule (flightSchedule.ts): jets taxi at about
+ * 1.5, a takeoff roll passes 2 just before lift-off, they touch down at about 2.6 and fly at about 4.
+ * They rest about 65 s at a stand and hold short about 38 s with engines running, so only a rest of
+ * 50 s or more counts as a cold start.
+ */
+export const FLIGHT = { still: 0.05, stillFor: 50, roll: 1.6, landing: 1.5, cooldown: 20, afterLanding: 15 } as const;
+
+/**
+ * Which flight sound, if any, a new reading calls for: the engines starting when a jet that stood
+ * still for a few seconds moves off, the takeoff roll when it accelerates past taxi speed, and
+ * touchdown when it meets the runway at speed. The first reading only sets the baseline, so opening
+ * the map in the middle of a takeoff plays nothing. Each sound waits a while before it can repeat.
+ */
+export function flightSound(s: FlightState, r: { ground: boolean; speed: number; now: number }): FlightSound | null {
+  const { ground, speed, now } = r;
+  const was = s.ground, before = s.speed;
+  s.ground = ground;
+  s.speed = speed;
+  if (was === null) {
+    s.stillSince = ground && speed < FLIGHT.still ? now : null;
+    return null;
+  }
+  const ready = (k: FlightSound) => now - s.last[k] >= FLIGHT.cooldown;
+  const fire = (k: FlightSound) => ((s.last[k] = now), k);
+  if (!ground) {
+    s.rolling = false;
+    s.stillSince = null;
+    return null;
+  }
+  if (!was && speed > FLIGHT.landing) {
+    s.landedAt = now;
+    s.rolling = false;
+    return ready("touchdown") ? fire("touchdown") : null;
+  }
+  if (speed < FLIGHT.still) {
+    s.stillSince ??= now;
+    s.rolling = false;
+    return null;
+  }
+  const stood = s.stillSince !== null && now - s.stillSince >= FLIGHT.stillFor;
+  s.stillSince = null;
+  if (stood && ready("spoolup")) return fire("spoolup");
+  if (speed < FLIGHT.roll - 1) s.rolling = false;
+  // Accelerating past taxi speed, and not the rollout after a landing.
+  if (!s.rolling && speed > FLIGHT.roll && speed > before && now - s.landedAt > FLIGHT.afterLanding) {
+    s.rolling = true;
+    return ready("takeoff") ? fire("takeoff") : null;
+  }
+  return null;
+}
+
+/** How hard a jet's engines work, 0 to 1, for the turbine whine. */
+export function jetThrust(s: FlightState): number {
+  if (s.ground === false) return 0.65;
+  if (s.rolling) return 1;
+  if (s.speed > FLIGHT.still) return 0.3;
+  return 0;
+}

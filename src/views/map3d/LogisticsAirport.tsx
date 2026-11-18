@@ -5,8 +5,17 @@ import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
 import {GroundCrew} from "./GroundCrew";
 import {executiveJetPose,FLIGHT_SCHEDULE,fleetPose,SHARED_SLOT} from "./flightSchedule";
-/** Flying jets carry a city sound (src/sound/engine.ts reads their position, louder as they pass close). */
-const FLYING_SOUND={citySound:"aircraft"};
+/** Moving jets carry a city sound (src/sound/engine.ts reads their position, louder as they pass close). Each jet
+ * gets its own tag, because the frame loop writes into it for the engine-start, takeoff and landing sounds: `ground`,
+ * and `speed` per second of the flight clock, so the cues match the schedule at any frame rate. */
+type FlyingSound={citySound:"aircraft";ground:boolean;speed:number;x:number;y:number;z:number;at:number};
+const flyingSound=():FlyingSound=>({citySound:"aircraft",ground:true,speed:0,x:NaN,y:0,z:0,at:NaN});
+function hear(s:FlyingSound,p:{x:number;y:number;z:number},clock:number){
+  const dt=clock-s.at;
+  if(dt>0)s.speed=Number.isFinite(s.x)?Math.hypot(p.x-s.x,p.y-s.y,p.z-s.z)/dt:0;
+  else if(dt<0||!Number.isFinite(dt))s.speed=0;
+  s.ground=p.y<=.02;s.x=p.x;s.y=p.y;s.z=p.z;s.at=clock;
+}
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
@@ -46,6 +55,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   const phase=lightPhase(slot+(parked?3:0));
+  const sound=useMemo(flyingSound,[]);
   const cockpit=useMemo(()=>COCKPIT_PANES.map(p=>({...p,c:night?'#ffe2a8':livery.cockpit})) as Inst[],[livery,night]);
   const parts=useMemo(()=>{
     const l=livery;
@@ -111,6 +121,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
     // Landing lights ("headlights") burn while the gear is down: taxi, takeoff roll and final approach.
     if(landingRef.current)landingRef.current.visible=pose.gear>.02;
     ref.current.position.set(pose.x,pose.y,pose.z);
+    hear(sound,pose,clock.current);
     // Heading first, then nose pitch, then bank about the fuselage.
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
     // While you ride the gold jet its cabin (GoldJetRide) is drawn in its place.
@@ -119,7 +130,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
   });
   const pickAll=gold?{...gold.pick,keys:[] as string[]}:undefined,picked=(items:Inst[])=>pickAll&&{...pickAll,keys:items.map(()=>GOLD_JET_KEY)};
   const S=gold?GOLD_JET_SCALE:1,P=GOLD_JET_PIVOT;
-  return <group ref={ref} userData={parked?undefined:FLYING_SOUND} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
+  return <group ref={ref} userData={parked?undefined:sound} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
    <group position={gold?P:undefined} scale={S}><group position={gold?[-P[0],-P[1],-P[2]]:undefined}>
     {gold&&<><Instanced items={parts.gold} geometry={g.cyl} material={gold.material} pick={picked(parts.gold)}/><Instanced items={parts.goldWindows} geometry={g.box} material={m.plain} shadow={false}/></>}
     <Instanced items={parts.body} geometry={g.ball} material={m.plain} pick={picked(parts.body)}/>
@@ -302,6 +313,7 @@ function ExecutiveJet({g,m,clock,circuit,night=false,beam}:{g:Geometry;m:Materia
   const ref=useRef<Group>(null),gearRef=useRef<Group>(null);
   const beaconRef=useRef<Group>(null),strobeRef=useRef<Group>(null),landingRef=useRef<Group>(null);
   const phase=lightPhase(SHARED_SLOT+5);
+  const sound=useMemo(flyingSound,[]);
   const cockpit=useMemo(()=>EXECUTIVE_JET_MODEL.cockpit.map(p=>({...p,c:night?JET_COCKPIT.night:JET_COCKPIT.day})),[night]);
   useFrame(()=>{
     if(!ref.current)return;
@@ -314,11 +326,12 @@ function ExecutiveJet({g,m,clock,circuit,night=false,beam}:{g:Geometry;m:Materia
     // Headlights burn while the gear is down (taxi, takeoff roll, final approach) and go off with it tucked away.
     if(landingRef.current)landingRef.current.visible=pose.gear>.02;
     ref.current.position.set(pose.x,pose.y,pose.z);
+    hear(sound,pose,clock.current);
     ref.current.rotation.set(pose.pitch,pose.yaw,pose.roll,"YXZ");
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
   const J=EXECUTIVE_JET_MODEL;
-  return <group ref={ref} userData={FLYING_SOUND}>
+  return <group ref={ref} userData={sound}>
     <Instanced items={J.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={J.balls} geometry={g.ball} material={m.plain}/>
     <Instanced items={J.boxes} geometry={g.box} material={m.plain}/>

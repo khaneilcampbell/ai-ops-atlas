@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { clamp01, distanceGain, EventLimiter, stereoPan, trafficLevel, type CityEvent, type CityEventKind } from "./citySound";
-import { SOUND_TAG_KEY, soundScene } from "./listener";
+import { clamp01, distanceGain, EventLimiter, flightSound, jetThrust, newFlightState, stereoPan, trafficLevel, zoneWeight, type CityEvent, type CityEventKind, type FlightSound, type FlightState } from "./citySound";
+import { SOUND_TAG_KEY, soundScene, ZONE_TAG_KEY, type ZoneKind } from "./listener";
+import { ZoneSounds } from "./zones";
 
 /**
  * The city soundscape, made entirely in the browser with Web Audio: filtered noise for traffic,
@@ -13,6 +14,9 @@ import { SOUND_TAG_KEY, soundScene } from "./listener";
  *  - automation: one soft tone per real event (start, handoff, complete, needs attention), placed
  *    at the agent's building and limited so bursts stay calm.
  *
+ * Zoomed in on a place, its own sound comes up (zones.ts) and the city traffic steps back: at the
+ * airport you hear jets start their engines, roll, lift off, touch down and reverse thrust.
+ *
  * Muting sets the master to silence at once and suspends the audio context.
  */
 
@@ -23,7 +27,15 @@ const AMBIENCE = 0.6;
 const EVENTS = 1.1;
 const NOISE_RMS = 0.3;
 
-type Voice = { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode; last: THREE.Vector3 | null; lastAt: number; speed: number; lastDist: number | null };
+type Voice = {
+  src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode;
+  /** The jet's one-shots (start-up, takeoff, touchdown) go through here, so they follow it across the view. */
+  fx: GainNode;
+  whine: OscillatorNode; whineGain: GainNode;
+  flight: FlightState;
+  last: THREE.Vector3 | null; lastAt: number; speed: number; lastDist: number | null;
+};
+type Zone = { kind: ZoneKind; x: number; z: number; r: number };
 
 type AudioCtor = typeof AudioContext;
 function audioCtor(): AudioCtor | null {
@@ -48,6 +60,10 @@ export class CityAudio {
   private wind: GainNode | null = null;
   private aircraft = new Map<THREE.Object3D, Voice>();
   private tagged: THREE.Object3D[] = [];
+  private zones: Zone[] = [];
+  private zoneRoots: THREE.Object3D[] = [];
+  private zoneSounds: ZoneSounds | null = null;
+  private weights = new Map<ZoneKind, number>();
   private lastScan = -Infinity;
   private timer: ReturnType<typeof setInterval> | null = null;
   private nextCar = 0;
@@ -99,6 +115,7 @@ export class CityAudio {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
     this.limiter.reset();
+    this.zoneSounds?.reset();
     const ctx = this.ctx;
     if (!ctx) return;
     this.master.gain.cancelScheduledValues(ctx.currentTime);
@@ -110,6 +127,14 @@ export class CityAudio {
     return this.running;
   }
 
+  /** What the engine hears right now: places and their weights, and each jet's flight state. */
+  debug() {
+    return {
+      zones: this.zones.map((z) => ({ ...z, weight: this.weights.get(z.kind) ?? 0 })),
+      jets: [...this.aircraft.values()].map((v) => ({ ground: v.flight.ground, speed: +v.speed.toFixed(2), rolling: v.flight.rolling, last: v.flight.last })),
+    };
+  }
+
   setVolume(v: number) {
     this.volume = clamp01(v);
     if (this.ctx && this.running) this.master.gain.setTargetAtTime(this.volume * MASTER, this.ctx.currentTime, 0.05);
@@ -117,6 +142,7 @@ export class CityAudio {
 
   setNight(night: boolean) {
     this.night = night;
+    nightNow = night;
   }
 
   setTraffic(on: boolean) {
@@ -222,6 +248,17 @@ export class CityAudio {
     wg.gain.value = 0.05;
     this.loop(1.3).connect(wf).connect(wg).connect(this.ambience);
     this.wind = wg;
+
+    this.zoneSounds = new ZoneSounds({
+      ctx,
+      out: this.ambience,
+      noise: this.noise,
+      get night() {
+        return engineNight();
+      },
+      birds: (l) => this.birds(l),
+      crickets: (l) => this.crickets(l),
+    });
   }
 
   private loop(offset = 0): AudioBufferSourceNode {
@@ -238,11 +275,26 @@ export class CityAudio {
     const now = ctx.currentTime;
     const s = soundScene();
     const view = s ? viewDistance(s.camera) : 80;
+    if (s) this.scan(s.scene);
+
+    // The place you are zoomed in on: its own sound comes up, and the city traffic steps back a little.
+    this.weights.clear();
+    let focused = 0;
+    if (s) {
+      const f = groundFocus(s.camera, view);
+      for (const z of this.zones) {
+        if (z.r === 0) continue;
+        const w = zoneWeight(f, view, z);
+        if (w > (this.weights.get(z.kind) ?? 0)) this.weights.set(z.kind, w);
+        focused = Math.max(focused, w);
+      }
+    }
+    this.zoneSounds?.update(this.weights, now);
 
     // Traffic bed: louder near the streets, quieter from high up, softer still with traffic hidden.
     if (this.traffic) {
       const swell = 0.85 + 0.15 * Math.sin(now * 0.21) * Math.sin(now * 0.077 + 1);
-      const level = trafficLevel(view) * (this.trafficOn ? 1 : 0.3) * (this.night ? 0.6 : 1);
+      const level = trafficLevel(view) * (this.trafficOn ? 1 : 0.3) * (this.night ? 0.6 : 1) * (1 - 0.55 * focused);
       this.traffic.gain.gain.setTargetAtTime(0.32 * level * swell, now, 0.6);
       this.traffic.filter.frequency.setTargetAtTime(300 + 260 * level, now, 0.8);
     }
@@ -250,7 +302,7 @@ export class CityAudio {
 
     // Now and then a car passes close by.
     if (this.trafficOn && now >= this.nextCar) {
-      if (this.nextCar) this.carPass(trafficLevel(view));
+      if (this.nextCar) this.carPass(trafficLevel(view) * (1 - 0.6 * focused));
       this.nextCar = now + 7 + Math.random() * 10;
     }
     // Birds by day, crickets by night, every so often.
@@ -265,18 +317,12 @@ export class CityAudio {
   }
 
   private updateAircraft(camera: THREE.Camera, scene: THREE.Object3D) {
+    void scene;
     const ctx = this.ctx!;
     const t = performance.now();
-    if (t - this.lastScan > 4000) {
-      this.lastScan = t;
-      const found: THREE.Object3D[] = [];
-      scene.traverse((o) => {
-        if (o.userData?.[SOUND_TAG_KEY] === "aircraft") found.push(o);
-      });
-      this.tagged = found;
-      for (const [o, v] of this.aircraft) if (!found.includes(o)) this.dropVoice(o, v);
-    }
     const now = ctx.currentTime;
+    // Zoomed in on the airport, the jets on the ground come forward: taxiing, start-ups and the roll.
+    const apron = this.weights.get("airport") ?? 0;
     for (const o of this.tagged) {
       let v = this.aircraft.get(o);
       if (!v) {
@@ -296,10 +342,22 @@ export class CityAudio {
       }
       const speed = v.speed;
       const { gain, pan, dist } = this.spatial(camera, tmp);
-      // A parked or holding jet is silent, a taxiing one a murmur, one in the air a passing roar.
+      const ground = typeof o.userData.ground === "boolean" ? o.userData.ground : tmp.y < 0.3;
+      // The jet's own speed on the flight clock when it reports one, so a slow frame rate can't hide a takeoff.
+      // Timed on that clock too, so a rest at the stand is told from a hold at the runway however fast it runs.
+      const own = typeof o.userData.speed === "number" && Number.isFinite(o.userData.at);
+      const cue = o.visible ? flightSound(v.flight, own ? { ground, speed: o.userData.speed, now: o.userData.at } : { ground, speed, now: t / 1000 }) : null;
+      const thrust = jetThrust(v.flight);
+      // A parked or holding jet is silent, a taxiing one a murmur, one in the air a passing roar, and the
+      // takeoff roll the loudest of all.
       const moving = smooth(0.2, 3, speed);
       const airborne = smooth(0.2, 2.5, tmp.y);
-      const loud = o.visible ? 0.55 * gain * moving * (0.35 + 0.65 * airborne) : 0;
+      const onGround = (0.35 + 0.65 * airborne) * (ground ? 0.5 + 0.5 * apron : 1);
+      const loud = o.visible ? 0.55 * gain * moving * onGround * (v.flight.rolling ? 1.6 : 1) : 0;
+      v.fx.gain.setTargetAtTime(o.visible ? gain * (0.45 + 0.55 * apron) : 0, now, 0.25);
+      v.whineGain.gain.setTargetAtTime(o.visible ? 0.03 * gain * thrust * (0.35 + 0.65 * apron) : 0, now, 0.4);
+      v.whine.frequency.setTargetAtTime(700 + 1100 * thrust, now, 0.8);
+      if (cue) this.jetCue(v, cue);
       // Approaching jets sound a little brighter, departing ones duller, like a soft Doppler shift.
       const closing = v.lastDist == null ? 0 : (v.lastDist - dist) / (TICK_MS / 1000);
       v.lastDist = dist;
@@ -321,13 +379,107 @@ export class CityAudio {
     const pan = ctx.createStereoPanner();
     const src = this.loop(Math.random() * 4);
     src.connect(filter).connect(gain).connect(pan).connect(this.ambience);
-    return { src, filter, gain, pan, last: null, lastAt: performance.now(), speed: 0, lastDist: null };
+    const fx = ctx.createGain();
+    fx.gain.value = 0;
+    fx.connect(pan);
+    // The turbine's whine, a soft tone that climbs with thrust.
+    const whine = ctx.createOscillator();
+    whine.type = "triangle";
+    whine.frequency.value = 700;
+    const whineGain = ctx.createGain();
+    whineGain.gain.value = 0;
+    whine.connect(whineGain).connect(pan);
+    whine.start();
+    return { src, filter, gain, pan, fx, whine, whineGain, flight: newFlightState(), last: null, lastAt: performance.now(), speed: 0, lastDist: null };
+  }
+
+  /** Finds the jets and the places with their own sound. A few times a minute: the city rarely changes. */
+  private scan(scene: THREE.Object3D) {
+    const t = performance.now();
+    if (t - this.lastScan < 4000) return;
+    this.lastScan = t;
+    const found: THREE.Object3D[] = [];
+    const roots: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      if (o.userData?.[SOUND_TAG_KEY] === "aircraft") found.push(o);
+      if (o.userData?.[ZONE_TAG_KEY]) roots.push(o);
+    });
+    this.tagged = found;
+    for (const [o, v] of this.aircraft) if (!found.includes(o)) this.dropVoice(o, v);
+    if (roots.length !== this.zoneRoots.length || roots.some((r, i) => r !== this.zoneRoots[i]) || this.zones.some((z) => z.r === 0)) {
+      this.zoneRoots = roots;
+      this.zones = roots.map((r) => zoneOf(r));
+    }
+  }
+
+  /** A jet's start-up, takeoff roll or touchdown, through its own voice so it moves with it. */
+  private jetCue(v: Voice, cue: FlightSound) {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + 0.02;
+    if (cue === "spoolup") {
+      // Engines starting: a low whirr that winds up into a steady whine, with a hiss of air under it.
+      const o = ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(70, t);
+      o.frequency.exponentialRampToValueAtTime(950, t + 5);
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 1600;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 1.5);
+      g.gain.linearRampToValueAtTime(0.07, t + 4.5);
+      g.gain.linearRampToValueAtTime(0, t + 7.5);
+      o.connect(lp).connect(g).connect(v.fx);
+      o.start(t);
+      o.stop(t + 7.6);
+      this.noiseBurst(v.fx, "bandpass", [1200, 2600], 1.2, t, [0, 0.12, 0.12, 0], [0, 2.5, 5, 7.5]);
+    } else if (cue === "takeoff") {
+      // Full power down the runway: a deep roar that opens up and brightens, then carries off with the jet.
+      this.noiseBurst(v.fx, "lowpass", [280, 2400], 0.7, t, [0, 0.55, 0.6, 0], [0, 2.5, 7, 13]);
+      const o = ctx.createOscillator();
+      o.type = "sine";
+      o.frequency.value = 52;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.18, t + 2.5);
+      g.gain.linearRampToValueAtTime(0, t + 10);
+      o.connect(g).connect(v.fx);
+      o.start(t);
+      o.stop(t + 10.1);
+    } else {
+      // Touchdown: two short tyre chirps, then the reverse-thrust rush as it slows on the runway.
+      for (const d of [0, 0.16]) this.noiseBurst(v.fx, "highpass", [1800, 1800], 0.8, t + d, [0, 0.22, 0], [0, 0.01, 0.09]);
+      this.noiseBurst(v.fx, "lowpass", [500, 1300], 0.7, t + 0.5, [0, 0.4, 0.35, 0], [0, 0.7, 2.6, 5]);
+    }
+  }
+
+  /** Filtered noise with a gain envelope (levels at times, in seconds from `at`) and a filter sweep. */
+  private noiseBurst(out: AudioNode, type: BiquadFilterType, [f0, f1]: [number, number], q: number, at: number, levels: number[], times: number[]) {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.Q.value = q;
+    const end = times[times.length - 1];
+    f.frequency.setValueAtTime(f0, at);
+    f.frequency.linearRampToValueAtTime(f1, at + end * 0.6);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(levels[0], at);
+    for (let i = 1; i < levels.length; i++) g.gain.linearRampToValueAtTime(levels[i], at + times[i]);
+    src.connect(f).connect(g).connect(out);
+    src.start(at, Math.random() * 2);
+    src.stop(at + end + 0.05);
   }
 
   private dropVoice(o: THREE.Object3D, v: Voice) {
     v.gain.gain.setTargetAtTime(0, this.ctx!.currentTime, 0.3);
+    v.fx.gain.setTargetAtTime(0, this.ctx!.currentTime, 0.3);
+    v.whineGain.gain.setTargetAtTime(0, this.ctx!.currentTime, 0.3);
     setTimeout(() => {
       v.src.stop();
+      v.whine.stop();
       v.pan.disconnect();
     }, 1500);
     this.aircraft.delete(o);
@@ -357,7 +509,7 @@ export class CityAudio {
     src.stop(t + 2.5);
   }
 
-  private birds() {
+  private birds(level = 1) {
     const ctx = this.ctx!;
     const p = ctx.createStereoPanner();
     p.pan.value = Math.random() * 1.4 - 0.7;
@@ -372,7 +524,7 @@ export class CityAudio {
       o.frequency.exponentialRampToValueAtTime(base * 1.35, t + 0.07);
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.035, t + 0.015);
+      g.gain.linearRampToValueAtTime(0.035 * level, t + 0.015);
       g.gain.exponentialRampToValueAtTime(0.0005, t + 0.09);
       o.connect(g).connect(p);
       o.start(t);
@@ -381,7 +533,7 @@ export class CityAudio {
     setTimeout(() => p.disconnect(), 1500);
   }
 
-  private crickets() {
+  private crickets(level = 1) {
     const ctx = this.ctx!;
     const p = ctx.createStereoPanner();
     p.pan.value = Math.random() * 1.2 - 0.6;
@@ -393,7 +545,7 @@ export class CityAudio {
       o.frequency.value = 4300;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.012, t + 0.01);
+      g.gain.linearRampToValueAtTime(0.012 * level, t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0003, t + 0.05);
       o.connect(g).connect(p);
       o.start(t);
@@ -408,6 +560,48 @@ export class CityAudio {
     window.removeEventListener("keydown", this.unlock);
     this.unlock = null;
   }
+}
+
+let nightNow = false;
+const engineNight = () => nightNow;
+
+const focusDir = new THREE.Vector3();
+/** The spot on the ground in the middle of the view. */
+export function groundFocus(camera: THREE.Camera, view: number): { x: number; z: number } {
+  camera.getWorldDirection(focusDir);
+  return { x: camera.position.x + focusDir.x * view, z: camera.position.z + focusDir.z * view };
+}
+
+const zoneBox = new THREE.Box3();
+const partBox = new THREE.Box3();
+/**
+ * A place's footprint on the ground, from what it draws. Jets are skipped, so one flying over the
+ * city doesn't stretch the airport across it. Before the place has drawn, its radius is 0 and the
+ * next scan measures it again.
+ */
+function zoneOf(root: THREE.Object3D): Zone {
+  zoneBox.makeEmpty();
+  root.updateWorldMatrix(true, true);
+  const walk = (o: THREE.Object3D) => {
+    if (o.userData?.[SOUND_TAG_KEY] === "aircraft") return;
+    const mesh = o as THREE.Mesh & Partial<THREE.InstancedMesh>;
+    if (mesh.isInstancedMesh) {
+      const im = o as THREE.InstancedMesh;
+      if (im.count > 0) {
+        if (!im.boundingBox) im.computeBoundingBox();
+        if (im.boundingBox) zoneBox.union(partBox.copy(im.boundingBox).applyMatrix4(im.matrixWorld));
+      }
+    } else if (mesh.isMesh && mesh.geometry) {
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      if (mesh.geometry.boundingBox) zoneBox.union(partBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld));
+    }
+    for (const c of o.children) walk(c);
+  };
+  walk(root);
+  const kind = root.userData[ZONE_TAG_KEY] as ZoneKind;
+  if (zoneBox.isEmpty()) return { kind, x: 0, z: 0, r: 0 };
+  const c = zoneBox.getCenter(new THREE.Vector3());
+  return { kind, x: c.x, z: c.z, r: Math.max(zoneBox.max.x - zoneBox.min.x, zoneBox.max.z - zoneBox.min.z) / 2 };
 }
 
 /** How far the camera is from the ground it looks at: the "zoom" of the map in world units. */
@@ -453,5 +647,8 @@ function pinkNoise(ctx: BaseAudioContext, seconds: number): AudioBuffer {
 /** The one engine the app uses; created lazily so nothing touches Web Audio until asked. */
 let engine: CityAudio | null = null;
 export function cityAudio(): CityAudio {
-  return (engine ??= new CityAudio());
+  engine ??= new CityAudio();
+  // For checking the mix by hand in development (window.__citySound.debug()); never in a release build.
+  if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __citySound?: CityAudio }).__citySound = engine;
+  return engine;
 }

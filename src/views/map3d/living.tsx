@@ -1,6 +1,7 @@
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
 import { MAP_FLEET } from "./mapFleet";
+import { SOUND_ZONE } from "../../sound/listener";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -252,7 +253,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     <group>
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} harbour={loop.harbour} marina={loop.marina} />
-      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} harbour={loop.harbour} />
+      <group userData={SOUND_ZONE.marina}><Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} harbour={loop.harbour} /></group>
       <FigureMeshes f={sailors} g={g} m={m} shadow={false} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={yachtDeck} args={[boatGeometry.hull,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />

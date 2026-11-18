@@ -8,7 +8,8 @@ vi.stubGlobal("localStorage", {
   clear: () => data.clear(),
 });
 
-const { DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, HANDOFF_MS, LIMITS, loadSoundPrefs, saveSoundPrefs, stereoPan, trafficLevel } = await import("./citySound");
+const { DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
+const { executiveJetPose, fleetPose, FLIGHT_SCHEDULE } = await import("../views/map3d/flightSchedule");
 
 beforeEach(() => data.clear());
 
@@ -99,5 +100,72 @@ describe("overlapping automations stay calm", () => {
     expect(played.length).toBeLessThanOrEqual(LIMITS.burst);
     l.reset();
     expect(l.admit("start", 0)).toBe(1);
+  });
+});
+
+describe("area sound", () => {
+  const airport = { x: 0, z: 0, r: 20 };
+  it("is full when zoomed in on the place and silent from high above or far away", () => {
+    expect(zoneWeight({ x: 0, z: 0 }, 20, airport)).toBe(1);
+    expect(zoneWeight({ x: 0, z: 0 }, 120, airport)).toBe(0);
+    expect(zoneWeight({ x: 80, z: 0 }, 20, airport)).toBe(0);
+  });
+  it("fades in as you zoom and as the view moves onto the place", () => {
+    const steps = [90, 70, 50, 30].map((v) => zoneWeight({ x: 0, z: 0 }, v, airport));
+    for (let i = 1; i < steps.length; i++) expect(steps[i]).toBeGreaterThan(steps[i - 1]);
+    const edge = zoneWeight({ x: 26, z: 0 }, 20, airport);
+    expect(edge).toBeGreaterThan(0);
+    expect(edge).toBeLessThan(1);
+  });
+});
+
+describe("flight sounds", () => {
+  const run = (pose: (t: number) => { x: number; y: number; z: number }, until: number) => {
+    const s = newFlightState(), heard: { t: number; cue: string }[] = [];
+    let prev = pose(0);
+    for (let t = 0.2; t < until; t += 0.2) {
+      const p = pose(t), speed = Math.hypot(p.x - prev.x, p.y - prev.y, p.z - prev.z) / 0.2;
+      prev = p;
+      const cue = flightSound(s, { ground: p.y <= 0.02, speed, now: t });
+      if (cue) heard.push({ t: +t.toFixed(1), cue });
+    }
+    return heard;
+  };
+
+  it("hears each airliner start up, take off and land once per loop, in that order", () => {
+    const heard = run((t) => fleetPose(t, 0), FLIGHT_SCHEDULE.cycle * 2 + 30);
+    const loop = heard.filter((h) => h.t > FLIGHT_SCHEDULE.cycle - 120 && h.t <= FLIGHT_SCHEDULE.cycle * 2 - 120).map((h) => h.cue);
+    expect(loop.sort()).toEqual(["spoolup", "takeoff", "touchdown"]);
+    const one = heard.filter((h) => h.t > 0 && h.t < FLIGHT_SCHEDULE.cycle + 10);
+    const at = (c: string) => one.find((h) => h.cue === c)?.t ?? NaN;
+    // Lands, rests at the stand, starts up, then takes off.
+    expect(at("touchdown")).toBeLessThan(at("spoolup"));
+    expect(at("spoolup")).toBeLessThan(at("takeoff"));
+  });
+
+  it("hears the executive jet start from its long rest and take off", () => {
+    const cues = run((t) => executiveJetPose(t), FLIGHT_SCHEDULE.cycle * 2).map((h) => h.cue);
+    expect(cues).toContain("touchdown");
+    expect(cues).toContain("spoolup");
+    expect(cues).toContain("takeoff");
+  });
+
+  it("stays quiet on the first reading, mid-takeoff", () => {
+    expect(flightSound(newFlightState(), { ground: true, speed: 2.5, now: 0 })).toBeNull();
+  });
+
+  it("does not mistake a landing rollout for a takeoff", () => {
+    const s = newFlightState();
+    flightSound(s, { ground: false, speed: 4, now: 0 });
+    expect(flightSound(s, { ground: true, speed: 2.6, now: 0.2 })).toBe("touchdown");
+    for (let i = 0; i < 20; i++) expect(flightSound(s, { ground: true, speed: 2.6 - i * 0.05 + (i % 2) * 0.06, now: 0.4 + i * 0.2 })).toBeNull();
+  });
+
+  it("puts the turbine at full power on the takeoff roll", () => {
+    const s = newFlightState();
+    s.ground = true;
+    s.rolling = true;
+    expect(jetThrust(s)).toBe(1);
+    expect(jetThrust(newFlightState())).toBe(0);
   });
 });

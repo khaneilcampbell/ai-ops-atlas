@@ -1,0 +1,1 @@
+- 2026-11-18 · City sound now follows where you zoom: at the airport you hear jets start their engines, roll down the runway, take off, touch down and reverse thrust; the station, marina, stadium and Commons each have their own quiet sounds, and the city traffic steps back while you are close in (#PR)

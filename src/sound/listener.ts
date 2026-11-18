@@ -22,6 +22,19 @@ export function soundScene(): SoundScene | null {
   return current;
 }
 
-/** Objects the engine gives a moving sound to, tagged by the scene (userData.citySound). */
+/** Objects the engine gives a moving sound to, tagged by the scene (userData.citySound). A jet's tag also
+ * carries `ground`, written by its frame loop, so the engine knows when it rolls, lifts off and touches down. */
 export type SoundTag = "aircraft";
 export const SOUND_TAG_KEY = "citySound";
+
+/** Places with their own sound up close, tagged on the group that draws them (userData.citySoundZone). */
+export type ZoneKind = "airport" | "station" | "marina" | "stadium" | "park";
+export const ZONE_TAG_KEY = "citySoundZone";
+/** One tag object per kind, so wrapping a place in `<group userData={SOUND_ZONE.airport}>` allocates nothing. */
+export const SOUND_ZONE: Record<ZoneKind, { citySoundZone: ZoneKind }> = {
+  airport: { citySoundZone: "airport" },
+  station: { citySoundZone: "station" },
+  marina: { citySoundZone: "marina" },
+  stadium: { citySoundZone: "stadium" },
+  park: { citySoundZone: "park" },
+};
