@@ -4,8 +4,8 @@ import { SOUND_TAG_KEY, soundScene, ZONE_TAG_KEY, type ZoneKind } from "./listen
 import { ZoneSounds } from "./zones";
 
 /**
- * The city soundscape, made entirely in the browser with Web Audio: filtered noise for traffic,
- * wind and passing jets, and short sine and triangle tones for birds, crickets and automation
+ * The city soundscape, made entirely in the browser with Web Audio: filtered noise for distant traffic
+ * and passing jets, and short sine and triangle tones for birds, crickets and automation
  * events. No recordings are shipped, so there are no third-party audio licences to track.
  *
  * Two layers under one master volume:
