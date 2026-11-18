@@ -1,1 +1,1 @@
-- 2026-11-18 · The Agents tab now lists only AI agents. Automations such as Agent Registry Clerk are no longer shown as agent rows; each agent shows one line naming the automations it runs, with a View in Automations link (#474)
+- 2026-11-18 · Automations no longer have agent job titles. Agent Registry Clerk is now Agent Registry Sync, Build and Release Engineer is now Atlas CI, and 20 more show their workflow names, so only real AI agents sound like people (#474)
