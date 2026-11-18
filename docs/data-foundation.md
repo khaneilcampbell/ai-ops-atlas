@@ -77,6 +77,19 @@ store a link to a file, not the file, and keep anything sensitive out of free-te
    n8n as a Header Auth credential (name `Authorization`, value `Bearer <key>`).
 8. Redeploy, open the Task Center, and check the card shows **Connected · schema v1 · 1 agent key**.
 
+### Atlas's database (Supabase, created 2026-11-18)
+
+Atlas's database is the Supabase project **atlas** in the Benjaire organization (free plan,
+us-east-1, PostgreSQL 17). Steps 1–3 are done there: migration 1 is applied, the `atlas_app` role
+exists with the grants from `db/roles.sql`, and the Supabase Data API roles (`anon`,
+`authenticated`) have no access to the `atlas` schema. `atlas_app` has no password yet, so nothing
+can log in as it until Khaneil sets one:
+
+- Set it in the Supabase SQL editor: `ALTER ROLE atlas_app PASSWORD '<openssl rand -hex 32>';`
+- Hyperdrive connects through Supabase's **session pooler** (Connect > Session pooler), with
+  the user name `atlas_app.<project ref>`, port 5432 and database `postgres`. The direct host
+  `db.<ref>.supabase.co` is IPv6-only on the free plan.
+
 Local development: copy `.env.example` to `.dev.vars`, point `ATLAS_DATABASE_URL` at a local
 database, and run `npx wrangler pages dev` after `npm run build:web`.
 

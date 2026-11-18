@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS atlas.schema_migrations (
 );
 
 -- Keeps updated_at honest and bumps version on every change, whoever writes.
-CREATE OR REPLACE FUNCTION atlas.touch_row() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION atlas.touch_row() RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   NEW.updated_at := now();
   NEW.version := OLD.version + 1;
