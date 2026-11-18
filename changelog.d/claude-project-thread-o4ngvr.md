@@ -1,1 +1,1 @@
-- 2026-11-18 · The lines between buildings on the map are thin again, like before, and still easy to see (#PR)
+- 2026-11-18 · The lines between buildings on the map are thin again, like before, and still easy to see (#476)
