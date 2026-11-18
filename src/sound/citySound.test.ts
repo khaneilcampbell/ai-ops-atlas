@@ -8,7 +8,7 @@ vi.stubGlobal("localStorage", {
   clear: () => data.clear(),
 });
 
-const { DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
+const { capScale, DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
 const { executiveJetPose, fleetPose, FLIGHT_SCHEDULE } = await import("../views/map3d/flightSchedule");
 
 beforeEach(() => data.clear());
@@ -167,5 +167,14 @@ describe("flight sounds", () => {
     s.rolling = true;
     expect(jetThrust(s)).toBe(1);
     expect(jetThrust(newFlightState())).toBe(0);
+  });
+});
+
+describe("jet noise cap", () => {
+  it("leaves a quiet sky alone and scales a busy one down to the cap", () => {
+    expect(capScale([0.1, 0.1], 0.35)).toBe(1);
+    const levels = [0.4, 0.4, 0.3];
+    const scale = capScale(levels, 0.35);
+    expect(levels.reduce((n, l) => n + l * scale, 0)).toBeCloseTo(0.35);
   });
 });

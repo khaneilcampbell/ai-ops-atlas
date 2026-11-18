@@ -1,15 +1,15 @@
 import * as THREE from "three";
-import { clamp01, distanceGain, EventLimiter, flightSound, jetThrust, newFlightState, stereoPan, trafficLevel, zoneWeight, type CityEvent, type CityEventKind, type FlightSound, type FlightState } from "./citySound";
+import { capScale, clamp01, distanceGain, EventLimiter, flightSound, jetThrust, newFlightState, stereoPan, trafficLevel, zoneWeight, type CityEvent, type CityEventKind, type FlightSound, type FlightState } from "./citySound";
 import { SOUND_TAG_KEY, soundScene, ZONE_TAG_KEY, type ZoneKind } from "./listener";
 import { ZoneSounds } from "./zones";
 
 /**
  * The city soundscape, made entirely in the browser with Web Audio: filtered noise for traffic,
- * wind and passing jets, and short sine and triangle tones for birds, crickets and automation
+ * and passing jets, and short sine and triangle tones for birds, crickets and automation
  * events. No recordings are shipped, so there are no third-party audio licences to track.
  *
  * Two layers under one master volume:
- *  - ambience: a traffic bed, a little wind, occasional cars passing, birds by day and crickets
+ *  - ambience: a low traffic bed, occasional cars passing, birds by day and crickets
  *    by night, and a voice for every jet in flight, placed by where it is relative to the camera;
  *  - automation: one soft tone per real event (start, handoff, complete, needs attention), placed
  *    at the agent's building and limited so bursts stay calm.
@@ -26,6 +26,11 @@ const MASTER = 0.9;
 const AMBIENCE = 0.6;
 const EVENTS = 1.1;
 const NOISE_RMS = 0.3;
+/** The steady traffic bed's level. Was 0.32, with a wind layer under it; together with the jets that was a constant rush. */
+const TRAFFIC_BED = 0.13;
+/** One jet's engine noise at its closest, and the most all jets' together may add up to. */
+const JET_RUSH = 0.4;
+const JET_RUSH_CAP = 0.35;
 
 type Voice = {
   src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode;
@@ -57,7 +62,6 @@ export class CityAudio {
   private events!: GainNode;
   private noise!: AudioBuffer;
   private traffic: { gain: GainNode; filter: BiquadFilterNode } | null = null;
-  private wind: GainNode | null = null;
   private aircraft = new Map<THREE.Object3D, Voice>();
   private tagged: THREE.Object3D[] = [];
   private zones: Zone[] = [];
@@ -232,22 +236,13 @@ export class CityAudio {
     // Traffic: a low, rounded rush that rises and falls a little, like streets a block away.
     const tf = ctx.createBiquadFilter();
     tf.type = "lowpass";
-    tf.frequency.value = 420;
+    tf.frequency.value = 300;
     tf.Q.value = 0.4;
     const tg = ctx.createGain();
     tg.gain.value = 0;
     this.loop().connect(tf).connect(tg).connect(this.ambience);
     this.traffic = { gain: tg, filter: tf };
 
-    // Wind: barely there, so the quiet between events never feels empty.
-    const wf = ctx.createBiquadFilter();
-    wf.type = "bandpass";
-    wf.frequency.value = 260;
-    wf.Q.value = 0.6;
-    const wg = ctx.createGain();
-    wg.gain.value = 0.05;
-    this.loop(1.3).connect(wf).connect(wg).connect(this.ambience);
-    this.wind = wg;
 
     this.zoneSounds = new ZoneSounds({
       ctx,
@@ -295,10 +290,10 @@ export class CityAudio {
     if (this.traffic) {
       const swell = 0.85 + 0.15 * Math.sin(now * 0.21) * Math.sin(now * 0.077 + 1);
       const level = trafficLevel(view) * (this.trafficOn ? 1 : 0.3) * (this.night ? 0.6 : 1) * (1 - 0.55 * focused);
-      this.traffic.gain.gain.setTargetAtTime(0.32 * level * swell, now, 0.6);
-      this.traffic.filter.frequency.setTargetAtTime(300 + 260 * level, now, 0.8);
+      // Kept low and deep: steady broadband noise any higher or brighter reads as wind (Khaneil, 2026-11-18).
+      this.traffic.gain.gain.setTargetAtTime(TRAFFIC_BED * level * swell, now, 0.6);
+      this.traffic.filter.frequency.setTargetAtTime(200 + 160 * level, now, 0.8);
     }
-    if (this.wind) this.wind.gain.setTargetAtTime(0.035 + 0.02 * Math.sin(now * 0.13), now, 1);
 
     // Now and then a car passes close by.
     if (this.trafficOn && now >= this.nextCar) {
@@ -323,6 +318,7 @@ export class CityAudio {
     const now = ctx.currentTime;
     // Zoomed in on the airport, the jets on the ground come forward: taxiing, start-ups and the roll.
     const apron = this.weights.get("airport") ?? 0;
+    const rush: { v: Voice; loud: number }[] = [];
     for (const o of this.tagged) {
       let v = this.aircraft.get(o);
       if (!v) {
@@ -353,7 +349,8 @@ export class CityAudio {
       const moving = smooth(0.2, 3, speed);
       const airborne = smooth(0.2, 2.5, tmp.y);
       const onGround = (0.35 + 0.65 * airborne) * (ground ? 0.5 + 0.5 * apron : 1);
-      const loud = o.visible ? 0.55 * gain * moving * onGround * (v.flight.rolling ? 1.6 : 1) : 0;
+      // Squared distance gain: a jet is heard as it passes near, not as a steady rush from across the city.
+      const loud = o.visible ? JET_RUSH * gain * gain * moving * onGround * (v.flight.rolling ? 1.6 : 1) : 0;
       v.fx.gain.setTargetAtTime(o.visible ? gain * (0.45 + 0.55 * apron) : 0, now, 0.25);
       v.whineGain.gain.setTargetAtTime(o.visible ? 0.03 * gain * thrust * (0.35 + 0.65 * apron) : 0, now, 0.4);
       v.whine.frequency.setTargetAtTime(700 + 1100 * thrust, now, 0.8);
@@ -362,10 +359,13 @@ export class CityAudio {
       const closing = v.lastDist == null ? 0 : (v.lastDist - dist) / (TICK_MS / 1000);
       v.lastDist = dist;
       const bright = Math.max(0.6, Math.min(1.5, 1 + closing / 40));
-      v.gain.gain.setTargetAtTime(loud, now, 0.35);
+      rush.push({ v, loud });
       v.pan.pan.setTargetAtTime(pan, now, 0.3);
-      v.filter.frequency.setTargetAtTime((320 + 1300 * gain * airborne) * bright, now, 0.3);
+      v.filter.frequency.setTargetAtTime((240 + 800 * gain * airborne) * bright, now, 0.3);
     }
+    // However many jets are up at once, their engine noise together stays under one cap.
+    const scale = capScale(rush.map((r) => r.loud), JET_RUSH_CAP);
+    for (const r of rush) r.v.gain.gain.setTargetAtTime(r.loud * scale, now, 0.35);
   }
 
   private voice(): Voice {

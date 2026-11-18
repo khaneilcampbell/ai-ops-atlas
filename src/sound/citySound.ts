@@ -236,3 +236,9 @@ export function jetThrust(s: FlightState): number {
   if (s.speed > FLIGHT.still) return 0.3;
   return 0;
 }
+
+/** Scale that keeps a set of levels' sum at or under `cap` (1 when they already fit). */
+export function capScale(levels: readonly number[], cap: number): number {
+  const sum = levels.reduce((n, l) => n + Math.max(0, l), 0);
+  return sum > cap ? cap / sum : 1;
+}
