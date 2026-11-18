@@ -1229,11 +1229,11 @@ export function MapView({active=true}:{active?:boolean}) {
                 className={`icon-btn ${inside ? "on" : ""}`}
                 onClick={() => setInside(!inside)}
                 aria-pressed={inside}
-                aria-label="Inside"
+                aria-label="Agents at work"
                 aria-keyshortcuts="I"
-                title={inside ? "Close the buildings (I)" : "See inside the buildings near you (I). Select one and Enter it for the full office."}
+                title={inside ? "Close the buildings (I)" : "See the agents working inside Atlas buildings (I): each building with someone at a desk opens at that floor."}
               >
-                <Icon name="cutaway" size={17} />
+                <Icon name="agents" size={17} />
               </button>
             )}
             {is3d && (

@@ -39,7 +39,7 @@ for (const light of ["day", "night"] as const)
     page.on("pageerror", (e) => errors.push(e.message));
     await openAtlas(page, { light });
     await waitForScene(page);
-    const toggle = page.getByRole("button", { name: "Inside", exact: true });
+    const toggle = page.getByRole("button", { name: "Agents at work", exact: true });
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await selectBuilding(page, "Atlas Command Center");
     await zoomIn(page, 4);
@@ -76,7 +76,7 @@ test.describe("phone", () => {
     for (let i = 0; i < 4; i++) await page.keyboard.press("+");
     await settle(page, 6);
     if (process.env.SHOTS) await page.screenshot({ path: "visual/out/inside-phone-before.png" });
-    const toggle = page.getByRole("button", { name: "Inside", exact: true });
+    const toggle = page.getByRole("button", { name: "Agents at work", exact: true });
     await toggle.tap();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     // One row, no wrapping, and the Inside button in full view beside 3D. (The toolbar already

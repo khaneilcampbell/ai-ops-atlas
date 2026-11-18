@@ -12,6 +12,7 @@ import { FLOOR_BASE, towerTop } from "./models";
 import { pickInside, sameTiers, stepCut, type InsideCandidate, type InsideLimits, type InsideTiers } from "./inside";
 import { CORE, levelY, type BuildingModel } from "./buildingModel";
 import { useInsideFocus } from "./insideFocus";
+import { agentInside } from "./agentFollow";
 import { useOpsStates } from "../../routine/useRoutineOps";
 import type { OperationalState } from "../../routine/operations";
 import type { Tower } from "./scene";
@@ -118,11 +119,6 @@ function buildParts(models: ReadonlyMap<string, BuildingModel>, offices: Map<str
     for (const sx of [-1, 1]) P.outline.push({ b: key, p: [m.x + (sx * w) / 2, y, m.z], s: [0.03, sill, w], f: y });
     // The lift core in the back corner, the same on every floor: the way up from the lobby.
     P.core.push({ b: key, p: [m.core.x, y + 0.2 * m.floorH, m.core.z], s: [CORE * k, 0.4 * m.floorH, CORE * k], f: y });
-    if (level === 0) {
-      // The lobby: a reception desk facing the door, two benches.
-      P.oak.push({ b: key, p: [m.door.lobby[0], y + 0.5 * k, m.door.lobby[2] - 2.2 * k], s: [2.2 * k, 1 * k, 0.6 * k], f: y });
-      for (const sx of [-1, 1]) P.chair.push({ b: key, p: [m.door.lobby[0] + sx * 2.6 * k, y + 0.25 * k, m.door.lobby[2] - 0.8 * k], s: [1.4 * k, 0.5 * k, 0.5 * k], f: y });
-    }
     for (const ws of floor?.workstations ?? []) {
       const own = managed.has(ws.agentId);
       const state = own ? deskState(ops.get(ws.agentId)) : (o?.desks.find((d) => d.ws.agentId === ws.agentId)?.state ?? "unknown");
@@ -166,6 +162,16 @@ const MAT = {
   tinted: std("#ffffff", { roughness: 0.85 }),
   wall: std(C.wall),
   lamp: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
+  // The office's own finishes (office/OfficeScene.tsx OfficeEnvironment), so the cutaway is the same room.
+  rug: std(C.rug, { roughness: 1 }),
+  trim: std(C.trim, { roughness: 0.6 }),
+  frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
+  pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.02, transparent: true, opacity: 0.18, depthWrite: false, roughness: 0.1, metalness: 0.1 }),
+  pot: std("#b8836a", { roughness: 0.9 }),
+  leaf: std("#4f7f4a", { roughness: 0.9, flatShading: true }),
+  leaf2: std("#6a9a52", { roughness: 0.9, flatShading: true }),
+  led: new THREE.MeshBasicMaterial({ color: "#7ee0a0", toneMapped: false }),
+  accent: std("#ffffff", { roughness: 0.6 }),
 };
 
 /** Recompiles every building material, so it picks the cut up or drops it. */
@@ -261,12 +267,15 @@ export function InsideView({ on: toolbar, models = NO_MODELS, towers, offices, l
   // Only buildings with a building model (an office) open up; the rest keep their exterior.
   const cands = useMemo<InsideCandidate[]>(() => towers.filter((t) => models.has(t.key)).map((t) => ({ key: t.key, x: t.x, y: FLOOR_BASE, z: t.z })), [towers, models]);
   const [tiers, setTiers] = useState<InsideTiers>({ near: [], mid: [] });
-  // The floor each open building shows: the one asked for, else its lowest office floor.
+  // Where agents are seated right now: building and the lowest floor with someone at a desk.
+  // The toolbar switch opens these first, at that floor ("see the agents working in Atlas buildings").
+  const [working, setWorking] = useState<ReadonlyMap<string, number>>(new Map());
+  // The floor each open building shows: the one asked for, else where its agents are working, else its lowest office floor.
   const levels = useMemo(() => {
     const out = new Map<string, number>();
-    for (const [key, m] of models) out.set(key, focus?.key === key && focus.level !== null ? focus.level : m.officeFloors[0].level);
+    for (const [key, m] of models) out.set(key, focus?.key === key && focus.level !== null ? focus.level : (working.get(key) ?? m.officeFloors[0].level));
     return out;
-  }, [models, focus]);
+  }, [models, focus, working]);
   const levelsRef = useRef(levels);
   levelsRef.current = levels;
   // Every open (or closing) cut: its current and target height.
@@ -317,7 +326,15 @@ export function InsideView({ on: toolbar, models = NO_MODELS, towers, offices, l
       lastPick.current = now;
       camera.updateMatrixWorld();
       frustum.setFromProjectionMatrix(mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-      const next = pickInside(cands, camera.position, (c) => frustum.intersectsSphere(sphere.set(new THREE.Vector3(c.x, c.y + 0.6, c.z), (byKey.get(c.key)?.size ?? 1) * 0.8)), limits, tiers, focus?.key ?? selected);
+      const seen = (c: InsideCandidate) => frustum.intersectsSphere(sphere.set(new THREE.Vector3(c.x, c.y + 0.6, c.z), (byKey.get(c.key)?.size ?? 1) * 0.8));
+      const at = new Map<string, number>();
+      for (const v of agentInside.values()) if (v?.seated && v.level !== null && models.has(v.key)) at.set(v.key, Math.min(at.get(v.key) ?? Infinity, v.level));
+      if ([...at].join() !== [...working].join()) setWorking(at);
+      // Buildings with agents at work open first, at any distance in view; the nearest others fill the rest.
+      const busy = cands.filter((c) => at.has(c.key) && seen(c)).sort((a, b) => Math.hypot(a.x - camera.position.x, a.z - camera.position.z) - Math.hypot(b.x - camera.position.x, b.z - camera.position.z)).map((c) => c.key);
+      const next = pickInside(cands.filter((c) => !busy.includes(c.key)), camera.position, seen, { ...limits, near: Math.max(0, limits.near - busy.length) }, tiers, focus?.key ?? selected);
+      next.near = [...busy.slice(0, limits.near), ...next.near].slice(0, limits.near);
+      next.mid = [...busy.slice(limits.near), ...next.mid].slice(0, limits.mid);
       if (focus && !next.near.includes(focus.key)) {
         next.near = [focus.key, ...next.near].slice(0, Math.max(1, limits.near));
         next.mid = next.mid.filter((k) => k !== focus.key);
@@ -416,29 +433,130 @@ export function InsideView({ on: toolbar, models = NO_MODELS, towers, offices, l
       <Rising items={parts.lamp} geometry={BALL} material={MAT.lamp} rise={rise} floorY={y} shadow={false} />
       <Rising items={parts.marker} geometry={GEM} material={MAT.lamp} rise={rise} floorY={y} shadow={false} />
       {walls.map((m) => (
-        <OfficeWalls key={m.key} m={m} y={levelY(levels.get(m.key) ?? m.officeFloors[0].level)} />
+        <OfficeInterior key={m.key} m={m} level={levels.get(m.key) ?? m.officeFloors[0].level} />
       ))}
     </group>
   );
 }
 
-/**
- * The open floor's back and left walls (OfficeEnvironment's cutaway walls), at the building's
- * scale. Each steps aside while the camera looks in from its side, as inside the building (CutawayWall).
- */
-function OfficeWalls({ m, y }: { m: BuildingModel; y: number }) {
-  const w = m.plate;
-  const h = Math.min(1.5 * m.k, m.floorH * 0.8);
-  const T = 0.16 * m.k;
-  const center = useMemo(() => ({ x: m.x, z: m.z }), [m.x, m.z]);
+const CYL = new THREE.CylinderGeometry(0.5, 0.42, 1, 10);
+const LEAF = new THREE.IcosahedronGeometry(0.5, 0);
+const Bx = ({ p, s: z, m }: { p: [number, number, number]; s: [number, number, number]; m: THREE.Material }) => <mesh geometry={BOX} material={m} position={p} scale={z} castShadow receiveShadow />;
+function Plant({ p, s: k }: { p: [number, number, number]; s: number }) {
   return (
-    <group>
+    <group position={p} scale={k}>
+      <mesh geometry={CYL} material={MAT.pot} position={[0, 0.22, 0]} scale={[0.42, 0.44, 0.42]} castShadow />
+      <mesh geometry={LEAF} material={MAT.leaf} position={[0, 0.72, 0]} scale={[0.62, 0.7, 0.62]} castShadow />
+      <mesh geometry={LEAF} material={MAT.leaf2} position={[0.12, 1.02, 0.05]} scale={[0.4, 0.46, 0.4]} rotation={[0.4, 0.6, 0]} castShadow />
+    </group>
+  );
+}
+
+/**
+ * The open floor's room, drawn like the office inside "Enter building" (OfficeEnvironment): back
+ * and left walls with their windows, trim and the wall display, the low sills on the street and
+ * right sides, the rug under the desks, the server rack and plants, the lift's doors in the core;
+ * on the lobby, a reception desk, sofas and planting by the door. In office units, scaled to the
+ * building (buildingModel.ts), its storey's height capping the walls. The accent strip is the
+ * building's own colour. Each full wall steps aside while the camera looks in from its side.
+ */
+function OfficeInterior({ m, level }: { m: BuildingModel; level: number }) {
+  const w = m.plate / m.k, d = w;
+  const H = Math.min(2.7, (0.92 * m.floorH) / m.k);
+  const T = 0.16;
+  const f = H / 2.7;
+  const center = useMemo(() => ({ x: m.x, z: m.z }), [m.x, m.z]);
+  const accent = useMemo(() => {
+    const mat = MAT.accent.clone();
+    mat.color.set(m.accent);
+    return mat;
+  }, [m.accent]);
+  useEffect(() => () => accent.dispose(), [accent]);
+  const leftWins = [-d / 3, 0, d / 3];
+  const backWins = [-w / 2 + w * 0.17, -w * 0.05];
+  const winH = 1.3 * f, winY = 1.55 * f;
+  // The lift core in office units (the same corner on every floor), and its doors facing the landing.
+  const cx = (m.core.x - m.x) / m.k, cz = (m.core.z - m.z) / m.k;
+  const lobby = level === 0;
+  const ly = (m.door.lobby[2] - m.z) / m.k, lx = (m.door.lobby[0] - m.x) / m.k;
+  return (
+    <group position={[m.x, levelY(level), m.z]} scale={m.k}>
+      {!lobby && <Bx p={[0, 0.006, 0.25]} s={[Math.min(w - 2.6, 8.2), 0.012, Math.min(d - 3, 6.2)]} m={MAT.rug} />}
+      {lobby && <Bx p={[lx, 0.006, ly - 1.6]} s={[3.2, 0.012, 2.4]} m={MAT.rug} />}
       <CutawayWall side="back" center={center}>
-        <mesh geometry={BOX} material={MAT.wall} position={[m.x, y + h / 2, m.z - w / 2]} scale={[w, h, T]} castShadow receiveShadow />
+        <Bx p={[0, 0.45 * f, -d / 2 - T / 2]} s={[w + T * 2, 0.9 * f, T]} m={MAT.wall} />
+        <Bx p={[0, H - 0.25 * f, -d / 2 - T / 2]} s={[w + T * 2, 0.5 * f, T]} m={MAT.wall} />
+        {[-w / 2 - T, ...backWins.map((x) => x + 0.65)].map((start, i) => {
+          const end = i < backWins.length ? backWins[i] - 0.65 : w / 2 + T;
+          return end > start ? <Bx key={i} p={[(start + end) / 2, winY, -d / 2 - T / 2]} s={[end - start, winH, T]} m={MAT.wall} /> : null;
+        })}
+        {backWins.map((x) => (
+          <group key={x} position={[x, winY, -d / 2 + 0.005]}>
+            <Bx p={[0, 0, 0.02]} s={[1.18, winH - 0.12, 0.02]} m={MAT.pane} />
+            <Bx p={[0, 0, 0.04]} s={[0.04, winH - 0.12, 0.02]} m={MAT.frame} />
+          </group>
+        ))}
+        <Bx p={[0, H + 0.03, -d / 2 - T / 2]} s={[w + T * 2 + 0.04, 0.06, T + 0.04]} m={MAT.trim} />
+        {/* The building's colour along the wall, and the wall display (its screen stays dark: no pretend figures). */}
+        <Bx p={[0, 0.95 * f, -d / 2 + 0.01]} s={[w, 0.05, 0.02]} m={accent} />
+        {!lobby && <Bx p={[w * 0.15, 1.6 * f, -d / 2 + 0.04]} s={[2.5, 1.3 * f, 0.06]} m={MAT.dark} />}
       </CutawayWall>
       <CutawayWall side="left" center={center}>
-        <mesh geometry={BOX} material={MAT.wall} position={[m.x - w / 2, y + h / 2, m.z]} scale={[T, h, w]} castShadow receiveShadow />
+        <Bx p={[-w / 2 - T / 2, 0.45 * f, 0]} s={[T, 0.9 * f, d]} m={MAT.wall} />
+        <Bx p={[-w / 2 - T / 2, H - 0.25 * f, 0]} s={[T, 0.5 * f, d]} m={MAT.wall} />
+        {[-d / 2, ...leftWins.map((z) => z + 0.75)].map((start, i) => {
+          const end = i < leftWins.length ? leftWins[i] - 0.75 : d / 2;
+          return end > start ? <Bx key={i} p={[-w / 2 - T / 2, winY, (start + end) / 2]} s={[T, winH, end - start]} m={MAT.wall} /> : null;
+        })}
+        {leftWins.map((z) => (
+          <group key={z} position={[-w / 2 + 0.005, winY, z]}>
+            <Bx p={[0.02, 0, 0]} s={[0.02, winH - 0.12, 1.38]} m={MAT.pane} />
+            <Bx p={[0.04, 0, 0]} s={[0.02, winH - 0.12, 0.04]} m={MAT.frame} />
+          </group>
+        ))}
+        <Bx p={[-w / 2 - T / 2, H + 0.03, 0]} s={[T + 0.04, 0.06, d]} m={MAT.trim} />
+        <Bx p={[-w / 2 + 0.01, 0.95 * f, 0]} s={[0.02, 0.05, d]} m={accent} />
       </CutawayWall>
+      {/* The street and right sides are cut down to a sill with a trim cap, as inside. */}
+      <Bx p={[0, 0.16, d / 2 + T / 2]} s={[w + T * 2, 0.32, T]} m={MAT.wall} />
+      <Bx p={[w / 2 + T / 2, 0.16, 0]} s={[T, 0.32, d]} m={MAT.wall} />
+      <Bx p={[0, 0.34, d / 2 + T / 2]} s={[w + T * 2 + 0.04, 0.04, T + 0.04]} m={MAT.trim} />
+      <Bx p={[w / 2 + T / 2, 0.34, 0]} s={[T + 0.04, 0.04, d]} m={MAT.trim} />
+      {/* The lift: its doors on the landing side of the core, in a dark frame. */}
+      <group position={[cx, 0, cz + CORE / 2 + 0.01]}>
+        <Bx p={[0, 0.95 * f, 0]} s={[0.9, 1.9 * f, 0.03]} m={MAT.frame} />
+        <Bx p={[0, 0.95 * f, 0.02]} s={[0.03, 1.8 * f, 0.02]} m={MAT.dark} />
+        <Bx p={[0, 1.95 * f, 0.01]} s={[0.9, 0.06, 0.03]} m={accent} />
+      </group>
+      {lobby ? (
+        <>
+          {/* Reception facing the door, a sofa either side, planting by the entrance. */}
+          <Bx p={[lx, 0.55, ly - 2.4]} s={[2.4, 1.1, 0.7]} m={MAT.oak} />
+          <Bx p={[lx, 1.12, ly - 2.4]} s={[2.5, 0.05, 0.8]} m={accent} />
+          {[-1, 1].map((sx) => (
+            <group key={sx} position={[lx + sx * 2.8, 0, ly - 0.9]}>
+              <Bx p={[0, 0.22, 0]} s={[1.6, 0.44, 0.7]} m={MAT.chair} />
+              <Bx p={[0, 0.55, -0.3]} s={[1.6, 0.5, 0.12]} m={MAT.chair} />
+            </group>
+          ))}
+          <Plant p={[lx - 1.6, 0, ly - 0.2]} s={0.9} />
+          <Plant p={[lx + 1.6, 0, ly - 0.2]} s={0.9} />
+          <Plant p={[-w / 2 + 0.7, 0, -d / 2 + 0.7]} s={1.1} />
+        </>
+      ) : (
+        <>
+          {/* The server rack in the back corner: its lights are decoration, not telemetry. */}
+          <group position={[-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
+            <Bx p={[0, 0.95 * f, 0]} s={[0.62, 1.9 * f, 0.62]} m={MAT.dark} />
+            {[0.5, 0.8, 1.1, 1.4].map((y) => (
+              <mesh key={y} geometry={BOX} material={MAT.led} position={[-0.2, y * f, 0.32]} scale={[0.03, 0.03, 0.01]} />
+            ))}
+          </group>
+          <Plant p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
+          <Plant p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
+          <Plant p={[w / 2 - 0.5, 0, d / 2 - 0.5]} s={0.8} />
+        </>
+      )}
     </group>
   );
 }

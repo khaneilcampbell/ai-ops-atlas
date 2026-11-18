@@ -93,7 +93,7 @@ for (const width of [1512, 390])
       const card = page.locator(".m3-agent-task");
       await expect(card).toContainText(NAME);
       if (m.office) {
-        await card.getByRole("button", { name: "Locate agent" }).click();
+        await card.getByRole("button", { name: "View office" }).click();
         await settle(page, 6);
         const zoom = page.getByRole("button", { name: "Zoom in", exact: true });
         if (await zoom.isVisible()) for (let i = 0; i < 3; i++) await zoom.click();
