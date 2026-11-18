@@ -8,7 +8,7 @@ vi.stubGlobal("localStorage", {
   clear: () => data.clear(),
 });
 
-const { capScale, DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
+const { capScale, DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, isSoundPrefsKey, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
 const { executiveJetPose, fleetPose, FLIGHT_SCHEDULE } = await import("../views/map3d/flightSchedule");
 
 beforeEach(() => data.clear());
@@ -176,5 +176,12 @@ describe("jet noise cap", () => {
     const levels = [0.4, 0.4, 0.3];
     const scale = capScale(levels, 0.35);
     expect(levels.reduce((n, l) => n + l * scale, 0)).toBeCloseTo(0.35);
+  });
+});
+
+describe("sound preference across tabs", () => {
+  it("recognises the saved preference's storage key and nothing else", () => {
+    expect(isSoundPrefsKey("atlas:citySound")).toBe(true);
+    expect(isSoundPrefsKey("atlas:mapLens")).toBe(false);
   });
 });
