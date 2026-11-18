@@ -1,0 +1,1 @@
+- 2026-11-18 · The map has one Map view menu: By district, Agent network or Automation flow. Infrastructure view and the Group projects menu are merged into By district, because neither changed the map on its own any more (#PR)

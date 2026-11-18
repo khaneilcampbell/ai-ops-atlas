@@ -18,7 +18,7 @@ import type { LightMode } from "./map3d/living";
 import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { useRuntimes } from "./office/activity";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
-import { LENS_INFO, LENS_TYPES, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
+import { LENS_INFO, LENS_TYPES, lensLinks, lensNeeds3d, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
@@ -400,7 +400,6 @@ function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scal
 const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", paused: "pause", attention: "alert", retired: "close" };
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const repoShort = (name: string) => name.split("/")[1] ?? name;
-const GROUP_LABEL: Record<GroupBy, string> = { district: "By district", none: "No grouping", status: "By status", tag: "By tag" };
 
 /** Where things sit in world space, for camera moves, hit lookups and keyboard navigation. */
 function anchors(districts: District[], parks: Park[]) {
@@ -438,7 +437,9 @@ export function MapView({active=true}:{active?:boolean}) {
   }, [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
+  // District names are on unless "none" was saved (the old "No grouping"; visual tests still use it for
+  // clean screenshots). By status and By tag drew the same names as By district, so they read as district.
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => (load<GroupBy>("mapProjectGrouping", "district") === "none" ? "none" : "district"));
   const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
   const assignments = usePresenceAssignments();
   const jobs = useMemo(() => agentJobs(catalog, assignments), [catalog, assignments]);
@@ -509,6 +510,8 @@ export function MapView({active=true}:{active?:boolean}) {
     const saved = load<MapLens>("mapLens", "infrastructure");
     return MAP_LENSES.includes(saved) ? saved : "infrastructure";
   });
+  // The flat map draws no connection lines, so it always reads as "By district"; the saved 3D view returns with 3D.
+  const shownLens: MapLens = is3d ? lens : "infrastructure";
   const setLens = (l: MapLens) => {
     setLensState(l);
     save("mapLens", l);
@@ -1209,10 +1212,12 @@ export function MapView({active=true}:{active?:boolean}) {
           )}
 
           <div className="map-controls">
-            <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
-              title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
-            <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Keep district locations and clean district names; no grouping hides district headings" />
+            {/* One menu for the city's view. "By district" brings back the district names as well as the
+                quiet infrastructure lines, so picking it always changes something you can see. */}
+            <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label}
+              onChange={(l) => { setLens(l); if (l === "infrastructure") setGroupBy("district"); }}
+              optionDisabled={(l) => !is3d && lensNeeds3d(l)}
+              title={is3d ? LENS_INFO[shownLens].hint : "The flat map shows the city by district. Agent network and Automation flow need the 3D map."} />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>

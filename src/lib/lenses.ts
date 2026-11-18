@@ -1,14 +1,16 @@
 import type { ConnectionType } from "../catalog/types";
 
-// The map's three views. Each decides which of the catalog's connections are drawn; none adds a
-// connection of its own. Infrastructure keeps the map quiet: lines only for the building in hand,
-// or all of them when "Show connections" is on.
+// The map's three views, in one "Map view" menu. Each decides which of the catalog's connections
+// are drawn; none adds a connection of its own. "By district" (key "infrastructure", kept so saved
+// choices still load) is the default city: district names on, and lines only for the building in
+// hand, or all of them when "Show connections" is on. It replaced the separate Infrastructure view
+// and "Group projects" menus, which no longer changed the map on their own.
 
 export const MAP_LENSES = ["infrastructure", "agents", "automations"] as const;
 export type MapLens = (typeof MAP_LENSES)[number];
 
 export const LENS_INFO: Record<MapLens, { label: string; hint: string; empty: string }> = {
-  infrastructure: { label: "Infrastructure view", hint: "Select a building to see its connections", empty: "" },
+  infrastructure: { label: "By district", hint: "The city by district. Select a building to see its connections", empty: "" },
   agents: { label: "Agent network", hint: "Links between agents, from registry dependencies", empty: "No agent links declared yet" },
   automations: { label: "Automation flow", hint: "Repositories to the automations they host, and n8n flows", empty: "No automations with a source or workflow yet" },
 };
@@ -21,6 +23,9 @@ export const LENS_TYPES: Record<MapLens, readonly ConnectionType[]> = {
   // GitHub here: the repository that hosts each automation's source or workflow.
   automations: ["github", "n8n"],
 };
+
+/** Views that draw a network of lines; they need the 3D map. "By district" works in both. */
+export const lensNeeds3d = (lens: MapLens) => lens !== "infrastructure";
 
 export interface LensLink {
   id: string;
