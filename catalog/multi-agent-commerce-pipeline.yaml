@@ -49,7 +49,7 @@ agents:
       - 'Resend API: approval and failure emails to Khaneil only'
       - 'n8n data table commerce_products: reads ideas, writes drafts'
     registry:
-      title: Commerce Operations Coordinator
+      title: Commerce Design Run
       tier: coordinator
       category: business
       subcategory: Workflow orchestration
@@ -644,7 +644,7 @@ agents:
       - 'Stripe restricted key: write access to products, prices and payment links only'
       - 'n8n data tables: writes commerce_products and shop_settings'
     registry:
-      title: Product Publishing Coordinator
+      title: Approve and Publish
       category: business
       subcategory: Workflow automation
       classification:
@@ -858,7 +858,7 @@ agents:
       - 'Resend API: buyer emails on benjaire.com'
       - 'n8n data tables: reads shop_settings, writes orders'
     registry:
-      title: Digital Fulfillment Coordinator
+      title: Order Delivery
       category: business
       subcategory: Order fulfillment
       classification:
@@ -943,7 +943,7 @@ agents:
       - 'Resend API: weekly email to Khaneil only'
       - 'n8n data table commerce_products: reads live products'
     registry:
-      title: Sales Reporting Specialist
+      title: Shop Page and Weekly Sales
       category: business
       subcategory: Sales reporting
       classification:
@@ -1228,7 +1228,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Commerce Quality Engineer
+      title: Commerce Pipeline Tests
       category: engineering
       subcategory: CI/CD
       classification:

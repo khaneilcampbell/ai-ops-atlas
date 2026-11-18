@@ -16,24 +16,24 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 
 | Agent | Owning project | Building | Floor / room | Workspace readiness | Workflow readiness |
 |---|---|---|---|---|---|
-| Build and Release Engineer (`atlas-ci`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Atlas CI (`atlas-ci`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Repository Intelligence Analyst (`repo-intelligence`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Senior Engineering Reviewer (`atlas-engineering-review`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| CI Recovery Specialist (`atlas-rerun-failed`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Pull Request Integration Coordinator (`atlas-merge-pr`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Re-run Failed Jobs (`atlas-rerun-failed`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Merge Pull Request (`atlas-merge-pr`) | ai-ops-atlas | Atlas HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Atlas Production Coordinator (`atlas-production-coordinator`) | ai-ops-atlas | Atlas HQ | 3 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Inquiry Routing Coordinator (`benjaire-contact-worker`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Client Intake Specialist (`benjaire-flow-intake`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Client Reply Assistant (`benjaire-inquiry-to-client`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Website Quality Engineer (`benjaire-site-ci`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Contact Form Worker (`benjaire-contact-worker`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Flow Intake (`benjaire-flow-intake`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Inquiry to Client (`benjaire-inquiry-to-client`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Benjaire Site CI (`benjaire-site-ci`) | benjaire-site | Benjaire HQ | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Portfolio Web Developer (`site-builder`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Website Quality Auditor (`site-audit`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Website Security Analyst (`security-check`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Portfolio Quality Engineer (`site-ci`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Merge Flow Coordinator (`github-merge-flow`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Site Audit (`site-audit`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Website Security Check (`security-check`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Portfolio Site CI (`site-ci`) | portfolio-site | Portfolio Site | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Merge Flow (`github-merge-flow`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Opportunity Scout (`github-opportunity-scout`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Design Consistency (`github-design-consistency`) | github-profile | Profile Tower | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Commerce Operations Coordinator (`commerce-loop`) | commerce-pipeline | Atlas Marketplace | 1 / 102 | Assigned | Building workflow planned |
+| Commerce Design Run (`commerce-loop`) | commerce-pipeline | Atlas Marketplace | 1 / 102 | Assigned | Building workflow planned |
 | Product Opportunity Analyst (`niche-scout`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Market Research Analyst (`market-analyst`) | commerce-pipeline | Atlas Marketplace | 1 / 103 | Assigned | Building workflow planned |
 | Brand Strategist (`brand-strategist`) | commerce-pipeline | Atlas Marketplace | 1 / 104 | Assigned | Building workflow planned |
@@ -41,19 +41,19 @@ Workplace placement, roster lookup and inspectors use the agent manifest's workp
 | Brand Copywriter and SEO Strategist (`copy-strategist`) | commerce-pipeline | Atlas Marketplace | 1 / 105 | Assigned | Building workflow planned |
 | Product Launch Planner (`launch-planner`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Product Visualization Designer (`canva-mockups`) | commerce-pipeline | Atlas Marketplace | 1 / 106 | Assigned | Building workflow planned |
-| Product Publishing Coordinator (`shopify-publisher`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Approve and Publish (`shopify-publisher`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Search Optimization Specialist (`seo-maintainer`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Pipeline Health Analyst (`health-report`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Digital Fulfillment Coordinator (`order-delivery`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Sales Reporting Specialist (`sales-sync`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Order Delivery (`order-delivery`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Shop Page and Weekly Sales (`sales-sync`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Operations Reporting Coordinator (`email-digest`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 | Database Backup Specialist (`db-backup`) | commerce-pipeline | Commerce Pipeline | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Commerce Quality Engineer (`commerce-tests`) | commerce-pipeline | Atlas Marketplace | 1 / 107 | Assigned | Building workflow planned |
-| Technical Documentation Specialist (`docs-builder`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Documentation Quality Engineer (`hub-ci`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Security Case Documentation Specialist (`soc-case-notes`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Threat Detection Analyst (`bruteforce-detection`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
-| Detection Quality Engineer (`soc-lab-ci`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Commerce Pipeline Tests (`commerce-tests`) | commerce-pipeline | Atlas Marketplace | 1 / 107 | Assigned | Building workflow planned |
+| Docs Builder (`docs-builder`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Hub CI (`hub-ci`) | intelligence-hub | Intelligence Hub | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| SOC Case Notes (`soc-case-notes`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| Brute Force Detection Search (`bruteforce-detection`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
+| SOC Lab CI (`soc-lab-ci`) | soc-lab | SOC Lab | 4 / Project desk | Existing project desk retained | Existing configuration preserved; see recorded Output |
 
 ## Unassigned and intentionally empty spaces
 

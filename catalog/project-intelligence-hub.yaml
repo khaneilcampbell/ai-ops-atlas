@@ -29,7 +29,7 @@ agents:
     permissions:
       - Reads Source/ and writes DOCX files in the project folder; no network
     registry:
-      title: Technical Documentation Specialist
+      title: Docs Builder
       category: engineering
       subcategory: Documentation
       classification:
@@ -97,7 +97,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Documentation Quality Engineer
+      title: Hub CI
       category: engineering
       subcategory: CI/CD
       classification:
@@ -189,7 +189,7 @@ agents:
       - 'Google Sheets: reads and writes the Atlas Agent Registry sheet only'
       - 'Anthropic API: one Claude call a week for the Top 10 ranking, capped at $3 per 30 days'
     registry:
-      title: Agent Registry Clerk
+      title: Agent Registry Sync
       category: engineering
       subcategory: Workflow automation
       automation_category: maintenance       # B since the Top 10 ranking step; keeps its place beside the registry sync's other upkeep

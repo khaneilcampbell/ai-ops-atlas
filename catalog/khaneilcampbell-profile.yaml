@@ -44,7 +44,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 briefs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Merge Flow Coordinator
+      title: Merge Flow
       category: engineering
       subcategory: Code review and release
       classification:

@@ -32,7 +32,7 @@ agents:
       - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
       - 'Protected macos-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
-      title: Build and Release Engineer
+      title: Atlas CI
       category: engineering
       subcategory: CI/CD
       classification:
@@ -290,7 +290,7 @@ agents:
     last_run: null
     permissions: [Actions write on repositories selected in the token and in Settings]
     registry:
-      title: CI Recovery Specialist
+      title: Re-run Failed Jobs
       category: engineering
       subcategory: CI/CD operations
       classification:
@@ -358,7 +358,7 @@ agents:
     last_run: null
     permissions: [Pull requests and Contents write on one repository per token, for repositories ticked in Settings]
     registry:
-      title: Pull Request Integration Coordinator
+      title: Merge Pull Request
       category: engineering
       subcategory: Code review and release
       classification:
