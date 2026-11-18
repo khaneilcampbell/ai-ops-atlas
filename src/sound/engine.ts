@@ -127,13 +127,6 @@ export class CityAudio {
     void ctx.suspend().catch(() => {});
   }
 
-  /** Stops for good and releases the audio device (a live reload in development replaces the engine). */
-  close() {
-    this.stop();
-    void this.ctx?.close().catch(() => {});
-    this.ctx = null;
-  }
-
   get playing() {
     return this.running;
   }
@@ -659,7 +652,3 @@ export function cityAudio(): CityAudio {
   if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __citySound?: CityAudio }).__citySound = engine;
   return engine;
 }
-
-// A live reload in development loads a fresh copy of this file with its own engine. Close the old
-// one, or its sound would carry on where the mute button can no longer reach it.
-if (import.meta.hot) import.meta.hot.dispose(() => engine?.close());
