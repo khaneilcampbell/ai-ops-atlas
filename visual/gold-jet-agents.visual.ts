@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { openAtlas, settle, waitForScene } from "./atlas";
@@ -6,8 +6,10 @@ import { openAtlas, settle, waitForScene } from "./atlas";
 // Agents ride the Atlas Gold Jet in their free time (routinePlaces.ts flight, routinePose.ts): this waits for the
 // first agent aboard, opens its card and follows it. Motion is switched on, since the jet only flies with it.
 // Review shots, not baselines: JET_SHOTS=<dir> npx playwright test -c visual/local-chromium.config.ts visual/gold-jet-agents.visual.ts
-const out = process.env.JET_SHOTS ?? join(import.meta.dirname, "out", "gold-jet-agents");
-const AT = Date.parse("2026-11-18T19:00:00Z");
+const out = process.env.JET_SHOTS ?? "";
+test.skip(!out, "Set JET_SHOTS to a folder to take these review shots");
+// Just before Yusuf Demir (agent-operations-lead) heads out for a flight in its free time.
+const AT = Date.parse("2026-11-18T12:00:30Z");
 
 async function routine(page: Page) {
   return page.evaluate(async () => {
@@ -21,7 +23,7 @@ async function routine(page: Page) {
 
 for (const width of [1512, 390])
   test(`Agent aboard the Atlas Gold Jet ${width}`, async ({ page }) => {
-    test.setTimeout(900_000);
+    test.setTimeout(1_700_000);
     mkdirSync(out, { recursive: true });
     const phone = width < 600;
     await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -32,11 +34,11 @@ for (const width of [1512, 390])
     await expect
       .poll(
         async () => {
-          await settle(page, 20);
+          await settle(page, 10);
           rider = (await routine(page)).find((a) => a.place.startsWith("Aboard the Atlas Gold Jet"));
           return rider?.id ?? null;
         },
-        { timeout: 800_000, intervals: [0] },
+        { timeout: 1_500_000, intervals: [0] },
       )
       .not.toBeNull();
     console.log(`${width}: ${rider!.id} · ${rider!.place}`);

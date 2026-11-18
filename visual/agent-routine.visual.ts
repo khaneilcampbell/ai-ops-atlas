@@ -10,7 +10,8 @@ import { openAtlas, settle, waitForScene } from "./atlas";
 // workflow doesn't keep successful runs yet (n8n setting, awaiting Khaneil's OK); the fixture shows
 // them as it will once it does. Her desk is in Atlas Command Center, which opens in Inside. Review shots,
 // not baselines: ROUTINE_SHOTS=<dir> npx playwright test -c visual visual/agent-routine.visual.ts
-const out = process.env.ROUTINE_SHOTS ?? join(import.meta.dirname, "out", "agent-routine");
+const out = process.env.ROUTINE_SHOTS ?? "";
+test.skip(!out, "Set ROUTINE_SHOTS to a folder to take these review shots");
 const AGENT = "atlas-health-monitor", NAME = "Priya Raman", OFFICE = "project:ai-ops-atlas";
 const SCHEDULED = Date.parse("2026-10-28T11:20:00Z"); // 7:20 in New York (daylight time)
 const MIN = 60_000;
