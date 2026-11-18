@@ -349,6 +349,11 @@ agents:
     status: active
     trigger: 'Schedule: 09:00 ET on the 1st of each month (task "Monthly next-product report")'
     last_run: 2026-11-11T07:11:23Z
+    links:
+      # The agent's read_shop_sales and propose_shop_product tools run this workflow (agent config read
+      # 2026-11-18). It is a draft in n8n because only the agent calls it; it has no trigger of its own.
+      - label: 'n8n workflow: Commerce · Product Lab hand-off (draft, the agent''s shop tools)'
+        url: https://khancam15.app.n8n.cloud/workflow/ABtXhTwIRF9FkNGv
     permissions:
       - 'Gmail tool email_kc_report: sends only to benjaireco@gmail.com (n8n Gmail credential)'
       - 'Notion MCP server: creates or updates Product Lab pages (n8n Notion credential)'
