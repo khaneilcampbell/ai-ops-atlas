@@ -113,7 +113,7 @@ agents:
     const watched = catalog.agents.filter((a) => a.alerts);
     expect(watched.map((a) => a.id).sort()).toEqual([
       "benjaire-contact-worker", "benjaire-flow-digest", "benjaire-flow-intake", "benjaire-flow-missed-runs", "benjaire-flow-reminders", "benjaire-flow-status",
-      "benjaire-shop-delivery", "benjaire-shop-follow-ups", "dataset-census", "marketplace-steward", "order-delivery", "sales-sync", "shopify-publisher", "signal-watch",
+      "benjaire-shop-delivery", "benjaire-shop-follow-ups", "dataset-census", "order-delivery", "sales-sync", "shopify-publisher",
     ]);
     for (const a of watched) {
       expect(a.observe?.agentFeed).toBe(true);
