@@ -1,0 +1,1 @@
+- 2026-11-18 · Building agents now start on a reliable Cloudflare clock, so Marketplace Steward and Signal Watch stop showing false Stale alerts when GitHub skips scheduled runs (#464)

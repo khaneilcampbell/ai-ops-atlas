@@ -552,7 +552,7 @@ agents:
     owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
-    trigger: Every hour, or by hand
+    trigger: Every hour via a Cloudflare Cron Trigger (GitHub schedule as backup), or by hand
     source: ops/building-agents/agents.py
     observe:
       agent_feed: true
@@ -637,7 +637,7 @@ agents:
     owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
-    trigger: Every 30 minutes, or by hand
+    trigger: Every 30 minutes via a Cloudflare Cron Trigger (GitHub schedule as backup), or by hand
     source: ops/building-agents/agents.py
     observe:
       agent_feed: true
@@ -722,7 +722,7 @@ agents:
     owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
-    trigger: Every 3 hours, or by hand
+    trigger: Every 3 hours via a Cloudflare Cron Trigger (GitHub schedule as backup), or by hand
     source: ops/building-agents/agents.py
     observe:
       agent_feed: true
