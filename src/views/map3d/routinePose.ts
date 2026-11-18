@@ -116,6 +116,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     const p = riderPoint(c.places, kind, c.personaId, c.wall, c.yacht);
     if (!p) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
     if (kind === "wheel") return at(p[0], p[1], p[2], 0, { sit: 1, place: `${spot.label}, ${seg.times.seat ?? "a cabin"}` });
+    // The gold jet: aboard in the cabin, the badge riding on the jet round its loop.
+    if (kind === "jet") return { x: p[0], y: p[1], z: p[2], yaw: 0, figure: false, badge: [p[0] + place5(c.slot).col * 0.12, p[1] + 0.8, p[2]], sit: 1, typing: false, walking: false, officeScale: null, place: "Aboard the Atlas Gold Jet" };
     if (kind === "train") return { x: p[0], y: p[1], z: p[2], yaw: 0, figure: false, badge: [p[0], p[1] + 0.35, p[2]], sit: 1, typing: false, walking: false, officeScale: null, place: `On the train, ${seg.times.seat ?? "a carriage"}` };
     // The yacht: on her aft deck wherever she is (never on the water).
     const yaw = c.yacht?.yaw ?? spot.yaw;

@@ -8,6 +8,8 @@ import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents } from "./namedAgentPlan";
 import { cabinAngle, cabinAtBottom, CityRoutes, planCityPlaces, riderPoint, routineEnv, WHEEL_TURN_MS } from "./routinePlaces";
 import { buildScene } from "./scene";
+import { FLIGHT_SCHEDULE } from "./flightSchedule";
+import { goldJetState, goldJetTrip } from "./goldJetPlan";
 
 const scene = buildScene(layoutMap(catalog));
 const jobs = agentJobs(catalog);
@@ -37,7 +39,7 @@ describe("city places for the routine", () => {
 
   it("offers every listed outing that this layout has", () => {
     const kinds = new Set(places.leisure.map((o) => o.kind));
-    for (const k of ["park", "district", "wheel", "train", "flight", "arena"] as const) expect(kinds.has(k), k).toBe(true);
+    for (const k of ["park", "district", "wheel", "train", "flight", "jet", "arena"] as const) expect(kinds.has(k), k).toBe(true);
   });
 
   it("walks home to office on the streets for every agent", () => {
@@ -82,5 +84,26 @@ describe("city places for the routine", () => {
         expect(p && p.every(Number.isFinite), `${a.personaId} ${s.note}`).toBe(true);
       }
     }
+  });
+
+  it("boards the Atlas Gold Jet while it boards, flies its loop aboard and steps off once it's back at the gate", () => {
+    const trip = goldJetTrip(1000)!;
+    expect(trip).toBeTruthy();
+    expect(goldJetState(trip.board).stage).toBe("boarding");
+    expect(goldJetState(trip.alight).stage).toBe("deplaning");
+    const stages = new Set<string>();
+    for (let t = trip.board; t < trip.alight; t += 1) stages.add(goldJetState(t).stage);
+    for (const st of ["pushback", "takeoff", "flight", "landing"]) expect(stages.has(st), st).toBe(true);
+    // One loop, give or take: never a ride that runs on for ages.
+    expect(trip.alight - trip.board).toBeLessThan(FLIGHT_SCHEDULE.cycle * 1.5);
+    const id = named.agents[0].personaId;
+    const env = routineEnv(routes, id, () => NOW)!;
+    const jet = places.leisure.find((o) => o.kind === "jet")!;
+    const times = env.ride(jet, NOW, id)!;
+    expect(times.board).toBeGreaterThanOrEqual(NOW);
+    expect(times.alight).toBeGreaterThan(times.board);
+    expect(env.rideExit(jet, times, times.board + 1000)).toBe(times.alight);
+    // Aboard: the rider is wherever the jet is.
+    expect(riderPoint(places, "jet", id, (times.board + times.alight) / 2)?.every(Number.isFinite)).toBe(true);
   });
 });

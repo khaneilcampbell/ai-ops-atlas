@@ -153,7 +153,7 @@ export function Airport({plan:a,g,m,pick,moving,bounds,flightAltitude,obstacles,
   useEffect(()=>()=>glazing.dispose(),[glazing]);
   const beam=useMemo(()=>new THREE.MeshBasicMaterial({color:'#fff1cc',transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
   useEffect(()=>()=>beam.dispose(),[beam]);
-  useFrame((_,dt)=>{if(animate)clock.current+=Math.min(dt,.1);goldJetLive.clock=clock.current;});
+  useFrame((_,dt)=>{if(animate){clock.current+=Math.min(dt,.1);goldJetLive.wall=Date.now();}goldJetLive.running=animate;goldJetLive.clock=clock.current;});
   // Polished gold for the private jet: a little metallic so it catches the sun, warm at night like the terminal glass.
   const goldMaterial=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',metalness:.3,roughness:.32}),[]);
   useEffect(()=>{goldMaterial.emissive.set('#5a4114');goldMaterial.emissiveIntensity=night?.4:.12;},[goldMaterial,night]);

@@ -24,8 +24,8 @@ export const ACTIVITY_LABEL: Record<CityActivity, string> = { walking: "Walking"
 export type WorkPhase = "heading" | "entering" | "to_desk" | "working" | "completed" | "leaving";
 export const PHASE_LABEL: Record<WorkPhase, string> = { heading: "Heading to office", entering: "Entering building", to_desk: "Going to desk", working: "Working", completed: "Task completed", leaving: "Leaving office" };
 
-export type LeisureKind = "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
-export const LEISURE_LABEL: Record<LeisureKind, string> = { park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "On a simulated flight", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
+export type LeisureKind = "park" | "district" | "train" | "flight" | "jet" | "yacht" | "wheel" | "arena" | "home";
+export const LEISURE_LABEL: Record<LeisureKind, string> = { park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "On a simulated flight", jet: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
 
 /** A place the agent can be: a door, a park bench, a platform. The map turns these into coordinates. */
 export type SpotId = string;
@@ -151,7 +151,7 @@ export const rand = (seed: string) => hashOf(seed) / 4294967296;
 
 /** Each agent's liking for each kind of outing, 0.2 to 1.2, fixed per agent. */
 export function preferences(personaId: string): Record<LeisureKind, number> {
-  const kinds: LeisureKind[] = ["park", "district", "train", "flight", "yacht", "wheel", "arena", "home"];
+  const kinds: LeisureKind[] = ["park", "district", "train", "flight", "jet", "yacht", "wheel", "arena", "home"];
   return Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) as Record<LeisureKind, number>;
 }
 
@@ -380,7 +380,7 @@ export function planRoutine(input: RoutineInput): Routine {
       }
       walkTo(pick.spot, "walking", null, `Walking to ${pick.label.toLowerCase()}`, pick);
       const room = scheduled !== null ? scheduled - cur.t - leadFrom({ spot: pick.exit }) : Infinity;
-      if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "yacht" || pick.kind === "wheel") {
+      if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "jet" || pick.kind === "yacht" || pick.kind === "wheel") {
         const times = env.ride(pick, cur.t, personaId);
         if (times && times.alight - cur.t <= Math.max(room, 0)) {
           push({ kind: "stay", t0: cur.t, t1: times.board, at: pick.spot, activity: "relaxing", phase: null, note: `In the queue for ${pick.label.toLowerCase()}`, option: pick });

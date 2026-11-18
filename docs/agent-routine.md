@@ -39,7 +39,7 @@ Planned in the New York time zone unless the workflow's own n8n setting says oth
 or a hidden tab picks up where it was without replaying a completion.
 
 1. Free time: the park, another district, the train, the yacht, the Ferris wheel, a simulated
-   flight, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
+   flight, a trip on the Atlas Gold Jet, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
    outing that would run into the next scheduled run.
 2. Heading to the office so it arrives just before a known scheduled run (at most 15 minutes ahead).
 3. Entering the building, going to its own desk (the desk the Inside view's office plan gives it).
@@ -56,7 +56,9 @@ runs, retries and overlapping runs share one desk visit and are all listed on th
 Waiting for approval holds the agent at its desk for 5 minutes, then it goes on with its day while
 the card keeps "Waiting for approval".
 
-Rides are city simulation only. No booking, ticket, purchase or external action exists anywhere.
+On the gold jet an agent walks through the terminal, boards while the jet boards at its gate, stays aboard
+through pushback, takeoff and the circuit (its badge rides on the jet) and steps off when it deplanes. With reduced
+motion the jet stands still, so nobody boards it. Rides are city simulation only. No booking, ticket, purchase or external action exists anywhere.
 
 ## On the map
 

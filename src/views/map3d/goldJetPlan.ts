@@ -125,4 +125,28 @@ export const GOLD_JET_SLOT_OK=GOLD_JET_SLOT!==SHARED_SLOT&&GOLD_JET_SLOT<FLIGHT_
  * The airport clock and circuit as the map last saw them, so the interior can pick the flight up where the map left it.
  * Written by the map's Airport frame loop; the cabin you ride in follows it.
  */
-export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean}={clock:0};
+export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean;/** Wall time (ms) the clock was last advanced. */wall?:number;/** False while the airport stands still (reduced motion, paused): the jet stays put. */running?:boolean}={clock:0};
+
+/** Airport clock seconds at a wall time, from the map's live clock (the airport advances it each frame). */
+export function airportClockAt(wall:number):number{if(goldJetLive.running===false)return goldJetLive.clock;return goldJetLive.wall?goldJetLive.clock+(wall-goldJetLive.wall)/1000:wall/1000;}
+/** Wall time (ms) of an airport clock time, by the same mapping. */
+export function wallOfAirport(clock:number,now:number):number{return now+(clock-airportClockAt(now))*1000;}
+
+/**
+ * An agent's trip on the gold jet (the agents' daily routine): it boards while the jet boards at its gate, at or after
+ * `clock`, stays aboard through pushback, takeoff, the circuit and landing, and steps off once the jet is back at the
+ * gate and deplaning. Airport clock seconds. City simulation only: no booking, ticket or real flight exists.
+ */
+export function goldJetTrip(clock:number,circuit?:FlightCircuit):{board:number;alight:number}|null{
+ const at=(t:number)=>goldJetState(t,circuit).stage;
+ let t=Math.ceil(clock);
+ const end=t+FLIGHT_SCHEDULE.cycle*2;
+ // Boarding, with time left before pushback: board on the next whole second it boards.
+ while(t<end&&!(at(t)==='boarding'&&at(t+6)==='boarding'))t++;
+ if(t>=end)return null;
+ const board=t;
+ // Through the flight, then off when it deplanes.
+ while(t<end&&at(t)!=='flight')t++;
+ while(t<end&&at(t)!=='deplaning')t++;
+ return t<end?{board,alight:t+3}:null;
+}

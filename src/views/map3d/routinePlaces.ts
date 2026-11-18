@@ -3,6 +3,7 @@ import type { Agent, Project } from "../../catalog/types";
 import type { Anchor, LeisureOption, RideTimes, RoutineEnv, SpotId } from "../../routine/routine";
 import { rand } from "../../routine/routine";
 import { airportPoint } from "./airport";
+import { airportClockAt, goldJetLive, goldJetMapPose, goldJetTrip, wallOfAirport } from "./goldJetPlan";
 import { buildingModels, deskJourney, type BuildingModel, type P3 } from "./buildingModel";
 import type { NamedAgent } from "./namedAgentPlan";
 import { PERIMETER_RAIL, loopPoint, type PerimeterRailPlan } from "./perimeterRailPlan";
@@ -85,6 +86,8 @@ export interface CityPlaces {
   /** Ride geometry the renderer needs to put riders aboard. */
   wheel?: { x: number; z: number; hubY: number; radius: number };
   train?: { loop: PerimeterRailPlan; from: number; to: number };
+  /** The airport, for putting gold jet riders aboard the jet wherever it is on its loop. */
+  jet?: { airport: { x: number; z: number; west?: boolean } };
   /** Yacht sailings on the train clock (travelLoops.ts), and her saloon door (where riders step aboard). */
   yacht?: { depart: number; period: number; aboard: Pt3 };
 }
@@ -191,6 +194,9 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
   if (air) {
     const front = airportPoint(air, -0.7, 6);
     opt({ id: "flight", kind: "flight", label: "On a simulated flight", spot: "flight", exit: "flight", stay: [0, 0] }, { id: "flight", label: "Atlas airport terminal", path: [street(front)], yaw: 0, inside: true });
+    // The Atlas Gold Jet: through the terminal, along the jet bridge while it boards, round its loop and back to the gate.
+    out.jet = { airport: { x: air.x, z: air.z, west: air.west } };
+    opt({ id: "jet", kind: "jet", label: "Flying on the Atlas Gold Jet", spot: "jet", exit: "jet", stay: [0, 0] }, { id: "jet", label: "Atlas airport terminal, gold jet gate", path: [street(front)], yaw: 0, inside: true });
   }
   const st = scene.stadium;
   if (st) {
@@ -327,6 +333,15 @@ export function routineEnv(routes: CityRoutes, personaId: string, now: () => num
           const depart = wallOfTrain(clock + (y.period - since), now());
           return { board: arrive + 4000, alight: depart + (TRAVEL.sail + 8) * 1000, seat: "aft deck" };
         }
+        case "jet": {
+          // A jet standing still (reduced motion, paused map) never boards: the agent watches it instead.
+          if (goldJetLive.running === false) return null;
+          // Twenty seconds through the terminal to the gate, then the jet's next boarding.
+          const trip = goldJetTrip(airportClockAt(arrive + 20_000), goldJetLive.circuit);
+          if (!trip) return null;
+          const n = now(), board = Math.max(arrive + 20_000, wallOfAirport(trip.board, n));
+          return { board, alight: Math.max(board, wallOfAirport(trip.alight, n)), seat: "Atlas Gold Jet cabin" };
+        }
         case "flight": {
           // The terminal, then a simulated flight on the airport's loop and back: city simulation only.
           const board = arrive + 15_000;
@@ -365,6 +380,10 @@ export function riderPoint(places: CityPlaces, kind: LeisureOption["kind"], pers
     }
     const q = loopPoint(loop, d);
     return [q.x, TERRACE_H + 0.95, q.z];
+  }
+  if (kind === "jet" && places.jet) {
+    const p = goldJetMapPose(places.jet.airport, airportClockAt(wall), goldJetLive.circuit);
+    return [p.x, TERRACE_H + 0.06 + p.y + 0.35, p.z];
   }
   if (kind === "yacht" && yachtPose && places.yacht) return [yachtPose.x, places.yacht.aboard[1] + 0.3, yachtPose.z];
   return null;

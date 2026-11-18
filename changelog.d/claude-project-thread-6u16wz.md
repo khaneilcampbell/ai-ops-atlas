@@ -1,1 +1,2 @@
 - 2026-11-18 · Agents now walk into their building through its real door, ride the lift to their floor and sit at their own desk at the same size as outside. "View inside" and "View office" open the building at that floor, drawn like the full office, and the toolbar's Agents at work button opens the buildings where agents are working, with a summary of who is there and the runs in progress.
+- 2026-11-18 · Agents can also ride the Atlas Gold Jet on their free time: they board at its gate, fly its loop with their badge on the jet, and step off when it lands.

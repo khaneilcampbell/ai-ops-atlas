@@ -1211,10 +1211,13 @@ function World({
     if (fp && !rideActive()) {
       wake(100);
       const k = 1 - Math.pow(0.04, Math.min(delta, 0.1));
-      const dx = (fp[0] - controls.target.x) * k, dz = (fp[2] - controls.target.z) * k;
+      // Height too, so an agent on an upper floor or aboard the gold jet stays in view.
+      const dx = (fp[0] - controls.target.x) * k, dy = (fp[1] - controls.target.y) * k, dz = (fp[2] - controls.target.z) * k;
       controls.target.x += dx;
+      controls.target.y += dy;
       controls.target.z += dz;
       camera.position.x += dx;
+      camera.position.y += dy;
       camera.position.z += dz;
       // Close enough to see the agent: ease in to a street-level distance, keeping the angle.
       const off = camera.position.clone().sub(controls.target), len = off.length();
