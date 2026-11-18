@@ -76,9 +76,15 @@ describe("health aggregation", () => {
     expect(aggregateHealth(["a"], { a: { kind: "loading" } }).lastRun).toBeUndefined();
   });
 
-  it("reads the Atlas repository for Product Marketplace, Observability Center and Data Intelligence Center", () => {
-    for (const id of ["atlas-marketplace", "airport-building:operations", "financial:residence"]) {
+  it("reads the Atlas repository for the Data Intelligence Center", () => {
+    for (const id of ["financial:residence"]) {
       expect(buildingAssets(landmark(id), catalog), id).toMatchObject({ projects: ["ai-ops-atlas"], repositories: ["khaneilcampbell/ai-ops-atlas"] });
+    }
+  });
+
+  it("gives the Product Marketplace and Observability Center no Atlas CI health since their agents were deleted", () => {
+    for (const id of ["atlas-marketplace", "airport-building:operations"]) {
+      expect(buildingAssets(landmark(id), catalog), id).toMatchObject({ projects: [], repositories: [] });
     }
   });
 });

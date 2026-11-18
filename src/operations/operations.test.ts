@@ -25,7 +25,7 @@ import { incidentOutputs, incidentStatus, incidentWorkflows } from "./workflow";
 
 const AT = "2026-11-17T12:00:00.000Z";
 const NOW = Date.parse(AT);
-const AGENT: Actor = { kind: "agent", id: "signal-watch", name: "Signal Watch" };
+const AGENT: Actor = { kind: "agent", id: "dataset-census", name: "Dataset Census" };
 
 const ev = (over: Partial<EventInput> = {}) =>
   makeEvent({ system: "integration", type: "integration.failing", project: null, correlationId: "integration:n8n", at: AT, severity: "medium", identity: "atlas-local", resource: "n8n", dedupKey: `signal:n8n:failing:${over.dedupKey ?? "1"}`, payload: { title: "n8n: failing", detail: "n8n answered 503" }, ...over });
@@ -197,7 +197,7 @@ describe("8. unauthorized execution prevention", () => {
     const p = s.snapshot().policies["refresh-status"];
     expect(s.setPolicy(AGENT, { ...p, enabled: true })).toMatch(/only Khaneil/);
     expect(s.snapshot().policies["refresh-status"].enabled).toBe(false);
-    expect(s.snapshot().audit.at(-1)).toMatchObject({ action: "policy_refused_agent", actor: "Signal Watch" });
+    expect(s.snapshot().audit.at(-1)).toMatchObject({ action: "policy_refused_agent", actor: "Dataset Census" });
     expect(s.setStop(AGENT, false, "")).toMatch(/only Khaneil/);
     expect(policyProblem(KHANEIL, { ...p, maxRetries: 99 })).toMatch(/Retries/);
     const forged = parseOps(JSON.stringify({ ...emptyOps(), policies: { "refresh-status": { ...p, enabled: true, maxRetries: 50 }, "delete-prod": { playbookId: "delete-prod", enabled: true } } }));

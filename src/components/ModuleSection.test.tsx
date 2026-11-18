@@ -35,10 +35,10 @@ it("shows the publishing pipeline in the Product Marketplace, with stages switch
   expect(html).not.toContain("No commerce agents");
 });
 
-it("reads Product Marketplace health from its operating agent's live reports, never CI alone", () => {
+it("has no operating agent in the Product Marketplace since Marketplace Steward was deleted, and never claims it healthy", () => {
   const html = render({ kind: "service", id: "atlas-marketplace" });
-  expect(html).toContain('aria-label="Live feed"');
-  expect(html).toContain("Marketplace Steward");
+  expect(html).not.toContain("Marketplace Steward");
+  expect(html).not.toContain('aria-label="Live feed"');
   expect(html).not.toContain("Healthy");
 });
 

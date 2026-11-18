@@ -25,10 +25,10 @@ export interface NetLink {
 type Hue = keyof typeof LINK_COLORS;
 /** "glow" is the soft sleeve around the selected or hovered link. */
 type Shade = LinkLevel | "glow";
-// Sized for the whole city in view: after the city grew, 0.035-wide lines at 0.22 opacity vanished
-// at the overview zoom, so picking a view changed nothing anyone could see.
+// Thin, pencil-like lines (Khaneil, Nov 18: the 0.17-wide tubes were too thick). They stay visible
+// with the whole city in frame because they are drawn near solid: at 0.22 opacity they vanished.
 export const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.92, weak: 0.78, dim: 0.06, glow: 0.2 };
-export const RADIUS = 0.17;
+export const RADIUS = 0.035;
 const MAX_PARTICLES = 160;
 const SPEED = 2.2; // world units per second
 
