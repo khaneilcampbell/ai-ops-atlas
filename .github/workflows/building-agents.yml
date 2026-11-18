@@ -3,6 +3,9 @@
 # live status. GET requests only; the feed token can only add reports. No model calls, no spend.
 name: Building agents
 
+# GitHub drops many scheduled runs (about 1 in 6 arrived in November 2026), so a Cloudflare Cron
+# Trigger (ops/building-agents/trigger) starts this workflow by workflow_dispatch on time. These
+# schedule lines stay as a backup; an extra run only adds one more report.
 on:
   schedule:
     - cron: "15,45 * * * *"  # signals: Signal Watch, Observability Center

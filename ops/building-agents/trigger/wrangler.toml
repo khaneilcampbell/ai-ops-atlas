@@ -1,0 +1,9 @@
+# Deploy from this folder: npx wrangler deploy, then npx wrangler secret put GITHUB_DISPATCH_TOKEN.
+name = "atlas-building-agents-trigger"
+main = "index.js"
+compatibility_date = "2026-11-01"
+workers_dev = false
+
+[triggers]
+# One trigger every quarter hour; index.js picks the checks due at each one.
+crons = ["*/15 * * * *"]
