@@ -1,7 +1,10 @@
 import { runWorking, walkShare, type Segment } from "../../routine/routine";
 import { RIG } from "./agentFigures";
 import { along } from "./railCommuters";
+import { goldJetRide } from "./goldJetIds";
+import { GOLD_JET_NAME, airportClockAt, goldJetLive, goldJetMapPose, goldJetState } from "./goldJetPlan";
 import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
+import { TERRACE_H } from "./scene";
 
 /**
  * Where and how one agent is drawn at a moment, from its routine segment (routine/routine.ts).
@@ -43,6 +46,8 @@ export interface PoseContext {
   open: ReadonlySet<string>;
   wall: number;
   yacht?: { x: number; z: number; yaw: number };
+  /** The airport clock now (seconds) and the jet's circuit; defaults to the map's live clock. */
+  jet?: { clock: number; circuit?: typeof goldJetLive.circuit };
   /** City figure scale for this agent (FIGURE_SCALE times its height). */
   scale: number;
 }
@@ -116,7 +121,18 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
 
   if (seg.kind === "ride") {
     const kind = seg.option.kind;
-    if (kind === "flight") return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: "On a simulated flight" };
+    if (kind === "flight") {
+      // Aboard the Atlas Gold Jet between stepping on and walking off: its badge rides the jet wherever it is.
+      const aboard = seg.times.seat === GOLD_JET_NAME && c.places.jet && c.wall >= seg.times.board && c.wall < seg.times.alight - 4000;
+      if (aboard && c.places.jet) {
+        const clock = c.jet?.clock ?? airportClockAt(c.wall), circuit = c.jet ? c.jet.circuit : goldJetLive.circuit;
+        const p = goldJetMapPose(c.places.jet, clock, circuit), y = TERRACE_H + p.y + 1.05;
+        // While you ride in the cabin yourself the badge would sit on the camera, so it is left out then.
+        return { x: p.x, y, z: p.z, yaw: p.yaw, figure: false, badge: goldJetRide.active ? null : [p.x, y, p.z], sit: 1, typing: false, walking: false, officeScale: null, place: `Aboard the ${GOLD_JET_NAME} · ${goldJetState(clock, circuit).label}` };
+      }
+      const where = seg.times.seat === GOLD_JET_NAME ? (c.wall < seg.times.board ? `Atlas airport terminal, waiting to board the ${GOLD_JET_NAME}` : `Atlas airport terminal, off the ${GOLD_JET_NAME}`) : spot.label;
+      return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: where };
+    }
     const p = riderPoint(c.places, kind, c.personaId, c.wall, c.yacht);
     if (!p) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
     if (kind === "wheel") return at(p[0], p[1], p[2], 0, { sit: 1, place: `${spot.label}, ${seg.times.seat ?? "a cabin"}` });

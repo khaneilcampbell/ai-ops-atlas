@@ -10,6 +10,8 @@ import { planNamedAgents } from "./namedAgentPlan";
 import { CityRoutes, planCityPlaces, routineEnv } from "./routinePlaces";
 import { routinePose, type DrawnPose } from "./routinePose";
 import { buildScene } from "./scene";
+import { GOLD_JET_NAME, goldJetLive, goldJetState } from "./goldJetPlan";
+import type { Segment } from "../../routine/routine";
 
 const scene = buildScene(layoutMap(catalog));
 const jobs = agentJobs(catalog);
@@ -92,5 +94,53 @@ describe("drawing the routine", () => {
     const t0 = performance.now();
     for (const a of named.agents) planRoutine({ personaId: a.personaId, ops: quiet(a.personaId), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW + 20_000 });
     expect(performance.now() - t0).toBeLessThan(400);
+  });
+
+  it("rides the Atlas Gold Jet: boards at the gate, flies its loop, walks off after landing", () => {
+    const saved = { ...goldJetLive };
+    try {
+      // The map's airport clock, running.
+      Object.assign(goldJetLive, { clock: 1000, wall: NOW, live: true });
+      const id = named.agents[0].personaId, env = routineEnv(routes, id, () => NOW)!;
+      const flight = env.leisure.find((o) => o.kind === "flight")!;
+      expect(flight.label).toBe(`Flying on the ${GOLD_JET_NAME}`);
+      const times = env.ride(flight, NOW, id)!;
+      expect(times.seat).toBe(GOLD_JET_NAME);
+      const clockAt = (w: number) => 1000 + (w - NOW) / 1000;
+      // Steps on while the jet is boarding, walks off while it lets its passengers off, after a whole loop.
+      expect(goldJetState(clockAt(times.board)).stage).toBe("boarding");
+      expect(goldJetState(clockAt(times.alight - 4000) - 1).stage).toBe("deplaning");
+      expect(times.alight - times.board).toBeGreaterThan(120_000);
+      expect(times.alight - times.board).toBeLessThan(10 * MIN);
+      // Called in for work: before boarding it leaves at once; once aboard it stays on until the jet lands.
+      expect(env.rideExit(flight, times, times.board - 1000)).toBe(times.board - 1000);
+      expect(env.rideExit(flight, times, times.board + 30_000)).toBe(times.alight);
+
+      const seg = { kind: "ride", at: "flight", option: flight, times, t0: NOW, t1: times.alight, note: "" } as unknown as Segment;
+      const pose = (w: number) => routinePose(seg, { routes, places, personaId: id, slot: 0, open: new Set(), wall: w, scale: FIGURE_SCALE })!;
+      const before = pose(times.board - 2000), terminal = places.spots.get("flight")!.path[0];
+      expect(before.place).toContain("waiting to board");
+      expect(Math.hypot(before.x - terminal[0], before.z - terminal[2])).toBeLessThan(1);
+      // In the air: the badge rides with the jet, high over the city and moving.
+      let high = 0, moved = 0, last: DrawnPose | null = null;
+      for (let w = times.board + 1000; w < times.alight - 5000; w += 5000) {
+        const p = pose(w);
+        expect(p.place).toContain(`Aboard the ${GOLD_JET_NAME}`);
+        expect(p.figure).toBe(false);
+        high = Math.max(high, p.y);
+        if (last) moved += Math.hypot(p.x - last.x, p.z - last.z);
+        last = p;
+      }
+      expect(high).toBeGreaterThan(3);
+      expect(moved).toBeGreaterThan(20);
+      expect(pose(times.alight - 1000).place).toContain(`off the ${GOLD_JET_NAME}`);
+
+      // Booking seats on the jet keeps the whole team's plan quick.
+      const t0 = performance.now();
+      for (const a of named.agents) planRoutine({ personaId: a.personaId, ops: quiet(a.personaId), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW + 20_000 });
+      expect(performance.now() - t0).toBeLessThan(400);
+    } finally {
+      Object.assign(goldJetLive, saved);
+    }
   });
 });

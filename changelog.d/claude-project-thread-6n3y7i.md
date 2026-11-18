@@ -1,1 +1,1 @@
-- 2026-11-18 · Your agents now live a daily routine: they walk to the office before their scheduled n8n runs, sit at their own desks while the run works, and enjoy the city in between. Click an agent to follow it or open its office. (#473)
+- 2026-11-18 · Your agents now live a daily routine: they walk to the office before their scheduled n8n runs, sit at their own desks while the run works, and enjoy the city in between, including rides on the Atlas Gold Jet. Click an agent to follow it or open its office; its card now matches the Atlas panels. (#473)

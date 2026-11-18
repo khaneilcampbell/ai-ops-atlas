@@ -38,8 +38,8 @@ Planned in the New York time zone unless the workflow's own n8n setting says oth
 (everyone at home), deterministically: the same runs and clock always give the same day, so a reload
 or a hidden tab picks up where it was without replaying a completion.
 
-1. Free time: the park, another district, the train, the yacht, the Ferris wheel, a simulated
-   flight, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
+1. Free time: the park, another district, the train, the yacht, the Ferris wheel, a ride on the
+   Atlas Gold Jet, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
    outing that would run into the next scheduled run.
 2. Heading to the office so it arrives just before a known scheduled run (at most 15 minutes ahead).
 3. Entering the building, going to its own desk (the desk the Inside view's office plan gives it).
@@ -50,7 +50,8 @@ or a hidden tab picks up where it was without replaying a completion.
 
 Unexpected work (a webhook or a manual run) calls the agent in from wherever it is; the card says
 the run already started. A ride finishes safely first (the wheel completes its turn, the yacht
-returns, the train reaches its stop; a flight lands within 20 seconds). A run that finishes before
+returns, the train reaches its stop, the gold jet lands and its passengers walk off; an agent still
+waiting in the terminal leaves at once). A run that finishes before
 the agent arrives ends the walk with "finished before arrival": no pretend work session. Several
 runs, retries and overlapping runs share one desk visit and are all listed on the one card.
 Waiting for approval holds the agent at its desk for 5 minutes, then it goes on with its day while
@@ -100,8 +101,11 @@ Product Lab hand-off and Career Execution Agent are drafts (unpublished).
 - n8n's run list doesn't include the current step, so the card shows the run, not the node.
 - GitHub Actions `schedule:` cron is not read yet: GitHub-run agents go in when a run is seen, not
   ahead of it.
-- A flight is time in the terminal (no badge on a plane). The train shows a badge only (the rider is
-  inside the carriage).
+- The Atlas Gold Jet: an agent waits in the terminal, steps on during the jet's own boarding at the
+  gate, rides its loop over the city (its badge flies with the jet), and walks off when it lands
+  (`goldJetTrip`, `airportClockAt` in `goldJetPlan.ts`). When the airport isn't animating (paused,
+  reduced motion) it spends that time in the terminal instead. Riders aren't drawn inside the cabin
+  when you ride the jet yourself. The train shows a badge only (the rider is inside the carriage).
 - Some custom towers don't open as a cutaway yet, so a seated agent there is hidden by the shell;
   the badge still marks it. Atlas Command Center opens fully.
 - Sounds: Atlas has no volume control on main yet (pull request #466), so the routine plays none.
