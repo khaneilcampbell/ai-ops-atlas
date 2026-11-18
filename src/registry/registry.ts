@@ -96,6 +96,7 @@ export function filterEntries(entries: RegistryEntry[], f: RegistryFilter): Regi
       matches(
         f.query,
         p.title,
+        p.displayName,
         p.originalName,
         p.id,
         p.summary,

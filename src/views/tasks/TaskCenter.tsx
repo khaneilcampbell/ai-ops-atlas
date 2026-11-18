@@ -26,6 +26,9 @@ import { addArtifact, byId, taskService, useTasks } from "../../tasks/store";
 import { ATLAS, CATEGORY_LABEL, KHANEIL, PRIORITY_LABEL, SOURCE_LABEL, STATUS_LABEL, TASK_PRIORITIES, TASK_SOURCES, TASK_STATUSES, type Actor, type StoredTask, type TaskEventType, type TaskStatus } from "../../tasks/types";
 import { TaskForm } from "./TaskForm";
 import "../../styles/tasks.css";
+import { AgentIdentityLine } from "../../components/AgentIdentity";
+import { identityFor } from "../../registry/identity";
+import { statusFromTask } from "../../registry/agentStatus";
 
 const GITHUB_ACTOR: Actor = { kind: "github", id: "github-actions", name: "GitHub Actions" };
 const STATUS_CLASS: Record<TaskStatus, string> = { queued: "idle", running: "active", blocked: "paused", awaiting_approval: "attention", completed: "done", failed: "failed", cancelled: "retired" };
@@ -247,7 +250,7 @@ export function TaskCenterView() {
                   <td data-label="Priority">
                     <span className={`task-priority ${t.priority}`}>{PRIORITY_LABEL[t.priority]}</span>
                   </td>
-                  <td data-label="Agent">{nameOfAgent(t)}</td>
+                  <td data-label="Agent">{t.agentId ? <AgentIdentityLine identity={identityFor(t.agentId, catalog.agents, t.agentName)} status={statusFromTask(t.status)} size={26} /> : nameOfAgent(t)}</td>
                   <td data-label="Building">{nameOfBuilding(t)}</td>
                   <td data-label="Source">
                     {SOURCE_LABEL[t.source]}
@@ -506,11 +509,11 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
                 {task.agentId ? (
                   <>
                     {catalogAgent ? (
-                      <button className="text-btn inline" onClick={() => select({ kind: "agent", id: catalogAgent.id })}>
-                        {catalogAgent.name}
+                      <button className="text-btn inline agent-identity-btn" onClick={() => select({ kind: "agent", id: catalogAgent.id })}>
+                        <AgentIdentityLine identity={identityFor(catalogAgent.id, catalog.agents, task.agentName)} status={statusFromTask(task.status)} size={36} />
                       </button>
                     ) : (
-                      (task.agentName ?? task.agentId)
+                      <AgentIdentityLine identity={identityFor(task.agentId, catalog.agents, task.agentName)} size={36} />
                     )}
                     {problemForAgent && <div className="muted small">{problemForAgent}</div>}
                   </>
@@ -702,7 +705,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
                   {e.type === "status_changed" && e.meta?.from ? ` · ${STATUS_LABEL[e.meta.from as TaskStatus] ?? e.meta.from} → ${STATUS_LABEL[e.meta.to as TaskStatus] ?? e.meta.to}` : ""}
                   {e.meta?.error ? ` · ${e.meta.error}` : e.meta?.reason ? ` · ${e.meta.reason}` : ""}
                   <div className="meta muted small">
-                    {formatDateTime(e.at)} · {e.actor.name}
+                    {formatDateTime(e.at)} · {e.actor.kind === "agent" ? <ActorIdentity id={e.actor.id} name={e.actor.name} /> : e.actor.name}
                   </div>
                 </li>
               ))}
@@ -713,6 +716,12 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
       </aside>
     </>
   );
+}
+
+/** An agent named in task history, with its portrait, so updates are attributed to it. */
+function ActorIdentity({ id, name }: { id: string; name: string }) {
+  const { catalog } = useAtlas();
+  return <AgentIdentityLine identity={identityFor(id, catalog.agents, name)} size={20} showRole={false} />;
 }
 
 /** n8n runs of the task's workflow since it started: context only, never claimed as the task's own run. */

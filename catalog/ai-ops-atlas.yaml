@@ -110,6 +110,18 @@ agents:
       - Anthropic Messages API (key in the macOS Keychain)
       - Reads and writes JSON files in the app data folder
     registry:
+      identity:
+        display_name: Samuel Asante
+        accent: "#C026D3"
+        intro: "Pick one repository and I read it from GitHub, read-only, then ask Claude for a health report. Verified facts stay separate from recommendations, and I drop any claim I can't cite. If nothing changed, I reuse the last report."
+        voice: "Facts first, then cited recommendations with their confidence."
+        appearance: "Ghanaian man in his early 30s, dark skin, short two-strand twists, thin wire-frame glasses, burgundy quarter-zip over a white t-shirt"
+        portrait:
+          path: agents/repo-intelligence.webp
+          model: soul_2
+          job_id: 1e63ce4a-62b0-4f5d-a926-e3fb40bee710
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Repository Intelligence Analyst
       category: data
       subcategory: Repository intelligence
@@ -193,6 +205,18 @@ agents:
     last_run: null
     permissions: [GitHub read-only (GET through the app's allowlist), Anthropic API key from Keychain]
     registry:
+      identity:
+        display_name: Margaret Lindqvist
+        accent: "#475569"
+        intro: "I review the whole ecosystem at once: every catalog repository's CI, dependencies and security settings, and each agent's autonomy, then return a scorecard and ranked recommendations. I recommend only and change nothing."
+        voice: "Scorecard and top risks first; direct and ranked."
+        appearance: "Swedish woman in her late 50s, fair skin with natural fine lines, short silver pixie cut, tortoiseshell glasses, black fine-knit turtleneck under a grey wool blazer"
+        portrait:
+          path: agents/atlas-engineering-review.webp
+          model: soul_2
+          job_id: e64b3def-50e3-402d-b23c-8b6d3f556d52
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Senior Engineering Reviewer
       category: engineering
       subcategory: Architecture and security review
@@ -409,6 +433,18 @@ agents:
       - at: 2026-11-14
         event: Took over Merge Flow and works with the Release Coordinator, at Khaneil's request. System Improvements, Reliability Reviewer, Performance Reviewer, AI UI Improvement Designer and GitHub Steward were deleted the same day
     registry:
+      identity:
+        display_name: Tomás Herrera
+        accent: "#D97706"
+        intro: "I own the road from a merged change to your installed update. Merge Flow sorts every open pull request into a lane, and on request I name the next safe step. I run only when you ask and can't merge or release."
+        voice: "One recommended next step per lane, in priority order."
+        appearance: "Mexican man in his late 30s, light olive skin, wavy dark brown hair, rimless glasses, light stubble, olive overshirt over a grey t-shirt"
+        portrait:
+          path: agents/atlas-production-coordinator.webp
+          model: soul_2
+          job_id: cc767d98-c41b-46d5-a375-4a0d775c63f3
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Atlas Production Coordinator
       version: 1.0.0
       tier: specialized
@@ -483,6 +519,18 @@ agents:
     permissions:
       - 'None: the n8n agent has no tools; it answers in chat only'
     registry:
+      identity:
+        display_name: Hana Kobayashi
+        accent: "#7C3AED"
+        intro: "I'm the n8n chat agent you ask about Atlas releases. I rank issues and walk drafts through review from what you paste in. I can't read GitHub, merge or publish, and I'm capped at $1 a month."
+        voice: "Questions and answers with numbered checklists; says when its advice may lag recent pipeline changes."
+        appearance: "Japanese woman in her late 20s, fair skin, straight black chin-length bob, light-wash denim shirt"
+        portrait:
+          path: agents/atlas-release-coordinator.webp
+          model: soul_2
+          job_id: 3d7e8c23-b3e4-424b-bfba-3023f9d36a84
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Release Coordinator
       category: engineering
       subcategory: Release
@@ -921,6 +969,18 @@ agents:
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Daniel Okafor
+        accent: "#2563EB"
+        intro: "I get tested Atlas changes to you safely. Atlas CI tests every change, I re-run failed jobs and merge ready pull requests only when you ask, and Marketplace Steward confirms each signed update is published. I have no model of my own; I work through those four automations."
+        voice: "Short and checklist first: what passed, what is waiting on you, the next step."
+        appearance: "Nigerian-British man in his early 40s, deep brown skin, short cropped black hair greying at the temples, close-trimmed beard, navy crew-neck merino sweater over a white collared shirt"
+        portrait:
+          path: agents/atlas-release-manager.webp
+          model: soul_2
+          job_id: ab703322-ff86-4f4f-809f-93e48db7b729
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Atlas Release Manager
       category: engineering
       subcategory: Release
@@ -1000,6 +1060,18 @@ agents:
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Priya Raman
+        accent: "#0D9488"
+        intro: "I watch whether Atlas itself is healthy. Signal Watch checks main-branch workflows and the site every 30 minutes, Dataset Census counts the catalog every 3 hours, and Data Inventory keeps the map list current. I report health; I don't repair anything."
+        voice: "Status first, then numbers with timestamps. Says \"not connected\" plainly."
+        appearance: "South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt"
+        portrait:
+          path: agents/atlas-health-monitor.webp
+          model: soul_2
+          job_id: d027dd76-7129-488c-bfcd-3e0e93741067
+          prompt_version: 1
+          generated_at: 2026-11-18
       title: Atlas Health Monitor
       category: infrastructure
       subcategory: Monitoring
