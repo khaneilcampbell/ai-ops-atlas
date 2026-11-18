@@ -1,3 +1,4 @@
 - 2026-11-18 · City sound now follows where you zoom: at the airport you hear jets start their engines, roll down the runway, take off, touch down and reverse thrust; the station, marina, stadium and Commons each have their own quiet sounds, and the city traffic steps back while you are close in (#PR)
 - 2026-11-18 · Quieter, calmer city sound: no more wind-like rush. The wind layer is gone, the traffic bed is lower and deeper, and jets are heard as they pass near instead of as a constant roar (#PR)
 - 2026-11-18 · Mute now silences City sound in every open Atlas tab and window at once, not just the one you clicked (#PR)
+- 2026-11-18 · You can hear the train and the cars now: the passenger train rumbles and clacks over the rail joints as it moves, the nearest street cars have engines that rise and dip as they pass, the background traffic is an engine hum instead of a hiss, and planes are quieter (#PR)
