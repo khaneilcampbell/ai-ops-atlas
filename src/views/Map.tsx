@@ -1214,7 +1214,7 @@ export function MapView({active=true}:{active?:boolean}) {
           <div className="map-controls">
             {/* One menu for the city's view. "By district" brings back the district names as well as the
                 quiet infrastructure lines, so picking it always changes something you can see. */}
-            <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label}
+            <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].short}
               onChange={(l) => { setLens(l); if (l === "infrastructure") setGroupBy("district"); }}
               optionDisabled={(l) => !is3d && lensNeeds3d(l)}
               title={is3d ? LENS_INFO[shownLens].hint : "The flat map shows the city by district. Agent network and Automation flow need the 3D map."} />

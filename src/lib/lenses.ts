@@ -9,10 +9,10 @@ import type { ConnectionType } from "../catalog/types";
 export const MAP_LENSES = ["infrastructure", "agents", "automations"] as const;
 export type MapLens = (typeof MAP_LENSES)[number];
 
-export const LENS_INFO: Record<MapLens, { label: string; hint: string; empty: string }> = {
-  infrastructure: { label: "By district", hint: "The city by district. Select a building to see its connections", empty: "" },
-  agents: { label: "Agent network", hint: "Links between agents, from registry dependencies", empty: "No agent links declared yet" },
-  automations: { label: "Automation flow", hint: "Repositories to the automations they host, and n8n flows", empty: "No automations with a source or workflow yet" },
+export const LENS_INFO: Record<MapLens, { label: string; short: string; hint: string; empty: string }> = {
+  infrastructure: { label: "By district", short: "Districts", hint: "The city by district. Select a building to see its connections", empty: "" },
+  agents: { label: "Agent network", short: "Agents", hint: "Links between agents, from registry dependencies", empty: "No agent links declared yet" },
+  automations: { label: "Automation flow", short: "Automations", hint: "Repositories to the automations they host, and n8n flows", empty: "No automations with a source or workflow yet" },
 };
 
 /** The connection colors each view can draw, in key order. Its key lists only these, so every
