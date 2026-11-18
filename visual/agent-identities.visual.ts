@@ -6,8 +6,10 @@ import { NOW } from "./github";
 // Agent identities (2026-11-18): the Agents directory, one agent's inspector, the task form's
 // agent picker and a task's detail with its agent. Screenshots only, into
 // visual/out/agent-identities/ (IDENTITY_SHOTS overrides), not baselines. Runs on main too,
-// for before shots: steps that need the new picker are skipped there.
+// for before shots: steps that need the new picker are skipped there. Review shots only, so like
+// the Circa shots it runs only when asked: IDENTITY_SHOTS=visual/out/agent-identities npx playwright test -c visual visual/agent-identities.visual.ts
 test.use({ deviceScaleFactor: 2 });
+test.skip(!process.env.IDENTITY_SHOTS, "Set IDENTITY_SHOTS to the output folder to take these review shots");
 const out = process.env.IDENTITY_SHOTS ?? "visual/out/agent-identities";
 
 const iso = (ms: number) => new Date(ms).toISOString();
