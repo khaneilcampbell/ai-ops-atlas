@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DatabaseCard } from "./DatabaseCard";
 import { TaskIntelligence } from "./TaskIntelligence";
 import { actionsApi } from "../../actions/api";
 import { useActions } from "../../actions/state";
@@ -279,6 +280,8 @@ export function TaskCenterView() {
           )}
         </div>
       )}
+
+      <DatabaseCard />
 
       {selected && tasks.some((t) => t.id === selected) && !form && <TaskDetail id={selected} ctx={ctx} onClose={() => setSelected(null)} onEdit={(task) => setForm({ task })} onOpen={setSelected} />}
       {form && (
