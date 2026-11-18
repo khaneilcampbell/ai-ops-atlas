@@ -13,9 +13,13 @@ import { useTasks } from "../../tasks/store";
 import type { StoredTask } from "../../tasks/types";
 import { activityText, planRoutine, segmentAt, type Routine, type RoutineEnv, type Segment } from "../../routine/routine";
 import type { OpRun } from "../../routine/operations";
-import { publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
+import { publishOpsStates, publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
 import { figureParts, partMatrix, poseBones, FIGURE_SCALE, RIG, type FigurePart } from "./agentFigures";
-import { agentPositions, setFollowedAgent, useFollowedAgent, viewOffice } from "./agentFollow";
+import { agentInside, agentPositions, setFollowedAgent, useFollowedAgent } from "./agentFollow";
+import { levelY } from "./buildingModel";
+import { leaveInside, setInsideLevel, useInsideFocus, viewInside } from "./insideFocus";
+import { InsidePanel, type InsidePanelAgent } from "./InsidePanel";
+import { FLOOR_H } from "./scene";
 import { AgentTaskCard } from "./AgentTaskCard";
 import { namedAgentAt, type NamedAgent, type NamedAgentPlan } from "./namedAgentPlan";
 import { routineEnv, type CityPlaces, type CityRoutes } from "./routinePlaces";
@@ -159,8 +163,8 @@ interface Props {
   /** The city's places and street routes for the routine (routinePlaces.ts). Without them agents stand at work. */
   places?: CityPlaces;
   routes?: CityRoutes;
-  /** Headquarters open in the Inside view: agents at their desks there are drawn seated. */
-  open?: ReadonlySet<string>;
+  /** Headquarters open in the Inside view, and the floor each shows: agents on that floor are drawn there. */
+  open?: ReadonlyMap<string, number>;
   /** Walk and idle; false for reduced motion or a paused map. */
   moving: boolean;
   /** The map is drawing (not hidden behind another tab). */
@@ -169,7 +173,9 @@ interface Props {
 
 /** Ring colours: working, waiting for approval, failed (needs attention). */
 const RING: Record<string, string> = { running: "#7ee0ff", queued: "#7ee0ff", waiting_approval: "#ffcf6e", failed: "#ff6b57" };
-const NO_OPEN: ReadonlySet<string> = new Set();
+const NO_OPEN: ReadonlyMap<string, number> = new Map();
+/** The occupied-floor band on a closed building: real run colours, warm white while at a desk with nothing running. */
+const BAND_AT_DESK = "#ffe7b0";
 
 function openUrl(href: string) {
   if ("__TAURI_INTERNALS__" in window) void import("@tauri-apps/plugin-opener").then((m) => m.openUrl(href));
@@ -178,14 +184,15 @@ function openUrl(href: string) {
 
 export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, moving, drawing }: Props) {
   const agents = plan.agents;
-  const { camera, gl, size } = useThree();
+  const { camera, gl, size, invalidate } = useThree();
   const { select, setView } = useAtlas();
   const ids = useMemo(() => agents.map((a) => a.personaId), [agents]);
   const work = useAgentWork(ids);
   const ops = useRoutineOps(ids);
   const held = useRoutineHeld();
   const followed = useFollowedAgent();
-  const boxes = useRef<THREE.InstancedMesh>(null), balls = useRef<THREE.InstancedMesh>(null), badges = useRef<THREE.InstancedMesh>(null), rings = useRef<THREE.InstancedMesh>(null);
+  const boxes = useRef<THREE.InstancedMesh>(null), balls = useRef<THREE.InstancedMesh>(null), badges = useRef<THREE.InstancedMesh>(null), rings = useRef<THREE.InstancedMesh>(null), bands = useRef<THREE.InstancedMesh>(null);
+  const focus = useInsideFocus();
   const card = useRef<THREE.Group>(null), chip = useRef<THREE.Group>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -205,10 +212,22 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   routinesRef.current = routines;
   const openRef = useRef(insideOpen);
   openRef.current = insideOpen;
+  const openSig = useRef("");
+  // A building opened, closed or changed floor: draw a frame so the agents there move to match.
+  useEffect(() => invalidate(), [insideOpen, invalidate]);
+  // Reduced motion draws no animation frames of its own: ask for one every two seconds so walkers
+  // still move on and a finished run still lets its agent get up and leave.
+  useEffect(() => {
+    if (moving || !drawing) return;
+    const id = window.setInterval(() => invalidate(), 2000);
+    return () => window.clearInterval(id);
+  }, [moving, drawing, invalidate]);
   const opsRef = useRef(ops.ops);
   opsRef.current = ops.ops;
   const workRef = useRef(work);
   workRef.current = work;
+  // The desks in the open offices show the same real state as the cards (InsideView reads it).
+  useEffect(() => publishOpsStates(new Map([...ops.ops].map(([id, o]) => [id, o.state]))), [ops.ops]);
 
   // Static: every figure's parts, split by shape, with where each agent's run of parts starts.
   const rigs = useMemo(() => {
@@ -234,6 +253,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     return {
       body: new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0 }),
       ring: new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false }),
+      band: new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.6, toneMapped: false, depthWrite: false }),
       badge: new THREE.ShaderMaterial({ vertexShader: BADGE_VERTEX, fragmentShader: BADGE_FRAGMENT, uniforms: { uMap: { value: atlas }, uGrid: { value: new THREE.Vector2(BADGE.cols, rows) }, uViewport: { value: new THREE.Vector2(1, 1) }, uPx: { value: BADGE.far } } }),
     };
   }, [agents, atlas]);
@@ -253,6 +273,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   const live = useRef({
     t: 0,
     last: -1,
+    lastWall: 0,
     published: 0,
     gaits: [] as Gait[],
     bones: [] as THREE.Matrix4[],
@@ -269,6 +290,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     const publish = wall - L.published > 1000;
     if (publish) L.published = wall;
     let ringN = 0;
+    const lit = new Map<string, string>();
     agents.forEach((a, i) => {
       const r = rigs[i], gait = (L.gaits[i] ??= newGait()), id = a.personaId;
       const hideBody = () => {
@@ -287,6 +309,17 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         pose = s.where === "home" ? null : { x: s.x, y: s.y, z: s.z, yaw: s.yaw, figure: true, badge: [s.x, s.y + RIG.top * cityScale + BADGE.lift, s.z], sit: 0, typing: false, walking: s.where === "walking", officeScale: null, place: a.workLabel };
       }
       L.place[i] = pose?.place ?? "";
+      agentInside.set(id, pose?.inside ?? null);
+      // Working inside a building that's closed at its floor: a subtle band marks that floor from outside.
+      const inn = pose?.inside;
+      // Only where that floor's façade is still standing: the building closed, or opened at a floor above it.
+      const shownLevel = inn ? openRef.current.get(inn.key) : undefined;
+      if (inn?.seated && inn.level !== null && (shownLevel === undefined || inn.level < shownLevel)) {
+        const band = `${inn.key}@${inn.level}`, state = opsRef.current.get(id)?.state;
+        const color = state && RING[state] ? RING[state] : BAND_AT_DESK;
+        // A run state outranks someone simply at a desk on the same floor.
+        if (!lit.has(band) || lit.get(band) === BAND_AT_DESK) lit.set(band, color);
+      }
       if (publish && seg) publishWhere(id, { activity: activityText(seg), place: pose?.place ?? "", note: seg.note, at: wall });
       if (!pose || !pose.badge) {
         hideBody();
@@ -321,6 +354,21 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         rings.current.setColorAt(ringN++, L.c.set(color));
       }
     });
+    if (bands.current) {
+      let n = 0;
+      for (const [band, color] of lit) {
+        const at = band.lastIndexOf("@"), key = band.slice(0, at), lv = Number(band.slice(at + 1));
+        const m = places?.buildings.get(key);
+        if (!m) continue;
+        // A lit strip on the street façade at that floor, under the badges there: readable, not a sheet over the building.
+        const front = Math.max(m.door.facade[2], m.z + m.size / 2) + 0.03;
+        bands.current.setMatrixAt(n, L.m.compose(new THREE.Vector3(m.x, levelY(lv) + FLOOR_H * 0.45, front), new THREE.Quaternion(), new THREE.Vector3(m.plate * 0.7, 0.05, 0.02)));
+        bands.current.setColorAt(n++, L.c.set(color));
+      }
+      bands.current.count = n;
+      bands.current.instanceMatrix.needsUpdate = true;
+      if (bands.current.instanceColor) bands.current.instanceColor.needsUpdate = true;
+    }
     if (rings.current) {
       rings.current.count = ringN;
       if (rings.current.instanceColor) rings.current.instanceColor.needsUpdate = true;
@@ -328,8 +376,9 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     // Which way each character faces and what it's doing, for the review shots (visual/*.visual.ts).
     if (badges.current) {
       badges.current.userData.yaw = L.yaw;
-      badges.current.userData.open = [...openRef.current];
-      badges.current.userData.routine = agents.map((a, i) => ({ id: a.personaId, at: L.at[i], seg: L.segs[i] && { kind: L.segs[i]!.kind, phase: L.segs[i]!.phase, activity: L.segs[i]!.activity, note: L.segs[i]!.note }, place: L.place[i] }));
+      badges.current.userData.open = [...openRef.current.keys()];
+      badges.current.userData.openLevels = Object.fromEntries(openRef.current);
+      badges.current.userData.routine = agents.map((a, i) => ({ id: a.personaId, at: L.at[i], seg: L.segs[i] && { kind: L.segs[i]!.kind, phase: L.segs[i]!.phase, activity: L.segs[i]!.activity, note: L.segs[i]!.note }, place: L.place[i], inside: agentInside.get(a.personaId) ?? null }));
     }
     for (const m of [boxes.current, balls.current, badges.current, rings.current]) if (m) m.instanceMatrix.needsUpdate = true;
   };
@@ -340,9 +389,15 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     const L = live.current, dt = Math.min(delta, 0.15);
     L.t += dt;
     // Reduced motion or a paused map: no stride or idle, and walkers move on every two seconds.
-    if (!moving && L.last >= 0 && L.t - L.last < 2) return updateBadge();
+    // ...except right after a building opens, closes or changes floor: place everyone there at once.
+    const sig = [...openRef.current].join();
+    // Two seconds of wall clock, not of drawn frames, so a reduced-motion view still keeps up with the day.
+    const wall = Date.now();
+    if (!moving && L.last >= 0 && wall - L.lastWall < 2000 && sig === openSig.current) return updateBadge();
+    openSig.current = sig;
     place(L.last < 0 ? 0 : dt);
     L.last = L.t;
+    L.lastWall = wall;
     updateBadge();
     for (const [ref, i] of [[card, open], [chip, hover]] as const) {
       const at = i === null ? null : L.at[i];
@@ -352,12 +407,12 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       }
     }
   });
-  // The open card's activity and timings refresh every second.
+  // The open card's and building summary's activity and timings refresh every second.
   useEffect(() => {
-    if (open === null) return;
+    if (open === null && !focus) return;
     const id = window.setInterval(() => setCardTick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
-  }, [open]);
+  }, [open, focus]);
   const updateBadge = () => {
     const u = mat.badge.uniforms;
     u.uViewport.value.set(size.width, size.height);
@@ -433,6 +488,29 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
 
   if (!agents.length) return null;
   const shown = open !== null ? agents[open] : null;
+  // "Locate agent": open its building at the floor it's on now (its desk's floor while it's elsewhere) and follow it there.
+  const locate = (personaId: string) => {
+    const desk = places?.agents.get(personaId)?.desk;
+    if (!desk) return;
+    const inn = agentInside.get(personaId);
+    const level = inn && inn.key === desk.towerKey && inn.level !== null ? inn.level : desk.level;
+    const at = agentPositions.get(personaId);
+    viewInside(desk.towerKey, level, personaId, { x: at?.[0] ?? desk.x, y: levelY(level), z: at?.[2] ?? desk.z, dist: 6 });
+    setFollowedAgent(personaId);
+    // A phone has room for one panel: the building summary, which lists the agent too.
+    if (size.width < 600) setOpen(null);
+  };
+  // The open building's summary (View inside).
+  const model = focus ? places?.buildings.get(focus.key) : undefined;
+  const panelLevel = model ? (focus?.level ?? model.officeFloors[0].level) : 0;
+  const panelAgents: InsidePanelAgent[] = model
+    ? agents.flatMap((a, i) => {
+        const d = model.desks.get(a.personaId);
+        if (!d) return [];
+        const inn = agentInside.get(a.personaId);
+        return [{ personaId: a.personaId, identity: a.identity, level: d.level, desk: d.number, inside: inn && inn.key === model.key ? { level: inn.level, seated: inn.seated } : null, seg: live.current.segs[i], ops: ops.ops.get(a.personaId) }];
+      })
+    : [];
   const hovered = hover !== null && hover !== open ? agents[hover] : null;
   const onOpenRun = (run: OpRun) => {
     if (run.source === "task") {
@@ -447,6 +525,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       <instancedMesh name="named-agent-balls" ref={balls} args={[geo.ball, mat.body, ballCount]} frustumCulled={false} />
       <instancedMesh name="named-agent-badges" ref={badges} args={[geo.badge, mat.badge, agents.length]} frustumCulled={false} renderOrder={2} />
       <instancedMesh name="named-agent-activity" ref={rings} args={[geo.ring, mat.ring, agents.length]} frustumCulled={false} />
+      <instancedMesh name="named-agent-floor-bands" ref={bands} args={[geo.box, mat.band, agents.length]} frustumCulled={false} raycast={() => null} />
       <group ref={chip}>
         {hovered && (
           <Html zIndexRange={[40, 30]} style={{ pointerEvents: "none" }}>
@@ -458,6 +537,29 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
           </Html>
         )}
       </group>
+      {model && (
+        <Html zIndexRange={[58, 52]} calculatePosition={() => [12, 12]}>
+          <InsidePanel
+            model={model}
+            level={panelLevel}
+            agents={panelAgents}
+            otherDesks={Math.max(0, model.desks.size - panelAgents.length)}
+            now={Date.now()}
+            source={ops.source}
+            fetchedAt={ops.fetchedAt}
+            onLevel={(l) => {
+              setFollowedAgent(null);
+              setInsideLevel(l);
+            }}
+            onLocate={locate}
+            onOpenRun={onOpenRun}
+            onClose={() => {
+              setFollowedAgent(null);
+              leaveInside();
+            }}
+          />
+        </Html>
+      )}
       <group ref={card}>
         {shown && open !== null && (
           // Docked in the map's top corner, not floating over the agent: it stays readable while the agent walks or the camera follows.
@@ -477,10 +579,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
               docked
               onClose={() => setOpen(null)}
               onFollow={() => setFollowedAgent(followed === shown.personaId ? null : shown.personaId)}
-              onViewOffice={() => {
-                const desk = places?.agents.get(shown.personaId)?.desk;
-                if (desk) viewOffice({ towerKey: desk.towerKey, projectId: desk.towerKey.replace(/^project:/, "") });
-              }}
+              onViewOffice={() => locate(shown.personaId)}
               onOpenRun={onOpenRun}
               onProfile={() => select({ kind: "agent", id: shown.personaId })}
             />

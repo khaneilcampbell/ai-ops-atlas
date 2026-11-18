@@ -968,6 +968,32 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .m3-agent-task .acts button[aria-pressed="true"] { background: rgba(150, 236, 255, 0.34); }
 @media (max-width: 520px) { .m3-agent-task { width: min(300px, calc(100vw - 32px)); max-height: 46vh; } .m3-agent-task .runs, .m3-agent-task .src { display: none; } }
 
+/* View inside: the open building's summary beside the cutaway (views/map3d/InsidePanel.tsx). */
+.m3-inside-panel { width: 290px; transform: none; max-height: calc(100vh - 220px); overflow: auto; }
+.m3-inside-panel .head { padding-right: 24px; }
+.m3-inside-panel .head .n { font-weight: 700; font-size: 15px; }
+.m3-inside-panel .head .r { font-size: 11px; color: rgba(220, 244, 252, 0.72); margin-top: 2px; }
+.m3-inside-panel h4 { margin: 10px 0 4px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(220, 244, 252, 0.64); font-weight: 600; }
+.m3-inside-panel .floors button, .m3-inside-panel .people button { border-radius: 8px; border: 1px solid rgba(150, 236, 255, 0.6); background: rgba(150, 236, 255, 0.12); color: #effcff; font: 600 11px Inter, -apple-system, sans-serif; cursor: pointer; }
+.m3-inside-panel .floors button:hover, .m3-inside-panel .people button:hover { background: rgba(150, 236, 255, 0.24); }
+.m3-inside-panel .floors { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.m3-inside-panel .floors button { position: relative; padding: 4px 9px; font-size: 11px; border-radius: 999px; }
+.m3-inside-panel .floors button[aria-pressed="true"] { background: rgba(150, 236, 255, 0.34); }
+.m3-inside-panel .floors button.occupied { box-shadow: inset 0 0 0 1px rgba(255, 231, 176, 0.7); }
+.m3-inside-panel .floors .dot { display: inline-grid; place-items: center; min-width: 14px; height: 14px; margin-left: 5px; border-radius: 7px; background: #ffe7b0; color: #16303a; font-size: 9px; font-weight: 800; }
+.m3-inside-panel .people { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.m3-inside-panel .people li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.m3-inside-panel .people .sub { display: block; font-size: 10.5px; color: rgba(220, 244, 252, 0.72); }
+.m3-inside-panel .people .op-running, .m3-inside-panel .people .op-queued { color: #8ff0ff; }
+.m3-inside-panel .people .op-waiting_approval { color: #ffd88a; }
+.m3-inside-panel .people .op-failed { color: #ffb4a8; }
+.m3-inside-panel .people button { padding: 3px 8px; font-size: 11px; }
+.m3-inside-panel .runs { margin: 0; padding: 0; list-style: none; font-size: 11px; color: rgba(220, 244, 252, 0.8); display: grid; gap: 3px; }
+.m3-inside-panel .runs li.err { color: #ffb4a8; }
+.m3-inside-panel .runs .link { all: unset; cursor: pointer; text-decoration: underline; color: #effcff; }
+.m3-inside-panel .src { margin: 6px 0 0; font-size: 10.5px; color: rgba(220, 244, 252, 0.64); }
+@media (max-width: 520px) { .m3-inside-panel { width: calc(100vw - 32px); max-height: 30vh; } .m3-inside-panel .head .r { display: none; } }
+
 /* Agents → Workday: the daily routine settings (views/agents/RoutinePanel.tsx). */
 .routine-panel { display: grid; gap: 8px; margin-bottom: 14px; }
 .routine-panel .routine-wf { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

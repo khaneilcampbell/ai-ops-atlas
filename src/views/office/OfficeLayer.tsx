@@ -17,7 +17,8 @@ import { ApprovalQueue } from "../../components/ApprovalQueue";
 import { isReportAgent } from "../../reports/model";
 import { useProposals } from "../../approvals/state";
 import type { Proposal } from "../../approvals/proposals";
-import { ACTION_AGENTS, accentFor, planOffice, RUNTIME_LABEL, toolIcon } from "./model";
+import { ACTION_AGENTS, accentFor, planOffice, RUNTIME_LABEL, toolIcon, type Workstation } from "./model";
+import { floorLayout } from "../map3d/buildingModel";
 import OfficeScene, { type DeskData, type OfficeApi } from "./OfficeScene";
 import { officeRows, type OfficeRow } from "./officeRows";
 import { leaveBuilding, useOffice } from "./store";
@@ -44,6 +45,12 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   // Every registered worker belongs at a desk inside its project building.
   const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
+  // The same floors and desk places as the map's cutaway of this building (map3d/buildingModel.ts).
+  const placed = useMemo(() => {
+    const out = new Map<string, { level: number; ws: Workstation }>();
+    if (plan) for (const [level, list] of floorLayout(plan, (id) => agents.find((a) => a.id === id)?.officeFloor)) for (const ws of list) out.set(ws.agentId, { level, ws });
+    return out;
+  }, [plan, agents]);
   const places = useMemo(() => agentPlaces(catalog), [catalog]);
 
   const rows = useMemo(
@@ -53,13 +60,14 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
   const desks = useMemo<DeskData[]>(
     () =>
-      (plan?.workstations ?? []).map((ws) => {
+      (plan?.workstations ?? []).map((planned) => {
+        const ws = placed.get(planned.agentId)?.ws ?? planned;
         const r = rows.get(ws.agentId)!;
         const a = agents.find((x) => x.id === ws.agentId)!;
         const b = r.runtime.basis;
         return {
           ws,
-          floor: a.officeFloor ?? 4,
+          floor: placed.get(ws.agentId)?.level ?? a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
@@ -70,7 +78,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
-    [plan, rows, agents, pending, places],
+    [plan, placed, rows, agents, pending, places],
   );
 
   // Escape closes the inspector, then leaves the building. Captured first so the map's own

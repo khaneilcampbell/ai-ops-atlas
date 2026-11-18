@@ -1,5 +1,4 @@
 import { catalog as fullCatalog } from "../catalog";
-import { VIEW_OFFICE_EVENT, type ViewOfficeDetail } from "./map3d/agentFollow";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
@@ -461,17 +460,6 @@ export function MapView({active=true}:{active?:boolean}) {
     setInsideState(on);
     saveInside(on);
   };
-  // "View office" on an agent's card: switch on Inside and frame its headquarters, so its desk shows.
-  useEffect(() => {
-    const on = (e: Event) => {
-      const d = (e as CustomEvent<ViewOfficeDetail>).detail;
-      setInsideState(true);
-      saveInside(true);
-      if (d?.projectId) select({ kind: "project", id: d.projectId });
-    };
-    window.addEventListener(VIEW_OFFICE_EVENT, on);
-    return () => window.removeEventListener(VIEW_OFFICE_EVENT, on);
-  }, [select]);
   const setTraffic = (on: boolean) => {
     setTrafficState(on);
     save("mapTraffic", on);

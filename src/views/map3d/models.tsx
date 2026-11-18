@@ -729,6 +729,15 @@ export interface PickHandlerSet {
 
 /** Headquarters stand on a plinth; their floors start here. */
 export const FLOOR_BASE = TERRACE_H + 0.15;
+
+/**
+ * A headquarters' street door: where its entrance doors are drawn, the door agents walk through and the
+ * point the building model (buildingModel.ts) starts the lobby from. `p` is the door's bottom centre on
+ * the façade, `s` its size.
+ */
+export function entranceDoor(t: Tower): { p: [number, number, number]; s: [number, number, number] } {
+  return isCommerceTower(t.projectId)?commerceDoor(t):isSocLab(t.projectId)?{p:[t.x+t.size*(SOC_LAB.lobby.canopy.x0+SOC_LAB.lobby.canopy.x1)/2,FLOOR_BASE,t.z+t.size*SOC_LAB.lobby.z1+0.012],s:[t.size*0.2,0.36,0.025]}:isPortfolioSite(t.projectId)?{p:[t.x+t.size*0.04,FLOOR_BASE,t.z+t.size*(PORTFOLIO_SITE.core.z1-0.06)+0.005],s:[t.size*0.24,0.3,0.025]}:isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]};
+}
 /** Rooftop name boards and billboards stand this high above the roof. */
 const BOARD_LIFT = 0.42;
 
@@ -1033,7 +1042,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>isCommerceTower(t.projectId)?commerceDoor(t):isSocLab(t.projectId)?{p:[t.x+t.size*(SOC_LAB.lobby.canopy.x0+SOC_LAB.lobby.canopy.x1)/2,FLOOR_BASE,t.z+t.size*SOC_LAB.lobby.z1+0.012],s:[t.size*0.2,0.36,0.025]}:isPortfolioSite(t.projectId)?{p:[t.x+t.size*0.04,FLOOR_BASE,t.z+t.size*(PORTFOLIO_SITE.core.z1-0.06)+0.005],s:[t.size*0.24,0.3,0.025]}:isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(entranceDoor)} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />

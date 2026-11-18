@@ -1,7 +1,9 @@
 import { runWorking, walkShare, type Segment } from "../../routine/routine";
 import { RIG } from "./agentFigures";
 import { along } from "./railCommuters";
-import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
+import { alongJourney, levelY, SEAT_TOP, type P3 } from "./buildingModel";
+import { riderPoint, type AgentPlaces, type CityPlaces, type CitySpot, type CityRoutes } from "./routinePlaces";
+import { FLOOR_H } from "./scene";
 
 /**
  * Where and how one agent is drawn at a moment, from its routine segment (routine/routine.ts).
@@ -9,10 +11,13 @@ import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
  *
  * - walking: along its street route, striding;
  * - standing at a spot: at its own place in the row there (no two agents on one point);
- * - inside a building with no cutaway (home, the arena, the terminal, its office with Inside off):
- *   no figure, and the badge waits above the door, so you can still find and pick it;
- * - at its desk with the office open in the Inside view: walks in from the door, sits at its own
- *   desk, types while the run is working;
+ * - inside a building with no cutaway (home, the arena, the terminal): no figure, and the badge
+ *   waits above the door, so you can still find and pick it;
+ * - going to work: one continuous walk at the same scale from its place outside, through the
+ *   building's real door, across the lobby, up the lift to its floor and along the aisle to its own
+ *   chair (buildingModel.ts), and back out the same way. The figure is always placed: with the
+ *   building closed the walls hide it and its badge shows on the façade at its floor; with its
+ *   floor open in the Inside view it is seen at the desk, typing while a run is working;
  * - on a ride: seated in its wheel cabin, aboard the yacht's deck, in a train carriage (badge only).
  */
 export interface DrawnPose {
@@ -31,6 +36,8 @@ export interface DrawnPose {
   officeScale: number | null;
   /** Where it is, in words ("Atlas Command Center", "The Ferris wheel"). */
   place: string;
+  /** Inside its office building: which one, on which floor (null in the lift), and whether it's seated. */
+  inside?: { key: string; level: number | null; seated: boolean };
 }
 
 export interface PoseContext {
@@ -39,8 +46,8 @@ export interface PoseContext {
   personaId: string;
   /** Its own number in the team (0..): a unique place in the rows at shared spots, and its walking lane. */
   slot: number;
-  /** Headquarters open in the Inside view (tower keys). */
-  open: ReadonlySet<string>;
+  /** Headquarters open in the Inside view: tower key to the floor shown (its level). */
+  open: ReadonlyMap<string, number>;
   wall: number;
   yacht?: { x: number; z: number; yaw: number };
   /** City figure scale for this agent (FIGURE_SCALE times its height). */
@@ -48,12 +55,18 @@ export interface PoseContext {
 }
 
 const BADGE_LIFT = 0.075;
-/** Office units: the seated person's thigh height and head top in the Inside view (InsideView deskParts). */
-const OFFICE_SEAT = 0.58, OFFICE_TOP = 1.39;
 
 /** Column (-2..2) and row (0..) of a team member's place at a shared spot: no two share one. */
 const place5 = (slot: number) => ({ col: (slot % 5) - 2, row: Math.floor(slot / 5) });
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** World units over which a walk eases out of, and into, a row place. */
+const BLEND = 0.8;
+/** A team member's own standing place at a spot: side by side across the way it faces, further rows behind. */
+function rowPlace(spot: CitySpot, slot: number): P3 {
+  const stand = spot.path[spot.path.length - 1];
+  if (spot.inside) return stand;
+  const { col, row } = place5(slot), gap = spot.spread ?? 0.14;
+  return [stand[0] + Math.cos(spot.yaw) * gap * col - Math.sin(spot.yaw) * gap * row, stand[1], stand[2] - Math.sin(spot.yaw) * gap * col - Math.cos(spot.yaw) * gap * row];
+}
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
@@ -74,41 +87,24 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
       if (!p) return null;
       return at(p[0], p[1], p[2], target!.yaw, { place: target!.label });
     }
-    const q = along(r, r.length * f, place5(c.slot).col * 0.035);
-    return at(q.x, q.y, q.z, q.yaw, { walking: c.wall < seg.t1, place: `On the way to ${target?.label ?? "the next place"}` });
+    const lane = place5(c.slot).col * 0.035, d = r.length * f;
+    const q = along(r, d, lane);
+    // Step out of its own place in the row it was standing in, and into its place in the next one, without a hop.
+    let [x, y, z] = [q.x, q.y, q.z];
+    const from = "spot" in seg.from ? c.places.spots.get(seg.from.spot) : undefined;
+    const ease = (u: number) => Math.max(0, 1 - u / BLEND);
+    if (from && d < BLEND) {
+      const a = along(r, 0, lane), p = rowPlace(from, c.slot), w = ease(d);
+      [x, y, z] = [x + (p[0] - a.x) * w, y + (p[1] - a.y) * w, z + (p[2] - a.z) * w];
+    }
+    if (target && r.length - d < BLEND && (seg.f1 ?? 1) >= 1) {
+      const b = along(r, r.length, lane), p = rowPlace(target, c.slot), w = ease(r.length - d);
+      [x, y, z] = [x + (p[0] - b.x) * w, y + (p[1] - b.y) * w, z + (p[2] - b.z) * w];
+    }
+    return at(x, y, z, q.yaw, { walking: c.wall < seg.t1, place: `On the way to ${target?.label ?? "the next place"}` });
   }
 
-  if (seg.kind === "inside") {
-    const desk = mine.desk;
-    const door = mine.office.path[0];
-    if (!desk || !c.open.has(desk.towerKey)) {
-      // Inside with the office closed: the badge waits above the door.
-      return { x: door[0], y: door[1], z: door[2], yaw: mine.office.yaw, figure: false, badge: mine.doorBadge, sit: 0, typing: false, walking: false, officeScale: null, place: mine.officeLabel };
-    }
-    const k = (OFFICE_TOP * desk.k) / RIG.top;
-    const f = clamp01((c.wall - seg.t0) / Math.max(1, seg.t1 - seg.t0));
-    const [lx, ly, lz] = desk.lobby;
-    const walk = (ax: number, ay: number, az: number, bx: number, bz: number, by: number) => {
-      const yaw = Math.atan2(bx - ax, bz - az);
-      return at(lerp(ax, bx, f), lerp(ay, by, f), lerp(az, bz, f), yaw, { walking: true, officeScale: k, place: mine.officeLabel });
-    };
-    switch (seg.phase) {
-      case "entering":
-        return walk(door[0], door[1], door[2], lx, lz, ly);
-      case "to_desk":
-        return walk(lx, ly, lz, desk.x, desk.z, desk.y);
-      case "leaving":
-        // Back to the lobby and out of the door in one walk.
-        return f < 0.6
-          ? at(lerp(desk.x, lx, f / 0.6), desk.y, lerp(desk.z, lz, f / 0.6), Math.atan2(lx - desk.x, lz - desk.z), { walking: true, officeScale: k, place: mine.officeLabel })
-          : at(lerp(lx, door[0], (f - 0.6) / 0.4), lerp(ly, door[1], (f - 0.6) / 0.4), lerp(lz, door[2], (f - 0.6) / 0.4), Math.atan2(door[0] - lx, door[2] - lz), { walking: true, officeScale: k, place: mine.officeLabel });
-      default: {
-        // Seated: hips on the chair, facing the monitor.
-        const y = desk.y + OFFICE_SEAT * desk.k - RIG.leg.h * k;
-        return at(desk.x, y, desk.z, desk.yaw, { sit: 1, typing: runWorking(seg), officeScale: k, place: `At its desk in ${mine.officeLabel}` });
-      }
-    }
-  }
+  if (seg.kind === "inside") return insidePose(seg, c, mine, at);
 
   const spot = c.places.spots.get(seg.at);
   if (!spot) return null;
@@ -132,10 +128,71 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     if (seg.at === mine.home.id) return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: null, sit: 0, typing: false, walking: false, officeScale: null, place: mine.homeLabel };
     return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: spot.label };
   }
-  const { col, row } = place5(c.slot), gap = spot.spread ?? 0.14;
-  // Side by side across the way it faces, further rows behind.
-  const x = stand[0] + Math.cos(spot.yaw) * gap * col - Math.sin(spot.yaw) * gap * row, z = stand[2] - Math.sin(spot.yaw) * gap * col - Math.cos(spot.yaw) * gap * row;
+  const { row } = place5(c.slot);
+  const [x, , z] = rowPlace(spot, c.slot);
   // On the bench in a park (the front row); anyone further back stands behind it.
   const sit = seg.option?.kind === "park" && row === 0 ? 1 : 0;
   return at(x, stand[1] - sit * RIG.leg.h * c.scale * 0.55, z, spot.yaw, { sit, place: spot.label });
+}
+
+/** Office floor the point is on, or null between floors (in the lift). */
+function floorAt(y: number): number | null {
+  const l = (y - levelY(0)) / FLOOR_H;
+  return Math.abs(l - Math.round(l)) < 0.06 ? Math.round(l) : null;
+}
+
+type At = (x: number, y: number, z: number, yaw: number, rest: Partial<DrawnPose> & { place: string }) => DrawnPose;
+
+/** Going in to work, at the desk, and leaving: one journey through the building model. */
+function insidePose(seg: Extract<Segment, { kind: "inside" }>, c: PoseContext, mine: AgentPlaces, at: At): DrawnPose {
+  const desk = mine.desk;
+  const door = mine.office.path[0];
+  if (!desk) {
+    // No desk in a headquarters (a workplace that isn't an office): the badge waits above the door.
+    return { x: door[0], y: door[1], z: door[2], yaw: mine.office.yaw, figure: false, badge: mine.doorBadge, sit: 0, typing: false, walking: false, officeScale: null, place: mine.officeLabel };
+  }
+  const m = desk.building;
+  // From its own place in the row outside the office (where it stood or arrived), in by the door.
+  const pts: P3[] = [rowPlace(mine.office, c.slot), ...desk.journey.points];
+  // Stand, sidewalk, doorway, lobby: entering ends in the lobby (index 3).
+  const LOBBY = 3;
+  const f = clamp01((c.wall - seg.t0) / Math.max(1, seg.t1 - seg.t0));
+  let q: { p: P3; yaw: number; riding: boolean };
+  let seated = false;
+  switch (seg.phase) {
+    case "entering":
+      q = alongJourney(pts.slice(0, LOBBY + 1), f);
+      break;
+    case "to_desk":
+      q = alongJourney(pts.slice(LOBBY), f);
+      break;
+    case "leaving":
+      q = alongJourney([...pts].reverse(), f);
+      break;
+    default:
+      q = { p: [desk.x, desk.y, desk.z], yaw: desk.yaw, riding: false };
+      seated = true;
+  }
+  const [x, y0, z] = q.p;
+  const walking = !seated && !q.riding && f < 1;
+  // Indoors once past the doorway: a floor, or the lift between floors.
+  const indoors = seated || (Math.abs(x - m.x) < m.size / 2 && Math.abs(z - m.z) < m.size / 2 && y0 >= levelY(0) - 0.01);
+  const level = indoors ? floorAt(y0) : null;
+  // Seated: hips on the chair (the building is drawn at people's scale, so the seat meets the hips).
+  const y = seated ? desk.y + SEAT_TOP * desk.k - RIG.leg.h * c.scale : y0;
+  const place = seated ? `At its desk in ${mine.officeLabel}, ${level === 0 ? "lobby" : `floor ${desk.level}`}` : q.riding ? `In the lift in ${mine.officeLabel}` : indoors ? `${mine.officeLabel}, ${level === 0 ? "lobby" : `floor ${level ?? desk.level}`}` : mine.officeLabel;
+  const inside = indoors ? { key: m.key, level, seated } : undefined;
+  const base = { sit: seated ? 1 : 0, typing: seated && runWorking(seg), walking, place, inside };
+  if (!indoors) return at(x, y, z, q.yaw, base);
+  const open = c.open.get(m.key);
+  if (open !== undefined && level === open) return at(x, y, z, q.yaw, base);
+  if (open !== undefined && (level === null || level > open)) {
+    // Above the open floor: the shell there is cut away, so the figure would float, and a badge over
+    // the open floor would read as being on it. The building summary counts it on its own floor.
+    return at(x, y, z, q.yaw, { ...base, figure: false, badge: null });
+  }
+  // Closed (or below the open floor): the walls hide the figure; its badge shows on the street façade at its floor.
+  const front = Math.max(m.door.facade[2], m.z + m.size / 2) + 0.06;
+  const bx = Math.max(m.x - m.size / 2 + 0.1, Math.min(m.x + m.size / 2 - 0.1, x));
+  return at(x, y, z, q.yaw, { ...base, badge: [bx, y0 + 0.32, front] });
 }

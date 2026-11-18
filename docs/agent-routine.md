@@ -63,9 +63,26 @@ Rides are city simulation only. No booking, ticket, purchase or external action 
 - Click or tap an agent: its card shows what it's doing in the city and, separately, its work state,
   current task and workflow, run start and elapsed time, result, recent runs, next scheduled run, and
   **Follow agent**, **View office**, **Open task** (or **Open error** on a failure), **Full profile**.
-- With **Inside** on, an agent at its desk is drawn seated at its own desk; the office's generic
-  person for that desk is left out, so there is never a second figure. With Inside off, its badge
-  waits above the door.
+- **One building, two views** (`src/views/map3d/buildingModel.ts`). Each headquarters has one
+  definition that the exterior, the cutaway and the walk all read: its footprint, the street door
+  the map draws, storey height, a lobby behind the door, a lift core in the back corner of every
+  floor, and the office floors from each agent's catalog `office_floor` (floor 4 when it isn't set,
+  six desks a floor, as "Enter building" uses: `floorLayout`). The inside is drawn at people's
+  scale, so an agent keeps its size from the sidewalk to its chair, and every plate fits inside the
+  footprint.
+- **The walk in** is one continuous path: its place outside, the door, the lobby, the lift up to its
+  floor, the aisle behind the chairs, its own chair; and back out the same way. The figure is never
+  switched off: with the building closed the walls hide it and its badge sits on the street façade
+  at its floor, with a subtle band round that floor (cyan running, amber waiting for approval, red
+  failed, warm white at a desk with nothing running).
+- **View inside** (a building's panel) or **Locate agent** (the agent's card) opens that building as
+  a cutaway at one floor, whatever the toolbar's Inside switch says; the floors above step aside
+  and the ones below keep their walls. The summary beside it lists the floors (with who is on each
+  now), every agent assigned there with where it is and its real work state, the runs in
+  progress, and **Back to city**. It is kept across a reload. The open desks' monitors show only a
+  real state (running, waiting for approval, failed) and a neutral screen otherwise.
+- The office's generic person for a named agent's desk is left out, so there is never a second
+  figure. Opening, closing, changing floors and locating never touch a run.
 - The ring over an agent: cyan running, amber waiting for approval, red failed.
 - Agents waiting at the same place stand in rows, never on one point.
 
@@ -102,6 +119,10 @@ Product Lab hand-off and Career Execution Agent are drafts (unpublished).
   ahead of it.
 - A flight is time in the terminal (no badge on a plane). The train shows a badge only (the rider is
   inside the carriage).
-- Some custom towers don't open as a cutaway yet, so a seated agent there is hidden by the shell;
-  the badge still marks it. Atlas Command Center opens fully.
+- Custom towers keep their own shapes (round, ribbon, podium): the floor plate is the square
+  inside the footprint, so on a curved façade the plate's corners sit just inside the glass, and the
+  storeys follow the standard headquarters storey height.
+- "Enter building" (the full office) uses the same floors and desk places, but its rooms, lift
+  landing and lobby furniture are still its own drawing, and it shows the office's generic people
+  rather than the named characters.
 - Sounds: Atlas has no volume control on main yet (pull request #466), so the routine plays none.

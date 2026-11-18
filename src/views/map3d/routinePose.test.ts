@@ -24,7 +24,7 @@ function running(id: string, startedAt: number): AgentOps {
   const run: OpRun = { key: `n8n:test:${id}`, workflowKey: "n8n:test", workflowName: "Test workflow", agentId: id, source: "n8n", status: "running", startedAt, stoppedAt: null, seenAt: startedAt, statusSeenAt: startedAt, mode: "trigger", retry: false, url: null, title: "Test workflow" };
   return { ...quiet(id), runs: [run], open: [run], state: "running" };
 }
-const poseAt = (r: Routine, id: string, i: number, t: number, open: ReadonlySet<string> = new Set()): DrawnPose | null => {
+const poseAt = (r: Routine, id: string, i: number, t: number, open: ReadonlyMap<string, number> = new Map()): DrawnPose | null => {
   const seg = segmentAt(r, t);
   return seg && routinePose(seg, { routes, places, personaId: id, slot: i, open, wall: t, scale: FIGURE_SCALE });
 };
@@ -46,7 +46,7 @@ describe("drawing the routine", () => {
     });
   });
 
-  it("walks in, sits at its own desk and types while a run works, with the office open", () => {
+  it("walks in, sits at its own desk and types while a run works, on its floor in the open building", () => {
     expect(withDesk.length).toBeGreaterThanOrEqual(10);
     for (const a of withDesk) {
       const i = named.agents.indexOf(a), desk = places.agents.get(a.personaId)!.desk!;
@@ -54,17 +54,53 @@ describe("drawing the routine", () => {
       const work = r.segments.find((s) => s.kind === "inside" && s.phase === "working")!;
       expect(work, a.personaId).toBeTruthy();
       const t = (work.t0 + Math.min(work.t1, NOW + 30 * MIN)) / 2;
-      const seated = poseAt(r, a.personaId, i, t, new Set([desk.towerKey]))!;
-      expect(seated).toMatchObject({ figure: true, sit: 1, typing: true });
+      const seated = poseAt(r, a.personaId, i, t, new Map([[desk.towerKey, desk.level]]))!;
+      expect(seated).toMatchObject({ figure: true, sit: 1, typing: true, officeScale: null, inside: { key: desk.towerKey, level: desk.level, seated: true } });
       expect(Math.hypot(seated.x - desk.x, seated.z - desk.z)).toBeLessThan(1e-6);
-      // Office closed: no body, the badge waits above the door.
+      // Hips on the chair: the same figure scale as in the street, sitting just above its floor.
+      expect(seated.y).toBeGreaterThan(desk.y - 0.02);
+      expect(seated.y).toBeLessThan(desk.y + 0.05);
+      // Building closed: the figure stays at its desk behind the walls, the badge shows on the street façade at its floor.
       const closed = poseAt(r, a.personaId, i, t)!;
-      expect(closed.figure).toBe(false);
-      expect(closed.badge).toEqual(places.agents.get(a.personaId)!.doorBadge);
-      // The walk to the desk starts at the door and ends at the chair.
+      expect(closed.figure, a.personaId).toBe(true);
+      expect(closed.badge![1]).toBeGreaterThan(desk.y);
+      expect(closed.badge![1]).toBeLessThan(desk.y + desk.building.floorH);
+      expect(closed.badge![2]).toBeGreaterThanOrEqual(desk.building.z + desk.building.size / 2);
+      // Another floor open below its own: not drawn floating over the cut.
+      const below = poseAt(r, a.personaId, i, t, new Map([[desk.towerKey, 0]]))!;
+      expect(below.figure).toBe(false);
+      // The walk to the desk ends in the chair.
       const toDesk = r.segments.find((s) => s.kind === "inside" && s.phase === "to_desk")!;
-      const end = poseAt(r, a.personaId, i, toDesk.t1 - 1, new Set([desk.towerKey]))!;
+      const end = poseAt(r, a.personaId, i, toDesk.t1 - 1, new Map([[desk.towerKey, desk.level]]))!;
       expect(Math.hypot(end.x - desk.x, end.z - desk.z)).toBeLessThan(0.05);
+    }
+  });
+
+  it("goes from the sidewalk to the chair and back out without a jump, at one scale", () => {
+    for (const a of withDesk) {
+      const i = named.agents.indexOf(a), desk = places.agents.get(a.personaId)!.desk!;
+      // A run that finished, so the visit has every phase: in, working, completed, leaving, and out.
+      const start = NOW - 20 * MIN;
+      const run: OpRun = { key: `n8n:t:${a.personaId}`, workflowKey: "n8n:t", workflowName: "T", agentId: a.personaId, source: "n8n", status: "succeeded", startedAt: start, stoppedAt: NOW - 18 * MIN, seenAt: start, statusSeenAt: NOW - 18 * MIN, mode: "webhook", retry: false, url: null, title: "T" };
+      const ops = { ...quiet(a.personaId), runs: [run], open: [], lastResult: run, state: "succeeded" as const };
+      const r = planRoutine({ personaId: a.personaId, ops, env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW });
+      const ins = r.segments.filter((s) => s.kind === "inside");
+      if (!ins.length) continue;
+      const t0 = ins[0].t0 - 3000, t1 = ins[ins.length - 1].t1 + 3000;
+      const open = new Map([[desk.towerKey, desk.level]]);
+      let prev: DrawnPose | null = null;
+      const floors = new Set<number | null>();
+      for (let t = t0; t <= t1; t += 100) {
+        const p = poseAt(r, a.personaId, i, t, open);
+        expect(p, `${a.personaId} at ${t - t0}`).toBeTruthy();
+        expect(p!.officeScale).toBeNull();
+        if (prev) expect(Math.hypot(p!.x - prev.x, p!.y - prev.y, p!.z - prev.z), `${a.personaId} jumped at ${t - t0} ms (${p!.place})`).toBeLessThan(0.2);
+        if (p!.inside) floors.add(p!.inside.level);
+        prev = p;
+      }
+      // Through the lobby and up to its own floor.
+      expect(floors.has(0), a.personaId).toBe(true);
+      expect(floors.has(desk.level), a.personaId).toBe(true);
     }
   });
 

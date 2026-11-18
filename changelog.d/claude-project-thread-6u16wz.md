@@ -1,0 +1,1 @@
+- 2026-11-18 · Agents now walk into their building through its real door, ride the lift to their floor and sit at their own desk at the same size as outside. "View inside" and "Locate agent" open the building at that floor, with a summary of who is there and the runs in progress.

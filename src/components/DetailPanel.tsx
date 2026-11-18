@@ -1,3 +1,4 @@
+import { projectOfficeAgents } from "../catalog/workplaces";
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
@@ -38,6 +39,7 @@ import { PullRequests } from "./PullRequests";
 import { useReducedMotion } from "../lib/motion";
 import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
+import { leaveInside, useInsideFocus, viewInside } from "../views/map3d/insideFocus";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
 import { BusinessLink } from "./BusinessLink";
@@ -103,6 +105,15 @@ function EnterBuildingButton({id,label="Enter building"}:{id:string;label?:strin
   const {view}=useAtlas();
   const reduced=useReducedMotion();
   return view==="map"&&webglAvailable()?<button className="ghost-btn enter-building" onClick={()=>enterBuilding(id,reduced||id.startsWith("skyline-business:"))}><Icon name="agents" size={15}/> {label}</button>:null;
+}
+
+/** "View inside": open this headquarters as a cutaway on the map, at its lowest office floor (map3d/insideFocus.ts). */
+function ViewInsideButton({id}:{id:string}) {
+  const {view,catalog}=useAtlas();
+  const focus=useInsideFocus();
+  if(view!=="map"||!webglAvailable()||!projectOfficeAgents(catalog.agents,id).length)return null;
+  const open=focus?.key===`project:${id}`;
+  return <button className="ghost-btn view-inside" aria-pressed={open} onClick={()=>open?leaveInside():viewInside(`project:${id}`)}><Icon name="map" size={15}/> {open?"Back to city":"View inside"}</button>;
 }
 
 function LinkedRepositories({project}:{project:Project}) {
@@ -224,6 +235,7 @@ function ProjectDetail({ id }: { id: string }) {
     <Head eyebrow="Project building" title={project.name} organization={project.organization}>
       <div className="chips" style={{ marginTop: 10 }}><StatusPill status={project.status} /><span className="chip">{repositories.length} {repositories.length === 1 ? "repository" : "repositories"}</span></div>
       <EnterBuildingButton id={project.id}/>
+      <ViewInsideButton id={project.id}/>
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>

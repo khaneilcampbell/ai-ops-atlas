@@ -130,7 +130,7 @@ export function AgentTaskCard(p: AgentTaskCardProps) {
         </button>
         {p.hasOffice && (
           <button type="button" onClick={p.onViewOffice}>
-            View office
+            Locate agent
           </button>
         )}
         {openable ? (

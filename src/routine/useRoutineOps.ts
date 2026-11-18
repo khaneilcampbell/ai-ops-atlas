@@ -6,7 +6,7 @@ import { identityFor } from "../registry/identity";
 import { useAtlas } from "../state";
 import { useTasks } from "../tasks/store";
 import { loadLedger, observe, saveLedger, type Ledger } from "./ledger";
-import { agentOps, sightingsOf, type AgentOps } from "./operations";
+import { agentOps, sightingsOf, type AgentOps, type OperationalState } from "./operations";
 
 /**
  * Every named agent's operational state, from the shared n8n poll (one request for all agents,
@@ -134,4 +134,29 @@ export function useWhere(personaId: string): LiveWhere | null {
     () => whereVersion,
   );
   return where.get(personaId) ?? null;
+}
+
+// ------------------------------------------------------------------------------------- run state for the desks
+
+/**
+ * Every named agent's operational state as the map last worked it out (NamedAgents publishes it
+ * from useRoutineOps), so the open offices' desks, the agent's card and the building summary all
+ * show the same real state. Never set from movement: only from runs.
+ */
+let opsStates: ReadonlyMap<string, OperationalState> = new Map();
+const opsWatchers = new Set<() => void>();
+export function publishOpsStates(next: ReadonlyMap<string, OperationalState>) {
+  if (next.size === opsStates.size && [...next].every(([k, v]) => opsStates.get(k) === v)) return;
+  opsStates = next;
+  opsWatchers.forEach((w) => w());
+}
+export function useOpsStates(): ReadonlyMap<string, OperationalState> {
+  return useSyncExternalStore(
+    (w) => {
+      opsWatchers.add(w);
+      return () => opsWatchers.delete(w);
+    },
+    () => opsStates,
+    () => opsStates,
+  );
 }

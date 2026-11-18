@@ -92,7 +92,9 @@ import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow, WholeBuildingGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
-import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
+import { insideRoof, InsideView, type InsideOffice } from "./InsideView";
+import { takeInsideFrame, useInsideFocus } from "./insideFocus";
+import { levelY } from "./buildingModel";
 import { insideLimits, type InsideLimits } from "./inside";
 import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
@@ -230,6 +232,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
 
 /** How far the camera sits from an agent it follows (world units). */
 const FOLLOW_DIST = 9;
+const NO_OPEN: ReadonlyMap<string, number> = new Map();
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
@@ -253,9 +256,11 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
-  const [opened, setOpened] = useState<string[]>([]);
-  const openSet = useMemo(() => new Set(props.inside ? opened : []), [opened, props.inside]);
-  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? INSIDE_ROOF : towerTop(t)), [openSet]);
+  const [opened, setOpened] = useState<ReadonlyMap<string, number>>(NO_OPEN);
+  // "View inside" opens one building on purpose, whatever the toolbar's Inside switch says (insideFocus.ts).
+  const insideFocus = useInsideFocus();
+  const openSet = useMemo<ReadonlyMap<string, number>>(() => (props.inside || insideFocus ? opened : NO_OPEN), [opened, props.inside, insideFocus]);
+  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? insideRoof(openSet.get(t.key)!) : towerTop(t)), [openSet]);
   const api = useRef<Map3DApi | null>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
   const labelEls = useRef(new Map<string, HTMLDivElement>());
@@ -496,7 +501,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const powerMode = usePowerMode();
   const battery = useOnBattery();
   const insideCaps = useMemo(() => insideLimits(phone, powerMode, battery), [phone, powerMode, battery]);
-  const insideOffices = useInsideOffices(!!props.inside);
+  const insideOffices = useInsideOffices(!!props.inside || !!insideFocus);
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
@@ -673,8 +678,8 @@ function World({
   inside: boolean;
   insideOffices: Map<string, InsideOffice>;
   insideCaps: InsideLimits;
-  onInsideOpen: (keys: string[]) => void;
-  insideOpen: Set<string>;
+  onInsideOpen: (open: ReadonlyMap<string, number>) => void;
+  insideOpen: ReadonlyMap<string, number>;
   onLinkHover: (id: string | null, e?: { nativeEvent: PointerEvent }) => void;
   onLinkPick: (id: string) => void;
   hoods: number;
@@ -1183,6 +1188,14 @@ function World({
 
   useFrame((state, delta) => {
     if (!reduced) time.value = state.clock.elapsedTime;
+    // "View inside" and "Locate agent": glide to the building's open floor once.
+    const fr = takeInsideFrame();
+    const fm = fr && city?.places.buildings.get(fr.key);
+    if (fr && fm) {
+      framing.current = null;
+      const y = levelY(fr.level ?? fm.officeFloors[0].level);
+      goto(fr.at ? new THREE.Vector3(fr.at.x, y, fr.at.z) : new THREE.Vector3(fm.x, y, fm.z), fr.dist ?? Math.max(6, fm.size * 2.6), false, 700);
+    }
     const a = anim.current;
     if (a) {
       wake(100);
@@ -1330,7 +1343,7 @@ function World({
     if (key === YACHT_KEY) return yachtOutline();
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
-    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
+    return a && key && insideOpen.has(key) ? { ...a, y1: insideRoof(insideOpen.get(key)!) } : a && { ...a, ...a.whole };
   };
   const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);
   return (
@@ -1374,7 +1387,7 @@ function World({
       {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><IntelligenceHub tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><PortfolioSite tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isSocLab(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><SocLab tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
-      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} managed={managedDesks} />
+      <InsideView on={inside} models={city?.places.buildings} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} managed={managedDesks} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />

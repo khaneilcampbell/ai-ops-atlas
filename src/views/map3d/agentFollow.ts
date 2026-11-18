@@ -32,12 +32,8 @@ export function useFollowedAgent(): string | null {
   );
 }
 
-/** Ask the map to open an agent's office in the Inside view and frame it (Map.tsx listens). */
-export const VIEW_OFFICE_EVENT = "atlas:view-office";
-export interface ViewOfficeDetail {
-  projectId: string | null;
-  towerKey: string | null;
-}
-export function viewOffice(detail: ViewOfficeDetail) {
-  window.dispatchEvent(new CustomEvent<ViewOfficeDetail>(VIEW_OFFICE_EVENT, { detail }));
-}
+/**
+ * Which agents are inside their office building right now and on which floor (null in the lift),
+ * as last drawn (NamedAgents.tsx). For the building summary and "Locate agent"; never a run state.
+ */
+export const agentInside = new Map<string, { key: string; level: number | null; seated: boolean } | null>();
