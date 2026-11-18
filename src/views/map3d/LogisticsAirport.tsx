@@ -5,6 +5,8 @@ import {MODELS,SCALE} from "./vehicleModels";
 import AirportCampus from "./AirportCampus";
 import {GroundCrew} from "./GroundCrew";
 import {executiveJetPose,FLIGHT_SCHEDULE,fleetPose,SHARED_SLOT} from "./flightSchedule";
+/** Flying jets carry a city sound (src/sound/engine.ts reads their position, louder as they pass close). */
+const FLYING_SOUND={citySound:"aircraft"};
 import {airportAnimationEnabled} from "./airportBuildings";
 import {liveryFor,type Livery} from "./airlineLiveries";
 import {AIRCRAFT_LIGHTS,COCKPIT_PANES,LANDING_BEAM,blinkState,lightPhase} from "./aircraftLights";
@@ -117,7 +119,7 @@ function Aircraft({g,m,circuit,clock,slot,parked,livery,night=false,beam,gold}:{
   });
   const pickAll=gold?{...gold.pick,keys:[] as string[]}:undefined,picked=(items:Inst[])=>pickAll&&{...pickAll,keys:items.map(()=>GOLD_JET_KEY)};
   const S=gold?GOLD_JET_SCALE:1,P=GOLD_JET_PIVOT;
-  return <group ref={ref} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
+  return <group ref={ref} userData={parked?undefined:FLYING_SOUND} position={parked?[parked.x,0,parked.z]:undefined} rotation={parked?[0,parked.yaw??0,0]:undefined}>
    <group position={gold?P:undefined} scale={S}><group position={gold?[-P[0],-P[1],-P[2]]:undefined}>
     {gold&&<><Instanced items={parts.gold} geometry={g.cyl} material={gold.material} pick={picked(parts.gold)}/><Instanced items={parts.goldWindows} geometry={g.box} material={m.plain} shadow={false}/></>}
     <Instanced items={parts.body} geometry={g.ball} material={m.plain} pick={picked(parts.body)}/>
@@ -316,7 +318,7 @@ function ExecutiveJet({g,m,clock,circuit,night=false,beam}:{g:Geometry;m:Materia
     if(gearRef.current){gearRef.current.scale.set(1,Math.max(.001,pose.gear),1);gearRef.current.visible=pose.gear>.02;}
   });
   const J=EXECUTIVE_JET_MODEL;
-  return <group ref={ref}>
+  return <group ref={ref} userData={FLYING_SOUND}>
     <Instanced items={J.tubes} geometry={g.cyl} material={m.plain}/>
     <Instanced items={J.balls} geometry={g.ball} material={m.plain}/>
     <Instanced items={J.boxes} geometry={g.box} material={m.plain}/>

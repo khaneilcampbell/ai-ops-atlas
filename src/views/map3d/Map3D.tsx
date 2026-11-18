@@ -86,6 +86,7 @@ import { useAgentTag } from "./useAgentTag";
 import type { AgentTagInfo } from "./agentTagInfo";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
+import { CitySoundBridge } from "../../sound/CitySoundBridge";
 import { ActivityGlow, WholeBuildingGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
@@ -513,6 +514,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       <Canvas key={glKey} onCreated={onGlCreated} shadows="percentage" dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
+        <CitySoundBridge anchors={anchors} />
         <World
           drawing={drawing}
           agentCommutes={agentCommutes}

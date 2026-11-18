@@ -14,6 +14,8 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
+import { CitySoundControl } from "../components/CitySoundControl";
+import { useCitySound } from "../sound/useCitySound";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { useRuntimes } from "./office/activity";
@@ -492,6 +494,9 @@ export function MapView({active=true}:{active?:boolean}) {
   const runtimeMap = useRuntimes();
   const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
   const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // City sound: ambience plus a soft tone for each real change in an agent's runtime state.
+  const agentProject = useMemo(() => new Map(catalog.agents.map((a) => [a.id, a.projectId])), [catalog]);
+  const sound = useCitySound({ active, night: light === "night", traffic, runtimes, projectOf: (id) => agentProject.get(id) });
   const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
@@ -1214,6 +1219,7 @@ export function MapView({active=true}:{active?:boolean}) {
             <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
               title="Keep district locations and clean district names; no grouping hides district headings" />
             <span className="sep" />
+            <CitySoundControl sound={sound} reduced={reduced} />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
                 3D

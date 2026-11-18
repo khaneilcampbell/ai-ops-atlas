@@ -1,0 +1,24 @@
+/* City sound (components/CitySoundControl.tsx): the speaker in the map toolbar, its hover label,
+   and the volume slider that sits beside it while sound is on. */
+.city-sound { position: relative; display: inline-flex; align-items: center; flex: none; }
+.city-sound-tip {
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: nowrap;
+  background: var(--forest-800); color: var(--on-dark); font-size: 12px; font-weight: 500; padding: 6px 9px; border-radius: 8px;
+  box-shadow: var(--shadow); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .12s ease;
+}
+.city-sound:hover .city-sound-tip, .city-sound:has(button:focus-visible) .city-sound-tip { opacity: 1; visibility: visible; }
+.city-sound-volume { width: 72px; margin: 0 6px 0 4px; accent-color: var(--forest-700); cursor: pointer; height: 20px; }
+.city-sound-volume:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+.city-sound .icon-btn:disabled { opacity: .45; cursor: default; }
+/* A soft ring when an automation sound plays. */
+.city-sound .icon-btn.pulse { animation: city-sound-ring .9s ease-out; }
+@keyframes city-sound-ring { from { box-shadow: 0 0 0 0 rgba(208, 173, 105, .55); } to { box-shadow: 0 0 0 9px rgba(208, 173, 105, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .city-sound .icon-btn.pulse { animation: none; }
+  .city-sound-tip { transition: none; }
+}
+@media (max-width: 700px) {
+  /* The toolbar scrolls sideways on a phone, so the label would be clipped; the button's own label covers it. */
+  .city-sound-tip { display: none; }
+  .city-sound-volume { width: 54px; margin: 0 4px 0 2px; }
+}

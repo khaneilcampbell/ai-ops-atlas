@@ -33,6 +33,8 @@ const PATHS: Record<string, string> = {
   // A building in section: the roof lifted off, a floor and a desk inside.
   cutaway: "M3 10l9-6 9 6M5 13v7h14v-7M5 16h14M10 20v-2h4v2M8 9.5l4-2.7 4 2.7",
   car: "M3 17v-4l2.2-5.2A2 2 0 0 1 7 6.5h10a2 2 0 0 1 1.8 1.3L21 13v4h-2M3 17h2M9 17h6M3 13h18M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  speaker: "M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14",
+  "speaker-off": "M11 5 6 9H2v6h4l5 4zM22 9l-6 6M16 9l6 6",
   moon: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z",
   network: "M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4",
   usage: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM15 8.5c-.6-.9-1.7-1.5-3-1.5-1.9 0-3 1-3 2.3 0 3 6 1.7 6 4.7 0 1.3-1.2 2.3-3 2.3-1.4 0-2.6-.6-3.2-1.6M12 5.5V7M12 17v1.5",
