@@ -121,7 +121,7 @@ agents:
     permissions:
       - Reads the site folder; writes nothing and makes no network calls
     registry:
-      title: Site Audit
+      title: "Portfolio · Page Quality Audit"
       category: engineering
       subcategory: Code quality
       classification:
@@ -191,7 +191,7 @@ agents:
       - GITHUB_TOKEN with the repository's default permissions (the workflow sets none)
       - No repository secrets
     registry:
-      title: Website Security Check
+      title: "Portfolio · Security Policy Check"
       category: security
       subcategory: Security configuration auditing
       classification:
@@ -259,7 +259,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Portfolio Site CI
+      title: "Portfolio · Build and Test"
       category: engineering
       subcategory: CI/CD
       classification:

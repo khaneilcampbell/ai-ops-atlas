@@ -32,7 +32,7 @@ agents:
       - 'GITHUB_TOKEN: contents write only in the artifact-only publishing job, to publish the main-build release'
       - 'Protected macos-signing environment only: TAURI_SIGNING_PRIVATE_KEY, MACOS_SIGNING_CERT, MACOS_SIGNING_CERT_PASSWORD'
     registry:
-      title: Atlas CI
+      title: "Atlas · Test and Release Build"
       category: engineering
       subcategory: CI/CD
       classification:
@@ -290,7 +290,7 @@ agents:
     last_run: null
     permissions: [Actions write on repositories selected in the token and in Settings]
     registry:
-      title: Re-run Failed Jobs
+      title: "Atlas · Re-run Failed CI Jobs"
       category: engineering
       subcategory: CI/CD operations
       classification:
@@ -358,7 +358,7 @@ agents:
     last_run: null
     permissions: [Pull requests and Contents write on one repository per token, for repositories ticked in Settings]
     registry:
-      title: Merge Pull Request
+      title: "Atlas · Merge Approved Pull Request"
       category: engineering
       subcategory: Code review and release
       classification:
@@ -611,7 +611,7 @@ agents:
       - 'GITHUB_TOKEN: public repository metadata read'
       - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
     registry:
-      title: Dataset Census
+      title: "Atlas · Data Freshness Count"
       category: data
       subcategory: Data inventory
       classification:
@@ -711,7 +711,7 @@ agents:
       - 'GitHub: public read of atlas-inventory.json, no key'
       - 'Google Sheets: writes the inventory tabs of the Atlas Agent Registry sheet only'
     registry:
-      title: Atlas Data Inventory
+      title: "Atlas · Map Inventory Sheet"
       category: data
       subcategory: Data inventory
       classification:

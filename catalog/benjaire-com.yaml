@@ -44,7 +44,7 @@ agents:
       - Turnstile secret key (TURNSTILE_SECRET_KEY)
       - Benjaire Flow intake key, sent as x-flow-key (FLOW_INTAKE_KEY)
     registry:
-      title: Contact Form Worker
+      title: "Inquiries · Contact Form Check"
       category: business
       subcategory: Customer inquiry processing
       classification:
@@ -124,7 +124,7 @@ agents:
       - Anthropic, through the n8n credential on Classify with Claude
       - 'n8n data tables: reads flow_settings, writes flow_inquiries and flow_events'
     registry:
-      title: Flow Intake
+      title: "Inquiries · Classify and Save Inquiry"
       category: business
       subcategory: Workflow automation
       classification:
@@ -211,7 +211,7 @@ agents:
       - 'Atlas AGENT_FEED_TOKEN, add-only: the Worker can store an inquiry but never read one back'
       - 'D1 table inquiries: kept 180 days, then deleted'
     registry:
-      title: Inquiry to Client
+      title: "Inquiries · Draft Reply and Follow-ups"
       category: business
       subcategory: Customer inquiry processing
       classification:
@@ -285,7 +285,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Benjaire Site CI
+      title: "Benjaire Site · Build and Test"
       category: engineering
       subcategory: CI/CD
       classification:
@@ -804,7 +804,7 @@ agents:
       - 'Resend API: sends from contact@benjaire.com to the ops address only'
       - 'n8n data table flow_settings: reads ops_email'
     registry:
-      title: Flow Error Alerts
+      title: "Benjaire Ops · Workflow Failure Alerts"
       category: business
       subcategory: Workflow automation
       classification:
@@ -889,7 +889,7 @@ agents:
       - 'Resend API: welcome email to the client on a first win, sent from contact@benjaire.com'
       - 'n8n data tables: reads flow_settings, updates flow_inquiries status, writes flow_events'
     registry:
-      title: Flow Status Updates
+      title: "Inquiries · Client Status Updates"
       category: business
       subcategory: Workflow automation
       classification:
@@ -986,7 +986,7 @@ agents:
       - 'Resend API: reminder emails to the owner address only'
       - 'n8n data tables: reads flow_settings and flow_inquiries, marks reminded'
     registry:
-      title: Flow Reply Reminders
+      title: "Inquiries · Unanswered Reply Reminder"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1077,7 +1077,7 @@ agents:
       - 'Resend API: digest email to the owner address only'
       - 'n8n data tables: reads flow_settings and flow_inquiries'
     registry:
-      title: Flow Monday Digest
+      title: "Inquiries · Monday Digest Email"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1168,7 +1168,7 @@ agents:
       - 'n8n API key (read only): executions of the watched workflows'
       - 'Resend API: alert email to the ops address only'
     registry:
-      title: Flow Missed Run Check
+      title: "Benjaire Ops · Missed Run Check"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1255,7 +1255,7 @@ agents:
       - 'Resend API: buyer emails from benjaire.com'
       - 'n8n data tables: reads shop_settings, writes shop orders'
     registry:
-      title: Shop Starter Delivery
+      title: "Shop · Starter Kit Delivery"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1353,7 +1353,7 @@ agents:
       - 'Resend API: buyer follow-up emails from benjaire.com'
       - 'n8n data tables: reads shop orders and shop_settings, marks follow-ups sent'
     registry:
-      title: Shop Buyer Follow Ups
+      title: "Shop · Buyer Follow-up Emails"
       category: business
       subcategory: Workflow automation
       classification:

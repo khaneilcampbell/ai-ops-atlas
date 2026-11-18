@@ -49,7 +49,7 @@ agents:
       - 'Resend API: approval and failure emails to Khaneil only'
       - 'n8n data table commerce_products: reads ideas, writes drafts'
     registry:
-      title: Commerce Design Run
+      title: "Commerce · Draft Product and Designs"
       tier: coordinator
       category: business
       subcategory: Workflow orchestration
@@ -644,7 +644,7 @@ agents:
       - 'Stripe restricted key: write access to products, prices and payment links only'
       - 'n8n data tables: writes commerce_products and shop_settings'
     registry:
-      title: Approve and Publish
+      title: "Commerce · Approve and Publish Product"
       category: business
       subcategory: Workflow automation
       classification:
@@ -858,7 +858,7 @@ agents:
       - 'Resend API: buyer emails on benjaire.com'
       - 'n8n data tables: reads shop_settings, writes orders'
     registry:
-      title: Order Delivery
+      title: "Commerce · Deliver Buyer Template"
       category: business
       subcategory: Order fulfillment
       classification:
@@ -943,7 +943,7 @@ agents:
       - 'Resend API: weekly email to Khaneil only'
       - 'n8n data table commerce_products: reads live products'
     registry:
-      title: Shop Page and Weekly Sales
+      title: "Commerce · Shop Page and Weekly Sales"
       category: business
       subcategory: Sales reporting
       classification:
@@ -1022,7 +1022,7 @@ agents:
       - 'Stripe restricted key: reads checkout sessions, payment intents, charges and balance transactions'
       - 'n8n data table shop_orders: reads which product each checkout bought'
     registry:
-      title: Stripe Sales Feed
+      title: "Commerce · Stripe Sales Sync"
       category: business
       subcategory: Sales reporting
       classification:
@@ -1228,7 +1228,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Commerce Pipeline Tests
+      title: "Commerce · Pipeline Tests"
       category: engineering
       subcategory: CI/CD
       classification:

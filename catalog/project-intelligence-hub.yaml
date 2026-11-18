@@ -29,7 +29,7 @@ agents:
     permissions:
       - Reads Source/ and writes DOCX files in the project folder; no network
     registry:
-      title: Docs Builder
+      title: "Docs · Render DOCX Documents"
       category: engineering
       subcategory: Documentation
       classification:
@@ -97,7 +97,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Hub CI
+      title: "Docs · Check and Render All"
       category: engineering
       subcategory: CI/CD
       classification:
@@ -189,7 +189,7 @@ agents:
       - 'Google Sheets: reads and writes the Atlas Agent Registry sheet only'
       - 'Anthropic API: one Claude call a week for the Top 10 ranking, capped at $3 per 30 days'
     registry:
-      title: Agent Registry Sync
+      title: "Agent Ops · Registry Sheet Sync"
       category: engineering
       subcategory: Workflow automation
       automation_category: maintenance       # B since the Top 10 ranking step; keeps its place beside the registry sync's other upkeep
@@ -282,7 +282,7 @@ agents:
       - 'Resend: the proposal email to Khaneil only'
       - 'n8n data table agent_factory_proposals: writes proposals and decisions'
     registry:
-      title: Agent Factory
+      title: "Agent Ops · New Agent Proposals"
       category: engineering
       subcategory: Agent planning
       classification:
@@ -376,7 +376,7 @@ agents:
       - 'Anthropic API: one call per step; the Atlas site allows at most 20 steps a day'
       - 'Atlas report key (N8N_BRIDGE_CALLBACK_TOKEN): adds reports only for steps the site sent'
     registry:
-      title: Workflow Step Runner
+      title: "Agent Ops · Workflow Step Runner"
       category: engineering
       subcategory: Workflow automation
       classification:

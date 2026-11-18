@@ -44,7 +44,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 briefs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Merge Flow
+      title: "GitHub · Pull Request Merge Lanes"
       category: engineering
       subcategory: Code review and release
       classification:
@@ -128,7 +128,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Opportunity Scout
+      title: "Development · Revenue Opportunity Scout"
       category: business
       subcategory: Opportunity research
       classification:
@@ -214,7 +214,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Design Consistency
+      title: "Development · Design Token Check"
       category: engineering
       subcategory: Design consistency
       automation_category: maintenance

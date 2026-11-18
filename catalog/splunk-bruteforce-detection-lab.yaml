@@ -40,7 +40,7 @@ agents:
       - Splunk REST API with the lab account in SPLUNK_USER and SPLUNK_PASS
       - Writes Markdown notes to notes/
     registry:
-      title: SOC Case Notes
+      title: "SOC · Write Case Notes"
       category: security
       subcategory: Detection analysis
       classification:
@@ -104,7 +104,7 @@ agents:
     permissions:
       - Splunk search on index main (WinEventLog:Security)
     registry:
-      title: Brute Force Detection Search
+      title: "SOC · Brute Force Detection Search"
       category: security
       subcategory: Detection analysis
       classification:
@@ -168,7 +168,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: SOC Lab CI
+      title: "SOC · Lint and Test"
       category: engineering
       subcategory: CI/CD
       classification:
