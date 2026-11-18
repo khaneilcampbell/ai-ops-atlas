@@ -174,3 +174,17 @@ Id `documentation-lead` · accent `#6B8F71` · avatar `public/agents/documentati
 Id `soc-detection-lead` · accent `#38BDF8` · avatar `public/agents/soc-detection-lead.webp` (Higgsfield job `a704bcd2-b729-420e-96f3-46e3a4698fd3`)
 
 > Flat vector illustrated avatar of a fictional character: Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #38BDF8 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
+
+## City characters
+
+Each of the 17 identities is also one character in the 3D city (`src/views/map3d/NamedAgents.tsx`), built from its avatar.
+
+- **Appearance:** `src/registry/cityFigures.ts`, keyed by the same stable agent id as `registry.identity`. It holds skin, hair style and colour, facial hair, glasses, earrings, necklace, the visible top, collar and jacket, and a silhouette (height, shoulders). Trousers and shoes are not in the avatars, so they are quiet role-appropriate defaults. The avatar's coloured circle is only the badge ring, never skin or clothes. `cityFigures.test.ts` checks every identity has exactly one figure.
+- **Rig:** `src/views/map3d/agentFigures.ts` hangs each figure's boxes and balls on one shared six-bone rig (body, head, legs, arms). All characters draw in four calls: boxes, balls, portrait badges (one atlas texture, a fixed size on screen) and activity rings.
+- **Place:** `src/views/map3d/namedAgentPlan.ts` stands each persona in front of its real workplace from `agentJobs` (its project's headquarters, or the Marketing Agency for Leila Haddad), side by side with the others there. Agents with a commute walk it from their workday or saved presence schedule and are not drawn while at home. No other travel is drawn: Atlas has no handoff data between buildings yet.
+- **One per identity:** automations and Product Lab skills show their persona in lists, but never add a second character. The AI agents no longer walk in the crowd mesh, so nobody appears twice.
+- **Activity:** a thin ring above the head only while a task assigned to the persona (or one of its automations) is running, or verified telemetry says it is working.
+- **Profile:** pointing names the character; a click or tap opens a card with the portrait, name, role, AI agent label, building, status and current task, with Open task (opens that task in the Task Center) and Full profile (the agent's detail panel).
+- **Reduced motion:** no stride or idle movement; walkers move on every two seconds.
+
+Limits: at normal city zoom a figure is about a centimetre tall on screen, so faces read from the portrait badge rather than the 3D head. Glasses, beards and hairstyles show in close-ups. Office desk figures are unchanged. Review shots: `NAMED_SHOTS=<dir> npx playwright test -c visual visual/named-agents.visual.ts`.

@@ -116,8 +116,11 @@ export function TaskCenterView() {
   const actions = useActions();
   const ctx: ExecContext = { desktop: actions.available, agentsToken: !!actions.status?.agents_token };
   const focus = useMemo(() => takeTaskFocus(), []);
-  const [filter, setFilterState] = useState<TaskFilter>(() => ({ ...EMPTY_FILTER, ...(focus ?? {}) }));
-  const [selected, setSelected] = useState<string | null>(null);
+  const [filter, setFilterState] = useState<TaskFilter>(() => {
+    const { taskId: _task, ...rest } = focus ?? {}; // eslint-disable-line @typescript-eslint/no-unused-vars
+    return { ...EMPTY_FILTER, ...rest };
+  });
+  const [selected, setSelected] = useState<string | null>(focus?.taskId ?? null);
   const [form, setForm] = useState<{ task?: StoredTask; preset?: { buildingId?: string; agentId?: string } } | null>(null);
   const [pageN, setPage] = useState(0);
   const [autoIntake, setAutoIntake] = useState(() => load<boolean>("tasksAutoIntake", false));
