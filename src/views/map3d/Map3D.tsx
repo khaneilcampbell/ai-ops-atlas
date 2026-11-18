@@ -81,9 +81,10 @@ import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
-import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
-import { useAgentTag } from "./useAgentTag";
-import type { AgentTagInfo } from "./agentTagInfo";
+import { planAgentCommutes } from "./agentCommutes";
+import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
+import { NamedAgents } from "./NamedAgents";
+import { catalog as fullCatalog } from "../../catalog";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow, WholeBuildingGlow } from "./activity";
@@ -229,9 +230,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
-  // The agent under the pointer on the map, and its card: same verified state as its desk, plus home and work.
-  const [tagAgent, setTagAgent] = useState<string | null>(null);
-  const agentTag = useAgentTag(tagAgent, jobs);
+  // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
+  const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
@@ -515,9 +515,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
           drawing={drawing}
-          agentCommutes={agentCommutes}
-          agentTag={agentTag}
-          onAgentHover={setTagAgent}
+          namedAgents={namedAgents}
           power={power}
           light={props.light}
           health={health}
@@ -611,7 +609,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  drawing,agentCommutes,agentTag,onAgentHover,
+  drawing,namedAgents,
   power,
   light: lightMode,
   health,
@@ -647,7 +645,7 @@ function World({
   cover,
   surface,
 }: {
-  drawing:boolean;agentCommutes?: CommutePlan;agentTag?: AgentTagInfo | null;onAgentHover?: (agentId: string | null) => void;
+  drawing:boolean;namedAgents?: NamedAgentPlan;
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -1313,7 +1311,8 @@ function World({
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} agentTag={agentTag} onAgentHover={onAgentHover} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} moving={!reduced} drawing={drawing} />}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

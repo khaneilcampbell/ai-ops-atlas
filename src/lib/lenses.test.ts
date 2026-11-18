@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LENS_TYPES, lensLinks, MAP_LENSES, type LensContext, type LensLink } from "./lenses";
+import { LENS_INFO, LENS_TYPES, lensLinks, lensNeeds3d, MAP_LENSES, type LensContext, type LensLink } from "./lenses";
 
 const links: LensLink[] = [
   { id: "repo:site-ci", type: "github", a: "repo:me/site", b: "agent:site-ci", pa: "site", pb: "site" },
@@ -45,4 +45,9 @@ it("respects connection type switches in every view, including selected projects
  for(const lens of ["infrastructure","agents","automations"] as const)expect(lensLinks(links,lens,disabled)).toEqual([]);
  expect(ids(lensLinks(links,"agents",{...ctx,types:{...ctx.types,n8n:false}}))).toEqual(["dep:a~b"]);
  expect(ids(lensLinks(links,"automations",{...ctx,types:{...ctx.types,github:false}}))).toEqual(["dep:c~d"]);
+});
+
+it("merges the infrastructure view into By district, the one view that works on the flat map",()=>{
+ expect(MAP_LENSES.map(l=>LENS_INFO[l].label)).toEqual(["By district","Agent network","Automation flow"]);
+ expect(MAP_LENSES.filter(l=>!lensNeeds3d(l))).toEqual(["infrastructure"]);
 });

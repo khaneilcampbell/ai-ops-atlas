@@ -107,6 +107,30 @@ export interface RegistryManifest {
   };
   cost?: { budget?: string; notes?: string };
   docs?: { technical?: string; runbook?: string; knownIssues: string[]; improvements: string[]; lastReview?: string | null };
+  /** A persistent persona shown with the agent everywhere in Atlas. Display only: ids, tasks and permissions are unchanged. */
+  identity?: AgentIdentityManifest;
+}
+
+/** One generated portrait, kept so it is reused, never regenerated per task. */
+export interface PortraitRecord {
+  /** Path under public/, such as "agents/atlas-release-manager.webp". */
+  path: string;
+  model?: string;
+  jobId?: string;
+  promptVersion?: number;
+  generatedAt?: string | null;
+}
+
+/** `registry.identity` as written in a manifest. */
+export interface AgentIdentityManifest {
+  displayName: string;
+  /** #RRGGBB. Marks identity only, never status. */
+  accent?: string;
+  intro?: string;
+  voice?: string;
+  /** Fixed appearance details, reused in any later portrait prompt. */
+  appearance?: string;
+  portrait?: PortraitRecord;
 }
 
 /** One execution as observed by Atlas or recorded by hand. */

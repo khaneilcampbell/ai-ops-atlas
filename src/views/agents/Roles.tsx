@@ -3,12 +3,15 @@ import { ESSENTIAL_ROLES, memberKind, placement, roleActivity, roleDirectory, ro
 import type { Agent, Project } from "../../catalog/types";
 import { filterEntries, EMPTY_FILTER, type RegistryEntry } from "../../registry/registry";
 import { OPERATIONAL_LABEL } from "../../registry/telemetry";
+import { AgentIdentityLine } from "../../components/AgentIdentity";
+import { identityFor } from "../../registry/identity";
+import type { IdentityStatus } from "../../registry/agentStatus";
 
 export type RoleView = "roles" | "inactive" | "archived";
 const NAME = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
 
 /** Essential roles with their agents and automations nested underneath, plus Inactive and Archived. */
-export function Roles({ agents, projects, entries, view, query, current, pick }: { agents: Agent[]; projects: Project[]; entries: RegistryEntry[]; view: RoleView; query: string; current?: string; pick: (id: string) => void }) {
+export function Roles({ agents, projects, entries, view, query, current, pick, statuses }: { agents: Agent[]; projects: Project[]; entries: RegistryEntry[]; view: RoleView; query: string; current?: string; pick: (id: string) => void; statuses?: ReadonlyMap<string, { status: IdentityStatus }> }) {
   const dir = useMemo(() => roleDirectory(agents), [agents]);
   const roles = useMemo(() => roleOf(agents), [agents]);
   const byId = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
@@ -24,12 +27,13 @@ export function Roles({ agents, projects, entries, view, query, current, pick }:
     const e = entry.get(id)!;
     const a = byId.get(id)!;
     const last = e.telemetry.lastVerifiedRun;
+    const identity = identityFor(id, agents);
     return (
       <li key={id}>
         <button data-id={id} className={`reg-step ${id === current ? "on" : ""}`} onClick={() => pick(id)}>
           <i className={`op-dot op-${e.operational}`} aria-hidden />
           <span className="grow">
-            {e.profile.title}
+            {identity.kind === "own" ? <AgentIdentityLine identity={identity} status={statuses?.get(id)?.status} size={30} /> : e.profile.title}
             <span className="muted small role-meta">{memberKind(a)} · {where(a)}{withRole ? ` · ${a.status === "retired" ? "Archived" : (NAME.get(roles.get(id) ?? "") ?? "No owning role")}` : ""}</span>
           </span>
           <span className="muted small">{OPERATIONAL_LABEL[e.operational]}{last ? ` · ${last.at.slice(0, 10)}` : ""}</span>
