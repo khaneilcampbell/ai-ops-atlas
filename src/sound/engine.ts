@@ -58,6 +58,10 @@ export class CityAudio {
   private night = false;
   private trafficOn = true;
   private unlock: (() => void) | null = null;
+  /** The Automation Plaza's rings: a faint, slowly beating shimmer while they turn. */
+  private plaza: { gain: GainNode; pan: StereoPannerNode; oscs: OscillatorNode[] } | null = null;
+  private plazaMoving = false;
+  private plazaKey: string | null = null;
   /** Called when an event sound plays, for the button's ripple. */
   onEvent: ((kind: CityEventKind) => void) | null = null;
 
@@ -123,6 +127,13 @@ export class CityAudio {
     this.trafficOn = on;
   }
 
+  /** The plaza's rings are turning (live runs, motion allowed); its shimmer plays at that map place. */
+  setPlazaMotion(moving: boolean, anchorKey: string | null) {
+    this.plazaMoving = moving;
+    this.plazaKey = anchorKey;
+    if (!moving && this.plaza && this.ctx) this.plaza.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15);
+  }
+
   /** One automation event, at its agent's building when the map knows where that is. */
   play(e: CityEvent) {
     const ctx = this.ctx;
@@ -163,7 +174,7 @@ export class CityAudio {
 
   private place(e: CityEvent): { gain: number; pan: number } {
     const s = soundScene();
-    const at = s && (s.anchor(`agent:${e.agentId}`) ?? (e.projectId ? s.anchor(`project:${e.projectId}`) : null));
+    const at = s && ((e.anchorKey ? s.anchor(e.anchorKey) : null) ?? (e.agentId ? s.anchor(`agent:${e.agentId}`) : null) ?? (e.projectId ? s.anchor(`project:${e.projectId}`) : null));
     if (!s || !at) return { gain: 0.6, pan: 0 };
     return this.spatial(s.camera, tmp.set(at.x, at.y, at.z));
   }
@@ -262,6 +273,41 @@ export class CityAudio {
       this.nextCritter = now + 9 + Math.random() * 14;
     }
     if (s) this.updateAircraft(s.camera, s.scene);
+    this.updatePlaza();
+  }
+
+  private updatePlaza() {
+    const ctx = this.ctx!;
+    const s = soundScene();
+    const at = this.plazaMoving && this.plazaKey && s ? s.anchor(this.plazaKey) : null;
+    if (!at || !s) {
+      if (this.plaza) this.plaza.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+      return;
+    }
+    if (!this.plaza) {
+      // Two soft sines a few hertz apart beat slowly, like rings turning on fine bearings.
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      const pan = ctx.createStereoPanner();
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 1400;
+      const oscs = [659.25, 662.1, 987.77].map((f, i) => {
+        const o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.value = i === 2 ? 0.18 : 0.5;
+        o.connect(g).connect(lp);
+        o.start();
+        return o;
+      });
+      lp.connect(gain).connect(pan).connect(this.ambience);
+      this.plaza = { gain, pan, oscs };
+    }
+    const { gain, pan } = this.spatial(s.camera, tmp.set(at.x, at.y, at.z));
+    this.plaza.gain.gain.setTargetAtTime(0.05 * gain, ctx.currentTime, 0.4);
+    this.plaza.pan.pan.setTargetAtTime(pan, ctx.currentTime, 0.4);
   }
 
   private updateAircraft(camera: THREE.Camera, scene: THREE.Object3D) {

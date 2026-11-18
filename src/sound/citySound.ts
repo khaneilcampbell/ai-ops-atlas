@@ -56,8 +56,10 @@ export type CityEventKind = "start" | "handoff" | "complete" | "attention";
 
 export interface CityEvent {
   kind: CityEventKind;
-  agentId: string;
+  agentId?: string;
   projectId?: string;
+  /** Play it at this map place (an anchor key, e.g. the Automation Plaza) instead of the agent's building. */
+  anchorKey?: string;
 }
 
 /** The parts of an agent's runtime this needs (office/model.ts Runtime). */
@@ -98,7 +100,7 @@ export function eventsForRuntimes(
       completions.push({ kind: "complete", agentId, projectId });
     }
   }
-  for (const c of completions) if (c.projectId) finished.set(c.projectId, { agentId: c.agentId, at: now });
+  for (const c of completions) if (c.projectId) finished.set(c.projectId, { agentId: c.agentId ?? "", at: now });
   return [...out, ...completions];
 }
 

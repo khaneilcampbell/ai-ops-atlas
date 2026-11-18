@@ -1,0 +1,1 @@
+- 2026-11-18 · New Atlas Automation Plaza on the empty Career Applications lot: a glass sculpture with gold rings that turn only while real automations run, a sign with the live running and queued counts, and a panel showing what is running, queued or needs attention. Says "Status unavailable" when no live data is connected

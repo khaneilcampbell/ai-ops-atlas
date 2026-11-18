@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageVisible } from "../lib/power";
 import { eventsForRuntimes, loadSoundPrefs, saveSoundPrefs, type CityEventKind, type RuntimeLike, type SoundPrefs } from "./citySound";
+import type { PlazaEvent } from "../plaza/plazaState";
 import { audioSupported, cityAudio } from "./engine";
 
 export interface CitySound extends SoundPrefs {
@@ -16,12 +17,14 @@ export interface CitySound extends SoundPrefs {
  * plays only while the city view is open and the tab is visible, and turns real changes in
  * agents' runtime states into automation sounds.
  */
-export function useCitySound({ active, night, traffic, runtimes, projectOf }: {
+export function useCitySound({ active, night, traffic, runtimes, projectOf, plaza }: {
   active: boolean;
   night: boolean;
   traffic: boolean;
   runtimes: ReadonlyMap<string, RuntimeLike>;
   projectOf: (agentId: string) => string | undefined;
+  /** Atlas Automation Plaza: its latest event, and whether its rings are turning. */
+  plaza?: { event: PlazaEvent | null; moving: boolean; anchorKey: string };
 }): CitySound {
   const [prefs, setPrefs] = useState<SoundPrefs>(loadSoundPrefs);
   const [lastEvent, setLastEvent] = useState<CitySound["lastEvent"]>(null);
@@ -71,6 +74,21 @@ export function useCitySound({ active, night, traffic, runtimes, projectOf }: {
     const engine = cityAudio();
     for (const e of events) engine.play(e);
   }, [runtimes, playing]);
+
+  // The plaza's rings hum while they turn; its task and n8n events chime at the plaza. Agent-run
+  // events already sound at their building above, so the plaza doesn't play them twice.
+  const plazaMoving = !!plaza?.moving;
+  const plazaKey = plaza?.anchorKey ?? null;
+  useEffect(() => {
+    if (!supported) return;
+    cityAudio().setPlazaMotion(plazaMoving && playing, plazaKey);
+  }, [plazaMoving, plazaKey, playing, supported]);
+  const plazaEvent = plaza?.event ?? null;
+  useEffect(() => {
+    if (!supported || !playing || !plazaEvent || plazaEvent.source === "agent" || !plazaKey) return;
+    cityAudio().play({ kind: plazaEvent.kind, agentId: plazaEvent.agentId, anchorKey: plazaKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per event
+  }, [plazaEvent]);
 
   const toggle = useCallback(() => {
     const next = { ...prefs, on: !prefs.on };

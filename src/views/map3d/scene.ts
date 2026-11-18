@@ -1,6 +1,7 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
+import {planPlaza,plazaPlanting,PLAZA,type PlazaPlan} from './plazaPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -192,6 +193,8 @@ export interface Scene3D {
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   commons?:CommonsPlan;
+  /** Atlas Automation Plaza on the Career Applications vacant lot (plazaPlan.ts). */
+  plaza?:PlazaPlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -895,6 +898,10 @@ function buildCity(layout: Layout): Scene3D {
   if(financial){const f=financialParkPlanting(financial,top);trees.push(...f.trees);bushes.push(...f.bushes);}
   // Atlas Commons is planted like the rest of the city (Khaneil, 2026-11-13): its trees are lit avenue palms and olives, and its shore is LA shrubs.
   if(commons){const c=commonsPlanting(commons,top);trees.push(...c.trees);bushes.push(...c.bushes);}
+  // Atlas Automation Plaza on the lawn of the Career Applications vacant lot: nothing nearby moves; only
+  // loose lawn planting inside its footprint gives way, and its own trees and bed shrubs join the city's planting.
+  const plaza=planPlaza({parks,towers,cleared,roads:connections.map(c=>c.road)});
+  if(plaza){for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(Math.hypot(items[i].x-plaza.cx,items[i].z-plaza.cz)<PLAZA.stepsOuter+1.1)items.splice(i,1);const q=plazaPlanting(plaza,top);trees.push(...q.trees);bushes.push(...q.bushes);}
   const stationPlaza=planStationPlaza({stadium,communityRail},{
     land,roads:connections.map(c=>c.road),
     obstacles:[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
@@ -925,6 +932,7 @@ function buildCity(layout: Layout): Scene3D {
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
+    plaza,
     financial,
     stationPlaza,
     community,

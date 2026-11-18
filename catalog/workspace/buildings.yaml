@@ -82,6 +82,10 @@ buildings:
     display_name: Team Events Arena
     organization: Atlas
     former_names: [Atlas Stadium]
+  # Nov 18: public plaza on the former Career Applications lot; its sign shows live automation status.
+  "service:automation-plaza":
+    display_name: Atlas Automation Plaza
+    organization: Atlas
   "service:stadium-station":
     display_name: Events Arena Station
     organization: Atlas

@@ -13,6 +13,7 @@ import { LOOP } from "../views/map3d/airportArrivals";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
 import { planAirportCrew, planCrewTrains } from "../views/map3d/airportCrew";
 import { COMMONS_KEY, COMMONS_NAME } from "../views/map3d/commonsPlan";
+import { PLAZA_KEY, PLAZA_NAME } from "../views/map3d/plazaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { planDistrictLife } from "../views/map3d/districtLifePlan";
 import { planDistrictWalkers } from "../views/map3d/districtWalkers";
@@ -57,7 +58,7 @@ export interface InventoryBuilding {
   area: string;
   organization: string;
   module: string;
-  /** Active, idle, paused, attention (catalog buildings), Planned (drawn places), Retired or Vacant lot. */
+  /** Active, idle, paused, attention (catalog buildings), Planned (drawn places), Live status (the Automation Plaza), Retired or Vacant lot. */
   status: string;
   /** Catalog project whose repository the building runs on, when there is one. */
   project: string;
@@ -175,6 +176,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.agency) add({ id: AGENCY_KEY, name: AGENCY_NAME, kind: "Landmark", area: "Bay", status: PLANNED, project: "", source: "src/views/map3d/marketingAgencyPlan.ts" });
   if (scene.mall) add({ id: MALL_KEY, name: "Atlas Marketplace", kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/mallPlan.ts" });
   if (scene.commons) add({ id: COMMONS_KEY, name: COMMONS_NAME, kind: "Public space", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/commonsPlan.ts" });
+  // Drawn on the former Career Applications lot; its sign and rings show live automation status (src/plaza/plazaState.ts).
+  if (scene.plaza) add({ id: PLAZA_KEY, name: PLAZA_NAME, kind: "Public space", area: area.get("career-optimizer") || "Former Career Applications lot", organization: "Atlas", status: "Live status", project: "", source: "src/views/map3d/plazaPlan.ts" });
   if (scene.galleria) add({ id: GALLERIA_KEY, name: GALLERIA_NAME, kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/galleriaPlan.ts" });
   if (scene.stadium) add({ id: STADIUM_KEY, name: STADIUM_NAME, kind: "Landmark", area: "Stadium", status: PLANNED, project: "", source: "src/views/map3d/stadiumPlan.ts" });
   // The Atlas yacht is berthed at the marina whenever the map has its harbour; she cruises out with her guests and can be
