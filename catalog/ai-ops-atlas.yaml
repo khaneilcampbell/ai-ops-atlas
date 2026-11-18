@@ -591,93 +591,7 @@ agents:
         runbook: docs/runbooks/ai-ops-atlas.md#release-coordinator
         last_review: 2026-11-17
   # Building operators (2026-11-12): one scheduled, model-free check per building that reports to
-  # the live feed. Their reports are what turn the Observability Center and Data Intelligence
-  # Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
-  - id: signal-watch
-    name: Signal Watch
-    purpose: Checks the signals Atlas depends on every 30 minutes. Reads the latest main-branch run of each GitHub Actions workflow and whether the Atlas site answers, and reports the count to the live feed for the Observability Center.
-    framework: GitHub Actions (Python, standard library)
-    owned_by: atlas-health-monitor            # owning agent, added at Khaneil's request 2026-11-13
-    runtime: GitHub-hosted runner
-    status: active
-    trigger: Every 30 minutes, or by hand
-    source: ops/building-agents/agents.py
-    observe:
-      agent_feed: true
-    alerts:
-      failures: true
-      report_within: 90m
-    last_run: null
-    permissions:
-      - 'GITHUB_TOKEN: actions read (workflow runs)'
-      - 'ATLAS_FEED_TOKEN: add-only reports to /api/hooks/agents'
-    registry:
-      title: Signal Watch
-      category: infrastructure
-      subcategory: Observability
-      classification:
-        type: D
-        confidence: verified
-        evidence: ops/building-agents/agents.py signals; no AI model
-      mission:
-        problem: Atlas depends on its GitHub workflows and its site; a red workflow or a down site should show in Atlas without anyone checking by hand.
-        outcomes:
-          - The Observability Center shows how many main-branch workflows are failing and whether the site answers
-          - A new failure shows within 30 minutes
-        beneficiaries:
-          - Khaneil
-      responsibilities:
-        tasks:
-          - Read the latest main-branch run of each workflow
-          - Check the Atlas site answers
-          - Report the counts to the live feed
-        tools:
-          - GitHub Actions
-          - Python standard library
-          - Atlas live feed
-        inputs:
-          - GitHub Actions workflow runs
-          - Atlas site response
-        outputs:
-          - Live feed report for the Observability Center
-        dependencies:
-          - GitHub Actions run history
-          - Atlas site
-          - Atlas live feed
-        limitations:
-          - Checks every 30 minutes, so a short outage between checks can be missed
-          - Reports problems; it does not fix them
-          - No AI model, so it cannot judge content; it only follows its fixed rules
-      goals:
-        objective: The Observability Center shows how many main-branch workflows are failing and whether the site answers
-        review_frequency: Monthly
-        kpis:
-          - name: Run success rate
-            kind: reliability
-            target: At least 95% of runs succeed
-            target_value: 95
-            direction: min
-            basis: A failed check leaves its building's status stale
-            measure: run_success_rate
-          - name: Report freshness
-            kind: reliability
-            target: A report at least every 30 minutes
-            basis: Cron 15,45 * * * * in building-agents.yml
-      execution:
-        trigger_type: scheduled
-        environment: GitHub-hosted runner
-      governance:
-        autonomy: 1
-        autonomy_note: Reads and reports only.
-        risk: low
-        credential_owner: Khaneil (ATLAS_FEED_TOKEN repository secret; GITHUB_TOKEN is per run)
-      cost:
-        budget: No model calls. GitHub Actions minutes on a public repository.
-
-      docs:
-        technical: .github/workflows/building-agents.yml
-        runbook: docs/runbooks/ai-ops-atlas.md#building-operators
-        last_review: 2026-11-17
+  # the live feed. Its report is what turns the Data Intelligence Center green (catalog/workspace/workspace.yaml `agents`). GET requests only.
   - id: dataset-census
     name: Dataset Census
     purpose: Counts the data Atlas reads every 3 hours. Parses the catalog (projects, agents, repositories) and checks each catalog repository on GitHub for its last push, then reports how many are fresh or stale to the live feed for the Data Intelligence Center.
@@ -959,25 +873,27 @@ agents:
   - id: atlas-health-monitor
     name: Atlas Health Monitor
     purpose: >-
-      Knows whether Atlas itself is healthy: watches the build and site signals Atlas depends on, counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
+      Knows whether Atlas itself is healthy: counts the data Atlas reads, and keeps one organized list of everything on the map. It has no model of its own yet; it works through the automations it owns.
     framework: Atlas owning agent (runs through its automations)
     model: None of its own; each automation it owns keeps its own model and cap
     runtime: Through its automations
     status: active
-    trigger: Its automations run every 30 minutes, every 3 hours and daily
+    trigger: Its automations run every 3 hours and daily
     last_run: null
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Signal Watch, Dataset Census, Atlas Data Inventory, at Khaneil's request
       - at: 2026-11-17
         event: Supervises autonomous operations (Phase 9) in Mission Control. Turns verified events into incidents with fixed rules, and runs only approved read-only recovery playbooks, automatically only under a policy Khaneil enabled at autonomy level 3
+      - at: 2026-11-18
+        event: Signal Watch deleted at Khaneil's request; it now owns Dataset Census and Atlas Data Inventory
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
       identity:
         display_name: Priya Raman
         accent: "#0D9488"
-        intro: "I watch whether Atlas itself is healthy. Signal Watch checks main-branch workflows and the site every 30 minutes, Dataset Census counts the catalog every 3 hours, and Data Inventory keeps the map list current. I report health; I don't repair anything."
+        intro: "I watch whether Atlas itself is healthy. Dataset Census counts the catalog every 3 hours, and Data Inventory keeps the map list current. I report health; I don't repair anything."
         voice: "Status first, then numbers with timestamps. Says \"not connected\" plainly."
         appearance: "South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt"
         portrait:
@@ -998,21 +914,17 @@ agents:
       mission:
         problem: Atlas reports on everything else, so a broken Atlas signal, stale data or an out-of-date map list would mislead every tab.
         outcomes:
-          - Atlas's own build and site signals are checked every 30 minutes
           - Catalog freshness every 3 hours
           - The map inventory every day
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Check main-branch workflows and the site every 30 minutes, Count catalog data every 3 hours, Keep the map inventory list current, Group verified operational events into incidents, Run and verify approved read-only recovery playbooks]
+        tasks: [Count catalog data every 3 hours, Keep the map inventory list current, Group verified operational events into incidents, Run and verify approved read-only recovery playbooks]
         tools: [Its automations]
         outputs: [The results of its automations, Incidents and recovery logs in Mission Control]
         inputs:
-          - GitHub Actions runs
-          - The Atlas site
           - The catalog and map inventory
         dependencies:
-          - signal-watch
           - dataset-census
           - atlas-data-inventory
         limitations:
@@ -1026,10 +938,6 @@ agents:
             kind: reliability
             target: Every automation it owns shows healthy in Atlas
             basis: Its health is the worst of its automations'
-          - name: Signal freshness
-            kind: reliability
-            target: Observability Center report no older than 1 hour
-            basis: Signal Watch runs every 30 minutes
       execution:
         trigger_type: scheduled
         environment: Through its automations
