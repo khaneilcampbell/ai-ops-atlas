@@ -131,6 +131,16 @@ export class CityAudio {
     return this.running;
   }
 
+  /** Stops and releases the audio entirely; a later start() builds it again. */
+  close() {
+    this.stop();
+    const ctx = this.ctx;
+    this.ctx = null;
+    this.aircraft.clear();
+    this.zoneSounds = null;
+    void ctx?.close().catch(() => {});
+  }
+
   /** What the engine hears right now: places and their weights, and each jet's flight state. */
   debug() {
     return {
@@ -646,6 +656,9 @@ function pinkNoise(ctx: BaseAudioContext, seconds: number): AudioBuffer {
 
 /** The one engine the app uses; created lazily so nothing touches Web Audio until asked. */
 let engine: CityAudio | null = null;
+// In development a code change swaps this module for a fresh copy with a fresh engine. Stop the old one
+// and close its audio, so it can't keep playing where the mute button no longer reaches it.
+if (import.meta.hot) import.meta.hot.dispose(() => engine?.close());
 export function cityAudio(): CityAudio {
   engine ??= new CityAudio();
   // For checking the mix by hand in development (window.__citySound.debug()); never in a release build.

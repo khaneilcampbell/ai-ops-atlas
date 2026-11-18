@@ -22,6 +22,9 @@ export function loadSoundPrefs(): SoundPrefs {
   return { on: saved.on === true, volume };
 }
 
+/** Whether a localStorage key (as a storage event reports it) holds the sound preference. */
+export const isSoundPrefsKey = (key: string) => key === PREFS_KEY || key.endsWith(`:${PREFS_KEY}`);
+
 export function saveSoundPrefs(p: SoundPrefs) {
   save(PREFS_KEY, { on: p.on, volume: clamp01(p.volume) });
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageVisible } from "../lib/power";
-import { eventsForRuntimes, loadSoundPrefs, saveSoundPrefs, type CityEventKind, type RuntimeLike, type SoundPrefs } from "./citySound";
+import { eventsForRuntimes, isSoundPrefsKey, loadSoundPrefs, saveSoundPrefs, type CityEventKind, type RuntimeLike, type SoundPrefs } from "./citySound";
 import { audioSupported, cityAudio } from "./engine";
 
 export interface CitySound extends SoundPrefs {
@@ -28,6 +28,17 @@ export function useCitySound({ active, night, traffic, runtimes, projectOf }: {
   const visible = usePageVisible();
   const supported = audioSupported();
   const playing = supported && prefs.on && active && visible;
+  // Muting (or a new volume) in one Atlas tab or window applies to every other one, at once.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && !isSoundPrefsKey(e.key)) return;
+      const next = loadSoundPrefs();
+      setPrefs((p) => (p.on === next.on && p.volume === next.volume ? p : next));
+      if (!next.on && supported) cityAudio().stop();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [supported]);
 
   useEffect(() => {
     if (!supported) return;
