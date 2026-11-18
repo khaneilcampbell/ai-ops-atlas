@@ -21,7 +21,7 @@ pre-filled GitHub issue in your browser; nothing is sent until you press Create 
 
 | View | What you see |
 | --- | --- |
-| **Projects** (map) | The 3D city. Pan, zoom and turn with mouse, trackpad or touch, switch day and night, and click a building for its panel. **View** picks which links are drawn (Infrastructure, Agent network, Automation flow) and **Grouping** arranges buildings By district, By status, By tag or with no grouping |
+| **Projects** (map) | The 3D city. Pan, zoom and turn with mouse, trackpad or touch, switch day and night, and click a building for its panel. **Map view** picks By district (the default city with district names, and a building's own links when you select it), Agent network or Automation flow; the last two need the 3D map |
 | **Mission Control** | Prioritized work: approvals waiting for you, failing workflows, agent alerts, workflow runs per day, API usage and cost, the busiest repositories and recent activity |
 | **Grid** | Every repository side by side with CI, last push, issues and linked agents |
 
