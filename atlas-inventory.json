@@ -557,6 +557,20 @@
    "automations": 0
   },
   {
+   "id": "service:automation-plaza",
+   "name": "Atlas Automation Plaza",
+   "kind": "Public space",
+   "area": "Bay",
+   "organization": "Atlas",
+   "status": "Live status",
+   "project": "",
+   "source": "src/views/map3d/plazaPlan.ts",
+   "module": "",
+   "agent_ids": [],
+   "ai_agents": 0,
+   "automations": 0
+  },
+  {
    "id": "service:atlas-galleria",
    "name": "Vendor & Supplier Hub",
    "kind": "Landmark",
@@ -2074,6 +2088,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-18T21:31:30.459Z",
- "commit": "360919a709eef0926bfff1d68cc5428ab50cf55e"
+ "generated_at": "2026-11-18T22:59:05.911Z",
+ "commit": "7d8304bebe0d4fd128e3747833ed2569d8aa082a"
 }
