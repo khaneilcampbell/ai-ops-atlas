@@ -16,7 +16,6 @@ import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/par
 import { Portfolio } from "./agents/Portfolio";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
 import { Roles, type RoleView } from "./agents/Roles";
-import { RunsLine } from "./agents/RunsLine";
 import { roleDirectory } from "../catalog/essentialRoles";
 import "../styles/registry.css";
 import { AgentIdentityLine } from "../components/AgentIdentity";
@@ -152,7 +151,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
             <div className="card agent-list reg-list-pane" aria-label="Essential roles">
               <Roles agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} view={prefs.view as RoleView} query={filters.query} current={current?.profile.id} pick={(id) => select({ kind: "agent", id })} statuses={statuses} />
             </div>
-            {current ? <Inspector key={current.profile.id} entry={current} status={statuses.get(current.profile.id)} /> : <div className="card empty">Open a role and pick an agent to see its details.</div>}
+            {current ? <Inspector key={current.profile.id} entry={current} status={statuses.get(current.profile.id)} /> : <div className="card empty">Open a role and pick an agent or automation to see its details.</div>}
           </div>
         </>
       )}
@@ -215,7 +214,19 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
                               owner={kind === "automations" ? (owners.get(e.profile.id)?.title ?? (orphanIds.has(e.profile.id) ? null : undefined)) : undefined}
                               status={statuses.get(e.profile.id)?.status}
                             />
-                            <RunsLine agent={e.profile.title} steps={steps.map((x) => ({ id: x.profile.id, title: x.profile.title }))} as="div" />
+                            {steps.length > 0 && (
+                              <ul className="reg-nested" aria-label={`Automations run by ${e.profile.title}`}>
+                                {steps.map((x) => (
+                                  <li key={x.profile.id}>
+                                    <button className={`reg-step ${x.profile.id === current?.profile.id ? "on" : ""}`} onClick={pick(x.profile.id)}>
+                                      <i className={`op-dot op-${x.operational}`} aria-hidden />
+                                      <span className="grow">{x.profile.title}</span>
+                                      <span className="muted small">{OPERATIONAL_LABEL[x.operational]}</span>
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
                           </li>
                         );
                       })}
