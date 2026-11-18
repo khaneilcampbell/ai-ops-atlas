@@ -3,7 +3,8 @@ import type { Agent, Project } from "../../catalog/types";
 import type { Anchor, LeisureOption, RideTimes, RoutineEnv, SpotId } from "../../routine/routine";
 import { rand } from "../../routine/routine";
 import { buildingsOf, defaultFloor, floorOf, journeyTo } from "../../buildings/buildingDefinition";
-import { airportPoint } from "./airport";
+import { airportPoint, type AirportPlan } from "./airport";
+import { GOLD_JET_NAME, airportClockAt, goldJetLive, goldJetTrip, wallOfAirport } from "./goldJetPlan";
 import { FLOOR_BASE } from "./models";
 import type { NamedAgent } from "./namedAgentPlan";
 import { PERIMETER_RAIL, loopPoint, type PerimeterRailPlan } from "./perimeterRailPlan";
@@ -93,6 +94,8 @@ export interface CityPlaces {
   train?: { loop: PerimeterRailPlan; from: number; to: number };
   /** Yacht sailings on the train clock (travelLoops.ts), and her saloon door (where riders step aboard). */
   yacht?: { depart: number; period: number; aboard: Pt3 };
+  /** The airport the Atlas Gold Jet flies from, for putting its passengers aboard. */
+  jet?: Pick<AirportPlan, "x" | "z" | "west">;
 }
 
 const street = (p: [number, number] | Pt3): Pt3 => (p.length === 2 ? [p[0], STREET_Y, p[1]] : [p[0], STREET_Y, p[2]]);
@@ -212,11 +215,12 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
     opt({ id: "yacht", kind: "yacht", label: "On a yacht ride", spot: "yacht", exit: "yacht", stay: [0, 0] }, { id: "yacht", label: "The Atlas yacht", path: [street(path[0]), ...path], yaw: Math.PI / 2, inside: false, spread: 0.12 });
   }
 
-  // The airport terminal (a simulated flight) and the arena gate.
+  // The airport terminal, for a ride on the Atlas Gold Jet (Khaneil, 2026-11-18), and the arena gate.
   const air = scene.airport;
   if (air) {
     const front = airportPoint(air, -0.7, 6);
-    opt({ id: "flight", kind: "flight", label: "On a simulated flight", spot: "flight", exit: "flight", stay: [0, 0] }, { id: "flight", label: "Atlas airport terminal", path: [street(front)], yaw: 0, inside: true });
+    out.jet = { x: air.x, z: air.z, west: air.west };
+    opt({ id: "flight", kind: "flight", label: `Flying on the ${GOLD_JET_NAME}`, spot: "flight", exit: "flight", stay: [0, 0] }, { id: "flight", label: "Atlas airport terminal", path: [street(front)], yaw: 0, inside: true });
   }
   const st = scene.stadium;
   if (st) {
@@ -354,9 +358,19 @@ export function routineEnv(routes: CityRoutes, personaId: string, now: () => num
           return { board: arrive + 4000, alight: depart + (TRAVEL.sail + 8) * 1000, seat: "aft deck" };
         }
         case "flight": {
-          // The terminal, then a simulated flight on the airport's loop and back: city simulation only.
+          // Through the terminal and onto the Atlas Gold Jet's next boarding, round its loop over the city, and off
+          // again at the gate (goldJetPlan.ts). City simulation only: no booking, ticket or purchase exists.
+          const L = goldJetLive;
+          const trip = L.live && L.wall ? goldJetTrip(airportClockAt(arrive + 20_000), L.circuit) : null;
+          if (trip) {
+            const n = now(), at = (c: number) => wallOfAirport(c, n);
+            // Its turn in the boarding line, seeded per agent, so a group doesn't all step on at once.
+            const turn = trip.boardFrom + (trip.boardTo - trip.boardFrom) * (0.2 + 0.6 * rand(`${personaId}:jet-seat`));
+            return { board: at(turn), alight: at(trip.off) + 4000, seat: GOLD_JET_NAME };
+          }
+          // The airport isn't running (paused, reduced motion, or not drawn yet): time in the terminal instead.
           const board = arrive + 15_000;
-          return { board, alight: board + (240 + rand(`${personaId}:${Math.floor(arrive / 60000)}:flight`) * 180) * 1000, seat: "simulated flight" };
+          return { board, alight: board + (240 + rand(`${personaId}:${Math.floor(arrive / 60000)}:flight`) * 180) * 1000, seat: "the terminal" };
         }
         default:
           return null;
@@ -364,7 +378,8 @@ export function routineEnv(routes: CityRoutes, personaId: string, now: () => num
     },
     rideExit: (o, times, at) => {
       // Nobody steps off mid-air or at sea: the wheel finishes its turn, the yacht comes back, the train reaches its stop.
-      if (o.kind === "flight") return Math.min(times.alight, Math.max(at, times.board) + 20_000);
+      // A jet passenger stays aboard until it lands and walks off; before boarding it just leaves the terminal.
+      if (o.kind === "flight") return times.seat === GOLD_JET_NAME ? (at < times.board ? at : times.alight) : Math.min(times.alight, Math.max(at, times.board) + 20_000);
       return times.alight;
     },
     home: mine.home.id,

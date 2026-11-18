@@ -230,6 +230,9 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   return m;
 }
 
+/** How far the camera sits from an agent it follows (world units). */
+const FOLLOW_DIST = 9;
+
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
@@ -1207,6 +1210,9 @@ function World({
       controls.target.z += dz;
       camera.position.x += dx;
       camera.position.z += dz;
+      // Close enough to see the agent: ease in to a street-level distance, keeping the angle.
+      const off = camera.position.clone().sub(controls.target), len = off.length();
+      if (len > FOLLOW_DIST) camera.position.copy(controls.target).addScaledVector(off, (len - (len - FOLLOW_DIST) * k) / len);
     }
     // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
     // OrbitControls eases by a fixed share per frame, so the glide after a drag lasted half as long

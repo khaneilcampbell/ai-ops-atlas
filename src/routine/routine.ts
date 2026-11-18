@@ -25,7 +25,7 @@ export type WorkPhase = "heading" | "entering" | "to_desk" | "working" | "comple
 export const PHASE_LABEL: Record<WorkPhase, string> = { heading: "Heading to office", entering: "Entering building", to_desk: "Going to desk", working: "Working", completed: "Task completed", leaving: "Leaving office" };
 
 export type LeisureKind = "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
-export const LEISURE_LABEL: Record<LeisureKind, string> = { park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "On a simulated flight", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
+export const LEISURE_LABEL: Record<LeisureKind, string> = { park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
 
 /** A place the agent can be: a door, a park bench, a platform. The map turns these into coordinates. */
 export type SpotId = string;

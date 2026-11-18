@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { wake } from "../../lib/power";
 
 /**
  * "Follow agent": the camera keeps one named agent in view as it walks, rides or works. The
@@ -13,6 +14,8 @@ export const agentPositions = new Map<string, [number, number, number] | null>()
 export function setFollowedAgent(personaId: string | null) {
   if (followed === personaId) return;
   followed = personaId;
+  // Start drawing so the camera can glide over (the map draws on demand when idle).
+  if (personaId) wake(300);
   watchers.forEach((w) => w());
 }
 export function followedAgent(): string | null {

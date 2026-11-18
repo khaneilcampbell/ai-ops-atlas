@@ -30,7 +30,7 @@ import { yachtLivePose } from "./yachtRidePlan";
  *
  * Each one lives its day by its routine (routine/routine.ts): free time, the walk to the office
  * ahead of a scheduled run, its own desk in the Inside view while the run works, then free time
- * again (the park, other districts, the train, the yacht, the Ferris wheel, a simulated flight, the
+ * again (the park, other districts, the train, the yacht, the Ferris wheel, the Atlas Gold Jet, the
  * arena, home). The routine is worked out from real run events and the wall clock, so it never
  * drives or judges the work, and a reload picks up exactly where it was. Without the city places
  * (a layout with no streets) the agents fall back to standing at their workplaces (namedAgentPlan.ts).

@@ -938,35 +938,42 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 /* Named agents in the city (map3d/NamedAgents.tsx): the name on hover, and the profile on click or tap. */
 .m3-agent-chip { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding: 4px 8px; border-radius: 999px; background: rgba(10, 46, 58, 0.88); border: 1px solid rgba(150, 236, 255, 0.7); color: #effcff; font: 12px/1.3 Inter, -apple-system, "Segoe UI", sans-serif; transform: translate(-50%, calc(-100% - 26px)); user-select: none; }
 .m3-agent-chip span { color: rgba(220, 244, 252, 0.74); font-size: 11px; }
-.m3-agent-profile { position: relative; width: 264px; max-width: calc(100vw - 32px); padding: 12px 14px; border-radius: 14px; background: rgba(10, 46, 58, 0.94); border: 1px solid rgba(150, 236, 255, 0.85); color: #effcff; font: 12px/1.4 Inter, -apple-system, "Segoe UI", sans-serif; box-shadow: 0 8px 26px #0006; backdrop-filter: blur(6px); transform: translate(-50%, calc(-100% - 28px)); }
-.m3-agent-profile .who { display: flex; gap: 10px; align-items: center; padding-right: 18px; }
-.m3-agent-profile .n { font-weight: 700; font-size: 14px; }
-.m3-agent-profile .r { color: rgba(220, 244, 252, 0.78); font-size: 11.5px; margin-bottom: 3px; }
-.m3-agent-profile dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
-.m3-agent-profile dt { color: rgba(220, 244, 252, 0.7); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 2px; }
-.m3-agent-profile dd { margin: 0; }
-.m3-agent-profile .acts { display: flex; gap: 8px; margin-top: 10px; }
-.m3-agent-profile .acts button { flex: 1; min-height: 32px; border-radius: 8px; border: 1px solid rgba(150, 236, 255, 0.6); background: rgba(150, 236, 255, 0.12); color: #effcff; font: 600 12px Inter, -apple-system, sans-serif; cursor: pointer; }
-.m3-agent-profile .acts button:hover { background: rgba(150, 236, 255, 0.24); }
-.m3-agent-profile .x { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: 0; background: none; color: #effcff; font-size: 18px; cursor: pointer; }
-/* The routine task card (map3d/AgentTaskCard.tsx): city activity and real run state, kept apart. */
+/* The agent card on the map, in the Inspector's look (Khaneil, 2026-11-18: like the Business Operations HQ
+   listing): dark forest header with a gold eyebrow and serif name, a light sage body, gold-outlined buttons. */
+.m3-agent-profile { position: relative; width: 264px; max-width: calc(100vw - 32px); border-radius: 14px; overflow: hidden; background: var(--sage-50); border: 1px solid var(--forest-700); color: var(--ink); font: 12.5px/1.45 var(--sans); box-shadow: 0 12px 34px rgba(22, 33, 26, 0.32); transform: translate(-50%, calc(-100% - 28px)); }
+.m3-agent-profile .head { background: var(--forest-800); color: var(--on-dark); padding: 12px 16px 13px; }
+.m3-agent-profile .eyebrow { color: var(--gold); font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; padding-right: 26px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m3-agent-profile .who { display: flex; gap: 11px; align-items: center; }
+.m3-agent-profile .n { font-family: var(--serif); font-weight: 400; font-size: 19px; line-height: 1.15; color: var(--on-dark); }
+.m3-agent-profile .r { color: var(--on-dark-2); font-size: 12px; margin-top: 2px; }
+.m3-agent-profile .body { padding: 12px 16px 14px; }
+.m3-agent-profile dl { margin: 0; display: grid; grid-template-columns: 84px 1fr; gap: 7px 12px; }
+.m3-agent-profile dt { color: var(--ink-3); font-size: 12px; }
+.m3-agent-profile dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+.m3-agent-profile .acts { display: flex; gap: 8px; margin-top: 12px; }
+.m3-agent-profile .acts button { flex: 1; min-height: 32px; border-radius: 10px; border: 1px solid var(--gold); background: none; color: var(--gold-deep); font: 500 12.5px var(--sans); cursor: pointer; }
+.m3-agent-profile .acts button:hover { background: var(--gold-soft); }
+.m3-agent-profile .acts button.primary { background: var(--forest-700); border-color: var(--forest-700); color: var(--on-dark); }
+.m3-agent-profile .acts button.primary:hover { background: var(--forest-600); }
+.m3-agent-profile .x { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: 0; background: none; color: var(--on-dark-2); font-size: 18px; cursor: pointer; }
+.m3-agent-profile .x:hover { color: var(--on-dark); }
 .m3-agent-task { width: 300px; }
 .m3-agent-task.docked { transform: none; max-height: calc(100% - 24px); overflow: auto; }
-.m3-agent-task dd .sub { display: block; color: rgba(220, 244, 252, 0.72); font-size: 11px; }
-.m3-agent-task dd .sub.wait { color: #ffd88a; }
-.m3-agent-task dd .sub.err, .m3-agent-task .runs li.err { color: #ffb4a8; }
-.m3-agent-task dd.op-running { color: #8ff0ff; }
-.m3-agent-task dd.op-waiting_approval { color: #ffd88a; }
-.m3-agent-task dd.op-failed { color: #ffb4a8; font-weight: 600; }
-.m3-agent-task .attn { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 5px; border-radius: 50%; background: #e5533d; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 1px; }
-.m3-agent-task .runs { margin: 8px 0 0; padding: 6px 0 0; list-style: none; border-top: 1px solid rgba(150, 236, 255, 0.22); font-size: 11px; color: rgba(220, 244, 252, 0.8); max-height: 92px; overflow: auto; }
-.m3-agent-task .runs b { color: #effcff; font-weight: 600; }
-.m3-agent-task .miss, .m3-agent-task .src { margin: 6px 0 0; font-size: 10.5px; color: rgba(220, 244, 252, 0.64); }
-.m3-agent-task .miss { color: #ffd88a; }
+.m3-agent-task dd .sub { display: block; color: var(--ink-3); font-size: 11.5px; }
+.m3-agent-task dd .sub.wait { color: var(--gold-deep); }
+.m3-agent-task dd .sub.err, .m3-agent-task .runs li.err { color: #a8402f; }
+.m3-agent-task dd.op-running { color: #1f6f86; font-weight: 600; }
+.m3-agent-task dd.op-waiting_approval { color: var(--gold-deep); font-weight: 600; }
+.m3-agent-task dd.op-failed { color: #a8402f; font-weight: 600; }
+.m3-agent-task .attn { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 5px; border-radius: 50%; background: #c4462f; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 1px; }
+.m3-agent-task .runs { margin: 10px 0 0; padding: 8px 0 0; list-style: none; border-top: 1px solid var(--sage-200); font-size: 11.5px; color: var(--ink-2); max-height: 92px; overflow: auto; }
+.m3-agent-task .runs b { color: var(--ink); font-weight: 600; }
+.m3-agent-task .miss, .m3-agent-task .src { margin: 8px 0 0; font-size: 11px; color: var(--ink-3); }
+.m3-agent-task .miss { color: var(--gold-deep); }
 .m3-agent-task .acts { flex-wrap: wrap; }
 .m3-agent-task .acts button { flex: 1 1 40%; }
-.m3-agent-task .acts button[aria-pressed="true"] { background: rgba(150, 236, 255, 0.34); }
-@media (max-width: 520px) { .m3-agent-task { width: min(300px, calc(100vw - 32px)); max-height: 46vh; } }
+.m3-agent-task .acts button[aria-pressed="true"] { background: var(--gold-soft); }
+@media (max-width: 520px) { .m3-agent-task { width: min(300px, calc(100vw - 32px)); max-height: 46vh; } .m3-agent-task .runs, .m3-agent-task .src { display: none; } }
 
 /* Agents → Workday: the daily routine settings (views/agents/RoutinePanel.tsx). */
 .routine-panel { display: grid; gap: 8px; margin-bottom: 14px; }
