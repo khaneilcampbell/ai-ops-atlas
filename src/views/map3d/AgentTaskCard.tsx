@@ -44,8 +44,8 @@ function dayClock(t: number, now: number, tz: string): string {
 
 function runLine(r: OpRun, now: number, tz: string): string {
   const parts = [RUN_LABEL[r.status]];
-  if (r.startedAt) parts.push(`started ${clock(r.startedAt, tz)}`);
-  if (r.stoppedAt) parts.push(`ended ${clock(r.stoppedAt, tz)}`);
+  if (r.startedAt) parts.push(`started ${dayClock(r.startedAt, now, tz)}`);
+  if (r.stoppedAt) parts.push(`ended ${dayClock(r.stoppedAt, now, tz)}`);
   else if (r.startedAt && (r.status === "running" || r.status === "waiting" || r.status === "waiting_approval")) parts.push(`${ago(now - r.startedAt)} so far`);
   if (r.retry) parts.push("retry");
   return parts.join(" · ");

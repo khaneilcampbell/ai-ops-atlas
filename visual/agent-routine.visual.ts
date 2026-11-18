@@ -95,7 +95,13 @@ for (const width of [1512, 390])
       if (m.office) {
         await card.getByRole("button", { name: "View office" }).click();
         await settle(page, 6);
-        for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+        const zoom = page.getByRole("button", { name: "Zoom in", exact: true });
+        if (await zoom.isVisible()) for (let i = 0; i < 3; i++) await zoom.click();
+        else {
+          // The phone toolbar has no zoom buttons: the map's + key does the same.
+          await page.locator(".map-stage").focus();
+          for (let i = 0; i < 4; i++) await page.keyboard.press("+");
+        }
         // Inside picks which buildings open on its own frame clock: keep the clock running until his opens.
         await expect.poll(async () => { await settle(page, 2); return (await routineOf(page))?.open ?? []; }, { timeout: 90_000 }).toContain(OFFICE);
         await page.evaluate((id) => (window as unknown as { __atlasOpenAgent(id: string): void }).__atlasOpenAgent(id), AGENT);

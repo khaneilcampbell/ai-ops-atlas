@@ -135,6 +135,7 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
   const { col, row } = place5(c.slot), gap = spot.spread ?? 0.14;
   // Side by side across the way it faces, further rows behind.
   const x = stand[0] + Math.cos(spot.yaw) * gap * col - Math.sin(spot.yaw) * gap * row, z = stand[2] - Math.sin(spot.yaw) * gap * col - Math.cos(spot.yaw) * gap * row;
-  const sit = seg.option?.kind === "park" ? 1 : 0;
+  // On the bench in a park (the front row); anyone further back stands behind it.
+  const sit = seg.option?.kind === "park" && row === 0 ? 1 : 0;
   return at(x, stand[1] - sit * RIG.leg.h * c.scale * 0.55, z, spot.yaw, { sit, place: spot.label });
 }
