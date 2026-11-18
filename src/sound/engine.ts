@@ -9,7 +9,7 @@ import { ZoneSounds } from "./zones";
  * events. No recordings are shipped, so there are no third-party audio licences to track.
  *
  * Two layers under one master volume:
- *  - ambience: a traffic bed, a little wind, occasional cars passing, birds by day and crickets
+ *  - ambience: a soft traffic hum, occasional cars passing, birds by day and crickets
  *    by night, and a voice for every jet in flight, placed by where it is relative to the camera;
  *  - automation: one soft tone per real event (start, handoff, complete, needs attention), placed
  *    at the agent's building and limited so bursts stay calm.
@@ -57,7 +57,6 @@ export class CityAudio {
   private events!: GainNode;
   private noise!: AudioBuffer;
   private traffic: { gain: GainNode; filter: BiquadFilterNode } | null = null;
-  private wind: GainNode | null = null;
   private aircraft = new Map<THREE.Object3D, Voice>();
   private tagged: THREE.Object3D[] = [];
   private zones: Zone[] = [];
@@ -229,25 +228,17 @@ export class CityAudio {
     this.events.connect(this.master);
     this.noise = pinkNoise(ctx, 4);
 
-    // Traffic: a low, rounded rush that rises and falls a little, like streets a block away.
+    // Traffic: a low, distant hum of streets a few blocks away, kept soft so it never reads as wind.
     const tf = ctx.createBiquadFilter();
     tf.type = "lowpass";
-    tf.frequency.value = 420;
+    tf.frequency.value = 260;
     tf.Q.value = 0.4;
     const tg = ctx.createGain();
     tg.gain.value = 0;
     this.loop().connect(tf).connect(tg).connect(this.ambience);
     this.traffic = { gain: tg, filter: tf };
 
-    // Wind: barely there, so the quiet between events never feels empty.
-    const wf = ctx.createBiquadFilter();
-    wf.type = "bandpass";
-    wf.frequency.value = 260;
-    wf.Q.value = 0.6;
-    const wg = ctx.createGain();
-    wg.gain.value = 0.05;
-    this.loop(1.3).connect(wf).connect(wg).connect(this.ambience);
-    this.wind = wg;
+    // No separate wind layer: with the traffic bed under it, it read as a strong wind (Khaneil, 2026-11-18).
 
     this.zoneSounds = new ZoneSounds({
       ctx,
@@ -295,10 +286,9 @@ export class CityAudio {
     if (this.traffic) {
       const swell = 0.85 + 0.15 * Math.sin(now * 0.21) * Math.sin(now * 0.077 + 1);
       const level = trafficLevel(view) * (this.trafficOn ? 1 : 0.3) * (this.night ? 0.6 : 1) * (1 - 0.55 * focused);
-      this.traffic.gain.gain.setTargetAtTime(0.32 * level * swell, now, 0.6);
-      this.traffic.filter.frequency.setTargetAtTime(300 + 260 * level, now, 0.8);
+      this.traffic.gain.gain.setTargetAtTime(0.13 * level * swell, now, 0.6);
+      this.traffic.filter.frequency.setTargetAtTime(200 + 140 * level, now, 0.8);
     }
-    if (this.wind) this.wind.gain.setTargetAtTime(0.035 + 0.02 * Math.sin(now * 0.13), now, 1);
 
     // Now and then a car passes close by.
     if (this.trafficOn && now >= this.nextCar) {
@@ -353,7 +343,8 @@ export class CityAudio {
       const moving = smooth(0.2, 3, speed);
       const airborne = smooth(0.2, 2.5, tmp.y);
       const onGround = (0.35 + 0.65 * airborne) * (ground ? 0.5 + 0.5 * apron : 1);
-      const loud = o.visible ? 0.55 * gain * moving * onGround * (v.flight.rolling ? 1.6 : 1) : 0;
+      // Jets circling overhead stay a soft, low pass-by: several at once at full level sounded like wind.
+      const loud = o.visible ? 0.55 * gain * moving * onGround * (v.flight.rolling ? 1.6 : ground ? 1 : 0.4 * gain) : 0;
       v.fx.gain.setTargetAtTime(o.visible ? gain * (0.45 + 0.55 * apron) : 0, now, 0.25);
       v.whineGain.gain.setTargetAtTime(o.visible ? 0.03 * gain * thrust * (0.35 + 0.65 * apron) : 0, now, 0.4);
       v.whine.frequency.setTargetAtTime(700 + 1100 * thrust, now, 0.8);
@@ -364,7 +355,7 @@ export class CityAudio {
       const bright = Math.max(0.6, Math.min(1.5, 1 + closing / 40));
       v.gain.gain.setTargetAtTime(loud, now, 0.35);
       v.pan.pan.setTargetAtTime(pan, now, 0.3);
-      v.filter.frequency.setTargetAtTime((320 + 1300 * gain * airborne) * bright, now, 0.3);
+      v.filter.frequency.setTargetAtTime((260 + 700 * gain * airborne) * bright, now, 0.3);
     }
   }
 
@@ -617,7 +608,7 @@ const smooth = (a: number, b: number, v: number) => {
   return x * x * (3 - 2 * x);
 };
 
-/** Seconds of pink noise (Paul Kellet's filter), the raw material for traffic, wind and jets. */
+/** Seconds of pink noise (Paul Kellet's filter), the raw material for traffic and jets. */
 function pinkNoise(ctx: BaseAudioContext, seconds: number): AudioBuffer {
   const len = Math.floor(ctx.sampleRate * seconds);
   const fade = Math.floor(ctx.sampleRate * 0.05);
