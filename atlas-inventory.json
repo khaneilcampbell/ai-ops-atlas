@@ -527,12 +527,11 @@
    "kind": "Landmark",
    "area": "Marketplace",
    "status": "Planned",
-   "project": "ai-ops-atlas",
+   "project": "",
    "source": "src/views/map3d/mallPlan.ts",
    "organization": "Atlas",
    "module": "Commerce & Product Marketplace",
    "agent_ids": [
-    "marketplace-steward",
     "commerce-loop",
     "market-analyst",
     "brand-strategist",
@@ -541,7 +540,7 @@
     "commerce-tests"
    ],
    "ai_agents": 3,
-   "automations": 4
+   "automations": 3
   },
   {
    "id": "service:atlas-commons",
@@ -675,15 +674,13 @@
    "kind": "Airport building",
    "area": "Airport",
    "status": "Planned",
-   "project": "ai-ops-atlas",
+   "project": "",
    "source": "src/views/map3d/airportBuildings.ts",
    "organization": "Atlas Airport",
    "module": "Observability Center",
-   "agent_ids": [
-    "signal-watch"
-   ],
+   "agent_ids": [],
    "ai_agents": 0,
-   "automations": 1
+   "automations": 0
   },
   {
    "id": "project:skyline",
@@ -842,34 +839,6 @@
    "source": ""
   },
   {
-   "id": "marketplace-steward",
-   "name": "Marketplace Steward",
-   "kind": "Automation",
-   "status": "active",
-   "building_id": "service:atlas-marketplace",
-   "building_name": "Product Marketplace",
-   "placement": "Operates this building",
-   "owned_by": "atlas-release-manager",
-   "project": "ai-ops-atlas",
-   "runtime": "GitHub-hosted runner",
-   "trigger": "Every hour, or by hand",
-   "source": "ops/building-agents/agents.py"
-  },
-  {
-   "id": "signal-watch",
-   "name": "Signal Watch",
-   "kind": "Automation",
-   "status": "active",
-   "building_id": "service:airport-building:operations",
-   "building_name": "Observability Center",
-   "placement": "Operates this building",
-   "owned_by": "atlas-health-monitor",
-   "project": "ai-ops-atlas",
-   "runtime": "GitHub-hosted runner",
-   "trigger": "Every 30 minutes, or by hand",
-   "source": "ops/building-agents/agents.py"
-  },
-  {
    "id": "dataset-census",
    "name": "Dataset Census",
    "kind": "Automation",
@@ -922,7 +891,7 @@
    "owned_by": "",
    "project": "ai-ops-atlas",
    "runtime": "Through its automations",
-   "trigger": "Its automations run every 30 minutes, every 3 hours and daily",
+   "trigger": "Its automations run every 3 hours and daily",
    "source": ""
   },
   {
@@ -2105,6 +2074,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-18T19:58:56.278Z",
- "commit": "3c3edd2d558e7b06208690e796d7a46a2ec89725"
+ "generated_at": "2026-11-18T21:31:30.459Z",
+ "commit": "360919a709eef0926bfff1d68cc5428ab50cf55e"
 }
