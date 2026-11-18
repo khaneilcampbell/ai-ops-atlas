@@ -1,3 +1,4 @@
+import { pickFloor } from "../../buildings/insideFloors";
 import { describe, expect, it } from "vitest";
 import { catalog } from "../../catalog";
 import { agentJobs } from "../../catalog/agentJobs";
@@ -54,8 +55,14 @@ describe("drawing the routine", () => {
       const work = r.segments.find((s) => s.kind === "inside" && s.phase === "working")!;
       expect(work, a.personaId).toBeTruthy();
       const t = (work.t0 + Math.min(work.t1, NOW + 30 * MIN)) / 2;
+      // Its own floor open (buildings/insideFloors.ts): seated and typing.
+      pickFloor(desk.towerKey, desk.floor);
       const seated = poseAt(r, a.personaId, i, t, new Set([desk.towerKey]))!;
       expect(seated).toMatchObject({ figure: true, sit: 1, typing: true });
+      // Another floor open: it waits as a badge on the facade at its own floor, never drawn on the wrong floor.
+      pickFloor(desk.towerKey, desk.floor === 1 ? 2 : desk.floor - 1);
+      expect(poseAt(r, a.personaId, i, t, new Set([desk.towerKey]))!).toMatchObject({ figure: false, badge: desk.marker });
+      pickFloor(desk.towerKey, desk.floor);
       expect(Math.hypot(seated.x - desk.x, seated.z - desk.z)).toBeLessThan(1e-6);
       // Office closed: no body, the badge waits above the door.
       const closed = poseAt(r, a.personaId, i, t)!;
@@ -65,6 +72,11 @@ describe("drawing the routine", () => {
       const toDesk = r.segments.find((s) => s.kind === "inside" && s.phase === "to_desk")!;
       const end = poseAt(r, a.personaId, i, toDesk.t1 - 1, new Set([desk.towerKey]))!;
       expect(Math.hypot(end.x - desk.x, end.z - desk.z)).toBeLessThan(0.05);
+      // It came in through the door, the lobby and the lift (buildingDefinition journeyTo).
+      const enter = r.segments.find((s) => s.kind === "inside" && s.phase === "entering")!;
+      const start = poseAt(r, a.personaId, i, enter.t0 + 1, new Set([desk.towerKey]))!;
+      expect(Math.hypot(start.x - desk.entry[0][0], start.z - desk.entry[0][2])).toBeLessThan(0.05);
+      pickFloor(desk.towerKey, null);
     }
   });
 

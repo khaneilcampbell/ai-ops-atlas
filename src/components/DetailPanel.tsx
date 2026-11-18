@@ -1,5 +1,6 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
+import { BuildingInside } from "./BuildingInside";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
 import {MALL_KEY,MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
@@ -227,6 +228,7 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
+      <BuildingInside projectId={project.id}/>
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
       <LinkedRepositories project={project}/>

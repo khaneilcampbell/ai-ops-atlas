@@ -976,3 +976,13 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .routine-panel .conn-verified { background: rgba(46, 160, 90, 0.16); color: #1f7a45; }
 .routine-panel .conn-draft { background: rgba(200, 140, 30, 0.16); color: #8a5a00; }
 .routine-panel .routine-switch { display: flex; gap: 8px; align-items: center; }
+
+/* A building's people (BuildingInside.tsx): floors, agents and Inside actions. */
+.building-inside-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.building-floors { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.building-floors button { border: 1px solid var(--line, #d9d4c7); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: inherit; }
+.building-floors button[aria-pressed="true"] { background: var(--gold-deep, #8a6a2f); border-color: var(--gold-deep, #8a6a2f); color: #fff; }
+.building-floor + .building-floor { margin-top: 8px; }
+.building-people { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.building-people li { display: grid; gap: 2px; }
+.building-people .text-btn { justify-self: start; padding-left: 0; }

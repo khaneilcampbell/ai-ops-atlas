@@ -479,7 +479,8 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
               onFollow={() => setFollowedAgent(followed === shown.personaId ? null : shown.personaId)}
               onViewOffice={() => {
                 const desk = places?.agents.get(shown.personaId)?.desk;
-                if (desk) viewOffice({ towerKey: desk.towerKey, projectId: desk.towerKey.replace(/^project:/, "") });
+                // Its own building and floor, following it so its desk (or wherever it is now) stays in view.
+                if (desk) viewOffice({ towerKey: desk.towerKey, projectId: desk.towerKey.replace(/^project:/, ""), personaId: shown.personaId, floor: desk.floor });
               }}
               onOpenRun={onOpenRun}
               onProfile={() => select({ kind: "agent", id: shown.personaId })}

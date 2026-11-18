@@ -1,6 +1,8 @@
 import { runWorking, walkShare, type Segment } from "../../routine/routine";
 import { RIG } from "./agentFigures";
 import { along } from "./railCommuters";
+import { openFloor } from "../../buildings/insideFloors";
+import type { Pt3 } from "./roads";
 import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
 
 /**
@@ -48,12 +50,30 @@ export interface PoseContext {
 }
 
 const BADGE_LIFT = 0.075;
-/** Office units: the seated person's thigh height and head top in the Inside view (InsideView deskParts). */
-const OFFICE_SEAT = 0.58, OFFICE_TOP = 1.39;
+/** Office units: the seated person's thigh height in the Inside view (InsideView deskParts). */
+const OFFICE_SEAT = 0.58;
 
 /** Column (-2..2) and row (0..) of a team member's place at a shared spot: no two share one. */
 const place5 = (slot: number) => ({ col: (slot % 5) - 2, row: Math.floor(slot / 5) });
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** A point a share of the way along a path of straight legs, facing along its leg (a lift ride keeps the last heading). */
+export function alongPath(path: readonly Pt3[], share: number): { x: number; y: number; z: number; yaw: number } {
+  const legs = path.slice(1).map((p, i) => Math.hypot(p[0] - path[i][0], p[1] - path[i][1], p[2] - path[i][2]));
+  const total = legs.reduce((a, b) => a + b, 0);
+  let left = clamp01(share) * total, yaw = 0;
+  for (let i = 0; i < legs.length; i++) {
+    const a = path[i], b = path[i + 1];
+    if (Math.hypot(b[0] - a[0], b[2] - a[2]) > 1e-6) yaw = Math.atan2(b[0] - a[0], b[2] - a[2]);
+    if (left <= legs[i] || i === legs.length - 1) {
+      const t = legs[i] > 0 ? Math.min(1, left / legs[i]) : 1;
+      return { x: lerp(a[0], b[0], t), y: lerp(a[1], b[1], t), z: lerp(a[2], b[2], t), yaw };
+    }
+    left -= legs[i];
+  }
+  const p = path[path.length - 1] ?? [0, 0, 0];
+  return { x: p[0], y: p[1], z: p[2], yaw };
+}
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
@@ -81,28 +101,32 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
   if (seg.kind === "inside") {
     const desk = mine.desk;
     const door = mine.office.path[0];
-    if (!desk || !c.open.has(desk.towerKey)) {
-      // Inside with the office closed: the badge waits above the door.
-      return { x: door[0], y: door[1], z: door[2], yaw: mine.office.yaw, figure: false, badge: mine.doorBadge, sit: 0, typing: false, walking: false, officeScale: null, place: mine.officeLabel };
-    }
-    const k = (OFFICE_TOP * desk.k) / RIG.top;
+    const hidden = (): DrawnPose => ({ x: door[0], y: door[1], z: door[2], yaw: mine.office.yaw, figure: false, badge: mine.doorBadge, sit: 0, typing: false, walking: false, officeScale: null, place: mine.officeLabel });
+    // Inside with its office closed: its badge shows on the facade at its floor.
+    if (!desk || !c.open.has(desk.towerKey)) return hidden();
+    // One building, one open floor (buildings/insideFloors.ts). Anyone above it would stand in the
+    // part of the shell that is cut away, so they wait as a badge; anyone below is behind its walls.
+    const open = openFloor(desk.towerKey, desk.defaultFloor);
+    const openY = desk.surfaces[open] ?? desk.y;
+    // Inside, the character keeps its own size and look (buildingDefinition INTERIOR_K matches it).
+    const k = c.scale;
     const f = clamp01((c.wall - seg.t0) / Math.max(1, seg.t1 - seg.t0));
-    const [lx, ly, lz] = desk.lobby;
-    const walk = (ax: number, ay: number, az: number, bx: number, bz: number, by: number) => {
-      const yaw = Math.atan2(bx - ax, bz - az);
-      return at(lerp(ax, bx, f), lerp(ay, by, f), lerp(az, bz, f), yaw, { walking: true, officeScale: k, place: mine.officeLabel });
+    const walk = (path: readonly Pt3[], share: number): DrawnPose => {
+      const q = alongPath(path, share);
+      if (q.y > openY + 0.02) return hidden();
+      return at(q.x, q.y, q.z, q.yaw, { walking: true, officeScale: k, place: mine.officeLabel });
     };
+    const inAndUp = [...desk.entry, ...desk.route.slice(1)];
     switch (seg.phase) {
       case "entering":
-        return walk(door[0], door[1], door[2], lx, lz, ly);
+        return walk(desk.entry, f);
       case "to_desk":
-        return walk(lx, ly, lz, desk.x, desk.z, desk.y);
+        return walk(desk.route, f);
       case "leaving":
-        // Back to the lobby and out of the door in one walk.
-        return f < 0.6
-          ? at(lerp(desk.x, lx, f / 0.6), desk.y, lerp(desk.z, lz, f / 0.6), Math.atan2(lx - desk.x, lz - desk.z), { walking: true, officeScale: k, place: mine.officeLabel })
-          : at(lerp(lx, door[0], (f - 0.6) / 0.4), lerp(ly, door[1], (f - 0.6) / 0.4), lerp(lz, door[2], (f - 0.6) / 0.4), Math.atan2(door[0] - lx, door[2] - lz), { walking: true, officeScale: k, place: mine.officeLabel });
+        // Back from its chair to the lift, down, through the lobby and out of the door, in one walk.
+        return walk([...inAndUp].reverse(), f);
       default: {
+        if (desk.floor !== open) return hidden();
         // Seated: hips on the chair, facing the monitor.
         const y = desk.y + OFFICE_SEAT * desk.k - RIG.leg.h * k;
         return at(desk.x, y, desk.z, desk.yaw, { sit: 1, typing: runWorking(seg), officeScale: k, place: `At its desk in ${mine.officeLabel}` });

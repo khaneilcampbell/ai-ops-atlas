@@ -1,3 +1,11 @@
+import { locateAgent } from "../../buildings/buildingDefinition";
+import { mapBuildings } from "../../buildings/insideFloors";
+
+/** The desk floor of an agent, or of an automation's owner when the owner works in the same building. */
+function deskFloor(agentId: string, projectId: string) {
+  const at = locateAgent(mapBuildings(), agentId);
+  return at && at.building.projectId === projectId ? at.desk.floor : undefined;
+}
 import {projectOfficeAgents} from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
@@ -59,7 +67,9 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const b = r.runtime.basis;
         return {
           ws,
-          floor: a.officeFloor ?? 4,
+          // The same floor as the map's Inside view and the agent's walk in (buildings/buildingDefinition.ts):
+          // an AI agent's own desk floor, an automation on its owner's floor.
+          floor: deskFloor(a.id, a.projectId) ?? a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),

@@ -92,7 +92,9 @@ import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow, WholeBuildingGlow } from "./activity";
 import { PHONE_QUERY, useMedia } from "../../lib/media";
 import { useOnBattery, usePageVisible, usePowerMode, usePowerProfile, wake, type PowerProfile } from "../../lib/power";
-import { INSIDE_ROOF, InsideView, type InsideOffice } from "./InsideView";
+import { InsideView, insideRoof, type InsideOffice } from "./InsideView";
+import { buildingsOf } from "../../buildings/buildingDefinition";
+import { setMapBuildings, useInsideFloors } from "../../buildings/insideFloors";
 import { insideLimits, type InsideLimits } from "./inside";
 import { useInsideOffices } from "./useInsideOffices";
 import { FramePacer } from "./pacer";
@@ -252,7 +254,12 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
   const [opened, setOpened] = useState<string[]>([]);
   const openSet = useMemo(() => new Set(props.inside ? opened : []), [opened, props.inside]);
-  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? INSIDE_ROOF : towerTop(t)), [openSet]);
+  // An open building's nameplate sits over its open floor (buildings/buildingDefinition.ts).
+  const buildingDefs = useMemo(() => buildingsOf(scene.towers, fullCatalog.projects, fullCatalog.agents), [scene]);
+  const floorPick = useInsideFloors();
+  useEffect(() => setMapBuildings(buildingDefs), [buildingDefs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- floorPick changes when a floor is picked
+  const roofOf = useCallback((t: Tower) => (openSet.has(t.key) ? insideRoof(buildingDefs.get(t.key)) : towerTop(t)), [openSet, buildingDefs, floorPick]);
   const api = useRef<Map3DApi | null>(null);
   const wrapEl = useRef<HTMLDivElement>(null);
   const labelEls = useRef(new Map<string, HTMLDivElement>());
@@ -493,7 +500,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const powerMode = usePowerMode();
   const battery = useOnBattery();
   const insideCaps = useMemo(() => insideLimits(phone, powerMode, battery), [phone, powerMode, battery]);
-  const insideOffices = useInsideOffices(!!props.inside);
+  const insideOffices = useInsideOffices(!!props.inside, scene.towers);
   // When frames run slow the governor lowers pixel ratio, then shadow detail, to keep it smooth.
   const quality = LEVELS[useQualityLevel()];
   const maxDpr = Math.min(power.maxDpr, quality.maxDpr);
@@ -1324,7 +1331,7 @@ function World({
     if (key === YACHT_KEY) return yachtOutline();
     const a = key ? anchors.get(key) : undefined;
     if (a?.project && OPERATIONS_DISTRICTS.has(a.project) && key && !insideOpen.has(key)) return undefined;
-    return a && key && insideOpen.has(key) ? { ...a, y1: INSIDE_ROOF } : a && { ...a, ...a.whole };
+    return a && key && insideOpen.has(key) ? { ...a, y1: insideRoof(buildingsOf(scene.towers, fullCatalog.projects, fullCatalog.agents).get(key)) } : a && { ...a, ...a.whole };
   };
   const terraceOf = (id?: string) => (id ? districtRect(scene, id) : undefined);
   return (
