@@ -9,7 +9,7 @@ import type { WorkflowRun } from "../workflows/types";
  * Pure, so every state can be tested. Three sources, all existing:
  *
  * - agent runtimes (office/activity.ts useRuntimes): the verified run states that light the
- *   buildings and play the city sounds (GitHub runs, the agent feed, the app's own logs);
+ *   buildings (GitHub runs, the agent feed, the app's own logs);
  * - Task Center tasks on this device (tasks/store.ts), with the workflow step a task carries when
  *   it belongs to a live workflow run (workflows/runs.ts);
  * - n8n runs from the Workflow Automation Plant feed (n8n/runs.ts, polled every 2 minutes).
