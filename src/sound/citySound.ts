@@ -245,3 +245,18 @@ export function capScale(levels: readonly number[], cap: number): number {
   const sum = levels.reduce((n, l) => n + Math.max(0, l), 0);
   return sum > cap ? cap / sum : 1;
 }
+
+/**
+ * One focal sound at a time: the loudest of the moving sources (train, nearest car, jets) leads and
+ * the others step back, so the city reads as one scene instead of everything at once. Returns a gain
+ * per source; with nothing clearly leading, nothing is ducked.
+ */
+export const FOCUS = { duck: 0.45, lead: 0.03 } as const;
+export function focusDuck<K extends string>(levels: Record<K, number>): Record<K, number> {
+  const keys = Object.keys(levels) as K[];
+  let lead: K | null = null;
+  for (const k of keys) if (levels[k] > FOCUS.lead && (lead === null || levels[k] > levels[lead])) lead = k;
+  const out = {} as Record<K, number>;
+  for (const k of keys) out[k] = lead === null || k === lead ? 1 : FOCUS.duck;
+  return out;
+}

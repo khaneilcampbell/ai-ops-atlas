@@ -2,3 +2,4 @@
 - 2026-11-18 · Quieter, calmer city sound: no more wind-like rush. The wind layer is gone, the traffic bed is lower and deeper, and jets are heard as they pass near instead of as a constant roar (#PR)
 - 2026-11-18 · Mute now silences City sound in every open Atlas tab and window at once, not just the one you clicked (#PR)
 - 2026-11-18 · You can hear the train and the cars now: the passenger train rumbles and clacks over the rail joints as it moves, the nearest street cars have engines that rise and dip as they pass, the background traffic is an engine hum instead of a hiss, and planes are quieter (#PR)
+- 2026-11-18 · Calmer, more cohesive city sound: everything now plays in one shared space, one moving sound leads at a time, there are about 40% fewer sound events, and the hums are in the same key as the automation tones (#PR)

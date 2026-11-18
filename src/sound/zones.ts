@@ -27,11 +27,12 @@ export interface ZoneHost {
 
 /** Seconds between a place's one-shot sounds, when fully zoomed in on it (longer when further away). */
 const EVERY: Record<ZoneKind, [number, number]> = {
-  airport: [16, 26],
-  station: [14, 24],
-  marina: [9, 16],
-  stadium: [22, 40],
-  park: [6, 11],
+  // Spaced out so the city has room to breathe between sounds (Khaneil, 2026-11-18: "overstimulating").
+  airport: [26, 42],
+  station: [24, 40],
+  marina: [16, 28],
+  stadium: [36, 60],
+  park: [12, 22],
 };
 
 export class ZoneSounds {

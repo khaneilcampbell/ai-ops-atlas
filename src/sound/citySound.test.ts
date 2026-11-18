@@ -8,7 +8,7 @@ vi.stubGlobal("localStorage", {
   clear: () => data.clear(),
 });
 
-const { capScale, DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, HANDOFF_MS, isSoundPrefsKey, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
+const { capScale, DEFAULT_PREFS, distanceGain, EventLimiter, eventsForRuntimes, flightSound, focusDuck, HANDOFF_MS, isSoundPrefsKey, jetThrust, LIMITS, loadSoundPrefs, newFlightState, saveSoundPrefs, stereoPan, trafficLevel, zoneWeight } = await import("./citySound");
 const { executiveJetPose, fleetPose, FLIGHT_SCHEDULE } = await import("../views/map3d/flightSchedule");
 
 beforeEach(() => data.clear());
@@ -183,5 +183,17 @@ describe("sound preference across tabs", () => {
   it("recognises the saved preference's storage key and nothing else", () => {
     expect(isSoundPrefsKey("atlas:citySound")).toBe(true);
     expect(isSoundPrefsKey("atlas:mapLens")).toBe(false);
+  });
+});
+
+describe("one focal sound at a time", () => {
+  it("lets the loudest moving source lead and steps the others back", () => {
+    const d = focusDuck({ train: 0.13, car: 0.06, jets: 0.04 });
+    expect(d.train).toBe(1);
+    expect(d.car).toBeLessThan(1);
+    expect(d.jets).toBeLessThan(1);
+  });
+  it("ducks nothing when nothing clearly leads", () => {
+    expect(focusDuck({ train: 0, car: 0.01, jets: 0.02 })).toEqual({ train: 1, car: 1, jets: 1 });
   });
 });

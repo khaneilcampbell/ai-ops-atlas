@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { capScale, clamp01, distanceGain, EventLimiter, flightSound, jetThrust, newFlightState, stereoPan, trafficLevel, zoneWeight, type CityEvent, type CityEventKind, type FlightSound, type FlightState } from "./citySound";
+import { capScale, clamp01, distanceGain, focusDuck, EventLimiter, flightSound, jetThrust, newFlightState, stereoPan, trafficLevel, zoneWeight, type CityEvent, type CityEventKind, type FlightSound, type FlightState } from "./citySound";
 import { CAR_FEED, SOUND_TAG_KEY, soundScene, ZONE_TAG_KEY, type ZoneKind } from "./listener";
 import { ZoneSounds } from "./zones";
 
@@ -32,12 +32,16 @@ const TRAFFIC_BED = 0.13;
 const JET_RUSH = 0.22;
 const JET_RUSH_CAP = 0.16;
 /** The nearest street cars voiced at once, and one car's level right beside you. */
-const CAR_VOICES = 3;
+const CAR_VOICES = 1;
 const CAR = 0.16;
 /** The train passing close by. */
 const TRAIN = 0.2;
 /** Distance between the rail joints the wheels click over, in world units. */
 const RAIL_JOINT = 1.1;
+/** How much of the shared room is heard. */
+const ROOM_WET = 0.22;
+/** Level after the shared compressor, measured to match the mix before it was added (about -47 dB RMS). */
+const GLUE_TRIM = 0.45;
 
 type Voice = {
   src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode;
@@ -77,6 +81,9 @@ export class CityAudio {
   private trains: THREE.Object3D[] = [];
   private trainVoices = new Map<THREE.Object3D, TrainVoice>();
   private cars: CarVoice[] = [];
+  /** Last tick's levels of the moving sources, and the duck each gets this tick (one focal sound at a time). */
+  private heard = { train: 0, car: 0, jets: 0 };
+  private duck = { train: 1, car: 1, jets: 1 };
   private carPrev = { x: new Float32Array(CAR_FEED.x.length), z: new Float32Array(CAR_FEED.z.length), at: 0, n: 0 };
   private carSpeed = new Float32Array(CAR_FEED.x.length);
   private zones: Zone[] = [];
@@ -259,13 +266,39 @@ export class CityAudio {
     this.master = ctx.createGain();
     this.master.gain.value = 0;
     this.master.connect(ctx.destination);
+    this.noise = pinkNoise(ctx, 4);
+    // Every sound goes through one shared space before the master (Khaneil, 2026-11-18: "cohesive"):
+    // a soft top end, a short warm room so the layers sit in the same air, and a gentle compressor so
+    // no single sound jumps out of the mix.
+    const glue = ctx.createDynamicsCompressor();
+    glue.threshold.value = -26;
+    glue.knee.value = 18;
+    glue.ratio.value = 3;
+    glue.attack.value = 0.008;
+    glue.release.value = 0.4;
+    // The compressor adds its own make-up gain; this trims it back so the mix stays as quiet as before.
+    const trim = ctx.createGain();
+    trim.gain.value = GLUE_TRIM;
+    glue.connect(trim).connect(this.master);
+    const tone = ctx.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 3800;
+    tone.Q.value = 0.5;
+    tone.connect(glue);
+    const room = ctx.createConvolver();
+    room.buffer = roomImpulse(ctx, 1.8);
+    const wet = ctx.createGain();
+    wet.gain.value = ROOM_WET;
+    room.connect(wet).connect(glue);
+    const bus = ctx.createGain();
+    bus.connect(tone);
+    bus.connect(room);
     this.ambience = ctx.createGain();
     this.ambience.gain.value = AMBIENCE;
-    this.ambience.connect(this.master);
+    this.ambience.connect(bus);
     this.events = ctx.createGain();
     this.events.gain.value = EVENTS;
-    this.events.connect(this.master);
-    this.noise = pinkNoise(ctx, 4);
+    this.events.connect(bus);
 
     // Traffic: engines idling and pulling away a block or two off, a low hum with only a little road
     // noise under it, so it reads as cars rather than wind (Khaneil, 2026-11-18).
@@ -279,14 +312,15 @@ export class CityAudio {
     const road = ctx.createGain();
     road.gain.value = 0.35;
     this.loop().connect(road).connect(tf);
-    for (const [f, a] of [[47, 0.32], [58.5, 0.26], [71, 0.22], [88, 0.14]] as const) {
+    // Tuned to A (55, 82.4, 110 Hz) like the automation tones, so the hum and the events share a key.
+    for (const [f, a] of [[55, 0.34], [82.41, 0.24], [110, 0.14]] as const) {
       const o = ctx.createOscillator();
       o.type = "sawtooth";
       o.frequency.value = f;
       const wob = ctx.createOscillator();
       wob.frequency.value = 0.05 + Math.random() * 0.08;
       const depth = ctx.createGain();
-      depth.gain.value = f * 0.04;
+      depth.gain.value = f * 0.012;
       wob.connect(depth).connect(o.frequency);
       const g = ctx.createGain();
       g.gain.value = a;
@@ -352,7 +386,7 @@ export class CityAudio {
     // Now and then a car passes close by.
     if (this.trafficOn && now >= this.nextCar) {
       if (this.nextCar) this.carPass(trafficLevel(view) * (1 - 0.6 * focused));
-      this.nextCar = now + 5 + Math.random() * 8;
+      this.nextCar = now + 14 + Math.random() * 12;
     }
     // Birds by day, crickets by night, every so often.
     if (now >= this.nextCritter) {
@@ -360,9 +394,10 @@ export class CityAudio {
         if (this.night) this.crickets();
         else this.birds();
       }
-      this.nextCritter = now + 9 + Math.random() * 14;
+      this.nextCritter = now + 18 + Math.random() * 18;
     }
     if (s) {
+      this.duck = focusDuck(this.heard);
       this.updateAircraft(s.camera, s.scene);
       this.updateTrains(s.camera);
       this.updateCars(s.camera, view, focused);
@@ -423,7 +458,8 @@ export class CityAudio {
     }
     // However many jets are up at once, their engine noise together stays under one cap.
     const scale = capScale(rush.map((r) => r.loud), JET_RUSH_CAP);
-    for (const r of rush) r.v.gain.gain.setTargetAtTime(r.loud * scale, now, 0.35);
+    for (const r of rush) r.v.gain.gain.setTargetAtTime(r.loud * scale * this.duck.jets, now, 0.35);
+    this.heard.jets = rush.reduce((n, r) => n + r.loud * scale, 0);
   }
 
   private voice(): Voice {
@@ -564,6 +600,7 @@ export class CityAudio {
     }
     // The map opens about 200 units up, so cars stay audible there too, and come right forward up close.
     const zoom = 0.4 + 0.6 * (1 - smooth(30, 180, view));
+    let carLevel = 0;
     for (const v of this.cars) {
       if (!nearest.some((c) => c.i === v.car)) {
         v.car = -1;
@@ -579,13 +616,15 @@ export class CityAudio {
       const doppler = Math.max(0.88, Math.min(1.12, 1 + closing / 30));
       // City cars drive at about 0.35 world units a second (trafficFlow.ts); the engine note rises with it.
       const rev = 1 + Math.min(1, speed / 0.6) * 0.4;
-      v.a.frequency.setTargetAtTime(58 * rev * doppler, now, 0.3);
-      v.b.frequency.setTargetAtTime(87 * rev * doppler, now, 0.3);
+      v.a.frequency.setTargetAtTime(55 * rev * doppler, now, 0.3);
+      v.b.frequency.setTargetAtTime(82.41 * rev * doppler, now, 0.3);
       v.tone.frequency.setTargetAtTime(260 + 520 * gain, now, 0.3);
       const level = CAR * gain * zoom * smooth(0.03, 0.25, speed) * (1 - 0.5 * focused);
-      v.gain.gain.setTargetAtTime(level, now, 0.3);
+      carLevel = Math.max(carLevel, level);
+      v.gain.gain.setTargetAtTime(level * this.duck.car, now, 0.6);
       v.pan.pan.setTargetAtTime(pan, now, 0.25);
     }
+    this.heard.car = carLevel;
   }
 
   private trainVoice(): TrainVoice {
@@ -621,6 +660,7 @@ export class CityAudio {
     const ctx = this.ctx!;
     const now = ctx.currentTime;
     const t = performance.now();
+    let trainLevel = 0;
     for (const o of this.trains) {
       let v = this.trainVoices.get(o);
       if (!v) {
@@ -639,9 +679,10 @@ export class CityAudio {
       const { gain, pan } = this.spatial(camera, tmp);
       const moving = smooth(0.1, 1.2, v.speed);
       const level = o.visible ? TRAIN * Math.pow(gain, 1.5) * moving : 0;
-      v.gain.gain.setTargetAtTime(level, now, 0.4);
+      trainLevel = Math.max(trainLevel, level);
+      v.gain.gain.setTargetAtTime(level * this.duck.train, now, 0.6);
       v.pan.pan.setTargetAtTime(pan, now, 0.3);
-      v.motor.frequency.setTargetAtTime(160 + 120 * Math.min(1, v.speed / 3), now, 0.5);
+      v.motor.frequency.setTargetAtTime(165 + 55 * Math.min(1, v.speed / 3), now, 0.5);
       v.motorGain.gain.setTargetAtTime(0.06 * moving, now, 0.5);
       // Two quick clacks (front and back wheels of a bogie) for each joint passed since the last tick.
       let joints = 0;
@@ -653,9 +694,11 @@ export class CityAudio {
       if (level > 0.002)
         for (let j = 0; j < joints; j++) {
           const at = now + 0.02 + (j * TICK_MS) / 1000 / Math.max(1, joints);
-          for (const d of [0, 0.09]) this.noiseBurst(v.clacks, "bandpass", [1100, 1100], 1.6, at + d, [0, 0.9, 0], [0, 0.004, 0.05]);
+          // Soft, low clacks: the rhythm of the rails, not a click track.
+          for (const d of [0, 0.09]) this.noiseBurst(v.clacks, "bandpass", [700, 700], 1.4, at + d, [0, 0.4, 0], [0, 0.006, 0.07]);
         }
     }
+    this.heard.train = trainLevel;
   }
 
   /** A jet's start-up, takeoff roll or touchdown, through its own voice so it moves with it. */
@@ -878,6 +921,24 @@ const smooth = (a: number, b: number, v: number) => {
   const x = clamp01((v - a) / (b - a));
   return x * x * (3 - 2 * x);
 };
+
+/** A soft, dark room: decaying noise, brighter at first and mellowing as it fades, in stereo. */
+function roomImpulse(ctx: BaseAudioContext, seconds: number): AudioBuffer {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      // A one-pole low-pass that closes over the tail, so late reflections are dull, like a real room.
+      const k = 0.5 - 0.42 * t;
+      lp += k * (Math.random() * 2 - 1 - lp);
+      d[i] = lp * Math.pow(1 - t, 2.4) * 0.6;
+    }
+  }
+  return buf;
+}
 
 /** Seconds of pink noise (Paul Kellet's filter), the raw material for traffic, wind and jets. */
 function pinkNoise(ctx: BaseAudioContext, seconds: number): AudioBuffer {
