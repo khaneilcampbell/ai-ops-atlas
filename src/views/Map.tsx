@@ -14,6 +14,11 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
+import { usePlazaEffects, usePlazaSnapshot } from "../plaza/usePlaza";
+import { plazaSummary, signText } from "../plaza/plazaState";
+import { n8nWorkflowIds } from "../n8n/runs";
+import { PLAZA_KEY } from "./map3d/plazaPlan";
+import type { PlazaProps } from "./map3d/Map3D";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { useRuntimes } from "./office/activity";
@@ -493,6 +498,19 @@ export function MapView({active=true}:{active?:boolean}) {
   const runtimeMap = useRuntimes();
   const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
   const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Atlas Automation Plaza: the same runtimes, plus Task Center tasks and n8n runs (plaza/plazaState.ts).
+  const plazaSnap = usePlazaSnapshot(runtimes);
+  const plazaPathProjects = useMemo(() => new Set(catalog.agents.filter((a) => a.observe?.githubWorkflow || a.observe?.agentFeed || n8nWorkflowIds(a).length).map((a) => a.projectId)), [catalog]);
+  const plazaEffects = usePlazaEffects(plazaSnap, (key) => plazaPathProjects.has(key.replace(/^project:/, "")));
+  const plazaSign = useMemo(() => signText(plazaSnap), [plazaSnap]);
+  const plaza = useMemo<PlazaProps>(
+    () => ({
+      view: { connection: plazaSnap.connection, preview: plazaSnap.preview, running: plazaSnap.running.length, queued: plazaSnap.queued.length, attention: plazaSnap.attention.length, sign: plazaSign },
+      effects: plazaEffects,
+      automationProjects: plazaPathProjects,
+    }),
+    [plazaSnap, plazaSign, plazaEffects, plazaPathProjects],
+  );
   const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
@@ -1049,6 +1067,7 @@ export function MapView({active=true}:{active?:boolean}) {
               healthFor={healthFor}
               landmarkMarks={landmarkMarks}
               light={light}
+              plaza={plaza}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);
@@ -1204,6 +1223,13 @@ export function MapView({active=true}:{active?:boolean}) {
             </dl>
           </section>
 
+          {/* The plaza's text equivalent: one keyboard stop that announces its live status and opens its panel. */}
+          {is3d && (
+            <button type="button" className="plaza-a11y" onClick={() => select({ kind: "service", id: PLAZA_KEY.slice("service:".length) })} aria-describedby="plaza-a11y-status">
+              Atlas Automation Plaza: {plazaSign.status}
+              <span id="plaza-a11y-status" className="sr-only" aria-live="polite">{plazaSummary(plazaSnap)}</span>
+            </button>
+          )}
           {tip && (
             <div className="map-tip" style={{ left: tip.x, top: tip.y }}>
               <div className="t">{tip.title}</div>
