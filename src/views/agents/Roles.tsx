@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { RunsLine } from "./RunsLine";
 import { ESSENTIAL_ROLES, memberKind, placement, roleActivity, roleDirectory, roleOf } from "../../catalog/essentialRoles";
 import type { Agent, Project } from "../../catalog/types";
 import { filterEntries, EMPTY_FILTER, type RegistryEntry } from "../../registry/registry";
@@ -10,13 +11,16 @@ import type { IdentityStatus } from "../../registry/agentStatus";
 export type RoleView = "roles" | "inactive" | "archived";
 const NAME = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
 
-/** Essential roles with their agents and automations nested underneath, plus Inactive and Archived. */
+/** Essential roles with their AI agents, plus Inactive and Archived agents. Automations are never listed
+ *  here as agents (Khaneil, 2026-11-18): an owning agent shows the automations it runs as one plain
+ *  line that opens them in the Automations tab. */
 export function Roles({ agents, projects, entries, view, query, current, pick, statuses }: { agents: Agent[]; projects: Project[]; entries: RegistryEntry[]; view: RoleView; query: string; current?: string; pick: (id: string) => void; statuses?: ReadonlyMap<string, { status: IdentityStatus }> }) {
   const dir = useMemo(() => roleDirectory(agents), [agents]);
   const roles = useMemo(() => roleOf(agents), [agents]);
   const byId = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
   const entry = useMemo(() => new Map(entries.map((e) => [e.profile.id, e])), [entries]);
   const hits = useMemo(() => new Set(filterEntries(entries, { ...EMPTY_FILTER, query }).map((e) => e.profile.id)), [entries, query]);
+  const isAgent = (id: string) => memberKind(byId.get(id)!) !== "Automation";
   const show = (ids: string[]) => ids.filter((id) => entry.has(id) && hits.has(id));
   const where = (a: Pick<Agent, "projectId">) => {
     const p = placement(a, projects);
@@ -43,7 +47,7 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
   };
 
   if (view !== "roles") {
-    const ids = show(view === "inactive" ? dir.inactive : dir.archived);
+    const ids = show(view === "inactive" ? dir.inactive : dir.archived).filter(isAgent);
     return ids.length ? <ul className="role-plain" aria-label={view === "inactive" ? "Inactive entries" : "Archived entries"}>{ids.map((id) => row(id, true))}</ul> : <p className="muted pad">Nothing {view} matches.</p>;
   }
   return (
@@ -53,9 +57,10 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
         const ids = show(all);
         if (query && !ids.length) return null;
         const act = roleActivity(all.flatMap((id) => (entry.has(id) ? [{ operational: entry.get(id)!.operational, lastVerifiedAt: entry.get(id)!.telemetry.lastVerifiedRun?.at ?? null }] : [])));
-        const autos = all.filter((id) => memberKind(byId.get(id)!) === "Automation").length;
-        const leads = ids.filter((id) => memberKind(byId.get(id)!) !== "Automation");
-        const loose = ids.filter((id) => memberKind(byId.get(id)!) === "Automation" && !leads.includes(byId.get(id)!.ownedBy ?? ""));
+        const autos = all.filter((id) => !isAgent(id)).length;
+        // A search that matches only an automation still shows the agent that runs it.
+        const leads = all.filter((id) => isAgent(id) && entry.has(id) && (ids.includes(id) || ids.some((s) => byId.get(s)!.ownedBy === id)));
+        if (query && !leads.length) return null;
         return (
           <details key={r.id} className="role-card" open={!!query || undefined} data-role={r.id}>
             <summary>
@@ -68,10 +73,9 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
             </summary>
             <ul aria-label={`${r.name} members`}>
               {leads.map((id) => {
-                const steps = ids.filter((s) => byId.get(s)!.ownedBy === id);
-                return [row(id), steps.length > 0 && <li key={`${id}-steps`}><ul className="reg-nested" aria-label={`Automations run by ${entry.get(id)!.profile.title}`}>{steps.map((s) => row(s))}</ul></li>];
+                const steps = all.filter((s) => !isAgent(s) && byId.get(s)!.ownedBy === id && entry.has(s));
+                return [row(id), <RunsLine key={`${id}-runs`} agent={entry.get(id)!.profile.title} steps={steps.map((s) => ({ id: s, title: entry.get(s)!.profile.title }))} />];
               })}
-              {loose.map((id) => row(id))}
             </ul>
           </details>
         );

@@ -52,6 +52,7 @@ export interface RoleDirectory {
   archived: string[];
   /** Current entries no role claims: shown as "No owning role" so the gap is visible. */
   unassigned: string[];
+  /** inactive/archived count AI agents only: the Agents tab never lists an automation as an agent. */
   counts: { roles: number; automations: number; aiAgents: number; inactive: number; archived: number };
 }
 
@@ -67,8 +68,9 @@ export function roleDirectory(items: Item[]): RoleDirectory {
     else out.unassigned.push(a.id);
     if (!isArchived(a)) out.counts[isAiAgent(a) ? "aiAgents" : "automations"]++;
   }
-  out.counts.inactive = out.inactive.length;
-  out.counts.archived = out.archived.length;
+  const ai = new Set(items.filter(isAiAgent).map((a) => a.id));
+  out.counts.inactive = out.inactive.filter((id) => ai.has(id)).length;
+  out.counts.archived = out.archived.filter((id) => ai.has(id)).length;
   return out;
 }
 

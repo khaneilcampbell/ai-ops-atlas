@@ -1,7 +1,7 @@
 import {test, expect} from '@playwright/test';
 import {mkdirSync} from 'node:fs';
 import {openAtlas,goTo,settle} from './atlas';
-// Agents with the automations they own nested underneath. Since 2026-11-13 every automation has an
+// Agents with the automations they own named on one plain line (never as agent rows, 2026-11-18). Since 2026-11-13 every automation has an
 // owning agent, so Automations shows no orphan note.
 test.use({deviceScaleFactor:1});
 for(const width of [1512,390]) test(`Agents own their automations ${width}`,async({page})=>{
@@ -10,12 +10,11 @@ for(const width of [1512,390]) test(`Agents own their automations ${width}`,asyn
  mkdirSync('docs/agent-owners',{recursive:true});
  await goTo(page,'Agents');
  // Since 2026-11-14 the Production Coordinator runs Merge Flow; Senior Engineering Reviewer's six were deleted or moved.
- const nested=page.getByRole('list',{name:'Automations run by Atlas Production Coordinator'});
- await expect(nested.getByRole('button')).toHaveCount(1);
- await expect(page.getByRole('list',{name:'Automations run by Senior Engineering Reviewer'})).toHaveCount(0);
- await expect(page.getByRole('list',{name:'Automations run by Client Inquiry Manager'}).getByRole('button')).toHaveCount(6);
- await expect(page.getByRole('list',{name:'Automations run by Commerce Operations Manager'}).getByRole('button')).toHaveCount(6); // 6 since the Stripe sales feed was published (2026-11-16)
- await expect(page.getByRole('list',{name:'Automations run by Portfolio Web Developer'}).getByRole('button')).toHaveCount(3);
+ await expect(page.getByRole('note',{name:'Automations run by Atlas Production Coordinator'})).toHaveAttribute('data-count','1');
+ await expect(page.getByRole('note',{name:'Automations run by Senior Engineering Reviewer'})).toHaveCount(0);
+ await expect(page.getByRole('note',{name:'Automations run by Client Inquiry Manager'})).toHaveAttribute('data-count','6');
+ await expect(page.getByRole('note',{name:'Automations run by Commerce Operations Manager'})).toHaveAttribute('data-count','6'); // 6 since the Stripe sales feed was published (2026-11-16)
+ await expect(page.getByRole('note',{name:'Automations run by Portfolio Web Developer'})).toHaveAttribute('data-count','3');
  await page.locator('.reg-row[data-id="atlas-production-coordinator"]').scrollIntoViewIfNeeded();await settle(page,1);
  await page.locator('.reg-row[data-id="atlas-production-coordinator"]').evaluate(e=>e.scrollIntoView({block:'start'}));
  await page.screenshot({path:`docs/agent-owners/agents-${width}.png`});

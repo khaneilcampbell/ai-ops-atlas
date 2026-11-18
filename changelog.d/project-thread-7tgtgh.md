@@ -1,0 +1,1 @@
+- 2026-11-18 · The Agents tab now lists only AI agents. Automations such as Agent Registry Clerk are no longer shown as agent rows; each agent shows one line naming the automations it runs, with a View in Automations link (#PR)

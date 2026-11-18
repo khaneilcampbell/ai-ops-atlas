@@ -56,6 +56,14 @@ describe("essential roles directory", () => {
     expect(find("Splunk")).toContain("soc-detection-lead");
   });
 
+  it("counts only AI agents in the Agents tab's Inactive and Archived views (2026-11-18)", () => {
+    const ai = (ids: string[]) => ids.filter((id) => isAiAgent(byId.get(id)!)).length;
+    expect(dir.counts.archived).toBe(ai(dir.archived));
+    expect(dir.counts.inactive).toBe(ai(dir.inactive));
+    expect(dir.archived.length).toBeGreaterThan(dir.counts.archived); // archived automations exist, and stay out
+    expect(memberKind(byId.get("agent-registry-sync")!)).toBe("Automation");
+  });
+
   it("labels deterministic workflows Automation and owning agents as coordinators", () => {
     expect(memberKind(byId.get("atlas-ci")!)).toBe("Automation");
     expect(memberKind(byId.get("atlas-release-manager")!)).toBe("Coordinates automations");
@@ -80,7 +88,7 @@ describe("essential roles directory", () => {
 
   it("counts roles, automations and archived entries separately", () => {
     expect(dir.counts.roles).toBe(8);
-    expect(dir.counts.aiAgents + dir.counts.automations + dir.counts.archived).toBe(catalog.agents.length);
+    expect(dir.counts.aiAgents + dir.counts.automations + dir.archived.length).toBe(catalog.agents.length);
     console.log("role directory counts", dir.counts, Object.fromEntries([...dir.members].map(([k, v]) => [k, v.length])), "inactive", dir.inactive);
   });
 });

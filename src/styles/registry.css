@@ -173,3 +173,4 @@
 .role-card .reg-step .grow, .role-plain .reg-step .grow { white-space: normal; }
 .role-plain { list-style: none; margin: 0; padding: 4px; }
 .role-meta { display: block; }
+.role-runs { margin: 2px 0 8px 46px; padding: 0 8px 0 10px; border-left: 1px solid var(--sage-300); line-height: 1.45; }
