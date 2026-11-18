@@ -34,12 +34,16 @@ export function insideFloor(def: BuildingDefinition) {
 }
 /** Nameplate height over an open building. */
 export function insideRoof(def: BuildingDefinition | undefined) {
-  return def ? insideFloor(def).surface + WALL_H * def.k + 0.12 : INSIDE_ROOF;
+  return def ? insideFloor(def).surface + wallHeight(def) * def.k + 0.12 : INSIDE_ROOF;
+}
+/** The room's wall height in office units: the office's own 2.7, capped under the storey above. */
+export function wallHeight(def: BuildingDefinition) {
+  return Math.min(WALL_H, (0.92 * def.exterior.storeyH) / def.k);
 }
 /** The cut reaches a little past the tower's own walls, over the custom towers' podiums and trim. */
 const CUT_REACH = 0.56;
 /** Office wall height, office units (OfficeEnvironment). */
-const WALL_H = 1.5;
+const WALL_H = 2.7;
 
 type Part = { b: string; p: [number, number, number]; s: [number, number, number]; c?: string; f: number };
 interface Parts {
@@ -150,6 +154,15 @@ const MAT = {
   tinted: std("#ffffff", { roughness: 0.85 }),
   wall: std(C.wall),
   lamp: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
+  // The office's own finishes (office/OfficeScene.tsx OfficeEnvironment), so the cutaway is the same room.
+  rug: std(C.rug, { roughness: 1 }),
+  trim: std(C.trim, { roughness: 0.6 }),
+  frame: std("#3a4a3f", { roughness: 0.5, metalness: 0.2 }),
+  pane: new THREE.MeshStandardMaterial({ color: "#cfe6f2", emissive: "#cfe6f2", emissiveIntensity: 0.02, transparent: true, opacity: 0.18, depthWrite: false, roughness: 0.1, metalness: 0.1 }),
+  pot: std("#b8836a", { roughness: 0.9 }),
+  leaf: std("#4f7f4a", { roughness: 0.9, flatShading: true }),
+  leaf2: std("#6a9a52", { roughness: 0.9, flatShading: true }),
+  led: new THREE.MeshBasicMaterial({ color: "#7ee0a0", toneMapped: false }),
 };
 
 /** Recompiles every building material, so it picks the cut up or drops it. */
@@ -387,28 +400,92 @@ export function InsideView({ on, towers, offices, limits, reduced, night, select
   );
 }
 
+const CYL = new THREE.CylinderGeometry(0.5, 0.42, 1, 10);
+const LEAF = new THREE.IcosahedronGeometry(0.5, 0);
+const Bx = ({ p, s: z, m }: { p: [number, number, number]; s: [number, number, number]; m: THREE.Material }) => <mesh geometry={BOX} material={m} position={p} scale={z} castShadow receiveShadow />;
+function Plant({ p, s: k }: { p: [number, number, number]; s: number }) {
+  return (
+    <group position={p} scale={k}>
+      <mesh geometry={CYL} material={MAT.pot} position={[0, 0.22, 0]} scale={[0.42, 0.44, 0.42]} castShadow />
+      <mesh geometry={LEAF} material={MAT.leaf} position={[0, 0.72, 0]} scale={[0.62, 0.7, 0.62]} castShadow />
+      <mesh geometry={LEAF} material={MAT.leaf2} position={[0.12, 1.02, 0.05]} scale={[0.4, 0.46, 0.4]} rotation={[0.4, 0.6, 0]} castShadow />
+    </group>
+  );
+}
+
 /**
- * The office's back and left walls (OfficeEnvironment's cutaway walls) on the open floor's plate,
- * at the characters' scale. Each steps aside while the camera looks in from its side, as inside the
- * building (CutawayWall).
+ * The open floor's room, furnished like the office inside "Enter building" (OfficeEnvironment):
+ * back and left walls with windows, trim, the building's colour strip and a wall display (dark: no
+ * pretend figures), low sills on the street and right sides, a rug under the desks, a server rack
+ * (decorative lights) and plants, and the lift's doors on the core. In office units, scaled by the
+ * building definition's k onto its floor plate, the storey height capping the walls. Each full wall
+ * steps aside while the camera looks in from its side (CutawayWall).
  */
 function OfficeWalls({ t, office }: { t: Tower; office: InsideOffice }) {
   const { def } = office;
+  const k = def.k;
   const floor = insideFloor(def);
   const { x0, x1, z0, z1 } = floor.plate;
-  const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-  const h = WALL_H * def.k;
-  const T = 0.16 * def.k;
-  const y = floor.surface;
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const w = (x1 - x0) / k, d = (z1 - z0) / k;
+  const H = wallHeight(def);
+  const f = H / 2.7;
+  const T = 0.16;
   const center = useMemo(() => ({ x: t.x, z: t.z }), [t.x, t.z]);
+  const accent = useMemo(() => std(def.identity?.accent ?? C.trim, { roughness: 0.6 }), [def]);
+  useEffect(() => () => accent.dispose(), [accent]);
+  const winH = Math.max(0.3, 1.3 * f), winY = Math.max(winH / 2 + 0.25, 1.55 * f);
+  const backWins = [-w * 0.3, w * 0.05];
+  const leftWins = [-d / 4, d / 4];
+  const lx = (def.core.x - cx) / k, lz = (def.core.z - cz) / k;
+  const rugW = Math.max(1, w - 2), rugD = Math.max(1, d - 2);
   return (
-    <group>
+    <group position={[cx, floor.surface, cz]} scale={k}>
+      <Bx p={[0, 0.006, 0.2]} s={[rugW, 0.012, rugD]} m={MAT.rug} />
       <CutawayWall side="back" center={center}>
-        <mesh geometry={BOX} material={MAT.wall} position={[cx, y + h / 2, z0]} scale={[w, h, T]} castShadow receiveShadow />
+        <Bx p={[0, H / 2, -d / 2 - T / 2]} s={[w + T * 2, H, T]} m={MAT.wall} />
+        {backWins.map((x) => (
+          <group key={x} position={[x, winY, -d / 2 + 0.01]}>
+            <Bx p={[0, 0, 0.02]} s={[1.18, winH, 0.02]} m={MAT.pane} />
+            <Bx p={[0, 0, 0.04]} s={[0.04, winH, 0.02]} m={MAT.frame} />
+          </group>
+        ))}
+        <Bx p={[0, H + 0.03, -d / 2 - T / 2]} s={[w + T * 2 + 0.04, 0.06, T + 0.04]} m={MAT.trim} />
+        <Bx p={[0, 0.95 * f, -d / 2 + 0.01]} s={[w, 0.05, 0.02]} m={accent} />
+        <Bx p={[w * 0.32, winY, -d / 2 + 0.04]} s={[Math.min(1.8, w * 0.25), winH, 0.06]} m={MAT.dark} />
       </CutawayWall>
       <CutawayWall side="left" center={center}>
-        <mesh geometry={BOX} material={MAT.wall} position={[x0, y + h / 2, cz]} scale={[T, h, d]} castShadow receiveShadow />
+        <Bx p={[-w / 2 - T / 2, H / 2, 0]} s={[T, H, d]} m={MAT.wall} />
+        {leftWins.map((z) => (
+          <group key={z} position={[-w / 2 + 0.01, winY, z]}>
+            <Bx p={[0.02, 0, 0]} s={[0.02, winH, 1.38]} m={MAT.pane} />
+            <Bx p={[0.04, 0, 0]} s={[0.02, winH, 0.04]} m={MAT.frame} />
+          </group>
+        ))}
+        <Bx p={[-w / 2 - T / 2, H + 0.03, 0]} s={[T + 0.04, 0.06, d]} m={MAT.trim} />
+        <Bx p={[-w / 2 + 0.01, 0.95 * f, 0]} s={[0.02, 0.05, d]} m={accent} />
       </CutawayWall>
+      {/* The street and right sides are cut down to a sill with a trim cap, as inside. */}
+      <Bx p={[0, 0.16, d / 2 + T / 2]} s={[w + T * 2, 0.32, T]} m={MAT.wall} />
+      <Bx p={[w / 2 + T / 2, 0.16, 0]} s={[T, 0.32, d]} m={MAT.wall} />
+      <Bx p={[0, 0.34, d / 2 + T / 2]} s={[w + T * 2 + 0.04, 0.04, T + 0.04]} m={MAT.trim} />
+      <Bx p={[w / 2 + T / 2, 0.34, 0]} s={[T + 0.04, 0.04, d]} m={MAT.trim} />
+      {/* The lift on the core: its doors in a dark frame, the building's colour above them. */}
+      <group position={[lx, 0, lz]}>
+        <Bx p={[0, 0.95 * f, 0]} s={[0.9, 1.9 * f, 0.03]} m={MAT.frame} />
+        <Bx p={[0, 0.95 * f, 0.02]} s={[0.03, 1.8 * f, 0.02]} m={MAT.dark} />
+        <Bx p={[0, 1.95 * f, 0.01]} s={[0.9, 0.06, 0.03]} m={accent} />
+      </group>
+      {/* The server rack in the back corner (its lights are decoration, not telemetry) and plants. */}
+      <group position={[-w / 2 + 0.45, 0, -d / 2 + 0.45]}>
+        <Bx p={[0, 0.95 * f, 0]} s={[0.55, 1.9 * f, 0.55]} m={MAT.dark} />
+        {[0.5, 0.8, 1.1, 1.4].map((y) => (
+          <mesh key={y} geometry={BOX} material={MAT.led} position={[-0.18, y * f, 0.28]} scale={[0.03, 0.03, 0.01]} />
+        ))}
+      </group>
+      <Plant p={[-w / 2 + 1.2, 0, -d / 2 + 0.4]} s={0.7} />
+      <Plant p={[-w / 2 + 0.45, 0, d / 2 - 0.45]} s={0.8} />
+      <Plant p={[w / 2 - 0.45, 0, d / 2 - 0.45]} s={0.8} />
     </group>
   );
 }

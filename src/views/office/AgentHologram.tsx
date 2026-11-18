@@ -13,10 +13,10 @@ import { RUN_SLOTS } from "./officeOrg";
  * observed in progress; otherwise it holds still.
  */
 
-const GLASS = "#bfeaf5";
-const LINE = "rgba(150,236,255,0.95)";
-const INK = "#effcff";
-const SOFT = "rgba(220,244,252,0.74)";
+const GLASS = "#e6c88a";
+const LINE = "rgba(208,173,105,0.9)";
+const INK = "#f4efe2";
+const SOFT = "rgba(236,228,208,0.74)";
 const FONT = "Inter, -apple-system, 'Segoe UI', sans-serif";
 const RUN_COLOR: Record<RunMark, string> = { success: "#7fe0a0", failure: "#ff8a78", running: "#8fe6ff", other: "#b9c7cc" };
 
@@ -62,11 +62,11 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, lines: n
   return out;
 }
 
-/** Translucent glass card with a bright outline and corner ticks, the reference's tile language. */
+/** Translucent forest-green glass card (Atlas green and gold) with a gold outline and corner ticks, the reference's tile language. */
 function glassCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, "rgba(22,92,112,0.80)");
-  g.addColorStop(1, "rgba(8,44,58,0.74)");
+  g.addColorStop(0, "rgba(34,58,47,0.90)");
+  g.addColorStop(1, "rgba(20,36,29,0.86)");
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
@@ -74,7 +74,7 @@ function glassCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.strokeStyle = "#ffffff";
+  ctx.strokeStyle = "#e6c88a";
   ctx.lineWidth = 5;
   for (const [cx, cy, dx, dy] of [
     [x, y, 1, 1],
@@ -99,7 +99,7 @@ function runBars(ctx: CanvasRenderingContext2D, runs: RunMark[], x: number, y: n
     const bx = x + i * (bw + gap);
     const r = i >= offset ? runs[i - offset] : null;
     if (!r) {
-      ctx.strokeStyle = "rgba(214,247,255,0.35)";
+      ctx.strokeStyle = "rgba(236,228,208,0.35)";
       ctx.lineWidth = 2;
       ctx.strokeRect(bx, y + h * 0.55, bw, h * 0.45);
       continue;
@@ -120,7 +120,7 @@ export function hologramTexture(d: HologramData) {
   const state = STATE_COLOR[d.state];
   // Status ring, after the reference's circular indicators: full while running, a quarter when unknown.
   ctx.lineWidth = 12;
-  ctx.strokeStyle = "rgba(214,247,255,0.25)";
+  ctx.strokeStyle = "rgba(236,228,208,0.25)";
   ctx.beginPath();
   ctx.arc(96, 98, 46, 0, Math.PI * 2);
   ctx.stroke();
@@ -146,7 +146,7 @@ export function hologramTexture(d: HologramData) {
   ctx.font = `700 25px ${FONT}`;
   const pill = d.stateLabel.toUpperCase();
   const pw = ctx.measureText(pill).width + 52;
-  ctx.fillStyle = "rgba(8,32,40,0.55)";
+  ctx.fillStyle = "rgba(14,26,20,0.55)";
   ctx.beginPath();
   ctx.roundRect(40, 168, pw, 46, 23);
   ctx.fill();
@@ -178,7 +178,7 @@ export function hologramTexture(d: HologramData) {
   }
 
   // Goal and responsibilities
-  ctx.strokeStyle = "rgba(214,247,255,0.35)";
+  ctx.strokeStyle = "rgba(236,228,208,0.35)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(512, 320);
@@ -205,7 +205,7 @@ export function hologramTexture(d: HologramData) {
   }
 
   // Home and work: who this is and where it belongs, wherever it is drawn. Placement only.
-  ctx.strokeStyle = "rgba(214,247,255,0.35)";
+  ctx.strokeStyle = "rgba(236,228,208,0.35)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(40, 616);
@@ -275,7 +275,7 @@ function streamTexture() {
   const [c, ctx] = makeCanvas(256, 16);
   const g = ctx.createLinearGradient(0, 0, 256, 0);
   for (let i = 0; i <= 4; i++) {
-    g.addColorStop(i / 4, i % 2 ? "rgba(160,240,255,0.95)" : "rgba(60,180,220,0.05)");
+    g.addColorStop(i / 4, i % 2 ? "rgba(240,217,160,0.95)" : "rgba(201,163,90,0.05)");
   }
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 256, 16);
@@ -327,7 +327,7 @@ export function AgentHologram({ data, reduced }: { data: HologramData; reduced: 
   return (
     <group raycast={() => null}>
       <mesh geometry={tube} raycast={() => null}>
-        <meshBasicMaterial map={stream} color={running ? "#9ff0ff" : "#7fc9dc"} transparent opacity={running ? 0.95 : 0.45} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial map={stream} color={running ? "#f0d9a0" : "#c9a35a"} transparent opacity={running ? 0.95 : 0.45} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
       <group ref={float}>
         <group ref={face} position={[0, PANEL_Y, 0]}>

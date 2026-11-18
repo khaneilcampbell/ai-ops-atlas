@@ -17,6 +17,7 @@ import AtlasHqShell from "./AtlasHqShell";
 import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
+import type { CityFigure } from "../../registry/cityFigures";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
 import { OFFICE_COLORS as C } from "./palette";
 import { AgentHologram, OrgBands } from "./AgentHologram";
@@ -35,6 +36,10 @@ export interface DeskData {
   when: string | null;
   /** The glass data view shown over the desk on hover or selection, from verified data only. */
   holo?: HologramData;
+  /** A named agent's own look (the same figure the city draws), in place of the generic worker. */
+  figure?: CityFigure;
+  /** A named agent whose day has them away from the desk right now: the chair stays empty. */
+  away?: boolean;
 }
 
 export interface OfficeApi {
@@ -427,7 +432,7 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       </mesh>
       <AgentStatusIndicator state={state} reduced={reduced} />
       <Chair />
-      <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
+      {!d.away && <AgentCharacter seed={d.ws.agentId} accent={d.accent} figure={d.figure} state={state} reduced={reduced} />}
       {(hover || selected) && d.holo && <AgentHologram data={d.holo} reduced={reduced} />}
     </group>
   );
@@ -446,12 +451,18 @@ function Chair() {
 }
 
 /** AgentCharacter: a seated miniature figure. Types only while a run is observed in progress. */
-function AgentCharacter({ seed, accent, state, reduced }: { seed: string; accent: string; state: Runtime["state"]; reduced: boolean }) {
-  const shirt = useMemo(() => std(accent, { roughness: 0.85 }), [accent]);
+function AgentCharacter({ seed, accent, figure, state, reduced }: { seed: string; accent: string; figure?: CityFigure; state: Runtime["state"]; reduced: boolean }) {
+  const shirt = useMemo(() => std(figure ? (figure.jacket ?? figure.top) : accent, { roughness: 0.85 }), [accent, figure]);
+  const own = useMemo(
+    () => (figure ? { skin: std(figure.skin, { roughness: 0.7 }), hair: std(figure.hair.color, { roughness: 0.9 }), legs: std(figure.trousers, { roughness: 0.9 }), glasses: figure.glasses ? std(figure.glasses, { roughness: 0.4 }) : null } : null),
+    [figure],
+  );
   useEffect(() => () => shirt.dispose(), [shirt]);
+  useEffect(() => () => { if (own) Object.values(own).forEach((m) => m?.dispose()); }, [own]);
   const h = hash(seed);
-  const skin = MAT.skin[Math.floor(h * 4) % 4];
-  const hair = MAT.hair[Math.floor(h * 17) % 4];
+  const skin = own?.skin ?? MAT.skin[Math.floor(h * 4) % 4];
+  const hair = own?.hair ?? MAT.hair[Math.floor(h * 17) % 4];
+  const bald = figure?.hair.style === "bald";
   const inactive = state === "offline";
   const L = useRef<THREE.Group>(null);
   const R = useRef<THREE.Group>(null);
@@ -469,12 +480,13 @@ function AgentCharacter({ seed, accent, state, reduced }: { seed: string; accent
   return (
     <group position={[0, 0, 0.62]}>
       {/* Legs under the desk */}
-      <Box p={[-0.1, 0.55, -0.2]} s={[0.15, 0.13, 0.44]} m={inactive ? MAT.inactive : MAT.chair} />
-      <Box p={[0.1, 0.55, -0.2]} s={[0.15, 0.13, 0.44]} m={inactive ? MAT.inactive : MAT.chair} />
+      <Box p={[-0.1, 0.55, -0.2]} s={[0.15, 0.13, 0.44]} m={inactive ? MAT.inactive : own?.legs ?? MAT.chair} />
+      <Box p={[0.1, 0.55, -0.2]} s={[0.15, 0.13, 0.44]} m={inactive ? MAT.inactive : own?.legs ?? MAT.chair} />
       <mesh geometry={TORSO} material={inactive ? MAT.inactive : shirt} position={[0, 0.86, 0.04]} rotation={[inactive ? 0.18 : -0.06, 0, 0]} {...shadow} />
       <group ref={head} position={[0, 1.18, 0.02]}>
         <mesh geometry={SPHERE} material={skin} position={[0, 0.07, 0]} scale={0.27} {...shadow} />
-        <mesh geometry={SPHERE} material={hair} position={[0, 0.12, 0.03]} scale={[0.285, 0.24, 0.285]} {...shadow} />
+        {!bald && <mesh geometry={SPHERE} material={hair} position={[0, 0.12, 0.03]} scale={[0.285, 0.24, 0.285]} {...shadow} />}
+        {own?.glasses && <mesh geometry={BOX} material={own.glasses} position={[0, 0.08, -0.14]} scale={[0.22, 0.05, 0.03]} />}
       </group>
       {[L, R].map((ref, i) => (
         <group key={i} ref={ref} position={[i ? 0.21 : -0.21, 0.98, 0.02]} rotation={[rest, 0, 0]}>

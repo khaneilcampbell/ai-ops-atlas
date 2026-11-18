@@ -132,6 +132,22 @@ for (const width of [1512, 390])
       await page.screenshot({ path: join(out, `${width}-locate-page.png`) });
       save(`${width}-locate-close`, await frame(page, "project:ai-ops-atlas", true));
     }
+    // Enter building (office/OfficeScene.tsx): the same floor, with the named agents at their own desks.
+    const enter = page.getByRole("button", { name: "Enter building" });
+    if (await enter.count()) {
+      await enter.first().dispatchEvent("click");
+      await page.locator(".office-layer canvas").waitFor({ timeout: 60_000 });
+      for (let i = 0; i < 8; i++) await settle(page, 2);
+      await page.screenshot({ path: join(out, `${width}-office-page.png`) });
+      const floor4 = page.getByRole("button", { name: "Floor 4", exact: true });
+      if (await floor4.count()) {
+        await floor4.first().dispatchEvent("click");
+        const zoom = page.locator(".office-layer").getByRole("button", { name: /zoom in/i });
+        if (await zoom.count()) for (let i = 0; i < 3; i++) await zoom.first().dispatchEvent("click");
+        for (let i = 0; i < 6; i++) await settle(page, 2);
+        await page.screenshot({ path: join(out, `${width}-office-floor.png`) });
+      }
+    }
   });
 
 test("Every building with a desk, inside", async ({ page }) => {
