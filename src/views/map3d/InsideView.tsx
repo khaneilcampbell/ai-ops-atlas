@@ -80,7 +80,10 @@ function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, 
   if (d.state === "awaiting" || d.state === "failed") push("marker", [0, 1.98, -0.22], [0.36, 0.36, 0.36], STATE_COLOR[d.state]);
 }
 
-function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffice>, tiers: InsideTiers): Parts {
+/** The seated person's parts at a desk: left out where a named agent's own character sits (NamedAgents). */
+const PERSON: ReadonlySet<keyof Parts> = new Set(["torso", "head", "hair"]);
+
+function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffice>, tiers: InsideTiers, managed: ReadonlySet<string> = new Set()): Parts {
   const P: Parts = { slab: [], outline: [], tiles: [], oak: [], steel: [], dark: [], screen: [], chair: [], torso: [], head: [], hair: [], lamp: [], marker: [] };
   for (const key of [...tiers.near, ...tiers.mid]) {
     const t = towers.get(key);
@@ -105,7 +108,10 @@ function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffic
         P.tiles.push({ b: key, p: [x, CUT_Y + 0.006, z], s: [1.9 * k, 0.012, 1.9 * k], c: STATE_COLOR[desk.state] });
         continue;
       }
+      const own = managed.has(desk.ws.agentId);
       deskParts(desk, (list, p, s, c) => {
+        // A named agent's desk: its character comes and goes (routine), so the chair is empty when it's away.
+        if (own && PERSON.has(list)) return;
         const [x, z] = at(p[0], p[2]);
         P[list].push({ b: key, p: [x, CUT_Y + p[1] * k, z], s: [s[0] * k, s[1] * k, s[2] * k], c });
       });
@@ -210,7 +216,7 @@ function Rising({ items, geometry, material, rise, floorY, shadow = true }: { it
  * the standard ones, and their shadows go with them. Off, it draws nothing and the materials are
  * compiled without the cut.
  */
-export function InsideView({ on, towers, offices, limits, reduced, night, selected, onOpen }: { on: boolean; towers: Tower[]; offices: Map<string, InsideOffice>; limits: InsideLimits; reduced: boolean; night: boolean; selected: string | null; onOpen?: (keys: string[]) => void }) {
+export function InsideView({ on, towers, offices, limits, reduced, night, selected, onOpen, managed }: { on: boolean; towers: Tower[]; offices: Map<string, InsideOffice>; limits: InsideLimits; reduced: boolean; night: boolean; selected: string | null; onOpen?: (keys: string[]) => void; managed?: ReadonlySet<string> }) {
   const { camera, scene, gl, invalidate } = useThree();
   const byKey = useMemo(() => new Map(towers.map((t) => [t.key, t])), [towers]);
   // Only buildings with an office plan open up; the rest keep their exterior.
@@ -325,7 +331,7 @@ export function InsideView({ on, towers, offices, limits, reduced, night, select
   const last = useRef(offices);
   if (offices.size) last.current = offices;
   const plans = offices.size ? offices : last.current;
-  const parts = useMemo(() => buildParts(byKey, plans, drawn), [byKey, plans, drawn]);
+  const parts = useMemo(() => buildParts(byKey, plans, drawn, managed), [byKey, plans, drawn, managed]);
   const walls = drawn.near.map((k) => byKey.get(k)).filter((t): t is Tower => !!t && plans.has(t.projectId));
   // After dark the office lights are on, as inside (OfficeEnvironment): the floor and walls glow warm.
   useEffect(() => {

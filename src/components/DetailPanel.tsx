@@ -1,4 +1,5 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import { RoutinePanel } from "../views/agents/RoutinePanel";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
 import {MALL_KEY,MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
@@ -271,7 +272,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         }}>{name === "overview" ? "Overview" : name === "output" ? "Output" : name === "workday" ? "Workday" : "Intelligence"}</button>)}
       </div>
       <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
-        {tab === "workday" ? <AgentPresence agentId={agent.id}/> : tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
+        {tab === "workday" ? <><RoutinePanel agentId={agent.id}/><AgentPresence agentId={agent.id}/></> : tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <ClaudeReviewHandoff agent={agent}/>
         <BuildingTasks agentId={agent.id}/>

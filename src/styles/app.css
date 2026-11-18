@@ -949,3 +949,30 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .m3-agent-profile .acts button { flex: 1; min-height: 32px; border-radius: 8px; border: 1px solid rgba(150, 236, 255, 0.6); background: rgba(150, 236, 255, 0.12); color: #effcff; font: 600 12px Inter, -apple-system, sans-serif; cursor: pointer; }
 .m3-agent-profile .acts button:hover { background: rgba(150, 236, 255, 0.24); }
 .m3-agent-profile .x { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: 0; background: none; color: #effcff; font-size: 18px; cursor: pointer; }
+/* The routine task card (map3d/AgentTaskCard.tsx): city activity and real run state, kept apart. */
+.m3-agent-task { width: 300px; }
+.m3-agent-task.docked { transform: none; max-height: calc(100% - 24px); overflow: auto; }
+.m3-agent-task dd .sub { display: block; color: rgba(220, 244, 252, 0.72); font-size: 11px; }
+.m3-agent-task dd .sub.wait { color: #ffd88a; }
+.m3-agent-task dd .sub.err, .m3-agent-task .runs li.err { color: #ffb4a8; }
+.m3-agent-task dd.op-running { color: #8ff0ff; }
+.m3-agent-task dd.op-waiting_approval { color: #ffd88a; }
+.m3-agent-task dd.op-failed { color: #ffb4a8; font-weight: 600; }
+.m3-agent-task .attn { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 5px; border-radius: 50%; background: #e5533d; color: #fff; font-size: 10px; font-weight: 800; vertical-align: 1px; }
+.m3-agent-task .runs { margin: 8px 0 0; padding: 6px 0 0; list-style: none; border-top: 1px solid rgba(150, 236, 255, 0.22); font-size: 11px; color: rgba(220, 244, 252, 0.8); max-height: 92px; overflow: auto; }
+.m3-agent-task .runs b { color: #effcff; font-weight: 600; }
+.m3-agent-task .miss, .m3-agent-task .src { margin: 6px 0 0; font-size: 10.5px; color: rgba(220, 244, 252, 0.64); }
+.m3-agent-task .miss { color: #ffd88a; }
+.m3-agent-task .acts { flex-wrap: wrap; }
+.m3-agent-task .acts button { flex: 1 1 40%; }
+.m3-agent-task .acts button[aria-pressed="true"] { background: rgba(150, 236, 255, 0.34); }
+@media (max-width: 520px) { .m3-agent-task { width: min(300px, calc(100vw - 32px)); max-height: 46vh; } }
+
+/* Agents → Workday: the daily routine settings (views/agents/RoutinePanel.tsx). */
+.routine-panel { display: grid; gap: 8px; margin-bottom: 14px; }
+.routine-panel .routine-wf { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.routine-panel .routine-wf li { padding: 8px 10px; border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 8px; }
+.routine-panel .conn { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; background: rgba(120, 130, 140, 0.14); }
+.routine-panel .conn-verified { background: rgba(46, 160, 90, 0.16); color: #1f7a45; }
+.routine-panel .conn-draft { background: rgba(200, 140, 30, 0.16); color: #8a5a00; }
+.routine-panel .routine-switch { display: flex; gap: 8px; align-items: center; }

@@ -84,6 +84,8 @@ import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
 import { NamedAgents } from "./NamedAgents";
+import { CityRoutes, planCityPlaces, type CityPlaces } from "./routinePlaces";
+import { agentPositions, followedAgent, setFollowedAgent } from "./agentFollow";
 import { catalog as fullCatalog } from "../../catalog";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
@@ -232,6 +234,17 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
   const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
+  // Where the named agents live their day: homes, offices, desks, outings and the streets between (routinePlaces.ts).
+  const city = useMemo(() => {
+    if (!jobs || !namedAgents) return undefined;
+    try {
+      const places = planCityPlaces(scene, namedAgents.agents, jobs, fullCatalog.projects, fullCatalog.agents);
+      return { places, routes: new CityRoutes(places) };
+    } catch (e) {
+      console.warn("Agent routine places unavailable for this layout", e);
+      return undefined;
+    }
+  }, [scene, jobs, namedAgents]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
@@ -516,6 +529,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <World
           drawing={drawing}
           namedAgents={namedAgents}
+          city={city}
           power={power}
           light={props.light}
           health={health}
@@ -609,7 +623,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  drawing,namedAgents,
+  drawing,namedAgents,city,
   power,
   light: lightMode,
   health,
@@ -645,7 +659,7 @@ function World({
   cover,
   surface,
 }: {
-  drawing:boolean;namedAgents?: NamedAgentPlan;
+  drawing:boolean;namedAgents?: NamedAgentPlan;city?: { places: CityPlaces; routes: CityRoutes };
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -706,6 +720,8 @@ function World({
   // Decorative travel loops (train, shuttle cars, yacht) for the perimeter-loop layout: one plan shared by all three.
   const travel=useMemo(()=>travelPlan(scene),[scene]);
   const railRoads=useMemo(()=>[scene.freight?.highway??[],scene.freight?.route??[],scene.freight?.cityAccess??[],...(scene.freight?.access.flatMap(a=>[a.collector,...a.ramps])??[]),...scene.transportConnections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...(scene.carBridges??[]).flatMap(b=>b.roads)],[scene]);
+  // Desks whose named agent comes and goes by its routine: the Inside view leaves their chairs for the character.
+  const managedDesks = useMemo(() => new Set([...(city?.places.agents.values() ?? [])].filter((p) => p.desk).map((p) => p.personaId)), [city]);
   const controls = useMemo(() => {
     const c = new MapControls(camera, gl.domElement);
     // Turn all the way around (right drag, two fingers, or Shift with the left button), but stay
@@ -741,6 +757,8 @@ function World({
     anim.current = null;
     framing.current = null;
     movedRef.current();
+    // Moving the camera yourself lets go of a followed agent.
+    setFollowedAgent(null);
   }, []);
   useEffect(() => {
     // Reconnect on every mount: React's development double-mount would otherwise leave them detached.
@@ -1172,6 +1190,17 @@ function World({
       camera.position.lerpVectors(a.from[1], a.to[1], e);
       if (p >= 1) anim.current = null;
     }
+    // Following an agent: the view glides after it, keeping the same angle and distance.
+    const followed = followedAgent(), fp = followed ? agentPositions.get(followed) : null;
+    if (fp && !rideActive()) {
+      wake(100);
+      const k = 1 - Math.pow(0.04, Math.min(delta, 0.1));
+      const dx = (fp[0] - controls.target.x) * k, dz = (fp[2] - controls.target.z) * k;
+      controls.target.x += dx;
+      controls.target.z += dz;
+      camera.position.x += dx;
+      camera.position.z += dz;
+    }
     // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
     // OrbitControls eases by a fixed share per frame, so the glide after a drag lasted half as long
     // on a 120 Hz display as at 60 Hz, and dragged on when frames ran slow. Scale it to frame time.
@@ -1312,7 +1341,7 @@ function World({
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
       {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
-      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} moving={!reduced} drawing={drawing} />}
+      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} />}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
@@ -1339,7 +1368,7 @@ function World({
       {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><IntelligenceHub tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><PortfolioSite tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isSocLab(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><SocLab tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
-      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} />
+      <InsideView on={inside} towers={scene.towers} offices={insideOffices} limits={insideCaps} reduced={reduced} night={lightMode === "night"} selected={selKey} onOpen={onInsideOpen} managed={managedDesks} />
       <ActivityGlow towers={scene.towers} houses={scene.houses} states={activity} g={g} m={m} reduced={reduced} />
       <Outline a={hl(hover !== selKey ? hover : null)} color="#fff6d8" />
       <Outline a={hl(selKey)} color="#c9a35a" ring />
