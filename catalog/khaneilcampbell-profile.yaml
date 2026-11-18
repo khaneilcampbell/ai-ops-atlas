@@ -313,9 +313,9 @@ agents:
         appearance: "Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt"
         portrait:
           path: agents/github-profile-manager.webp
-          model: soul_2
-          job_id: 50bfdf4e-c373-4962-9954-e2497221705c
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 8383d702-d9ca-43c0-9851-daf60bdc75bf
+          prompt_version: 2
           generated_at: 2026-11-18
       title: GitHub Profile Manager
       category: career
@@ -414,9 +414,9 @@ agents:
         appearance: "African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo"
         portrait:
           path: agents/development-hub-lead.webp
-          model: soul_2
-          job_id: 3c9ea282-828c-4cc2-9aba-4f8bdd7ff4d9
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 640de0bb-2045-4175-9db4-d5b6230b2ad5
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Development Hub Lead
       category: engineering

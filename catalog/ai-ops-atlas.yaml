@@ -118,9 +118,9 @@ agents:
         appearance: "Ghanaian man in his early 30s, dark skin, short two-strand twists, thin wire-frame glasses, burgundy quarter-zip over a white t-shirt"
         portrait:
           path: agents/repo-intelligence.webp
-          model: soul_2
-          job_id: 1e63ce4a-62b0-4f5d-a926-e3fb40bee710
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: bfe4e2a7-7f0f-4c9b-9a8e-30704a9f9465
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Repository Intelligence Analyst
       category: data
@@ -213,9 +213,9 @@ agents:
         appearance: "Swedish woman in her late 50s, fair skin with natural fine lines, short silver pixie cut, tortoiseshell glasses, black fine-knit turtleneck under a grey wool blazer"
         portrait:
           path: agents/atlas-engineering-review.webp
-          model: soul_2
-          job_id: e64b3def-50e3-402d-b23c-8b6d3f556d52
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: ddf918d0-1502-4812-bfb0-d149395e964e
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Senior Engineering Reviewer
       category: engineering
@@ -441,9 +441,9 @@ agents:
         appearance: "Mexican man in his late 30s, light olive skin, wavy dark brown hair, rimless glasses, light stubble, olive overshirt over a grey t-shirt"
         portrait:
           path: agents/atlas-production-coordinator.webp
-          model: soul_2
-          job_id: cc767d98-c41b-46d5-a375-4a0d775c63f3
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 1286b3d1-e5d9-4f57-8228-e228513334fa
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Atlas Production Coordinator
       version: 1.0.0
@@ -527,9 +527,9 @@ agents:
         appearance: "Japanese woman in her late 20s, fair skin, straight black chin-length bob, light-wash denim shirt"
         portrait:
           path: agents/atlas-release-coordinator.webp
-          model: soul_2
-          job_id: 3d7e8c23-b3e4-424b-bfba-3023f9d36a84
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 9c93621d-28cb-439b-a326-2e19fe86f0c3
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Release Coordinator
       category: engineering
@@ -977,9 +977,9 @@ agents:
         appearance: "Nigerian-British man in his early 40s, deep brown skin, short cropped black hair greying at the temples, close-trimmed beard, navy crew-neck merino sweater over a white collared shirt"
         portrait:
           path: agents/atlas-release-manager.webp
-          model: soul_2
-          job_id: ab703322-ff86-4f4f-809f-93e48db7b729
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 24b50ca5-6aef-4f96-9caf-38bf77bbc4e3
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Atlas Release Manager
       category: engineering
@@ -1068,9 +1068,9 @@ agents:
         appearance: "South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt"
         portrait:
           path: agents/atlas-health-monitor.webp
-          model: soul_2
-          job_id: d027dd76-7129-488c-bfcd-3e0e93741067
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: b288c85b-4f63-41cf-80d5-0da09c0b1c6e
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Atlas Health Monitor
       category: infrastructure

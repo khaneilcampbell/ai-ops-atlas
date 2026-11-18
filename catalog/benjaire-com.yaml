@@ -362,9 +362,9 @@ agents:
         appearance: "Lebanese woman in her mid 30s, light olive skin, long dark curly hair worn down, small hoop earrings, rust-terracotta blouse under a cream linen jacket"
         portrait:
           path: agents/benjaire-product-lab.webp
-          model: soul_2
-          job_id: 8c95a365-89ce-44a3-ab15-8cacc6762fac
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 793ebfb5-c40d-4708-87e3-0df6cfb83a7b
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Product Lab Lead
       category: business
@@ -1445,9 +1445,9 @@ agents:
         appearance: "French-Canadian woman in her mid 40s, fair skin with light freckles, auburn hair in a loose low bun, cream cable-knit sweater"
         portrait:
           path: agents/benjaire-inquiry-manager.webp
-          model: soul_2
-          job_id: a0931c6f-46d6-4b1c-8641-156dc43fcab5
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 406afb79-3173-48a5-99f9-83d0b735a5ed
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Client Inquiry Manager
       category: business
@@ -1535,9 +1535,9 @@ agents:
         appearance: "Italian man in his late 20s, light skin, short curly brown hair, light stubble, chambray button-down shirt"
         portrait:
           path: agents/benjaire-shop-manager.webp
-          model: soul_2
-          job_id: 796673e5-581d-4ab5-9621-abe4e9f0babf
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: c06f7285-2cc7-4b14-87f8-87ab7702e76e
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Shop Order Manager
       category: business
@@ -1621,9 +1621,9 @@ agents:
         appearance: "Jamaican man in his mid 40s, dark brown skin, shaved head, neat goatee with grey flecks, charcoal henley"
         portrait:
           path: agents/benjaire-ops-monitor.webp
-          model: soul_2
-          job_id: 182f0ff0-4334-4024-b773-c459fba42d1e
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 2bc7ba93-6938-4e11-b543-064d11c9dd93
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Business Operations Monitor
       category: infrastructure

@@ -461,9 +461,9 @@ agents:
         appearance: "Turkish man in his early 40s, light olive skin, short dark hair, short salt-and-pepper beard, navy overshirt over a light grey t-shirt"
         portrait:
           path: agents/agent-operations-lead.webp
-          model: soul_2
-          job_id: 5ed7e54b-ae6d-4ba1-98dd-9da8eca247cb
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 45bacbc1-3785-4fd6-aff4-86359f49771f
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Agent Operations Lead
       category: engineering
@@ -550,9 +550,9 @@ agents:
         appearance: "Korean-American woman in her early 50s, light skin, shoulder-length straight black hair with grey strands, thin gold necklace, cream silk blouse"
         portrait:
           path: agents/documentation-lead.webp
-          model: soul_2
-          job_id: 9e5a6e75-d912-48b9-8528-8a215a31a090
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: f783d513-ba67-43bb-9787-8655200bb353
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Documentation Lead
       category: data

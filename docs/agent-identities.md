@@ -1,7 +1,7 @@
 # Agent identities
 
 Seventeen Atlas agents have a persona: a display name next to their functional role, one
-portrait, an accent color, a short introduction and a communication style. The persona is for
+illustrated avatar, an accent color, a short introduction and a communication style. The persona is for
 display only. The agent's stable id, tasks, permissions, workflow connections and history are
 unchanged, and everywhere a persona shows it also says **AI agent**.
 
@@ -19,9 +19,9 @@ registry:
     appearance: "..."    # fixed appearance details, the input to the portrait prompt
     portrait:
       path: agents/benjaire-inquiry-manager.webp   # under public/, named after the id
-      model: soul_2
+      model: gpt_image_2_6
       job_id: <Higgsfield job id>
-      prompt_version: 1
+      prompt_version: 2
       generated_at: 2026-11-18
 ```
 
@@ -46,128 +46,131 @@ lifecycle status. Stale, Off and Not connected stay visible; an agent Atlas can'
 never shown as Ready. An owning agent with no runs of its own takes the most urgent state of
 its automations and names the one it came from.
 
-## Portraits
+## Avatars
 
-Portraits were generated once on Higgsfield Soul 2.0 (1:1, 2k), two variants per agent, 34
-images for 4.08 credits on 2026-11-18. One was picked per agent and saved as a 384 px WebP
-(about 10 KB). Nothing in Atlas generates portraits; a task never creates one. If a portrait
-fails to load, the initials show instead.
+Avatars are illustrations, not photos: Khaneil chose drawn avatars over real-looking faces on
+2026-11-18. They were generated once on Higgsfield (`gpt_image_2_6`, 1:1), one per agent, 17
+images for about 4.25 credits, each drawn on its accent color circle. They are saved as 384 px
+WebP (about 10 KB). Nothing in Atlas generates avatars; a task never creates one. If an avatar
+fails to load, the initials show instead. (A first photoreal set, prompt_version 1, was
+replaced and is not used.)
 
-To regenerate one, use the prompt below unchanged (`portraitPrompt(appearance)` builds it),
-then bump `prompt_version` and update `job_id` and `generated_at`. Keep the appearance
+To regenerate one, use the prompt below unchanged (`portraitPrompt(appearance, accent)` builds
+it), then bump `prompt_version` and update `job_id` and `generated_at`. Keep the appearance
 fixed so the agent looks the same.
 
-**House style** (`PORTRAIT_HOUSE_STYLE`): head-and-shoulders, natural skin, relaxed expression,
-smart casual clothing, soft lighting, neutral background, no glamour, no stock poses.
+**House style** (`PORTRAIT_HOUSE_STYLE`): flat vector editorial illustration, head and
+shoulders, simple shapes and solid fills, minimal facial detail, the agent's accent as a solid
+circle behind it. Never a photo.
 
 ## New agents
 
 A new agent gets an identity when it is added to the catalog: a unique display name, an accent
-far enough from the others, an appearance line and one portrait from the house style.
+far enough from the others, an appearance line and one illustrated avatar from the house style.
 `src/registry/identity.test.ts` checks names are unique, accents are valid and distinct, every
 portrait file exists and is small, and no introduction claims memory or learning. Agent Factory
 drafting identities in its proposals is a later step that needs Khaneil's OK to publish.
 
-## Per-agent prompts (prompt_version 1)
+## Per-agent prompts (prompt_version 2)
 
 ### Samuel Asante · Repository Intelligence Analyst
 
-Id `repo-intelligence` · accent `#C026D3` · portrait `public/agents/repo-intelligence.webp` (Higgsfield job `1e63ce4a-62b0-4f5d-a926-e3fb40bee710`)
+Id `repo-intelligence` · accent `#C026D3` · avatar `public/agents/repo-intelligence.webp` (Higgsfield job `bfe4e2a7-7f0f-4c9b-9a8e-30704a9f9465`)
 
-> Photorealistic portrait of a fictional Ghanaian man in his early 30s, dark skin, short two-strand twists, thin wire-frame glasses, burgundy quarter-zip over a white t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Ghanaian man in his early 30s, dark skin, short two-strand twists, thin wire-frame glasses, burgundy quarter-zip over a white t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #C026D3 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Margaret Lindqvist · Senior Engineering Reviewer
 
-Id `atlas-engineering-review` · accent `#475569` · portrait `public/agents/atlas-engineering-review.webp` (Higgsfield job `e64b3def-50e3-402d-b23c-8b6d3f556d52`)
+Id `atlas-engineering-review` · accent `#475569` · avatar `public/agents/atlas-engineering-review.webp` (Higgsfield job `ddf918d0-1502-4812-bfb0-d149395e964e`)
 
-> Photorealistic portrait of a fictional Swedish woman in her late 50s, fair skin with natural fine lines, short silver pixie cut, tortoiseshell glasses, black fine-knit turtleneck under a grey wool blazer. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Swedish woman in her late 50s, fair skin with natural fine lines, short silver pixie cut, tortoiseshell glasses, black fine-knit turtleneck under a grey wool blazer. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #475569 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Tomás Herrera · Atlas Production Coordinator
 
-Id `atlas-production-coordinator` · accent `#D97706` · portrait `public/agents/atlas-production-coordinator.webp` (Higgsfield job `cc767d98-c41b-46d5-a375-4a0d775c63f3`)
+Id `atlas-production-coordinator` · accent `#D97706` · avatar `public/agents/atlas-production-coordinator.webp` (Higgsfield job `1286b3d1-e5d9-4f57-8228-e228513334fa`)
 
-> Photorealistic portrait of a fictional Mexican man in his late 30s, light olive skin, wavy dark brown hair, rimless glasses, light stubble, olive overshirt over a grey t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Mexican man in his late 30s, light olive skin, wavy dark brown hair, rimless glasses, light stubble, olive overshirt over a grey t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #D97706 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Hana Kobayashi · Release Coordinator
 
-Id `atlas-release-coordinator` · accent `#7C3AED` · portrait `public/agents/atlas-release-coordinator.webp` (Higgsfield job `3d7e8c23-b3e4-424b-bfba-3023f9d36a84`)
+Id `atlas-release-coordinator` · accent `#7C3AED` · avatar `public/agents/atlas-release-coordinator.webp` (Higgsfield job `9c93621d-28cb-439b-a326-2e19fe86f0c3`)
 
-> Photorealistic portrait of a fictional Japanese woman in her late 20s, fair skin, straight black chin-length bob, light-wash denim shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Japanese woman in her late 20s, fair skin, straight black chin-length bob, light-wash denim shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #7C3AED on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Daniel Okafor · Atlas Release Manager
 
-Id `atlas-release-manager` · accent `#2563EB` · portrait `public/agents/atlas-release-manager.webp` (Higgsfield job `ab703322-ff86-4f4f-809f-93e48db7b729`)
+Id `atlas-release-manager` · accent `#2563EB` · avatar `public/agents/atlas-release-manager.webp` (Higgsfield job `24b50ca5-6aef-4f96-9caf-38bf77bbc4e3`)
 
-> Photorealistic portrait of a fictional Nigerian-British man in his early 40s, deep brown skin, short cropped black hair greying at the temples, close-trimmed beard, navy crew-neck merino sweater over a white collared shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Nigerian-British man in his early 40s, deep brown skin, short cropped black hair greying at the temples, close-trimmed beard, navy crew-neck merino sweater over a white collared shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #2563EB on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Priya Raman · Atlas Health Monitor
 
-Id `atlas-health-monitor` · accent `#0D9488` · portrait `public/agents/atlas-health-monitor.webp` (Higgsfield job `d027dd76-7129-488c-bfcd-3e0e93741067`)
+Id `atlas-health-monitor` · accent `#0D9488` · avatar `public/agents/atlas-health-monitor.webp` (Higgsfield job `b288c85b-4f63-41cf-80d5-0da09c0b1c6e`)
 
-> Photorealistic portrait of a fictional South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #0D9488 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Leila Haddad · Product Lab Lead
 
-Id `benjaire-product-lab` · accent `#C2410C` · portrait `public/agents/benjaire-product-lab.webp` (Higgsfield job `8c95a365-89ce-44a3-ab15-8cacc6762fac`)
+Id `benjaire-product-lab` · accent `#C2410C` · avatar `public/agents/benjaire-product-lab.webp` (Higgsfield job `793ebfb5-c40d-4708-87e3-0df6cfb83a7b`)
 
-> Photorealistic portrait of a fictional Lebanese woman in her mid 30s, light olive skin, long dark curly hair worn down, small hoop earrings, rust-terracotta blouse under a cream linen jacket. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Lebanese woman in her mid 30s, light olive skin, long dark curly hair worn down, small hoop earrings, rust-terracotta blouse under a cream linen jacket. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #C2410C on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Claire Dubois · Client Inquiry Manager
 
-Id `benjaire-inquiry-manager` · accent `#E11D48` · portrait `public/agents/benjaire-inquiry-manager.webp` (Higgsfield job `a0931c6f-46d6-4b1c-8641-156dc43fcab5`)
+Id `benjaire-inquiry-manager` · accent `#E11D48` · avatar `public/agents/benjaire-inquiry-manager.webp` (Higgsfield job `406afb79-3173-48a5-99f9-83d0b735a5ed`)
 
-> Photorealistic portrait of a fictional French-Canadian woman in her mid 40s, fair skin with light freckles, auburn hair in a loose low bun, cream cable-knit sweater. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: French-Canadian woman in her mid 40s, fair skin with light freckles, auburn hair in a loose low bun, cream cable-knit sweater. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #E11D48 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Mateo Rossi · Shop Order Manager
 
-Id `benjaire-shop-manager` · accent `#0369A1` · portrait `public/agents/benjaire-shop-manager.webp` (Higgsfield job `796673e5-581d-4ab5-9621-abe4e9f0babf`)
+Id `benjaire-shop-manager` · accent `#0369A1` · avatar `public/agents/benjaire-shop-manager.webp` (Higgsfield job `c06f7285-2cc7-4b14-87f8-87ab7702e76e`)
 
-> Photorealistic portrait of a fictional Italian man in his late 20s, light skin, short curly brown hair, light stubble, chambray button-down shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Italian man in his late 20s, light skin, short curly brown hair, light stubble, chambray button-down shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #0369A1 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Andre Thompson · Business Operations Monitor
 
-Id `benjaire-ops-monitor` · accent `#65A30D` · portrait `public/agents/benjaire-ops-monitor.webp` (Higgsfield job `182f0ff0-4334-4024-b773-c459fba42d1e`)
+Id `benjaire-ops-monitor` · accent `#65A30D` · avatar `public/agents/benjaire-ops-monitor.webp` (Higgsfield job `2bc7ba93-6938-4e11-b543-064d11c9dd93`)
 
-> Photorealistic portrait of a fictional Jamaican man in his mid 40s, dark brown skin, shaved head, neat goatee with grey flecks, charcoal henley. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Jamaican man in his mid 40s, dark brown skin, shaved head, neat goatee with grey flecks, charcoal henley. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #65A30D on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Nina Petrova · Portfolio Web Developer
 
-Id `site-builder` · accent `#EC4899` · portrait `public/agents/site-builder.webp` (Higgsfield job `b100d8c2-7516-4b74-9273-fcbf02f31961`)
+Id `site-builder` · accent `#EC4899` · avatar `public/agents/site-builder.webp` (Higgsfield job `0a224f04-13a6-4e15-9d29-107d4456ec16`)
 
-> Photorealistic portrait of a fictional Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #EC4899 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Jordan Reyes · GitHub Profile Manager
 
-Id `github-profile-manager` · accent `#16A34A` · portrait `public/agents/github-profile-manager.webp` (Higgsfield job `50bfdf4e-c373-4962-9954-e2497221705c`)
+Id `github-profile-manager` · accent `#16A34A` · avatar `public/agents/github-profile-manager.webp` (Higgsfield job `8383d702-d9ca-43c0-9851-daf60bdc75bf`)
 
-> Photorealistic portrait of a fictional Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #16A34A on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Elijah Brooks · Development Hub Lead
 
-Id `development-hub-lead` · accent `#1E3A8A` · portrait `public/agents/development-hub-lead.webp` (Higgsfield job `3c9ea282-828c-4cc2-9aba-4f8bdd7ff4d9`)
+Id `development-hub-lead` · accent `#1E3A8A` · avatar `public/agents/development-hub-lead.webp` (Higgsfield job `640de0bb-2045-4175-9db4-d5b6230b2ad5`)
 
-> Photorealistic portrait of a fictional African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #1E3A8A on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Sofia Mendes · Commerce Operations Manager
 
-Id `commerce-operations-manager` · accent `#EAB308` · portrait `public/agents/commerce-operations-manager.webp` (Higgsfield job `43416d5b-7a9c-4d48-b510-0e11289d194c`)
+Id `commerce-operations-manager` · accent `#EAB308` · avatar `public/agents/commerce-operations-manager.webp` (Higgsfield job `2970526e-1d52-4752-9221-845a6fa7afd5`)
 
-> Photorealistic portrait of a fictional Brazilian woman in her mid 40s, tan skin, shoulder-length wavy brown hair with lighter highlights, small gold pendant, camel blazer over a white t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Brazilian woman in her mid 40s, tan skin, shoulder-length wavy brown hair with lighter highlights, small gold pendant, camel blazer over a white t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #EAB308 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Yusuf Demir · Agent Operations Lead
 
-Id `agent-operations-lead` · accent `#9F1239` · portrait `public/agents/agent-operations-lead.webp` (Higgsfield job `5ed7e54b-ae6d-4ba1-98dd-9da8eca247cb`)
+Id `agent-operations-lead` · accent `#9F1239` · avatar `public/agents/agent-operations-lead.webp` (Higgsfield job `45bacbc1-3785-4fd6-aff4-86359f49771f`)
 
-> Photorealistic portrait of a fictional Turkish man in his early 40s, light olive skin, short dark hair, short salt-and-pepper beard, navy overshirt over a light grey t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Turkish man in his early 40s, light olive skin, short dark hair, short salt-and-pepper beard, navy overshirt over a light grey t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #9F1239 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Eleanor Park · Documentation Lead
 
-Id `documentation-lead` · accent `#6B8F71` · portrait `public/agents/documentation-lead.webp` (Higgsfield job `9e5a6e75-d912-48b9-8528-8a215a31a090`)
+Id `documentation-lead` · accent `#6B8F71` · avatar `public/agents/documentation-lead.webp` (Higgsfield job `f783d513-ba67-43bb-9787-8655200bb353`)
 
-> Photorealistic portrait of a fictional Korean-American woman in her early 50s, light skin, shoulder-length straight black hair with grey strands, thin gold necklace, cream silk blouse. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Korean-American woman in her early 50s, light skin, shoulder-length straight black hair with grey strands, thin gold necklace, cream silk blouse. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #6B8F71 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.
 
 ### Connor Walsh · Security Detection Lead
 
-Id `soc-detection-lead` · accent `#38BDF8` · portrait `public/agents/soc-detection-lead.webp` (Higgsfield job `0678f18f-36d9-4be2-992a-db1e8a1f34b1`)
+Id `soc-detection-lead` · accent `#38BDF8` · avatar `public/agents/soc-detection-lead.webp` (Higgsfield job `a704bcd2-b729-420e-96f3-46e3a4698fd3`)
 
-> Photorealistic portrait of a fictional Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt. Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.
+> Flat vector illustrated avatar of a fictional character: Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt. Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile). Solid circular background in #38BDF8 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.

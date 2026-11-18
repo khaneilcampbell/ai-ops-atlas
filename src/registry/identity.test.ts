@@ -59,9 +59,9 @@ describe("agent identities in the catalog", () => {
       const file = join(PUBLIC, p.path);
       expect(existsSync(file), file).toBe(true);
       expect(statSync(file).size).toBeLessThan(40_000);
-      expect(p.model).toBe("soul_2");
+      expect(p.model).toBe("gpt_image_2_6");
       expect(p.jobId).toMatch(/^[0-9a-f-]{36}$/);
-      expect(p.promptVersion).toBe(1);
+      expect(p.promptVersion).toBe(2);
       expect(a.registry!.identity!.appearance).toBeTruthy();
     }
   });
@@ -73,9 +73,10 @@ describe("agent identities in the catalog", () => {
     }
   });
 
-  it("builds the portrait prompt from the fixed appearance and the shared house style", () => {
-    const p = portraitPrompt("Irish man in his early 30s, short ginger hair.");
-    expect(p).toBe(`Photorealistic portrait of a fictional Irish man in his early 30s, short ginger hair. ${PORTRAIT_HOUSE_STYLE}`);
+  it("builds the illustrated avatar prompt from the fixed appearance, accent and shared house style", () => {
+    const p = portraitPrompt("Irish man in his early 30s, short ginger hair.", "#38BDF8");
+    expect(p).toBe(`Flat vector illustrated avatar of a fictional character: Irish man in his early 30s, short ginger hair. ${PORTRAIT_HOUSE_STYLE} Solid circular background in #38BDF8 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.`);
+    expect(p).not.toMatch(/photoreal/i);
     expect(identities(catalog.agents)).toHaveLength(17);
   });
 });

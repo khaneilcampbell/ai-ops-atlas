@@ -3,16 +3,19 @@ import type { AgentIdentityManifest } from "./types";
 
 // Agent identities: the persona (name, portrait, accent) Atlas shows with an agent. Display only.
 // The agent's id, tasks, permissions, workflows and history never change, and every place that
-// shows an identity also says it is an AI agent. Portraits are files in public/agents/, generated
-// once and reused; nothing here ever generates one.
+// shows an identity also says it is an AI agent. Avatars are illustrated files in public/agents/,
+// generated once and reused; nothing here ever generates one.
 
-/** The fixed style every portrait prompt ends with, so lighting and framing match across the team. */
+/** The fixed style every avatar prompt carries, so the team reads as one illustrated set. */
 export const PORTRAIT_HOUSE_STYLE =
-  "Head-and-shoulders professional headshot, square crop with a little space above the head, eye level, 85mm lens, shoulders turned slightly, looking at the camera. Relaxed, natural expression with a slight closed-mouth smile. Natural skin texture with visible pores and fine lines, no retouching. Soft, even key light from front left with gentle fill and soft shadow. Plain neutral warm-grey seamless studio background. Smart casual clothing. Calm documentary corporate portrait. No text, no logos, no hands in frame. Avoid glamour styling, heavy makeup, plastic or airbrushed skin, exaggerated expressions, stock-photo poses, crossed arms, dramatic or colored lighting.";
+  "Head and shoulders, centered, facing slightly to the side, friendly calm expression. Clean modern editorial illustration style: simple geometric shapes, smooth solid color fills, subtle soft shading, no outlines, minimal facial detail (simple eyes and smile).";
 
-/** The exact prompt for an agent's portrait (prompt_version 1), from its fixed appearance. */
-export function portraitPrompt(appearance: string): string {
-  return `Photorealistic portrait of a fictional ${appearance.replace(/\.\s*$/, "")}. ${PORTRAIT_HOUSE_STYLE}`;
+/**
+ * The exact prompt for an agent's illustrated avatar (prompt_version 2), from its fixed appearance
+ * and accent. Avatars are drawn, never photos: Khaneil chose illustrations over real-looking faces.
+ */
+export function portraitPrompt(appearance: string, accent: string): string {
+  return `Flat vector illustrated avatar of a fictional character: ${appearance.replace(/\.\s*$/, "")}. ${PORTRAIT_HOUSE_STYLE} Solid circular background in ${accent} on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.`;
 }
 
 /** Neutral accent for entries without an identity (retired agents, unowned automations). */

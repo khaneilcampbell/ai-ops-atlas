@@ -80,6 +80,6 @@ Last reviewed: <date>
 
 ## Identities
 
-Seventeen agents carry a persona (name, portrait, accent, intro) under `registry.identity`.
+Seventeen agents carry a persona (name, illustrated avatar, accent, intro) under `registry.identity`.
 Automations show their owner's persona, and retired agents show initials. See
 [agent-identities.md](agent-identities.md).

@@ -46,9 +46,9 @@ agents:
         appearance: "Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top"
         portrait:
           path: agents/site-builder.webp
-          model: soul_2
-          job_id: b100d8c2-7516-4b74-9273-fcbf02f31961
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 0a224f04-13a6-4e15-9d29-107d4456ec16
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Portfolio Web Developer
       category: engineering

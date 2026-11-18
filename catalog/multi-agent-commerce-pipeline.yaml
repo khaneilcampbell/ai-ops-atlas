@@ -1301,9 +1301,9 @@ agents:
         appearance: "Brazilian woman in her mid 40s, tan skin, shoulder-length wavy brown hair with lighter highlights, small gold pendant, camel blazer over a white t-shirt"
         portrait:
           path: agents/commerce-operations-manager.webp
-          model: soul_2
-          job_id: 43416d5b-7a9c-4d48-b510-0e11289d194c
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: 2970526e-1d52-4752-9221-845a6fa7afd5
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Commerce Operations Manager
       category: business

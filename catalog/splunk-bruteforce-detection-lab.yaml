@@ -241,9 +241,9 @@ agents:
         appearance: "Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt"
         portrait:
           path: agents/soc-detection-lead.webp
-          model: soul_2
-          job_id: 0678f18f-36d9-4be2-992a-db1e8a1f34b1
-          prompt_version: 1
+          model: gpt_image_2_6
+          job_id: a704bcd2-b729-420e-96f3-46e3a4698fd3
+          prompt_version: 2
           generated_at: 2026-11-18
       title: Security Detection Lead
       category: security
