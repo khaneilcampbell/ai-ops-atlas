@@ -75,7 +75,7 @@ Rides are city simulation only. No booking, ticket, purchase or external action 
   switched off: with the building closed the walls hide it and its badge sits on the street façade
   at its floor, with a subtle band round that floor (cyan running, amber waiting for approval, red
   failed, warm white at a desk with nothing running).
-- **View inside** (a building's panel) or **Locate agent** (the agent's card) opens that building as
+- **View inside** (a building's panel) or **View office** (the agent's card, which locates it) opens that building as
   a cutaway at one floor, whatever the toolbar's Inside switch says; the floors above step aside
   and the ones below keep their walls. The summary beside it lists the floors (with who is on each
   now), every agent assigned there with where it is and its real work state, the runs in
@@ -83,6 +83,10 @@ Rides are city simulation only. No booking, ticket, purchase or external action 
   real state (running, waiting for approval, failed) and a neutral screen otherwise.
 - The office's generic person for a named agent's desk is left out, so there is never a second
   figure. Opening, closing, changing floors and locating never touch a run.
+- The open floor is drawn like the office inside "Enter building": walls with windows, trim and the
+  wall display, the rug, server rack, plants, the lift doors and the building's accent colour.
+- The toolbar's **Agents at work** button (I) opens every building in view with someone seated at a
+  desk, at that floor, then the nearest others.
 - The ring over an agent: cyan running, amber waiting for approval, red failed.
 - Agents waiting at the same place stand in rows, never on one point.
 
