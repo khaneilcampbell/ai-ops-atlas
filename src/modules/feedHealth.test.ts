@@ -31,8 +31,8 @@ describe("building feed health", () => {
     expect(feedHealth([], [])).toBeNull();
   });
 
-  it("gives each of the three buildings its operating agent, watched with a report window", () => {
-    const want: Record<string, string> = { "atlas-marketplace": "marketplace-steward", "airport-building:operations": "signal-watch", "financial:residence": "dataset-census" };
+  it("gives each of the two buildings its operating agent, watched with a report window", () => {
+    const want: Record<string, string> = { "airport-building:operations": "signal-watch", "financial:residence": "dataset-census" };
     for (const [id, agentId] of Object.entries(want)) {
       const l = landmarkInstances().find((x) => x.id === id)!;
       const assets = buildingAssets(l, catalog);

@@ -15,7 +15,6 @@ The agent feed (`/api/hooks/agents` → D1 `events` → `/api/events` → `src/l
 | --- | --- | --- |
 | signal-watch | Observability Center | 2026-11-17 09:12 UTC, ok |
 | dataset-census | Data Intelligence Center | 2026-11-17 03:48 UTC, ok |
-| marketplace-steward | Product Marketplace | 2026-11-17 03:40 UTC, ok |
 | Flow missed-run check (5 agents) | Benjaire HQ | 2026-11-16 16:00 UTC, ok |
 | commerce-loop | Commerce Pipeline | 2026-11-16 15:00 UTC, failed |
 

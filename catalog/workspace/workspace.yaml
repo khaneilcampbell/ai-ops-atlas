@@ -39,8 +39,6 @@ landmarks:
   "service:atlas-marketplace":
     map_name: Atlas Marketplace
     module: commerce-product-marketplace
-    project: ai-ops-atlas
-    agents: [marketplace-steward]
   "service:financial:banks":
     map_name: Bayvale Bank
     module: finance-analytics-tower

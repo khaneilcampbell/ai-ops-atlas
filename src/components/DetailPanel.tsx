@@ -154,9 +154,9 @@ function ServiceDetail({id}:{id:string}) {
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
     <Head eyebrow="Products · Benjaire and Atlas" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
-    <div className="panel-body selectable"><ModuleSection/><p>Where Benjaire's products are sold and Atlas itself is shipped. The Commerce Operations Center pipeline on n8n turns each approved idea into a Canva template that Stripe sells on the shop page, and the Marketplace Steward checks every hour that the latest signed Atlas build is published. A four-floor wave-style building: curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
+    <div className="panel-body selectable"><ModuleSection/><p>Where Benjaire's products are sold and Atlas itself is shipped. The Commerce Operations Center pipeline on n8n turns each approved idea into a Canva template that Stripe sells on the shop page. A four-floor wave-style building: curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
-      <dl className="kv"><dt>Operating agent</dt><dd>Marketplace Steward · Hourly release check, no model calls</dd><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
+      <dl className="kv"><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
     </div>
   </>;
   const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;

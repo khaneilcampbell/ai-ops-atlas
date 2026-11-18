@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Building operators for Atlas: one model-free check per building, reported to the live feed.
 
-  marketplace  Product Marketplace     the main-build release and its latest.json
   signals      Observability Center    the latest main run of each workflow, and the site answering
   census       Data Intelligence Center the catalog's projects, agents and repositories on GitHub
 
@@ -21,8 +20,8 @@ import urllib.request
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "khaneilcampbell/ai-ops-atlas")
 API = "https://api.github.com"
-AGENT = {"marketplace": "marketplace-steward", "signals": "signal-watch", "census": "dataset-census"}
-PHASE = {"marketplace": "Product publishing check", "signals": "Signal check", "census": "Dataset census"}
+AGENT = {"signals": "signal-watch", "census": "dataset-census"}
+PHASE = {"signals": "Signal check", "census": "Dataset census"}
 FRESH_DAYS = 30
 # Workflows whose latest main run failing means Atlas itself is broken, not just one check.
 REQUIRED_WORKFLOWS = {"ci.yml"}
@@ -52,20 +51,6 @@ def ago(iso: str) -> str:
         if secs >= size:
             return f"{int(secs // size)} {unit} ago"
     return "just now"
-
-
-def marketplace() -> str:
-    rel = get(f"{API}/repos/{REPO}/releases/tags/main-build")
-    assets = {a["name"]: a for a in rel.get("assets", [])}
-    if "latest.json" not in assets:
-        raise CheckFailed("main-build has no latest.json, so installed Macs can't update")
-    latest = json.loads(get(assets["latest.json"]["browser_download_url"], raw=True))
-    version, date = latest.get("version"), latest.get("pub_date")
-    signed = sorted(k for k, v in (latest.get("platforms") or {}).items() if isinstance(v, dict) and v.get("signature") and v.get("url"))
-    if not version or not signed:
-        raise CheckFailed(f"latest.json is incomplete (version {version or 'missing'}, {len(signed)} signed platforms)")
-    when = f" published {ago(date)}" if date else ""
-    return f"Atlas {version}{when} · signed update for {', '.join(signed)} · {len(assets)} release files"
 
 
 def signals() -> str:
@@ -160,7 +145,7 @@ def main() -> int:
     failed = False
     for check in AGENT if args.check == "all" else [args.check]:
         try:
-            status, detail = "ok", {"marketplace": marketplace, "signals": signals, "census": census}[check]()
+            status, detail = "ok", {"signals": signals, "census": census}[check]()
         except CheckFailed as e:
             status, detail, failed = "failed", str(e), True
         except Exception as e:  # the check itself broke: still tell Atlas, so the building goes red

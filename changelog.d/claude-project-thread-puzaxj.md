@@ -1,0 +1,1 @@
+- 2026-11-18 · Marketplace Steward is deleted. Its hourly release check no longer runs, so the "Marketplace Steward is silent" alert is gone. The Product Marketplace now says honestly that no live check is connected, instead of showing Atlas CI as its health
