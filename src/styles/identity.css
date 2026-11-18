@@ -43,7 +43,7 @@
 
 /* Map agent card (dark glass) */
 .m3-agent-tag .n { display: flex; align-items: center; gap: var(--space-3); }
-.m3-agent-tag .ai-agent-label { background: transparent; color: var(--on-dark); border-color: var(--on-dark-2); }
+.m3-agent-tag .ai-agent-label, .m3-agent-chip .ai-agent-label, .m3-agent-profile .ai-agent-label { background: transparent; color: var(--on-dark); border-color: var(--on-dark-2); }
 .m3-agent-tag .agent-avatar .agent-status-dot { box-shadow: none; }
 .agent-identity-btn { text-align: left; }
 .activity-agent { display: inline-flex; align-items: center; gap: var(--space-2); margin-right: var(--space-2); }
