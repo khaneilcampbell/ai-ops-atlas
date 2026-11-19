@@ -13,15 +13,15 @@ const watch = (id: string, state: WatchState, at: string | null = "2026-11-12T07
 
 describe("building feed health", () => {
   it("is green only when every operating agent reported on time", () => {
-    expect(feedHealth(["dataset-census"], [watch("dataset-census", "ok")])).toMatchObject({ health: "good", summary: "Live · Dataset Census reporting on time" });
+    expect(feedHealth(["dataset-census"], [watch("dataset-census", "ok")])).toMatchObject({ health: "good", summary: "Live · Atlas · Data Freshness Count reporting on time" });
   });
 
   it("is red when the latest report failed", () => {
-    expect(feedHealth(["dataset-census"], [watch("dataset-census", "failing")])).toMatchObject({ health: "bad", summary: "Failing · Dataset Census: failing detail" });
+    expect(feedHealth(["dataset-census"], [watch("dataset-census", "failing")])).toMatchObject({ health: "bad", summary: "Failing · Atlas · Data Freshness Count: failing detail" });
   });
 
   it("is not verified, with the reason, when stale, empty or unread", () => {
-    expect(feedHealth(["dataset-census"], [watch("dataset-census", "silent")])).toMatchObject({ health: "unknown", state: "stale", summary: "Not verified · Dataset Census: silent detail" });
+    expect(feedHealth(["dataset-census"], [watch("dataset-census", "silent")])).toMatchObject({ health: "unknown", state: "stale", summary: "Not verified · Atlas · Data Freshness Count: silent detail" });
     expect(feedHealth(["dataset-census"], [watch("dataset-census", "no-reports", null)])).toMatchObject({ health: "unknown", state: "none" });
     expect(feedHealth(["dataset-census"], [watch("dataset-census", "no-source", null)])).toMatchObject({ health: "unknown", state: "unavailable" });
   });

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useActions } from "../../actions/state";
 import { useProposals } from "../../approvals/state";
-import { projectOfficeAgents } from "../../catalog/workplaces";
+import { officeDeskAgents } from "../../catalog/workplaces";
 import { useIntel } from "../../intel/state";
 import { useAtlas } from "../../state";
 import { accentFor, planOffice } from "../office/model";
@@ -22,12 +22,12 @@ export function useInsideOffices(on: boolean): Map<string, InsideOffice> {
     if (!on) return out;
     const rows = officeRows(catalog.projects, catalog.agents, repos, intel, { available: actions.available, status: actions.status, audit: actions.audit }, pending);
     for (const project of catalog.projects) {
-      const agents = projectOfficeAgents(catalog.agents, project.id);
+      const agents = officeDeskAgents(catalog.agents, project.id);
       if (!agents.length) continue;
       const plan = planOffice(project, agents);
       out.set(project.id, {
         plan,
-        desks: plan.workstations.map((ws) => ({ ws, state: rows.get(ws.agentId)?.runtime.state ?? "unknown", accent: accentFor(ws.slot, project.id) })),
+        desks: plan.workstations.map((ws) => ({ ws, state: rows.get(ws.agentId)?.runtime.state ?? "unknown", accent: accentFor(ws.slot, project.id)})),
       });
     }
     return out;
