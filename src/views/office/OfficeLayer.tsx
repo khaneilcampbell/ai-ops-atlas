@@ -81,7 +81,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         return {
           ws,
           figure: figure ?? undefined,
-          away: !!day && !seatedAtDesk(segmentAt(day, tick)),
+          // Only a named agent whose day has them at the desk right now sits there; every other chair is empty.
+          away: !(figure && day && seatedAtDesk(segmentAt(day, tick))),
           // The same floor as the map's Inside view and the agent's walk in (buildings/buildingDefinition.ts):
           // an AI agent's own desk floor, an automation on its owner's floor.
           floor: deskFloor(a.id, a.projectId) ?? a.officeFloor ?? 4,

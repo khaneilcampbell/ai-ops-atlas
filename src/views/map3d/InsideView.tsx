@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { wake } from "../../lib/power";
-import { hash } from "../mapLayout";
 import CutawayWall from "../office/CutawayWall";
 import { OFFICE_COLORS as C } from "../office/palette";
 import { defaultFloor, floorOf, type BuildingDefinition, type DeskDefinition } from "../../buildings/buildingDefinition";
@@ -65,11 +64,11 @@ interface Parts {
 /**
  * A desk as the office draws it (AgentWorkstation, AgentCharacter, AgentStatusIndicator in
  * OfficeScene), boiled down to the pieces that read at map scale, in office units around the
- * desk's center. The monitor shows the agent's real operational state (deskScreen.ts), or a neutral
+ * desk's center. No stand-in people: only named agents sit at desks, drawn by NamedAgents when
+ * their day has them there, so an empty chair means nobody is working at it. The monitor shows the agent's real operational state (deskScreen.ts), or a neutral
  * screen: never progress Atlas can't see.
  */
-function deskParts(d: InsideDesk, person: boolean, push: (list: keyof Parts, p: [number, number, number], s: [number, number, number], c?: string) => void) {
-  const h = hash(d.desk.agentId);
+function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, number], s: [number, number, number], c?: string) => void) {
   const lit = d.state !== "neutral";
   push("oak", [0, 0.74, 0], [1.5, 0.05, 0.76]);
   push("steel", [-0.7, 0.36, 0], [0.05, 0.72, 0.7]);
@@ -78,18 +77,6 @@ function deskParts(d: InsideDesk, person: boolean, push: (list: keyof Parts, p: 
   push("screen", [0, 1.18, -0.195], [0.78, 0.44, 0.01], SCREEN_COLOR[d.state]);
   push("chair", [0, 0.46, 0.66], [0.5, 0.07, 0.48]);
   push("chair", [0, 0.8, 0.9], [0.48, 0.56, 0.07]);
-  if (person) {
-    // An agent with no city character of its own: a seated person in its accent colour.
-    push("torso", [0, 0.86, 0.66], [0.36, 0.62, 0.32], d.accent);
-    push("head", [0, 1.25, 0.64], [0.27, 0.27, 0.27], C.skin[Math.floor(h * 4) % 4]);
-    for (const side of [-1, 1]) {
-      push("torso", [side * 0.09, 0.58, 0.48], [0.13, 0.1, 0.38], "#2f3a44");
-      push("torso", [side * 0.09, 0.28, 0.32], [0.11, 0.56, 0.11], "#2f3a44");
-      push("torso", [side * 0.22, 0.98, 0.62], [0.09, 0.3, 0.09], d.accent);
-      push("torso", [side * 0.19, 0.83, 0.38], [0.09, 0.08, 0.42], d.accent);
-    }
-    push("hair", [0, 1.3, 0.67], [0.285, 0.24, 0.285], C.hair[Math.floor(h * 17) % 4]);
-  }
   if (lit) push("lamp", [0.6, 0.9, -0.24], [0.22, 0.22, 0.22], SCREEN_COLOR[d.state]);
   // A marker over the desk when a person is needed, as inside.
   if (needsPerson(d.state)) push("marker", [0, 1.98, -0.22], [0.36, 0.36, 0.36], SCREEN_COLOR[d.state]);
@@ -99,7 +86,7 @@ function deskParts(d: InsideDesk, person: boolean, push: (list: keyof Parts, p: 
  * The open floor of every open building: its slab and outline on the storey's own plate, and the
  * desks on that floor only. Desks on other floors stay inside the closed part of the shell.
  */
-function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffice>, tiers: InsideTiers, managed: ReadonlySet<string> = new Set()): Parts {
+function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffice>, tiers: InsideTiers): Parts {
   const P: Parts = { slab: [], outline: [], tiles: [], oak: [], steel: [], dark: [], screen: [], chair: [], torso: [], head: [], hair: [], lamp: [], marker: [] };
   for (const key of [...tiers.near, ...tiers.mid]) {
     const t = towers.get(key);
@@ -126,7 +113,7 @@ function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffic
         P.tiles.push({ b: key, p: [x, y + 0.006, z], s: [1.9 * k, 0.012, 1.9 * k], c: SCREEN_COLOR[desk.state], f: y });
         continue;
       }
-      deskParts(desk, !managed.has(desk.desk.agentId), (list, p, s, c) => {
+      deskParts(desk, (list, p, s, c) => {
         const [x, z] = at(p[0], p[2]);
         P[list].push({ b: key, p: [x, y + p[1] * k, z], s: [s[0] * k, s[1] * k, s[2] * k], c, f: y });
       });
@@ -240,7 +227,7 @@ function Rising({ items, geometry, material, rise, shadow = true }: { items: Par
  * the standard ones, and their shadows go with them. Off, it draws nothing and the materials are
  * compiled without the cut.
  */
-export function InsideView({ on, towers, offices, limits, reduced, night, selected, onOpen, managed }: { on: boolean; towers: Tower[]; offices: Map<string, InsideOffice>; limits: InsideLimits; reduced: boolean; night: boolean; selected: string | null; onOpen?: (keys: string[]) => void; managed?: ReadonlySet<string> }) {
+export function InsideView({ on, towers, offices, limits, reduced, night, selected, onOpen }: { on: boolean; towers: Tower[]; offices: Map<string, InsideOffice>; limits: InsideLimits; reduced: boolean; night: boolean; selected: string | null; onOpen?: (keys: string[]) => void }) {
   const { camera, scene, gl, invalidate } = useThree();
   const byKey = useMemo(() => new Map(towers.map((t) => [t.key, t])), [towers]);
   // Only buildings with an office plan open up; the rest keep their exterior.
@@ -368,7 +355,7 @@ export function InsideView({ on, towers, offices, limits, reduced, night, select
   if (offices.size) last.current = offices;
   const plans = offices.size ? offices : last.current;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `floors` changes when a floor is picked
-  const parts = useMemo(() => buildParts(byKey, plans, drawn, managed), [byKey, plans, drawn, managed, floors]);
+  const parts = useMemo(() => buildParts(byKey, plans, drawn), [byKey, plans, drawn, floors]);
   const walls = drawn.near.map((k) => byKey.get(k)).filter((t): t is Tower => !!t && plans.has(t.projectId));
   // After dark the office lights are on, as inside (OfficeEnvironment): the floor and walls glow warm.
   useEffect(() => {
