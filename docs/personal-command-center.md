@@ -59,8 +59,8 @@ All changes are additive or wording; no data is deleted or migrated destructivel
   Each tool card adds the projects, agents and workflows that use it (`toolUse`). Status and
   "verified" rules are unchanged (verified only after a real check).
 - **Agent library**: "Agent catalog (internal marketplace)" is now "Agent library", private.
-- **Personal setup**: wizard steps are Owner, Workspace, Tools, Agents, Workflows, Health check, with
-  single-owner wording. Existing installs still skip it (unchanged first-run logic).
+- **Personal setup**: removed on 2026-11-18. There is no "Welcome to Atlas" popup; a device with no
+  workspace gets the Benjaire workspace silently (`src/views/product/ensureWorkspace.ts`).
 - **Purposes**: Business operations, AI engineering, Infrastructure, Personal operations, Something
   else. The old "agency" (client work) value is still accepted when loading so saved workspaces keep
   working; it is no longer offered.

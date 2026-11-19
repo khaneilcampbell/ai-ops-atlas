@@ -7,7 +7,7 @@ import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
 import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
-import { n8nHealth, unlistedWorkflows, useN8nRuns, workflowOwners } from "../n8n/runs";
+import { n8nHealth, n8nWorkflowIds, unlistedWorkflows, useN8nRuns, workflowOwners } from "../n8n/runs";
 import { useHostDeploys } from "../infra/deploys";
 import { capStatus, SPEND_CAPS, type CapState } from "../finance/caps";
 import { useIntel } from "../intel/state";
@@ -170,6 +170,16 @@ function N8nRuns() {
   const { catalog } = useAtlas();
   const n8n = useN8nRuns();
   const byWorkflow = useMemo(() => workflowOwners(catalog.agents), [catalog]);
+  // The AI agent each workflow works for: the owner of the automation that links it.
+  const leadOf = useMemo(() => {
+    const names = new Map(catalog.agents.map((a) => [a.id, a.name]));
+    const out = new Map<string, string>();
+    for (const a of catalog.agents) {
+      const lead = a.ownedBy ? names.get(a.ownedBy) : undefined;
+      if (lead) for (const id of n8nWorkflowIds(a)) if (!out.has(id)) out.set(id, lead);
+    }
+    return out;
+  }, [catalog]);
   const snap = n8n.value;
   const rows = snap?.state === "ok" ? snap.workflows : [];
   const failing = rows.filter((w) => n8nHealth(w) === "failing").length;
@@ -188,9 +198,10 @@ function N8nRuns() {
               const health = n8nHealth(w);
               const last = w.runs[0];
               const linked = byWorkflow.get(w.id);
+              const lead = leadOf.get(w.id);
               return (
                 <li key={w.id} data-state={health === "off" ? "none" : undefined}>
-                  <span>{w.name}{linked && linked !== w.name ? <span className="muted small"> · {linked}</span> : null}{unlisted.has(w.id) ? <span className="muted small"> · Not in Atlas yet</span> : null}</span>
+                  <span>{w.name}{linked && linked !== w.name ? <span className="muted small"> · {linked}</span> : null}{lead ? <span className="muted small"> · run for {lead}</span> : null}{unlisted.has(w.id) ? <span className="muted small"> · Not in Atlas yet</span> : null}</span>
                   <span className="muted small">
                     {health === "failing" ? <span className="run-failure">{HEALTH_LABEL[health]}</span> : HEALTH_LABEL[health]}
                     {last?.startedAt ? ` · ${relative(last.startedAt)}` : ""}

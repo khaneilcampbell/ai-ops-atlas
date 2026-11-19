@@ -112,6 +112,14 @@ describe("existing data migration", () => {
     expect(hasExistingData(["atlas:mapMode", "atlas:timeZone"])).toBe(true);
   });
 
+  it("gives a device stuck in the old half-finished setup its workspace, so no setup popup is needed", () => {
+    const { s } = store();
+    s.setOnboarding("in_progress", 2, AT);
+    expect(s.migrate({ projects: [], agents: [], integrations: [], templates: [], timeZone: "UTC" }, KHANEIL, AT).ok).toBe(true);
+    expect(s.active()?.id).toBe("benjaire");
+    expect(s.snapshot.onboarding.status).toBe("migrated");
+  });
+
   it("keeps every existing project and agent id in a Benjaire workspace and skips the wizard", () => {
     const { s } = store();
     const projects = catalog.projects.map((p) => p.id);
@@ -401,9 +409,10 @@ describe("desktop and web build compatibility", () => {
     expect(headers).toMatch(/\/api\/\*\s+Cache-Control: private, no-store/);
   });
 
-  it("the setup and workspace screens load lazily, so the map's first paint doesn't include them", () => {
+  it("the workspace screen loads lazily and no setup popup is mounted, so the map's first paint doesn't include them", () => {
     const app = readFileSync("src/App.tsx", "utf8");
     expect(app).toMatch(/lazy\(\(\) => import\("\.\/views\/product\/Workspace"\)/);
-    expect(app).toMatch(/lazy\(\(\) => import\("\.\/views\/product\/Onboarding"\)/);
+    // Single owner: the old "Welcome to Atlas" setup popup is gone for good.
+    expect(app).not.toMatch(/Onboarding/);
   });
 });

@@ -1,7 +1,8 @@
 import type { Agent, Catalog, Project } from "../catalog/types";
 import { OFF_MAP_PROJECTS } from "../catalog/projects";
+import { ownership } from "../catalog/ownership";
 import { managedAgent } from "../manage/manifest";
-import { n8nWorkflowIds } from "../n8n/runs";
+import { n8nWorkflowIds } from "../n8n/links";
 import type { WorkflowRef } from "./types";
 
 // The Task Center reads agents and buildings from the Atlas catalog (catalog/*.yaml), the same
@@ -44,7 +45,12 @@ export function agentProblem(a: Agent | undefined): string | null {
   return null;
 }
 
-export function agentProfile(a: Agent, projects: readonly Project[]): AgentProfile {
+/** An owning agent's workflows include those of the automations it owns (owned_by), named by automation. */
+export function ownedWorkflows(owned: readonly Agent[]): WorkflowRef[] {
+  return owned.flatMap((o) => agentWorkflows(o).map((w) => ({ ...w, label: `${o.name} · ${w.label}` })));
+}
+
+export function agentProfile(a: Agent, projects: readonly Project[], owned: readonly Agent[] = []): AgentProfile {
   const p = projects.find((x) => x.id === a.projectId);
   const caps = [...new Set([...(a.capabilities ?? []), ...(a.registry?.responsibilities?.tasks ?? [])])];
   return {
@@ -55,14 +61,15 @@ export function agentProfile(a: Agent, projects: readonly Project[]): AgentProfi
     capabilities: caps,
     environment: a.registry?.execution?.environment ?? a.runtime ?? "Not documented",
     status: a.status,
-    workflows: agentWorkflows(a),
+    workflows: [...agentWorkflows(a), ...ownedWorkflows(owned)].filter((w, i, all) => all.findIndex((x) => x.kind === w.kind && x.id === w.id) === i),
     unavailable: agentProblem(a),
   };
 }
 
 /** Every catalog agent as a profile, sorted by name. Retired agents stay listed (for history) but marked. */
 export function agentProfiles(c: Catalog): AgentProfile[] {
-  return c.agents.map((a) => agentProfile(a, c.projects)).sort((x, y) => x.name.localeCompare(y.name));
+  const { owned } = ownership(c);
+  return c.agents.map((a) => agentProfile(a, c.projects, owned.get(a.id))).sort((x, y) => x.name.localeCompare(y.name));
 }
 
 /** Buildings a task can be filed under: the ones on the map. */

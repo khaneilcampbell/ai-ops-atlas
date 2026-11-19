@@ -212,6 +212,22 @@ describe("telemetry", () => {
     expect(observeKpi({ name: "d", kind: "quality", target: null, targetValue: null, direction: null, basis: null, measure: "avg_duration_minutes" }, t)?.display).toBe("1.5 min");
   });
 
+  it("doesn't count runs cut off by the app closing as failures", () => {
+    const intelAgent = { ...ciAgent, observe: { atlasIntel: true } } as Agent;
+    const base = { started_at: null, duration_ms: null, cost_usd: null, trigger: "scheduled", model: "m" };
+    const runs = [
+      { ...base, status: "interrupted", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:03:19Z", repo: "me/a" },
+      { ...base, status: "succeeded", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:03:01Z", duration_ms: 25_000, repo: "me/b" },
+      { ...base, status: "failed", queued_at: "2026-11-09T14:02:36Z", finished_at: "2026-11-09T14:02:36Z", repo: "me/gone" },
+    ] as Run[];
+    const t = telemetryFor(intelAgent, undefined, runs);
+    expect(t.executions.map((e) => e.result)).toEqual(["other", "success", "failure"]);
+    expect(t.executions[0].label).toContain("interrupted");
+    expect(t.failures).toBe(1);
+    expect(t.successRate).toBe(0.5);
+    expect(operationalState({ classification: "A" }, t)).toBe("verified");
+  });
+
   it("only reports observed KPI values that telemetry supplies", () => {
     const empty = telemetryFor(ciAgent, undefined, null);
     const kpi = { name: "Success", kind: "reliability" as const, target: "≥ 90%", targetValue: 90, direction: "min" as const, basis: null, measure: "run_success_rate" as const };
@@ -263,7 +279,8 @@ describe("directory", () => {
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(7);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
-    expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci"]);
+    expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-release-manager"]);
+    // Atlas Release Manager owns Atlas CI, so Atlas CI's verified run verifies it too.
   });
 
   it("groups by agent type in type order and by project", () => {
@@ -274,7 +291,7 @@ describe("directory", () => {
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
     const s = sortEntries(entries, "lastRun");
-    expect(s[0].profile.id).toBe("atlas-ci");
+    expect(s.slice(0, 2).map((e) => e.profile.id).sort()).toEqual(["atlas-ci", "atlas-release-manager"]);
     const t = sortEntries(entries, "title").map((e) => e.profile.title);
     expect(t).toEqual([...t].sort((a, b) => a.localeCompare(b)));
   });
@@ -286,7 +303,9 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(36);
+    // 36 with a source of their own, 8 with n8n workflow links (7 automations and Benjaire Product Lab,
+    // which links its hand-off workflow), and 11 owning agents through their automations.
+    expect(s.observable).toBe(55);
   });
 });
 
