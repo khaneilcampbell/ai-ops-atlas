@@ -3,6 +3,10 @@ import { n8nHealth, n8nWorkflowIds } from "../n8n/runs";
 import type { N8nRun } from "../n8n/types";
 import type { StoredTask } from "../tasks/types";
 import type { WorkflowRun } from "../workflows/types";
+import { buildingDisplayName } from "../modules/names";
+
+/** Map keys of the buildings an agent can be given a room in (catalog/workplaces.ts), by catalog name. */
+const WORKPLACE_KEYS: Readonly<Record<string, string>> = { "Benjaire Marketing Agency": "service:benjaire-marketing" };
 
 /**
  * Atlas Automation Plaza: what the plaza shows, from the automation data Atlas already reads.
@@ -101,6 +105,8 @@ export interface AgentLike {
   id: string;
   name: string;
   projectId: string;
+  /** Where the agent works, when its manifest seats it outside its project's building. */
+  workplace?: { building: string };
   links?: { label: string; url: string }[];
 }
 
@@ -155,6 +161,10 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
   const agentById = new Map(i.agents.map((a) => [a.id, a]));
   const who = (agentId: string | undefined, fallbackName?: string, buildingId?: string) => {
     const a = agentId ? agentById.get(agentId) : undefined;
+    // An agent with a workplace does its work there (Product Lab: Growth & Marketing Studio), so
+    // the plaza names that building, by its current display name, not its project's headquarters.
+    const place = a?.workplace ? WORKPLACE_KEYS[a.workplace.building] : undefined;
+    if (a && place) return { agentId: a.id, agentName: a.name, buildingKey: place, buildingName: buildingDisplayName(place, a.workplace!.building) };
     const projectId = a?.projectId ?? (buildingId && i.projectNames.has(buildingId) ? buildingId : undefined);
     return {
       agentId: a?.id ?? agentId,
