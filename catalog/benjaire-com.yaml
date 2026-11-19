@@ -336,7 +336,7 @@ agents:
 
   # Benjaire Product Lab: one first-class n8n Agent (id ruOvE7nfE713WDUL on khancam15.app.n8n.cloud),
   # read through the n8n MCP on 2026-11-04. Its five roles are skills inside the same agent run, listed
-  # here so each has a desk in the Benjaire Marketing Agency. Atlas has seen no run yet, and n8n Agent
+  # here so each has a desk in the Growth & Marketing Studio (map key "Benjaire Marketing Agency"). Atlas has seen no run yet, and n8n Agent
   # runs are not workflow executions, so there is no `observe` source until the agent posts reports.
   - id: benjaire-product-lab
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}
