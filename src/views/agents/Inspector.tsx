@@ -19,6 +19,7 @@ import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill,
 import { formatDateTime } from "../../lib/timezone";
 import { usePresenceAssignments } from "../../catalog/agentPresence";
 import { PresenceEditor } from "./PresenceEditor";
+import { RoutinePanel } from "./RoutinePanel";
 import { AgentAvatar, AgentStatusPill, AiAgentLabel } from "../../components/AgentIdentity";
 import { identityFor } from "../../registry/identity";
 import type { IdentityStatus } from "../../registry/agentStatus";
@@ -420,6 +421,7 @@ function WorkdayTab({ job, editor }: { job: AgentJob; editor: React.ReactNode })
         <dd>{job.output.value}<Basis d={job.output} /></dd>
       </dl>
       <div className="reg-stack">
+        {job.offDuty !== "retired" && <RoutinePanel agentId={job.agentId} />}
         <div className="section-title">On the map</div>
         <p className="small">
           {job.presence && !job.offDuty

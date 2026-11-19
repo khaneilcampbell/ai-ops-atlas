@@ -46,6 +46,10 @@ const PATHS: Record<string, string> = {
   // A workflow: one step branching to two.
   briefcase: "M4 8h16v11H4zM9 8V5h6v3M4 13h16M11 13v2h2v-2",
   flow: "M3 10h5v4H3zM16 4h5v4h-5zM16 16h5v4h-5zM8 12h4M12 6v12M12 6h4M12 18h4",
+  // Two people: the map's City agents roster.
+  people: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a6 6 0 0 0-4-5.6",
+  // Crosshair: locate on the map.
+  locate: "M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2v3M12 19v3M2 12h3M19 12h3M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
 };
 
 export type IconName = keyof typeof PATHS;

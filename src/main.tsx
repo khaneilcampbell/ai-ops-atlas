@@ -10,6 +10,7 @@ import "./styles/mobile.css";
 import "./styles/citySound.css";
 import "./styles/automationPlaza.css";
 import "./styles/polished.css";
+import "./styles/cityAgents.css";
 import { isTauri } from "./lib/env";
 import { VaultGate } from "./components/VaultGate";
 

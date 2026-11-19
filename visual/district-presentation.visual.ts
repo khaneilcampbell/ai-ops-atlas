@@ -22,7 +22,9 @@ test('the Map view menu keeps the camera and district names; labels and controls
  for(const mode of ['agents','infrastructure']){
   await view.selectOption(mode);await settle(page,2);
   expect((await scene()).camera).toEqual(baseline.camera);
-  await expect(page.locator('.m3-pill.hood.district').first()).toBeVisible();
+  // District names stay: at least one is on screen. Not the first in the DOM: label layout can give a single
+  // name way to a nearer plaque, and on CI (other fonts, other widths) AI Operations does.
+  await expect(page.locator('.m3-pill.hood.district').filter({visible:true}).first()).toBeVisible();
   await expect(page.locator('.m3-pill.hood.district').filter({hasText:/Declared|#/i})).toHaveCount(0);
   await page.screenshot({path:`artifacts/district-presentation/${mode}.png`});
  }
