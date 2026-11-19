@@ -22,7 +22,8 @@ test('the Map view menu keeps the camera and district names; labels and controls
  for(const mode of ['agents','infrastructure']){
   await view.selectOption(mode);await settle(page,2);
   expect((await scene()).camera).toEqual(baseline.camera);
-  await expect(page.locator('.m3-pill.hood.district').first()).toBeVisible();
+  // District names fade back in after the label layout settles; software WebGL on CI can take longer than 5 s.
+  await expect(page.locator('.m3-pill.hood.district').first()).toBeVisible({timeout:30_000});
   await expect(page.locator('.m3-pill.hood.district').filter({hasText:/Declared|#/i})).toHaveCount(0);
   await page.screenshot({path:`artifacts/district-presentation/${mode}.png`});
  }
