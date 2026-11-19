@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
-/** People in the Financial District: sidewalk walkers and train riders to Atlas Hills (KC, 2026-10-31). */
+/** People in the Financial District: sidewalk walkers and train riders to Atlas Hills (Khaneil, 2026-10-31). */
 // Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
 const out=process.env.SHOT_DIR??'';
 test.skip(!out,'Set SHOT_DIR to a folder to take crowd screenshots.');

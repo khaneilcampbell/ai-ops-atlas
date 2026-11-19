@@ -19,9 +19,9 @@ project:
 agents:
   - id: github-merge-flow
     name: Merge Flow
-    purpose: Sorts every open pull request across KC's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; KC still says "merge".
+    purpose: Sorts every open pull request across Khaneil's repositories into one lane (ready, failing, behind, conflicts and so on) and names the next move that gets it merged to production sooner. Read-only; Khaneil still says "merge".
     framework: GitHub Actions + Claude
-    owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
+    owned_by: atlas-production-coordinator    # owning agent, moved at Khaneil's request 2026-11-14 (was development-hub-lead)
     model: Claude Opus 5.5 (Anthropic API), only when the triage changed
     runtime: GitHub-hosted runner
     status: active
@@ -54,7 +54,7 @@ agents:
       mission:
         problem: Finished pull requests wait for days because nobody sees that they are ready, behind their base, or blocked on one failing check.
         outcomes: [Ready pull requests are named the moment they are ready, Each blocked pull request has one concrete next move, Time to merge is measured instead of guessed]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Read open pull requests and their merge state in one request, Sort them into lanes, Skip everything else when nothing changed, Ask Claude for a short brief when something needs action, Report counts publicly and details only in Atlas]
         tools: [GitHub GraphQL API (read), Anthropic Messages API, GitHub Actions cache for the last fingerprint]
@@ -76,7 +76,7 @@ agents:
           - name: Median time to merge
             kind: throughput
             target: Under 24 hours, from the run summary
-            basis: Most of KC's pull requests are small and reviewed the same day
+            basis: Most of Khaneil's pull requests are small and reviewed the same day
       execution:
         trigger_type: event
         schedule: Every 4 hours at :23, plus each completed pull-request CI run in ai-ops-atlas
@@ -84,10 +84,10 @@ agents:
         stages: [Restore last fingerprint, One GraphQL read, Sort into lanes, Stop when unchanged, Brief within caps, Report, Save fingerprint]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and decides what is worth saying, but only recommends. Merges stay with KC and the Merge Pull Request action; re-runs stay with Re-run Failed Jobs.
+        autonomy_note: Runs on its own and decides what is worth saying, but only recommends. Merges stay with Khaneil and the Merge Pull Request action; re-runs stay with Re-run Failed Jobs.
         data_sensitivity: internal
-        approval: None needed to run; every change to a repository stays with KC
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: None needed to run; every change to a repository stays with Khaneil
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history and job summaries; optional live feed reports
       cost:
@@ -99,11 +99,11 @@ agents:
         known_issues:
           - Without MERGE_FLOW_TOKEN only public repositories are readable
         improvements:
-          - Bring behind branches up to date automatically, once KC approves that level 3 step
+          - Bring behind branches up to date automatically, once Khaneil approves that level 3 step
         last_review: 2026-10-30
   - id: github-opportunity-scout
     name: Opportunity Scout
-    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories KC already has, plus a build-ready spec for the best one. Recommend-only; KC decides what gets built.
+    purpose: Reads Atlas's agent registry and, only when it changed, proposes up to 3 scored ways to make money from the agents and repositories Khaneil already has, plus a build-ready spec for the best one. Recommend-only; Khaneil decides what gets built.
     framework: GitHub Actions + Claude
     owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: Claude Opus 5.5 (Anthropic API), only when the registry changed
@@ -134,11 +134,11 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or KC asks for a fresh look
+        evidence: ops/opportunity-scout/scout.py builds the registry digest deterministically and makes one Claude call with a closed JSON schema only when the registry fingerprint changed or Khaneil asks for a fresh look
       mission:
         problem: Atlas holds dozens of working agents, but nobody regularly asks which of them could earn money and what small agent would turn that into revenue.
         outcomes: [Each registry change yields at most 3 ranked money ideas, The best idea arrives as a spec that can be built without another planning round, Every idea and spec keeps a human approval point]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Read the registry from catalog files, Stop when nothing changed, Ask Claude for scored ideas and one spec, Rank and check them against the registry, Report in the job summary and Atlas's feed]
         tools: [Anthropic Messages API with structured output, GitHub Actions cache for the last fingerprint and spend]
@@ -159,7 +159,7 @@ agents:
             measure: run_success_rate
           - name: Ideas built
             kind: other
-            target: At least one spec a quarter that KC approves for building
+            target: At least one spec a quarter that Khaneil approves for building
             basis: Ideas only matter when one turns into an agent
       execution:
         trigger_type: event
@@ -168,10 +168,10 @@ agents:
         stages: [Restore last fingerprint, Read registry, Stop when unchanged, Ideas within caps, Rank and check, Report, Save fingerprint]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with KC.
+        autonomy_note: Runs on its own and decides when there is something new to say, but only recommends. Building, spending, contacting anyone or publishing stays with Khaneil.
         data_sensitivity: internal
-        approval: None needed to run; KC approves any spec before it is built
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: None needed to run; Khaneil approves any spec before it is built
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history and job summaries; optional live feed reports
       cost:
@@ -183,11 +183,11 @@ agents:
         known_issues:
           - Without ANTHROPIC_API_KEY it only reports that the registry changed
         improvements:
-          - Add a small, terms-respecting market signal once KC picks a niche
+          - Add a small, terms-respecting market signal once Khaneil picks a niche
         last_review: 2026-10-30
   - id: github-design-consistency
     name: Design Consistency
-    purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; KC says "merge".
+    purpose: Checks Atlas's stylesheets and building and agent names against one design-tokens file and, when something drifted, opens one small pull request that brings it back, with before and after screenshots. Plain code for the check and exact swaps; Claude only for judgment calls. Never merges; Khaneil says "merge".
     framework: GitHub Actions + Claude
     owned_by: development-hub-lead            # owning agent, added at Khaneil's request 2026-11-13
     model: Claude Opus 5.5 (Anthropic API), only for findings that need judgment
@@ -225,7 +225,7 @@ agents:
       mission:
         problem: Atlas's look drifts as features land, with colors from the old palette and one-off sizes, and nobody checks every stylesheet against the theme.
         outcomes: [Every stylesheet uses the Atlas tokens or says why not, New drift is flagged on the pull request that adds it, Each fix arrives as one reviewable pull request with screenshots]
-        beneficiaries: [KC, Atlas users]
+        beneficiaries: [Khaneil, Atlas users]
       responsibilities:
         tasks: [Check stylesheets and names against the tokens, Mark drift above the baseline as new, Swap exact token matches in code, Ask Claude for judgment calls within caps, Open one fix pull request with before and after screenshots, Report in the job summary and Atlas's feed]
         tools: [Anthropic Messages API with structured output, Playwright screenshots, GitHub pull requests API, GitHub Actions cache for spend and caps]
@@ -234,7 +234,7 @@ agents:
         dependencies: [github-merge-flow]
         limitations: [Never merges or approves, The 3D map and office scenes are art and are not checked, Screenshots cover Mission Control Agents and Repositories, Without DESIGN_FIX_TOKEN its pull requests need CI started by hand]
       goals:
-        objective: Keep Atlas on one design system without KC having to police it.
+        objective: Keep Atlas on one design system without Khaneil having to police it.
         review_frequency: Monthly
         kpis:
           - name: Run success rate
@@ -255,10 +255,10 @@ agents:
         stages: [Check against tokens, Stop when nothing to fix or a fix PR is open, Code swaps or one Claude call within caps, Verify each edit, Screenshots before and after, Open pull request, Report]
       governance:
         autonomy: 1
-        autonomy_note: Runs on its own and proposes fixes as pull requests, one at a time. Merging stays with KC.
+        autonomy_note: Runs on its own and proposes fixes as pull requests, one at a time. Merging stays with Khaneil.
         data_sensitivity: internal
-        approval: KC reviews and merges every fix pull request
-        credential_owner: KC (repository secrets in ai-ops-atlas)
+        approval: Khaneil reviews and merges every fix pull request
+        credential_owner: Khaneil (repository secrets in ai-ops-atlas)
         risk: low
         audit_log: GitHub Actions run history, job summaries and the fix pull requests
       cost:
@@ -276,30 +276,122 @@ agents:
   - id: github-profile-manager
     name: GitHub Profile Manager
     purpose: >-
-      Draft n8n agent for managing the GitHub profile. Not published, so it does not run.
+      Keeps Khaneil's GitHub profile README (the khaneilcampbell/khaneilcampbell repository) current with recent
+      project work, presented for Forward Deployed Engineer roles. Published in n8n as
+      "Development Hub – GitHub Profile Manager"; it checks for changes every 6 hours.
     framework: n8n Agent
+    model: Claude (claude-sonnet-5)
     runtime: n8n Cloud
-    status: paused
-    trigger: None until it is published
+    status: active
+    trigger: Every 6 hours (New York time), task "Sync profile README with recent repo changes"
     last_run: null
+    history:
+      - at: 2026-11-08
+        event: Created as an unpublished n8n agent draft with one scheduled task
+      - at: 2026-11-17
+        event: Configuration read for the first time after Khaneil turned on MCP access; GitHub credential still missing, so it cannot run
+      - at: 2026-11-17
+        event: Khaneil attached the GitHub credential, published it and renamed it "Development Hub – GitHub Profile Manager" in n8n
+    links:
+      - label: Profile repository
+        url: https://github.com/khaneilcampbell/khaneilcampbell
+    capabilities:
+      - Read the profile README and the date of its last commit
+      - Review Khaneil's own public repositories for changes since then
+      - Sort each change into meaningful or trivial
+      - Rewrite the README sections that changed and commit README.md
+      - Report which repositories triggered the update and the commit link
+    permissions:
+      - 'GitHub (Khaneil''s OAuth credential): reads Khaneil''s repositories and commits README.md to the profile repository''s default branch only'
+      - Anthropic web search, at most 5 searches per run
     registry:
+      identity:
+        display_name: Jordan Reyes
+        accent: "#16A34A"
+        intro: "Every 6 hours I check your public GitHub activity and, when something meaningful changed, rewrite your profile README for Forward Deployed Engineer roles. I commit straight to the default branch, and I never mention private repositories or invent projects."
+        voice: "Changelog voice: what changed and why it earned a line."
+        appearance: "Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt"
+        portrait:
+          path: agents/github-profile-manager.webp
+          model: gpt_image_2_6
+          job_id: 8383d702-d9ca-43c0-9851-daf60bdc75bf
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: GitHub Profile Manager
       category: career
       subcategory: Profile
       classification:
         type: A
         confidence: verified
-        evidence: Unpublished n8n agent I4i0qQm5g0bfEID8, checked read-only on 2026-11-11
+        evidence: n8n agent I4i0qQm5g0bfEID8 read on 2026-11-17 (Claude Sonnet 5, GitHub MCP server, one task on cron 0 */6 * * *); published 2026-11-17
+      mission:
+        problem: The GitHub profile page falls behind the work Khaneil ships, so recruiters see an out-of-date picture.
+        outcomes:
+          - A profile README that reflects every meaningful project change within 6 hours
+          - No commit when only trivial changes happened
+        beneficiaries:
+          - Khaneil
+          - Recruiters and clients reading the GitHub profile
+      responsibilities:
+        tasks:
+          - Find the profile repository named after the GitHub username
+          - Read README.md and the date of its last commit (or look back 30 days)
+          - Review new repositories, commits, merged pull requests, releases and README changes since then
+          - Classify each change as meaningful or trivial
+          - Rewrite the headline, What I do, Featured projects, Recent activity, Tech stack and Contact sections as needed
+          - Commit README.md to the default branch and reply with the commit link
+        tools: [Claude (claude-sonnet-5), GitHub MCP server, Anthropic web search]
+        inputs:
+          - Khaneil's own public, non-fork repositories
+          - The current profile README.md
+        outputs:
+          - One README.md commit per run with changes, or a reply saying the profile is already current
+        dependencies:
+          - GitHub OAuth credential on the agent's GitHub MCP server
+          - khaneilcampbell/khaneilcampbell profile repository
+        limitations:
+          - Commits straight to the default branch, with no pull request to review first
+          - Never mentions private repositories or invents projects, metrics or clients
+      goals:
+        objective: Keep the GitHub profile accurate and current with no manual edits.
+        review_frequency: Monthly
+        kpis:
+          - name: Profile updated after meaningful changes
+            kind: quality
+            target: Within 6 hours of a meaningful change
+            basis: Task schedule (every 6 hours); checked against the profile repository's commit history
+          - name: Commits for trivial changes
+            kind: quality
+            target: '0'
+            basis: The task's own rule; checked by reading its commits
       execution:
-        trigger_type: manual
+        trigger_type: scheduled
+        schedule: Every 6 hours, cron 0 */6 * * * (America/New_York)
         environment: n8n
+      governance:
+        autonomy: 3
+        autonomy_note: Published 2026-11-17; commits to the profile repository on its own every 6 hours, only when something meaningful changed.
+        data_sensitivity: public
+        approval: Khaneil published it on 2026-11-17; no approval per run
+        credential_owner: Khaneil (n8n account and GitHub OAuth credential)
+        risk: low
+        kill_switch: Unpublish the agent in n8n, or disable its task
+      cost:
+        notes: Claude Sonnet 5 with up to 5 web searches per run, 4 runs a day; prompt caching is on
+      docs:
+        runbook: docs/runbooks/development-hub.md#github-profile-manager
+        last_review: 2026-11-17
+        known_issues:
+          - Commits go straight to the default branch with no pull request
+        improvements:
+          - Open a pull request instead of committing directly, so Khaneil reviews each profile change
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
   - id: development-hub-lead
     name: Development Hub Lead
     purpose: >-
-      Runs Khaneil's cross-repository GitHub routines from the Development Hub: sorts every open pull request into one lane, checks Atlas styles and names for design drift, and proposes scored ways to earn from the agents when the registry changes. It has no model of its own yet; it works through the automations it owns.
+      Runs Khaneil's cross-repository GitHub routines from the Development Hub: checks Atlas styles and names for design drift, and proposes scored ways to earn from the agents when the registry changes. It has no model of its own yet; it works through the automations it owns.
     framework: Atlas owning agent (runs through its automations)
     model: None of its own; each automation it owns keeps its own model and cap
     runtime: Through its automations
@@ -309,7 +401,23 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Merge Flow Coordinator, Design Consistency, Opportunity Scout, at Khaneil's request
+      - at: 2026-11-14
+        event: Merge Flow moved to the Atlas Production Coordinator, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Elijah Brooks
+        accent: "#1E3A8A"
+        intro: "I run your cross-repository GitHub routines from the Development Hub: Design Consistency checks Atlas styles and names for drift and opens a fix pull request, and Opportunity Scout proposes up to 3 scored earning ideas when the registry changes. Everything still goes through pull requests you merge."
+        voice: "Concise proposals, each with a score and a one-line reason."
+        appearance: "African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo"
+        portrait:
+          path: agents/development-hub-lead.webp
+          model: gpt_image_2_6
+          job_id: 640de0bb-2045-4175-9db4-d5b6230b2ad5
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Development Hub Lead
       category: engineering
       subcategory: Repository operations
@@ -319,10 +427,38 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Cross-repository routines (design drift, earning ideas, pull request triage) need one owner so their results are acted on.
+        outcomes:
+          - Design drift in Atlas is reported
+          - Up to 3 scored earning ideas when the registry changes
+        beneficiaries:
+          - Khaneil
       responsibilities:
-        tasks: [Sort open pull requests into lanes, Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes]
+        tasks: [Check Atlas for design drift, Propose up to 3 scored earning ideas when the registry changes, Open a fix pull request when drift is found]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Atlas source on GitHub
+          - The agent registry
+        dependencies:
+          - github-design-consistency
+          - github-opportunity-scout
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Proposals and fixes still go through pull requests Khaneil merges
+      goals:
+        objective: Turn the Development Hub's scheduled checks into actions Khaneil can take.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Ideas per registry change
+            kind: throughput
+            target: At most 3 scored ideas
+            basis: Opportunity Scout's own cap
       execution:
         trigger_type: scheduled
         environment: Through its automations
@@ -330,5 +466,9 @@ agents:
         autonomy: 1
         autonomy_note: Recommends and reports; merging stays with Khaneil.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: docs/runbooks/development-hub.md#development-hub-lead
+        last_review: 2026-11-17

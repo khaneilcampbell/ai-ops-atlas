@@ -15,6 +15,9 @@ import {
   type RegistryManifest,
 } from "./types";
 
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const PORTRAIT_RE = /^agents\/[a-z0-9][a-z0-9-]*\.webp$/;
+
 /** Parses an agent's `registry` block (atlas/v2). Unknown values are reported, never guessed. */
 export function parseRegistry(r: Reader, value: unknown, path: string): RegistryManifest | undefined {
   const o = r.obj(value, path);
@@ -119,11 +122,47 @@ export function parseRegistry(r: Reader, value: unknown, path: string): Registry
       credentialOwner: r.str(gov, "credential_owner", p, false),
       risk: r.oneOf(gov, "risk", p, RISK_LEVELS),
       auditLog: r.str(gov, "audit_log", p, false),
+      killSwitch: r.str(gov, "kill_switch", p, false),
+      caps: r.str(gov, "caps", p, false),
     };
   }
 
   const cost = sub("cost");
   if (cost) out.cost = { budget: r.str(cost, "budget", `${path}.cost`, false), notes: r.str(cost, "notes", `${path}.cost`, false) };
+
+  const idn = sub("identity");
+  if (idn) {
+    const p = `${path}.identity`;
+    const displayName = r.str(idn, "display_name", p);
+    if (displayName) {
+      const accent = r.str(idn, "accent", p, false);
+      if (accent && !HEX_RE.test(accent)) r.fail(`${p}.accent`, "must be a #RRGGBB color");
+      out.identity = {
+        displayName,
+        accent: accent && HEX_RE.test(accent) ? accent.toUpperCase() : undefined,
+        intro: r.str(idn, "intro", p, false),
+        voice: r.str(idn, "voice", p, false),
+        appearance: r.str(idn, "appearance", p, false),
+      };
+      const po = idn.portrait === undefined || idn.portrait === null ? null : r.obj(idn.portrait, `${p}.portrait`);
+      if (po) {
+        const pp = `${p}.portrait`;
+        const file = r.str(po, "path", pp);
+        if (file && !PORTRAIT_RE.test(file)) r.fail(`${pp}.path`, "must be agents/<agent-id>.webp under public/");
+        const version = po.prompt_version;
+        if (version !== undefined && version !== null && (typeof version !== "number" || !Number.isInteger(version) || version < 1)) r.fail(`${pp}.prompt_version`, "must be a whole number from 1");
+        if (file && PORTRAIT_RE.test(file)) {
+          out.identity.portrait = {
+            path: file,
+            model: r.str(po, "model", pp, false),
+            jobId: r.str(po, "job_id", pp, false),
+            promptVersion: typeof version === "number" && Number.isInteger(version) && version >= 1 ? version : undefined,
+            generatedAt: r.date(po, "generated_at", pp),
+          };
+        }
+      }
+    }
+  }
 
   const d = sub("docs");
   if (d) {
@@ -137,7 +176,7 @@ export function parseRegistry(r: Reader, value: unknown, path: string): Registry
     };
   }
 
-  warnUnknown(r, o, path, ["title", "suggested_title", "summary", "category", "subcategory", "classification", "tier", "automation_category", "version", "mission", "responsibilities", "goals", "execution", "governance", "cost", "docs"]);
+  warnUnknown(r, o, path, ["title", "suggested_title", "summary", "category", "subcategory", "classification", "tier", "automation_category", "version", "mission", "responsibilities", "goals", "execution", "governance", "cost", "identity", "docs"]);
   return out;
 }
 

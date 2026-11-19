@@ -46,7 +46,7 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
   // Every street a walk can run beside: district roads, their frontage streets and the bridge streets.
   const roadSpans=connectionSpans([...paths.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...(scene.carBridges??[]).flatMap(br=>br.roads)]);
   // A walk's railing stops wherever any road crosses it, the Galleria's drives included: the walk
-  // itself already opens there, so a rail left standing would run across the carriageway (KC, 2026-11-09).
+  // itself already opens there, so a rail left standing would run across the carriageway (Khaneil, 2026-11-09).
   // Every street breaks a railing, frontage and bridge streets included (Khaneil, 2026-11-13: posts in the street).
   const railBreaks=[...paths.flatMap(l=>[l.road,...(l.frontage?[l.frontage]:[])]),...(scene.carBridges??[]).flatMap(br=>br.roads),...clearRoads];
   const streetSegs=roadSpans.map(s=>[s.a,s.b] as [Pt,Pt]);
@@ -62,7 +62,7 @@ export function VenueBridge({scene,g,m,clearRoads=[]}:{scene:Scene3D;g:ReturnTyp
      for(let band=-2;band<=2;band++)solid.push({p:[crossing[0]+Math.sin(rotation)*band*.09,TERRACE_H+.061,crossing[1]+Math.cos(rotation)*band*.09],s:[TRANSPORT.bridgeWidth,.006,.045],r:rotation,c:'#f7f2df'});
     }
     // Rails protect waterfront spans, leaving the ends open for circulation. A walk that runs beside
-    // a road is a sidewalk, not a waterfront, so it gets no railing between it and the street (KC, 2026-11-08).
+    // a road is a sidewalk, not a waterfront, so it gets no railing between it and the street (Khaneil, 2026-11-08).
     const besideRoad=roadSpans.some(s=>(s.a[0]===s.b[0])===(Math.abs(a[0]-b[0])<1e-6)&&(s.a[0]===s.b[0]?Math.abs(s.a[0]-a[0])<1.6&&Math.min(s.a[1],s.b[1])<Math.max(a[1],b[1])&&Math.max(s.a[1],s.b[1])>Math.min(a[1],b[1]):Math.abs(s.a[1]-a[1])<1.6&&Math.min(s.a[0],s.b[0])<Math.max(a[0],b[0])&&Math.max(s.a[0],s.b[0])>Math.min(a[0],b[0])));
     if(!besideRoad)for(const side of [-1,1]){
      for(let t=.2;t<len-.15;t+=.4){

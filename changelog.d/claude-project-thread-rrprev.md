@@ -1,0 +1,1 @@
+- 2026-11-17 · Agent desks, the inspector and building modules now say Running, Idle, Failed, Stale or Not connected. An agent that stops reporting turns Stale instead of looking fine, and the inspector shows when Atlas last heard from it (#451)

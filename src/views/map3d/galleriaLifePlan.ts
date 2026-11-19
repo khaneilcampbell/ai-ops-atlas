@@ -6,7 +6,7 @@ import {along,commuterRoute,type CommuterRoute} from './railCommuters';
 import {buildStreetGraph,nearestStreet,streetLines} from './streetGraph';
 
 /**
- * Life round Atlas Galleria (KC, 2026-11-08): a paved walk from the entrance out to the nearest
+ * Life round Atlas Galleria (Khaneil, 2026-11-08): a paved walk from the entrance out to the nearest
  * street, lamp posts round the building and along the walk, shoppers coming and going and
  * strolling round it, and drivers who walk out to a parked car, back out and drive off the lot,
  * then come back later and walk in again. Pure and deterministic, like the district visitors:
@@ -42,7 +42,7 @@ export interface GalleriaDriver {walk:CommuterRoute;drive:CommuterRoute;car:{x:n
  backOut:boolean}
 /** Where the lot is too shallow for the car park behind the building: a row of bays each side of the walk, facing the street. */
 export interface GalleriaCourt {pad:{x:number;z:number;w:number;d:number}[];stripes:Pt[];cars:{x:number;z:number;c:string;kind:GalleriaCarKind}[]}
-/** An asphalt drive from a car park to the street (KC, 2026-11-08), centre line a→b; b is on the street's centre line. */
+/** An asphalt drive from a car park to the street (Khaneil, 2026-11-08), centre line a→b; b is on the street's centre line. */
 export interface GalleriaDriveway {a:Pt;b:Pt}
 export interface GalleriaLife {portal:GalleriaPortal;walk:Pt[];lamps:GalleriaLamp[];walkers:GalleriaWalker[];drivers:GalleriaDriver[];court?:GalleriaCourt;driveways:GalleriaDriveway[];
  /** Car park surfaces (the lot behind the building, or the street court), for carHeight. */

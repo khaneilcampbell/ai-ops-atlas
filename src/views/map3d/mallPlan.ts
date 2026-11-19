@@ -6,7 +6,7 @@ export const MALL_KEY='service:atlas-marketplace';
 /**
  * Atlas Marketplace: a low wave-style mall (stacked curving floors wrapped in white fins) on the
  * land between the open lot (once the Skyline park) and the Hills boulevard. Sizes are in map units.
- * KC, 2026-11-08: "reduce down 1x". The building is one step (0.8) smaller in every direction than
+ * Khaneil, 2026-11-08: "reduce down 1x". The building is one step (0.8) smaller in every direction than
  * before: floors 1.6 -> 1.28 and the footprint `size` 0.8 of the lot. The lot itself, its plaza and
  * everything planned around it (Galleria, rail, roads) stay where they were.
  */

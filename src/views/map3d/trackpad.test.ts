@@ -273,3 +273,26 @@ describe("inside a building", () => {
     expect(quarterOf({ x: 0, z: -1 })).toEqual({ x: 1, z: -1 });
   });
 });
+
+describe("Command with a scroll, for a Magic Mouse", () => {
+  it("zooms on the map and inside, even when the scroll reads as a trackpad", () => {
+    const c = new WheelClassifier("trackpad");
+    const zin = wheelIntent(wheel({ metaKey: true, deltaY: -20, deltaX: 1 }), c, "auto", 1, false);
+    expect(zin.kind).toBe("zoom");
+    expect(zin.kind === "zoom" && zin.factor).toBeGreaterThan(1);
+    const zout = interiorIntent(wheel({ metaKey: true, deltaY: 20, timeStamp: 1000 }), new WheelClassifier("trackpad"), "auto", 1, false);
+    expect(zout.kind === "zoom" && zout.factor).toBeLessThan(1);
+  });
+
+  it("zooms in every scroll mode, and a wheel notch can't jump", () => {
+    for (const mode of ["auto", "pan", "zoom"] as const) {
+      const z = wheelIntent(wheel({ metaKey: true, deltaY: -500 }), new WheelClassifier("mouse"), mode, 1, false);
+      expect(z).toEqual({ kind: "zoom", factor: 2 });
+    }
+  });
+
+  it("leaves plain scrolls as they were", () => {
+    expect(wheelIntent(wheel({ deltaY: 100 }), new WheelClassifier("mouse"), "auto", 1, false).kind).toBe("pass");
+    expect(wheelIntent(wheel({ deltaY: 10, deltaX: 2 }), new WheelClassifier("trackpad"), "auto", 1, false).kind).toBe("pan");
+  });
+});

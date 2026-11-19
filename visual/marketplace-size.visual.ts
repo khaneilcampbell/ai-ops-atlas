@@ -1,6 +1,6 @@
 import {test,type Page} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * Atlas Marketplace one step smaller (KC, 2026-11-08). Fixed camera views over the Marketplace lot,
+ * Atlas Marketplace one step smaller (Khaneil, 2026-11-08). Fixed camera views over the Marketplace lot,
  * so the same script shoots main (before) and the branch (after).
  * Run: MARKETPLACE_SHOTS=1 SHOT_DIR=... npx playwright test -c visual marketplace-size
  */

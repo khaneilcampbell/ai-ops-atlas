@@ -127,3 +127,41 @@ it('flies the executive jet every other loop in the shared slot, resting at the 
   expect([p.x,p.z]).toEqual([7,-4.6]);
  }
 });
+
+it('the executive jet tucks its gear after takeoff and lowers it before landing (Khaneil, 2026-11-15)',()=>{
+ for(const c of CIRCUITS){
+  const base=SHARED_SLOT*f.interval-f.start;
+  const k=[0,1].find(k=>{for(let t=0;t<f.cycle;t+=.5)if(executiveJetPose(base+k*f.cycle+t,c).y>1)return true;return false;})!;
+  // Gear state changes over the flying loop: down, up, down again.
+  const states:string[]=[];let lowest=1;
+  for(let t=0;t<f.cycle;t+=.1){
+   const p=executiveJetPose(base+k*f.cycle+t,c),s=p.gear>.98?'down':p.gear<.02?'up':'';
+   if(s&&states[states.length-1]!==s)states.push(s);
+   // Never on the runway or taxiway with the wheels up.
+   if(p.y<.02)expect(p.gear).toBeGreaterThan(.98);
+   if(p.y>1)lowest=Math.min(lowest,p.gear);
+  }
+  expect(states).toEqual(['down','up','down']);
+  expect(lowest).toBeLessThan(.02);
+ }
+});
+
+it('every plane on the loop tucks its gear after takeoff and lowers it before landing (Khaneil, 2026-11-15)',()=>{
+ for(const c of CIRCUITS)for(let slot=0;slot<f.count;slot++){
+  // Over two loops (the shared slot flies every other one): never on the ground with the wheels up, wheels fully up
+  // somewhere high in the air, and every retraction matched by a lowering before the next touchdown.
+  let ups=0,downs=0,prev=fleetPose(0,slot,c).gear,lowest=1;
+  for(let t=0;t<f.cycle*2;t+=.1){
+   const p=fleetPose(t,slot,c);
+   if(!p.visible)continue;
+   if(p.y<.02)expect(p.gear,`slot ${slot} on the ground at ${t.toFixed(1)}s`).toBeGreaterThan(.98);
+   if(p.y>1)lowest=Math.min(lowest,p.gear);
+   if(prev>=.5&&p.gear<.5)ups++;
+   if(prev<.5&&p.gear>=.5)downs++;
+   prev=p.gear;
+  }
+  expect(ups,`slot ${slot} retracts`).toBeGreaterThan(0);
+  expect(downs,`slot ${slot} lowers as often as it retracts`).toBe(ups);
+  expect(lowest).toBeLessThan(.02);
+ }
+});

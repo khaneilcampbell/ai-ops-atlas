@@ -1,6 +1,6 @@
 # Opportunity Scout
 
-Opportunity Scout is the second agent in the GitHub building (project `github-profile`, agent `github-opportunity-scout`), next to Merge Flow. It reads Atlas's own agent registry and asks one question: which of the agents and repositories KC already runs could make money, and what small agent would turn the best idea into revenue? It only recommends. Building, spending, contacting anyone and publishing stay with KC.
+Opportunity Scout is the second agent in the GitHub building (project `github-profile`, agent `github-opportunity-scout`), next to Merge Flow. It reads Atlas's own agent registry and asks one question: which of the agents and repositories Khaneil already runs could make money, and what small agent would turn the best idea into revenue? It only recommends. Building, spending, contacting anyone and publishing stay with Khaneil.
 
 ## How it runs
 

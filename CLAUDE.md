@@ -1,7 +1,7 @@
 # Working on Atlas
 
 Atlas is a Tauri Mac app and the same React app as a private web page (Cloudflare Pages). Every merge
-to `main` signs and publishes a Mac update that KC's installed app picks up within about 10 minutes,
+to `main` signs and publishes a Mac update that Khaneil's installed app picks up within about 10 minutes,
 and redeploys the web page. Treat every merge as a production release.
 
 ## Every change
@@ -16,7 +16,7 @@ and redeploys the web page. Treat every merge as a production release.
   screenshots at desktop and iPhone width.
 - Rust or Tauri changes: pull requests don't compile macOS. Run the CI workflow by hand on the branch
   with "Also build the macOS app" before asking to merge.
-- Never merge. KC merges, or says "merge" in the thread.
+- Never merge. Khaneil merges, or says "merge" in the thread.
 
 ## Keep the dashboard tabs current
 Khaneil's standing rule (2026-11-13): any change that adds, removes, renames or switches on or off

@@ -1,0 +1,1 @@
+- 2026-11-18 · Your 17 named agents now walk the city as characters that match their avatars: same hair, glasses, beards and clothes, standing at their real building with their portrait above them. Click or tap one to see their role, building and current task (#471)

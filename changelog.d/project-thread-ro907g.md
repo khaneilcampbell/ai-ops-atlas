@@ -1,0 +1,3 @@
+- 2026-11-15 · The train line and its stations now run on the ground, with a level crossing on the walk to the yacht dock (#433)
+- 2026-11-16 · Events Arena Station has a harbour-side platform that runs on as a boardwalk to a stair down to the yacht dock. The train opens its doors on both sides there, and yacht guests walk straight from the train to the dock (#433)
+- 2026-11-16 · A Transit Gateway now joins the Events Arena Station plaza to the harbour boardwalk: a glass entrance lobby with a stair and a lift, an enclosed footbridge over the train track, and a covered stair down to the boardwalk. It replaces the level crossing, so nobody walks across the rails (#433)

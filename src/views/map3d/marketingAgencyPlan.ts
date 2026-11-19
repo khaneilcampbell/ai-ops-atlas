@@ -5,7 +5,7 @@ import {distanceToRoad} from './highway';
 
 /**
  * Benjaire Marketing Agency, on new land in the open bay between Benjaire HQ, Benjaire Dashboard
- * and the Financial District (KC, 2026-10-31). An original Atlas building: a monolithic cream
+ * and the Financial District (Khaneil, 2026-10-31). An original Atlas building: a monolithic cream
  * mass cut by a diagonal glazed slot, a perforated diamond screen that fades from dense to sparse,
  * and a copper-framed sweep of glass over a reflecting-pool plaza.
  *

@@ -1,0 +1,1 @@
+- 2026-11-17 · Atlas now reads as your private command center: Mission Control opens with a Command brief (what agents are doing, what needs you, what's costing money and more), Workspace shows your businesses and projects by category, tool cards show which projects, agents and workflows use them, and setup wording is for one owner, with no client or marketplace language (#PR)

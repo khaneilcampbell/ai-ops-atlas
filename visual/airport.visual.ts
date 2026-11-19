@@ -2,7 +2,7 @@ import { test, type Page } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
-/** Atlas Airport redesign views (KC, 2026-10-31). Writes screenshots to SHOT_DIR; no baseline compare.
+/** Atlas Airport redesign views (Khaneil, 2026-10-31). Writes screenshots to SHOT_DIR; no baseline compare.
  * Cameras are given in airport-local coordinates (x across, z along the runway) and mapped to the world,
  * including the west-facing mirror, by reading the airport plan from the Airport component's props. */
 const out = process.env.SHOT_DIR ?? "artifacts/airport";

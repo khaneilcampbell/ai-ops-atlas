@@ -58,13 +58,21 @@ agents:
         outputs: [Markdown case note in notes/]
         dependencies: [bruteforce-detection]
         limitations: [Lab only; Splunk at https://localhost:8089 with TLS verification disabled]
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Case note per detection run
+            kind: throughput
+            target: One structured note per run
+            basis: Its only output
+        objective: Write a reviewable case note for every detection run.
       execution:
         trigger_type: manual
         environment: Lab VM
       governance:
         autonomy: 0
         data_sensitivity: internal
-        credential_owner: KC (lab Splunk account, set as environment variables)
+        credential_owner: Khaneil (lab Splunk account, set as environment variables)
         risk: low
       docs:
         technical: WALKTHROUGH.md
@@ -108,17 +116,30 @@ agents:
         outcomes:
           - One row per account and source over the threshold, rated by severity
       responsibilities:
-        tasks: [Flag repeated failed SMB logons from one source]
+        tasks: [Flag repeated failed SMB logons from one source, Rate each source's severity by failed logon count]
         tools: [Splunk SPL]
         inputs: [WinEventLog:Security in index main]
         outputs: ["Rows with account, source address, count and severity"]
+        dependencies:
+          - Splunk index main (WinEventLog:Security)
+        limitations:
+          - Fixed 5 minute buckets can split one burst and miss it
+          - Whether it runs as a scheduled alert is not in the repository
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Repeated failed logons flagged
+            kind: quality
+            target: Every source over the failed-logon threshold is flagged
+            basis: The search's purpose
+        objective: Flag brute-force logon attempts from one source.
       execution:
         trigger_type: manual
         environment: Splunk Enterprise (lab)
       governance:
         autonomy: 0
         data_sensitivity: internal
-        credential_owner: KC (lab Splunk account)
+        credential_owner: Khaneil (lab Splunk account)
         risk: low
       docs:
         technical: WALKTHROUGH.md
@@ -157,19 +178,25 @@ agents:
       mission:
         problem: Keeps the detection query and case note generator from breaking silently.
         outcomes: ["Every pull request is linted and tested before merge"]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Lint soc_automation.py, Test the SPL detection logic, Test Splunk REST calls with a mocked API, Test case note output]
         tools: [GitHub Actions, ruff, pytest]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Tests the detection logic, not a live Splunk instance
       goals:
         objective: Catch broken detection or reporting logic before merge.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -178,7 +205,7 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
       docs:
         technical: README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#soc-lab-ci
@@ -203,7 +230,21 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Threat Detection Analyst, Security Case Documentation Specialist, Detection Quality Engineer, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Connor Walsh
+        accent: "#38BDF8"
+        intro: "I own the brute-force detection lab: the Splunk search for repeated failed logons, the case notes written from its results, and the tests that keep both working. Detection and case notes are still run by hand."
+        voice: "Incident-report style: source, count, window, evidence; no speculation."
+        appearance: "Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt"
+        portrait:
+          path: agents/soc-detection-lead.webp
+          model: gpt_image_2_6
+          job_id: a704bcd2-b729-420e-96f3-46e3a4698fd3
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Security Detection Lead
       category: security
       subcategory: Threat detection
@@ -213,10 +254,35 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: The detection, its case notes and its tests need one owner so the lab stays working and documented.
+        outcomes:
+          - Repeated failed logons are flagged
+          - Each detection run has a case note
+          - Tests pass on every change
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks: [Flag repeated failed logons from one source, Write case notes from the results, Test the detection and case notes on every change]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Windows Security events in Splunk
+        dependencies:
+          - bruteforce-detection
+          - soc-case-notes
+          - soc-lab-ci
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Detection and case notes are still run by hand
+      goals:
+        objective: Keep the brute-force detection lab working and documented.
+        review_frequency: Quarterly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
       execution:
         trigger_type: manual
         environment: Through its automations
@@ -224,5 +290,9 @@ agents:
         autonomy: 0
         autonomy_note: Detects and documents only; it blocks nothing.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#soc-lab-ci
+        last_review: 2026-11-17

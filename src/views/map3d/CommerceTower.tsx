@@ -31,7 +31,8 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
  const geo=useMemo(()=>packNormals(commerceGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
-  const silver=glassTexture('#7f9fb8','#d4e2ec','#56718a',73),gold=glassTexture('#d7b06c','#f7e6bd','#b98d4f',89);
+  // Sage-green glass in place of the silver-blue, like the city artwork (2026-11-17); the gold bands stay.
+  const silver=glassTexture('#8aa898','#d6e4da','#5e7a6b',73),gold=glassTexture('#d7b06c','#f7e6bd','#b98d4f',89);
   const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:.18,metalness:.25}));
   return {
    textures:[silver.map,silver.glow,gold.map,gold.glow],

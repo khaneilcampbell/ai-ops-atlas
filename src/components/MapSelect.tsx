@@ -14,10 +14,12 @@ export interface MapSelectProps<T extends string> {
   short?: (v: T) => string;
   onChange: (v: T) => void;
   disabled?: boolean;
+  /** Options listed but not selectable right now, such as 3D-only views on the flat map. */
+  optionDisabled?: (v: T) => boolean;
   title?: string;
 }
 
-export function MapSelect<T extends string>({ label, value, options, text, short, onChange, disabled, title }: MapSelectProps<T>) {
+export function MapSelect<T extends string>({ label, value, options, text, short, onChange, disabled, optionDisabled, title }: MapSelectProps<T>) {
   return (
     <label className={`map-group${disabled ? " disabled" : ""}`} title={title}>
       <span className="map-group-face" aria-hidden="true">
@@ -27,7 +29,7 @@ export function MapSelect<T extends string>({ label, value, options, text, short
       </span>
       <select aria-label={label} disabled={disabled} value={value} onChange={(e) => onChange(e.target.value as T)}>
         {options.map((o) => (
-          <option key={o} value={o}>
+          <option key={o} value={o} disabled={optionDisabled?.(o)}>
             {text(o)}
           </option>
         ))}

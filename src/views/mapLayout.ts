@@ -92,7 +92,7 @@ export const CLEARED_LOTS: ReadonlySet<string> = new Set(["benjaire-ops"]);
 /**
  * Lots of removed towers whose manifest is gone too. Career Applications' repository
  * (khaneilcampbell/career-application-system) was deleted on GitHub and its catalog file removed
- * (KC, 2026-11-10), but its land stays a vacant lot so no other building moves. Each entry holds only
+ * (Khaneil, 2026-11-10), but its land stays a vacant lot so no other building moves. Each entry holds only
  * what the layout reads: the lot's size comes from a district with nothing in it (5 across, as
  * before), its groupings from the old manifest, and it goes right after `after` in catalog order.
  */
@@ -250,17 +250,17 @@ export function districtSize(lotCount: number, projectId?: string) {
 /**
  * Districts widened past what their houses and kiosks need, to fit a custom-built headquarters
  * and its grounds. The Commerce district holds the teardrop tower and its garden podium
- * (KC, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
+ * (Khaneil, 2026-11-01: "expand district landscape to fit design"). The Intelligence Hub district has
  * about twice its usual land (7.5 across, from 5: 2.25x the area, the nearest step on the grid),
- * and its building widens with it by the usual HQ share (KC, 2026-11-08: "expand intelligence hub
+ * and its building widens with it by the usual HQ share (Khaneil, 2026-11-08: "expand intelligence hub
  * district size land mass 2x bigger"). Sizes stay on the 2.5 grid.
  */
-export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5 };
+export const DISTRICT_MIN_SIZE: Record<string, number> = { "commerce-pipeline": 10, "intelligence-hub": 7.5, "portfolio-site": 7.5 };
 
 /**
  * The headquarters' share of a district's width, where a custom-built HQ needs more ground than
  * the usual 0.26: the Commerce tower's podium is the whole teardrop site, half as wide again as
- * the tower (KC, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
+ * the tower (Khaneil, 2026-11-01). Roads, paths and the plaza re-route round the bigger footprint.
  */
 export const DISTRICT_HQ_SHARE: Record<string, number> = { "commerce-pipeline": 0.36 };
 const MATCH_OPERATIONS_WIDTH = new Set(["ai-ops-atlas", "benjaire-site", "portfolio-site", "github-profile", "soc-lab"]);
@@ -359,7 +359,9 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     const items: Item[] = b.projects
       .map((project): Item & { fit: number } => {
         const r = residents(agentsByProject.get(project.id) ?? []);
-        const s = districtSize(r.houses.length + r.services.length, project.id);
+        // Portfolio grows into the free space to its east and south in the complete city.
+        // Keep the established shelf cells so protected landmarks and Commons stay anchored.
+        const s = districtSize(r.houses.length + r.services.length, project.id === "portfolio-site" ? undefined : project.id);
         const fit = districtSize(r.houses.length + r.services.length);
         return vacant(project) ? { vacant: project.id, w: s, h: s, fit } : { project, w: s, h: s, fit };
       })
@@ -417,7 +419,15 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
     // Each island's meadow fills its whole shelf cell plus half the gap, so neighbors' patches meet.
     for (const it of blk.inner.placed) meadows.push({ ox: blk.x + it.x - g2, oy: blk.y + it.cy - g2, w: it.w + GAP, h: it.ch + GAP });
     const lotId = (it: Item) => it.vacant ? `park:vacant:${it.vacant}` : `park:${blk.key}`;
-    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? lotId(it), x: blk.x + it.x, y: blk.y + it.y, w: it.w, h: it.h }));
+    // Grow only within the established city envelope; filtered layouts retain their fallback.
+    const edgeX = Math.max(...outer.placed.map(b => b.x + b.w));
+    const edgeY = Math.max(...outer.placed.map(b => b.y + b.h));
+    const parcelSize = (it: Placed<Item>) => {
+      if (it.project?.id !== "portfolio-site") return it.w;
+      const size = Math.max(it.w, DISTRICT_MIN_SIZE["portfolio-site"]);
+      return blk.x + it.x + size <= edgeX && blk.y + it.y + size <= edgeY ? size : it.w;
+    };
+    const own = blk.inner.placed.map((it) => ({ id: it.project?.id ?? lotId(it), x: blk.x + it.x, y: blk.y + it.y, w: parcelSize(it), h: it.project ? parcelSize(it) : it.h }));
     if (joined) rects.push(...own);
     else walks.push(...walkways(own));
     for (const it of blk.inner.placed) {
@@ -435,7 +445,7 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const agents = agentsByProject.get(project.id) ?? [];
       const { crew, houses, services } = residents(agents);
       const n = houses.length + services.length;
-      const size = it.w;
+      const size = parcelSize(it);
       const m = n ? ringFor(n) : 2;
       const operationsWidth = districtSize(0, "intelligence-hub") * .34;
       const hqSize = Math.max(n ? size * (DISTRICT_HQ_SHARE[project.id] ?? 0.26) : size * 0.34, MATCH_OPERATIONS_WIDTH.has(project.id) ? operationsWidth : 0);
@@ -611,8 +621,12 @@ export interface LabelBox {
  * Greedy placement: labels are taken in priority order. Each tries its preferred spot, then its
  * alternatives, and is hidden only when every spot overlaps a label already placed. A coarse grid
  * keeps this near linear for hundreds of labels. Returns the chosen vertical offset per shown label.
+ *
+ * `prev` is the last placement. While the camera moves, a label that was shown keeps its spot and
+ * needs only half the padding to stay, so labels at the edge of a collision don't flicker on and
+ * off or hop between spots from one frame to the next.
  */
-export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
+export function placeLabels(boxes: LabelBox[], pad = 4, prev?: ReadonlyMap<string, number>): Map<string, number> {
   const CELL = 160;
   const grid = new Map<string, LabelBox[]>();
   const shown = new Map<string, number>();
@@ -622,13 +636,16 @@ export function placeLabels(boxes: LabelBox[], pad = 4): Map<string, number> {
       for (let cy = Math.floor((b.top - pad) / CELL); cy <= Math.floor((b.bottom + pad) / CELL); cy++) out.push(`${cx},${cy}`);
     return out;
   };
-  const hits = (a: LabelBox, b: LabelBox) =>
-    Math.abs(a.x - b.x) * 2 < a.w + b.w + pad * 2 && a.top < b.bottom + pad && b.top < a.bottom + pad;
+  const hits = (a: LabelBox, b: LabelBox, gap: number) =>
+    Math.abs(a.x - b.x) * 2 < a.w + b.w + gap * 2 && a.top < b.bottom + gap && b.top < a.bottom + gap;
   for (const b of [...boxes].sort((p, q) => p.priority - q.priority)) {
-    for (const dy of [0, ...(b.alts ?? [])]) {
+    const was = prev?.get(b.id);
+    const spots = [0, ...(b.alts ?? [])];
+    for (const dy of was === undefined ? spots : [was, ...spots.filter((s) => s !== was)]) {
       const c = { ...b, top: b.top + dy, bottom: b.bottom + dy };
       const keys = cells(c);
-      if (keys.some((k) => grid.get(k)?.some((o) => hits(c, o)))) continue;
+      const gap = dy === was ? pad / 2 : pad;
+      if (keys.some((k) => grid.get(k)?.some((o) => hits(c, o, gap)))) continue;
       shown.set(b.id, dy);
       for (const k of keys) grid.set(k, [...(grid.get(k) ?? []), c]);
       break;

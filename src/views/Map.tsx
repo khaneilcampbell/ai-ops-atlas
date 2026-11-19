@@ -7,16 +7,23 @@ import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAiAgent, residentsLabel } from "../catalog/roles";
 import { agentJobs } from "../catalog/agentJobs";
+import { usePresenceAssignments } from "../catalog/agentPresence";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
 import { ConnectionPanel } from "../components/ConnectionPanel";
 import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
+import { usePlazaEffects, usePlazaSnapshot } from "../plaza/usePlaza";
+import { plazaSummary, signText } from "../plaza/plazaState";
+import { n8nWorkflowIds } from "../n8n/runs";
+import { PLAZA_KEY } from "./map3d/plazaPlan";
+import type { PlazaProps } from "./map3d/Map3D";
 import type { LightMode } from "./map3d/living";
-import { buildConnections, liveLandmarkConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
+import { useRuntimes } from "./office/activity";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
-import { LENS_INFO, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
+import { LENS_INFO, LENS_TYPES, lensLinks, lensNeeds3d, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
@@ -44,6 +51,7 @@ import {
 } from "./mapLayout";
 import { measure, SANS, SERIF, wrap } from "./mapText";
 import type { Map3DApi, MapLink } from "./map3d/Map3D";
+import { ControlsHelp } from "./map3d/ControlsHelp";
 import { webglAvailable } from "./map3d/webgl";
 import { leaveBuilding, useOffice } from "./office/store";
 
@@ -397,7 +405,6 @@ function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scal
 const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", paused: "pause", attention: "alert", retired: "close" };
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const repoShort = (name: string) => name.split("/")[1] ?? name;
-const GROUP_LABEL: Record<GroupBy, string> = { district: "By district", none: "No grouping", status: "By status", tag: "By tag" };
 
 /** Where things sit in world space, for camera moves, hit lookups and keyboard navigation. */
 function anchors(districts: District[], parks: Park[]) {
@@ -435,9 +442,12 @@ export function MapView({active=true}:{active?:boolean}) {
   }, [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
+  // District names are on unless "none" was saved (the old "No grouping"; visual tests still use it for
+  // clean screenshots). By status and By tag drew the same names as By district, so they read as district.
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => (load<GroupBy>("mapProjectGrouping", "district") === "none" ? "none" : "district"));
   const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
-  const jobs = useMemo(() => agentJobs(catalog), [catalog]);
+  const assignments = usePresenceAssignments();
+  const jobs = useMemo(() => agentJobs(catalog, assignments), [catalog, assignments]);
   const where = useMemo(() => anchors(layout.districts, layout.parks), [layout]);
   const reduced = useReducedMotion();
   // The 3D neighborhood is the default; the flat isometric map stays as a lighter fallback.
@@ -465,6 +475,7 @@ export function MapView({active=true}:{active?:boolean}) {
   useEffect(() => { if (!active) leaveBuilding(true); }, [active]);
   const displayNeighborhoods = useMemo(() => districtHeadings(layout, groupBy), [layout, groupBy]);
   const map3d = useRef<Map3DApi>(null);
+  const [controlsHelp, setControlsHelp] = useState(false);
   const phone = useMedia(PHONE_QUERY);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
@@ -482,7 +493,25 @@ export function MapView({active=true}:{active?:boolean}) {
   const [linkSel, setLinkSel] = useState<string | null>(null);
   // Live landmarks drive both their status dots and their line to Atlas Command Center.
   const live = useLiveLandmarks();
-  const connections = useMemo(() => [...buildConnections(catalog, repos), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live]);
+  // Flow lines (feed reports, n8n workflows) carry their agents' live states, as their desks do.
+  // Keyed by the states themselves, so a feed tick that changes nothing doesn't rebuild the lines.
+  const runtimeMap = useRuntimes();
+  const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
+  const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Atlas Automation Plaza: the same runtimes, plus Task Center tasks and n8n runs (plaza/plazaState.ts).
+  const plazaSnap = usePlazaSnapshot(runtimes);
+  const plazaPathProjects = useMemo(() => new Set(catalog.agents.filter((a) => a.observe?.githubWorkflow || a.observe?.agentFeed || n8nWorkflowIds(a).length).map((a) => a.projectId)), [catalog]);
+  const plazaEffects = usePlazaEffects(plazaSnap, (key) => plazaPathProjects.has(key.replace(/^project:/, "")));
+  const plazaSign = useMemo(() => signText(plazaSnap), [plazaSnap]);
+  const plaza = useMemo<PlazaProps>(
+    () => ({
+      view: { connection: plazaSnap.connection, preview: plazaSnap.preview, running: plazaSnap.running.length, queued: plazaSnap.queued.length, attention: plazaSnap.attention.length, sign: plazaSign },
+      effects: plazaEffects,
+      automationProjects: plazaPathProjects,
+    }),
+    [plazaSnap, plazaSign, plazaEffects, plazaPathProjects],
+  );
+  const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
   const allLinks = useMemo<MapLink[]>(
@@ -499,6 +528,8 @@ export function MapView({active=true}:{active?:boolean}) {
     const saved = load<MapLens>("mapLens", "infrastructure");
     return MAP_LENSES.includes(saved) ? saved : "infrastructure";
   });
+  // The flat map draws no connection lines, so it always reads as "By district"; the saved 3D view returns with 3D.
+  const shownLens: MapLens = is3d ? lens : "infrastructure";
   const setLens = (l: MapLens) => {
     setLensState(l);
     save("mapLens", l);
@@ -934,8 +965,10 @@ export function MapView({active=true}:{active?:boolean}) {
     const dir = dirs[e.key];
     if (dir) {
       e.preventDefault();
-      if (e.shiftKey && !is3d) panBy(-dir[0] * 120, -dir[1] * 120);
-      else moveFocus(dir[0], dir[1]);
+      // Shift with an arrow moves the map. In 3D the map moves itself while the keys are held (keys.ts).
+      if (e.shiftKey) {
+        if (!is3d) panBy(-dir[0] * 120, -dir[1] * 120);
+      } else moveFocus(dir[0], dir[1]);
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (focused) select({ kind: "project", id: focused.project.id });
@@ -944,6 +977,7 @@ export function MapView({active=true}:{active?:boolean}) {
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
     else if (is3d && e.key === "i") setInside(!inside);
+    else if (is3d && e.key === "?") setControlsHelp((o) => !o);
   };
 
   return (
@@ -960,7 +994,7 @@ export function MapView({active=true}:{active?:boolean}) {
           tabIndex={0}
           role="application"
           aria-roledescription="map"
-          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows pan, I shows inside the buildings."
+          aria-label="Workspace map. Arrow keys move between projects, Enter inspects, plus and minus zoom, 0 fits, Shift and arrows or W A S D pan, Q and E turn, R and F tilt, I shows inside the buildings, question mark lists every control."
           onKeyDown={onKeyDown}
           onPointerDown={(e) => {
             if (e.button !== 0 || is3d) return;
@@ -1033,6 +1067,7 @@ export function MapView({active=true}:{active?:boolean}) {
               healthFor={healthFor}
               landmarkMarks={landmarkMarks}
               light={light}
+              plaza={plaza}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);
@@ -1188,6 +1223,13 @@ export function MapView({active=true}:{active?:boolean}) {
             </dl>
           </section>
 
+          {/* The plaza's text equivalent: one keyboard stop that announces its live status and opens its panel. */}
+          {is3d && (
+            <button type="button" className="plaza-a11y" onClick={() => select({ kind: "service", id: PLAZA_KEY.slice("service:".length) })} aria-describedby="plaza-a11y-status">
+              Atlas Automation Plaza: {plazaSign.status}
+              <span id="plaza-a11y-status" className="sr-only" aria-live="polite">{plazaSummary(plazaSnap)}</span>
+            </button>
+          )}
           {tip && (
             <div className="map-tip" style={{ left: tip.x, top: tip.y }}>
               <div className="t">{tip.title}</div>
@@ -1196,10 +1238,12 @@ export function MapView({active=true}:{active?:boolean}) {
           )}
 
           <div className="map-controls">
-            <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
-              title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
-            <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Keep district locations and clean district names; no grouping hides district headings" />
+            {/* One menu for the city's view. "By district" brings back the district names as well as the
+                quiet infrastructure lines, so picking it always changes something you can see. */}
+            <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].short}
+              onChange={(l) => { setLens(l); if (l === "infrastructure") setGroupBy("district"); }}
+              optionDisabled={(l) => !is3d && lensNeeds3d(l)}
+              title={is3d ? LENS_INFO[shownLens].hint : "The flat map shows the city by district. Agent network and Automation flow need the 3D map."} />
             <span className="sep" />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
@@ -1250,12 +1294,29 @@ export function MapView({active=true}:{active?:boolean}) {
                   <ConnectionsMenu
                     prefs={{...linkPrefs,on:linkPrefs.on||lens!=="infrastructure"}}
                     counts={linkCounts}
+                    types={LENS_TYPES[lens]}
                     picked={!!pickedLink}
                     onChange={p=>{setLinkPrefs(p);if(p.on===false){setLensState("infrastructure");save("mapLens","infrastructure");}setLinkSel(null);}}
                     onClear={() => setLinkSel(null)}
                     onClose={() => setLinksMenu(false)}
                   />
                 )}
+              </div>
+            )}
+            {is3d && !phone && (
+              <div className="map-menu-wrap">
+                <button
+                  className={`icon-btn ${controlsHelp ? "on" : ""}`}
+                  onClick={() => setControlsHelp(!controlsHelp)}
+                  aria-expanded={controlsHelp}
+                  aria-haspopup="dialog"
+                  aria-label="Map controls"
+                  aria-keyshortcuts="?"
+                  title="Map controls for trackpad, mouse and keyboard (?)"
+                >
+                  <Icon name="keyboard" size={17} />
+                </button>
+                {controlsHelp && <ControlsHelp onClose={() => setControlsHelp(false)} />}
               </div>
             )}
             {is3d && (
@@ -1332,9 +1393,11 @@ interface LinkPrefs {
 const LINK_DEFAULTS: LinkPrefs = { on: false, types: { github: true, agent: true, n8n: true, dependency: true }, focus: true, paused: false };
 
 /** The toolbar's Connections popover: what to draw, focus mode and animation. */
-function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: {
+function ConnectionsMenu({ prefs, counts, types, picked, onChange, onClear, onClose }: {
   prefs: LinkPrefs;
   counts: Record<ConnectionType, number>;
+  /** The colors this view draws; the key shows only these, plus red for failures. */
+  types: readonly ConnectionType[];
   picked: boolean;
   onChange: (p: Partial<LinkPrefs>) => void;
   onClear: () => void;
@@ -1351,7 +1414,7 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
       window.removeEventListener("keydown", esc);
     };
   }, [onClose]);
-  const missing = CONNECTION_TYPES.filter((t) => !counts[t]);
+  const missing = types.filter((t) => !counts[t]);
   return (
     <div className="map-menu" ref={ref} role="dialog" aria-label="Connections">
       <label className="row strong">
@@ -1359,7 +1422,7 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
         Show all connections in this view
       </label>
       <div className="group">
-        {CONNECTION_TYPES.map((t) => (
+        {types.map((t) => (
           <label key={t} className="row">
             <input type="checkbox" checked={prefs.types[t]} onChange={(e) => onChange({ types: { ...prefs.types, [t]: e.target.checked } })} />
             <i className="swatch" style={{ background: LINK_COLORS[t].day }} />
@@ -1367,6 +1430,10 @@ function ConnectionsMenu({ prefs, counts, picked, onChange, onClear, onClose }: 
             <span className="count">{counts[t] || "None yet"}</span>
           </label>
         ))}
+        <div className="row key">
+          <i className="swatch" style={{ background: LINK_COLORS.unhealthy.day }} />
+          Failing, any kind
+        </div>
       </div>
       <label className="row">
         <input type="checkbox" checked={prefs.focus} onChange={(e) => onChange({ focus: e.target.checked })} />

@@ -1,6 +1,6 @@
 # Runbooks: AI Career Application Optimization System
 
-Repository: [khaneilcampbell/job-applications-workflow](https://github.com/khaneilcampbell/job-applications-workflow) (private). Personal data lives only in the git-ignored `private/` folder on KC's machine. The repository's own guides: `docs/workflow.md` (by hand in a Claude Project) and `docs/automation.md` (the `jobflow` command line).
+Repository: [khaneilcampbell/job-applications-workflow](https://github.com/khaneilcampbell/job-applications-workflow) (private). Personal data lives only in the git-ignored `private/` folder on Khaneil's machine. The repository's own guides: `docs/workflow.md` (by hand in a Claude Project) and `docs/automation.md` (the `jobflow` command line).
 
 ## Job analysis, tailoring and quality review
 

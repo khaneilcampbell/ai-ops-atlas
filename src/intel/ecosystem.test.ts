@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { telemetryFor } from "../registry/telemetry";
 import { recordsFromRuns } from "../usage/model";
-import { REVIEW_AGENT_ID, REVIEW_AGENT_NAME, ecosystemContext, isReviewRun } from "./ecosystem";
+import { REVIEW_AGENT_ID, REVIEW_AGENT_NAME, ecosystemContext, isReviewRun, reportsToAtlas } from "./ecosystem";
 import type { Run } from "./types";
 
 const run = (p: Partial<Run>): Run => ({
@@ -38,6 +38,24 @@ describe("engineering review context", () => {
     expect(me.kind).toBe("A");
     expect(me.telemetry).toBe(true);
     expect(me.project).toBe("Atlas Command Center");
+  });
+
+  it("counts every live source as telemetry, not only workflows and the run log", () => {
+    const tel = (id: string) => ctx.agents.find((a) => a.id === id)!.telemetry;
+    // Run feed (/api/hooks/agents), reports inbox (/api/hooks/reports), desktop action audit log.
+    expect(tel("benjaire-contact-worker")).toBe(true);
+    expect(tel("order-delivery")).toBe(true);
+    expect(tel("benjaire-product-lab")).toBe(true);
+    expect(tel("atlas-rerun-failed")).toBe(true);
+    expect(reportsToAtlas({ id: "nothing-connected", observe: undefined })).toBe(false);
+  });
+
+  it("passes each agent's kill switch and caps to the review", () => {
+    const worker = ctx.agents.find((a) => a.id === "benjaire-contact-worker")!;
+    expect(worker.caps).toMatch(/20 a minute site-wide/);
+    expect(worker.kill_switch).toMatch(/CONTACT_PAUSED/);
+    const delivery = ctx.agents.find((a) => a.id === "order-delivery")!;
+    expect(delivery.kill_switch).toMatch(/customer_emails_paused/);
   });
 
   it("keeps review runs and repository runs apart", () => {

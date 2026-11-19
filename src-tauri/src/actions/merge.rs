@@ -17,7 +17,7 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-/// How Atlas merges: one squashed commit, the way KC merges by hand.
+/// How Atlas merges: one squashed commit, the way Khaneil merges by hand.
 pub const MERGE_METHOD: &str = "squash";
 
 /// The merge request, implemented by the Keychain-backed client in `client.rs`.

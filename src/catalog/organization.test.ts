@@ -55,12 +55,12 @@ describe("agent tiers", () => {
   const tiers = (t: string) => [...org.records.values()].filter((r) => r.tier.value === t).map((r) => r.id).sort();
 
   it("puts Atlas agents that work across repositories at the center", () => {
-    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-github-steward", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
+    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
   });
 
   it("makes orchestrators coordinators", () => {
     expect(tiers("coordinator")).toEqual([
-      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "soc-detection-lead",
+      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "site-builder", "soc-detection-lead",
     ]);
   });
 
@@ -75,9 +75,10 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
+      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
+        "atlas-sales-feed",
         "benjaire-contact-worker",
         "benjaire-flow-digest",
         "benjaire-flow-errors",
@@ -113,8 +114,8 @@ describe("automation categories", () => {
           "visual-director",
       ],
       monitoring: ["atlas-health-monitor", "benjaire-ops-monitor", "health-report"],
-      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-performance-reviewer", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-reliability-reviewer", "atlas-ui-improvement-designer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
-      maintenance: ["agent-registry-sync", "atlas-github-steward", "atlas-system-improvements", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
+      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
+      maintenance: ["agent-registry-sync", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
 

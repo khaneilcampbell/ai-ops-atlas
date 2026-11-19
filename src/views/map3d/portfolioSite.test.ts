@@ -3,7 +3,7 @@ import {catalog} from '../../catalog';
 import {layoutMap} from '../mapLayout';
 import {buildScene,FLOOR_H} from './scene';
 import {headquartersEnvelope} from './financialPlan';
-import {PORTFOLIO_SITE,planPortfolioSite,portfolioSiteReach,portfolioSiteRoof,portfolioSiteTop} from './portfolioSitePlan';
+import {PORTFOLIO_SITE,planPortfolioSite,portfolioSiteReach,portfolioSiteTop} from './portfolioSitePlan';
 import {towerRing} from './roads';
 import {TRANSPORT} from './transportScale';
 
@@ -17,9 +17,24 @@ describe('Portfolio Site',()=>{
   expect(plan.lines).toHaveLength(PORTFOLIO_SITE.floors+1);
   expect(PORTFOLIO_SITE.storey).toBeGreaterThan(FLOOR_H*.95);
   expect(PORTFOLIO_SITE.storey).toBeLessThan(FLOOR_H*1.15);
-  expect(tower.customHeight).toBeCloseTo(portfolioSiteRoof());
+  expect(planPortfolioSite(tower.customHeight).top).toBeCloseTo(scene.towers.find(t=>t.projectId==='intelligence-hub')!.customHeight!);
   expect(plan.top).toBeCloseTo(portfolioSiteTop());
   expect(plan.top).toBeGreaterThan(plan.roof);
+ });
+
+ it('keeps the matched-height façade valid without adding floors',()=>{
+  const matched=planPortfolioSite(tower.customHeight);
+  expect(matched.lines).toHaveLength(PORTFOLIO_SITE.floors+1);
+  expect(matched.roof).toBeGreaterThan(plan.roof);
+  for(const box of matched.boxes)expect(box.y1).toBeGreaterThan(box.y0);
+ });
+
+ it('aligns both brown wall tops with the lower roof edge',()=>{
+  for(const roof of [plan.roof,tower.customHeight!]){
+   const walls=planPortfolioSite(roof).boxes.filter(box=>box.kind==='slats'&&box.y0===PORTFOLIO_SITE.ground-PORTFOLIO_SITE.slab);
+   expect(walls).toHaveLength(2);
+   for(const wall of walls)expect(wall.y1).toBeCloseTo(roof);
+  }
  });
 
  it('does not move the Financial District reference height',()=>{

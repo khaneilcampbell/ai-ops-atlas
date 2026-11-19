@@ -6,7 +6,7 @@
 // held by the desktop shell (the Keychain, read only by Rust) or by the hosted site's server
 // functions. Anything that writes is authorized there, not in the page.
 
-export const INTEGRATION_IDS = ["github", "agent-feed", "live-feed", "atlas-intel", "usage-sync", "n8n", "github-security"] as const;
+export const INTEGRATION_IDS = ["github", "agent-feed", "live-feed", "atlas-intel", "usage-sync", "n8n", "github-security", "stripe-sales"] as const;
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
 /** Where an integration's credentials are held. "none" means it needs none to read. */
@@ -65,6 +65,13 @@ const CONTRACTS: IntegrationContract[] = [
     provides: ["Open Dependabot, code scanning and secret scanning alert counts", "Alert severities"],
     // The site's GITHUB_TOKEN reads alerts on both; the Mac app asks the site with its sync key, so alert reads never use the Mac's token.
     access: "read", credentials: { desktop: "site-server", web: "site-server" }, client: "src/security/alerts.ts",
+  },
+  {
+    id: "stripe-sales", version: V, label: "Stripe sales (via n8n)",
+    provides: ["Paid Stripe checkouts: ids, amounts, refunds, Stripe fees and dates (no buyer details)"],
+    // Read on demand only. The site starts the restricted Atlas · Sales feed n8n workflow with the bridge key;
+    // n8n holds the restricted Stripe read key. The Mac app asks the site with its sync key.
+    access: "read", credentials: { desktop: "site-server", web: "site-server" }, client: "src/business/stripeClient.ts",
   },
 ];
 

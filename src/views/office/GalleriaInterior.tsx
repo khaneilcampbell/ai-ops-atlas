@@ -120,7 +120,7 @@ type P3=[number,number,number];
 /** One flight between floors: up and down escalators in a pair across the atrium, and a stair from the basement. */
 export interface GalleriaRun {from:number;kind:'up'|'down'|'stair';foot:P3;top:P3}
 /**
- * The flights that start on `floor` (KC, 2026-11-08): each shopping floor pair has an up and a down escalator side by
+ * The flights that start on `floor` (Khaneil, 2026-11-08): each shopping floor pair has an up and a down escalator side by
  * side, crossing the atrium at 30°, and the basement has a stair beside the lift core up to the ground floor.
  */
 export function galleriaRuns(floor:number):GalleriaRun[]{
@@ -151,7 +151,7 @@ function gallery(k:number):Pt[]{
  return l.map(([x,y])=>{const d=Math.hypot(x-cx,y-cy)||1;return toIn([x+(x-cx)/d*k,y+(y-cy)/d*k]);});
 }
 /**
- * Shoppers, staff and drivers on one floor (KC, 2026-11-08), as AgencyCrowd paths at the floor's
+ * Shoppers, staff and drivers on one floor (Khaneil, 2026-11-08), as AgencyCrowd paths at the floor's
  * own height: strollers circle the gallery walk, shoppers step from it into a shop and back, one
  * member of staff stands in each unit, and in the basement drivers walk from the lift to the cars.
  */
@@ -202,7 +202,7 @@ function Atrium({top,night,shift=0,ceiling}:{top:number;night:boolean;shift?:num
  const clip=useMemo(()=>ceiling===undefined?[]:[new THREE.Plane(new THREE.Vector3(0,-1,0),ceiling)],[ceiling]);
  return <group>
   <group position={[x,BASE[1]-shift,z]}>
-   {/* A solid steel funnel (KC, 2026-11-08); the gridshell ribs sit just proud of its skin. */}
+   {/* A solid steel funnel (Khaneil, 2026-11-08); the gridshell ribs sit just proud of its skin. */}
    <mesh geometry={geo} castShadow><meshStandardMaterial color="#f1f2ec" roughness={.4} metalness={.15} side={THREE.DoubleSide} clippingPlanes={clip}/></mesh>
    <mesh geometry={geo} scale={[1.012,1,1.012]}><meshBasicMaterial color="#b9c1b5" wireframe clippingPlanes={clip}/></mesh>
    {!clip.length&&<mesh position={[0,top,0]}><cylinderGeometry args={[R+.1,R+.1,.08,40]}/><meshStandardMaterial color="#dce2d5" transparent opacity={.55} emissive="#d0ad69" emissiveIntensity={night?.8:0} depthWrite={false}/></mesh>}
@@ -249,7 +249,7 @@ export default function GalleriaInterior({light}:{light:LightMode}){
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  const offset=(f:number)=>mode===ALL?BASE[f]:0;
  return <section className={`skyline-interior mall-interior galleria-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?'demand':'never'} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:[26,24,30],fov:42}} onCreated={({gl})=>{gl.localClippingEnabled=true;}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>

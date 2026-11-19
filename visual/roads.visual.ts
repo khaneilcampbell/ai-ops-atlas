@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
-/** One road standard across the city: streets, bridges, ramps (KC, 2026-10-31). Runs only with SHOT_DIR. */
+/** One road standard across the city: streets, bridges, ramps (Khaneil, 2026-10-31). Runs only with SHOT_DIR. */
 const out=process.env.SHOT_DIR??'';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){

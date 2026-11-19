@@ -13,7 +13,7 @@ export interface HostTarget {
   /** The repository whose default branch it deploys from. */
   repository: string;
   deploy: DeploySource;
-  /** Where KC goes to look at or retry a deploy. */
+  /** Where Khaneil goes to look at or retry a deploy. */
   console: { label: string; url: string };
   /** Set when a website dashboard already polls this host's deploys. */
   propertyId?: string;

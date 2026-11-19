@@ -53,7 +53,7 @@ export function walkerAt(w:DistrictWalker,seconds:number):WalkerState{
 }
 
 /**
- * How many simulated people to draw. KC's original twelve rail commuters always show; the rest
+ * How many simulated people to draw. Khaneil's original twelve rail commuters always show; the rest
  * scale with the quality governor (each level that trades pixels for speed draws fewer people)
  * and with Battery saver (half), so the crowd never costs a slow Mac its frame rate.
  */

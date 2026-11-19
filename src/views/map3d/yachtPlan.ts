@@ -96,13 +96,12 @@ export type RoutePoint=[number,number,number];
  * the cross dock and pontoon, up the passerelle and across the aft deck to the saloon doors. Agents
  * and visitors walk this both ways. Points are [x, y, z]; the stair is one straight sloping leg.
  */
-export function boardingRoute(m:MarinaSite,b:YachtBerth):RoutePoint[]{
+export function boardingRoute(m:MarinaSite,b:YachtBerth,head?:RoutePoint[]):RoutePoint[]{
  const cityTop=TERRACE_H+.03,dockTop=WATER_Y+.22,deckY=WATER_Y+YACHT_DECK_Y+.01,dockZ=b.pontoon.z;
  const saloonX=b.x+(YACHT.main.aftDeck-.12)*YACHT_SCALE;
+ // `head` replaces the way down to the pier root (the harbour platform's boardwalk and dog-leg stair); it ends there.
  return [
-  [m.x,cityTop,m.cityWalkZ],
-  [m.x,cityTop,m.pierZ-1.8],
-  [m.x,dockTop,m.pierZ],
+  ...(head??[[m.x,cityTop,m.cityWalkZ],[m.x,cityTop,m.pierZ-1.8],[m.x,dockTop,m.pierZ]] as RoutePoint[]),
   [m.x,dockTop,dockZ],
   [b.gangway.x,dockTop,dockZ],
   [b.gangway.x,dockTop,b.gangway.z0],

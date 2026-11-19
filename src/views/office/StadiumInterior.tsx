@@ -23,7 +23,7 @@ import '../../styles/skyline.css';
 
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
 const STONE='#d9d9d4',CREAM='#efefea',INK='#2b2a28',GLASS='#a9bdc9',COURT='#2f5f63',SURROUND='#4f6670',LINE='#f3f1e6',STEEL='#f2f2ef';
-/** Seat colours: blue rows, with a brown band across the front of the upper tier (KC's reference), no team colours. */
+/** Seat colours: blue rows, with a brown band across the front of the upper tier (Khaneil's reference), no team colours. */
 const SEAT=['#2e5a86','#336394'],BAND='#7a5a48';
 
 /** All the boxes of one view in one instanced mesh, coloured per piece (the AgencyInterior pattern). */
@@ -151,7 +151,7 @@ export default function StadiumInterior({light}:{light:LightMode}){
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  const mid=concourseMid(),title=all?'All · Open cutaway':STADIUM_VIEWS[view];
  return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows camera={{position:VIEW_EYES[-1],fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible?"demand":"never"} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:VIEW_EYES[-1],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.32:.75}/>

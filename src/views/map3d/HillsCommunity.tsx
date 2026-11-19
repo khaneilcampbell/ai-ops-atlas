@@ -7,7 +7,10 @@ import {agentAt,type CommutePlan} from './agentCommutes';
 import {crowdLimit,planDistrictWalkers,walkerAt} from './districtWalkers';
 import {useQualityLevel} from '../../lib/governor';
 import type {FinancialPlan} from './financialPlan';
-import {useMemo,useRef,useEffect} from 'react';
+import {useMemo,useRef,useEffect,useState} from 'react';
+import {AgentTag} from './AgentTag';
+import type {AgentTagInfo} from './agentTagInfo';
+import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
@@ -19,7 +22,8 @@ import {distanceToRoad,offsetRoad,roadIntersections} from './highway';
 import {openWalk} from './connectionGeometry';
 import {usePowerProfile,useWindowFocused} from '../../lib/power';
 import {blocksArea,supportPoint,type Area} from './marinaPlan';
-import {PARK_STATION,mergeStationParts,parkStationParts,placeParkStation} from './parkStationPlan';
+import {railCrossings,railCrossingParts} from './railCrossing';
+import {mergeStationParts,parkStationParts,placeParkStation} from './parkStationPlan';
 /** Bright shirt colours for the travellers on the loops, drawn unlit so they glow day and night. */
 export const GLOW_SHIRTS=['#4fe3ff','#ffd24d','#6dff9e','#ff7ad1','#a98bff','#ff9b45'];
 function useCommunityPalette(){return useMemo(()=>{const css=getComputedStyle(document.documentElement);return {green:css.getPropertyValue('--forest-700').trim()||'#294237',gold:css.getPropertyValue('--gold').trim()||'#c9a35a'};},[]);}
@@ -75,9 +79,24 @@ export function HillsCommunity({plan:p,g,m,pick,night}:{plan?:CommunityPlan;pick
  return <><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.glass} geometry={g.box} material={night?m.lamp:m.plain} pick={pick.of(parts.keys)}/><Instanced items={parts.plants} geometry={g.ball} material={m.plain}/><Instanced items={parts.lights} geometry={g.bead} material={night?m.lamp:m.plain}/></>;
 }
 /** Bullet carriage shell: underframe, skirt, body below and above the window band, accent lines, gangway. */
-const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
-/** Elevated track, platforms and stair approaches share the same sampled route as the train. */
-export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],g,m,pick,moving,night}:{plan?:RailPlan;travel?:TravelPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
+export const BULLET_BODY=(gold:string):Inst[]=>[{p:[0,-.07,0],s:[.42,.08,.8],c:'#33403f'},{p:[0,0,0],s:[.5,.2,1.02],c:'#f4f4ef'},{p:[0,.12,0],s:[.505,.03,1.02],c:gold},{p:[0,.05,0],s:[.505,.015,1.02],c:'#2d4f6a'},{p:[0,.44,0],s:[.5,.035,1.02],c:'#f4f4ef'},{p:[0,.02,.55],s:[.4,.4,.1],c:'#2f3a3c'}];
+/** The rest of each carriage, in the carriage's frame (floor at C.railRise+.1): roof cap (ball), door leaf (hinged at
+ * door.x, swings out a quarter turn), and the end cars' nose and windscreen (balls). Exported so the Transit Gateway can
+ * size the train's clearance envelope from the real shapes (transitGateway.test.ts). */
+export const TRAIN_ROOF:Inst={p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'};
+export const TRAIN_DOOR={x:.26,y:.16,z:.24,leaf:{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'} as Inst};
+export const TRAIN_NOSE=(end:1|-1):Inst[]=>[{p:[0,.2,end*.5],s:[.25,.27,.8],c:'#f4f4ef'},{p:[0,.4,end*.7],s:[.18,.09,.34]}];
+const NO_WALKS:[[number,number],[number,number]][]=[];
+/** Ground-level track, platforms and ramps share the same sampled route as the train. */
+export function CommunityRail({plan:p,travel,agents,community,financial,roads,clearRoads=[],keepClear=[],land,walks=NO_WALKS,bothSides,g,m,pick,moving,night,agentTag,onAgentHover}:{plan?:RailPlan;
+  /** The card for the agent under the pointer (map3d/agentTag.ts), and who is under it. */
+  agentTag?:AgentTagInfo|null;onAgentHover?:(agentId:string|null)=>void;
+  /** Loop stop with a platform on both sides (Events Arena Station's harbour platform): the train opens its doors both ways there. */
+  bothSides?:number;travel?:TravelPlan;agents?:CommutePlan;community?:CommunityPlan;financial?:FinancialPlan;roads:[number,number][][];
+  /** The city's land: the track runs on the ground here and on a low trestle with piers only where it is over water. */
+  land?:{x:number;z:number;w:number;d:number}[];
+  /** Ground walks (such as the forecourt walk to the yacht dock) that cross the track get a level crossing. */
+  walks?:[[number,number],[number,number]][];
   /** Drives the walks must open for but that draw their own crossings (the Galleria's driveways). */
   clearRoads?:[number,number][][];keepClear?:Area[];pick:PickHandlerSet;moving:boolean;night:boolean}&Shared){
  const power=usePowerProfile(),focused=useWindowFocused(),carriages=useRef<(THREE.Group|null)[]>([]),doors=useRef<(THREE.Group|null)[]>([]),bodies=useRef<THREE.InstancedMesh>(null),heads=useRef<THREE.InstancedMesh>(null),legs=useRef<THREE.InstancedMesh>(null),arms=useRef<THREE.InstancedMesh>(null),glowShirts=useRef<THREE.InstancedMesh>(null),gaits=useRef<Gait[]>([]),lastPlaced=useRef<number|undefined>(undefined),riders=useRef<(THREE.Group|null)[]>([]),elapsed=useRef(0),service=useRef<THREE.Group>(null);
@@ -87,39 +106,40 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  useEffect(()=>()=>trainGlass.dispose(),[trainGlass]);
  const stationGlass=useMemo(()=>new THREE.MeshStandardMaterial({color:'#ffffff',transparent:true,opacity:.42,depthWrite:false,roughness:.15,metalness:.3,emissive:night?'#ffe2a6':'#000000',emissiveIntensity:night?.25:0}),[night]);
  useEffect(()=>()=>stationGlass.dispose(),[stationGlass]);
- // Every perimeter loop stop wears the Dubai-style shell and glazed skybridge from #158 (KC, 2026-11-07).
+ // Every perimeter loop stop wears the Dubai-style shell and glazed skybridge from #158 (Khaneil, 2026-11-07).
  const station=useMemo(()=>{if(!p)return undefined;if(!p.loop)return parkStationParts(p.financial,TERRACE_H);const local=parkStationParts([0,0],TERRACE_H);return mergeStationParts(p.loop.stops.map(stop=>placeParkStation(local,stop)));},[p]);
  const palette=useCommunityPalette();
  const parts=useMemo(()=>{const solid:Inst[]=[],lights:Inst[]=[],platforms:Inst[]=[],paths:Inst[]=[],stationKeys:string[]=[];if(!p)return {solid,lights,platforms,paths,stationKeys};
  const track=deck!;
+ // Without land rects (older callers) everything counts as land: no piers, no parapets.
+ const onLand=(x:number,z:number)=>!land||land.some(r=>x>=r.x-.05&&x<=r.x+r.w+.05&&z>=r.z-.05&&z<=r.z+r.d+.05);
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string):Inst=>({p:[x,TERRACE_H+y,z],s:[w,h,d],c});
  const strip=(a:[number,number],b:[number,number],w:number,y:number,h:number,c:string,target=solid)=>target.push({p:[(a[0]+b[0])/2,TERRACE_H+y,(a[1]+b[1])/2],s:[w,h,Math.hypot(b[0]-a[0],b[1]-a[1])+.015],r:Math.atan2(b[0]-a[0],b[1]-a[1]),c});
- for(let i=1;i<track.route.length;i++)strip(track.route[i-1],track.route[i],1.08,C.railRise-.2,.2,'#c5beaa');
+ // A ballast bed set into the ground; where a side runs over water the same bed is a trestle deck on piers.
+ for(let i=1;i<track.route.length;i++){const a=track.route[i-1],b=track.route[i],wet=!onLand((a[0]+b[0])/2,(a[1]+b[1])/2);strip(a,b,wet?1.08:C.bedWidth,C.railRise-.2,.2,wet?'#c5beaa':'#9d978b');}
  for(const offset of [-.18,.18]){const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++)strip(line[i-1],line[i],.028,C.railRise+.045,.05,'#718785');}
  for(const offset of [-.51,.51]){
-  if(p.loop){for(let d=0;d<p.loop.length;d+=.5){const end=Math.min(p.loop.length,d+.5),mid=(d+end)/2;if(offset>0&&p.loop.stops.some(s=>Math.min(Math.abs(mid-s.distance),p.loop!.length-Math.abs(mid-s.distance))<4.4))continue;const a=loopPoint(p.loop,d),b=loopPoint(p.loop,end),normal=(q:typeof a):[number,number]=>[q.x-Math.cos(q.yaw)*offset,q.z+Math.sin(q.yaw)*offset];strip(normal(a),normal(b),.035,C.railRise+.45,.04,palette.green);}}
-  else{const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++){const at=track.lengths[i];if(at<5||at>track.length-5)continue;strip(line[i-1],line[i],.035,C.railRise+.45,.04,palette.green);}}
+  if(p.loop){for(let d=0;d<p.loop.length;d+=.5){const end=Math.min(p.loop.length,d+.5),mid=(d+end)/2;if(offset>0&&p.loop.stops.some(s=>Math.min(Math.abs(mid-s.distance),p.loop!.length-Math.abs(mid-s.distance))<4.4))continue;const a=loopPoint(p.loop,d),b=loopPoint(p.loop,end);if(onLand((a.x+b.x)/2,(a.z+b.z)/2))continue;const normal=(q:typeof a):[number,number]=>[q.x-Math.cos(q.yaw)*offset,q.z+Math.sin(q.yaw)*offset];strip(normal(a),normal(b),.035,C.railRise+.45,.04,palette.green);}}
+  else{const line=offsetRoad(track.route,offset);for(let i=1;i<line.length;i++){const at=track.lengths[i];if(at<5||at>track.length-5||onLand(line[i][0],line[i][1]))continue;strip(line[i-1],line[i],.035,C.railRise+.45,.04,palette.green);}}
  }
 
  for(let d=.3;d<track.length;d+=.48){const q=railPoint(track,d);solid.push({...box(q.x,C.railRise,q.z,.66,.035,.08,'#6d766e'),r:q.yaw});}
- for(let d=3;d<track.length;d+=PERIMETER_RAIL.supportSpacing){const q=railPoint(track,d),pier=supportPoint(track,d,keepClear);if(pier&&roads.every(path=>distanceToRoad([pier.x,pier.z],path)>1.4))solid.push({p:[pier.x,-1.2,pier.z],s:[.25,TERRACE_H+C.railRise+1,.4],c:'#bdb59e'});for(const side of [-1,1])if((!p.loop||side>0||!p.loop.stops.some(s=>Math.min(Math.abs(d-s.distance),p.loop!.length-Math.abs(d-s.distance))<4.4)))solid.push(box(q.x+Math.cos(q.yaw)*side*.51,C.railRise,q.z-Math.sin(q.yaw)*side*.51,.035,.45,.035,palette.green));}
+ // Piers and parapet posts only where the track is over water; on land it lies on its bed.
+ for(let d=3;d<track.length;d+=PERIMETER_RAIL.supportSpacing){const q=railPoint(track,d);if(onLand(q.x,q.z))continue;const pier=supportPoint(track,d,keepClear);if(pier&&roads.every(path=>distanceToRoad([pier.x,pier.z],path)>1.4))solid.push({p:[pier.x,-1.2,pier.z],s:[.25,TERRACE_H+C.railRise+1,.4],c:'#bdb59e'});for(const side of [-1,1])if((!p.loop||side>0||!p.loop.stops.some(s=>Math.min(Math.abs(d-s.distance),p.loop!.length-Math.abs(d-s.distance))<4.4)))solid.push(box(q.x+Math.cos(q.yaw)*side*.51,C.railRise,q.z-Math.sin(q.yaw)*side*.51,.035,.45,.035,palette.green));}
  const stops=p.loop?p.loop.stops.map(s=>({point:s.point,key:s.id,stop:s})):[p.hills,p.financial,...(p.airportLeg?[p.airportLeg.financial]:[])].map((point,index)=>({point,key:index===0?ATLAS_STATION_KEY:index===1?'service:financial-station':'service:airport-station',stop:undefined}));
  for(const [index,item]of stops.entries()){
   const [x,z]=p.loop?[0,0]:item.point,key=item.key;
   const begins=[solid.length,lights.length,platforms.length,paths.length];
-  platforms.push(box(x,C.platformRise-.2,z+.85,C.platformLength,.2,C.platformWidth,'#ded8c7'));stationKeys.push(key);
+  // The platform is a solid kerb from the ground up, beside the ground-level track.
+  platforms.push(box(x,-.02,z+.85,C.platformLength,C.platformRise+.02,C.platformWidth,'#ded8c7'));stationKeys.push(key);
   solid.push(box(x,C.platformRise+.005,z+.38,C.platformLength,.015,.07,'#d0ad69'));
   // Loop stops (and the old Financial Park stop) have the Dubai-style shell instead of the flat canopy (parkStationPlan).
   const shell=!!p.loop||index===1;
   if(!shell)solid.push(box(x,C.platformRise+1.15,z+.85,C.platformLength+.2,.08,.8,'#d9e3df'));
   for(const dx of [-3.5,3.5])solid.push(box(x+dx,C.platformRise,z+1.25,.07,1.15,.07,palette.green));
-  // Under a shell the lift stands just outside the glass, joined to the platform by a short landing.
-  const liftZ=shell?PARK_STATION.liftZ:1.3,liftFace=liftZ+.35;
-  solid.push(box(x+1,C.platformRise-.2,z+1.45,1,.2,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'),box(x-3.4,C.platformRise-.2,z+(shell?1.38:1.5),.7,.2,shell?.06:.5,'#ded8c7'));
-  strip([x+1,z+5.9],[x-3.4,z+5.9],.48,.075,.03,'#e3dfd2',paths);strip([x-3.4,z+5.9],[x-3.4,z+liftFace+.13],.48,.075,.03,'#e3dfd2',paths);
-  for(let i=0;i<15;i++)solid.push(box(x+1,C.platformRise*(1-(i+1)/15),z+1.7+i*.28,1,C.platformRise/15,.29,'#d6d0bd'));
-  // Separate protected lift and stairs make the raised platform reachable from ground paths.
-  solid.push(box(x-3.4,.02,z+liftZ,.65,C.platformRise+1,.7,shell?PARK_STATION.colors.lift:'#819f9b'),box(x-3.4,.05,z+liftFace+.02,.35,.8,.035,'#435e58'),box(x-3.4,C.platformRise+.05,z+(shell?liftZ-.37:liftFace+.02),.35,.8,.035,'#435e58'));
+  // With the platform at ground level a gentle step-free ramp replaces the tall stair and the lift tower.
+  solid.push(box(x+1,-.02,z+1.45,1,C.platformRise+.02,.5,'#ded8c7'),box(x+1,.035,z+5.9,1,.07,.7,'#ded8c7'));
+  for(let i=0;i<15;i++)solid.push(box(x+1,-.02,z+1.7+i*.28,1,C.platformRise*(1-i/15)+.02,.29,'#d6d0bd'));
   for(const dx of [-.58,.58]){solid.push({...box(x+1+dx,C.platformRise/2+.6,z+3.8,.035,.035,Math.hypot(C.platformRise,4.2),palette.green),rx:Math.atan2(C.platformRise,4.2)});}
   for(const dx of [-.58,.58])for(let i=0;i<15;i++)solid.push(box(x+1+dx,C.platformRise*(1-i/15),z+1.7+i*.28,.035,.6,.035,palette.green));
   for(const [dx,w]of [[-1.75,4.3],[2.75,2.3]])solid.push(box(x+dx,C.platformRise+.55,z+1.38,w,.035,.035,palette.green));
@@ -128,19 +148,23 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
    // Rotate the complete platform assembly, including stairs and lift, into its route frame.
    const stop=item.stop,angle=stop.yaw-Math.PI/2;
    for(const [items,begin]of [[solid,begins[0]],[lights,begins[1]],[platforms,begins[2]],[paths,begins[3]]] as [Inst[],number][])for(let i=begin;i<items.length;i++){const v=items[i],at=stationPoint(stop,v.p[0],v.p[2]);items[i]={...v,p:[at[0],v.p[1],at[1]],r:(v.r??0)+angle};}
-   for(const dx of [-3.5,3.5]){const at=stationPoint(stop,dx,.85);if(!blocksArea(keepClear,at[0],at[1],.15,.15))solid.push({p:[at[0],-1.2,at[1]],s:[.22,TERRACE_H+C.platformRise+1,.22],c:'#bdb59e'});}
+   for(const dx of [-3.5,3.5]){const at=stationPoint(stop,dx,.85);if(!onLand(at[0],at[1])&&!blocksArea(keepClear,at[0],at[1],.15,.15))solid.push({p:[at[0],-1.2,at[1]],s:[.22,TERRACE_H+C.platformRise+1,.22],c:'#bdb59e'});}
   }
 
  }
+ // Level crossings where a ground walk or a street meets the ground-level track (Khaneil, 2026-11-15), such as the
+ // forecourt walk to the yacht dock: a flush deck between the rails, white edges and a signal post on each approach.
+ const roadSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
+ for(const c of railCrossings(track.route,walks,roadSegs))if(onLand(c.at[0],c.at[1]))for(const part of railCrossingParts(c,night))solid.push({p:[part.p[0],TERRACE_H+part.p[1],part.p[2]],s:part.s,c:part.c,r:part.r});
  const streetSegs=[...roads,...clearRoads].flatMap(r=>r.slice(1).map((b,k)=>[r[k],b] as [[number,number],[number,number]]));
- // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (KC, 2026-11-08).
+ // Station walks open where a road or drive crosses them, so the raised path never stands in the road like a wall (Khaneil, 2026-11-08).
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])]))for(let i=1;i<path.length;i++)if(path[i][1]===0&&path[i-1][1]===0){
   // No slab on any carriageway, along, across or at a bend (crossings keep their zebra): Khaneil, 2026-11-13.
   for(const [a,b] of walkOffCarriageways([path[i-1][0],path[i-1][2]],[path[i][0],path[i][2]],streetSegs,TRANSPORT.walkWidth))paths.push(...openWalk(a,b,TRANSPORT.walkWidth,.075,.03,'#e3dfd2',[...roads,...clearRoads],TRANSPORT.cityWidth/2+.06,TERRACE_H));
  }
  for(const path of (p.loop?p.loop.stops.map(s=>s.walk):[p.financialWalk,p.hillsWalk,...(p.airportWalk?[p.airportWalk]:[])])){const ground=path.filter(point=>point[1]===0).map(point=>[point[0],point[2]] as [number,number]);for(const road of roads)for(const crossing of roadIntersections(road,ground)){let nearest=1;for(let i=2;i<road.length;i++)if(distanceToRoad(crossing,[road[i-1],road[i]])<distanceToRoad(crossing,[road[nearest-1],road[nearest]]))nearest=i;const a=road[nearest-1],b=road[nearest],yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);for(let d=-.55;d<=.55;d+=.14)solid.push({...box(crossing[0]+Math.cos(yaw)*d,.061,crossing[1]-Math.sin(yaw)*d,.065,.005,.48,'#f7f7f0'),r:yaw});}}
- return {solid,lights,platforms,paths,stationKeys};},[p,roads,clearRoads,keepClear,night,palette,deck]);
- // Simulated people, all drawn as two instanced meshes (bodies and heads): KC's twelve rail
+ return {solid,lights,platforms,paths,stationKeys};},[p,roads,clearRoads,keepClear,land,walks,night,palette,deck]);
+ // Simulated people, all drawn as two instanced meshes (bodies and heads): Khaneil's twelve rail
  // commuters first, then the AI agents walking between their Circa apartments and workplaces
  // (agentCommutes.ts, always drawn), then Financial District people riding to Hills places and
  // office workers walking the sidewalk between towers, interleaved so a smaller crowd keeps both kinds.
@@ -172,23 +196,29 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
    figureParts(at.x,y,at.z,at.yaw,stepGait(gait,at.x,at.z,dt),figure);if(i<glowing){body.setMatrixAt(i,hidden);glowShirts.current?.setMatrixAt(i,figure.torso);}else body.setMatrixAt(i,figure.torso);head.setMatrixAt(i,figure.head);
    for(const k of [0,1]){leg.setMatrixAt(i*2+k,figure.legs[k]);arm.setMatrixAt(i*2+k,figure.arms[k]);}
   }
-  for(const mesh of [body,head,leg,arm,glowShirts.current])if(mesh)mesh.instanceMatrix.needsUpdate=true;return {outbound,back};
+  for(const mesh of [body,head,leg,arm,glowShirts.current])if(mesh)mesh.instanceMatrix.needsUpdate=true;
+  // People move every frame, so the pointer's hit test re-measures them (only when Khaneil points).
+  body.boundingSphere=head.boundingSphere=null;return {outbound,back};
  };
  useEffect(()=>{placePeople(elapsed.current);});
+ // Pointing at (or on a phone tapping) an AI agent walking outside names it (AgentTag), so it is known away from its desk.
+ const [tagIndex,setTagIndex]=useState<number|null>(null);
+ const overAgent=(e:ThreeEvent<PointerEvent|MouseEvent>)=>{const i=e.instanceId,agent=i!=null&&i<limit?people[i]?.agent:undefined;if(!agent||i==null)return;e.stopPropagation();if(i!==tagIndex){setTagIndex(i);onAgentHover?.(agent.agentId);}};
+ const leaveAgent=()=>{if(tagIndex===null)return;setTagIndex(null);onAgentHover?.(null);};
  useEffect(()=>()=>{TRAVEL_CLOCK.live=false;},[]);
- useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);if(p.loop){TRAVEL_CLOCK.t=elapsed.current;TRAVEL_CLOCK.live=true;}const state=p.loop?loopState(elapsed.current,p.loop):railServiceState(elapsed.current,p),aboard=placePeople(elapsed.current);if(service.current&&p.loop)service.current.userData={visualSimulation:true,elapsed:elapsed.current,station:'station' in state?state.station:-1};riders.current.forEach(r=>{if(r)r.visible=p.loop?aboard.outbound||aboard.back:('phase' in state&&((state.phase==='outbound'||state.phase==='airport-outbound')&&aboard.outbound||(state.phase==='return'||state.phase==='airport-return')&&aboard.back));});carriages.current.forEach((car,i)=>{if(!car)return;const q=p.loop?loopPoint(p.loop,state.distance+(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(p.loop?(i%2?0:-1):(i%2?1:-1));});});
+ useFrame((_,delta)=>{if(!p||!deck||!enabled)return;elapsed.current+=Math.min(delta,.15);if(p.loop){TRAVEL_CLOCK.t=elapsed.current;TRAVEL_CLOCK.live=true;}const state=p.loop?loopState(elapsed.current,p.loop):railServiceState(elapsed.current,p),aboard=placePeople(elapsed.current);if(service.current&&p.loop)service.current.userData={visualSimulation:true,elapsed:elapsed.current,station:'station' in state?state.station:-1};riders.current.forEach(r=>{if(r)r.visible=p.loop?aboard.outbound||aboard.back:('phase' in state&&((state.phase==='outbound'||state.phase==='airport-outbound')&&aboard.outbound||(state.phase==='return'||state.phase==='airport-return')&&aboard.back));});carriages.current.forEach((car,i)=>{if(!car)return;const q=p.loop?loopPoint(p.loop,state.distance+(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+state.distance+(i-1)*C.carriageSpacing);car.position.set(q.x,TERRACE_H+C.railRise+.1,q.z);car.rotation.y=q.yaw;});const both=p.loop&&'station' in state&&bothSides!==undefined&&state.station===bothSides;doors.current.forEach((door,i)=>{if(door)door.rotation.y=state.doors*Math.PI/2*(p.loop&&!both?(i%2?0:-1):(i%2?1:-1));});});
  if(!p||!deck)return null;
  return <><group name="atlas-perimeter-railway"><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
  </group>{station&&<><Instanced items={station.metal} geometry={g.box} material={m.metal}/><Instanced items={station.accents} geometry={g.box} material={m.plain}/><Instanced items={station.glass} geometry={g.box} material={stationGlass} shadow={false}/></>}
  <group name="atlas-passenger-train" ref={service}>{[0,1,2].map(i=>{const start=p.loop?loopPoint(p.loop,(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
   {/* Bullet train: low white body, a continuous window band, gold line, and gangways between cars. */}
   <Instanced geometry={g.box} material={m.plain} items={BULLET_BODY(palette.gold)}/>
-  <Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.47,0],s:[.25,.08,.5],c:'#f4f4ef'}]}/>
+  <Instanced geometry={g.ball} material={m.plain} items={[TRAIN_ROOF]}/>
   <Instanced geometry={g.box} material={trainGlass} items={[-1,1].map(side=>({p:[side*.256,.2,0],s:[.015,.24,.9],c:night?'#f4dfb1':'#86b0b8'} as Inst))}/>
-  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*.26,.16,.24]} rotation={[0,0,0]}><Instanced geometry={g.box} material={m.plain} items={[{p:[0,0,.09],s:[.014,.4,.18],c:'#779b9f'}]}/></group>)}
+  {[-1,1].map((side,k)=><group key={side} ref={node=>{doors.current[i*2+k]=node;}} position={[side*TRAIN_DOOR.x,TRAIN_DOOR.y,TRAIN_DOOR.z]} rotation={[0,0,0]}><Instanced geometry={g.box} material={m.plain} items={[TRAIN_DOOR.leaf]}/></group>)}
   <group ref={node=>{riders.current[i]=node;}} visible={false}><Instanced geometry={g.box} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.16,z],s:[.06,.09,.06],c:palette.green}))}/><Instanced geometry={g.bead} material={m.plain} items={[-.2,.2].map(z=>({p:[0,.25,z],s:[.035,.035,.035],c:'#c6ad8f'}))}/></group>
-  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[{p:[0,.2,i===0?-.5:.5],s:[.25,.27,.8],c:'#f4f4ef'}]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[{p:[0,.4,i===0?-.7:.7],s:[.18,.09,.34]}]}/></>}
+  {i!==1&&<><Instanced geometry={g.ball} material={m.plain} items={[TRAIN_NOSE(i===0?-1:1)[0]]}/><Instanced geometry={g.ball} material={m.darkGlass} items={[TRAIN_NOSE(i===0?-1:1)[1]]}/></>}
  </group>;})}</group>
- {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false}/><instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
+ {count>0&&<><instancedMesh name="rail-commuters" ref={bodies} args={[g.box,m.plain,count]} castShadow frustumCulled={false} onPointerMove={agentCount?overAgent:undefined} onClick={agentCount?overAgent:undefined} onPointerOut={agentCount?leaveAgent:undefined}/><instancedMesh ref={heads} args={[g.bead,m.plain,count]} frustumCulled={false} onPointerMove={agentCount?overAgent:undefined} onClick={agentCount?overAgent:undefined} onPointerOut={agentCount?leaveAgent:undefined}/>{tagIndex!==null&&agentTag&&people[tagIndex]?.agent?.agentId===agentTag.agentId&&<AgentTag mesh={bodies} index={tagIndex} info={agentTag}/>}<instancedMesh name="rail-commuter-legs" ref={legs} args={[g.box,m.plain,count*2]} frustumCulled={false}/><instancedMesh name="rail-commuter-arms" ref={arms} args={[g.box,m.plain,count*2]} frustumCulled={false}/>{glowing>0&&<instancedMesh name="travel-glow-shirts" ref={glowShirts} args={[g.box,glowShirt,glowing]} frustumCulled={false}/>}</>}
  </>;
 }

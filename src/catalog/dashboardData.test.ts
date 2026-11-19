@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from ".";
 import { servicesOf } from "./roles";
-import { n8nWorkflowId } from "../n8n/runs";
+import { n8nWorkflowId, workflowOwners } from "../n8n/runs";
 
 // Guards for the data behind the dashboard tabs (CLAUDE.md, "Keep the dashboard tabs current").
 // They check what the manifests can prove on their own: live workflows the Atlas tabs can match,
@@ -15,6 +15,16 @@ describe("dashboard tab data", () => {
     const workflows = live.filter((a) => /n8n/i.test(a.runtime ?? "") && !/\bagent\b/i.test(a.framework));
     const missing = workflows.filter((a) => !n8nWorkflowId(a)).map((a) => a.id);
     expect(missing, "add a links entry labelled \"n8n workflow\" pointing at …/workflow/<id>").toEqual([]);
+  });
+
+  it("names the agent behind every n8n workflow an n8n Agent calls as a tool, so the plaza never shows \"No agent named\"", () => {
+    // Read from the n8n Agents' tool lists (2026-11-18). These workflows have no trigger of their own,
+    // so nothing else in the catalog would point at them.
+    const agentTools: Record<string, string> = {
+      ABtXhTwIRF9FkNGv: "benjaire-product-lab", // Commerce · Product Lab hand-off: read_shop_sales, propose_shop_product
+    };
+    const owners = workflowOwners(live.map((a) => ({ name: a.id, links: a.links })));
+    for (const [id, agent] of Object.entries(agentTools)) expect(owners.get(id), id).toBe(agent);
   });
 
   it("never marks an agent active while its own trigger says it is a draft or not switched on", () => {

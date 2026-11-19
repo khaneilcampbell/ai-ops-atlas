@@ -2,7 +2,7 @@ import type {Tower} from './scene';
 import {headquartersEnvelope} from './financialPlan';
 
 /**
- * The SOC Lab as a glass and steel tower, after KC's reference image (2026-11-09):
+ * The SOC Lab as a glass and steel tower, after Khaneil's reference image (2026-11-09):
  * - a blue glass curtain-wall core with thin vertical mullions;
  * - one full-height steel spine on the side the map looks at (+x), its face an exposed frame of
  *   columns, ties and zigzag diagonal braces;
