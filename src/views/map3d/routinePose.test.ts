@@ -56,7 +56,7 @@ describe("drawing the routine", () => {
     expect(withDesk.length).toBeGreaterThanOrEqual(10);
     for (const a of withDesk) {
       const i = named.agents.indexOf(a), desk = places.agents.get(a.personaId)!.desk!;
-      const r = planRoutine({ personaId: a.personaId, ops: running(a.personaId, NOW - 10 * MIN), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW });
+      const r = planRoutine({ personaId: a.personaId, deskShare: 0, ops: running(a.personaId, NOW - 10 * MIN), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW });
       const work = r.segments.find((s) => s.kind === "inside" && s.phase === "working")!;
       expect(work, a.personaId).toBeTruthy();
       const t = (work.t0 + Math.min(work.t1, NOW + 30 * MIN)) / 2;

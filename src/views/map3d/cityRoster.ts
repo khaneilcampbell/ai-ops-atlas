@@ -3,7 +3,7 @@ import { isAiAgent } from "../../catalog/roles";
 import { identityFor, type ResolvedIdentity } from "../../registry/identity";
 import { DEFAULT_TIME_ZONE } from "../../routine/cron";
 import { OPERATIONAL_LABEL, type AgentOps } from "../../routine/operations";
-import { clock, runWorking, type Segment } from "../../routine/routine";
+import { clock, inFreeTime, runWorking, type Segment } from "../../routine/routine";
 
 /**
  * The map's "City agents" roster (CityAgentsPanel.tsx): one row per active named agent, built from
@@ -158,7 +158,7 @@ export function rosterRow(i: RowInput): RosterRow {
     activity,
     location: i.place || null,
     // Free time is a city picture: out of the office between work, not at home asleep.
-    free: !!seg && seg.phase === null && seg.activity !== "at_home",
+    free: inFreeTime(seg),
     working: work.tone === "running" || (!!seg && runWorking(seg)),
     attention: work.tone === "attention" || i.identityStatus === "failed",
   };

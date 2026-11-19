@@ -107,6 +107,8 @@ export interface WorkRef {
   alreadyStarted: boolean;
   /** How it ended, once known. */
   outcome: "succeeded" | "failed" | "cancelled" | "unconfirmed" | "no_run" | "waiting" | null;
+  /** Free time spent at its own desk: no run, nothing due (Khaneil, 2026-11-19: "Desks during work hours"). */
+  idle?: true;
 }
 
 export interface Routine {
@@ -159,6 +161,10 @@ export const ROUTINE = {
   aheadMin: 90,
   /** Share of free-time picks spent outside the agent's own building (the rest are outings). */
   nearOffice: 0.65,
+  /** Share of daytime free-time picks spent sitting at its own desk (Khaneil chose "Desks during work hours", 2026-11-19). */
+  atDesk: 0.7,
+  /** Minutes of one idle spell at the desk, shortest and longest. */
+  deskMin: [20, 45] as [number, number],
   /** Night at home, in the agent's time zone. */
   night: [23, 7] as [number, number],
 } as const;
@@ -316,6 +322,8 @@ export interface RoutineInput {
    * it drops what it's doing (getting safely off a ride first) and goes to this kind of outing.
    * "any" picks one it likes. Only the picture changes: work still calls it in as usual.
    */
+  /** Share of daytime free time picks spent at the desk (default ROUTINE.atDesk); tests of the commute set 0. */
+  deskShare?: number;
   outing?: { kind: LeisureKind | "any"; at: number; /** How it travels there (default "auto"). */ travel?: TravelMode } | null;
 }
 
@@ -472,6 +480,8 @@ export function planRoutine(input: RoutineInput): Routine {
         continue;
       }
       const seed = `${personaId}:${Math.floor(cur.t / MIN)}`;
+      // Most daytime free time is at its own desk; outings now and then.
+      if (left > 5 * MIN && rand(`${seed}:desk`) < (input.deskShare ?? ROUTINE.atDesk) && deskSpell(limit, seed)) continue;
       // Choose an outing that fits: the walk there, the stay or ride, and the walk on to the office.
       const fits = env.leisure.filter((o) => {
         const go = env.travel(cur.at, o.spot);
@@ -509,6 +519,33 @@ export function planRoutine(input: RoutineInput): Routine {
       doOuting(pick, seed, scheduled);
     }
     return false;
+  };
+
+  /**
+   * An idle spell at its own desk, ending at night or in time for the next scheduled run (`stopAt`). Like an
+   * outing it never ends at the planning horizon, so the day is the same whenever it's recomputed.
+   * Returns false when there's no room for one (the loop then picks an outing).
+   */
+  const deskSpell = (stopAt: number, seed: string): boolean => {
+    const back = env.travel(cur.at, env.office);
+    const walk = atSpot(cur.at) === env.office ? 0 : (Number.isFinite(back) ? back : 20) * S;
+    const [lo, hi] = ROUTINE.deskMin;
+    let end = Math.min(stopAt, cur.t + walk + (ROUTINE.enter + ROUTINE.toDesk) * S + (lo + rand(`${seed}:deskstay`) * (hi - lo)) * MIN);
+    for (let u = cur.t; u < end; u += 5 * MIN) if (isNight(u, tz)) { end = u; break; }
+    const seated = end - (walk + (ROUTINE.enter + ROUTINE.toDesk + ROUTINE.leave) * S);
+    if (seated - cur.t < 5 * MIN) return false;
+    const work: WorkRef = { label: "Free time at its desk", runs: [], scheduledAt: null, alreadyStarted: false, outcome: null, idle: true };
+    walkTo(env.office, "walking", null, "Walking back to its desk");
+    const inside = (phase: WorkPhase, t1: number, note: string) => {
+      push({ kind: "inside", t0: cur.t, t1, at: env.office, activity: "at_desk", phase, note, work });
+      cur.t = Math.max(cur.t, t1);
+    };
+    inside("entering", cur.t + ROUTINE.enter * S, "Entering the building");
+    inside("to_desk", cur.t + ROUTINE.toDesk * S, "Going to its desk");
+    inside("working", Math.max(cur.t, end - ROUTINE.leave * S), "At its desk, no task running");
+    inside("leaving", Math.max(cur.t, end), "Leaving the office");
+    cur.at = { spot: env.office };
+    return true;
   };
 
   /** Cut the free time at `t` (an unexpected run): where the agent is then, after getting safely off any ride. */
@@ -668,6 +705,16 @@ export function runWorking(seg: Segment): boolean {
 /** Seated at its own desk (not walking in, up to it, or out): the office inside draws it in its chair. */
 export function seatedAtDesk(seg: Segment | null): boolean {
   return !!seg && seg.kind === "inside" && seg.phase !== "entering" && seg.phase !== "to_desk" && seg.phase !== "leaving";
+}
+
+/** Sitting at its desk in free time (or walking in or out for it): no run, so it can still be sent on free time. */
+export function idleAtDesk(seg: Segment | null): boolean {
+  return !!seg && seg.kind === "inside" && !!seg.work.idle;
+}
+
+/** In its free time: between work, not at home asleep (at its desk with nothing running counts). */
+export function inFreeTime(seg: Segment | null): boolean {
+  return !!seg && ((seg.phase === null && seg.activity !== "at_home") || idleAtDesk(seg));
 }
 
 /** What the card says the agent is doing in the city: "Working" only while a run is really running. */

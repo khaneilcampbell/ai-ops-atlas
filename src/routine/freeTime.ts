@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { load, save } from "../lib/storage";
-import type { LeisureKind, Segment, TravelMode } from "./routine";
+import { idleAtDesk, type LeisureKind, type Segment, type TravelMode } from "./routine";
 
 /**
  * "Free time" from Atlas: Khaneil sends an agent that has nothing to do off to something in the city
@@ -64,7 +64,7 @@ export function freshRequests(all: Record<string, unknown>, now: number): Map<st
 export function freeTimeAvailability(seg: Segment | null, held: boolean): { ok: true } | { ok: false; reason: string } {
   if (held) return { ok: false, reason: "Its city routine is paused in Atlas (Schedule), so it stays home." };
   if (!seg) return { ok: false, reason: "Not placed on the map yet. Switch on the 3D map." };
-  if (seg.phase !== null) return { ok: false, reason: "Busy with work right now. Free time comes after the task." };
+  if (seg.phase !== null && !idleAtDesk(seg)) return { ok: false, reason: "Busy with work right now. Free time comes after the task." };
   return { ok: true };
 }
 

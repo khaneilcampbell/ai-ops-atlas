@@ -34,7 +34,7 @@ const MOMENTS: { name: string; at: number; runs: Run[]; office?: boolean; expect
   { name: "1-heading-to-office", at: SCHEDULED - 75_000, runs: [], expect: /Heading to office|Entering building|Going to desk|At desk|Finishing up/i },
   { name: "2-working-at-desk", at: SCHEDULED + 70_000, runs: [{ id: "901", status: "running", mode: "trigger", startedAt: iso(SCHEDULED + 2000), stoppedAt: null }], office: true, expect: /Working/ },
   { name: "3-task-completed", at: SCHEDULED + 130_000, runs: [{ id: "901", status: "success", mode: "trigger", startedAt: iso(SCHEDULED + 2000), stoppedAt: iso(SCHEDULED + 124_000) }], office: true, expect: /Task completed|Leaving office/ },
-  { name: "4-free-time", at: SCHEDULED + 25 * MIN, runs: [{ id: "901", status: "success", mode: "trigger", startedAt: iso(SCHEDULED + 2000), stoppedAt: iso(SCHEDULED + 124_000) }], expect: /Relaxing|Walking|Riding|Visiting|At home/ },
+  { name: "4-free-time", at: SCHEDULED + 25 * MIN, runs: [{ id: "901", status: "success", mode: "trigger", startedAt: iso(SCHEDULED + 2000), stoppedAt: iso(SCHEDULED + 124_000) }], expect: /Relaxing|Walking|Riding|Visiting|At home|At desk|Going to desk|Entering building|Leaving office/ },
 ];
 
 async function routineOf(page: Page) {
