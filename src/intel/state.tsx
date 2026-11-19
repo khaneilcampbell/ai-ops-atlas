@@ -130,5 +130,5 @@ export function useIntel(): IntelState {
 /** What the website needs to show a run: status, timing and cost. No trace, prompts or report text. */
 function liveRun(r: Run): Partial<Run> {
   const { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd } = r;
-  return { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd, error: r.error ? { ...r.error, message: "" } : null, usage: null, estimate: null, trace: [] };
+  return { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd, error: r.error ? { ...r.error, message: "" } : null, usage: r.usage ?? null, estimate: null, trace: [] };
 }
