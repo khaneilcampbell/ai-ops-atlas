@@ -25,9 +25,11 @@ export interface AgentPlaces {
   work: Place;
 }
 
+/** Automations aren't drawn in the building, so their default addresses keep their own numbering, apart from agents'. */
+const AUTOMATION_UNITS = { firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
 /** Automations' apartments: Ellipse Residences East, four units a floor from the top floor down. */
 export function automationHomes(ids: string[]): Map<string, string> {
-  const R = AGENT_RESIDENCE;
+  const R = { ...AGENT_RESIDENCE, ...AUTOMATION_UNITS };
   const top = R.firstFloor + R.floors - 1;
   const residence = buildingDisplayName("service:financial:circa", R.name);
   const out = new Map<string, string>();

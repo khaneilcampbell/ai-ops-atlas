@@ -9,7 +9,8 @@ describe("agent places", () => {
   it("gives every catalog agent a home and a work building", () => {
     for (const a of catalog.agents) {
       const p = places.get(a.id)!;
-      expect(p.home.label, a.id).toMatch(/apartment \d+[A-D]$/);
+      // Working agents: an apartment drawn inside (301 to 606). Automations: their own numbering. Off duty: none.
+      expect(p.home.label, a.id).toMatch(/apartment ([3-6]0[1-6]|\d+[A-D])$|no apartment while (planned|paused|retired)$/);
       expect(p.work.label.length, a.id).toBeGreaterThan(0);
     }
   });
@@ -19,7 +20,7 @@ describe("agent places", () => {
   });
 
   it("never puts two agents in one apartment", () => {
-    const homes = [...places.values()].map((p) => p.home.label);
+    const homes = [...places.values()].map((p) => p.home.label).filter((l) => !l.includes("no apartment"));
     expect(new Set(homes).size).toBe(homes.length);
   });
 

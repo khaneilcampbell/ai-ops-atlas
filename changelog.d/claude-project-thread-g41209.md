@@ -1,0 +1,1 @@
+- 2026-11-19 · Agents now show inside Team Residence Towers: each one lives in the apartment its home card names, is home by its own day (evenings and nights), walks its own rooms with one trip to the pool deck or lobby, and sleeps in its bedroom at night. The old looping stand-ins are gone (#PR)

@@ -10,11 +10,13 @@ describe("agent jobs", () => {
     expect(jobs.map((j) => j.agentId)).toEqual(catalog.agents.filter(isAiAgent).map((a) => a.id));
     expect(jobs.length).toBeGreaterThan(10);
   });
-  it("gives each agent its own Circa apartment, stable across catalog order", () => {
-    const units = jobs.map((j) => `${j.home.label}`);
-    expect(new Set(units).size).toBe(jobs.length);
+  it("gives each working agent its own Circa apartment, stable across catalog order", () => {
+    const working = jobs.filter((j) => !j.offDuty);
+    expect(new Set(working.map((j) => j.home.label)).size).toBe(working.length);
+    // Off duty agents hold no apartment, so they never take one a working agent needs.
+    for (const j of jobs.filter((j) => j.offDuty)) expect(j.home).toMatchObject({ unit: "", label: expect.stringContaining(`no apartment while ${j.offDuty}`) });
     expect(jobs.every((j) => j.home.building === AGENT_RESIDENCE.id)).toBe(true);
-    const reversed = apartments(jobs.map((j) => j.agentId).reverse());
+    const reversed = apartments(jobs.map((j) => j.agentId).reverse(), new Map(jobs.flatMap((j) => (j.offDuty ? [[j.agentId, j.offDuty] as const] : []))));
     for (const j of jobs) expect(reversed.get(j.agentId)).toEqual(j.home);
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
