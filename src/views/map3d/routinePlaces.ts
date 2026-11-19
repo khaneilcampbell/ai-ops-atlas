@@ -12,10 +12,11 @@ import { along, commuterRoute, type CommuterRoute } from "./railCommuters";
 import { ENTRANCE, type Pt3 } from "./roads";
 import { TERRACE_H, type Scene3D } from "./scene";
 import { stadiumGate } from "./stadiumGeometry";
-import { WHEEL } from "./stationPlazaPlan";
+import { WHEEL, WHEEL_CABIN } from "./stationPlazaPlan";
 import { buildStreetGraph, streetLines, streetRoute, type StreetGraph } from "./streetGraph";
 import { TRAVEL, TRAVEL_CLOCK, travelPlan } from "./travelLoops";
 import { marinaSite } from "./marinaPlan";
+import { COMMONS_BENCH } from "./commonsPlan";
 import { boardingRoute } from "./yachtPlan";
 
 /**
@@ -44,8 +45,10 @@ export interface CitySpot {
   yaw: number;
   /** Standing here means being inside (a home, the arena, the terminal): the figure isn't drawn. */
   inside: boolean;
-  /** Several agents can stand here: each gets its own place in a row this far apart. */
+  /** Several agents can stand here: each gets its own place in a row this far apart (never closer than one agent's width, agentBody.ts). */
   spread?: number;
+  /** A bench at the spot's point: its seat surface (world height) and length; the front row sits on it. */
+  bench?: { y: number; length: number };
 }
 
 export interface DeskSeat {
@@ -169,7 +172,7 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
   if (c && c.benches.length) {
     c.benches.slice(0, 6).forEach((bench, i) => {
       const entry = c.access.service;
-      opt({ id: `park:commons:${i}`, kind: "park", label: "Relaxing in the Commons", spot: `park:commons:${i}`, exit: `park:commons:${i}`, stay: [240, 720] }, { id: `park:commons:${i}`, label: "The Commons", path: [street(entry), [bench[0], STREET_Y - 0.075, bench[1]]], yaw: (c.benchRotations[i] ?? 0) + Math.PI, inside: false, spread: 0.18 });
+      opt({ id: `park:commons:${i}`, kind: "park", label: "Relaxing in the Commons", spot: `park:commons:${i}`, exit: `park:commons:${i}`, stay: [240, 720] }, { id: `park:commons:${i}`, label: "The Commons", path: [street(entry), [bench[0], STREET_Y - 0.075, bench[1]]], yaw: (c.benchRotations[i] ?? 0) + Math.PI, inside: false, spread: 0.18, bench: { y: TERRACE_H + COMMONS_BENCH.seat, length: COMMONS_BENCH.length } });
     });
   }
   for (const p of scene.parks.filter((x) => /park|garden|green/i.test(x.label)).slice(0, 3)) {
@@ -296,6 +299,8 @@ export class CityRoutes {
 /** Ferris wheel speed, radians a second, and cabins (StationFerrisWheel.tsx turns by the wall clock). */
 export const WHEEL_SPEED = 0.045;
 export const WHEEL_CABINS = 12;
+/** Whether the wheel is turning (StationFerrisWheel sets it; reduced motion holds it still). */
+export const WHEEL_LIVE = { turning: true };
 const TAU = Math.PI * 2;
 /** The wheel's angle at a wall clock time. The wheel itself reads this, so riders and cabins agree. */
 export const wheelAngle = (wallMs: number) => ((wallMs / 1000) * WHEEL_SPEED) % TAU;
@@ -389,11 +394,13 @@ export function routineEnv(routes: CityRoutes, personaId: string, now: () => num
   };
 }
 
-/** Where a rider sits aboard at `wall`: a wheel cabin, a train carriage, or the yacht's deck. */
+/** Where a rider is aboard at `wall`: its wheel cabin's seat surface, a train carriage, or the yacht's main deck at her centre. */
 export function riderPoint(places: CityPlaces, kind: LeisureOption["kind"], personaId: string, wall: number, yachtPose?: { x: number; z: number; yaw: number }): Pt3 | null {
   if (kind === "wheel" && places.wheel) {
-    const w = places.wheel, i = Math.floor(rand(`${personaId}:cabin`) * WHEEL_CABINS), a = cabinAngle(i, wall);
-    return [w.x + Math.cos(a) * w.radius, w.hubY + Math.sin(a) * w.radius - 0.34, w.z];
+    const w = places.wheel, i = Math.floor(rand(`${personaId}:cabin`) * WHEEL_CABINS);
+    const a = WHEEL_LIVE.turning ? cabinAngle(i, wall) : (i * TAU) / WHEEL_CABINS;
+    // The seat surface in its cabin (stationPlazaPlan WHEEL_CABIN): the pose sits the hips on it.
+    return [w.x + Math.cos(a) * w.radius, w.hubY + Math.sin(a) * w.radius + WHEEL_CABIN.seatY, w.z + WHEEL_CABIN.seatZ];
   }
   if (kind === "train" && places.train) {
     const { loop } = places.train;
@@ -408,6 +415,7 @@ export function riderPoint(places: CityPlaces, kind: LeisureOption["kind"], pers
     const q = loopPoint(loop, d);
     return [q.x, TERRACE_H + 0.95, q.z];
   }
-  if (kind === "yacht" && yachtPose && places.yacht) return [yachtPose.x, places.yacht.aboard[1] + 0.3, yachtPose.z];
+  // The yacht: her centre at main-deck level (the gangway's top is the deck), never above it.
+  if (kind === "yacht" && yachtPose && places.yacht) return [yachtPose.x, places.yacht.aboard[1], yachtPose.z];
   return null;
 }

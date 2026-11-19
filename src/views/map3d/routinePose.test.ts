@@ -5,7 +5,10 @@ import { agentJobs } from "../../catalog/agentJobs";
 import { agentOps, type AgentOps, type OpRun } from "../../routine/operations";
 import { planRoutine, segmentAt, type Routine } from "../../routine/routine";
 import { layoutMap } from "../mapLayout";
-import { FIGURE_SCALE } from "./agentFigures";
+import { FIGURE_SCALE, RIG } from "./agentFigures";
+import { AGENT_BODY } from "./agentBody";
+import { WHEEL_CABIN } from "./stationPlazaPlan";
+import { YACHT, YACHT_SCALE } from "./yachtPlan";
 import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents } from "./namedAgentPlan";
 import { CityRoutes, planCityPlaces, routineEnv } from "./routinePlaces";
@@ -194,5 +197,45 @@ describe("drawing the routine", () => {
     } finally {
       Object.assign(goldJetLive, saved);
     }
+  });
+});
+
+describe("riders fit their rides (agentBody.ts)", () => {
+  const ride = (kind: "wheel" | "yacht", t: number): Segment => {
+    const option = places.leisure.find((o) => o.kind === kind)!;
+    return { kind: "ride", t0: t - 1000, t1: t + 60_000, at: option.spot, activity: "riding", phase: null, note: option.label, option, times: { board: t - 1000, alight: t + 60_000, seat: kind === "wheel" ? "cabin 1" : "aft deck" } };
+  };
+
+  it("sits in its wheel cabin with its hips on the bench, inside the glass", () => {
+    const id = named.agents[0].personaId, w = places.wheel!;
+    for (const t of [NOW, NOW + 20_000, NOW + 70_000]) {
+      const p = routinePose(ride("wheel", t), { routes, places, personaId: id, slot: 0, open: new Set(), wall: t, scale: FIGURE_SCALE })!;
+      expect(p.sit).toBe(1);
+      // On the rim's circle, hanging below its pivot by the cabin's seat drop.
+      const pivotY = p.y + RIG.leg.h * FIGURE_SCALE - WHEEL_CABIN.seatY;
+      expect(Math.hypot(p.x - w.x, pivotY - w.hubY)).toBeCloseTo(w.radius, 5);
+      // Head under the roof.
+      expect(p.y + RIG.top * FIGURE_SCALE).toBeLessThan(pivotY + WHEEL_CABIN.roof - WHEEL_CABIN.roofT / 2);
+    }
+  });
+
+  it("is on the yacht's deck aft of the bridge overhang, never on her roof or in the water", () => {
+    // This layout may have no marina: give her a berth so the deck places can be checked.
+    const aboard = places.yacht ?? { depart: 0, period: 600, aboard: [0, 0.92, 0] as [number, number, number] };
+    const withYacht = { ...places, yacht: aboard, spots: new Map([...places.spots, ["yacht", places.spots.get("yacht") ?? { id: "yacht", label: "The Atlas yacht", path: [[0, 0.92, 0]], yaw: 0, inside: false }]]) } as typeof places;
+    const yacht = { x: 10, z: 20, yaw: 0.7 }, deck = aboard.aboard[1] - 0.01;
+    const leisure = withYacht.leisure.some((o) => o.kind === "yacht") ? withYacht.leisure : [...withYacht.leisure, { id: "yacht", kind: "yacht", label: "On a yacht ride", spot: "yacht", exit: "yacht", stay: [0, 0] } as (typeof places.leisure)[number]];
+    const seg = { ...ride("wheel", NOW), at: "yacht", option: leisure.find((o) => o.kind === "yacht")! } as Segment;
+    const spots = named.agents.slice(0, 6).map((a, i) => routinePose(seg, { routes, places: withYacht, personaId: a.personaId, slot: i, open: new Set(), wall: NOW, yacht, scale: FIGURE_SCALE })!);
+    for (const p of spots) {
+      // Along her centreline (local x, bow +): aft of the overhang's edge, inside the transom.
+      const lx = ((p.x - yacht.x) * Math.cos(yacht.yaw) - (p.z - yacht.z) * Math.sin(yacht.yaw)) / YACHT_SCALE;
+      expect(lx).toBeLessThan(YACHT.bridge.x0);
+      expect(lx).toBeGreaterThan(-YACHT.length / 2);
+      expect(p.y).toBeGreaterThanOrEqual(deck - 0.12);
+      expect(p.y).toBeLessThan(deck + 0.05);
+    }
+    // No two share a place.
+    for (let i = 0; i < spots.length; i++) for (let j = i + 1; j < spots.length; j++) expect(Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z)).toBeGreaterThan(AGENT_BODY.depth);
   });
 });

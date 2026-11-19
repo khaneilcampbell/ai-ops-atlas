@@ -14,7 +14,7 @@ import type { StoredTask } from "../../tasks/types";
 import { useFreeTimeRequests } from "../../routine/freeTime";
 import { activityText, planRoutine, segmentAt, type Routine, type RoutineEnv, type Segment } from "../../routine/routine";
 import type { OpRun } from "../../routine/operations";
-import { publishRoutines, publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
+import { publishRoutines, publishWhere, routineOverride, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
 import { figureParts, partMatrix, poseBones, FIGURE_SCALE, RIG, type FigurePart } from "./agentFigures";
 import { agentPositions, setFollowedAgent, useFollowedAgent, viewOffice } from "./agentFollow";
 import { AgentTaskCard } from "./AgentTaskCard";
@@ -290,7 +290,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         hideGait(gait);
       };
       const cityScale = FIGURE_SCALE * a.figure.build.height;
-      const rt = routinesRef.current.get(id);
+      const rt = routineOverride.get(id) ?? routinesRef.current.get(id);
       const seg = rt ? segmentAt(rt, wall) : null;
       L.segs[i] = seg;
       let pose = seg && places && routes ? routinePose(seg, { routes, places, personaId: id, slot: i, open: openRef.current, wall, yacht, scale: cityScale }) : null;
