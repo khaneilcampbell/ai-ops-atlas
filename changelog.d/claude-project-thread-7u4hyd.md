@@ -1,0 +1,1 @@
+- 2026-11-19 · New Output Library: a Library button in the map toolbar (and in the Knowledge & Research Center) opens every report and file your agents produced, with search, filters, preview, download, version history and where each came from. Files go to private storage once the storage bucket is connected; until then each one shows as "File not saved".

@@ -155,7 +155,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "knowledge-repository", version: V, name: "Knowledge Repository", productDistrict: "data-intelligence",
     description: "Documentation and knowledge bases the workspace relies on.",
-    capabilities: [on("docs", "Document inventory", "src/knowledge/docs.ts documentInventory"), later("search", "Knowledge search")],
+    capabilities: [on("docs", "Document inventory", "src/knowledge/docs.ts documentInventory"), on("outputs", "Output Library", "src/views/library/OutputLibrary.tsx server/outputs.ts"), later("search", "Knowledge search")],
     connectors: ["github"], views: ["repos"], actions: [], permissions: [],
   },
   {

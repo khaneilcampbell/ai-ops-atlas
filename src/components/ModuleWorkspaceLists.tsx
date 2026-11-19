@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useAtlas } from "../state";
+import { openLibrary, useLibraryOpen } from "../library/client";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
@@ -68,7 +69,10 @@ export const WORKSPACE_PANELS: Partial<Record<ModuleTypeId, readonly WorkspacePa
     { capability: "research", label: "Product research briefs", component: ResearchBriefs },
   ],
   "observability-center": [{ capability: "signals", label: "Connected signals", component: ConnectedSignals }],
-  "knowledge-repository": [{ capability: "docs", label: "Document inventory", component: DocumentInventory }],
+  "knowledge-repository": [
+    { capability: "outputs", label: "Output Library", component: OutputLibraryEntry },
+    { capability: "docs", label: "Document inventory", component: DocumentInventory },
+  ],
   "integration-exchange": [{ capability: "catalog", label: "Vendors and suppliers", component: Suppliers }],
 };
 
@@ -650,6 +654,28 @@ function ConnectedSignals() {
 }
 
 const DOC_KIND_LABEL = { repository: "Repository", website: "Website", link: "Link" } as const;
+
+/** The Knowledge & Research Center keeps the Output Library: this opens the same drawer as the map toolbar. */
+function OutputLibraryEntry() {
+  const { view, setView } = useAtlas();
+  const open = useLibraryOpen();
+  return (
+    <div className="module-list" aria-label="Output Library">
+      <button
+        type="button"
+        className="ghost-btn"
+        aria-pressed={open}
+        onClick={() => {
+          if (view !== "map") setView("map");
+          openLibrary();
+        }}
+      >
+        Open Output Library
+      </button>
+      <p className="muted small">Every report and file agents and workflows saved: search, preview, download, and see where each came from. Files are kept in private storage, behind sign-in.</p>
+    </div>
+  );
+}
 
 function DocumentInventory() {
   const { catalog, repos } = useAtlas();
