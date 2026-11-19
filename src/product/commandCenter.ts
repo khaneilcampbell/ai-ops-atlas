@@ -1,4 +1,5 @@
 import { districtOf } from "../catalog/organization";
+import { isAiAgent } from "../catalog/roles";
 import type { DistrictId } from "../catalog/taxonomy";
 import type { Catalog, Project } from "../catalog/types";
 import type { RunStatus } from "../execution/types";
@@ -50,7 +51,8 @@ export interface PortfolioProject {
   category: Category;
   moved: boolean;
   repositories: string[];
-  agents: { id: string; name: string; status: string }[];
+  /** `automation`: a workflow owned by an agent, counted apart from AI agents. */
+  agents: { id: string; name: string; status: string; automation: boolean }[];
   /** Workflow templates that use one of this building's agents. */
   workflows: { id: string; name: string }[];
   openTasks: number;
@@ -104,7 +106,7 @@ export function portfolio(catalog: Catalog, w: Workspace | null, tasks: readonly
       category,
       moved,
       repositories: [...new Set([p.repository, ...(p.repositories ?? [])].filter(Boolean))],
-      agents: agents.map((a) => ({ id: a.id, name: a.name, status: a.status })),
+      agents: agents.map((a) => ({ id: a.id, name: a.name, status: a.status, automation: !isAiAgent(a) })),
       workflows: TEMPLATES.filter((t) => requiredAgents(t).some((id) => own.has(id))).map((t) => ({ id: t.id, name: t.name })),
       openTasks: ts.filter((t) => OPEN.has(t.status)).length,
       completedTasks: ts.filter((t) => t.status === "completed").length,

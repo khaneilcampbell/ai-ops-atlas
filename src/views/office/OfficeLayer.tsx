@@ -9,7 +9,7 @@ function deskFloor(agentId: string, projectId: string) {
   const at = locateAgent(mapBuildings(), agentId);
   return at && at.building.projectId === projectId ? at.desk.floor : undefined;
 }
-import {projectOfficeAgents} from "../../catalog/workplaces";
+import { officeAutomations, officeDeskAgents } from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -52,8 +52,10 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
-  // Every registered worker belongs at a desk inside its project building.
-  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  // Every AI agent of the project has a desk in its building. Automations are workflows, not staff,
+  // so they get no desk; the wall display still counts them.
+  const agents = useMemo(() => officeDeskAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  const automations = useMemo(() => officeAutomations(catalog.agents,projectId??"").length, [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
   const places = useMemo(() => agentPlaces(catalog), [catalog]);
   // Named agents sit at their own desks only while their day (the same one the city walks) has them
@@ -126,6 +128,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           plan={plan}
           floor={floor}
           desks={desks}
+          automations={automations}
           wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
           light={light}
           reduced={reduced}
@@ -152,14 +155,14 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length === 0 && (
           <div className="office-empty">
-            <h3>No workers are registered here yet</h3>
-            <p>This project has no registered agents or automations, so the office has no desks.</p>
+            <h3>No AI agents work here yet</h3>
+            <p>{automations ? `This project runs ${automations === 1 ? "1 automation" : `${automations} automations`}. Automations are workflows, so they have no desks.` : "This project has no registered agents or automations, so the office has no desks."}</p>
           </div>
         )}
 
         {desks.length > 0 && topFloor && (
           <details className="office-roster" aria-label="Select an agent">
-            <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
+            <summary>AI agents <span>{visibleDesks.length}</span></summary>
             <div className="office-roster-list">
             {byTier(visibleDesks, (d) => d.ws.tier).map((g) => (
               <div key={g.tier} className="office-roster-group" role="group" aria-label={g.label}>

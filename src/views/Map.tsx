@@ -8,7 +8,7 @@ import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
 import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isAiAgent, residentsLabel } from "../catalog/roles";
+import { directoryItems, isAiAgent, residentsLabel } from "../catalog/roles";
 import { agentJobs } from "../catalog/agentJobs";
 import { usePresenceAssignments } from "../catalog/agentPresence";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
@@ -56,6 +56,10 @@ import { measure, SANS, SERIF, wrap } from "./mapText";
 import type { Map3DApi, MapLink } from "./map3d/Map3D";
 import { ControlsHelp } from "./map3d/ControlsHelp";
 import { webglAvailable } from "./map3d/webgl";
+import { selectCityAgent, setCityAgentsPanel, useCityAgents } from "./map3d/cityAgentsStore";
+import { rosterAgents } from "./map3d/cityRoster";
+import { identityFor } from "../registry/identity";
+const CityAgentsPanel = lazy(() => import("./map3d/CityAgentsPanel").then((m) => ({ default: m.CityAgentsPanel })));
 import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
@@ -435,14 +439,14 @@ function anchors(districts: District[], parks: Park[]) {
 export function MapView({active=true}:{active?:boolean}) {
   const { catalog, repos, uncataloged, select, selection: appSelection, setView } = useAtlas();
   const selection = active ? appSelection : null;
-  const infrastructureMetrics = useMemo(() => {
-    const aiAgents = catalog.agents.filter(isAiAgent).length;
-    return [
-      { label: "Projects", count: catalog.projects.length },
-      { label: "AI Agents", count: aiAgents },
-      { label: "Automations", count: catalog.agents.length - aiAgents },
-    ];
-  }, [catalog]);
+  // The same counts as the Agents button and the Automations directory: active agents (one per
+  // identity, so Product Lab's skills count once, as Leila Haddad) and active automations. Retired
+  // entries stay in the manifests as history only.
+  const infrastructureMetrics = useMemo(() => [
+    { label: "Projects", count: catalog.projects.length },
+    { label: "AI Agents", count: rosterAgents(catalog.agents).length },
+    { label: "Automations", count: directoryItems(catalog.agents, "automations").length },
+  ], [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   // District names are on unless "none" was saved (the old "No grouping"; visual tests still use it for
@@ -526,6 +530,33 @@ export function MapView({active=true}:{active?:boolean}) {
   const map3d = useRef<Map3DApi>(null);
   const [controlsHelp, setControlsHelp] = useState(false);
   const phone = useMedia(PHONE_QUERY);
+
+  // City agents: the roster panel beside the map (map3d/CityAgentsPanel.tsx). The count is the active
+  // registry's named agents only: no automations, workflows, pedestrians or retired agents.
+  const cityAgents = useCityAgents();
+  const roster = useMemo(() => rosterAgents(catalog.agents), [catalog.agents]);
+  const agentCount = roster.length;
+  const agentsBtn = useRef<HTMLButtonElement>(null);
+  const closeCityAgents = useCallback(() => {
+    setCityAgentsPanel(false);
+    // Nothing keeps tracking an agent behind a closed panel.
+    setFollowedAgent(null);
+    agentsBtn.current?.focus();
+  }, []);
+  const toggleCityAgents = () => (cityAgents.panelOpen ? closeCityAgents() : setCityAgentsPanel(true));
+  useEffect(() => {
+    if (!active && cityAgents.panelOpen) setCityAgentsPanel(false);
+  }, [active, cityAgents.panelOpen]);
+  // An agent picked anywhere on the map (labels, the flat map, search) becomes the roster's selection
+  // while the panel is open, so the panel stays its only profile on the map.
+  useEffect(() => {
+    if (!cityAgents.panelOpen || selection?.kind !== "agent") return;
+    const persona = identityFor(selection.id, catalog.agents).personaId;
+    if (roster.some((r) => r.identity.personaId === persona)) {
+      selectCityAgent(persona);
+      select(null);
+    }
+  }, [cityAgents.panelOpen, selection, select, catalog.agents, roster]);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
   const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
@@ -1287,6 +1318,20 @@ export function MapView({active=true}:{active?:boolean}) {
           )}
 
           <div className="map-controls">
+            <button
+              ref={agentsBtn}
+              type="button"
+              className={`icon-btn text map-agents-btn ${cityAgents.panelOpen ? "on" : ""}`}
+              onClick={toggleCityAgents}
+              aria-pressed={cityAgents.panelOpen}
+              aria-label={`Agents, ${agentCount} active`}
+              title={cityAgents.panelOpen ? "Close City agents" : "City agents: find and manage your team"}
+            >
+              <Icon name="people" size={16} />
+              <span className="lbl">Agents</span>
+              <span className="count">{agentCount}</span>
+            </button>
+            <span className="sep" />
             {/* One menu for the city's view. "By district" brings back the district names as well as the
                 quiet infrastructure lines, so picking it always changes something you can see. */}
             <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].short}
@@ -1390,6 +1435,11 @@ export function MapView({active=true}:{active?:boolean}) {
           <div className="sr-only" aria-live="polite">
             {announce}
           </div>
+          {cityAgents.panelOpen && (
+            <Suspense fallback={<aside className={`city-agents ${phone ? "sheet" : ""}`} aria-busy="true"><p className="ca-fresh loading">Loading agents…</p></aside>}>
+              <CityAgentsPanel mapOn={is3d} phone={phone} onClose={closeCityAgents} onLocate={(at) => map3d.current?.locate(at[0], at[1], at[2])} />
+            </Suspense>
+          )}
         </div>
 
         {/* The drawing is decorative for assistive tech; this list carries the same content. */}
