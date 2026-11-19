@@ -1,1 +1,1 @@
-- 2026-11-19 · The Agents tab now shows the Career Execution Agent as live: it is published in n8n and can be started from the Task Center (#PR)
+- 2026-11-19 · The Agents tab now shows the Career Execution Agent as live: it is published in n8n and can be started from the Task Center (#493)
