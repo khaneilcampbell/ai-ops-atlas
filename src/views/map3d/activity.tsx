@@ -7,6 +7,7 @@ import { isIntelligenceHub } from "./intelligenceHubPlan";
 import { isPortfolioSite } from "./portfolioSitePlan";
 import { isSocLab } from "./socLabPlan";
 import * as THREE from "three";
+import { focusable } from "./materials";
 import type { Illumination } from "../office/activity";
 import type { useGeometries, useMaterials } from "./models";
 import { FLOOR_H, TERRACE_H, type House, type Tower } from "./scene";
@@ -193,7 +194,10 @@ export function lightUp(root: THREE.Object3D, copies: GlowCopies, glow: THREE.Co
       if (!weight) return;
       const lit = mat as Lit;
       // The original's own light (emissive times intensity), so night windows keep their warmth.
-      c = { copy: lit.clone(), base: lit.emissive.clone().multiplyScalar(lit.emissiveIntensity), weight };
+      // A copy of a building material keeps its focus and Inside cut patch (materials.ts).
+      const copy = lit.clone();
+      if (lit.userData.focusable) focusable(copy);
+      c = { copy, base: lit.emissive.clone().multiplyScalar(lit.emissiveIntensity), weight };
       copies.set(mat, c);
       mine.add(c.copy);
     }
