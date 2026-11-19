@@ -176,6 +176,10 @@ export interface Pose {
   sway: number;
   /** Overall size: FIGURE_SCALE times the figure's height. */
   scale: number;
+  /** Seated, 0 to 1: thighs forward (the caller lowers the figure onto the seat). */
+  sit?: number;
+  /** Forearms forward toward a desk, radians, left and right (typing moves them a little). */
+  reach?: [number, number];
 }
 
 const tmp = { root: new THREE.Matrix4(), bone: new THREE.Matrix4(), m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(0, 0, 0, "YXZ"), v: new THREE.Vector3(), s: new THREE.Vector3(), one: new THREE.Vector3(1, 1, 1) };
@@ -192,10 +196,11 @@ export function poseBones(pose: Pose, shoulders: number, out: THREE.Matrix4[]): 
   };
   at(BONES.body, 0, 0, 0);
   at(BONES.head, 0, head.y, 0, pose.look);
-  at(BONES.legL, -leg.x, leg.h, -pose.swing * RIG.legSwing);
-  at(BONES.legR, leg.x, leg.h, pose.swing * RIG.legSwing);
-  at(BONES.armL, -arm.x * shoulders, arm.y, pose.swing * RIG.armSwing + pose.sway);
-  at(BONES.armR, arm.x * shoulders, arm.y, -pose.swing * RIG.armSwing - pose.sway);
+  const sit = (pose.sit ?? 0) * (Math.PI / 2), [rl, rr] = pose.reach ?? [0, 0];
+  at(BONES.legL, -leg.x, leg.h, -pose.swing * RIG.legSwing - sit);
+  at(BONES.legR, leg.x, leg.h, pose.swing * RIG.legSwing - sit);
+  at(BONES.armL, -arm.x * shoulders, arm.y, pose.swing * RIG.armSwing + pose.sway - rl);
+  at(BONES.armR, arm.x * shoulders, arm.y, -pose.swing * RIG.armSwing - pose.sway - rr);
   return out;
 }
 

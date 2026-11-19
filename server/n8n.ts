@@ -4,7 +4,7 @@
 // switched on, and its recent runs' status and times. No run data, inputs or credentials leave n8n,
 // and nothing here can start, edit or stop a workflow (only GET requests are made).
 
-import { FAILED, RUNS_PER_WORKFLOW, type N8nRun, type N8nRunStatus, type N8nSnapshot, type N8nWorkflowRuns } from "../src/n8n/types";
+import { FAILED, RUNS_PER_WORKFLOW, type N8nRun, type N8nRunStatus, type N8nSchedule, type N8nSnapshot, type N8nWorkflowRuns } from "../src/n8n/types";
 import { bearerOk } from "./live";
 import type { CheckCache } from "./properties";
 import { reply, type Json as J } from "./http";
@@ -49,7 +49,71 @@ export function parseRun(j: J): N8nRun | null {
   const raw = typeof j.status === "string" ? j.status : null;
   // Older n8n versions only report finished; treat a finished run without a status as success.
   const status: N8nRunStatus = raw && STATUSES.has(raw) ? (raw as N8nRunStatus) : raw ? "unknown" : j.finished === true ? "success" : "unknown";
-  return { id, status, mode: str(j.mode), startedAt: iso(j.startedAt), stoppedAt: iso(j.stoppedAt) };
+  return { id, status, mode: str(j.mode), startedAt: iso(j.startedAt), stoppedAt: iso(j.stoppedAt), waitTill: iso(j.waitTill) };
+}
+
+/** A whole number from a node parameter, or the default when it is missing or an expression. */
+const whole = (v: unknown, dflt: number, lo: number, hi: number): number => {
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\d+$/.test(v) ? Number(v) : NaN;
+  return Number.isInteger(n) && n >= lo && n <= hi ? n : dflt;
+};
+const step = (n: number) => (n > 1 ? `*/${n}` : "*");
+
+/** One Schedule Trigger interval as cron, or null when it can't be read (an expression, an unknown field). */
+export function intervalCron(i: J): { cron: string; everyWeeks?: number } | null {
+  const field = typeof i?.field === "string" ? i.field : "days";
+  const m = whole(i?.triggerAtMinute, 0, 0, 59), h = whole(i?.triggerAtHour, 0, 0, 23);
+  switch (field) {
+    case "seconds":
+      return { cron: "* * * * *" };
+    case "minutes":
+      return { cron: `${step(whole(i?.minutesInterval, 5, 1, 59))} * * * *` };
+    case "hours":
+      return { cron: `${m} ${step(whole(i?.hoursInterval, 1, 1, 23))} * * *` };
+    case "days":
+      return { cron: `${m} ${h} ${step(whole(i?.daysInterval, 1, 1, 31))} * *` };
+    case "weeks": {
+      const days = (Array.isArray(i?.triggerAtDay) ? i.triggerAtDay : [0]).map((d: unknown) => whole(d, -1, 0, 6)).filter((d: number) => d >= 0);
+      const n = whole(i?.weeksInterval, 1, 1, 52);
+      return { cron: `${m} ${h} * * ${days.length ? [...new Set(days)].sort().join(",") : "0"}`, ...(n > 1 ? { everyWeeks: n } : {}) };
+    }
+    case "months":
+      return { cron: `${m} ${h} ${whole(i?.triggerAtDayOfMonth, 1, 1, 31)} ${step(whole(i?.monthsInterval, 1, 1, 12))} *` };
+    case "cronExpression": {
+      const parts = typeof i?.expression === "string" ? i.expression.trim().split(/\s+/) : [];
+      // n8n accepts a seconds field first; Atlas schedules to the minute.
+      const five = parts.length === 6 ? parts.slice(1) : parts;
+      return five.length === 5 && five.every((p: string) => /^[\d*/,-]+$/.test(p)) ? { cron: five.join(" ") } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Every schedule a workflow's own trigger nodes declare, as cron in its time zone. Disabled nodes are
+ * left out; a rule Atlas can't read (an expression) is left out rather than guessed.
+ */
+export function scheduleRules(nodes: unknown): N8nSchedule[] {
+  const out: N8nSchedule[] = [];
+  for (const n of Array.isArray(nodes) ? (nodes as J[]) : []) {
+    if (n?.disabled === true || typeof n?.type !== "string") continue;
+    const label = typeof n.name === "string" && n.name.trim() ? n.name.trim() : "Schedule";
+    if (n.type === "n8n-nodes-base.scheduleTrigger") {
+      const items: J[] = Array.isArray(n.parameters?.rule?.interval) ? n.parameters.rule.interval : [{}];
+      for (const i of items) {
+        const c = intervalCron(i);
+        if (c) out.push({ label, ...c });
+      }
+    } else if (n.type === "n8n-nodes-base.cron") {
+      for (const t of Array.isArray(n.parameters?.triggerTimes?.item) ? (n.parameters.triggerTimes.item as J[]) : []) {
+        const m = whole(t?.minute, 0, 0, 59), h = whole(t?.hour, 0, 0, 23);
+        const cron = t?.mode === "everyMinute" ? "* * * * *" : t?.mode === "everyHour" ? `${m} * * * *` : t?.mode === "everyDay" ? `${m} ${h} * * *` : t?.mode === "everyWeek" ? `${m} ${h} * * ${whole(t?.weekday, 1, 0, 6)}` : t?.mode === "everyMonth" ? `${m} ${h} ${whole(t?.dayOfMonth, 1, 1, 31)} * *` : t?.mode === "custom" ? intervalCron({ field: "cronExpression", expression: t?.cronExpression })?.cron : undefined;
+        if (cron) out.push({ label, cron });
+      }
+    }
+  }
+  return out;
 }
 
 /** Joins n8n's workflow list and recent executions into one row per workflow. Archived workflows are left out. */
@@ -71,6 +135,9 @@ export function summarize(workflows: J[], executions: J[], now: number): N8nWork
         active: w.active === true,
         runs: runs.slice(0, RUNS_PER_WORKFLOW),
         failures24h: runs.filter((r) => FAILED.has(r.status) && r.startedAt && now - Date.parse(r.startedAt) <= DAY_MS).length,
+        schedules: scheduleRules(w.nodes),
+        timezone: typeof w.settings?.timezone === "string" && w.settings.timezone !== "DEFAULT" ? w.settings.timezone : null,
+        savesSuccess: w.settings?.saveDataSuccessExecution !== "none",
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

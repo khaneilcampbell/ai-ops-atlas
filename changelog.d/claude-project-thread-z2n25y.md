@@ -1,0 +1,1 @@
+- 2026-11-19 · Fixed two screenshot checks that failed on every pull request: the old walking-agent card test is gone (the named agent characters replaced that card), and the district names check no longer depends on one particular name being on screen (#480)

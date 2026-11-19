@@ -8,6 +8,8 @@ export interface Prep {
   light?: "day" | "night";
   /** Extra `atlas:` localStorage entries, values as JSON. */
   storage?: Record<string, unknown>;
+  /** Freeze the clock here instead of NOW (ms). */
+  time?: number;
 }
 
 /**
@@ -36,8 +38,8 @@ export async function openAtlas(page: Page, prep: Prep = {}) {
     });
   });
   // Paused from the start: timers and animation frames only run when we step the clock.
-  await page.clock.install({ time: NOW });
-  await page.clock.pauseAt(NOW);
+  await page.clock.install({ time: prep.time ?? NOW });
+  await page.clock.pauseAt(prep.time ?? NOW);
   await page.goto("/");
   await expect(page.locator(".nav-item").first()).toBeVisible();
   await settle(page);
