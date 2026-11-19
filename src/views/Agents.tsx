@@ -15,7 +15,13 @@ import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
+import { Roles, type RoleView } from "./agents/Roles";
+import { roleDirectory } from "../catalog/essentialRoles";
 import "../styles/registry.css";
+import { AgentIdentityLine } from "../components/AgentIdentity";
+import { identityFor } from "../registry/identity";
+import { catalog as bundledCatalog } from "../catalog";
+import { agentStatuses, type IdentityStatus } from "../registry/agentStatus";
 
 type Sub = "directory" | "portfolio" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
@@ -33,8 +39,10 @@ interface Prefs {
   classification: string;
   operational: string;
   runtime: string;
+  /** Agents tab only: essential roles (default), Inactive, Archived, or the flat list of all agents. */
+  view: RoleView | "all";
 }
-const DEFAULT_PREFS: Prefs = { sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
+const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
 
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
@@ -62,6 +70,8 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     for (const [agentId, autos] of owns.owned) for (const a of autos) m.set(a.id, { id: agentId, title: byId.get(agentId)?.profile.title ?? agentId });
     return m;
   }, [owns, byId]);
+  // Identity status from execution data; owning agents take their automations' rollup.
+  const statuses = useMemo(() => agentStatuses(allCatalog.agents, new Map(allEntries.map((e) => [e.profile.id, e.telemetry]))), [allCatalog, allEntries]);
   const orphanIds = useMemo(() => new Set(owns.orphans.map((a) => a.id)), [owns]);
   const summary = useMemo(() => summarize(entries), [entries]);
   const rows = useMemo(
@@ -70,7 +80,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   );
   const groups = useMemo(() => groupEntries(rows, prefs.group, owners), [rows, prefs.group, owners]);
   const flat = groups.flatMap((g) => g.entries);
-  const current = (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
+  const roleView = kind === "agents" && prefs.view !== "all";
+  const counts = useMemo(() => roleDirectory(allCatalog.agents).counts, [allCatalog]);
+  const current = roleView ? (selection?.kind === "agent" ? byId.get(selection.id) : undefined) : (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
 
   const open = (id: string) => {
     select({ kind: "agent", id });
@@ -119,7 +131,31 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
       {prefs.sub === "manage" && kind === "agents" && <Manage open={open} />}
 
-      {prefs.sub === "directory" && (
+      {prefs.sub === "directory" && kind === "agents" && (
+        <div className="seg role-views" role="tablist" aria-label="Directory views">
+          {([["roles", `Essential roles ${counts.roles}`], ["inactive", `Inactive ${counts.inactive}`], ["archived", `Archived ${counts.archived}`], ["all", "All entries"]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={prefs.view === v} className={prefs.view === v ? "on" : ""} onClick={() => set({ view: v })}>{label}</button>
+          ))}
+          <span className="muted small">{counts.aiAgents} agents · {counts.automations} automations in use</span>
+        </div>
+      )}
+      {prefs.sub === "directory" && roleView && (
+        <>
+          <div className="filters" role="search">
+            <label className="field">
+              <Icon name="search" size={14} />
+              <input value={filters.query} onChange={(e) => setFilters({ query: e.target.value })} placeholder="Search names, ids, projects" aria-label="Search roles" />
+            </label>
+          </div>
+          <div className="agents-split">
+            <div className="card agent-list reg-list-pane" aria-label="Essential roles">
+              <Roles agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} view={prefs.view as RoleView} query={filters.query} current={current?.profile.id} pick={(id) => select({ kind: "agent", id })} statuses={statuses} />
+            </div>
+            {current ? <Inspector key={current.profile.id} entry={current} status={statuses.get(current.profile.id)} /> : <div className="card empty">Open a role and pick an agent or automation to see its details.</div>}
+          </div>
+        </>
+      )}
+      {prefs.sub === "directory" && !roleView && (
         <>
           <div className="filters" role="search">
             <label className="field">
@@ -176,6 +212,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
                               onClick={pick(e.profile.id)}
                               group={steps.length ? rollupHealth([e.operational, ...steps.map((x) => x.operational)]) : undefined}
                               owner={kind === "automations" ? (owners.get(e.profile.id)?.title ?? (orphanIds.has(e.profile.id) ? null : undefined)) : undefined}
+                              status={statuses.get(e.profile.id)?.status}
                             />
                             {steps.length > 0 && (
                               <ul className="reg-nested" aria-label={`Automations run by ${e.profile.title}`}>
@@ -197,7 +234,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
                   </section>
                 ))}
               </div>
-              {current && <Inspector key={current.profile.id} entry={current} />}
+              {current && <Inspector key={current.profile.id} entry={current} status={statuses.get(current.profile.id)} />}
             </div>
           )}
         </>
@@ -208,14 +245,21 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
 
 /** `group`: rolled-up health of an agent and the automations it owns. `owner`: for an automation,
  *  its owning agent's title, null when it has none (an orphan), undefined when not shown. */
-function Row({ e, on, onClick, group, owner }: { e: RegistryEntry; on: boolean; onClick: () => void; group?: Operational; owner?: string | null }) {
+function Row({ e, on, onClick, group, owner, status }: { e: RegistryEntry; on: boolean; onClick: () => void; group?: Operational; owner?: string | null; status?: IdentityStatus }) {
   const p = e.profile;
+  const identity = identityFor(p.id, bundledCatalog.agents);
   const last = e.telemetry.lastVerifiedRun;
   return (
     <button data-id={p.id} className={`agent-row reg-row ${on ? "on" : ""}`} aria-current={on || undefined} onClick={onClick}>
       <i className="roof" style={{ background: CLASS_COLOR[p.classification] }} />
       <span className="grow">
-        <span className="title">{p.title}</span>
+        {identity.kind === "own" ? (
+          <span className="title">
+            <AgentIdentityLine identity={identity} status={status} size={34} />
+          </span>
+        ) : (
+          <span className="title">{p.title}</span>
+        )}
         <span className="meta">
           {p.project.name} · {CATEGORY_LABEL[p.category]}
         </span>
@@ -224,7 +268,7 @@ function Row({ e, on, onClick, group, owner }: { e: RegistryEntry; on: boolean; 
           <span className="muted small">{p.framework}</span>
         </span>
         {owner === null && <span className="reg-row-owner"><span className="orphan-chip" title="No agent owns this automation yet">No owning agent</span></span>}
-        {owner && <span className="reg-row-owner muted small">Run by {owner}</span>}
+        {owner && <span className="reg-row-owner muted small">Run by {identity.kind === "owner" ? `${identity.name} (${owner})` : owner}</span>}
       </span>
       <span className="right">
         {group && (

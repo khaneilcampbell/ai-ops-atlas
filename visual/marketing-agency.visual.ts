@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
-/** Benjaire Marketing Agency exterior on the new bay lot (KC, 2026-10-31). Writes PNGs, compares nothing. */
+/** Benjaire Marketing Agency exterior on the new bay lot (Khaneil, 2026-10-31). Writes PNGs, compares nothing. */
 const out=process.env.SHOT_DIR??'artifacts/marketing-agency';
 type View=[string,[number,number,number],[number,number,number]];
 async function views(page:import('@playwright/test').Page,list:View[]){
@@ -46,7 +46,9 @@ for(const [name,size] of [['desktop',{width:1440,height:900}],['phone',{width:39
  expect(errors).toEqual([]);
 });
 async function floorMarkers(page:import('@playwright/test').Page,count:number){
- for(let i=0;i<20&&(await page.locator('[data-floor-label]').count())!==count;i++){await page.waitForTimeout(150);await settle(page,2);}
+ // The interior is a lazy chunk; on a busy CI machine it can take well over 3 s to mount, so wait by wall-clock time.
+ const until=Date.now()+45_000;
+ while(Date.now()<until&&(await page.locator('[data-floor-label]').count())!==count){await page.waitForTimeout(250);await settle(page,2);}
  await expect(page.locator('[data-floor-label]')).toHaveCount(count);
 }
 for(const [light,size] of [['day',{width:1440,height:900}],['night',{width:1440,height:900}],['phone',{width:390,height:844}]] as const)test(`Benjaire Marketing Agency interior, ${light}`,async({page})=>{

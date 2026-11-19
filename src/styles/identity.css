@@ -1,0 +1,61 @@
+/* ── Agent identities ──────────────────────────────
+   Portrait (or initials) in an accent ring, the "AI agent" label and the five run states.
+   The accent comes from the agent's catalog entry (--accent) and marks identity only; status
+   always uses the shared status tokens. */
+
+.agent-avatar { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; background: var(--sage-200); box-shadow: 0 0 0 2px var(--accent, var(--unknown)); overflow: visible; }
+.agent-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.agent-avatar.retired img, .agent-avatar.retired .agent-initials { filter: grayscale(1); opacity: 0.75; }
+.agent-initials { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; color: var(--white); background: var(--accent, var(--unknown)); font-weight: 600; letter-spacing: 0.02em; }
+.agent-avatar .agent-status-dot { position: absolute; right: -1px; bottom: -1px; width: 30%; height: 30%; min-width: 8px; min-height: 8px; max-width: 12px; max-height: 12px; box-shadow: 0 0 0 2px var(--white); }
+
+.agent-identity { display: inline-flex; align-items: center; gap: var(--space-5); min-width: 0; }
+.agent-identity-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.agent-identity-name { display: inline-flex; align-items: center; gap: var(--space-3); font-weight: 600; color: var(--ink); min-width: 0; }
+.agent-identity-name > .selectable { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-identity-role { font-size: var(--text-sm); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ai-agent-label { flex: none; display: inline-block; padding: 0 var(--space-3); border-radius: 999px; border: 1px solid var(--sage-300); color: var(--ink-2); background: var(--sage-50); font-size: var(--text-2xs); font-weight: 500; letter-spacing: 0.02em; line-height: 16px; white-space: nowrap; }
+
+.agent-status-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); }
+.agent-status-dot.st-ready, .agent-status-dot.st-completed { background: var(--good); }
+.agent-status-dot.st-working { background: var(--gold); animation: agent-working 1.6s ease-in-out infinite; }
+.agent-status-dot.st-waiting, .agent-status-dot.st-queued { background: var(--warn); }
+.agent-status-dot.st-failed { background: var(--bad); }
+@keyframes agent-working { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .agent-status-dot.st-working { animation: none; } }
+
+.agent-status-pill { display: inline-flex; align-items: center; gap: var(--space-3); padding: 1px var(--space-4); border-radius: 999px; border: 1px solid var(--sage-300); font-size: var(--text-xs); color: var(--ink-2); white-space: nowrap; }
+
+/* Inspector intro under the header */
+.agent-intro { margin: var(--space-4) 0 0; color: var(--ink-2); }
+.agent-intro .muted { display: block; margin-top: var(--space-2); }
+
+/* Task assignment menu */
+.agent-picker { display: flex; flex-direction: column; gap: var(--space-1); max-height: 260px; overflow-y: auto; padding: var(--space-2); border: 1px solid var(--sage-300); border-radius: 10px; background: var(--white); }
+.agent-pick { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: 8px; cursor: pointer; min-height: 40px; }
+.agent-pick:hover { background: var(--sage-50); }
+.agent-pick.on { background: var(--gold-soft); }
+.agent-pick.disabled { opacity: 0.55; cursor: not-allowed; }
+.agent-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.agent-pick:has(input:focus-visible) { outline: 2px solid var(--gold); outline-offset: 1px; }
+.agent-pick-none { color: var(--ink-2); padding-left: var(--space-2); }
+
+/* Map agent card (dark glass) */
+.m3-agent-tag .n { display: flex; align-items: center; gap: var(--space-3); }
+.m3-agent-tag .ai-agent-label, .m3-agent-chip .ai-agent-label, .m3-agent-profile .ai-agent-label { background: transparent; color: var(--on-dark); border-color: var(--on-dark-2); }
+.m3-agent-tag .agent-avatar .agent-status-dot { box-shadow: none; }
+.agent-identity-btn { text-align: left; }
+.activity-agent { display: inline-flex; align-items: center; gap: var(--space-2); margin-right: var(--space-2); }
+
+/* Phones: let a name and role wrap instead of cutting them off beside the row's status column. */
+@media (max-width: 640px) {
+  .agent-identity { align-items: flex-start; }
+  .agent-identity-name { flex-wrap: wrap; row-gap: 2px; }
+  .agent-identity-name > .selectable,
+  .agent-identity-role { white-space: normal; overflow: visible; }
+  /* A directory row with a portrait puts its status pills on their own line, under the name. */
+  .reg-row:has(.agent-identity) { flex-wrap: wrap; }
+  .reg-row:has(.agent-identity) > .grow { flex: 1 1 calc(100% - 20px); }
+  .reg-row:has(.agent-identity) > .right { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; padding-left: 20px; }
+}

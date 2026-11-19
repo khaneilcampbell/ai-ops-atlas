@@ -215,7 +215,7 @@ impl MergeApi for WriteClient {
         let token = crate::secrets::read_merge_token(repo).ok_or_else(|| {
             SendError::NotSent("No merge token is saved for this repository".into())
         })?;
-        // `sha` pins the commit KC approved: GitHub refuses with 409 if the branch moved.
+        // `sha` pins the commit Khaneil approved: GitHub refuses with 409 if the branch moved.
         let res = self
             .http
             .put(url)

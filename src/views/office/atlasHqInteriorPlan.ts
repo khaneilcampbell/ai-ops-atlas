@@ -1,8 +1,8 @@
 import type {Pt} from '../map3d/roads';
-import {superellipse,wingSway} from '../map3d/atlasHqPlan';
+import {HQ,superellipse,towerOutline,wingSway} from '../map3d/atlasHqPlan';
 
 /**
- * Atlas HQ inside, matched to the outside (KC, 2026-10-31). Plain numbers, no three.js.
+ * Atlas HQ inside, matched to the outside (Khaneil, 2026-10-31). Plain numbers, no three.js.
  *
  * Each floor plate takes the tower's softly rounded plan, wrapped in a glass curtain wall with a
  * mullion every bay. The gold wing shows as the part of that wall glazed gold; where blue turns to
@@ -15,8 +15,8 @@ import {superellipse,wingSway} from '../map3d/atlasHqPlan';
 export const HQ_INTERIOR={
  /** Glass sits this far outside the office plan, so desks and furniture keep their places. */
  margin:.6,
- /** Same squareness family as the tower outline, a little squarer to fit a room. */
- roundness:5,
+ /** The tower outline's own squareness, so each floor plate has the tower's rounded corners. */
+ roundness:4.2,
  points:64,
  height:2.7,
  /** Lobby glass runs up to the floor above: the double-height gold lobby. */
@@ -28,11 +28,21 @@ export const HQ_INTERIOR={
  floors:5,
  /** Floor 3 meets the top of the three-storey podium. */
  terraceFloor:3,
+ /** Office units per map unit: the interior is the tower drawn about 12 times larger. */
+ scale:12,
 } as const;
+
+/** The tower's plan, width over depth (about .84): every floor plate keeps it, so the floors read as slices of the tower. */
+export const towerAspect=(()=>{const p=towerOutline(),xs=p.map(([x])=>x),zs=p.map(([,z])=>z);return (Math.max(...xs)-Math.min(...xs))/(Math.max(...zs)-Math.min(...zs));})();
+/** The facade's window grid inside: a bay and a storey of the tower, at interior scale. */
+export const facadeBay=HQ.bay*HQ_INTERIOR.scale;
 
 export const isAtlasHq=(projectId:string)=>projectId==='ai-ops-atlas';
 
-export function shellAxes(w:number,d:number){return {a:w/2+HQ_INTERIOR.margin,b:d/2+HQ_INTERIOR.margin};}
+export function shellAxes(w:number,d:number){
+ // Deep office plans widen to the tower's proportions; the desks keep their places inside.
+ const b=d/2+HQ_INTERIOR.margin;return {a:Math.max(w/2+HQ_INTERIOR.margin,b*towerAspect),b};
+}
 /** The curtain wall outline, counter-clockwise from above, starting at the east (+x) point. */
 export function shellOutline(w:number,d:number):Pt[]{
  const {a,b}=shellAxes(w,d);return superellipse(0,0,a,b,HQ_INTERIOR.roundness,HQ_INTERIOR.points);
@@ -77,3 +87,33 @@ export function terrace(w:number,d:number){
 
 /** The stone core at the back (lifts and stairs in the section), behind the wall display. */
 export function core(d:number){return {x:0,z:-d/2-.1,w:HQ_INTERIOR.coreWidth,depth:.2};}
+
+/**
+ * The clear glass door on Floors 1 to 4 (Khaneil, 2026-11-17), in the front glass on the centre
+ * line, above the lobby entrance: agents walk from the lift corridor through it to the desks.
+ */
+export function floorDoor(w:number,d:number){return {x:0,z:shellAxes(w,d).b,width:1.4,height:2.2};}
+/**
+ * A stretch of curtain wall with the doorway cut out: front glass on Floors 1 to 4 loses the part
+ * between the door jambs, so the door stands open to walk through. Returns the pieces that stay.
+ */
+export function wallPieces(a:Pt,b:Pt,level:number,w:number,d:number):[Pt,Pt][]{
+ const door=floorDoor(w,d),h=door.width/2+.12;
+ if(level===0||a[1]+b[1]<=0||Math.max(a[0],b[0])<=-h||Math.min(a[0],b[0])>=h)return [[a,b]];
+ const at=(x:number):Pt=>{const t=(x-a[0])/(b[0]-a[0]);return [x,a[1]+(b[1]-a[1])*t];};
+ const lo=Math.min(a[0],b[0])<-h,hi=Math.max(a[0],b[0])>h,out:[Pt,Pt][]=[];
+ // Keep a's side first, so the pieces run the same way round as the outline.
+ const fromLow=a[0]<b[0];
+ const low:[Pt,Pt]|null=lo?(fromLow?[a,at(-h)]:[at(-h),b]):null,high:[Pt,Pt]|null=hi?(fromLow?[at(h),b]:[a,at(h)]):null;
+ for(const piece of fromLow?[low,high]:[high,low])if(piece)out.push(piece);
+ return out;
+}
+
+/**
+ * Width of ground the city outside keeps clear around the HQ cutaway: the curved glass, the Floor 3
+ * roof garden off the east side and the lift landing and canopy in front. The city's own palms and
+ * trees used to stand inside it and push up through the floors (Khaneil, 2026-11-17).
+ */
+export function hqClearSpan(w:number,d:number){
+ const {a,b}=shellAxes(w,d),T=terrace(w,d);return 2*Math.max(a,T.x1,b+2.8);
+}

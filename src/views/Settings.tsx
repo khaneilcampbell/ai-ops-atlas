@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { ControlsTable } from "./map3d/ControlsHelp";
+import { INTERIOR_CONTROLS, MAP_CONTROLS } from "./map3d/keys";
 import { Icon } from "../components/Icon";
 import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
@@ -11,6 +13,8 @@ import { commonZoneGroup, DEFAULT_TIME_ZONE, describeZone, filterZoneGroups, for
 import { ActionsSettings } from "./ActionsSettings";
 import { IntelSettings } from "./IntelSettings";
 import { SyncSettings } from "./SyncSettings";
+import { BackupSetting } from "./BackupSetting";
+import "../styles/production.css";
 
 export function SettingsView() {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
@@ -93,6 +97,7 @@ export function SettingsView() {
             Clear and refetch
           </button>
         </div>
+        <BackupSetting />
       </section>
 
       <section className="card">
@@ -280,12 +285,12 @@ function NavigationSetting() {
       </div>
       <div className="setting">
         <div className="grow">
-          <div className="label">Two-finger scroll</div>
+          <div className="label">Scrolling</div>
           <div className="muted small">{current.hint}</div>
           <div className="muted small">Inside a building, two fingers look around the room all the way round, and Option with a scroll moves across the floor.</div>
         </div>
         <label className="field">
-          <select value={prefs.scroll} onChange={(e) => setNavigationPrefs({ scroll: e.target.value as typeof prefs.scroll })} aria-label="Two-finger scroll">
+          <select value={prefs.scroll} onChange={(e) => setNavigationPrefs({ scroll: e.target.value as typeof prefs.scroll })} aria-label="Scrolling">
             {SCROLL_MODES.map((m) => (
               <option key={m.mode} value={m.mode}>
                 {m.label}
@@ -296,11 +301,11 @@ function NavigationSetting() {
       </div>
       <div className="setting">
         <div className="grow">
-          <div className="label">Trackpad speed</div>
-          <div className="muted small">How far the map moves for each scroll, pinch and twist.</div>
+          <div className="label">Speed</div>
+          <div className="muted small">How far the map moves for each scroll, pinch and twist, and for held keys.</div>
         </div>
         <label className="field">
-          <select value={prefs.speed} onChange={(e) => setNavigationPrefs({ speed: e.target.value as typeof prefs.speed })} aria-label="Trackpad speed">
+          <select value={prefs.speed} onChange={(e) => setNavigationPrefs({ speed: e.target.value as typeof prefs.speed })} aria-label="Speed">
             {TRACKPAD_SPEEDS.map((s) => (
               <option key={s.speed} value={s.speed}>
                 {s.label}
@@ -309,6 +314,12 @@ function NavigationSetting() {
           </select>
         </label>
       </div>
+      <details className="setting controls-details">
+        <summary className="label">All controls, MacBook and iMac</summary>
+        <ControlsTable title="On the map" rows={MAP_CONTROLS} />
+        <ControlsTable title="Inside a building" rows={INTERIOR_CONTROLS} />
+        <div className="muted small">Click the map once before using the keys. Keys move for as long as you hold them. A Magic Trackpad on an iMac works like a MacBook trackpad.</div>
+      </details>
     </section>
   );
 }

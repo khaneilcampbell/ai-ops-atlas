@@ -13,5 +13,5 @@ it('keeps terminal results and separates production evidence from CI', () => {
   const fresh = telemetryFor(agent, undefined, null, null, null, events, Date.parse(at));
   expect(runtimeFor(agent, fresh).state).toBe('failed');
   const stale = telemetryFor(agent, undefined, null, null, null, events, Date.parse(at) + 16 * 60_000);
-  expect(runtimeFor(agent, stale).state).toBe('unknown');
+  expect(runtimeFor(agent, stale).state).toBe('stale');
 });

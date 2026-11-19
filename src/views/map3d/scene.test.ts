@@ -103,7 +103,7 @@ describe("buildScene", () => {
 
 
 describe("open lot", () => {
-  // KC, 2026-11-08: Skyline was removed to make space. Its land stays as an empty lot in every
+  // Khaneil, 2026-11-08: Skyline was removed to make space. Its land stays as an empty lot in every
   // grouping, so the Marketplace, the airport road and the railway keep their places.
   it("keeps the old Skyline land as one empty lot, with nothing built on it", () => {
     for (const g of ["district", "none", "status", "tag"] as const) {

@@ -1,6 +1,7 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
+import {planPlaza,plazaGround,plazaPlanting,PLAZA,type PlazaPlan} from './plazaPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -10,6 +11,7 @@ import {planCommunityRail,planMarketplaceRail,stationAccessAreas,type CommunityP
 import {planNeighborhoodLinks} from './neighborhoodLinks';
 import {alignStreets,joinStreetEnds} from './streetAlign';
 import {marinaSite} from './marinaPlan';
+import {planHarbourPlatform} from './harbourPlatform';
 import {plazaRings} from './streetGraph';
 import {cityEnvelope} from './citySpacing';
 import {planFinancial,financialParkPlanting,type FinancialPlan} from "./financialPlan";
@@ -51,7 +53,7 @@ export const TERRACE_M = 0.35;
 export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
 /**
- * Atlas stands on one ground plane (KC, 2026-11-07): open land is level with the district terraces,
+ * Atlas stands on one ground plane (Khaneil, 2026-11-07): open land is level with the district terraces,
  * streets, bridges' landings and stations, instead of a meadow 0.6 below them. It sits a hair under
  * TERRACE_H so a terrace, plaza or forecourt top never flickers against it. Only the canals and the
  * sea stay lower, and only bridges and the elevated railway stay higher.
@@ -191,11 +193,13 @@ export interface Scene3D {
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   commons?:CommonsPlan;
+  /** Atlas Automation Plaza on the lawn in front of the Growth & Marketing Studio (plazaPlan.ts). */
+  plaza?:PlazaPlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
   /**
-   * Canva's freight route to the airport. Not built since KC's 2026-11-07 road review: the Commerce
+   * Canva's freight route to the airport. Not built since Khaneil's 2026-11-07 road review: the Commerce
    * district keeps its own streets and grass, without a trunk road or truck lot cut through it.
    */
   freight?: FreightPlan;
@@ -295,7 +299,7 @@ function buildCity(layout: Layout): Scene3D {
   const top = TERRACE_H;
   const onLand = (x: number, z: number) => land.some((r) => inRect(r, x, z));
 
-  // A cleared district (its tower removed, KC 2026-11-09) is laid out like the rest, streets,
+  // A cleared district (its tower removed, Khaneil 2026-11-09) is laid out like the rest, streets,
   // paving and bridges included, so the roads through it still join; only its building is dropped
   // from what the scene returns.
   const allDistricts = [...layout.districts, ...(layout.cleared ?? [])];
@@ -505,7 +509,7 @@ function buildCity(layout: Layout): Scene3D {
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.24 + (s.r - 7) * 0.025, kind: pick < 0.2 ? "cone" : pick > 0.95 ? "blossom" : "round" });
     }
-    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 2.2))) {
+    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 3.6))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
     }
@@ -522,7 +526,7 @@ function buildCity(layout: Layout): Scene3D {
       for (const s of p.strays) strays.push({ key: `repo:${s.name}`, name: s.name, x: s.gx + s.size / 2, z: s.gy + s.size / 2, size: s.size * 1.2, height: 0.9 + hash(s.name) * 0.7 });
       continue;
     }
-    // The open lot is plain level lawn, ready for the next build (KC, 2026-11-08: the Skyline
+    // The open lot is plain level lawn, ready for the next build (Khaneil, 2026-11-08: the Skyline
     // residences, shops and wheel that stood here were removed to make space). The Marketplace, the
     // airport road and the railway still take their places from it.
     terraces.push({ id: p.id, park: true, x: p.ox, z: p.oy, w: p.w, d: p.h });
@@ -907,8 +911,10 @@ function buildCity(layout: Layout): Scene3D {
     for(const path of [stationPlaza.walk,stationPlaza.entranceWalk])for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
     // The forecourt's front walk runs on along the shore to the harbour marina's stair, so the
     // station plaza joins the boat dock (Khaneil, 2026-11-13). Only on open land and clear of streets.
+    // With the harbour platform it ends at the Transit Gateway's door, which takes people over the track (transitGateway.ts).
     const harbor=marinaSite({terraces,land,paving,bounds:{x0:0,z0:0,x1:0,z1:0}},top),front=stationPlaza.walk[1];
-    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,harbor.shoreZ-.2]];
+    const gateway=planHarbourPlatform(communityRail?.loop,harbor)?.gateway;
+    const dock:[number,number][]=[[stationPlaza.bounds.x+stationPlaza.bounds.w,front[1]],[harbor.x,front[1]],[harbor.x,gateway?gateway.z0:harbor.shoreZ-.2]];
     const onLand=(x:number,z:number)=>land.some(l=>inRect(l,x,z));
     if(harbor.x>front[0]&&dock.every(([x,z])=>onLand(x,z))&&dock.slice(1).every((b,i)=>connections.every(c=>[c.road,...(c.frontage?[c.frontage]:[])].every(r=>roadIntersections([dock[i],b],r).length===0&&distanceToRoad(b,r)>STREET_CLEAR)))){
       for(let i=1;i<dock.length;i++){const a=dock[i-1],b=dock[i];if(Math.hypot(b[0]-a[0],b[1]-a[1])<.05)continue;paving.push(strip(a[0],a[1],b[0],b[1],.45,top));walks.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:top});}
@@ -916,12 +922,34 @@ function buildCity(layout: Layout): Scene3D {
     }
   }
   // Nothing growing or standing in a street: no tree, bush, rock or bollard on a carriageway, its
-  // sidewalk or a link's walk, whichever planner put it there (KC, 2026-11-09).
+  // sidewalk or a link's walk, whichever planner put it there (Khaneil, 2026-11-09).
   const inStreet=streetHitTest([...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],STREET_CLEAR),onWalk=streetHitTest(connections.map(c=>c.walk),.24);
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inStreet(items[i].x,items[i].z)||onWalk(items[i].x,items[i].z))items.splice(i,1);
+  // Atlas Automation Plaza on the open lawn in front of the Growth & Marketing Studio (Khaneil, 2026-11-18): nothing
+  // nearby moves; only loose lawn planting inside its footprint gives way, and its own trees and bed shrubs join the city's planting.
+  const plazaSite={towers,kiosks,agency,land,brooks,houses,cleared,clearedLots:towers.filter(t=>cleared.has(t.projectId)),roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk),landmarks:[...(galleria?[galleria.footprint]:[]),...(mall?[{x:mall.x,z:mall.z,w:mall.w,d:mall.d}]:[])]};
+  const plaza=planPlaza(plazaSite);
+  if(plaza){for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(Math.hypot(items[i].x-plaza.cx,items[i].z-plaza.cz)<PLAZA.stepsOuter+1.1)items.splice(i,1);const open=plazaGround(plazaSite);const q=plazaPlanting(plaza,top,(x,z)=>open(x,z,.3)&&!inStreet(x,z)&&!onWalk(x,z));trees.push(...q.trees);bushes.push(...q.bushes);}
+  // Footpaths near the plaza (Khaneil, 2026-11-18): a terrace boardwalk over dry lawn there becomes a plain
+  // paved path, and no path runs under the plaza disc; one that reaches it stops at the rim of the steps.
+  if(plaza){
+    const R=PLAZA.stepsOuter+.05,inR=(x:number,z:number)=>Math.hypot(x-plaza.cx,z-plaza.cz)<R;
+    const wet=(x:number,z:number)=>brooks.some(b=>x>b.x-.3&&x<b.x+b.w+.3&&z>b.z-.3&&z<b.z+b.d+.3);
+    const rimOf=(a:[number,number],b:[number,number]):[number,number]=>{const dx=b[0]-a[0],dz=b[1]-a[1],fx=a[0]-plaza.cx,fz=a[1]-plaza.cz,A=dx*dx+dz*dz,B=2*(fx*dx+fz*dz),C=fx*fx+fz*fz-R*R,t=(-B-Math.sqrt(Math.max(0,B*B-4*A*C)))/(2*A);return [a[0]+dx*t,a[1]+dz*t];};
+    for(let i=walks.length-1;i>=0;i--){
+      const w=walks[i],mx=(w.x0+w.x1)/2,mz=(w.z0+w.z1)/2;
+      if(Math.hypot(mx-plaza.cx,mz-plaza.cz)>PLAZA.stepsOuter+5)continue;
+      if(w.bridge&&!wet(mx,mz)){w.bridge=false;paving.push(strip(w.x0,w.z0,w.x1,w.z1,.32,top));}
+      const ia=inR(w.x0,w.z0),ib=inR(w.x1,w.z1);
+      if(ia&&ib){walks.splice(i,1);continue;}
+      if(ia){const q=rimOf([w.x1,w.z1],[w.x0,w.z0]);w.x0=q[0];w.z0=q[1];}
+      else if(ib){const q=rimOf([w.x0,w.z0],[w.x1,w.z1]);w.x1=q[0];w.z1=q[1];}
+    }
+  }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
+    plaza,
     financial,
     stationPlaza,
     community,

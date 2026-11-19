@@ -1,6 +1,6 @@
 # Design Consistency
 
-Design Consistency is the third agent in the GitHub building (project `github-profile`, agent `github-design-consistency`), next to Merge Flow and Opportunity Scout. It keeps Atlas on one design system: every color, type size, spacing step, font and radius comes from `src/styles/tokens.css`, and building and agent names follow the scheme from the label cleanup (short Title Case, brand first, no domains or dashes). When something drifts it opens one pull request that brings it back, with before and after screenshots. It never merges; KC says "merge".
+Design Consistency is the third agent in the GitHub building (project `github-profile`, agent `github-design-consistency`), next to Merge Flow and Opportunity Scout. It keeps Atlas on one design system: every color, type size, spacing step, font and radius comes from `src/styles/tokens.css`, and building and agent names follow the scheme from the label cleanup (short Title Case, brand first, no domains or dashes). When something drifts it opens one pull request that brings it back, with before and after screenshots. It never merges; Khaneil says "merge".
 
 ## The tokens file
 

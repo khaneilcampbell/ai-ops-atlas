@@ -240,7 +240,7 @@ export default function MallInterior({light}:{light:LightMode}){
  const info=MALL_LEVELS.find(l=>l.level===mode);
  const title=mode===ALL?'All floors · Open cutaway':info!.title;
  return <section className={`skyline-interior mall-interior ${isNight?"night":"day"}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[26,24,30],fov:42}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:[26,24,30],fov:42}}>
    <FramePacer profile={power} running={animate}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <hemisphereLight args={[isNight?'#91abd0':'#f4f7ee',isNight?'#1a2a22':'#8a9a82',isNight?.85:1.2]}/>

@@ -1,0 +1,51 @@
+/* Mission Control > Executive goals (Phase 8). Existing tokens only. */
+.exec { margin-bottom: 20px; }
+.exec-head { flex-wrap: wrap; }
+.exec-level { flex-direction: row; align-items: center; }
+.exec-level select { padding: 3px 6px; font-size: var(--text-sm); }
+.exec-pad { padding: 0 20px; margin: 0 0 8px; }
+.exec-form { display: flex; flex-direction: column; padding: 12px 20px; margin: 0 20px 12px; background: var(--sage-100); border-radius: var(--radius-sm); }
+.exec-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; padding: 4px 20px 12px; }
+.exec-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.exec-h { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--forest-700); font-weight: 600; margin: 4px 0; }
+.exec-box { border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--white); }
+.exec-box .list { padding: 0; }
+.exec-box .list-row { padding: 6px 4px; }
+.exec-goal { border: 1px solid var(--sage-200); border-left: 3px solid var(--sage-300); border-radius: var(--radius-sm); background: var(--white); }
+.exec-goal.pri-high { border-left-color: var(--warn); }
+.exec-goal.pri-critical { border-left-color: var(--bad); }
+.exec-goal-top { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 10px 12px; background: none; border: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+.exec-goal-top:hover { background: var(--sage-50); }
+.exec-goal-title { font-weight: 600; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.exec-goal-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.exec-progress { display: block; height: 5px; border-radius: 3px; background: var(--sage-200); overflow: hidden; }
+.exec-progress i { display: block; height: 100%; background: var(--good); }
+.exec-goal-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 12px 12px; }
+.exec-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin: 0; }
+.exec-facts dt { font-size: var(--text-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.exec-facts dd { margin: 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.exec-plan-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.exec-steps { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.exec-steps li { font-size: var(--text-md); }
+.exec-steps li.bad { color: var(--bad); }
+.exec-step-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip.warn { background: var(--gold-soft); border-color: rgba(201, 163, 90, 0.5); color: var(--gold-deep); }
+.exec-context ul { margin: 4px 0 0; padding-left: 18px; }
+.exec-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.exec-actions .grow { flex: 1; }
+.exec-actions select, .exec-note { border: 1px solid var(--sage-300); border-radius: 8px; padding: 3px 6px; font: inherit; font-size: var(--text-sm); background: var(--white); color: var(--ink); }
+.exec-note { min-width: 180px; flex: 1; }
+.exec-closed { margin-top: 4px; }
+.exec-brief { border-top: 1px solid var(--sage-200); padding: 12px 20px 16px; }
+.exec-brief-body { margin-top: 8px; }
+.exec-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; }
+.exec-brief-grid ul { margin: 0; padding-left: 16px; overflow-wrap: anywhere; }
+@media (max-width: 1080px) { .exec-brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .exec-grid { grid-template-columns: minmax(0, 1fr); padding: 4px 12px 12px; }
+  .exec-pad { padding: 0 12px; }
+  .exec-form { margin: 0 12px 12px; padding: 10px 12px; }
+  .exec-form .task-row { grid-template-columns: minmax(0, 1fr); }
+  .exec-brief { padding: 12px; }
+  .exec-brief-grid, .exec-facts { grid-template-columns: minmax(0, 1fr); }
+}

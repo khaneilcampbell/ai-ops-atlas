@@ -1,4 +1,6 @@
 import { isAiAgent } from "../catalog/roles";
+import { planHarbourPlatform } from "../views/map3d/harbourPlatform";
+import { marinaSite } from "../views/map3d/marinaPlan";
 import { OFF_MAP_PROJECTS } from "../catalog/projects";
 import type { Agent, Catalog } from "../catalog/types";
 import { MODULE_TYPES } from "../modules/catalog";
@@ -11,6 +13,7 @@ import { LOOP } from "../views/map3d/airportArrivals";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
 import { planAirportCrew, planCrewTrains } from "../views/map3d/airportCrew";
 import { COMMONS_KEY, COMMONS_NAME } from "../views/map3d/commonsPlan";
+import { PLAZA_KEY, PLAZA_NAME } from "../views/map3d/plazaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { planDistrictLife } from "../views/map3d/districtLifePlan";
 import { planDistrictWalkers } from "../views/map3d/districtWalkers";
@@ -23,7 +26,7 @@ import { travelPlan } from "../views/map3d/travelLoops";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
 import { MAP_FLEET } from "../views/map3d/mapFleet";
-import { buildScene, type Scene3D } from "../views/map3d/scene";
+import { buildScene, TERRACE_H, type Scene3D } from "../views/map3d/scene";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
 import { YACHT_KEY, YACHT_NAME } from "../views/map3d/yachtPlan";
 import { GOLD_JET_KEY, GOLD_JET_NAME } from "../views/map3d/goldJetIds";
@@ -55,7 +58,7 @@ export interface InventoryBuilding {
   area: string;
   organization: string;
   module: string;
-  /** Active, idle, paused, attention (catalog buildings), Planned (drawn places), Retired or Vacant lot. */
+  /** Active, idle, paused, attention (catalog buildings), Planned (drawn places), Live status (the Automation Plaza), Retired or Vacant lot. */
   status: string;
   /** Catalog project whose repository the building runs on, when there is one. */
   project: string;
@@ -100,7 +103,7 @@ export interface MapInventory {
 }
 
 const PLANNED = "Planned";
-/** Manifests still say "KC" in places; the owner is Khaneil everywhere the inventory is read. */
+/** Manifests still say "Khaneil" in places; the owner is Khaneil everywhere the inventory is read. */
 const plain = (t: string) => t.replace(/\bKC\b/g, "Khaneil");
 const moduleName = (id?: ModuleTypeId | null) => (id ? MODULE_TYPES[id]?.name ?? id : "");
 /** Workspace landmark ids leave out the "service:" prefix of the map key. */
@@ -173,6 +176,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.agency) add({ id: AGENCY_KEY, name: AGENCY_NAME, kind: "Landmark", area: "Bay", status: PLANNED, project: "", source: "src/views/map3d/marketingAgencyPlan.ts" });
   if (scene.mall) add({ id: MALL_KEY, name: "Atlas Marketplace", kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/mallPlan.ts" });
   if (scene.commons) add({ id: COMMONS_KEY, name: COMMONS_NAME, kind: "Public space", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/commonsPlan.ts" });
+  // On the lawn in front of the Growth & Marketing Studio; its sign and rings show live automation status (src/plaza/plazaState.ts).
+  if (scene.plaza) add({ id: PLAZA_KEY, name: PLAZA_NAME, kind: "Public space", area: "Bay", organization: "Atlas", status: "Live status", project: "", source: "src/views/map3d/plazaPlan.ts" });
   if (scene.galleria) add({ id: GALLERIA_KEY, name: GALLERIA_NAME, kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/galleriaPlan.ts" });
   if (scene.stadium) add({ id: STADIUM_KEY, name: STADIUM_NAME, kind: "Landmark", area: "Stadium", status: PLANNED, project: "", source: "src/views/map3d/stadiumPlan.ts" });
   // The Atlas yacht is berthed at the marina whenever the map has its harbour; she cruises out with her guests and can be
@@ -255,7 +260,7 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
     add({ category: "Aircraft", kind: "Airliner on the flight loop", count: LOOP.count - MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/airportArrivals.ts LOOP" });
     add({ category: "Aircraft", kind: "Gold private jet on the flight loop", count: MAP_FLEET.goldJets, area: "Airport", moves: true, source: "src/views/map3d/goldJetPlan.ts GOLD_JET_SLOT" });
     add({ category: "Aircraft", kind: "Parked airliner", count: AIRPORT_PARKED_STANDS.length, area: "Airport", moves: false, source: "src/views/map3d/LogisticsAirport.tsx" });
-    add({ category: "Aircraft", kind: "Executive jet on the flight loop", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
+    add({ category: "Aircraft", kind: "Executive jet on the flight loop (gear folds up after takeoff and down for landing; lit cockpit, headlights, nav lights, beacons and strobes at night)", count: MAP_FLEET.executiveJets, area: "Airport", moves: true, source: "src/views/map3d/LogisticsAirport.tsx ExecutiveJet" });
     const crew = planAirportCrew();
     for (const [role, count] of countBy(crew, (c) => c.role)) add({ category: "People", kind: `Ground crew (${role})`, count, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts" });
     add({ category: "Airport vehicles", kind: "Baggage train", count: planCrewTrains().length, area: "Airport", moves: true, source: "src/views/map3d/airportCrew.ts planCrewTrains" });
@@ -267,6 +272,10 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
 
   const rail = scene.communityRail;
   if (rail) add({ category: "Trains", kind: "Passenger train (3 cars)", count: 1, area: rail.loop ? "Perimeter rail loop" : "Atlas Hills line", moves: true, source: "src/views/map3d/HillsCommunity.tsx" });
+  // Stadium Station's harbour-side platform, boardwalk and stair down to the yacht dock (harbourPlatform.ts, Khaneil 2026-11-16).
+  if (rail?.loop && planHarbourPlatform(rail.loop, marinaSite(scene, TERRACE_H))) add({ category: "Trains", kind: "Harbour platform with a boardwalk and stair to the yacht dock", count: 1, area: "Marina", moves: false, source: "src/views/map3d/harbourPlatform.ts" });
+  // Transit Gateway: entrance lobby, stair, lift and enclosed footbridge over the track to the harbour boardwalk (transitGateway.ts, Khaneil 2026-11-16).
+  if (rail?.loop && planHarbourPlatform(rail.loop, marinaSite(scene, TERRACE_H))) add({ category: "Trains", kind: "Transit Gateway: entrance lobby, lift and footbridge over the track to the boardwalk", count: 1, area: "Marina", moves: false, source: "src/views/map3d/transitGateway.ts" });
   if (rail?.loop) add({ category: "People", kind: "Traveller (train, shuttle car and yacht loops)", count: travel?.travellers.length ?? 0, area: "Perimeter rail loop", moves: true, source: "src/views/map3d/travelLoops.ts" });
   else {
     const commuters = planRailCommuters(scene.community, scene.financial, rail);

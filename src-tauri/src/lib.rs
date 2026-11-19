@@ -7,7 +7,6 @@ mod live;
 mod local_usage;
 mod power;
 mod secrets;
-mod steward;
 mod usage_sync;
 
 pub fn run() {
@@ -24,19 +23,12 @@ pub fn run() {
         .setup(|app| {
             intel::setup(app)?;
             usage_sync::setup(app)?;
-            steward::setup(app)?;
             actions::setup(app)?;
             handoff::window_ready(app);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             github::github_get,
-            steward::steward_state,
-            steward::steward_run,
-            steward::steward_pause,
-            steward::steward_configure,
-            steward::steward_dismiss,
-            steward::steward_import,
             secrets::vault_status,
             secrets::vault_unlock,
             handoff::update_relaunch,
@@ -87,10 +79,15 @@ pub fn run() {
             local_usage::claude_code_usage,
             live::live_properties,
             live::live_n8n,
+            live::live_n8n_steps,
+            live::live_n8n_step_send,
+            live::live_stripe_sales,
             live::registry_refresh,
             live::live_security,
+            live::live_health,
             live::live_inquiry_reply,
             export::save_pdf,
+            export::save_backup,
             power::power_on_battery,
         ])
         .run(tauri::generate_context!())

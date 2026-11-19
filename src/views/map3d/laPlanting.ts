@@ -35,19 +35,22 @@ export function laTreeKind(t:Pick<Tree,'x'|'z'|'kind'|'la'>):LaTree|null{
  if(t.kind==='blossom')return 'jacaranda';
  const p=key(t.x,t.z,'la');
  if(t.kind==='cone')return p<.75?'cypress':null;
- return p<.32?null:p<.5?'olive':p<.62?'ficus':p<.78?'date':p<.88?'cypress':'fan';
+ // Campus lawns (Khaneil's city artwork, 2026-11-17): full, leafy shade trees lead, with a few
+ // dark cypress accents and no lawn palms. The palm avenues on the streets stay as they are.
+ return p<.16?null:p<.5?'ficus':p<.8?'olive':p<.9?'cypress':'jacaranda';
 }
 
 /** Mostly clipped hedges, with agave, bird of paradise and bougainvillea as accents. */
 export function laShrubKind(b:Pick<Point,'x'|'z'>):LaShrub{
  const p=key(b.x,b.z,'shrub');
- return p<.55?'hedge':p<.7?'agave':p<.85?'paradise':'bougainvillea';
+ // Fuller hedges and more flowering shrubs, like the beds in Khaneil's city artwork (2026-11-17).
+ return p<.5?'hedge':p<.58?'agave':p<.76?'paradise':'bougainvillea';
 }
 
 export const LA_COLORS={
  fanFrond:['#7a9a45','#88a650','#6f8d3d'],dateFrond:['#4e7a37','#5b8a3f','#46703a'],
  bulb:'#ffffff',halo:'#f2f4ff',fanTrunk:'#a08a6a',dateTrunk:'#8b7152',skirt:'#8e6d45',dates:'#d18a2e',
- ficus:['#3f7a3a','#4a8642','#386f35','#438040'],olive:['#7f9270','#8a9c7a','#75876a','#93a483'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
+ ficus:['#4f7f34','#5d8c3b','#466f2e','#6a9842'],olive:['#78a046','#86ab4f','#6c933f','#93b45c'],jacaranda:['#9c80d4','#b19ae2','#8a6dc6','#a58bdb'],cypress:['#35583a','#3f6643'],
  hedge:['#3f6e36','#47783c'],agave:'#86a59a',paradiseLeaf:'#3f7448',paradiseFlower:'#f08a24',bougainvillea:['#d63f8f','#e2589f','#c93583'],
 } as const;
 

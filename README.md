@@ -21,7 +21,7 @@ pre-filled GitHub issue in your browser; nothing is sent until you press Create 
 
 | View | What you see |
 | --- | --- |
-| **Projects** (map) | The 3D city. Pan, zoom and turn with mouse, trackpad or touch, switch day and night, and click a building for its panel. **View** picks which links are drawn (Infrastructure, Agent network, Automation flow) and **Grouping** arranges buildings By district, By status, By tag or with no grouping |
+| **Projects** (map) | The 3D city. Pan, zoom and turn with mouse, trackpad or touch, switch day and night, and click a building for its panel. **Map view** picks By district (the default city with district names, and a building's own links when you select it), Agent network or Automation flow; the last two need the 3D map |
 | **Mission Control** | Prioritized work: approvals waiting for you, failing workflows, agent alerts, workflow runs per day, API usage and cost, the busiest repositories and recent activity |
 | **Grid** | Every repository side by side with CI, last push, issues and linked agents |
 
@@ -81,12 +81,10 @@ Agents that work on Atlas itself or its repositories:
 | --- | --- | --- |
 | Repository Intelligence | Reads one repository and asks Claude for an assessment, within per-run and monthly caps | [docs/repository-intelligence.md](docs/repository-intelligence.md) |
 | Senior Engineering Reviewer | Reviews every repository at once and returns a scorecard and ranked fixes. Recommends only | [docs/engineering-review.md](docs/engineering-review.md) |
-| GitHub Steward | Observes repository health from the Mac app | [docs/github-steward.md](docs/github-steward.md) |
 | Merge Flow | Sorts every open pull request into a lane and names the next move. Recommends only | [ops/merge-flow](ops/merge-flow/README.md) |
 | Opportunity Scout | Looks for revenue ideas in the agents Khaneil already runs. Recommends only | [ops/opportunity-scout](ops/opportunity-scout/README.md) |
 | Design Consistency | Keeps the look on `src/styles/tokens.css` and opens a fix pull request when it drifts | [ops/design-consistency](ops/design-consistency/README.md) |
-| System improvements | Turns CI and source evidence into an improvement report after each main build | [docs/system-improvements.md](docs/system-improvements.md) |
-| Marketplace Steward, Signal Watch, Dataset Census | Building agents that report on the Product Marketplace, the Observability Center and the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
+| Dataset Census | Building agent that reports on the Data Intelligence Center into Atlas's live feed | [building-agents.yml](.github/workflows/building-agents.yml) |
 | Fix with Claude | A Mission Control button opens a pre-filled `claude-fix` issue; a Claude Code scheduled task then opens one small pull request or explains why it stopped. Atlas holds no token for it | [ops/fix-with-claude](ops/fix-with-claude/README.md) |
 
 The Mac app's write actions are **Re-run failed jobs**, **Merge pull request** (only when GitHub

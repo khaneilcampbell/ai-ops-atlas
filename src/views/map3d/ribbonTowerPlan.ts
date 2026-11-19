@@ -1,7 +1,7 @@
 import type {Pt} from './roads';
 
 /**
- * Benjaire HQ, the ribbon tower (KC, 2026-10-31): one organic rounded-square tower wrapped in
+ * Benjaire HQ, the ribbon tower (Khaneil, 2026-10-31): one organic rounded-square tower wrapped in
  * dense horizontal champagne ribbons over dark glass, pinched at the waists, with a sky opening
  * through its upper middle and a crown with a hollow oculus over a roof garden. It rises out of a
  * flowing white terraced podium with planted edges, a round skylight and cafe umbrellas.
@@ -39,7 +39,7 @@ export const RIBBON={
 } as const;
 
 /**
- * The BENJAIRE sign on the lobby, sized like the Financial District's signs (KC, 2026-10-31):
+ * The BENJAIRE sign on the lobby, sized like the Financial District's signs (Khaneil, 2026-10-31):
  * there the letters stand about a third of a unit tall, so here they fill the lobby storey, with
  * the badge and the workers sign either side. `aspect` is the wordmark canvas's width over height.
  */

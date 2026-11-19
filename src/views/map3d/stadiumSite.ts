@@ -5,11 +5,11 @@ import {STADIUM,STADIUM_SCALE,sideGateFeet,stadiumCentre,stadiumRingCentre} from
 import {SITE_EDGE,type StadiumPlan} from './stadiumPlan';
 
 /**
- * Atlas Stadium's grounds (KC, 2026-11-07: "utilize the whole space for the stadium ... like how
+ * Atlas Stadium's grounds (Khaneil, 2026-11-07: "utilize the whole space for the stadium ... like how
  * we did Atlas Marketplace"). After the city is laid out, the stadium takes the open land around
  * its lot, up to the neighbouring districts and the island edge, so nothing else moves. The stadium
- * sits in the middle of it (planStadium), ringed by reflecting pools as in KC's blueprint; the rest
- * stays open lawn (KC, 2026-11-07: pitches, car parks, plazas and groves removed).
+ * sits in the middle of it (planStadium), ringed by reflecting pools as in Khaneil's blueprint; the rest
+ * stays open lawn (Khaneil, 2026-11-07: pitches, car parks, plazas and groves removed).
  */
 export const SITE={
  /** How far the grounds may reach past the stadium lot on each side. */

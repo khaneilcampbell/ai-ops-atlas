@@ -13,6 +13,7 @@ project:
   repository: khaneilcampbell/khaneilcampbell.com
   tags: [portfolio, static-site, github-pages, claude]
   district: career-portfolio
+  module: development-repository-hub   # Khaneil chose 2026-11-17
   links:
     - label: Live site
       url: https://khaneilcampbell.com
@@ -21,7 +22,7 @@ agents:
   - id: site-builder
     name: Claude Site Assistant
     purpose: >-
-      Drafts page copy, design changes and pull requests that KC reviews
+      Drafts page copy, design changes and pull requests that Khaneil reviews
       before merging.
     framework: Claude Code
     model: Claude
@@ -35,33 +36,64 @@ agents:
       - at: 2026-10-24
         event: Rewrote home, About, Work and Contact copy (#36 to #43)
     permissions:
-      - 'GitHub: push branches and open pull requests through Claude Code; only KC merges'
+      - 'GitHub: push branches and open pull requests through Claude Code; only Khaneil merges'
     registry:
+      identity:
+        display_name: Nina Petrova
+        accent: "#EC4899"
+        intro: "When you ask, I draft page copy and design changes for khaneilcampbell.com, run the site checks and open a pull request for you to review. You merge."
+        voice: "Shows the draft, explains each design choice in a line, then asks for review."
+        appearance: "Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top"
+        portrait:
+          path: agents/site-builder.webp
+          model: gpt_image_2_6
+          job_id: 0a224f04-13a6-4e15-9d29-107d4456ec16
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Portfolio Web Developer
       category: engineering
       subcategory: Repository maintenance
       classification:
         type: A
         confidence: verified
-        evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that KC merges
+        evidence: Claude Code sessions draft changes and open pull requests (#36 to #45) that Khaneil merges
       mission:
         problem: Keeps the portfolio site current without hand-editing every page.
         outcomes: ["Reviewed pull requests for copy, design and link changes"]
-        beneficiaries: [KC, Site visitors]
+        beneficiaries: [Khaneil, Site visitors]
       responsibilities:
-        tasks: [Draft page copy and design changes, Open pull requests for review]
+        tasks: [Draft page copy and design changes, Open pull requests for review, Run the site checks before asking for review]
         tools: [Claude Code, Git, GitHub]
-        inputs: [KC's request]
+        inputs: [Khaneil's request]
         outputs: [Pull requests]
+        dependencies:
+          - site-ci
+          - security-check
+          - site-audit
+        limitations:
+          - Works only when Khaneil asks
+          - Opens pull requests; Khaneil reviews and merges them
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Pull requests reviewed before merge
+            kind: quality
+            target: 100%
+            basis: Only Khaneil merges
+          - name: Site checks pass
+            kind: reliability
+            target: Site CI and Security Check green on every pull request it opens
+            basis: Both are required checks
+        objective: Ship site improvements Khaneil approves, through reviewed pull requests.
       execution:
         trigger_type: manual
         environment: Claude Code sessions
       governance:
         autonomy: 2
-        autonomy_note: Changes reach the live site only after KC merges the pull request.
-        approval: KC reviews and merges every pull request
+        autonomy_note: Changes reach the live site only after Khaneil merges the pull request.
+        approval: Khaneil reviews and merges every pull request
         data_sensitivity: public
-        credential_owner: KC (Claude's GitHub access to the repository)
+        credential_owner: Khaneil (Claude's GitHub access to the repository)
         risk: low
         audit_log: Pull request history on GitHub
       docs:
@@ -105,6 +137,24 @@ agents:
         tools: [Python standard library]
         inputs: [Site root folder]
         outputs: [Audit findings and an exit code]
+        dependencies:
+          - Python 3 on the machine running it
+        limitations:
+          - Runs only by hand
+          - Checks the _headers file, which GitHub Pages ignores
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Findings on main
+            kind: quality
+            target: Zero failing header, accessibility or link checks
+            basis: The audit's own checks
+          - name: Credential-shaped values
+            kind: quality
+            target: Zero
+            basis: The audit flags them
+        objective: Keep the static site's headers, accessibility and links clean.
       execution:
         trigger_type: manual
         environment: Local
@@ -153,24 +203,31 @@ agents:
         outcomes:
           - A failed check whenever a page misses its policy
       responsibilities:
-        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules]
+        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules, Fail the run when a page is missing its policy]
         tools: [GitHub Actions, shell]
         inputs: [Pushes and pull requests to main]
         outputs: [Check results]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Checks only pages at the repository root
+          - No permissions block, so the token gets the repository default
       goals:
         objective: No page ships without its security policy.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
       governance:
         autonomy: 0
         data_sensitivity: public
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
       docs:
@@ -212,19 +269,26 @@ agents:
       mission:
         problem: Keeps headers, accessibility basics and internal links correct on every change.
         outcomes: ["Every pull request passes the site audit before merge"]
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks: [Run the site audit, Build the page inventory, Lint the Python scripts, Optional site bundle on manual dispatch]
         tools: [GitHub Actions, Python, ruff]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request, Site zip and inventory when requested]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Actions are pinned by version tag, not commit
+          - Checks code and links, not how pages look
       goals:
         objective: Block merges that break the published site.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -233,7 +297,7 @@ agents:
         data_sensitivity: public
         risk: low
         audit_log: GitHub Actions run history
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
       docs:
         technical: README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#site-ci
@@ -250,6 +314,7 @@ agents:
       recruiter message built only from Khaneil's confirmed facts, then emails Khaneil the drafts to review.
       It never applies or messages anyone.
     framework: n8n
+    owned_by: site-builder            # the only owning agent in Portfolio Web Studio; Khaneil to confirm
     model: claude-opus-5-5 (drafts), claude-haiku-5-5 (requirements)
     runtime: n8n Cloud
     status: paused
@@ -290,21 +355,29 @@ agents:
         tools: [Claude (claude-haiku-5-5 and claude-opus-5-5), Workflow data tables, Resend]
         inputs: [Job form, Confirmed rows in career_verified_facts]
         outputs: [Draft row in career_applications, Review email with a .md attachment]
+        dependencies:
+          - n8n Cloud, with the Anthropic and Resend credentials
+          - Confirmed rows in the career_verified_facts data table
         limitations: [Only confirmed facts are used, Job pages that need a login need the description pasted]
       goals:
         objective: Cut tailoring time without inventing experience.
+        review_frequency: Monthly
         kpis:
           - name: Applications reviewed
             kind: throughput
+            target: Every draft reviewed by Khaneil before anything is sent
             basis: Tracker status Reviewed or Submitted, in the Monday summary email
           - name: Applications submitted
             kind: throughput
+            target: Not set yet; Khaneil sets it once the workflow is published
             basis: Tracker status Submitted, set by Khaneil after applying
           - name: Tailoring minutes
             kind: other
+            target: Not set yet; Khaneil sets it once the workflow is published
             basis: tailoring_minutes column, filled in by Khaneil
           - name: Interview stories practiced
             kind: other
+            target: Not set yet; Khaneil sets it once the workflow is published
             basis: stories_practiced column, filled in by Khaneil
       execution:
         trigger_type: event
@@ -319,6 +392,7 @@ agents:
         risk: low
         audit_log: n8n executions and the career_applications data table
       docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#career-execution-agent
         known_issues:
           - Draft until Khaneil confirms the facts in career_verified_facts and approves publishing
           - Atlas has no live data for it yet; results stay in n8n

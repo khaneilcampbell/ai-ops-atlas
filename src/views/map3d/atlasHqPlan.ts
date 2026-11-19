@@ -111,14 +111,40 @@ export function canopyAt(u:number,k=1){
  return {x,front:(.76+.08*Math.sin(u*Math.PI*2.4))*k,back:.4*k,y:(HQ.canopyY-.07*Math.sin(u*Math.PI))*k};
 }
 
+/**
+ * The front door, dressed like the Financial District entrances (Khaneil, 2026-11-17): a stone
+ * plinth along the lobby, a pale stone landing out to the plaza, a double glass door in dark green
+ * jambs under a brass header, a thin gold canopy over it, a planter either side and two door lamps
+ * that light at night. Boxes as [x, y, z, w, h, d, colour], y the bottom; lamps listed apart.
+ */
+export type EntranceBox=[number,number,number,number,number,number,string];
+export function entrance(k=1){
+ const L=lobby(k),x=-.32*k,z=L.z,dw=.3*k,dh=.4*k;
+ const boxes:EntranceBox[]=[
+  [(L.x0+L.x1)/2,0,z+.03*k,L.x1-L.x0,.025*k,.1*k,'#d4d0bf'],
+  [x,0,z+.08*k+.23*k/2,.34*k,.02*k,.23*k,'#e5dfd0'],
+  [x-dw/4,.025*k,z+.012*k,dw/2-.008*k,dh,.01*k,'#bcd6dc'],
+  [x+dw/4,.025*k,z+.012*k,dw/2-.008*k,dh,.01*k,'#bcd6dc'],
+  [x,.025*k,z+.02*k,.008*k,dh,.012*k,'#2f5d4a'],
+  ...[-1,1].map(side=>[x+side*(dw/2+.01*k),.025*k,z+.02*k,.02*k,dh+.02*k,.03*k,'#2f5d4a'] as EntranceBox),
+  [x,.025*k+dh,z+.02*k,dw+.06*k,.025*k,.035*k,'#c5a35c'],
+  [x,.025*k+dh+.035*k,z+.07*k,dw+.12*k,.012*k,.14*k,'#d9b25f'],
+  ...[-1,1].map(side=>[x+side*.3*k,.025*k,z+.16*k,.07*k,.06*k,.07*k,'#3f6b4f'] as EntranceBox),
+  ...[-1,1].map(side=>[x+side*.3*k,.085*k,z+.16*k,.06*k,.05*k,.06*k,'#6f9a62'] as EntranceBox),
+ ];
+ const lamps:EntranceBox[]=[-1,1].map(side=>[x+side*.2*k,.025*k,z+.07*k,.016*k,.05*k,.016*k,'#ffffff']);
+ return {boxes,lamps};
+}
+
 /** Every outline the building puts on the ground, for clearance checks. */
 export function footprint(k=1):Pt[]{
  const canopy=Array.from({length:12},(_,i)=>{const c=canopyAt(i/11,k);return [c.x,c.front] as Pt;});
- return [...towerOutline(k),...podiumOutline(k),...wingLevels(k).flatMap(l=>l.map(([x,,z])=>[x,z] as Pt)),...canopy];
+ const door=entrance(k).boxes.flatMap(([x,,z,w,,d])=>[[x-w/2,z+d/2],[x+w/2,z+d/2]] as Pt[]);
+ return [...door,...towerOutline(k),...podiumOutline(k),...wingLevels(k).flatMap(l=>l.map(([x,,z])=>[x,z] as Pt)),...canopy];
 }
 export const hqTop=(k=1,v=1)=>HQ.roofHigh*k*v;
 /**
- * How much taller than the reference drawing the tower and wing stand (KC, 2026-10-31: size the
+ * How much taller than the reference drawing the tower and wing stand (Khaneil, 2026-10-31: size the
  * HQs with the Financial District). The podium, lobby and canopy keep their height; the tower
  * gains storeys, it doesn't stretch them.
  */
@@ -133,5 +159,7 @@ export const hqFloors=(v=1)=>Math.floor(HQ.roofLow*v/HQ.floor);
 export function hqPieceCount(){
  const towerFins=Math.ceil(HQ.ring/HQ.finEvery),wingFins=towerFins,podiumFins=HQ.ring*2;
  const meshes=['towerGlass','wingGlass','podiumGlass','roofs','bands','fins','lobby','canopy','garden','pools','trunks','canopies','signs'].length;
- return {meshes,instances:podiumFins+HQ.trees*2,finStrips:towerFins+wingFins};
+ // The entrance adds two instanced sets (stonework and door, lamps), counted with the instances.
+ const door=entrance();
+ return {meshes,instances:podiumFins+HQ.trees*2+door.boxes.length+door.lamps.length,finStrips:towerFins+wingFins};
 }

@@ -100,9 +100,37 @@ export interface RegistryManifest {
     credentialOwner?: string;
     risk?: Risk;
     auditLog?: string;
+    /** How to stop it at once without a deploy, and what stops. */
+    killSwitch?: string;
+    /** Limits that are always on (sends, spend or writes per period). */
+    caps?: string;
   };
   cost?: { budget?: string; notes?: string };
   docs?: { technical?: string; runbook?: string; knownIssues: string[]; improvements: string[]; lastReview?: string | null };
+  /** A persistent persona shown with the agent everywhere in Atlas. Display only: ids, tasks and permissions are unchanged. */
+  identity?: AgentIdentityManifest;
+}
+
+/** One generated portrait, kept so it is reused, never regenerated per task. */
+export interface PortraitRecord {
+  /** Path under public/, such as "agents/atlas-release-manager.webp". */
+  path: string;
+  model?: string;
+  jobId?: string;
+  promptVersion?: number;
+  generatedAt?: string | null;
+}
+
+/** `registry.identity` as written in a manifest. */
+export interface AgentIdentityManifest {
+  displayName: string;
+  /** #RRGGBB. Marks identity only, never status. */
+  accent?: string;
+  intro?: string;
+  voice?: string;
+  /** Fixed appearance details, reused in any later portrait prompt. */
+  appearance?: string;
+  portrait?: PortraitRecord;
 }
 
 /** One execution as observed by Atlas or recorded by hand. */
@@ -113,7 +141,9 @@ export interface ExecutionRecord {
   url?: string;
   durationMs?: number | null;
   costUsd?: number | null;
-  source: "github" | "atlas-intel" | "agent-feed" | "production" | "manual";
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | "n8n" | "manual";
+  /** For an owning agent's rolled-up history: the automation that ran it. */
+  via?: string;
   /** A GitHub run on a branch other than the default one (a pull request, Dependabot). Kept in
    *  the history, but it doesn't decide the agent's status. */
   offMainline?: boolean;
@@ -121,8 +151,11 @@ export interface ExecutionRecord {
 
 /** Derived at runtime. Never stored in a manifest. */
 export interface Telemetry {
-  /** Where live execution data comes from, or null when nothing is connected. */
-  source: "github" | "atlas-intel" | "agent-feed" | "production" | null;
+  /** Where live execution data comes from, or null when nothing is connected. "automations" is an
+   *  owning agent with no source of its own: the runs of the automations it owns (owned_by). */
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | "n8n" | "automations" | null;
+  /** For "automations": the owned automations that have a live source, by name. */
+  via?: string[];
   /** True when Atlas has looked at the source (the repository or the agent was loaded). */
   loaded: boolean;
   productionFresh?: boolean;

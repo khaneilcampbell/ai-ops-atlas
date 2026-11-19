@@ -1,0 +1,1 @@
+- 2026-11-16 · New Workspace page and first-run setup: workspace settings, an Integration Center that only says Connected when it is, agent on/off and model limits that stop runs they block, a workflow template library with simulation, an agent catalog, administration, and workspace export/import (#PR)

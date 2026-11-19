@@ -4,7 +4,7 @@ import type { WebProperty } from "./registry";
 import type { SiteSnapshot } from "./types";
 import { formatTime } from "../lib/timezone";
 
-// Incidents on a website building: something KC should act on, each with the links to act. They
+// Incidents on a website building: something Khaneil should act on, each with the links to act. They
 // come only from observed data (a failed build, an expiring certificate, a site that didn't
 // answer). A check that couldn't run is shown on the dashboard as unknown, never as an incident
 // and never as healthy.

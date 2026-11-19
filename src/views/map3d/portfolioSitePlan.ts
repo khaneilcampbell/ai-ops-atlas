@@ -1,7 +1,9 @@
 import type {Tower} from './scene';
+import {headquartersEnvelope} from './financialPlan';
+import {intelligenceHubHeight} from './intelligenceHubPlan';
 
 /**
- * The Portfolio Site as a slim apartment tower, after KC's reference (the G+M+8 apartment
+ * The Portfolio Site as a slim apartment tower, after Khaneil's reference (the G+M+8 apartment
  * building in Dhaka by Khetro Sthapati, Behance screenshots 2026-11-08): white render, brown brick
  * and timber slats on the left side and back, and on the faces the map looks at:
  * - front (+z): a balcony per floor on the left (white slab, brown slatted railing, warm window
@@ -19,7 +21,7 @@ import type {Tower} from './scene';
 export const PORTFOLIO_SITE={
  projectId:'portfolio-site',
  /**
-  * Ground floor plus twelve floors: the reference is G+8, but KC asked for it taller (2026-11-08),
+  * Ground floor plus twelve floors: the reference is G+8, but Khaneil asked for it taller (2026-11-08),
   * so the same floor repeats four more times and the roof stands near the old tower's height.
   */
  floors:12,
@@ -44,11 +46,12 @@ export const isPortfolioSite=(projectId:string)=>projectId===PORTFOLIO_SITE.proj
 
 /** Roof slab top above the plinth, and the building's highest point (the canopy). */
 export const portfolioSiteRoof=()=>PORTFOLIO_SITE.ground+PORTFOLIO_SITE.floors*PORTFOLIO_SITE.storey;
-export const portfolioSiteTop=()=>portfolioSiteRoof()+PORTFOLIO_SITE.canopy.lift+PORTFOLIO_SITE.canopy.h;
+export const portfolioSiteTop=(roof=portfolioSiteRoof())=>roof+PORTFOLIO_SITE.canopy.lift+PORTFOLIO_SITE.canopy.h;
 
-/** The Portfolio Site's height comes from its floor count, not the generic tower's. */
+/** Match the Operations Center roof with Portfolio's canopy, preserving its twelve floors. */
 export function sizePortfolioSite(towers:Tower[]){
- for(const t of towers)if(isPortfolioSite(t.projectId))t.customHeight=portfolioSiteRoof();
+ const roof=intelligenceHubHeight(headquartersEnvelope(towers))-PORTFOLIO_SITE.canopy.lift-PORTFOLIO_SITE.canopy.h;
+ for(const t of towers)if(isPortfolioSite(t.projectId))t.customHeight=roof;
 }
 
 /** What a part is made of: each kind is one material in the renderer. */
@@ -61,8 +64,8 @@ export interface Plant {kind:'shrub'|'trail'|'tree';x:number;y:number;z:number;s
 export interface PortfolioSitePlan {lines:number[];roof:number;top:number;boxes:Box[];panels:Panel[];plants:Plant[]}
 
 /** Lay out every part of the building. */
-export function planPortfolioSite():PortfolioSitePlan{
- const P=PORTFOLIO_SITE,C=P.core,S=P.storey,G=P.ground,roof=portfolioSiteRoof(),top=portfolioSiteTop();
+export function planPortfolioSite(roof=portfolioSiteRoof()):PortfolioSitePlan{
+ const P=PORTFOLIO_SITE,C=P.core,G=P.ground,S=(roof-G)/P.floors,top=portfolioSiteTop(roof);
  const lines=Array.from({length:P.floors+1},(_,i)=>G+i*S);
  const boxes:Box[]=[],panels:Panel[]=[],plants:Plant[]=[];
  const box=(kind:Kind,x0:number,x1:number,y0:number,y1:number,z0:number,z1:number)=>boxes.push({kind,x0,x1,y0,y1,z0,z1});

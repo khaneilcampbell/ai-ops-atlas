@@ -14,7 +14,7 @@ export interface OfficeRow {
 
 /**
  * Every worker's runtime state, from the same verified sources the office inspector uses: the
- * registry's telemetry, the desktop app's action audit log, and proposals waiting for KC. Shared
+ * registry's telemetry, the desktop app's action audit log, and proposals waiting for Khaneil. Shared
  * by the office (one building) and the map's Inside view (every building in view), so a desk
  * never shows a different state on the map than it does inside.
  */

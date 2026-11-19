@@ -177,7 +177,7 @@ export default function AgencyInterior({light}:{light:LightMode}){
  const all=floor===-1,levels=all?Array.from({length:INTERIOR.levels},(_,i)=>i):[floor];
  const pick=useMemo(()=>({keys:[] as string[],over:()=>{},out:()=>{},click:()=>{}}),[]);
  return <section className={`skyline-interior ${isNight?'night':'day'}`} aria-label={`${shown()} interior`}>
-  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows camera={{position:[30,40,58],fov:40}}>
+  <Canvas style={{position:'absolute',inset:0,zIndex:0}} frameloop={visible ? "demand" : "never"} dpr={[1,power.maxDpr]} shadows="percentage" camera={{position:[30,40,58],fov:40}}>
    <FramePacer profile={power} running={!reduced}/>
    <color attach="background" args={[isNight?'#101b2c':'#dbe2d8']}/>
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.3:.75}/>

@@ -32,7 +32,7 @@ export interface WebProperty {
   deploy: DeploySource;
   /** The Cloudflare Worker that serves the site, so its changes show in the events tile. */
   cloudflareWorker?: string;
-  /** Where KC goes to look at or retry a failed deploy. */
+  /** Where Khaneil goes to look at or retry a failed deploy. */
   deployConsole: { label: string; url: string };
 }
 

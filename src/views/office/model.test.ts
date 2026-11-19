@@ -42,7 +42,7 @@ describe("office plan", () => {
   it("gives the Atlas headquarters one desk per registered agent, grouped by role and workflow", () => {
     const project = catalog.projects.find((p) => p.id === "ai-ops-atlas")!;
     const agents = projectOfficeAgents(catalog.agents,project.id);
-    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-github-steward", "atlas-system-improvements", "atlas-ui-improvement-designer", "atlas-production-coordinator", "atlas-reliability-reviewer", "atlas-performance-reviewer", "atlas-release-coordinator", "atlas-release-manager", "atlas-health-monitor"]);
+    expect(agents.map((a) => a.id)).toEqual(["atlas-ci", "repo-intelligence", "atlas-engineering-review", "atlas-rerun-failed", "atlas-merge-pr", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-release-manager", "atlas-health-monitor"]);
     const plan = planOffice(project, agents);
     expect(plan.buildingId).toBe("project:ai-ops-atlas");
     expect(plan.workstations.map(w=>w.agentId).sort()).toEqual(agents.map(a=>a.id).sort());
@@ -113,7 +113,7 @@ describe("runtime state", () => {
     expect(runtimeFor(a, none, { available: true, status: status(false), audit: [] }).state).toBe("offline");
     expect(runtimeFor(a, none, { available: true, status: status(true), audit: [] }).state).toBe("idle");
     const rec = (id: string, at: string, stage: AuditRecord["stage"]): AuditRecord => ({
-      id, at, stage, action: "rerun_failed_jobs", actor: "KC", github_login: null, repo: "me/r", run_id: 1, workflow: "CI", run_number: 3,
+      id, at, stage, action: "rerun_failed_jobs", actor: "Khaneil", github_login: null, repo: "me/r", run_id: 1, workflow: "CI", run_number: 3,
       attempt_before: 1, head_sha: null, branch: "main", reason: null, http_status: null, request_id: null, message: null,
     });
     const audit = [rec("x", "2026-10-28T01:00:00Z", "attempted"), rec("x", "2026-10-28T01:00:01Z", "failed")];
@@ -132,7 +132,7 @@ describe("runtime state", () => {
     });
     expect(runtimeFor(a, none, { available: true, status: status(false), audit: [] }).state).toBe("offline");
     const merged: AuditRecord = {
-      id: "m", at: "2026-10-28T01:00:00Z", stage: "merged", action: "merge_pull_request", actor: "KC", github_login: null, repo: "me/r", run_id: 0, pull_number: 7, title: "Fix",
+      id: "m", at: "2026-10-28T01:00:00Z", stage: "merged", action: "merge_pull_request", actor: "Khaneil", github_login: null, repo: "me/r", run_id: 0, pull_number: 7, title: "Fix",
       workflow: null, run_number: null, attempt_before: null, head_sha: null, branch: "fix", reason: null, http_status: 200, request_id: null, message: null,
     };
     expect(actionExecutions("merge_pull_request", [merged])[0]).toMatchObject({ result: "success", url: "https://github.com/me/r/pull/7" });

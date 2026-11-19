@@ -9,6 +9,8 @@ import type { AutonomyLevel, Category, Classification, Confidence, Kpi, Risk, Se
 export interface AgentProfile {
   id: string;
   title: string;
+  /** The persona name from `registry.identity`, shown with the title; null without an identity. */
+  displayName: string | null;
   originalName: string | null;
   suggestedTitle: string | null;
   summary: string;
@@ -38,6 +40,8 @@ export interface AgentProfile {
     credentialOwner: string | null;
     risk: Risk | null;
     auditLog: string | null;
+    killSwitch: string | null;
+    caps: string | null;
   };
   cost: { budget: string | null; notes: string | null };
   docs: { source: string | null; technical: string | null; runbook: string | null; knownIssues: string[]; improvements: string[]; lastReview: string | null };
@@ -52,6 +56,7 @@ export function toProfile(agent: Agent, project: Project | undefined): AgentProf
   return {
     id: agent.id,
     title: agent.name,
+    displayName: reg?.identity?.displayName ?? null,
     originalName: nn(agent.originalName),
     suggestedTitle: nn(reg?.suggestedTitle),
     summary: reg?.summary ?? agent.purpose,
@@ -101,6 +106,8 @@ export function toProfile(agent: Agent, project: Project | undefined): AgentProf
       credentialOwner: nn(reg?.governance?.credentialOwner),
       risk: nn(reg?.governance?.risk),
       auditLog: nn(reg?.governance?.auditLog),
+      killSwitch: nn(reg?.governance?.killSwitch),
+      caps: nn(reg?.governance?.caps),
     },
     cost: { budget: nn(reg?.cost?.budget), notes: nn(reg?.cost?.notes) },
     docs: {

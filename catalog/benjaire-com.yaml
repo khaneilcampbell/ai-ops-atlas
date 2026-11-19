@@ -33,7 +33,7 @@ agents:
     source: site/worker/index.ts
     observe:
       agent_feed: true
-    # Customer-facing and unattended: a failed request alerts KC. It only runs when someone
+    # Customer-facing and unattended: a failed request alerts Khaneil. It only runs when someone
     # posts the form, so a quiet stretch is normal and there is no silence window.
     alerts:
       failures: true
@@ -54,13 +54,28 @@ agents:
       mission:
         problem: Receives website inquiries and checkout requests safely without a separate backend.
         outcomes: [Valid inquiries reach the right inbox and Benjaire Flow, Spam and abuse are rejected]
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks: [Check origin and rate limit, Verify Turnstile, Email the inquiry to the category recipient, Forward the inquiry to Benjaire Flow, Create Stripe checkout sessions]
         tools: [Cloudflare Workers, Cloudflare Turnstile, Cloudflare Email, Stripe API, n8n webhook]
         inputs: [Contact form POST, Checkout request]
         outputs: [Email to Benjaire, Webhook call to n8n, Stripe checkout redirect]
         dependencies: [benjaire-flow-intake]
+        limitations:
+          - Forwards to Benjaire Flow once with a 10 second timeout; a failed forward is only logged
+          - Turnstile blocks bots but cannot judge whether a real inquiry is serious
+      goals:
+        review_frequency: Monthly
+        kpis:
+          - name: Inquiries forwarded
+            kind: reliability
+            target: Every valid form submission reaches the inbox and Flow intake
+            basis: The email is the record; the forward to Flow is tried once
+          - name: Rate-limit refusals
+            kind: quality
+            target: Only abusive bursts are refused (5 a minute per visitor, 20 site-wide)
+            basis: Cloudflare rate limits in front of the Worker
+        objective: Get every genuine inquiry and checkout through, and keep abuse out.
       execution:
         trigger_type: event
         environment: Cloudflare Workers
@@ -68,8 +83,10 @@ agents:
         autonomy: 3
         autonomy_note: Acts on each request within fixed rules (rate limit, allowed hosts, configured price tiers).
         data_sensitivity: confidential
-        credential_owner: KC (Worker secrets in the Cloudflare dashboard)
+        credential_owner: Khaneil (Worker secrets in the Cloudflare dashboard)
         risk: medium
+        kill_switch: 'Set the Worker secret CONTACT_PAUSED=1 (contact form) or CHECKOUT_PAUSED=1 (checkout sends buyers to the Payment Link) in Cloudflare; see docs/runbooks/kill-switches.md in benjaire.com.'
+        caps: '5 a minute per visitor and 20 a minute site-wide, for the contact form and for checkout (Cloudflare rate limits). Email only reaches verified Email Routing addresses.'
       docs:
         technical: site/README.md
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#contact-form-worker
@@ -94,11 +111,11 @@ agents:
     trigger: Webhook from the contact Worker
     observe:
       agent_feed: true
-    # Customer-facing and unattended: a failed intake alerts KC. Runs per inquiry, so no
+    # Customer-facing and unattended: a failed intake alerts Khaneil. Runs per inquiry, so no
     # silence window.
     alerts:
       failures: true
-    last_run: null
+    last_run: 2026-11-16T17:10:57Z
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/iQdSJGMQi6TBHlar
@@ -119,7 +136,7 @@ agents:
         outcomes:
           - Every valid inquiry is saved and the owner alerted
           - The sender gets an acknowledgement
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks:
           - Check the x-flow-key
@@ -132,16 +149,37 @@ agents:
         inputs: [Inquiry webhook from the contact Worker]
         outputs: [flow_inquiries row, flow_events audit rows, Owner alert email, Acknowledgement email]
         dependencies: [benjaire-contact-worker]
+        limitations:
+          - No rate limit of its own; it relies on the Worker in front
+          - Claude Haiku sorts inquiries but can misjudge urgency, so Khaneil reviews the alert
+          - The repository export is updated by hand and can drift from n8n
+      goals:
+        objective: Sort, save and acknowledge every valid inquiry.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed intake means an unsorted inquiry; failures alert Khaneil
+            measure: run_success_rate
+          - name: Claude cost per inquiry
+            kind: cost
+            target: About $0.0004 per inquiry
+            basis: claude-haiku-5-5 classification, live-ops README
       execution:
         trigger_type: event
         environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: 'Emails the owner and the sender without approval, within fixed rules: key check, validation, honeypot, and spam marked only at confidence 0.7 or more and never answered.'
+        autonomy_note: 'Emails the owner and the sender without approval, within fixed rules: key check, validation, honeypot, and spam marked only at confidence 0.7 or more and never answered. Since 2026-11-16 the sender acknowledgement is a fixed template that repeats no visitor text except a letters-only first name, and it is held when Claude sorting is unavailable.'
         data_sensitivity: confidential
-        credential_owner: KC (n8n credentials and the flow_settings table)
+        credential_owner: Khaneil (n8n credentials and the flow_settings table)
         risk: medium
         audit_log: flow_events data table in n8n
+        kill_switch: 'Unpublish Flow · 1 Intake in n8n. Or, without unpublishing: flow_settings.customer_emails_paused = true holds the sender acknowledgement; the owner alert still goes. The acknowledgement is also held automatically when Claude sorting fails (flow_events ack_paused).'
+        caps: 'Only inquiries the contact Worker forwards (5 a minute per visitor, 20 site-wide). Spam at confidence 0.7 or more is never answered.'
       cost:
         notes: About $0.0004 per inquiry for Claude Haiku; n8n Cloud Starter about €20 to €24 a month; Resend free up to 3,000 emails a month (live-ops README)
       docs:
@@ -156,12 +194,12 @@ agents:
           - Expire status tokens after 90 days
           - Add a retention schedule and a privacy notice on the form
           - Connect n8n executions to Atlas
-        last_review: 2026-10-28
+        last_review: 2026-11-16
 
   - id: benjaire-inquiry-to-client
     name: Inquiry to Client
     purpose: >-
-      Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds KC to follow up on day 3 and day 7. KC sends every message from their own mail app.
+      Lists each benjaire.com inquiry in Mission Control, drafts a reply from a fixed template per category, and reminds Khaneil to follow up on day 3 and day 7. Khaneil sends every message from their own mail app.
     framework: Atlas (plain code, no model)
     owned_by: benjaire-inquiry-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: AI Ops Atlas site (Cloudflare Pages + D1) and app
@@ -185,25 +223,40 @@ agents:
         outcomes:
           - Every inquiry gets a reply within a day
           - Quiet leads get two follow-ups, then close
-        beneficiaries: [Benjaire customers, KC]
+        beneficiaries: [Benjaire customers, Khaneil]
       responsibilities:
         tasks:
           - Store each inquiry once (retried copies are ignored)
           - Show what needs a reply or a follow-up
           - Draft the reply and follow-ups from templates
-          - Open the draft in KC's mail app
+          - Open the draft in Khaneil's mail app
         tools: [Cloudflare D1, Atlas Mission Control]
         inputs: [Inquiry from the contact Worker]
-        outputs: [Mission Control inbox, Reply and follow-up drafts in KC's mail app]
+        outputs: [Mission Control inbox, Reply and follow-up drafts in Khaneil's mail app]
         dependencies: [benjaire-contact-worker]
+        limitations:
+          - Reply progress is saved per device, so it does not sync between the Mac and iPhone
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        review_frequency: Monthly
+        kpis:
+          - name: Inquiries answered
+            kind: throughput
+            target: Every stored inquiry gets a reply drafted and sent by Khaneil
+            basis: Mission Control lists what still needs a reply
+          - name: Follow-ups on time
+            kind: quality
+            target: Day 3 and day 7 follow-ups done when due
+            basis: The reminders are the reason it exists
+        objective: Make sure every inquiry gets a reply and its follow-ups.
       execution:
         trigger_type: event
         environment: AI Ops Atlas
       governance:
         autonomy: 1
-        autonomy_note: Prepares drafts only. Nothing is sent from Atlas; KC reads, edits and sends each message from their own mail app.
+        autonomy_note: Prepares drafts only. Nothing is sent from Atlas; Khaneil reads, edits and sends each message from their own mail app.
         data_sensitivity: confidential
-        credential_owner: KC (AGENT_FEED_TOKEN on the site and ATLAS_FEED_TOKEN on the Worker)
+        credential_owner: Khaneil (AGENT_FEED_TOKEN on the site and ATLAS_FEED_TOKEN on the Worker)
         risk: low
       cost:
         notes: No model calls. Runs inside the existing Pages site and D1 free tier, so $0 a month.
@@ -215,6 +268,7 @@ agents:
           - Optional Claude Haiku polish of a draft on click, behind a monthly cap
         last_review: 2026-11-01
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#inquiry-to-client
   - id: benjaire-site-ci
     name: Site CI
     purpose: Builds and tests the Astro site on every pull request and push to main.
@@ -247,20 +301,28 @@ agents:
         tools: [GitHub Actions, npm, Playwright]
         inputs: [Pushes and pull requests to main]
         outputs: [Check results]
+        dependencies:
+          - GitHub Actions runners
+          - Playwright
+        limitations:
+          - Checks build, links, SEO and accessibility, not how pages look
+          - Actions are pinned by version tag, not commit
       goals:
         objective: Block site changes that break the build, links, SEO or accessibility.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
       governance:
         autonomy: 0
         data_sensitivity: public
-        credential_owner: KC (GitHub repository settings)
+        credential_owner: Khaneil (GitHub repository settings)
         risk: low
         audit_log: GitHub Actions run history
       docs:
@@ -274,24 +336,41 @@ agents:
 
   # Benjaire Product Lab: one first-class n8n Agent (id ruOvE7nfE713WDUL on khancam15.app.n8n.cloud),
   # read through the n8n MCP on 2026-11-04. Its five roles are skills inside the same agent run, listed
-  # here so each has a desk in the Benjaire Marketing Agency. Atlas has seen no run yet, and n8n Agent
+  # here so each has a desk in the Growth & Marketing Studio (map key "Benjaire Marketing Agency"). Atlas has seen no run yet, and n8n Agent
   # runs are not workflow executions, so there is no `observe` source until the agent posts reports.
   - id: benjaire-product-lab
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}
     name: Benjaire Product Lab
     purpose: >-
-      n8n agent that researches, scores and recommends the next best product for Benjaire each month, running five research roles in order and emailing KC the brief.
+      n8n agent that researches, scores and recommends the next best product for Benjaire each month, running five research roles in order and emailing Khaneil the brief.
     framework: n8n Agent
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
     trigger: 'Schedule: 09:00 ET on the 1st of each month (task "Monthly next-product report")'
-    last_run: null
+    last_run: 2026-11-11T07:11:23Z
+    links:
+      # The agent's read_shop_sales and propose_shop_product tools run this workflow (agent config read
+      # 2026-11-18). It is a draft in n8n because only the agent calls it; it has no trigger of its own.
+      - label: 'n8n workflow: Commerce · Product Lab hand-off (draft, the agent''s shop tools)'
+        url: https://khancam15.app.n8n.cloud/workflow/ABtXhTwIRF9FkNGv
     permissions:
       - 'Gmail tool email_kc_report: sends only to benjaireco@gmail.com (n8n Gmail credential)'
       - 'Notion MCP server: creates or updates Product Lab pages (n8n Notion credential)'
       - 'Anthropic web search: at most 5 searches per run'
     registry:
+      identity:
+        display_name: Leila Haddad
+        accent: "#C2410C"
+        intro: "Each month I research, score and recommend Benjaire's next product, running market research, competitors, customers, scoring and the brief in order, then email you the brief. Web research can be dated or wrong, so the brief is advice, not a decision."
+        voice: "Curious and evidence led: every claim carries a date and a link."
+        appearance: "Lebanese woman in her mid 30s, light olive skin, long dark curly hair worn down, small hoop earrings, rust-terracotta blouse under a cream linen jacket"
+        portrait:
+          path: agents/benjaire-product-lab.webp
+          model: gpt_image_2_6
+          job_id: 793ebfb5-c40d-4708-87e3-0df6cfb83a7b
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Product Lab Lead
       category: business
       subcategory: Product research
@@ -304,37 +383,54 @@ agents:
         outcomes:
           - One top recommendation and two runners-up each month, with sources
           - Ideas are called hypotheses until real demand evidence exists
-        beneficiaries: [KC]
+        beneficiaries: [Khaneil]
       responsibilities:
         tasks:
           - Run Market Research, Competitor Analysis, Customer Insight, Product Scoring and Product Brief in order
           - Note what changed since last month's pick
-          - Email KC the brief and save it to Notion
+          - Email Khaneil the brief and save it to Notion
         tools: [n8n Agent, Claude (claude-sonnet-5-5), Anthropic web search, Gmail, Notion MCP]
-        inputs: [Monthly schedule, A topic from KC in chat]
+        inputs: [Monthly schedule, A topic from Khaneil in chat]
         outputs: [Monthly next-product brief by email, Notion page]
         dependencies: [benjaire-product-lab-research, benjaire-product-lab-competitors, benjaire-product-lab-customers, benjaire-product-lab-scoring, benjaire-product-lab-brief]
+        limitations:
+          - Monthly; between runs only Khaneil's chat questions start it
+          - Web research can be out of date or wrong; the brief is advice for Khaneil, not a decision
+          - High reasoning plus memory on every run is its main cost
+      goals:
+        review_frequency: Monthly
+        kpis:
+          - name: Monthly brief delivered
+            kind: reliability
+            target: One brief by email on the 1st of each month
+            basis: Task "Monthly next-product report" runs at 09:00 ET on the 1st
+          - name: Spend
+            kind: cost
+            target: Under $3 a month and $1.50 a session
+            basis: n8n agent budget guardrail
+        objective: Recommend the next best Benjaire product each month, with evidence.
       execution:
         trigger_type: scheduled
         schedule: '0 9 1 * * (America/New_York)'
         environment: n8n
       governance:
         autonomy: 1
-        autonomy_note: Recommends only. It emails KC and writes Notion pages without approval, never contacts anyone else and changes nothing outside KC's own inbox and Notion.
+        autonomy_note: Recommends only. It emails Khaneil and writes Notion pages without approval, never contacts anyone else and changes nothing outside Khaneil's own inbox and Notion.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials for Anthropic, Gmail and Notion)
+        credential_owner: Khaneil (n8n credentials for Anthropic, Gmail and Notion)
         risk: low
+        kill_switch: 'Switch the Monthly next-product report task off, or unpublish the Product Lab Lead agent, in n8n.'
+        caps: 'n8n agent budget of $3 a month and $1.50 a session, at most 5 web searches a run. Emails only Khaneil.'
       cost:
         notes: One run a month on Sonnet 5.5 with reasoning high, up to 5 web searches and n8n memory. Not measured yet; Atlas makes no model calls for it.
       docs:
         technical: https://khancam15.app.n8n.cloud
         known_issues:
-          - Atlas cannot see its runs yet; n8n Agent runs are not workflow executions and the agent does not post to Atlas
+          - Atlas sees each monthly brief (send_atlas_report posts it to /api/hooks/reports, checked in the published agent on 2026-11-14), not each n8n Agent run
           - Reasoning high plus observational memory on every run is the main cost
-        improvements:
-          - Post each finished brief to Atlas through POST /api/hooks/reports
-        last_review: 2026-11-04
+        last_review: 2026-11-14
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-product-lab-research
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-insights"}
     name: Product Lab Market Research
@@ -344,7 +440,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -356,19 +452,41 @@ agents:
         type: A
         confidence: verified
         evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      mission:
+        problem: Picking the next product on instinct misses real demand; Benjaire needs dated, linked demand evidence.
+        outcomes:
+          - A long list of 6 to 10 ideas, each with dated demand signals
+          - Ideas needing inventory, regulatory approval or patents are dropped
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks:
-            - 'Search trend signals from the last 12 months'
-            - 'Look for service-firm pain points for digital offers'
-            - 'List 6 to 10 ideas with pillar, demand signals, trend and price'
-            - 'Drop ideas needing heavy inventory, regulatory approval or patents'
+          - 'Search trend signals from the last 12 months'
+          - 'Look for service-firm pain points for digital offers'
+          - 'List 6 to 10 ideas with pillar, demand signals, trend and price'
+          - 'Drop ideas needing heavy inventory, regulatory approval or patents'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Topic from KC or the monthly task'
-            - 'Web search'
+          - 'Topic from Khaneil or the monthly task'
+          - 'Web search'
         outputs:
-            - 'Long list of 6 to 10 ideas with source links'
+          - 'Long list of 6 to 10 ideas with source links'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
+      goals:
+        objective: A long list of 6 to 10 ideas, each with dated demand signals
+        review_frequency: Monthly
+        kpis:
+          - name: Ideas per run
+            kind: throughput
+            target: 6 to 10 ideas
+            basis: The skill's own instruction
+          - name: Sourced claims
+            kind: quality
+            target: Every claim has a source link; estimates are labelled
+            basis: Product Lab rule shared by all five roles
       execution:
         trigger_type: scheduled
         schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
@@ -377,12 +495,13 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-product-lab-competitors
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-archive"}
     name: Product Lab Competitor Analysis
@@ -392,7 +511,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -404,20 +523,42 @@ agents:
         type: A
         confidence: verified
         evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      mission:
+        problem: An idea can look good until you find five sellers already doing it better.
+        outcomes:
+          - Each shortlisted idea has its top 3 to 5 competitors mapped
+          - A differentiation angle per idea
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks:
-            - 'Find the top 3 to 5 sellers per idea'
-            - 'Record price, rating, positioning and channel'
-            - 'Summarise the top 3 complaints from 1 to 3 star reviews'
-            - 'Rate saturation and propose an angle'
+          - 'Find the top 3 to 5 sellers per idea'
+          - 'Record price, rating, positioning and channel'
+          - 'Summarise the top 3 complaints from 1 to 3 star reviews'
+          - 'Rate saturation and propose an angle'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Shortlisted ideas'
-            - 'Web search'
+          - 'Shortlisted ideas'
+          - 'Web search'
         outputs:
-            - 'Competitor table per idea with links and the date prices were checked'
-            - 'Saturation and differentiation angle'
+          - 'Competitor table per idea with links and the date prices were checked'
+          - 'Saturation and differentiation angle'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
+      goals:
+        objective: Each shortlisted idea has its top 3 to 5 competitors mapped
+        review_frequency: Monthly
+        kpis:
+          - name: Competitors per idea
+            kind: throughput
+            target: 3 to 5
+            basis: The skill's own instruction
+          - name: Sourced claims
+            kind: quality
+            target: Every claim has a source link; estimates are labelled
+            basis: Product Lab rule shared by all five roles
       execution:
         trigger_type: scheduled
         schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
@@ -426,12 +567,13 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-product-lab-customers
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-social"}
     name: Product Lab Customer Insight
@@ -441,7 +583,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -453,20 +595,42 @@ agents:
         type: A
         confidence: verified
         evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      mission:
+        problem: A product without a clear buyer and reach channel is hard to validate cheaply.
+        outcomes:
+          - 1 to 2 specific personas per idea with real quoted pains
+          - The 3 cheapest channels to reach them
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks:
-            - 'Write 1 to 2 specific personas per idea'
-            - 'Quote real posts or reviews for the top pains'
-            - 'List buying triggers'
-            - 'Name the 3 cheapest reach channels'
-            - 'Draft a headline and value proposition'
+          - 'Write 1 to 2 specific personas per idea'
+          - 'Quote real posts or reviews for the top pains'
+          - 'List buying triggers'
+          - 'Name the 3 cheapest reach channels'
+          - 'Draft a headline and value proposition'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Shortlisted ideas with competitor findings'
-            - 'Web search'
+          - 'Shortlisted ideas with competitor findings'
+          - 'Web search'
         outputs:
-            - 'Personas, quoted pains, triggers, channels and a headline per idea'
+          - 'Personas, quoted pains, triggers, channels and a headline per idea'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
+      goals:
+        objective: 1 to 2 specific personas per idea with real quoted pains
+        review_frequency: Monthly
+        kpis:
+          - name: Personas per idea
+            kind: throughput
+            target: 1 to 2
+            basis: The skill's own instruction
+          - name: Sourced claims
+            kind: quality
+            target: Every claim has a source link; estimates are labelled
+            basis: Product Lab rule shared by all five roles
       execution:
         trigger_type: scheduled
         schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
@@ -475,12 +639,13 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-product-lab-scoring
     workplace: {building: Benjaire Marketing Agency, floor: 2, room: "2-workshop"}
     name: Product Lab Product Scoring
@@ -490,7 +655,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -502,19 +667,41 @@ agents:
         type: A
         confidence: verified
         evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      mission:
+        problem: Ideas need one consistent yardstick so the monthly pick is comparable month to month.
+        outcomes:
+          - One top recommendation and two runners-up from the weighted scorecard
+          - Each pick's biggest risk named
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks:
-            - 'Score each idea 1 to 5 on demand (25%), gap (20%), brand fit (15%), margin (15%), validation speed and cost (15%) and Flow synergy (10%)'
-            - 'Compute the weighted total out of 5.00'
-            - 'Justify very low and top scores'
-            - 'Pick the top idea and two runners-up with their biggest risk'
+          - 'Score each idea 1 to 5 on demand (25%), gap (20%), brand fit (15%), margin (15%), validation speed and cost (15%) and Flow synergy (10%)'
+          - 'Compute the weighted total out of 5.00'
+          - 'Justify very low and top scores'
+          - 'Pick the top idea and two runners-up with their biggest risk'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Market, competitor and customer findings'
+          - 'Market, competitor and customer findings'
         outputs:
-            - 'Scorecard table sorted highest first'
-            - 'Top pick and two runners-up'
+          - 'Scorecard table sorted highest first'
+          - 'Top pick and two runners-up'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
+      goals:
+        objective: One top recommendation and two runners-up from the weighted scorecard
+        review_frequency: Monthly
+        kpis:
+          - name: Scorecard applied
+            kind: quality
+            target: Every idea scored on all six weighted criteria out of 5.00
+            basis: The Benjaire weighted scorecard
+          - name: Sourced claims
+            kind: quality
+            target: Every claim has a source link; estimates are labelled
+            basis: Product Lab rule shared by all five roles
       execution:
         trigger_type: scheduled
         schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
@@ -523,12 +710,13 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-product-lab-brief
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-review"}
     name: Product Lab Product Brief
@@ -538,7 +726,7 @@ agents:
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active
-    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when KC asks it in chat)
+    trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
@@ -550,20 +738,42 @@ agents:
         type: A
         confidence: verified
         evidence: Skill of the n8n Agent Benjaire Product Lab, config read 2026-11-04
+      mission:
+        problem: Research is only useful when it ends in a decision Khaneil can act on.
+        outcomes:
+          - A decision-ready brief of about 900 words
+          - A week-by-week 30-day validation plan with numeric success metrics
+        beneficiaries:
+          - Khaneil
       responsibilities:
         tasks:
-            - 'Write the brief sections from recommendation to success metrics'
-            - 'Lay out a week-by-week 30-day validation plan'
-            - 'Set numeric success metrics'
-            - 'Save to Notion and email KC when asked'
+          - 'Write the brief sections from recommendation to success metrics'
+          - 'Lay out a week-by-week 30-day validation plan'
+          - 'Set numeric success metrics'
+          - 'Save to Notion and email Khaneil when asked'
         tools: [Claude (claude-sonnet-5-5), Anthropic web search]
         inputs:
-            - 'Scorecard and supporting research'
+          - 'Scorecard and supporting research'
         outputs:
-            - 'Product brief'
-            - 'Notion page Product Lab – <topic> – <date>'
-            - 'Email to KC'
+          - 'Product brief'
+          - 'Notion page Product Lab – <topic> – <date>'
+          - 'Email to Khaneil'
         dependencies: [benjaire-product-lab]
+        limitations:
+          - Runs only inside Benjaire Product Lab, never on its own
+          - Relies on web search results, which can be incomplete
+      goals:
+        objective: A decision-ready brief of about 900 words
+        review_frequency: Monthly
+        kpis:
+          - name: Brief length
+            kind: quality
+            target: About 900 words
+            basis: The skill's own instruction
+          - name: Sourced claims
+            kind: quality
+            target: Every claim has a source link; estimates are labelled
+            basis: Product Lab rule shared by all five roles
       execution:
         trigger_type: scheduled
         schedule: 'Inside the monthly Product Lab run: 0 9 1 * * (America/New_York)'
@@ -572,25 +782,32 @@ agents:
         autonomy: 1
         autonomy_note: Research and recommendation only; every claim needs a source link and estimates are labelled.
         data_sensitivity: internal
-        credential_owner: KC (n8n credentials)
+        credential_owner: Khaneil (n8n credentials)
         risk: low
       docs:
         technical: https://khancam15.app.n8n.cloud
         last_review: 2026-11-04
 
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#product-lab
   - id: benjaire-flow-errors
     name: Flow Error Alerts
     purpose: >-
-      When any Benjaire Flow or Shop workflow fails, emails the ops address with the workflow, step, error and a link to the run.
+      When any Benjaire Flow, Shop or Commerce workflow fails, emails the ops address with the workflow, step, error and a link to the run, and posts a failed report for that workflow's agents to the Atlas feed (step and run id only).
     framework: n8n
     owned_by: benjaire-ops-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
-    trigger: Error trigger from any Flow or Shop workflow
-    last_run: null
+    trigger: Error trigger from any Flow, Shop or Commerce workflow
+    last_run: 2026-11-16T12:00:50Z
+    history:
+      - at: 2026-11-16
+        event: Now also posts each failed run to the Atlas feed for that workflow's agents (step and run id only, no customer data), so the agent turns red in Atlas
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/F4A9rMTqPZunNoqb
+    permissions:
+      - 'Resend API: sends from contact@benjaire.com to the ops address only'
+      - 'n8n data table flow_settings: reads ops_email'
     registry:
       title: Flow Error Alerts
       category: business
@@ -599,10 +816,58 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow F4A9rMTqPZunNoqb, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: A failed Flow or Shop workflow would otherwise fail silently, and inquiries or buyer emails could be lost without anyone noticing.
+        outcomes:
+          - Every failed Flow or Shop run reaches the ops inbox within minutes
+          - Each alert names the workflow, the failed step and a link to the run
+        beneficiaries:
+          - Khaneil
+          - Benjaire customers
+      responsibilities:
+        tasks:
+          - Receive the error trigger from any Flow or Shop workflow
+          - Email ops the workflow, step, error and run link
+          - Leave customer data out of the alert
+        tools:
+          - n8n Cloud
+          - Resend
+        inputs:
+          - n8n error trigger from a failed workflow
+        outputs:
+          - Error alert email to the ops address
+        dependencies:
+          - Every Flow, Shop and Commerce n8n workflow (error trigger)
+          - Resend
+        limitations:
+          - Alerts only; it does not retry the failed workflow
+          - Only sees failures n8n catches; a workflow that never starts sends nothing (Missed Run Check covers that)
+      goals:
+        objective: No Flow or Shop failure goes unnoticed.
+        review_frequency: Monthly
+        kpis:
+          - name: Failures alerted
+            kind: reliability
+            target: Every failed Flow or Shop execution has an alert run
+            basis: The error workflow is set on every Flow and Shop workflow; a missing alert means a failure nobody saw
+          - name: Alert delivery
+            kind: reliability
+            target: Alert sent within 5 minutes of the failure
+            basis: Exec 731 alerted 1 second after the Data Inventory failure on 2026-11-16
       execution:
         trigger_type: event
         environment: n8n
 
+      governance:
+        autonomy: 0
+        autonomy_note: Reports failures only; it changes nothing.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials and flow_settings)
+        risk: low
+        audit_log: n8n executions
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#flow-error-alerts
+        last_review: 2026-11-17
   - id: benjaire-flow-status
     name: Flow Status Updates
     purpose: >-
@@ -612,10 +877,22 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Status link clicked in an owner alert
+    observe:
+      agent_feed: true
+    # Client emails on a first win: Flow Error Alerts reports any failed run. Runs per status
+    # click, so a quiet stretch is normal and there is no silence window.
+    alerts:
+      failures: true
     last_run: null
+    history:
+      - at: 2026-11-16
+        event: Failed runs now report to the Atlas feed through Flow Error Alerts
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/7ccL2o9ta9CNY3gj
+    permissions:
+      - 'Resend API: welcome email to the client on a first win, sent from contact@benjaire.com'
+      - 'n8n data tables: reads flow_settings, updates flow_inquiries status, writes flow_events'
     registry:
       title: Flow Status Updates
       category: business
@@ -624,10 +901,70 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow 7ccL2o9ta9CNY3gj, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: Khaneil needs to mark an inquiry replied, won or lost from the alert email without opening n8n, and a new client needs onboarding right away.
+        outcomes:
+          - Status changes only after a confirmed, token-checked click
+          - Every change is logged
+          - A first win sends the client the welcome and onboarding email
+        beneficiaries:
+          - Khaneil
+          - New Benjaire clients
+      responsibilities:
+        tasks:
+          - Show a confirm page on the status link (GET changes nothing)
+          - Verify the inquiry ref and one-time token on POST
+          - Update the inquiry status and log the event
+          - Send the welcome email on a first win
+        tools:
+          - n8n Cloud
+          - n8n data tables
+          - Resend
+        inputs:
+          - Status link clicked in an owner alert
+          - Confirm form POST
+        outputs:
+          - Updated flow_inquiries status
+          - flow_events audit row
+          - Welcome and onboarding email on a first win
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries data table
+          - Resend
+        limitations:
+          - Status links never expire
+          - No saved run since 2026-10-18, so it has not been proven recently
+      goals:
+        objective: Keep every inquiry's status accurate with one click.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed status change leaves the inquiry list wrong
+          - name: Unverified changes
+            kind: quality
+            target: Zero status changes without a valid token
+            basis: The confirm step checks ref + one-time token
       execution:
         trigger_type: event
         environment: n8n
 
+      governance:
+        autonomy: 2
+        autonomy_note: Changes a status only when Khaneil clicks and confirms; the welcome email follows that confirmation.
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials and flow_settings)
+        risk: low
+        audit_log: flow_events data table in n8n
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#flow-status-updates
+        known_issues:
+          - No execution in the last 30 days (none saved since 2026-10-18), so it has not been exercised recently
+          - Status tokens never expire
+        last_review: 2026-11-17
   - id: benjaire-flow-reminders
     name: Flow Reply Reminders
     purpose: >-
@@ -637,10 +974,22 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Weekdays at 9am, 1pm and 5pm ET
-    last_run: null
+    observe:
+      agent_feed: true
+    # Flow Missed Run Check reports it daily (skipped at weekends) and Flow Error Alerts reports failures.
+    alerts:
+      failures: true
+      report_within: 26h
+    last_run: 2026-11-16T22:00:00Z
+    history:
+      - at: 2026-11-16
+        event: Reports to Atlas through the daily Flow Missed Run Check (on time = ok, late = failed) and Flow Error Alerts (any failed run)
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/FXEm2O630Yw6h1iw
+    permissions:
+      - 'Resend API: reminder emails to the owner address only'
+      - 'n8n data tables: reads flow_settings and flow_inquiries, marks reminded'
     registry:
       title: Flow Reply Reminders
       category: business
@@ -649,10 +998,64 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow FXEm2O630Yw6h1iw, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: Inquiries can sit unanswered past their reply target when nobody is watching the inbox.
+        outcomes:
+          - Khaneil hears once about each inquiry past its reply target
+          - No inquiry is reminded twice
+        beneficiaries:
+          - Khaneil
+          - Benjaire prospects
+      responsibilities:
+        tasks:
+          - Find inquiries still new past their reply target
+          - Email the owner once per inquiry
+          - Mark each inquiry reminded
+        tools:
+          - n8n Cloud
+          - n8n data tables
+          - Resend
+        inputs:
+          - flow_inquiries rows
+          - flow_settings reply targets (24 hours, 4 hours urgent)
+        outputs:
+          - Reminder email to the owner
+          - reminded flag on the inquiry
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries and flow_settings data tables
+          - Resend
+        limitations:
+          - Checks three times on weekdays only, so weekend inquiries wait until Monday 9am
+          - Reminds; it does not reply to the client
+      goals:
+        objective: No inquiry waits past its reply target unnoticed.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run means missed reminders; the Missed Run Check watches it
+          - name: Runs on schedule
+            kind: reliability
+            target: 3 runs every weekday
+            basis: n8n executions show 14:00, 18:00 and 22:00 UTC runs on weekdays
       execution:
         trigger_type: scheduled
         environment: n8n
 
+      governance:
+        autonomy: 3
+        autonomy_note: 'Emails only the owner, within fixed rules: one reminder per inquiry.'
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials and flow_settings)
+        risk: low
+        audit_log: n8n executions
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#flow-reply-reminders
+        last_review: 2026-11-17
   - id: benjaire-flow-digest
     name: Flow Monday Digest
     purpose: >-
@@ -662,10 +1065,22 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Mondays at 8am ET
-    last_run: null
+    observe:
+      agent_feed: true
+    # Flow Missed Run Check reports it daily and Flow Error Alerts reports failures.
+    alerts:
+      failures: true
+      report_within: 26h
+    last_run: 2026-11-16T13:00:00Z
+    history:
+      - at: 2026-11-16
+        event: Reports to Atlas through the daily Flow Missed Run Check (on time = ok, late = failed) and Flow Error Alerts (any failed run)
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/WWLpiSncbo2SLS5M
+    permissions:
+      - 'Resend API: digest email to the owner address only'
+      - 'n8n data tables: reads flow_settings and flow_inquiries'
     registry:
       title: Flow Monday Digest
       category: business
@@ -674,26 +1089,89 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow WWLpiSncbo2SLS5M, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: Khaneil needs a weekly picture of inquiries, wins and response time without building a report by hand.
+        outcomes:
+          - A digest in the owner inbox every Monday morning
+          - Who is still waiting is named
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Count new, won and lost inquiries for the week
+          - Work out median handling time
+          - List who is still waiting
+          - Email the digest
+        tools:
+          - n8n Cloud
+          - n8n data tables
+          - Resend
+        inputs:
+          - flow_inquiries rows
+        outputs:
+          - Monday digest email to the owner
+        dependencies:
+          - benjaire-flow-intake
+          - flow_inquiries data table
+          - Resend
+        limitations:
+          - Weekly only, Mondays 8am
+          - Summarises what is in the table; it does not check inboxes
+      goals:
+        objective: One reliable weekly summary of the inquiry pipeline.
+        review_frequency: Quarterly
+        kpis:
+          - name: Digest sent every Monday
+            kind: reliability
+            target: 4 or 5 digests a month, none missed
+            basis: The Missed Run Check flags a missing Monday run
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed digest hides the week's pipeline
       execution:
         trigger_type: scheduled
         environment: n8n
 
+      governance:
+        autonomy: 3
+        autonomy_note: Emails only the owner; reads the inquiry tables and changes nothing.
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials and flow_settings)
+        risk: low
+        audit_log: n8n executions
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#flow-monday-digest
+        last_review: 2026-11-17
   - id: benjaire-flow-missed-runs
     name: Flow Missed Run Check
     purpose: >-
-      Emails ops when Shop follow ups, Reply reminders or the Monday digest have not run on time. No AI.
+      Emails ops when Shop follow ups, Reply reminders, the Monday digest or the weekly sales email have not run on time, and posts a daily heartbeat for each of them to the Atlas feed. No AI.
     framework: n8n
     owned_by: benjaire-ops-monitor            # owning agent, added at Khaneil's request 2026-11-13
     runtime: n8n Cloud
     status: active
     trigger: Daily at 11am ET
-    last_run: 2026-11-12T16:00:54Z
+    observe:
+      agent_feed: true
+    # Posts a heartbeat to Atlas every day at 11am ET, so a stopped check shows as silent after 26 hours.
+    alerts:
+      failures: true
+      report_within: 26h
+    last_run: 2026-11-16T16:00:52Z
     history:
+      - at: 2026-11-16
+        event: Posts a daily heartbeat to the Atlas feed (on-time schedules ok, late ones failed) and now also watches the weekly sales email
       - at: 2026-11-11
         event: Switched on in n8n; scheduled runs succeed daily at 11am ET (checked read-only 2026-11-13)
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/u3B7KFesmHzyEimO
+    permissions:
+      - 'n8n API key (read only): executions of the watched workflows'
+      - 'Resend API: alert email to the ops address only'
     registry:
       title: Flow Missed Run Check
       category: business
@@ -702,10 +1180,59 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow u3B7KFesmHzyEimO, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: A scheduled workflow that silently stops running produces no error, so the error alerts never fire.
+        outcomes:
+          - Ops hears the same day when Shop follow ups, Reply reminders or the Monday digest missed a run
+        beneficiaries:
+          - Khaneil
+          - Benjaire buyers and prospects
+      responsibilities:
+        tasks:
+          - Read the latest runs of Shop follow ups, Reply reminders and the Monday digest
+          - Compare them with their schedules
+          - Email ops about any missed run
+        tools:
+          - n8n Cloud
+          - Resend
+        inputs:
+          - n8n executions of the three watched workflows
+        outputs:
+          - Missed-run alert email to ops, only when one is late
+        dependencies:
+          - n8n execution history
+          - Resend
+        limitations:
+          - Watches three workflows only
+          - Daily, so a missed run can go unnoticed for up to a day
+      goals:
+        objective: Catch silent schedule failures within a day.
+        review_frequency: Monthly
+        kpis:
+          - name: Runs daily
+            kind: reliability
+            target: One run every day at 11am New York time
+            basis: n8n executions show a run at 16:00 UTC daily since 2026-11-11
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed check hides missed runs
       execution:
         trigger_type: scheduled
         environment: n8n
 
+      governance:
+        autonomy: 0
+        autonomy_note: Reads run history and alerts only.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n API key and credentials)
+        risk: low
+        audit_log: n8n executions
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#flow-missed-run-check
+        last_review: 2026-11-17
   - id: benjaire-shop-delivery
     name: Shop Starter Delivery
     purpose: >-
@@ -715,10 +1242,23 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Stripe checkout.session.completed webhook
-    last_run: null
+    observe:
+      agent_feed: true
+    # Buyer delivery email: Flow Error Alerts reports any failed run (the same workflow as Order
+    # Delivery). Runs per order, so there is no silence window.
+    alerts:
+      failures: true
+    last_run: 2026-11-12T15:07:57Z
+    history:
+      - at: 2026-11-16
+        event: Failed runs now report to the Atlas feed through Flow Error Alerts, alongside Order Delivery's per-email reports
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/pjj7ORgRjeGGTIFL
+    permissions:
+      - 'Stripe: reads checkout sessions to verify each paid order'
+      - 'Resend API: buyer emails from benjaire.com'
+      - 'n8n data tables: reads shop_settings, writes shop orders'
     registry:
       title: Shop Starter Delivery
       category: business
@@ -727,10 +1267,70 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow pjj7ORgRjeGGTIFL, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: A paying buyer must get their kit right away and only after Stripe confirms the payment.
+        outcomes:
+          - Every verified paid order gets one private, expiring download link
+          - Duplicate or unverified webhooks send nothing
+        beneficiaries:
+          - Benjaire shop buyers
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Verify checkout.session.completed against Stripe
+          - Save the order
+          - Email the buyer a private expiring download link
+          - Serve the kit zip
+        tools:
+          - n8n Cloud
+          - Stripe
+          - Resend
+          - n8n data tables
+        inputs:
+          - Stripe checkout.session.completed webhook
+        outputs:
+          - Order row
+          - Delivery email to the buyer
+          - Kit download
+        dependencies:
+          - Stripe checkout.session.completed webhook
+          - Resend
+          - shop_orders data table
+        limitations:
+          - No paid order has run through it yet; the last saved run is a test on 2026-11-12
+          - Delivers only after Stripe confirms payment
+      goals:
+        objective: Deliver every paid order once, safely.
+        review_frequency: Monthly
+        kpis:
+          - name: Paid orders delivered
+            kind: reliability
+            target: 100% of Stripe-verified paid orders get one delivery email
+            basis: Delivery is the only way buyers receive the kit
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves a paying buyer waiting
       execution:
         trigger_type: event
         environment: n8n
+      governance:
+        kill_switch: 'Unpublish Shop · Flow Starter delivery in n8n. Or, without unpublishing: shop_settings.customer_emails_paused = true holds buyer emails and tells Khaneil to send the link by hand.'
+        caps: 'One delivery email per Stripe-verified paid order, duplicates skipped.'
 
+        autonomy: 3
+        autonomy_note: Emails buyers without approval, only for Stripe-verified paid orders and only the approved kit link.
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials)
+        risk: medium
+        audit_log: n8n executions and the shop orders table
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#order-delivery
+        known_issues:
+          - The last saved execution is a manual test on 2026-11-12; no paid order has run through it since
+        last_review: 2026-11-17
   - id: benjaire-shop-follow-ups
     name: Shop Buyer Follow Ups
     purpose: >-
@@ -740,10 +1340,23 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Every 4 hours
-    last_run: null
+    observe:
+      agent_feed: true
+    # Buyer emails: Flow Missed Run Check reports it daily (on time or late) and Flow Error Alerts
+    # reports any failed run, so it is silent in Atlas after 26 hours without a report.
+    alerts:
+      failures: true
+      report_within: 26h
+    last_run: 2026-11-17T09:00:48Z
+    history:
+      - at: 2026-11-16
+        event: Reports to Atlas through the daily Flow Missed Run Check (on time = ok, late = failed) and Flow Error Alerts (any failed run)
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/1QdoYrF1XVxT4Xyu
+    permissions:
+      - 'Resend API: buyer follow-up emails from benjaire.com'
+      - 'n8n data tables: reads shop orders and shop_settings, marks follow-ups sent'
     registry:
       title: Shop Buyer Follow Ups
       category: business
@@ -752,9 +1365,64 @@ agents:
         type: C
         confidence: verified
         evidence: Live n8n workflow 1QdoYrF1XVxT4Xyu, checked read-only on 2026-11-11 (no model step)
+      mission:
+        problem: Buyers who get stuck setting up the kit go quiet unless someone checks in at the right time.
+        outcomes:
+          - Each order gets the day 2 setup check (if downloaded) and the day 12 help email once
+          - Unexpectedly large batches wait for Khaneil
+        beneficiaries:
+          - Benjaire shop buyers
+      responsibilities:
+        tasks:
+          - Find orders due a day 2 or day 12 email
+          - Hold the batch if more are due than followup_max_per_run
+          - Send each email once and record it
+          - Report each batch to Atlas
+        tools:
+          - n8n Cloud
+          - Resend
+          - n8n data tables
+        inputs:
+          - Shop orders since v1.0.1
+          - shop_settings caps and pause flag
+        outputs:
+          - Day 2 and day 12 buyer emails
+          - Sent markers on each order
+          - Batch report to Atlas
+        dependencies:
+          - benjaire-shop-delivery
+          - shop_settings caps and pause flag
+          - Resend
+        limitations:
+          - Every 4 hours, so a follow up can be up to 4 hours late
+          - Sends each follow up once per order and stops when shop_settings is paused
+      goals:
+        objective: Every buyer is checked on at day 2 and day 12, exactly once.
+        review_frequency: Monthly
+        kpis:
+          - name: Runs every 4 hours
+            kind: reliability
+            target: 6 runs a day
+            basis: n8n executions show runs at 01, 05, 09, 13, 17 and 21 UTC
+          - name: Duplicate follow-ups
+            kind: quality
+            target: Zero emails sent twice for one order
+            basis: Each email is marked once per order
       execution:
         trigger_type: scheduled
         environment: n8n
+      governance:
+        kill_switch: 'Unpublish Shop · Flow follow ups in n8n. Or, without unpublishing: shop_settings.customer_emails_paused = true sends nothing that run.'
+        caps: 'Each email once per order. A run with more due than followup_max_per_run (default 5) is held for Khaneil and reported to Atlas.'
+        autonomy: 3
+        autonomy_note: Emails buyers on a fixed schedule from fixed templates; a batch over the cap is held for Khaneil.
+        data_sensitivity: confidential
+        credential_owner: Khaneil (n8n credentials)
+        risk: medium
+        audit_log: n8n executions and Atlas reports
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/multi-agent-commerce-pipeline.md#buyer-follow-ups
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -771,7 +1439,21 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Inquiry Routing Coordinator, Client Intake Specialist, Client Reply Assistant, Flow Status Updates, Flow Reply Reminders, Flow Monday Digest, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Claire Dubois
+        accent: "#E11D48"
+        intro: "I make sure every benjaire.com inquiry is received, sorted, answered and followed up: the contact form checks it, Claude sorts it, I draft a reply for you to review in Atlas, remind you about anything unanswered and send the Monday digest. You write every reply to a client."
+        voice: "Warm and organized: the client and how long they have waited come first."
+        appearance: "French-Canadian woman in her mid 40s, fair skin with light freckles, auburn hair in a loose low bun, cream cable-knit sweater"
+        portrait:
+          path: agents/benjaire-inquiry-manager.webp
+          model: gpt_image_2_6
+          job_id: 406afb79-3173-48a5-99f9-83d0b735a5ed
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Client Inquiry Manager
       category: business
       subcategory: Client inquiries
@@ -781,10 +1463,43 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Inquiries come in through several steps (form, Claude sorting, drafts, status links, reminders, digest) and one owner must make sure none falls through.
+        outcomes:
+          - Every benjaire.com inquiry is received, sorted, answered and followed up
+          - Khaneil sees the whole pipeline in one place
+        beneficiaries:
+          - Khaneil
+          - Benjaire prospects and clients
       responsibilities:
         tasks: [Accept and check contact form submissions, Sort each inquiry and alert Khaneil, Draft replies Khaneil reviews in Atlas, Remind Khaneil about unanswered inquiries, Send the Monday digest]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Contact form submissions
+          - Status link clicks
+          - Its automations' schedules
+        dependencies:
+          - benjaire-contact-worker
+          - benjaire-flow-intake
+          - benjaire-flow-status
+          - benjaire-flow-reminders
+          - benjaire-flow-digest
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Khaneil writes every reply to a client
+      goals:
+        objective: Answer every inquiry within its reply target.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Replies within target
+            kind: quality
+            target: Every inquiry replied to within 24 hours (4 hours urgent)
+            basis: reply_sla_hours and urgent_sla_hours in flow_settings
       execution:
         trigger_type: event
         environment: Through its automations
@@ -792,8 +1507,12 @@ agents:
         autonomy: 1
         autonomy_note: Replies to clients are sent only after Khaneil reviews them.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#client-inquiry-manager
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -810,7 +1529,21 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Shop Starter Delivery, Shop Buyer Follow Ups, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Mateo Rossi
+        accent: "#0369A1"
+        intro: "I look after every Benjaire shop buyer: I verify each Stripe checkout, deliver the download, and send the day 2 and day 12 follow ups once per order. Refunds and buyer questions go to you."
+        voice: "Plain confirmations, order by order."
+        appearance: "Italian man in his late 20s, light skin, short curly brown hair, light stubble, chambray button-down shirt"
+        portrait:
+          path: agents/benjaire-shop-manager.webp
+          model: gpt_image_2_6
+          job_id: c06f7285-2cc7-4b14-87f8-87ab7702e76e
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Shop Order Manager
       category: business
       subcategory: Shop orders
@@ -820,10 +1553,39 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Each shop order needs verification, delivery and two follow-ups, and a miss means a paying buyer left waiting.
+        outcomes:
+          - Every paid order is delivered once
+          - Every buyer gets the day 2 and day 12 follow-ups once
+        beneficiaries:
+          - Benjaire shop buyers
+          - Khaneil
       responsibilities:
-        tasks: [Verify each checkout and deliver the download, Send the day 2 and day 12 follow ups once per order]
+        tasks: [Verify each checkout and deliver the download, Send the day 2 and day 12 follow ups once per order, Stop follow ups when the shop is paused or a cap is reached]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Stripe completed checkouts
+          - Its automations' schedules
+        dependencies:
+          - benjaire-shop-delivery
+          - benjaire-shop-follow-ups
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Refunds and buyer questions go to Khaneil
+      goals:
+        objective: Every buyer gets their product and support on time.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Paid orders delivered
+            kind: reliability
+            target: 100% of verified paid orders
+            basis: Delivery is the only way buyers receive the kit
       execution:
         trigger_type: event
         environment: Through its automations
@@ -831,8 +1593,12 @@ agents:
         autonomy: 1
         autonomy_note: Buyer emails follow fixed templates and the approval gate set up on 2026-11-12.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#shop-order-manager
+        last_review: 2026-11-17
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
@@ -849,7 +1615,21 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Website Quality Engineer, Flow Error Alerts, Flow Missed Run Check, at Khaneil's request
+    permissions:
+      - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
+      identity:
+        display_name: Andre Thompson
+        accent: "#65A30D"
+        intro: "I keep the Benjaire site and its workflows working: Site CI tests every change, and I email ops when a Flow or Shop workflow fails or a scheduled one misses its run. I alert; I don't fix."
+        voice: "Alert first and terse: what broke, where, since when."
+        appearance: "Jamaican man in his mid 40s, dark brown skin, shaved head, neat goatee with grey flecks, charcoal henley"
+        portrait:
+          path: agents/benjaire-ops-monitor.webp
+          model: gpt_image_2_6
+          job_id: 2bc7ba93-6938-4e11-b543-064d11c9dd93
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Business Operations Monitor
       category: infrastructure
       subcategory: Monitoring
@@ -859,10 +1639,42 @@ agents:
         type: A
         confidence: verified
         evidence: Owning agent defined in the Atlas catalog on 2026-11-13; its automations name it in owned_by. It has no model of its own and no run of its own has been seen.
+      mission:
+        problem: Site breakages and failed or silent workflows hurt customers before anyone notices.
+        outcomes:
+          - Every site change is tested
+          - Every failed Flow or Shop run is emailed to ops
+          - A missed scheduled run is flagged the same day
+        beneficiaries:
+          - Khaneil
+          - Benjaire customers
       responsibilities:
         tasks: [Build and test the site on every change, Email ops when a Flow or Shop workflow fails, Flag scheduled workflows that did not run on time]
         tools: [Its automations]
         outputs: [The results of its automations]
+        inputs:
+          - Pull requests and pushes
+          - n8n error triggers
+          - n8n run history
+        dependencies:
+          - benjaire-site-ci
+          - benjaire-flow-errors
+          - benjaire-flow-missed-runs
+        limitations:
+          - Acts only through the automations it owns; it has no model, schedule or credentials of its own
+          - Alerts Khaneil; it does not fix failures
+      goals:
+        objective: Find every Benjaire failure before a customer does.
+        review_frequency: Monthly
+        kpis:
+          - name: Owned automations healthy
+            kind: reliability
+            target: Every automation it owns shows healthy in Atlas
+            basis: Its health is the worst of its automations'
+          - name: Failures alerted
+            kind: reliability
+            target: Every failed or missed run is alerted within a day
+            basis: Error Alerts plus the daily Missed Run Check
       execution:
         trigger_type: event
         environment: Through its automations
@@ -870,5 +1682,9 @@ agents:
         autonomy: 1
         autonomy_note: Tests and alerts only.
         risk: low
+        credential_owner: Khaneil, through the credentials of each automation it owns
       cost:
         budget: No model calls of its own; each automation keeps its own cap.
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/benjaire-com.md#business-operations-monitor
+        last_review: 2026-11-17

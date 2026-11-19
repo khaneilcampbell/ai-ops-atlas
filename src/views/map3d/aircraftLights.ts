@@ -37,9 +37,10 @@ export const AIRCRAFT_LIGHTS={
 export const LANDING_BEAM={length:1.5,radius:.32,y:.18,z:-.92} as const;
 
 /** Cockpit windscreen: two front panes either side of the centre post, and a side window each side. */
-export const COCKPIT_PANES:{p:V3;s:V3;r?:number}[]=[
-  {p:[-.05,.45,-1.24],s:[.085,.042,.02],r:.35},
-  {p:[.05,.45,-1.24],s:[.085,.042,.02],r:-.35},
+export const COCKPIT_PANES:{p:V3;s:V3;r?:number;rx?:number}[]=[
+  // Windscreen panes laid back along the nose's slope, on its surface rather than standing up off it.
+  {p:[-.05,.458,-1.272],s:[.085,.04,.006],r:.35,rx:.98},
+  {p:[.05,.458,-1.272],s:[.085,.04,.006],r:-.35,rx:.98},
   {p:[-.143,.45,-1.1],s:[.02,.038,.09]},
   {p:[.143,.45,-1.1],s:[.02,.038,.09]},
 ];

@@ -4,7 +4,7 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 
 ## Atlas CI
 
-`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Validated pushes to `main` build the app, then require KC to approve the protected signing job before a separate job publishes it to the rolling `main-build` release that installed copies update from.
+`.github/workflows/ci.yml`. Lint, tests, Rust checks and audits on every pull request and push to `main`. Validated pushes to `main` build the app, then require Khaneil to approve the protected signing job before a separate job publishes it to the rolling `main-build` release that installed copies update from.
 
 - **Healthy:** the latest run on `main` is green in Actions, and the signing deployment has been approved before Atlas offers the new build.
 - **Run it:** push or open a pull request. To build the Mac app from a branch, run the workflow by hand with **macos** ticked.
@@ -48,3 +48,44 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 - **Turn it on:** Settings → Actions: tick **Merge pull requests**, then for each repository save its own fine-grained token (only that repository, **Pull requests** and **Contents** read and write, 90 days or less) and tick it.
 - **When it fails:** `409` means the branch moved after approval and nothing merged; re-check and try again. `405` means GitHub refused (for example squash merges off). A pull request that isn't ready is refused before anything is sent, with the reason.
 - **Stop it:** untick **Merge pull requests** or the repository, remove its token, or revoke it on GitHub.
+
+## Production Coordinator
+
+An owning agent with no model of its own. Its main step is Merge Flow (`ops/merge-flow/README.md`); on request Khaneil asks the Release Coordinator in n8n chat or Claude Code for a review. It never merges, deploys or bypasses a check.
+
+- **Healthy:** Merge Flow's latest run is green and every open pull request has a lane.
+- **When it fails:** follow [Merge Flow's runbook](../../ops/merge-flow/README.md#runbook).
+
+## Release Coordinator
+
+The n8n agent "Atlas Release Coordinator" (chat only, no tools, claude-sonnet-5-5 through n8n's AI gateway). Budget guardrail: $1 a month and $0.25 a session.
+
+- **Healthy:** a chat answer leads with the priority and the next safe action, and never suggests skipping a check. Last production chat: 2026-11-05.
+- **Run it:** open the agent's chat in n8n and paste the issues, pull requests or CI results to reason about. It works only from what you paste.
+- **When it fails:** a budget stop means the cap was hit; wait for the new month or raise it in the agent's guardrails.
+- **Stop it:** unpublish the agent in n8n.
+
+## Building operators
+
+Dataset Census is `ops/building-agents/agents.py`, run by `.github/workflows/building-agents.yml` every 3 hours at :10. No model calls.
+
+- **Healthy:** the workflow's scheduled runs are green and the Data Intelligence Center shows a recent report in Atlas.
+- **Run it:** Actions → Building agents → Run workflow, pick `census` or `all`.
+- **When it fails:** a `401` or `403` from the feed means the `ATLAS_FEED_TOKEN` or `ATLAS_FEED_URL` repository secret is wrong. GitHub's schedule can run late by up to an hour; that is not a failure.
+- **Stop it:** disable the workflow in Actions. The Data Intelligence Center then shows their last report as stale.
+
+## Atlas Data Inventory
+
+Two parts: `.github/workflows/map-inventory.yml` writes `atlas-inventory.json` to the `atlas-inventory` branch on each push to `main`, and the n8n workflow [Atlas · Data Inventory](https://khancam15.app.n8n.cloud/workflow/Hua0wdGB5WSDjSGB) (published 2026-11-13) rewrites four tabs of the Atlas Agent Registry sheet daily at 7:20am New York time (moved from 7:00 on 2026-11-17 so it no longer shares the minute with Business Structure). No model.
+
+- **Healthy:** the morning run has no failed execution in n8n (successful runs are not saved) and the sheet's Inventory Summary tab shows today's date.
+- **When it fails:** "Flow · 0 Error alerts" emails ops. The 2026-11-16 run failed at **Write Map Objects** with the Google Sheets "Write requests per minute" quota; since 2026-11-17 it pauses 30 seconds before that tab and retries each sheet write up to 5 times, so a repeat means the quota itself is too low; run it again by hand after a minute.
+- **Stop it:** unpublish the workflow in n8n; the sheet keeps its last tabs.
+
+## Release Manager
+
+An owning agent with no model of its own. Its automations are Atlas CI, Re-run Failed Jobs and Merge Pull Request (sections above). Merges and re-runs only happen when Khaneil presses the button in Atlas and approves.
+
+## Health Monitor
+
+An owning agent with no model of its own. Its automations are Dataset Census ([Building operators](#building-operators)) and [Atlas Data Inventory](#atlas-data-inventory). Incident playbooks are off by default; see [docs/autonomous-operations.md](../autonomous-operations.md).

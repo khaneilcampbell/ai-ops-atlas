@@ -6,7 +6,7 @@ export {STADIUM_SCALE};
 import type {Pt} from './roads';
 
 /**
- * Atlas Stadium (KC, 2026-11-07: steel-truss sports centre from KC's reference screenshots): two
+ * Atlas Stadium (Khaneil, 2026-11-07: steel-truss sports centre from Khaneil's reference screenshots): two
  * glass halls on a white podium under thin sloping roofs. The main arena hall's roof rises from
  * the entrance (east) to the far end (west) and curls up at the eaves and corners. It sits on
  * planar Warren trusses and a purlin grid, with white zig-zag bracing outside the glass and tree
@@ -47,7 +47,7 @@ export const STADIUM={
  gate:{foot:4.45,width:1.2,side:{x:1.6,run:.45,steps:3,width:.7}},
  /**
   * The ring the grounds keep clear: pools, palms and street lights stay outside it. Its centre sits
-  * `cx` west of the box centre, because the main hall grows west toward the ocean (KC, 14:34) while
+  * `cx` west of the box centre, because the main hall grows west toward the ocean (Khaneil, 14:34) while
   * the entrance and the gate stay put.
   */
  ring:{cx:-.25,rx:4.38,rz:3.65},

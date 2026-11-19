@@ -17,6 +17,9 @@ pub const PROPERTIES_PATH: &str = "/api/hooks/properties";
 pub const N8N_PATH: &str = "/api/hooks/n8n";
 pub const REGISTRY_REFRESH_PATH: &str = "/api/hooks/registry-refresh";
 pub const SECURITY_PATH: &str = "/api/hooks/security";
+pub const HEALTH_PATH: &str = "/api/hooks/health";
+pub const N8N_STEPS_PATH: &str = "/api/hooks/n8n-steps";
+pub const N8N_SALES_PATH: &str = "/api/hooks/n8n-sales";
 /// The websites the site checks (src/properties/registry.ts PROPERTIES); the site refuses others too.
 const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 /// Agents whose full reports the site stores (src/reports/model.ts REPORT_AGENTS).
@@ -300,8 +303,34 @@ pub async fn live_security(
     }
 }
 
+/// The site's production health report (server/health.ts), or `None` when website sync isn't set up.
+/// Read-only: states and which credentials are set come back, never a credential's value.
+#[tauri::command]
+pub async fn live_health(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{HEALTH_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's health report wasn't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
 /// Sends one reviewed reply to a website inquiry as the designed Benjaire email (the site looks the
-/// address up from the stored inquiry and copies KC). Only runs when KC presses Send in Atlas.
+/// address up from the stored inquiry and copies Khaneil). Only runs when Khaneil presses Send in Atlas.
 #[tauri::command]
 pub async fn live_inquiry_reply(
     id: String,
@@ -361,9 +390,149 @@ pub async fn live_publish(
     }
 }
 
+/// Step reports from the n8n bridge (server/n8nBridge.ts) after a cursor, whether the bridge is
+/// set up (`status`), or one step's send record and reports (`idem`, its idempotency key). `None`
+/// when website sync isn't set up. Read-only.
+#[tauri::command]
+pub async fn live_n8n_steps(
+    since: u64,
+    status: bool,
+    idem: Option<String>,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    let query = steps_query(since, status, idem.as_deref())?;
+    match sync
+        .http()
+        .get(format!("{url}{N8N_STEPS_PATH}?{query}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's step reports weren't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// The query for `live_n8n_steps`. An idempotency key is checked here as well as on the site, so
+/// nothing but `[A-Za-z0-9_:-]` ever reaches the URL.
+fn steps_query(since: u64, status: bool, idem: Option<&str>) -> Result<String, String> {
+    if status {
+        return Ok("status=1".to_string());
+    }
+    match idem {
+        Some(k) => {
+            let ok = (3..=120).contains(&k.len())
+                && k.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ':' || c == '-');
+            if ok {
+                Ok(format!("idem={k}"))
+            } else {
+                Err("Bad idempotency key.".into())
+            }
+        }
+        None => Ok(format!("since={since}")),
+    }
+}
+
+/// Asks the site to send one research or planning step to the n8n step runner. The site checks
+/// the allow-list, the daily limit and the idempotency key, and holds the n8n token; the app only
+/// sends its sync key and the step's envelope. The site's JSON answer (accepted, refused or
+/// unknown) is passed back as is, including on a refusal.
+#[tauri::command]
+pub async fn live_n8n_step_send(
+    envelope: serde_json::Value,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    if !envelope.is_object() {
+        return Err("The step must be an envelope object.".into());
+    }
+    match sync
+        .http()
+        .post(format!("{url}{N8N_STEPS_PATH}"))
+        .bearer_auth(key)
+        .json(&envelope)
+        .send()
+        .await
+    {
+        Ok(r) => {
+            let code = r.status().as_u16();
+            match r.json::<serde_json::Value>().await {
+                Ok(v) if v.get("state").is_some() => Ok(Some(v)),
+                _ if code == 403 || code == 302 => Err(
+                    "The site's login blocked the step. Add the Access bypass for /api/hooks/*."
+                        .into(),
+                ),
+                _ => Err(format!("The site answered {code} without a result.")),
+            }
+        }
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// Stripe sales in a date range, read by the n8n sales feed through the site (server/stripeSales.ts).
+/// The app sends only its sync key and two dates; the site holds the n8n key and checks the answer.
+/// Read-only: nothing in Stripe or n8n is changed. `None` when website sync isn't set up.
+#[tauri::command]
+pub async fn live_stripe_sales(
+    since: String,
+    until: String,
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    if since.len() > 40 || until.len() > 40 {
+        return Err("Bad date.".into());
+    }
+    match sync
+        .http()
+        .post(format!("{url}{N8N_SALES_PATH}"))
+        .bearer_auth(key)
+        .json(&serde_json::json!({ "since": since, "until": until }))
+        .send()
+        .await
+    {
+        Ok(r) => {
+            let code = r.status().as_u16();
+            match r.json::<serde_json::Value>().await {
+                Ok(v) if v.get("state").is_some() => Ok(Some(v)),
+                _ if code == 403 || code == 302 => Err(
+                    "The site's login blocked the sync. Add the Access bypass for /api/hooks/*."
+                        .into(),
+                ),
+                _ => Err(format!("The site answered {code} without a result.")),
+            }
+        }
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::security_repos;
+    use super::{security_repos, steps_query};
+
+    #[test]
+    fn steps_query_only_passes_clean_keys() {
+        assert_eq!(steps_query(7, true, Some("x")).unwrap(), "status=1");
+        assert_eq!(steps_query(7, false, None).unwrap(), "since=7");
+        assert_eq!(
+            steps_query(0, false, Some("task_abc:2")).unwrap(),
+            "idem=task_abc:2"
+        );
+        assert!(steps_query(0, false, Some("a&since=0")).is_err());
+        assert!(steps_query(0, false, Some("ab")).is_err());
+    }
 
     #[test]
     fn security_repos_keeps_only_well_formed_names() {

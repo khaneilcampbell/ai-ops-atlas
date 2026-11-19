@@ -8,6 +8,7 @@ export const STATE_COLOR: Record<RuntimeState, string> = {
   awaiting: "#e7b04a",
   failed: "#d0614f",
   idle: "#a9c2b2",
+  stale: "#b59a6a",
   offline: "#6b716b",
   unknown: "#8d948c",
 };

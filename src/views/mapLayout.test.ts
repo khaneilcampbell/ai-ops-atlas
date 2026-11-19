@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import type { Catalog } from "../catalog/types";
-import { GAP, OFF_MAP_PROJECTS, keepRemovedLots, layoutMap, placeLabels, type Layout } from "./mapLayout";
+import { DISTRICT_MIN_SIZE, GAP, OFF_MAP_PROJECTS, keepRemovedLots, layoutMap, placeLabels, type Layout } from "./mapLayout";
 import { districtHeadings } from "./mapPresentation";
 
 function rects(layout: Layout) {
@@ -126,6 +126,25 @@ describe("placeLabels", () => {
     ]);
     expect(shown.get("agent")).toBe(40);
   });
+
+  it("keeps a label in last frame's spot while it still fits, instead of hopping back", () => {
+    const boxes = [
+      { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
+      { id: "agent", x: 200, top: 0, bottom: 20, w: 80, priority: 6, alts: [40] },
+    ];
+    expect(placeLabels(boxes).get("agent")).toBe(0);
+    expect(placeLabels(boxes, 4, new Map([["repo", 0], ["agent", 40]])).get("agent")).toBe(40);
+  });
+
+  it("lets a shown label stay at the edge of a collision, so it doesn't flicker", () => {
+    // 83 apart: overlaps with the full 4 px padding, clears with half of it.
+    const boxes = [
+      { id: "repo", x: 0, top: 0, bottom: 20, w: 80, priority: 3 },
+      { id: "agent", x: 83, top: 0, bottom: 20, w: 80, priority: 6 },
+    ];
+    expect(placeLabels(boxes).has("agent")).toBe(false);
+    expect(placeLabels(boxes, 4, new Map([["repo", 0], ["agent", 0]])).has("agent")).toBe(true);
+  });
 });
 
 describe("walkways", () => {
@@ -248,6 +267,18 @@ describe("keepRemovedLots", () => {
   });
 });
 
+// Portfolio's building matches the Operations Center in every grouping, and its land matches the
+// Operations Center's own 7.5 parcel. In the complete By district campus the Operations Center moves
+// to the Commerce-sized east parcel (#375); Portfolio keeps 7.5 there so GitHub's podium keeps its land.
+for(const grouping of ['none','district','status','tag'] as const){
+ it(`matches Portfolio and Operations Center footprints (${grouping})`,()=>{
+  const districts=layoutMap(catalog,[],grouping).districts;
+  const portfolio=districts.find(d=>d.project.id==='portfolio-site')!;
+  const operations=districts.find(d=>d.project.id==='intelligence-hub')!;
+  expect(portfolio.size).toBe(grouping==='district'?DISTRICT_MIN_SIZE['intelligence-hub']:operations.size);
+  expect(portfolio.hq.size).toBeCloseTo(operations.hq.size);
+ });
+}
 describe("group names follow their buildings", () => {
   // Command Center and Operations move after packing (#363, #375); their group names must move with them.
   const l = layoutMap(catalog, [], "district");

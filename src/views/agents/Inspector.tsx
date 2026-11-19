@@ -17,8 +17,14 @@ import { agentJobs, clock, SIM_DAY_SECONDS, type AgentJob } from "../../catalog/
 import type { Decided } from "../../catalog/organization";
 import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill, orNA, RiskPill } from "./parts";
 import { formatDateTime } from "../../lib/timezone";
+import { usePresenceAssignments } from "../../catalog/agentPresence";
+import { PresenceEditor } from "./PresenceEditor";
+import { AgentAvatar, AgentStatusPill, AiAgentLabel } from "../../components/AgentIdentity";
+import { identityFor } from "../../registry/identity";
+import type { IdentityStatus } from "../../registry/agentStatus";
+import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
 
-type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "operations" | "governance" | "docs";
+type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "report", label: "Reports" },
   { id: "overview", label: "Overview" },
@@ -26,21 +32,24 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "workday", label: "Workday" },
   { id: "goals", label: "Goals" },
   { id: "workflow", label: "Workflow" },
+  { id: "intelligence", label: "Intelligence" },
   { id: "operations", label: "Operations" },
   { id: "governance", label: "Governance" },
   { id: "docs", label: "Documentation" },
 ];
 
-const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting" } as const;
+const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting", n8n: "n8n runs", automations: "Its automations" } as const;
 
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
-export function Inspector({ entry }: { entry: RegistryEntry }) {
+export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { status: IdentityStatus; from: string | null } }) {
   const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
+  const identity = identityFor(entry.profile.id, catalog.agents);
   const { profile: p, telemetry: t } = entry;
   // Agents that store full reports open on them: that's what they're for.
   const reports = isReportAgent(p.id) ? p.id : null;
-  const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === p.id), [catalog, p.id]);
-  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job));
+  const assignments = usePresenceAssignments();
+  const job = useMemo(() => agentJobs(catalog, assignments).find((j) => j.agentId === p.id), [catalog, assignments, p.id]);
+  const TABS = ALL_TABS.filter((x) => (x.id !== "report" || reports) && (x.id !== "workday" || job) && (x.id !== "intelligence" || hasIntelligence(p.id)));
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
   const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
@@ -65,19 +74,45 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   return (
     <section className="card agent-profile reg-inspector" aria-label={p.title}>
       <header className="ap-head">
-        <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
-          <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
-        </span>
+        {identity.kind === "own" ? (
+          <AgentAvatar identity={identity} size={56} status={status?.status} />
+        ) : (
+          <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
+            <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
+          </span>
+        )}
         <div className="grow">
           <div className="eyebrow">
             {p.project.name} · {CATEGORY_LABEL[p.category]}
             {p.subcategory ? ` · ${p.subcategory}` : ""}
           </div>
-          <h2 className="selectable">{p.title}</h2>
+          {identity.kind === "own" ? (
+            <>
+              <h2 className="selectable agent-identity-name">
+                {identity.name} <AiAgentLabel />
+              </h2>
+              <div className="muted selectable">{p.title}</div>
+            </>
+          ) : (
+            <h2 className="selectable">{p.title}</h2>
+          )}
           {p.originalName && <div className="muted small selectable">Manifest name: {p.originalName}</div>}
+          {identity.kind !== "own" && identity.kind !== "none" && (
+            <div className="muted small">
+              Run by {identity.name} ({identity.role}), AI agent
+            </div>
+          )}
+          {identity.intro && (
+            <p className="agent-intro selectable">
+              {identity.intro}
+              {identity.voice && <span className="muted small">Communication style: {identity.voice}</span>}
+            </p>
+          )}
           {p.suggestedTitle && <div className="muted small">Suggested title: {p.suggestedTitle} (not applied)</div>}
           <div className="chips" style={{ marginTop: 8 }}>
             <ClassBadge c={p.classification} long />
+            {status && <AgentStatusPill status={status.status} />}
+            {status?.from && <span className="muted small">from {status.from}</span>}
             <OperationalPill op={entry.operational} />
             <StatusPill status={entry.status} />
             <RiskPill risk={p.governance.risk} />
@@ -86,7 +121,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
         </div>
       </header>
 
-      {/* The four sections KC wants most visible, always on screen above the tabs. */}
+      {/* The four sections Khaneil wants most visible, always on screen above the tabs. */}
       <div className="essentials selectable">
         <div className="ess">
           <div className="section-title">Mission</div>
@@ -197,7 +232,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
           </div>
         )}
 
-        {tab === "workday" && job && <WorkdayTab job={job} />}
+        {tab === "workday" && job && <WorkdayTab job={job} editor={<PresenceEditor key={p.id} job={job} agent={agent} catalog={catalog} telemetry={t} />} />}
 
         {tab === "goals" && <GoalsTab kpis={p.goals.kpis} objective={p.goals.objective} review={p.goals.reviewFrequency} t={t} />}
 
@@ -259,6 +294,7 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
 
         {tab === "operations" && <OperationsTab entry={entry} flags={flags.map((f) => ({ id: f.id, severity: f.severity, detail: f.detail }))} history={agent.history} manifestLastRun={agent.lastRun} />}
 
+        {tab === "intelligence" && <IntelligenceTab agentId={p.id} />}
         {tab === "governance" && (
           <div className="reg-cols">
             <dl className="kv">
@@ -279,6 +315,10 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
               <dd>{orNA(p.governance.credentialOwner)}</dd>
               <dt>Audit log</dt>
               <dd>{orNA(p.governance.auditLog)}</dd>
+              <dt>Kill switch</dt>
+              <dd>{orNA(p.governance.killSwitch)}</dd>
+              <dt>Caps</dt>
+              <dd>{orNA(p.governance.caps)}</dd>
             </dl>
             <div className="reg-stack">
               <ListField title="Tool permissions" items={p.governance.permissions} />
@@ -355,7 +395,7 @@ function Basis({ d }: { d: Decided<unknown> }) {
 }
 
 /** The agent's job: home, workplace, shift, budget, owner and the output it owes each day. Read-only. */
-function WorkdayTab({ job }: { job: AgentJob }) {
+function WorkdayTab({ job, editor }: { job: AgentJob; editor: React.ReactNode }) {
   return (
     <div className="reg-cols">
       <dl className="kv">
@@ -369,7 +409,8 @@ function WorkdayTab({ job }: { job: AgentJob }) {
         <dd>{job.work.label}</dd>
         <dt>Shift</dt>
         <dd>
-          {clock(job.shift.value.start)} to {clock(job.shift.value.end)}
+          {job.presence && <div>{job.presence.start} to {job.presence.end}, {job.presence.timeZone} · presence schedule</div>}
+          {job.presence ? "Simulated map day: " : ""}{clock(job.shift.value.start)} to {clock(job.shift.value.end)}
           <Basis d={job.shift} />
           {job.shift.declared && <div className="muted small">Schedule in the manifest: {job.shift.declared}</div>}
         </dd>
@@ -381,7 +422,9 @@ function WorkdayTab({ job }: { job: AgentJob }) {
       <div className="reg-stack">
         <div className="section-title">On the map</div>
         <p className="small">
-          {job.offDuty
+          {job.presence && !job.offDuty
+            ? `Follows its presence schedule on the real clock (${job.presence.timeZone}): home, a walk to ${job.work.label}, and back.`
+            : job.offDuty
             ? OFF_DUTY[job.offDuty]
             : job.deskOnly
             ? `Works through the automations it owns, so it keeps its desk at ${job.work.label} and is not drawn walking.`
@@ -390,6 +433,7 @@ function WorkdayTab({ job }: { job: AgentJob }) {
             : `Walks from ${job.home.label} to ${job.work.label} for the start of its shift, and back home when it ends. A map day lasts ${SIM_DAY_SECONDS / 60} minutes.`}
         </p>
         <p className="muted small">This is a simulation of the job as written, not a live run. Runs Atlas has actually seen are on the Operations tab.</p>
+        {editor}
       </div>
     </div>
   );
@@ -543,6 +587,10 @@ function OperationsTab({
                 ? "Runs appear here once the agent has run in this app."
                 : t.source === "agent-feed"
                   ? "Runs appear here once its pipeline reports a phase to Atlas (ATLAS_FEED_URL and ATLAS_FEED_TOKEN in the pipeline's .env)."
+                : t.source === "n8n"
+                  ? "None of its n8n workflows ran within the recent executions n8n returned."
+                : t.source === "automations"
+                  ? `None of the automations it owns (${(t.via ?? []).join(", ")}) has a recent run.`
                 : "Atlas has no live source for this agent, so it cannot confirm that it has ever run. A configuration is not evidence of a successful execution."}
           </span>
         </div>

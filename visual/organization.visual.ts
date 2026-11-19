@@ -4,22 +4,24 @@ import {openAtlas,goTo,settle} from './atlas';
 test.use({deviceScaleFactor:1});
 for(const width of [1512,390]) test(`Separated agents and automations ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
- await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B'}}});
+ await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(21);
+ await expect(page.locator('.reg-row')).toHaveCount(22);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="github-merge-flow"]')).toHaveCount(0);
+ // Owns Merge Flow since 2026-11-14, so it is an agent now.
+ await expect(page.locator('.reg-row[data-id="atlas-production-coordinator"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="skyline-inquiry-assistant"]')).toHaveCount(0);
  await expect(page.locator('.reg-row[data-id="niche-scout"]')).toHaveCount(0);
  mkdirSync('docs/agent-organization',{recursive:true});
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(43);
- for(const id of ['github-merge-flow','atlas-ci','atlas-production-coordinator','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
+ await expect(page.locator('.reg-row')).toHaveCount(37); // 37 (Career Execution Agent draft) since Marketplace Steward and Signal Watch were deleted (2026-11-18)
+ for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
- await page.locator('.reg-row[data-id="atlas-production-coordinator"]').click();await settle(page,1);
+ await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);
  await page.getByRole('tab',{name:'Output',exact:true}).click();
  await expect(page.getByRole('tabpanel')).toBeVisible();
  await page.screenshot({path:`docs/agent-organization/automations-${width}.png`});

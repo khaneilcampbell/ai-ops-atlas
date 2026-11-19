@@ -1,6 +1,6 @@
 # Agent workdays: roles, homes, shifts and commutes
 
-KC, 2026-11-01: give each AI agent a home and a work building, a schedule, a budget and an owner,
+Khaneil, 2026-11-01: give each AI agent a home and a work building, a schedule, a budget and an owner,
 so it has a real workday with a clear output, and after the workday it travels back to its
 apartment.
 
@@ -30,7 +30,7 @@ later phases is in [`ops/agent-workdays/prompt.md`](../ops/agent-workdays/prompt
 | Field | Source today (phase 1) | Declared later (phase 2, `job:` block) |
 |---|---|---|
 | `role` | Tier label from `tierOf` (Central Operations, Department Coordinator, Specialized Agent) | `job.role` |
-| `owner` | Name before the brackets in `governance.credential_owner`; else KC (every catalog project is KC's) | `job.owner` |
+| `owner` | Name before the brackets in `governance.credential_owner`; else Khaneil (every catalog project is Khaneil's) | `job.owner` |
 | `home` | Circa apartment, assigned in agent-id order: West tower, floors 12 to 31, units A to D | `job.home: {building, unit}` |
 | `work` | Declared `workplace` (for example OpenAI suite 401), else its project's headquarters | unchanged |
 | `shift` | Default hours by trigger type (scheduled 8 to 16, manual 9 to 17, event 10 to 18, continuous 7 to 19), staggered up to an hour by a stable hash of the id | `job.shift: "09:00-17:00"` |
@@ -66,6 +66,39 @@ commute is longer than three simulated hours.
 
 A workplace with no street within 3 units gets no walk, and the Workday tab says so. Today that is
 the two OpenAI suite agents: the Skyline park has promenades but no street yet.
+
+## Presence schedules (first slice, Nov 17)
+
+Khaneil can give an AI agent a home building, a workplace headquarters, working days, start and end
+times and a time zone on the inspector's **Workday** tab. It is saved on this device under
+`atlas:agent-presence` (included in Atlas backups), keyed by the agent's catalog id.
+
+- `src/catalog/agentPresence.ts` derives one place from the real clock: home, outdoors, walking to
+  work, at work, walking home. Walks take 20 minutes before the start and after the end; outdoors is
+  the hour after getting home and 12:00 to 13:00 on days off. It is stateless, so reopening Atlas
+  lands on the current place without replaying walks; overnight shifts and DST follow the wall clock.
+- The map draws scheduled agents on their existing street route (`agentCommutes.ts`), in the same
+  crowd mesh, so no draw calls are added. Agents without a schedule keep the simulated map day.
+- **Presence is not execution.** The inspector shows the place and, separately, the activity from
+  telemetry (`runtimeFor`). Arriving at work never means a run started or succeeded.
+
+Not in this slice: choosing an office floor or desk, hiding office avatars outside work hours,
+walks to buildings other than project headquarters, and syncing schedules between devices.
+
+### Follow-up: start an automation at work time
+
+Today automations start only from their own triggers: n8n Schedule/Webhook triggers, GitHub Actions
+`schedule`/`workflow_dispatch`, and Atlas's guarded write actions (`src/actions/`,
+`src-tauri/src/actions/`). Atlas runs no scheduler of its own, and the presence schedule lives only in
+this device's storage, which n8n cannot read. The smallest follow-up:
+
+1. Move a schedule Khaneil wants to act on into the agent's catalog entry (`presence:` block), so it is
+   on `main` and reviewable.
+2. For an n8n workflow, set its Schedule Trigger to the start time (cron such as `0 9 * * 1-5`) and the
+   workflow's time zone setting to the schedule's zone, as a reviewed n8n change. n8n stays the
+   scheduler; Atlas only records it and shows the real runs from telemetry.
+3. If Atlas should make that change itself, it is a new write action behind the existing approval
+   gate in the protected action paths, which needs Khaneil's written OK.
 
 ## Phased plan to the end of November
 

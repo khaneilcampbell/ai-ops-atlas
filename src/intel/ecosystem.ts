@@ -1,4 +1,6 @@
-import type { Catalog } from "../catalog/types";
+import type { Agent, Catalog } from "../catalog/types";
+import { REPORT_AGENTS } from "../reports/model";
+import { ACTION_AGENTS } from "../views/office/model";
 import type { EcoContext, EcoReport, EcoReview, Rating, ReviewArea, Run } from "./types";
 
 /**
@@ -22,14 +24,30 @@ export function ecosystemContext(catalog: Catalog): EcoContext {
         autonomy_note: g?.autonomyNote ?? null,
         trigger: a.trigger ?? null,
         permissions: a.permissions ?? [],
-        // A live source Atlas can read: a GitHub workflow or its own run log.
-        telemetry: !!(a.observe?.githubWorkflow || a.observe?.atlasIntel),
+        telemetry: reportsToAtlas(a),
         status: a.status,
         approval: g?.approval ?? null,
         risk: g?.risk ?? null,
+        kill_switch: g?.killSwitch ?? null,
+        caps: g?.caps ?? null,
       };
     }),
   };
+}
+
+/**
+ * Whether Atlas has a live record of the agent's work: a GitHub workflow, its own run log, the
+ * run feed (/api/hooks/agents), the reports inbox (/api/hooks/reports) or the desktop action
+ * audit log. Missing any of these made the review report agents as silent that do report.
+ */
+export function reportsToAtlas(a: Pick<Agent, "id" | "observe">): boolean {
+  return !!(
+    a.observe?.githubWorkflow ||
+    a.observe?.atlasIntel ||
+    a.observe?.agentFeed ||
+    (REPORT_AGENTS as readonly string[]).includes(a.id) ||
+    Object.prototype.hasOwnProperty.call(ACTION_AGENTS, a.id)
+  );
 }
 
 export const REVIEW_AGENT_ID = "atlas-engineering-review";
