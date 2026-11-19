@@ -319,8 +319,6 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Job form or a signed start from the Atlas Task Center, plus a Monday 9am summary and a daily 10am review nudge
-    alerts:
-      failures: true
     last_run: null
     history:
       - at: 2026-11-12
