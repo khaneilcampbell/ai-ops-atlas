@@ -98,6 +98,15 @@ automations, n8n workflows, Product Lab skills, pedestrians or retired agents) a
   enforced. It explains that pausing a schedule (switching the workflow off) is not cancelling a
   running task (open the run or the Task Center), and keeps the city routine switch, which only
   changes the map.
+- **Free time** (Nov 19) sends an agent that is in its free time off to the Ferris wheel, a yacht or
+  train ride, a Gold Jet flight, a park bench, the arena or another district ("Surprise me" picks one
+  it likes). "Free time for idle agents" above the list does that for everyone free now. It is a
+  request to the routine planner (`src/routine/freeTime.ts`, `outing` in `planRoutine`): from that
+  moment the agent leaves what it's doing (off a ride at its next safe exit) and goes; the day before
+  it is unchanged and a reload draws the same outing. Agents at work, heading in, home for the night
+  or with their routine paused can't be sent. It never starts, delays or cancels a run or touches a
+  schedule, workflow or permission: a run that comes due still calls the agent in, and when the next
+  scheduled run is too close it takes a short break nearby instead.
 - Escape closes it and gives focus back to the Agents button; arrow keys move through the list.
   On a phone it is a bottom sheet over the lower map.
 

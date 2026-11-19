@@ -286,6 +286,12 @@ export interface RoutineInput {
   timeZone?: string;
   /** Paused in Atlas: the character stays home (its real work is unaffected). */
   held?: boolean;
+  /**
+   * Sent off on free time from Atlas (freeTime.ts): from `at`, if the agent is in its free time then,
+   * it drops what it's doing (getting safely off a ride first) and goes to this kind of outing.
+   * "any" picks one it likes. Only the picture changes: work still calls it in as usual.
+   */
+  outing?: { kind: LeisureKind | "any"; at: number } | null;
 }
 
 /**
@@ -330,7 +336,75 @@ export function planRoutine(input: RoutineInput): Routine {
    * scheduled run. `scheduled` is that run's time, when known, so the last outing ends early enough
    * to commute in. Returns the segments' end (== stopAt, or the scheduled commute start).
    */
+  const outing = input.outing && !isNight(input.outing.at, tz) ? input.outing : null;
+  let outingDone = false;
   const free = (stopAt: number, scheduled: number | null) => {
+    if (outing && !outingDone && outing.at >= cur.t && outing.at < stopAt) {
+      outingDone = true;
+      // Still free at that moment (not already set to head in for a scheduled run): go.
+      if (!freeLoop(outing.at, scheduled)) {
+        interrupt(outing.at);
+        goOuting(outing.kind, scheduled);
+      }
+    }
+    freeLoop(stopAt, scheduled);
+  };
+  /** The outing asked for from Atlas, chosen among the places of that kind (nearest that fits first). */
+  const goOuting = (kind: LeisureKind | "any", scheduled: number | null) => {
+    const limit = scheduled !== null ? scheduled - leadFrom(cur.at) : Infinity;
+    const left = limit - cur.t;
+    const reach = env.leisure.filter((o) => (kind === "any" ? o.kind !== "office" && o.kind !== "home" : o.kind === kind) && Number.isFinite(env.travel(cur.at, o.spot)));
+    const fits = reach.filter((o) => {
+      const back = env.travel({ spot: o.exit }, env.office);
+      return (env.travel(cur.at, o.spot) + o.stay[0] + (Number.isFinite(back) ? back : 0)) * S < left;
+    });
+    const seed = `${personaId}:asked:${Math.floor(cur.t / MIN)}`;
+    let pick: LeisureOption | null = null;
+    if (kind === "any" && fits.length) {
+      const total = fits.reduce((s, o) => s + likes[o.kind], 0);
+      let r = rand(seed) * total;
+      pick = fits.find((o) => (r -= likes[o.kind]) <= 0) ?? fits[fits.length - 1];
+    } else if (fits.length) {
+      pick = [...fits].sort((a, b) => env.travel(cur.at, a.spot) - env.travel(cur.at, b.spot))[0];
+    }
+    if (!pick) {
+      const why = reach.length ? "the next scheduled run is too close" : "there isn't one on the map";
+      const t1 = cur.t + Math.max(0, Math.min(left, 2 * MIN));
+      push({ kind: "stay", t0: cur.t, t1, at: atSpot(cur.at) ?? env.office, activity: "relaxing", phase: null, note: `Sent on free time from Atlas, but ${why}: taking a short break nearby` });
+      if (!atSpot(cur.at)) cur.at = { spot: env.office };
+      cur.t = Math.max(cur.t, t1);
+      return;
+    }
+    doOuting(pick, seed, scheduled, "Off on free time from Atlas: walking to");
+  };
+  /** Walk to an outing and spend it: a ride (queue, ride, off at its exit) or a stay. */
+  const doOuting = (pick: LeisureOption, seed: string, scheduled: number | null, walking = "Walking to") => {
+    walkTo(pick.spot, "walking", null, `${walking} ${pick.label.toLowerCase()}`, pick);
+    const room = scheduled !== null ? scheduled - cur.t - leadFrom({ spot: pick.exit }) : Infinity;
+    if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "yacht" || pick.kind === "wheel") {
+      const times = env.ride(pick, cur.t, personaId);
+      if (times && times.alight - cur.t <= Math.max(room, 0)) {
+        push({ kind: "stay", t0: cur.t, t1: times.board, at: pick.spot, activity: "relaxing", phase: null, note: `In the queue for ${pick.label.toLowerCase()}`, option: pick });
+        push({ kind: "ride", t0: times.board, t1: times.alight, at: pick.spot, activity: "riding", phase: null, note: pick.label, option: pick, times });
+        cur.t = Math.max(cur.t, times.alight);
+        cur.at = { spot: pick.exit };
+        return;
+      }
+      // The ride doesn't fit before work (or isn't running): watch it a while instead.
+      const t1 = cur.t + Math.min(Math.max(room, 30 * S), 4 * MIN);
+      push({ kind: "stay", t0: cur.t, t1, at: pick.spot, activity: "relaxing", phase: null, note: `Watching ${pick.label.replace(/^(Riding|On) (the |a )?/i, "the ").toLowerCase()} (not enough time for a ride)`, option: pick });
+      cur.t = t1;
+      return;
+    }
+    const lo = pick.stay[0], hi = pick.stay[1];
+    const stay = Math.min((lo + rand(`${seed}:stay`) * (hi - lo)) * S, Math.max(room, 30 * S));
+    const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" || pick.kind === "office" ? "relaxing" : "visiting";
+    push({ kind: "stay", t0: cur.t, t1: cur.t + stay, at: pick.spot, activity, phase: null, note: pick.label, option: pick });
+    cur.t += stay;
+    cur.at = { spot: pick.exit };
+  };
+  /** Returns true when it stopped because the next scheduled run is near (the commute is next). */
+  const freeLoop = (stopAt: number, scheduled: number | null): boolean => {
     let guard = 0;
     while (cur.t < stopAt && guard++ < 400) {
       // Choices depend only on the next scheduled run, never on when an unexpected one cuts in,
@@ -341,7 +415,7 @@ export function planRoutine(input: RoutineInput): Routine {
         // Not enough time for anything: wait where it is.
         if (limit > cur.t) push({ kind: "stay", t0: cur.t, t1: limit, at: atSpot(cur.at) ?? env.office, activity: "relaxing", phase: null, note: "Waiting nearby for the next scheduled run" });
         cur.t = Math.max(cur.t, limit);
-        break;
+        return true;
       }
       // Night: home until morning.
       if (isNight(cur.t, tz)) {
@@ -386,30 +460,9 @@ export function planRoutine(input: RoutineInput): Routine {
         cur.t += Math.min(left, 3 * MIN);
         continue;
       }
-      walkTo(pick.spot, "walking", null, `Walking to ${pick.label.toLowerCase()}`, pick);
-      const room = scheduled !== null ? scheduled - cur.t - leadFrom({ spot: pick.exit }) : Infinity;
-      if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "yacht" || pick.kind === "wheel") {
-        const times = env.ride(pick, cur.t, personaId);
-        if (times && times.alight - cur.t <= Math.max(room, 0)) {
-          push({ kind: "stay", t0: cur.t, t1: times.board, at: pick.spot, activity: "relaxing", phase: null, note: `In the queue for ${pick.label.toLowerCase()}`, option: pick });
-          push({ kind: "ride", t0: times.board, t1: times.alight, at: pick.spot, activity: "riding", phase: null, note: pick.label, option: pick, times });
-          cur.t = Math.max(cur.t, times.alight);
-          cur.at = { spot: pick.exit };
-          continue;
-        }
-        // The ride doesn't fit before work (or isn't running): watch it a while instead.
-        const t1 = cur.t + Math.min(Math.max(room, 30 * S), 4 * MIN);
-        push({ kind: "stay", t0: cur.t, t1, at: pick.spot, activity: "relaxing", phase: null, note: `Watching ${pick.label.replace(/^(Riding|On) (the |a )?/i, "the ").toLowerCase()} (not enough time for a ride)`, option: pick });
-        cur.t = t1;
-        continue;
-      }
-      const lo = pick.stay[0], hi = pick.stay[1];
-      const stay = Math.min((lo + rand(`${seed}:stay`) * (hi - lo)) * S, Math.max(room, 30 * S));
-      const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" || pick.kind === "office" ? "relaxing" : "visiting";
-      push({ kind: "stay", t0: cur.t, t1: cur.t + stay, at: pick.spot, activity, phase: null, note: pick.label, option: pick });
-      cur.t += stay;
-      cur.at = { spot: pick.exit };
+      doOuting(pick, seed, scheduled);
     }
+    return false;
   };
 
   /** Cut the free time at `t` (an unexpected run): where the agent is then, after getting safely off any ride. */
