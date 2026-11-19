@@ -1,6 +1,7 @@
-import {useMemo} from "react";
+import {useLayoutEffect,useMemo,useRef} from "react";
+import * as THREE from "three";
 import {Html} from "@react-three/drei";
-import {Box} from "./InteriorPrimitives";
+import {figureParts,partMatrix,poseBones,RIG} from "../map3d/agentFigures";
 import type {CircaTower} from "./circaFloors";
 import {circaResidents,livingOf,type CircaResident} from "./circaHomes";
 import type {AgentJob} from "../../catalog/agentJobs";
@@ -21,18 +22,36 @@ export function useCircaResidents(jobs:readonly AgentJob[]):CircaResidentNow[]{
   return useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)).map(r=>({...r,figure:cityFigureFor(r.id),identity:identityFor(r.id,catalog.agents,r.name)})),[jobs]);
 }
 
-/** A standing figure in the agent's own city look (cityFigures.ts), at the scale of the residence's furniture. */
+/** The residence draws the city rig at furniture scale: the same height the residents stood at before, about 1.5. */
+const RESIDENT_HEIGHT=1.5;
+/** Only if a resident somehow has no city look: residents are chosen from agents that have one (useCircaResidents). */
+const FALLBACK_FIGURE:CityFigure={skin:"#c79875",hair:{style:"short",color:"#2b211b"},top:"#5a8067",trousers:"#294237",shoes:"#2a2522",build:{height:1,shoulders:1}};
+const SHARED={box:new THREE.BoxGeometry(1,1,1),ball:new THREE.SphereGeometry(1,12,8),mat:new THREE.MeshStandardMaterial({roughness:.78,metalness:0})};
+
+/**
+ * A standing figure in the agent's own city look, built from the very same parts as its character on the city map
+ * (agentFigures.ts: hair style, glasses, beard, jacket, collar), so it looks the same inside as outside (Khaneil,
+ * 2026-11-19: "agents should look like same like they did on the outside of the map"). Two draw calls per resident.
+ */
 function ResidentFigure({figure}:{figure:CityFigure|null}){
-  const f=figure,top=f?(f.jacket??f.top):"#5a8067",h=f?.build.height??1,w=f?.build.shoulders??1;
-  return <group scale={[1.2*w,1.2*h,1.2*w]}>
-    {[-1,1].map(k=><Box key={k} p={[k*.075,.2,0]} s={[.11,.4,.12]} color={f?.trousers??"#294237"}/>)}
-    {[-1,1].map(k=><Box key={k} p={[k*.075,.03,.03]} s={[.12,.06,.18]} color={f?.shoes??"#2a2522"}/>)}
-    <mesh position={[0,.63,0]} castShadow><cylinderGeometry args={[.16,.17,.5,12]}/><meshStandardMaterial color={top}/></mesh>
-    {f?.jacket&&<Box p={[0,.66,.155]} s={[.1,.4,.02]} color={f.top}/>}
-    {[-1,1].map(k=><Box key={k} p={[k*.2,.62,0]} s={[.07,.42,.08]} color={top}/>)}
-    <mesh position={[0,1.07,0]} castShadow><sphereGeometry args={[.17,16,12]}/><meshStandardMaterial color={f?.skin??"#c79875"}/></mesh>
-    {f&&f.hair.style!=="bald"&&<mesh position={[0,1.12,-.02]} scale={[1.04,.8,1.04]}><sphereGeometry args={[.17,16,12]}/><meshStandardMaterial color={f.hair.color}/></mesh>}
-    {f?.glasses&&<Box p={[0,1.08,.16]} s={[.2,.045,.02]} color={f.glasses}/>}
+  const f=figure??FALLBACK_FIGURE;
+  const parts=useMemo(()=>figureParts(f),[f]);
+  const boxes=useMemo(()=>parts.filter(p=>p.shape==="box"),[parts]),balls=useMemo(()=>parts.filter(p=>p.shape==="ball"),[parts]);
+  const boxRef=useRef<THREE.InstancedMesh>(null),ballRef=useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(()=>{
+    const scale=RESIDENT_HEIGHT/RIG.top*f.build.height;
+    const bones=poseBones({x:0,y:0,z:0,yaw:0,swing:0,look:0,sway:0,scale},f.build.shoulders,[]);
+    const m=new THREE.Matrix4(),c=new THREE.Color();
+    for(const [ref,list] of [[boxRef,boxes],[ballRef,balls]] as const){
+      const mesh=ref.current;if(!mesh)continue;
+      list.forEach((p,k)=>{mesh.setMatrixAt(k,partMatrix(bones,p,m));mesh.setColorAt(k,c.set(p.c));});
+      mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+      mesh.computeBoundingSphere();
+    }
+  },[f,boxes,balls]);
+  return <group>
+    <instancedMesh ref={boxRef} args={[SHARED.box,SHARED.mat,boxes.length]} castShadow/>
+    <instancedMesh ref={ballRef} args={[SHARED.ball,SHARED.mat,balls.length]} castShadow/>
   </group>;
 }
 

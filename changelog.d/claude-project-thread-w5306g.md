@@ -1,1 +1,1 @@
-- 2026-11-19 · Team Residence Towers now shows all 17 agents inside, each standing in their own apartment with their portrait and name. No more walking loops or stand-in lift riders, and nobody disappears in the daytime (#495)
+- 2026-11-19 · Team Residence Towers now shows all 17 agents inside, each standing in their own apartment with their portrait and name. No more walking loops or stand-in lift riders, and nobody disappears in the daytime. Each one now looks exactly like their character on the city map: same hair, glasses, beard and clothes (#495)
