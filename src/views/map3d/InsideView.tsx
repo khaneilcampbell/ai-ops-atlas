@@ -4,9 +4,10 @@ import * as THREE from "three";
 import { wake } from "../../lib/power";
 import CutawayWall from "../office/CutawayWall";
 import { OFFICE_COLORS as C } from "../office/palette";
-import { defaultFloor, floorOf, type BuildingDefinition, type DeskDefinition } from "../../buildings/buildingDefinition";
+import { defaultFloor, floorOf, OFFICE_FURNITURE, type BuildingDefinition, type DeskDefinition } from "../../buildings/buildingDefinition";
 import { needsPerson, SCREEN_COLOR, type DeskScreen } from "../../buildings/deskScreen";
 import { openFloor, useInsideFloors } from "../../buildings/insideFloors";
+import { passWidth, standingClearHeight } from "./agentBody";
 import { cutCount, cutDepthMaterial, cutHeights, cutRects, CUT_MAX, setCutaway } from "./materials";
 import { FLOOR_BASE, towerTop } from "./models";
 import { pickInside, sameTiers, stepCut, type InsideCandidate, type InsideLimits, type InsideTiers } from "./inside";
@@ -75,7 +76,7 @@ function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, 
   push("steel", [0.7, 0.36, 0], [0.05, 0.72, 0.7]);
   push("dark", [0, 1.18, -0.22], [0.84, 0.5, 0.04]);
   push("screen", [0, 1.18, -0.195], [0.78, 0.44, 0.01], SCREEN_COLOR[d.state]);
-  push("chair", [0, 0.46, 0.66], [0.5, 0.07, 0.48]);
+  push("chair", [0, OFFICE_FURNITURE.seatTop - 0.035, OFFICE_FURNITURE.seatZ], [0.5, 0.07, 0.48]);
   push("chair", [0, 0.8, 0.9], [0.48, 0.56, 0.07]);
   if (lit) push("lamp", [0.6, 0.9, -0.24], [0.22, 0.22, 0.22], SCREEN_COLOR[d.state]);
   // A marker over the desk when a person is needed, as inside.
@@ -425,6 +426,7 @@ function OfficeWalls({ t, office }: { t: Tower; office: InsideOffice }) {
   const backWins = [-w * 0.3, w * 0.05];
   const leftWins = [-d / 4, d / 4];
   const lx = (def.core.x - cx) / k, lz = (def.core.z - cz) / k;
+  const liftH = Math.min(H - 0.12, Math.max(1.9 * f, standingClearHeight / k)), liftW = Math.max(0.9, passWidth / k);
   const rugW = Math.max(1, w - 2), rugD = Math.max(1, d - 2);
   return (
     <group position={[cx, floor.surface, cz]} scale={k}>
@@ -458,10 +460,11 @@ function OfficeWalls({ t, office }: { t: Tower; office: InsideOffice }) {
       <Bx p={[0, 0.34, d / 2 + T / 2]} s={[w + T * 2 + 0.04, 0.04, T + 0.04]} m={MAT.trim} />
       <Bx p={[w / 2 + T / 2, 0.34, 0]} s={[T + 0.04, 0.04, d]} m={MAT.trim} />
       {/* The lift on the core: its doors in a dark frame, the building's colour above them. */}
+      {/* Never smaller than an agent walking out of it (agentBody.ts), and always under the ceiling. */}
       <group position={[lx, 0, lz]}>
-        <Bx p={[0, 0.95 * f, 0]} s={[0.9, 1.9 * f, 0.03]} m={MAT.frame} />
-        <Bx p={[0, 0.95 * f, 0.02]} s={[0.03, 1.8 * f, 0.02]} m={MAT.dark} />
-        <Bx p={[0, 1.95 * f, 0.01]} s={[0.9, 0.06, 0.03]} m={accent} />
+        <Bx p={[0, liftH / 2, 0]} s={[liftW, liftH, 0.03]} m={MAT.frame} />
+        <Bx p={[0, liftH / 2, 0.02]} s={[0.03, liftH - 0.1 * f, 0.02]} m={MAT.dark} />
+        <Bx p={[0, liftH + 0.05 * f, 0.01]} s={[liftW, 0.06, 0.03]} m={accent} />
       </group>
       {/* The server rack in the back corner (its lights are decoration, not telemetry) and plants. */}
       <group position={[-w / 2 + 0.45, 0, -d / 2 + 0.45]}>

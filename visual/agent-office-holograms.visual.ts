@@ -23,8 +23,8 @@ async function run(page: Page, tag: string) {
   await page.locator(".office-roster summary").click();
   await settle(page, 1);
   await page.screenshot({ path: join(OUT, `office-holo-roster-${tag}.png`) });
-  // The front-centre desk, so the hologram has the room behind it.
-  await page.locator(".office-roster-list button", { hasText: "Atlas Release Manager" }).click();
+  // The first agent on this floor (which agents sit on Floor 4 follows the building's desk plan).
+  await page.locator(".office-roster-list button").first().click();
   await settle(page, 6);
   await page.screenshot({ path: join(OUT, `office-holo-selected-${tag}.png`) });
   // Closer, the way Khaneil would lean in to read it.
@@ -35,7 +35,7 @@ async function run(page: Page, tag: string) {
   await settle(page, 6);
   await page.screenshot({ path: join(OUT, `office-holo-closeup-${tag}.png`) });
   // Another agent at its desk; automations have no desk, so the roster lists AI agents only.
-  await page.locator(".office-roster-list button", { hasText: "Atlas Health Monitor" }).click();
+  await page.locator(".office-roster-list button").last().click();
   await settle(page, 6);
   // Software WebGL can lag a frame behind the selection; let it catch up.
   await page.waitForTimeout(2000);
