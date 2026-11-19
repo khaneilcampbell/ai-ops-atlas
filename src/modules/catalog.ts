@@ -111,7 +111,7 @@ const TYPES: AtlasModuleType[] = [
       on("apps", "Connected applications", "src/properties/registry.ts"),
       on("agents", "Related agents", "src/catalog/workplaces.ts projectOfficeAgents"),
       on("overview", "Business workspace overview", "src/business/dashboard.ts overview"),
-      later("assignments", "Automation assignments"),
+      on("assignments", "Automation assignments", "src/business/assignments.ts automationAssignments"),
       on("kpis", "Operational KPIs", "src/business/goals.ts goalProgress"),
       later("config", "Business-specific configuration"),
     ],
