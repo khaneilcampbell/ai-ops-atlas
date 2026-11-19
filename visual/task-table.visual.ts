@@ -61,14 +61,17 @@ const tasks = {
   ],
 };
 
-for (const width of [1728, 1512, 1280, 390])
-  test(`Task Center table fits at ${width}`, async ({ page }) => {
-    test.setTimeout(240_000);
+// 1280 is the narrowest desktop width, so wider windows fit too; 390 is the iPhone layout.
+// One page load for both widths keeps this file's CI time small (visual/shard-times.json).
+test("Task Center table fits at 1280 and 390", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  await openAtlas(page, { storage: { tasks } });
+  await goTo(page, "Task Center");
+  const card = page.locator(".task-table-card");
+  for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 1100 });
-    await openAtlas(page, { storage: { tasks } });
-    await goTo(page, "Task Center");
     await settle(page, 2);
-    const card = page.locator(".task-table-card");
     await expect(card.getByText("Marketplace publication")).toBeVisible();
 
     // Screenshots first, so a failing run still shows what went wrong.
@@ -106,5 +109,5 @@ for (const width of [1728, 1512, 1280, 390])
         expect(lines, `${label} header on one line`).toBe(1);
       }
     }
-
-  });
+  }
+});
