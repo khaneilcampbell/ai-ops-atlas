@@ -184,7 +184,7 @@ export const BENJAIRE_LAUNCH: WorkflowDefinition = {
       agentId: "benjaire-ops-monitor",
       inputs: ["Live product"],
       outputs: ["Failure and missed-run alerts"],
-      execution: { kind: "owned", note: "Works through the automations it owns (Site CI, Flow Error Alerts, Flow Missed Run Check)." },
+      execution: { kind: "owned", note: "Works through the automations it owns (Benjaire Site · Build and Test, Benjaire Ops · Workflow Failure Alerts, Benjaire Ops · Missed Run Check)." },
       caveat: "It watches site and workflow health. Sales and revenue outcomes aren't part of its registry duties yet.",
     },
     {
