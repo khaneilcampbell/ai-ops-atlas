@@ -1,78 +1,81 @@
-import {useEffect,useMemo,useRef,useState} from "react";
-import {useFrame} from "@react-three/fiber";
-import type * as THREE from "three";
-import {Box} from "./InteriorPrimitives";
-import {walkerAt} from "./circaNav";
+import {useLayoutEffect,useMemo,useRef} from "react";
+import * as THREE from "three";
+import {Html} from "@react-three/drei";
+import {figureParts,partMatrix,poseBones,RIG} from "../map3d/agentFigures";
 import type {CircaTower} from "./circaFloors";
-import {circaResidents,homeLoop,homeStateAt,nightLoop,bedroomOf,livingOf,type CircaResident,type HomeState} from "./circaHomes";
-import type {Day} from "./walkNav";
+import {circaResidents,livingOf,type CircaResident} from "./circaHomes";
 import type {AgentJob} from "../../catalog/agentJobs";
+import {catalog} from "../../catalog";
 import {cityFigureFor,type CityFigure} from "../../registry/cityFigures";
-import {useRoutines} from "../../routine/useRoutineOps";
-import {useTimeZone} from "../../lib/timezone";
+import {identityFor,type ResolvedIdentity} from "../../registry/identity";
+import {AgentAvatar} from "../../components/AgentIdentity";
 
-/** A resident as drawn now: who, in what look, home or out (from its own day), and its loop while home. */
-export type CircaResidentNow=CircaResident&{figure:CityFigure|null;state:HomeState;day:Day|null};
+/** A resident as drawn: who, in its own city look and its own portrait and persona name. */
+export type CircaResidentNow=CircaResident&{figure:CityFigure|null;identity:ResolvedIdentity};
 
 /**
- * The agents who live in Ellipse Residences, each in its own apartment, home or out by the same day the city draws
- * (circaHomes.ts). Re-checked every 20 s, so one who comes home appears without leaving the building.
+ * The agents who live in Team Residence Towers, each in the apartment its home card names (Khaneil, 2026-11-19:
+ * "agents are not showing when i go inside building ... no loop just have them show"). Their day already runs on the
+ * city map, so inside they don't walk a second loop: each one is simply shown in its own living room.
  */
 export function useCircaResidents(jobs:readonly AgentJob[]):CircaResidentNow[]{
-  const routines=useRoutines(),tz=useTimeZone();
-  const [now,setNow]=useState(()=>Date.now());
-  useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),20_000);return()=>window.clearInterval(id);},[]);
-  const residents=useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)),[jobs]);
-  // Loops depend only on the apartment, so they're built once per resident; each starts a few seconds apart.
-  const loops=useMemo(()=>new Map(residents.map((r,i)=>[r.id,{home:homeLoop(r,i*7.3),night:nightLoop(r)}])),[residents]);
-  return useMemo(()=>residents.map(r=>{
-    const state=homeStateAt(r.id,routines.get(r.id),now,tz),loop=loops.get(r.id)!;
-    return {...r,figure:cityFigureFor(r.id),state,day:state.home?(state.night?loop.night:loop.home):null};
-  }),[residents,loops,routines,now,tz]);
+  return useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)).map(r=>({...r,figure:cityFigureFor(r.id),identity:identityFor(r.id,catalog.agents,r.name)})),[jobs]);
 }
 
-/** A standing figure in the agent's own city look (cityFigures.ts), at the scale of the residence's furniture. */
+/** The residence draws the city rig at furniture scale: the same height the residents stood at before, about 1.5. */
+const RESIDENT_HEIGHT=1.5;
+/** Only if a resident somehow has no city look: residents are chosen from agents that have one (useCircaResidents). */
+const FALLBACK_FIGURE:CityFigure={skin:"#c79875",hair:{style:"short",color:"#2b211b"},top:"#5a8067",trousers:"#294237",shoes:"#2a2522",build:{height:1,shoulders:1}};
+const SHARED={box:new THREE.BoxGeometry(1,1,1),ball:new THREE.SphereGeometry(1,12,8),mat:new THREE.MeshStandardMaterial({roughness:.78,metalness:0})};
+
+/**
+ * A standing figure in the agent's own city look, built from the very same parts as its character on the city map
+ * (agentFigures.ts: hair style, glasses, beard, jacket, collar), so it looks the same inside as outside (Khaneil,
+ * 2026-11-19: "agents should look like same like they did on the outside of the map"). Two draw calls per resident.
+ */
 function ResidentFigure({figure}:{figure:CityFigure|null}){
-  const f=figure,top=f?(f.jacket??f.top):"#5a8067",h=f?.build.height??1,w=f?.build.shoulders??1;
-  // A little larger than the stand-ins it replaces, with a gold marker overhead so it's found in the open cutaway.
-  return <group scale={[1.2*w,1.2*h,1.2*w]}>
-    <mesh position={[0,1.75,0]} rotation={[0,Math.PI/4,0]} scale={[.2,.28,.2]}><octahedronGeometry args={[1,0]}/><meshBasicMaterial color="#e4be62" toneMapped={false}/></mesh>
-    {[-1,1].map(k=><Box key={k} p={[k*.075,.2,0]} s={[.11,.4,.12]} color={f?.trousers??"#294237"}/>)}
-    {[-1,1].map(k=><Box key={k} p={[k*.075,.03,.03]} s={[.12,.06,.18]} color={f?.shoes??"#2a2522"}/>)}
-    <mesh position={[0,.63,0]} castShadow><cylinderGeometry args={[.16,.17,.5,12]}/><meshStandardMaterial color={top}/></mesh>
-    {f?.jacket&&<Box p={[0,.66,.155]} s={[.1,.4,.02]} color={f.top}/>}
-    {[-1,1].map(k=><Box key={k} p={[k*.2,.62,0]} s={[.07,.42,.08]} color={top}/>)}
-    <mesh position={[0,1.07,0]} castShadow><sphereGeometry args={[.17,16,12]}/><meshStandardMaterial color={f?.skin??"#c79875"}/></mesh>
-    {f&&f.hair.style!=="bald"&&<mesh position={[0,1.12,-.02]} scale={[1.04,.8,1.04]}><sphereGeometry args={[.17,16,12]}/><meshStandardMaterial color={f.hair.color}/></mesh>}
-    {f?.glasses&&<Box p={[0,1.08,.16]} s={[.2,.045,.02]} color={f.glasses}/>}
+  const f=figure??FALLBACK_FIGURE;
+  const parts=useMemo(()=>figureParts(f),[f]);
+  const boxes=useMemo(()=>parts.filter(p=>p.shape==="box"),[parts]),balls=useMemo(()=>parts.filter(p=>p.shape==="ball"),[parts]);
+  const boxRef=useRef<THREE.InstancedMesh>(null),ballRef=useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(()=>{
+    const scale=RESIDENT_HEIGHT/RIG.top*f.build.height;
+    const bones=poseBones({x:0,y:0,z:0,yaw:0,swing:0,look:0,sway:0,scale},f.build.shoulders,[]);
+    const m=new THREE.Matrix4(),c=new THREE.Color();
+    for(const [ref,list] of [[boxRef,boxes],[ballRef,balls]] as const){
+      const mesh=ref.current;if(!mesh)continue;
+      list.forEach((p,k)=>{mesh.setMatrixAt(k,partMatrix(bones,p,m));mesh.setColorAt(k,c.set(p.c));});
+      mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+      mesh.computeBoundingSphere();
+    }
+  },[f,boxes,balls]);
+  return <group>
+    <instancedMesh ref={boxRef} args={[SHARED.box,SHARED.mat,boxes.length]} castShadow/>
+    <instancedMesh ref={ballRef} args={[SHARED.ball,SHARED.mat,balls.length]} castShadow/>
   </group>;
 }
 
+/** Residents who live on this level, in this tower. The podium (lobby, pool deck) has none: nobody lives there. */
+export function residentsOn(residents:readonly CircaResidentNow[],level:number,tower?:CircaTower){
+  return residents.filter(r=>r.home.level===level&&r.home.tower===tower);
+}
+
 /**
- * The residents on one level: the podium (no `tower`) or one tower's floor. Each one home walks its own loop: its
- * rooms, and one ride to the pool deck or the lobby on the lifts' clock, hidden while it rides. At night it stays in
- * its bedroom. With reduced motion it stands still in its living room (its bedroom at night). Residents who are out
- * aren't drawn; their apartment label says where they are.
+ * The residents on one tower floor, each standing in its own living room facing the open side, with its portrait and
+ * persona name overhead in the all-floors view (the same portraits as the Agents tab); on a single floor the
+ * apartment label carries the portrait instead, so the two don't overlap. Selecting one says who it is and where.
  */
-export function CircaWalkers({level,tower,residents,reduced,onPick}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];reduced:boolean;onPick?:(text:string)=>void}) {
-  const refs=useRef<(THREE.Group|null)[]>([]);
-  useFrame(state=>{
-    if(reduced)return;
-    const t=state.clock.elapsedTime;
-    residents.forEach((r,i)=>{
-      const g=refs.current[i];if(!g)return;
-      if(!r.day){g.visible=false;return;}
-      const w=walkerAt(r.day,t);
-      g.visible=w.level===level&&w.frame===tower&&!w.hidden;
-      if(g.visible){g.position.set(w.x,0.03,w.z);g.rotation.y=w.heading;}
-    });
-  });
-  return <group>{residents.map((r,i)=>{
-    const spot=r.state.home&&r.state.night?bedroomOf(r.home):livingOf(r.home);
-    const still=reduced&&r.state.home&&r.home.level===level&&r.home.tower===tower;
-    return <group key={r.id} ref={el=>{refs.current[i]=el;}} visible={still} position={still?[spot.x,0.03,spot.z]:[0,0,0]}
-      onClick={e=>{e.stopPropagation();onPick?.(`${r.name} · Apartment ${r.home.unit} · ${r.state.note}`);}}>
+export function CircaWalkers({level,tower,residents,chips=true,onPick}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];chips?:boolean;onPick?:(text:string)=>void}) {
+  const here=residentsOn(residents,level,tower);
+  return <group>{here.map(r=>{
+    const spot=livingOf(r.home),who=`${r.identity.name} · ${r.identity.role} · Apartment ${r.home.unit}`;
+    return <group key={r.id} position={[spot.x,0.03,spot.z]} onClick={e=>{e.stopPropagation();onPick?.(who);}}>
       <ResidentFigure figure={r.figure}/>
+      {chips&&<Html position={[0,2.05,0]} center zIndexRange={[40,30]}>
+        <button className="circa-resident-chip" onClick={()=>onPick?.(who)} aria-label={`${r.identity.name}, ${r.identity.role}, AI agent, apartment ${r.home.unit}`}>
+          <AgentAvatar identity={r.identity} size={26}/><b>{r.identity.name.split(" ")[0]}</b>
+        </button>
+      </Html>}
     </group>;
   })}</group>;
 }

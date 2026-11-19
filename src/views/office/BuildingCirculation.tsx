@@ -47,10 +47,10 @@ export function doorWalk(f:number,door:number){
  const turn=0.3,inside=-1.6;
  return f<turn?{x:door,z:inside*(1-f/turn),inside:true}:{x:door+(f-turn)/(1-turn)*(8.3-door),z:0,inside:false};
 }
-export function MovingLift({reduced,finish=DEFAULT_LIFT,top=4,offset=0}:{reduced:boolean;finish?:LiftFinish;top?:number;offset?:number}) {
+export function MovingLift({reduced,finish=DEFAULT_LIFT,top=4,offset=0,rider=true}:{reduced:boolean;finish?:LiftFinish;top?:number;offset?:number;rider?:boolean}) {
   const car=useRef<THREE.Group>(null);
   useFrame((state)=>{
     if(car.current)car.current.position.y=elevatorAt(reduced?0:state.clock.elapsedTime,top,offset).height;
   });
-  return <group ref={car}><Box p={[8.6,0.1,0]} s={[1.8,0.2,1.8]} color={finish.car}/><Box p={[9.4,1.3,0]} s={[0.1,2.4,1.8]} color={finish.carWall}/><Person x={8.6} z={0.25} color="#506b85"/></group>;
+  return <group ref={car}><Box p={[8.6,0.1,0]} s={[1.8,0.2,1.8]} color={finish.car}/><Box p={[9.4,1.3,0]} s={[0.1,2.4,1.8]} color={finish.carWall}/>{rider&&<Person x={8.6} z={0.25} color="#506b85"/>}</group>;
 }

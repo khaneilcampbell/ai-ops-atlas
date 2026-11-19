@@ -4,6 +4,7 @@ import {Html} from "@react-three/drei";
 import {circaApartmentParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
 import {circaUnits,type CircaTower} from "./circaFloors";
 import type {CircaResidentNow} from "./CircaWalkers";
+import {AgentAvatar} from "../../components/AgentIdentity";
 
 /**
  * Circa's Floor 2 pool deck on the podium and Floors 3 to 6 apartments in each tower inside "Enter building".
@@ -49,12 +50,12 @@ export function CircaApartments({level,tower="west",night,labels,onPick,resident
   const units=circaUnits(level,tower);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    {/* Residents are the AI agents whose home card names the apartment; CircaWalkers moves them while they're home. */}
+    {/* Residents are the AI agents whose home card names the apartment; CircaWalkers shows them in it. */}
     {units.map(u=>{
-      const here=residents.filter(r=>r.home.unit===u.id),who=here.map(r=>r.name).join(" · ");
-      const status=here.map(r=>r.state.home?"Home":`Out, ${r.state.note.toLowerCase()}`).join(" · ");
+      const here=residents.filter(r=>r.home.unit===u.id),who=here.map(r=>r.identity.name).join(" · ");
+      const role=here.map(r=>r.identity.role).join(" · ");
       return <group key={u.id}>
-        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.name} · ${r.state.note}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)}>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${status}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></button></Html>}
+        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.identity.name} · ${r.identity.role}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)} data-resident={here.length?"":undefined}>{here.map(r=><AgentAvatar key={r.id} identity={r.identity} size={30}/>)}<em>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${role}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></em></button></Html>}
       </group>;
     })}
   </group>;
