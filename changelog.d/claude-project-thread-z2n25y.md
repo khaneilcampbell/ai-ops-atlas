@@ -1,1 +1,1 @@
-- 2026-11-19 · Fixed the screenshot checks that started failing on every pull request after agents moved to their own desk floors: the office check opens all floors, and the Inside screenshots show agents at their desks (#PR)
+- 2026-11-19 · Fixed the screenshot checks that started failing on every pull request after agents moved to their own desk floors: the office check opens all floors, and the Inside screenshots show agents at their desks (#487)
