@@ -312,10 +312,19 @@ describe("free time sent from Atlas", () => {
     expect(r.segments.find((s) => s.phase === "to_desk")!.t1).toBeLessThanOrEqual(run);
   });
 
-  it("is ignored while the agent works or at night", () => {
-    const night = Date.parse("2026-11-19T05:00:00Z"); // midnight New York
-    const r = plan(night + MIN, { kind: "wheel", at: night });
-    expect(segmentAt(r, night + MIN)).toMatchObject({ activity: "at_home" });
+  it("is followed at night too, then the agent walks home for the night", () => {
+    const night = Date.parse("2026-11-19T11:30:00Z"); // 6:30 AM New York, before the 7 AM morning
+    const r = plan(night + MIN, { kind: "park", at: night });
+    const walk = r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= night && s.kind === "walk")!;
+    expect(walk.t0).toBe(night);
+    expect(walk.option?.kind).toBe("park");
+    expect(walk.note).toContain("free time from Atlas");
+    const after = r.segments.filter((s) => s.t0 > walk.t1);
+    expect(after.some((s) => s.kind === "stay" && s.option?.kind === "park")).toBe(true);
+    // From home at midnight as well.
+    const midnight = Date.parse("2026-11-19T05:00:00Z");
+    const m = plan(midnight + MIN, { kind: "wheel", at: midnight });
+    expect(segmentAt(m, midnight + 1000)).toMatchObject({ kind: "walk", activity: "walking" });
   });
 
   it("only offers free time to an agent in its free time", () => {
@@ -325,6 +334,8 @@ describe("free time sent from Atlas", () => {
     expect(freeTimeAvailability(null, false).ok).toBe(false);
     const work = { kind: "inside", t0: 0, t1: 1, at: "office", activity: "at_desk", phase: "working", note: "", work: { label: "", runs: [], scheduledAt: null, alreadyStarted: false, outcome: null } } as Segment;
     expect(freeTimeAvailability(work, false)).toMatchObject({ ok: false, reason: expect.stringContaining("Busy") });
+    const home = { kind: "stay", t0: 0, t1: 1, at: "home", activity: "at_home", phase: null, note: "At home for the night" } as Segment;
+    expect(freeTimeAvailability(home, false)).toEqual({ ok: true });
   });
 
   it("keeps only today's valid requests", () => {

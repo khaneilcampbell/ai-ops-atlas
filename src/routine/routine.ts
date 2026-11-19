@@ -361,7 +361,8 @@ export function planRoutine(input: RoutineInput): Routine {
    * scheduled run. `scheduled` is that run's time, when known, so the last outing ends early enough
    * to commute in. Returns the segments' end (== stopAt, or the scheduled commute start).
    */
-  const outing = input.outing && !isNight(input.outing.at, tz) ? input.outing : null;
+  // Honoured at night too (Khaneil, 2026-11-19: agents must follow a Free time pick): it goes, then walks home for the night.
+  const outing = input.outing ?? null;
   let outingDone = false;
   const free = (stopAt: number, scheduled: number | null) => {
     if (outing && !outingDone && outing.at >= cur.t && outing.at < stopAt) {
