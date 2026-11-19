@@ -67,7 +67,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
-          holo: hologramData({ name: r.entry.profile.title, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
+          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
     [plan, rows, agents, pending, places],
@@ -205,6 +205,8 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
   const errors = history.filter((e) => e.result === "failure").slice(0, 3);
   const file = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
   const lastVerified = history.find((e) => e.result === "success") ?? null;
+  // A heartbeat is newer evidence of life than the last run, so it counts as received too.
+  const received = [t.productionSeenAt, history[0]?.at].filter((x): x is string => !!x).sort().pop() ?? null;
   return (
     <aside className="panel docked office-panel" aria-label={`${p.title} details`}>
       <div className="panel-head">
@@ -230,6 +232,7 @@ function AgentInspectionPanel({ row, onClose, onProfile, branch }: { row: Row; o
           <div className="section-title">Current status</div>
           <p style={{ margin: 0, fontSize: 13.5 }}>{runtime.reason}</p>
           <div className="muted small">Source: {runtime.source ?? <NA kind="connected" />}</div>
+          {runtime.source && <div className="muted small">Last received: {received ? `${formatDateTime(received)} (${relative(received)})` : "Nothing received yet"}</div>}
         </section>
         {isReportAgent(p.id) && (
           <section>

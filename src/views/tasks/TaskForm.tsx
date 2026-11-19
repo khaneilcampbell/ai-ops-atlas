@@ -7,6 +7,9 @@ import { ruleRouter } from "../../tasks/routing";
 import { editTask, taskService, type NewTask } from "../../tasks/store";
 import { CATEGORY_LABEL, KHANEIL, PRIORITY_LABEL, SENSITIVE_CATEGORIES, TASK_PRIORITIES, type SensitiveCategory, type StoredTask, type TaskPriority, type WorkflowRef } from "../../tasks/types";
 import { TERMINAL } from "../../tasks/lifecycle";
+import type { Agent } from "../../catalog/types";
+import { identityFor } from "../../registry/identity";
+import { AgentIdentityLine } from "../../components/AgentIdentity";
 
 /** Create a task, or edit one that hasn't run yet (or failed). */
 export function TaskForm({ task, preset, ctx, onDone, onClose }: { task?: StoredTask; preset?: { buildingId?: string; agentId?: string }; ctx: ExecContext; onDone: (id: string) => void; onClose: () => void }) {
@@ -144,15 +147,12 @@ export function TaskForm({ task, preset, ctx, onDone, onClose }: { task?: Stored
             <span>
               Agent <button type="button" className="text-btn small" onClick={suggest}>Suggest from capabilities</button>
             </span>
-            <select value={agentId} onChange={(e) => pickAgent(e.target.value)} aria-label="Agent">
-              <option value="">Unassigned</option>
-              {agentChoices.map((p) => (
-                <option key={p.id} value={p.id} disabled={!!p.unavailable && p.id !== task?.agentId}>
-                  {p.name}
-                  {p.unavailable ? " (retired)" : ""}
-                </option>
-              ))}
-            </select>
+            <AgentPicker
+              value={agentId}
+              onChange={pickAgent}
+              choices={agentChoices.map((p) => ({ id: p.id, disabled: !!p.unavailable && p.id !== task?.agentId }))}
+              agents={catalog.agents}
+            />
             {routeNote && <small className="muted">{routeNote}</small>}
             {agent && (
               <small className="muted">
@@ -212,5 +212,30 @@ export function TaskForm({ task, preset, ctx, onDone, onClose }: { task?: Stored
         </form>
       </aside>
     </>
+  );
+}
+
+/**
+ * The assignment menu: one radio per agent with its portrait, name, role and the AI agent label,
+ * so arrow keys move through it like any radio group. Automations show the agent that runs them.
+ */
+function AgentPicker({ value, onChange, choices, agents }: { value: string; onChange: (id: string) => void; choices: { id: string; disabled: boolean }[]; agents: Agent[] }) {
+  return (
+    <div className="agent-picker" role="radiogroup" aria-label="Agent">
+      <label className={`agent-pick ${value === "" ? "on" : ""}`}>
+        <input type="radio" name="task-agent" value="" checked={value === ""} onChange={() => onChange("")} />
+        <span className="agent-pick-none">Unassigned</span>
+      </label>
+      {choices.map((c) => {
+        const identity = identityFor(c.id, agents);
+        return (
+          <label key={c.id} className={`agent-pick ${value === c.id ? "on" : ""} ${c.disabled ? "disabled" : ""}`}>
+            <input type="radio" name="task-agent" value={c.id} checked={value === c.id} disabled={c.disabled} onChange={() => onChange(c.id)} />
+            <AgentIdentityLine identity={identity} size={28} lead="agent" />
+            {identity.kind === "none" && identity.retired && <span className="muted small">Retired</span>}
+          </label>
+        );
+      })}
+    </div>
   );
 }

@@ -9,13 +9,13 @@ import {distanceToRoad} from './highway';
 
 describe('Los Angeles planting',()=>{
  const s=buildScene(layoutMap(catalog,[],'district'));
- it('thins the lawns and keeps palms as specimens among olive, ficus, cypress and jacaranda (luxury, not jungle)',()=>{
-  const drawn=s.trees.filter(t=>t.kind!=='palm'),kinds=drawn.map(laTreeKind).filter(k=>k!==null),share=(k:string)=>kinds.filter(x=>x===k).length/kinds.length;
+ it('fills the campus lawns with leafy shade trees and cypress accents, and no lawn palms (city artwork)',()=>{
+  const drawn=s.trees.filter(t=>t.kind!=='palm'&&t.kind!=='avenue'&&!t.la),kinds=drawn.map(laTreeKind).filter(k=>k!==null),share=(k:string)=>kinds.filter(x=>x===k).length/kinds.length;
   expect(kinds.length).toBeGreaterThan(80);
-  expect(kinds.length/drawn.length).toBeLessThan(.8);
-  expect(share('fan')+share('date')).toBeGreaterThan(.15);
-  expect(share('fan')+share('date')).toBeLessThan(.4);
-  for(const k of ['fan','date','olive','ficus','jacaranda','cypress'])expect(share(k),k).toBeGreaterThan(0);
+  expect(kinds.length/drawn.length).toBeGreaterThan(.75);
+  expect(share('fan')+share('date')).toBe(0);
+  expect(share('ficus')+share('olive')).toBeGreaterThan(.55);
+  for(const k of ['olive','ficus','jacaranda','cypress'])expect(share(k),k).toBeGreaterThan(0);
  });
  it('grows the arena palms as avenue palms and keeps old blossom trees flowering, now jacaranda',()=>{
   expect(laTreeKind({x:1,z:1,kind:'palm'})).toBe('avenue');

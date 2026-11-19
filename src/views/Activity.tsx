@@ -1,4 +1,6 @@
 import { OFF_MAP_PROJECTS } from "../catalog/projects";
+import { identityFor } from "../registry/identity";
+import { AgentAvatar, AiAgentLabel } from "../components/AgentIdentity";
 import { useMemo, useState } from "react";
 import { Icon, type IconName } from "../components/Icon";
 import { ExternalLink } from "../components/bits";
@@ -163,6 +165,7 @@ export function ActivityView() {
                     <span className="grow">
                       <span className="title">{e.url ? <ExternalLink href={e.url}>{e.title}</ExternalLink> : e.title}</span>
                       <span className="meta">
+                        {e.agentId && <ActivityAgent id={e.agentId} />}
                         <button className="text-btn inline" onClick={() => select(e.agentId ? { kind: "agent", id: e.agentId } : e.repo ? { kind: "repo", id: e.repo } : null)}>
                           {e.detail}
                         </button>
@@ -188,5 +191,20 @@ export function ActivityView() {
         GitHub keeps the latest 10 commits and 10 default-branch runs per repository in Atlas. Live run logs from n8n and CrewAI arrive with their adapters.
       </p>
     </div>
+  );
+}
+
+/** Who a run belongs to: the agent's identity, or the owning agent's for one of its automations. */
+function ActivityAgent({ id }: { id: string }) {
+  const { catalog } = useAtlas();
+  const identity = identityFor(id, catalog.agents);
+  if (identity.kind === "none") return null;
+  return (
+    <span className="activity-agent">
+      <AgentAvatar identity={identity} size={18} />
+      <span>{identity.name}</span>
+      <AiAgentLabel />
+      {identity.via ? <span className="muted"> via {identity.via} ·</span> : <span className="muted"> ·</span>}
+    </span>
   );
 }

@@ -1,4 +1,5 @@
 import {bridgePoint,clipConnectionRails,connectionSpans} from "./connectionGeometry";
+import { distantHills } from "./distantHills";
 import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_ASPHALT,STREET_LINE,TRANSPORT} from "./transportScale";
 export {STREET_LINE};
@@ -17,6 +18,7 @@ import { ROAD_W, DECK_W, deckRise, dist, rampOf, type CarBridge } from "./roads"
 import { HQ, hqTop } from "./atlasHqPlan";
 import { bridgeStreetSidewalks } from "./streetPavement";
 import { laPlanting } from "./laPlanting";
+import { PLAZA } from "./plazaPlan";
 import { airportSidewalkPalms, calmLawnPalms, clearForAvenues, palmZones, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
 import { COMMERCE, commerceFront, commerceTop, isCommerceTower } from "./commerceTowerPlan";
@@ -191,8 +193,8 @@ export function useMaterials() {
     const cliff = patterned("#b39874", "cliff");
     const wall = patterned("#d6cbb2", "wall");
     const set = {
-      land: [cliff, cliff, patterned("#7aae4f", "grass"), cliff, cliff, cliff],
-      terrace: [wall, wall, patterned("#86b958", "grass"), wall, wall, wall],
+      land: [cliff, cliff, patterned("#6d9a45", "grass"), cliff, cliff, cliff],
+      terrace: [wall, wall, patterned("#76a24b", "grass"), wall, wall, wall],
       sand: patterned("#e4d3a3", "sand"),
       foam: new THREE.MeshStandardMaterial({ color: "#d9eee8", roughness: 1 }),
       surf: patterned("#e8f6f2", "foam", { roughness: 1, transparent: true, depthWrite: false }),
@@ -215,7 +217,7 @@ export function useMaterials() {
       metal: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.35, metalness: 0.65 }),
       glow: new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
       darkGlass: new THREE.MeshStandardMaterial({ color: "#4d6878", roughness: 0.12, metalness: 0.45 }),
-      lawn: patterned("#7fb356", "grass"),
+      lawn: patterned("#72a049", "grass"),
       glass: new THREE.MeshStandardMaterial({ color: "#f3dc95", emissive: "#e9c46a", emissiveIntensity: 0.35, roughness: 0.3 }),
       solar: new THREE.MeshStandardMaterial({ color: "#2e4660", roughness: 0.25, metalness: 0.4 }),
       foliage: swaying(new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 })),
@@ -469,6 +471,7 @@ export function Terrain({ scene, g, m, onTerrace }: { scene: Scene3D; g: G; m: M
       <mesh position={[cx, WATER_Y, cz]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={m.water} raycast={noRaycast}>
         <planeGeometry args={[OCEAN_SPAN, OCEAN_SPAN]} />
       </mesh>
+      <DistantHills scene={scene} />
       <Instanced items={items.foam} geometry={g.box} material={m.surf} shadow={false} />
       <Instanced items={items.sand} geometry={g.box} material={m.sand} shadow={false} />
       <Instanced items={items.land} geometry={g.box} material={m.land} />
@@ -501,8 +504,18 @@ const palmHalo = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: tr
 export function avenuePlanting(scene: Scene3D) {
   const keep = scene.pedestrianExclusion, m = 0.5;
   const clear = (p: { x: number; z: number }) => !keep || p.x < keep.x - m || p.x > keep.x + keep.w + m || p.z < keep.z - m || p.z > keep.z + keep.d + m;
-  const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear);
-  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms];
+  // Nothing grows on the Automation Plaza's disc and steps, or right against them (Khaneil, 2026-11-18).
+  const pz = scene.plaza, offPlaza = (p: { x: number; z: number }) => !pz || Math.hypot(p.x - pz.cx, p.z - pz.cz) > PLAZA.stepsOuter + 0.45;
+  const palms = [...planStreetPalms(scene), ...(scene.airport ? airportSidewalkPalms(scene.airport) : [])].filter(clear).filter(offPlaza);
+  return [...clearForAvenues(calmLawnPalms(scene.trees, palmZones(scene)), palms), ...palms].filter(offPlaza);
+}
+
+/** Forested hills far across the water (distantHills.ts): flat-shaded, shadowless and not clickable. */
+function DistantHills({ scene }: { scene: Scene3D }) {
+  const items = useMemo(() => distantHills(scene.bounds, WATER_Y), [scene.bounds]);
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 1, flatShading: true }), []);
+  return <Instanced items={items} geometry={geometry} material={material} shadow={false} />;
 }
 
 export function Landscape({ scene, g, m, night = false }: { scene: Scene3D; g: G; m: M; night?: boolean }) {
@@ -629,7 +642,7 @@ export function Kiosks({ kiosks, g, m, pick, night = false }: { kiosks: Kiosk[];
     const one = (k: Kiosk) => {
       const OFFICE_H = k.height ?? TOOL_OFFICE_HEIGHT;
       const brand = toolBrand(k.name), w = k.size, d = w * 0.8, f = brand.facade;
-      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#fff5d9", glassSide = f?.glass[1] ?? "#e5e8e1";
+      const trim = f?.trim ?? brand.roof, glassFront = f?.glass[0] ?? "#e9efd9", glassSide = f?.glass[1] ?? "#c9d8c4"; // soft green-tinted glass (city artwork, 2026-11-17)
       walls.push({ p: [k.x, y, k.z], s: [w, OFFICE_H, d], c: brand.wall });
       slabs.push({ p: [k.x, y, k.z], s: [w * 1.08, 0.08, d * 1.1], c: brand.roof });
       slabs.push({ p: [k.x, y + OFFICE_H, k.z], s: [w * 1.08, 0.1, d * 1.12], c: brand.roof });

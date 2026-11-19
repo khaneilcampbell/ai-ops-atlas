@@ -34,7 +34,7 @@ it('Aldren Insights has floor-to-ceiling clear glass on every office floor with 
   const desks=a.solid.filter(p=>Math.abs(p.p[1]-(floor.p[1]+floor.s[1]))<1e-9&&p.s[1]<.3);expect(desks.length).toBeGreaterThanOrEqual(4);
   for(const desk of desks)expect(desk.p[1]+desk.s[1]).toBeLessThan(pane.p[1]+pane.s[1]-.05);
  }
- expect(financialBrand('residence')).toMatchObject({name:'Aldren Insights',symbol:'wordmark',body:'#1d4f91',accent:'#2f8f83',signLines:['Aldren Insights']});
+ expect(financialBrand('residence')).toMatchObject({name:'Aldren Insights',symbol:'wordmark',body:'#efe6d3',accent:'#2f8f83',signLines:['Aldren Insights']});
 });
 it('opens Halden Trust in its Financial District tower (the Skyline branch is gone)',()=>{
  expect(financialInteriorBrand('Halden Branch')).toBeUndefined();expect(financialInteriorBrand('financial:records')?.name).toBe('Halden Trust');expect(financialInteriorBrand('Wells Fargo')?.id).toBe('records');

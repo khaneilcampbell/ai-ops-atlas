@@ -9,6 +9,8 @@ import type { AutonomyLevel, Category, Classification, Confidence, Kpi, Risk, Se
 export interface AgentProfile {
   id: string;
   title: string;
+  /** The persona name from `registry.identity`, shown with the title; null without an identity. */
+  displayName: string | null;
   originalName: string | null;
   suggestedTitle: string | null;
   summary: string;
@@ -54,6 +56,7 @@ export function toProfile(agent: Agent, project: Project | undefined): AgentProf
   return {
     id: agent.id,
     title: agent.name,
+    displayName: reg?.identity?.displayName ?? null,
     originalName: nn(agent.originalName),
     suggestedTitle: nn(reg?.suggestedTitle),
     summary: reg?.summary ?? agent.purpose,

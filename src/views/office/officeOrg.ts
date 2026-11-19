@@ -101,6 +101,8 @@ export const RUN_SLOTS = 12;
 
 export function hologramData(o: {
   name: string;
+  /** With an identity, `name` is the persona and this is its functional role (shown with "AI agent"). */
+  role?: string | null;
   ws: Pick<Workstation, "tier" | "zone">;
   runtime: Runtime;
   history: ExecutionRecord[];
@@ -123,7 +125,7 @@ export function hologramData(o: {
   const goal = o.profile.goals.objective?.trim() || o.profile.mission.purpose?.trim() || null;
   return {
     name: o.name,
-    team: `${TEAM_LABEL[o.ws.zone]} team · ${TIER_LABEL[o.ws.tier]}`,
+    team: o.role ? `${o.role} · AI agent` : `${TEAM_LABEL[o.ws.zone]} team · ${TIER_LABEL[o.ws.tier]}`,
     state: o.runtime.state,
     stateLabel: RUNTIME_LABEL[o.runtime.state],
     reason: o.runtime.reason,

@@ -1,6 +1,7 @@
 {
   "activity-buildings.visual.ts": 45,
   "agent-commute.visual.ts": 8,
+  "agent-identities.visual.ts": 0,
   "agent-owners.visual.ts": 39,
   "airport.visual.ts": 214,
   "alerts.visual.ts": 35,
@@ -60,6 +61,7 @@
   "module-lists-1.visual.ts": 1080,
   "module-lists-2.visual.ts": 1088,
   "module-panel.visual.ts": 862,
+  "named-agents.visual.ts": 0,
   "night-lights.visual.ts": 0,
   "office-life.visual.ts": 23,
   "orbit-brand.visual.ts": 60,

@@ -39,10 +39,10 @@ export const ALERTING: ReadonlySet<WatchState> = new Set(["failing", "silent"]);
 
 export const STATE_LABEL: Record<WatchState, string> = {
   failing: "Failed",
-  silent: "Silent",
+  silent: "Stale",
   ok: "Healthy",
   "not-running": "Not running",
-  "no-source": "Unknown",
+  "no-source": "Not connected",
   "no-reports": "No reports yet",
 };
 

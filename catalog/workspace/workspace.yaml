@@ -39,8 +39,6 @@ landmarks:
   "service:atlas-marketplace":
     map_name: Atlas Marketplace
     module: commerce-product-marketplace
-    project: ai-ops-atlas
-    agents: [marketplace-steward]
   "service:financial:banks":
     map_name: Bayvale Bank
     module: finance-analytics-tower
@@ -67,8 +65,6 @@ landmarks:
   "service:airport-building:operations":
     map_name: Atlas · Operations
     module: observability-center
-    project: ai-ops-atlas
-    agents: [signal-watch]
   "service:airport-building:cargo":
     map_name: Atlas · Cargo
     module: model-intelligence-lab

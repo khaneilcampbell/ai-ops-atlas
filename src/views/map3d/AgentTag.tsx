@@ -3,6 +3,9 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import type { AgentTagInfo } from "./agentTagInfo";
+import { catalog } from "../../catalog";
+import { identityFor } from "../../registry/identity";
+import { AgentAvatar, AiAgentLabel } from "../../components/AgentIdentity";
 
 /**
  * Follows one instanced walker (by its index in the people meshes) and holds the agent's card
@@ -19,12 +22,18 @@ export function AgentTag({ mesh, index, info }: { mesh: React.RefObject<THREE.In
     g.visible = tmp.s.x > 0.001;
     g.position.copy(tmp.p);
   });
+  const identity = useMemo(() => identityFor(info.agentId, catalog.agents), [info.agentId]);
+  const own = identity.kind === "own";
   return (
     <group ref={group}>
       <Html position={[0, 0.42, 0]} zIndexRange={[40, 30]} style={{ pointerEvents: "none" }}>
-        <div className="m3-agent-tag" role="status" aria-label={`${info.name}, ${info.stateLabel}`}>
-          <div className="n">{info.name}</div>
-          {info.role && <div className="r">{info.role}</div>}
+        <div className="m3-agent-tag" role="status" aria-label={`${own ? `${identity.name}, ${info.name}, AI agent` : info.name}, ${info.stateLabel}`}>
+          <div className="n">
+            {own && <AgentAvatar identity={identity} size={28} />}
+            <span>{own ? identity.name : info.name}</span>
+            <AiAgentLabel />
+          </div>
+          {own ? <div className="r">{info.name}</div> : info.role && <div className="r">{info.role}</div>}
           <div className="st">
             <i style={{ background: info.stateColor }} />
             {info.stateLabel}

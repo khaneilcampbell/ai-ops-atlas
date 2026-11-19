@@ -19,6 +19,9 @@ import { AutonomyMeter, CLASS_COLOR, ClassBadge, ListField, NA, OperationalPill,
 import { formatDateTime } from "../../lib/timezone";
 import { usePresenceAssignments } from "../../catalog/agentPresence";
 import { PresenceEditor } from "./PresenceEditor";
+import { AgentAvatar, AgentStatusPill, AiAgentLabel } from "../../components/AgentIdentity";
+import { identityFor } from "../../registry/identity";
+import type { IdentityStatus } from "../../registry/agentStatus";
 import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
 
 type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
@@ -35,11 +38,12 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "docs", label: "Documentation" },
 ];
 
-const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting" } as const;
+const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting", n8n: "n8n runs", automations: "Its automations" } as const;
 
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
-export function Inspector({ entry }: { entry: RegistryEntry }) {
+export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { status: IdentityStatus; from: string | null } }) {
   const { catalog, repos, manifestIssues, uncataloged, select } = useAtlas();
+  const identity = identityFor(entry.profile.id, catalog.agents);
   const { profile: p, telemetry: t } = entry;
   // Agents that store full reports open on them: that's what they're for.
   const reports = isReportAgent(p.id) ? p.id : null;
@@ -70,19 +74,45 @@ export function Inspector({ entry }: { entry: RegistryEntry }) {
   return (
     <section className="card agent-profile reg-inspector" aria-label={p.title}>
       <header className="ap-head">
-        <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
-          <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
-        </span>
+        {identity.kind === "own" ? (
+          <AgentAvatar identity={identity} size={56} status={status?.status} />
+        ) : (
+          <span className="ap-badge" style={{ background: CLASS_COLOR[p.classification] }}>
+            <Icon name={isAiAgent(agent) ? "agents" : "network"} size={20} />
+          </span>
+        )}
         <div className="grow">
           <div className="eyebrow">
             {p.project.name} · {CATEGORY_LABEL[p.category]}
             {p.subcategory ? ` · ${p.subcategory}` : ""}
           </div>
-          <h2 className="selectable">{p.title}</h2>
+          {identity.kind === "own" ? (
+            <>
+              <h2 className="selectable agent-identity-name">
+                {identity.name} <AiAgentLabel />
+              </h2>
+              <div className="muted selectable">{p.title}</div>
+            </>
+          ) : (
+            <h2 className="selectable">{p.title}</h2>
+          )}
           {p.originalName && <div className="muted small selectable">Manifest name: {p.originalName}</div>}
+          {identity.kind !== "own" && identity.kind !== "none" && (
+            <div className="muted small">
+              Run by {identity.name} ({identity.role}), AI agent
+            </div>
+          )}
+          {identity.intro && (
+            <p className="agent-intro selectable">
+              {identity.intro}
+              {identity.voice && <span className="muted small">Communication style: {identity.voice}</span>}
+            </p>
+          )}
           {p.suggestedTitle && <div className="muted small">Suggested title: {p.suggestedTitle} (not applied)</div>}
           <div className="chips" style={{ marginTop: 8 }}>
             <ClassBadge c={p.classification} long />
+            {status && <AgentStatusPill status={status.status} />}
+            {status?.from && <span className="muted small">from {status.from}</span>}
             <OperationalPill op={entry.operational} />
             <StatusPill status={entry.status} />
             <RiskPill risk={p.governance.risk} />
@@ -557,6 +587,10 @@ function OperationsTab({
                 ? "Runs appear here once the agent has run in this app."
                 : t.source === "agent-feed"
                   ? "Runs appear here once its pipeline reports a phase to Atlas (ATLAS_FEED_URL and ATLAS_FEED_TOKEN in the pipeline's .env)."
+                : t.source === "n8n"
+                  ? "None of its n8n workflows ran within the recent executions n8n returned."
+                : t.source === "automations"
+                  ? `None of the automations it owns (${(t.via ?? []).join(", ")}) has a recent run.`
                 : "Atlas has no live source for this agent, so it cannot confirm that it has ever run. A configuration is not evidence of a successful execution."}
           </span>
         </div>

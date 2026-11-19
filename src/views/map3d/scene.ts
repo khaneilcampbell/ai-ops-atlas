@@ -1,6 +1,7 @@
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
+import {planPlaza,plazaGround,plazaPlanting,PLAZA,type PlazaPlan} from './plazaPlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -192,6 +193,8 @@ export interface Scene3D {
   agency?:AgencyPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   commons?:CommonsPlan;
+  /** Atlas Automation Plaza on the lawn in front of the Growth & Marketing Studio (plazaPlan.ts). */
+  plaza?:PlazaPlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -506,7 +509,7 @@ function buildCity(layout: Layout): Scene3D {
       const pick = hash(`${s.gx.toFixed(2)}:${s.gy.toFixed(2)}`);
       trees.push({ x: s.gx, y: top, z: s.gy, s: 0.24 + (s.r - 7) * 0.025, kind: pick < 0.2 ? "cone" : pick > 0.95 ? "blossom" : "round" });
     }
-    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 2.2))) {
+    for (const s of treeSpots(`${d.project.id}:bush`, d.ox + 0.2, d.oy + 0.2, d.size - 0.4, Math.round(planted * 3.6))) {
       if (blocked(s.gx, s.gy)) continue;
       bushes.push({ x: s.gx, y: top, z: s.gy, s: 0.1 + hash(`${s.gx}:${s.gy}:b`) * 0.06 });
     }
@@ -922,9 +925,31 @@ function buildCity(layout: Layout): Scene3D {
   // sidewalk or a link's walk, whichever planner put it there (Khaneil, 2026-11-09).
   const inStreet=streetHitTest([...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],STREET_CLEAR),onWalk=streetHitTest(connections.map(c=>c.walk),.24);
   for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(inStreet(items[i].x,items[i].z)||onWalk(items[i].x,items[i].z))items.splice(i,1);
+  // Atlas Automation Plaza on the open lawn in front of the Growth & Marketing Studio (Khaneil, 2026-11-18): nothing
+  // nearby moves; only loose lawn planting inside its footprint gives way, and its own trees and bed shrubs join the city's planting.
+  const plazaSite={towers,kiosks,agency,land,brooks,houses,cleared,clearedLots:towers.filter(t=>cleared.has(t.projectId)),roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk),landmarks:[...(galleria?[galleria.footprint]:[]),...(mall?[{x:mall.x,z:mall.z,w:mall.w,d:mall.d}]:[])]};
+  const plaza=planPlaza(plazaSite);
+  if(plaza){for(const items of [trees,bushes,rocks])for(let i=items.length-1;i>=0;i--)if(Math.hypot(items[i].x-plaza.cx,items[i].z-plaza.cz)<PLAZA.stepsOuter+1.1)items.splice(i,1);const open=plazaGround(plazaSite);const q=plazaPlanting(plaza,top,(x,z)=>open(x,z,.3)&&!inStreet(x,z)&&!onWalk(x,z));trees.push(...q.trees);bushes.push(...q.bushes);}
+  // Footpaths near the plaza (Khaneil, 2026-11-18): a terrace boardwalk over dry lawn there becomes a plain
+  // paved path, and no path runs under the plaza disc; one that reaches it stops at the rim of the steps.
+  if(plaza){
+    const R=PLAZA.stepsOuter+.05,inR=(x:number,z:number)=>Math.hypot(x-plaza.cx,z-plaza.cz)<R;
+    const wet=(x:number,z:number)=>brooks.some(b=>x>b.x-.3&&x<b.x+b.w+.3&&z>b.z-.3&&z<b.z+b.d+.3);
+    const rimOf=(a:[number,number],b:[number,number]):[number,number]=>{const dx=b[0]-a[0],dz=b[1]-a[1],fx=a[0]-plaza.cx,fz=a[1]-plaza.cz,A=dx*dx+dz*dz,B=2*(fx*dx+fz*dz),C=fx*fx+fz*fz-R*R,t=(-B-Math.sqrt(Math.max(0,B*B-4*A*C)))/(2*A);return [a[0]+dx*t,a[1]+dz*t];};
+    for(let i=walks.length-1;i>=0;i--){
+      const w=walks[i],mx=(w.x0+w.x1)/2,mz=(w.z0+w.z1)/2;
+      if(Math.hypot(mx-plaza.cx,mz-plaza.cz)>PLAZA.stepsOuter+5)continue;
+      if(w.bridge&&!wet(mx,mz)){w.bridge=false;paving.push(strip(w.x0,w.z0,w.x1,w.z1,.32,top));}
+      const ia=inR(w.x0,w.z0),ib=inR(w.x1,w.z1);
+      if(ia&&ib){walks.splice(i,1);continue;}
+      if(ia){const q=rimOf([w.x1,w.z1],[w.x0,w.z0]);w.x0=q[0];w.z0=q[1];}
+      else if(ib){const q=rimOf([w.x0,w.z0],[w.x1,w.z1]);w.x1=q[0];w.z1=q[1];}
+    }
+  }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
+    plaza,
     financial,
     stationPlaza,
     community,
