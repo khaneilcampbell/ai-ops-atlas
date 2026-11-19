@@ -223,7 +223,7 @@ export function parseProduct(raw: string | null, at = new Date().toISOString()):
 }
 
 // ---------------------------------------------------------------------------------------------
-// Migration: an install that already has Atlas data never sees the first-run wizard. It gets one
+// Migration: there is no first-run setup. A device without a workspace gets one
 // workspace built from what is already there (the existing owner's business, every cataloged
 // project and agent, the time zone in Settings), so nothing it had changes meaning.
 
@@ -325,10 +325,10 @@ export class ProductStore {
     return this.file.workspaces.find((w) => w.id === this.file.activeId) ?? null;
   }
 
-  /** First launch on a device that already has Atlas data: keep everything, skip the wizard. */
+  /** A device with no workspace yet gets the owner's one. An existing workspace is never replaced. */
   migrate(src: MigrationSource, actor: Actor, at: string): Ok {
     return this.commit((f) => {
-      if (f.workspaces.length || f.onboarding.status !== "not_started") return { ok: true };
+      if (f.workspaces.length) return { ok: true };
       f.workspaces = [existingWorkspace(src, actor, at)];
       f.activeId = f.workspaces[0].id;
       f.onboarding = { status: "migrated", step: 5, updatedAt: at, completedAt: at };

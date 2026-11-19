@@ -49,6 +49,8 @@ Decorative light (lamps, warm ring) uses separate materials from the run indicat
 Events are de-duplicated by `kind:id:timestamp` for 15 minutes, at most 3 pulses show at once,
 and the first reading after load is a baseline, so a refresh never replays old events.
 
+A test run started by hand in the n8n editor that is still waiting after a day is left out: it was abandoned, not real work. Waiting runs from triggers, webhooks, forms and agents always show.
+
 Paths are drawn only to buildings whose agents have a real execution source (a GitHub workflow,
 the agent feed or a linked n8n workflow). An n8n workflow no agent links to has no building.
 
