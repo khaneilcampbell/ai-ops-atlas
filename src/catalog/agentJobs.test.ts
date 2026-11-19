@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "./index";
-import { AGENT_RESIDENCE, agentJobs, apartments, clock, ownerOf, SHIFT_BY_TRIGGER } from "./agentJobs";
+import { AGENT_RESIDENCE, OVERFLOW_RESIDENCE, agentJobs, apartments, clock, ownerOf, SHIFT_BY_TRIGGER } from "./agentJobs";
 import { isAiAgent } from "./roles";
 import type { Agent } from "./types";
 
@@ -10,12 +10,30 @@ describe("agent jobs", () => {
     expect(jobs.map((j) => j.agentId)).toEqual(catalog.agents.filter(isAiAgent).map((a) => a.id));
     expect(jobs.length).toBeGreaterThan(10);
   });
-  it("gives each agent its own Circa apartment, stable across catalog order", () => {
-    const units = jobs.map((j) => `${j.home.label}`);
-    expect(new Set(units).size).toBe(jobs.length);
+  it("gives each working agent its own Circa apartment, stable across catalog order", () => {
+    const working = jobs.filter((j) => !j.offDuty);
+    expect(new Set(working.map((j) => j.home.label)).size).toBe(working.length);
+    // Off duty agents hold no apartment, so they never take one a working agent needs.
+    for (const j of jobs.filter((j) => j.offDuty)) expect(j.home).toMatchObject({ unit: "", label: expect.stringContaining(`no apartment while ${j.offDuty}`) });
     expect(jobs.every((j) => j.home.building === AGENT_RESIDENCE.id)).toBe(true);
-    const reversed = apartments(jobs.map((j) => j.agentId).reverse());
+    const named = new Set(catalog.agents.filter((a) => a.registry?.identity).map((a) => a.id));
+    const reversed = apartments(jobs.map((j) => j.agentId).reverse(), new Map(jobs.flatMap((j) => (j.offDuty ? [[j.agentId, j.offDuty] as const] : []))), named);
     for (const j of jobs) expect(reversed.get(j.agentId)).toEqual(j.home);
+  });
+  it("moves the city's named agents into Team Residence Towers first, then Client Success Center once it's full", () => {
+    // Every named agent has its own apartment in the residence today.
+    const named = jobs.filter((j) => catalog.agents.find((a) => a.id === j.agentId)?.registry?.identity && !j.offDuty);
+    expect(named.length).toBe(17);
+    for (const j of named) expect(j.home.building, j.agentId).toBe(AGENT_RESIDENCE.id);
+    // 24 apartments, then Client Success Center's suites; named agents are never the ones moved out.
+    const ids = Array.from({ length: 30 }, (_, i) => `agent-${String(i).padStart(2, "0")}`);
+    const first = new Set(ids.slice(20));
+    const homes = apartments(ids, new Map(), first);
+    for (const id of first) expect(homes.get(id)!.building).toBe(AGENT_RESIDENCE.id);
+    const overflow = ids.filter((id) => homes.get(id)!.building === OVERFLOW_RESIDENCE.id);
+    expect(overflow).toEqual(ids.slice(14, 20));
+    expect(homes.get(overflow[0])).toMatchObject({ unit: "101", label: expect.stringMatching(/suite 101$/) });
+    expect(new Set([...homes.values()].map((h) => h.label)).size).toBe(30);
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
     // Exercise declared-workplace mapping independently of the real workflow's classification.

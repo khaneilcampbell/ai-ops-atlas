@@ -72,6 +72,9 @@ import { STADIUM_OFFICE_ID } from "./map3d/stadiumPlan";
 import { YACHT_OFFICE_ID } from "./map3d/yachtPlan";
 import { GOLD_JET_OFFICE_ID } from "./map3d/goldJetIds";
 import { interiorFloors } from "./office/circaFloors";
+import { closeLibrary, openLibrary, useLibraryOpen } from "../library/client";
+import "../styles/library.css";
+const OutputLibrary = lazy(() => import("./library/OutputLibrary").then((m) => ({ default: m.OutputLibrary })));
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
@@ -534,6 +537,11 @@ export function MapView({active=true}:{active?:boolean}) {
   const map3d = useRef<Map3DApi>(null);
   const [controlsHelp, setControlsHelp] = useState(false);
   const phone = useMedia(PHONE_QUERY);
+  // The Output Library drawer (views/library/OutputLibrary.tsx), opened here or from the Knowledge & Research Center.
+  const libraryOpen = useLibraryOpen();
+  useEffect(() => {
+    if (!active && libraryOpen) closeLibrary();
+  }, [active, libraryOpen]);
 
   // City agents: the roster panel beside the map (map3d/CityAgentsPanel.tsx). The count is the active
   // registry's named agents only: no automations, workflows, pedestrians or retired agents.
@@ -1434,6 +1442,18 @@ export function MapView({active=true}:{active?:boolean}) {
             <button className="icon-btn" onClick={() => zoomBy(0.8)} aria-label="Zoom out" title="Zoom out (−)">
               <Icon name="minus" size={17} />
             </button>
+            <span className="sep" />
+            <button
+              type="button"
+              className={`icon-btn text map-library-btn ${libraryOpen ? "on" : ""}`}
+              onClick={() => (libraryOpen ? closeLibrary() : openLibrary())}
+              aria-pressed={libraryOpen}
+              aria-label="Output Library"
+              title={libraryOpen ? "Close the Output Library" : "Output Library: every report and file your agents produced"}
+            >
+              <Icon name="briefcase" size={16} />
+              <span className="lbl">Library</span>
+            </button>
           </div>
 
           <div className="sr-only" aria-live="polite">
@@ -1445,6 +1465,12 @@ export function MapView({active=true}:{active?:boolean}) {
             </Suspense>
           )}
         </div>
+
+        {libraryOpen && (
+          <Suspense fallback={<aside className={`lib-drawer ${phone ? "sheet" : ""}`} aria-busy="true"><p className="lib-empty">Loading the Library…</p></aside>}>
+            <OutputLibrary phone={phone} />
+          </Suspense>
+        )}
 
         {/* The drawing is decorative for assistive tech; this list carries the same content. */}
         <ul className="sr-only" aria-label="Projects on the map">

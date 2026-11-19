@@ -111,7 +111,7 @@ const TYPES: AtlasModuleType[] = [
       on("apps", "Connected applications", "src/properties/registry.ts"),
       on("agents", "Related agents", "src/catalog/workplaces.ts projectOfficeAgents"),
       on("overview", "Business workspace overview", "src/business/dashboard.ts overview"),
-      later("assignments", "Automation assignments"),
+      on("assignments", "Automation assignments", "src/business/assignments.ts automationAssignments"),
       on("kpis", "Operational KPIs", "src/business/goals.ts goalProgress"),
       later("config", "Business-specific configuration"),
     ],
@@ -155,7 +155,7 @@ const TYPES: AtlasModuleType[] = [
   {
     id: "knowledge-repository", version: V, name: "Knowledge Repository", productDistrict: "data-intelligence",
     description: "Documentation and knowledge bases the workspace relies on.",
-    capabilities: [on("docs", "Document inventory", "src/knowledge/docs.ts documentInventory"), later("search", "Knowledge search")],
+    capabilities: [on("docs", "Document inventory", "src/knowledge/docs.ts documentInventory"), on("outputs", "Output Library", "src/views/library/OutputLibrary.tsx server/outputs.ts"), later("search", "Knowledge search")],
     connectors: ["github"], views: ["repos"], actions: [], permissions: [],
   },
   {

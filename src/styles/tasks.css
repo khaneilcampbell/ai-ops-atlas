@@ -21,8 +21,26 @@
 .task-toggle { cursor: pointer; margin-left: auto; }
 
 .task-filters .field input[type="date"] { width: 132px; }
-.task-table-card { overflow: hidden; }
+/* Scroll rather than clip if a window is ever too narrow for the columns below. */
+.task-table-card { overflow-x: auto; }
 .task-table td { font-size: var(--text-md); }
+@media (min-width: 761px) {
+  /* The agent's automation line ("Role · via Automation") used to stay on one line, so the
+     Agent column took half the table and pushed Last run past the card edge. It now wraps
+     within a fixed width, and the short columns keep their words on one line. */
+  .task-table th,
+  .task-table td[data-label="Status"],
+  .task-table td[data-label="Priority"],
+  .task-table td[data-label="Source"],
+  .task-table td[data-label="Created"],
+  .task-table td[data-label="Last run"] { white-space: nowrap; }
+  .task-table td[data-label="Task"] { min-width: 12rem; }
+  .task-table td[data-label="Building"] { min-width: 9rem; }
+  .task-table td[data-label="Agent"] .agent-identity { max-width: 18rem; align-items: flex-start; }
+  .task-table td[data-label="Agent"] .agent-identity-role {
+    white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+}
 .task-table .task-title { text-align: left; white-space: normal; padding: 0; }
 .task-table .desc { max-width: 38ch; }
 .task-pager { display: flex; align-items: center; justify-content: space-between; padding: var(--space-5) var(--space-8); border-top: 1px solid var(--sage-200); }
@@ -81,10 +99,13 @@
   .task-filters .field { flex: 1 1 140px; }
   .task-filters .field input { width: 100%; }
   .task-table thead { display: none; }
-  .task-table, .task-table tbody, .task-table tr, .task-table td { display: block; width: 100%; }
+  /* mobile.css gives every table.table a 560px minimum for sideways scroll and loads after this
+     file, so this selector is one class stronger. These rows stack instead of scrolling. */
+  table.table.task-table, .task-table tbody, .task-table tr, .task-table td { display: block; width: 100%; min-width: 0; box-sizing: border-box; }
   .task-table tr { padding: var(--space-6) var(--space-7); border-bottom: 1px solid var(--sage-200); }
   .task-table td { border: 0; padding: var(--space-1) 0; display: flex; gap: var(--space-4); align-items: baseline; }
   .task-table td::before { content: attr(data-label); flex: 0 0 76px; font-size: var(--text-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+  .task-table td > * { min-width: 0; }
   .task-table td[data-label="Task"] { display: block; padding-bottom: var(--space-3); }
   .task-table td[data-label="Task"]::before, .task-table td[data-label=""]::before { content: none; }
   .task-table td[data-label="Task"] .task-title { font-size: var(--text-xl); }
@@ -92,3 +113,33 @@
   .task-panel { width: 100%; }
 }
 .task-table td[data-label=""] { white-space: nowrap; }
+
+/* Starting an allow-listed n8n workflow: its form, then a review of exactly what is sent. */
+.n8n-start { gap: var(--space-4); }
+.n8n-start-form { margin-top: var(--space-3); }
+.n8n-start-review { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.n8n-start-review dt { font-size: var(--text-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.n8n-start-review dd { margin: 0; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Atlas database card (Task Center). */
+.db-card { margin: var(--space-8) 0; }
+.db-card .card-head h3 { margin: 0; }
+.db-pad { padding: 0 20px 16px; margin: 0; }
+.db-counts { display: flex; flex-wrap: wrap; gap: var(--space-8); padding: 0 20px var(--space-5); font-size: var(--text-sm); color: var(--ink-2); }
+.db-counts b { color: var(--ink); font-size: var(--text-md); }
+.db-counts .bad b { color: var(--bad); }
+.db-counts .warn b { color: var(--gold-deep); }
+.db-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); padding: 0 12px 12px; }
+.db-grid > div { min-width: 0; }
+.db-grid .section-title { padding: 0 8px; }
+.db-grid > div > p { padding: 0 8px; }
+.db-list { max-height: 360px; overflow: auto; padding: 0; }
+.db-list .list-row { align-items: flex-start; }
+.db-wrap { white-space: normal !important; }
+.db-text { font-size: var(--text-sm); margin-top: var(--space-1); overflow-wrap: anywhere; }
+.db-links { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin-top: var(--space-1); font-size: var(--text-sm); }
+.db-changes { margin: var(--space-2) 0; padding-left: var(--space-8); font-size: var(--text-sm); color: var(--ink-2); overflow-wrap: anywhere; }
+.db-approval .task-actions { margin-top: var(--space-3); }
+.db-focus { background: var(--gold-soft); border-radius: var(--radius-sm); }
+@media (max-width: 1180px) { .db-grid { grid-template-columns: minmax(0, 1fr); } .db-list { max-height: none; } }
+.db-list .list-row .meta { white-space: normal; }

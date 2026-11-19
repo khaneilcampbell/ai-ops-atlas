@@ -242,7 +242,7 @@ export function episodesOf(ops: AgentOps, from: number, until: number, now: numb
 
 const atSpot = (a: Anchor): SpotId | null => ("spot" in a ? a.spot : null);
 
-function isNight(t: number, tz: string): boolean {
+export function isNight(t: number, tz: string): boolean {
   const h = zoned(t, tz).h;
   const [from, to] = ROUTINE.night;
   return h >= from || h < to;

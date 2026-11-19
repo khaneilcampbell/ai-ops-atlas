@@ -1,10 +1,9 @@
 import {useLayoutEffect,useMemo,useRef} from "react";
 import * as THREE from "three";
 import {Html} from "@react-three/drei";
-import {Person} from "./InteriorPrimitives";
 import {circaApartmentParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
 import {circaUnits,type CircaTower} from "./circaFloors";
-import {POOL_PEOPLE} from "./circaNav";
+import type {CircaResidentNow} from "./CircaWalkers";
 
 /**
  * Circa's Floor 2 pool deck on the podium and Floors 3 to 6 apartments in each tower inside "Enter building".
@@ -41,19 +40,22 @@ export function CircaPoolDeck({night}:{night:boolean}) {
   const parts=useMemo(()=>circaPoolDeckParts(),[]);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    {POOL_PEOPLE.map(([x,z],i)=><Person key={i} x={x} z={z} color={i?"#b58b49":"#4c6a86"}/>)}
   </group>;
 }
 
 /** One tower's apartment floor, tower-local; the east tower is drawn mirrored by its parent group. */
-export function CircaApartments({level,tower="west",night,labels,onPick}:{level:number;tower?:CircaTower;night:boolean;labels:boolean;onPick:(text:string)=>void}) {
+export function CircaApartments({level,tower="west",night,labels,onPick,residents=[]}:{level:number;tower?:CircaTower;night:boolean;labels:boolean;onPick:(text:string)=>void;residents?:CircaResidentNow[]}) {
   const parts=useMemo(()=>circaApartmentParts(level),[level]);
   const units=circaUnits(level,tower);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    {/* Residents are the AI agents who live here; CircaWalkers moves them through their rooms. */}
-    {units.map(u=><group key={u.id}>
-      {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(`Apartment ${u.id} · ${u.label}`)}>{`Apartment ${u.id}`}<span>{u.beds===2?"2 bed":"1 bed"}</span></button></Html>}
-    </group>)}
+    {/* Residents are the AI agents whose home card names the apartment; CircaWalkers moves them while they're home. */}
+    {units.map(u=>{
+      const here=residents.filter(r=>r.home.unit===u.id),who=here.map(r=>r.name).join(" · ");
+      const status=here.map(r=>r.state.home?"Home":`Out, ${r.state.note.toLowerCase()}`).join(" · ");
+      return <group key={u.id}>
+        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.name} · ${r.state.note}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)}>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${status}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></button></Html>}
+      </group>;
+    })}
   </group>;
 }

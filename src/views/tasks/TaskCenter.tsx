@@ -1,5 +1,6 @@
 import { ownership } from "../../catalog/ownership";
 import { useEffect, useMemo, useState } from "react";
+import { DatabaseCard } from "./DatabaseCard";
 import { TaskIntelligence } from "./TaskIntelligence";
 import { actionsApi } from "../../actions/api";
 import { useActions } from "../../actions/state";
@@ -12,9 +13,11 @@ import { relative } from "../../lib/time";
 import { formatDateTime } from "../../lib/timezone";
 import { fetchManageData } from "../../manage/data";
 import { managedAgent, MANIFEST } from "../../manage/manifest";
-import { useN8nRuns } from "../../n8n/runs";
+import { refreshN8n, useN8nRuns } from "../../n8n/runs";
+import { STARTABLE, type StartInput } from "../../n8n/startable";
+import { startN8n, startStatus } from "../../n8n/startClient";
 import { useAtlas } from "../../state";
-import { availability, githubRunUpdate, matchGithubRun, n8nRunsSince, outcomeToUpdate, type ExecContext } from "../../tasks/adapters";
+import { availability, githubRunUpdate, matchGithubRun, n8nRunUpdate, n8nRunsSince, outcomeToUpdate, startAnswerToUpdate, type ExecContext } from "../../tasks/adapters";
 import { takeTaskFocus } from "../../tasks/focus";
 import { githubFailureEvents, intake, n8nFailureEvents } from "../../tasks/intake";
 import { approvalFor, beginAttempt, block, cancel, decideApproval, liveAttempt, needsApproval, requestApproval, retry, startProblem, unmetDependencies, updateAttempt } from "../../tasks/lifecycle";
@@ -26,12 +29,14 @@ import { EMPTY_FILTER, lastExecution, matches, page, sortTasks, summarize, type 
 import { addArtifact, byId, taskService, useTasks } from "../../tasks/store";
 import { ATLAS, CATEGORY_LABEL, KHANEIL, PRIORITY_LABEL, SOURCE_LABEL, STATUS_LABEL, TASK_PRIORITIES, TASK_SOURCES, TASK_STATUSES, type Actor, type StoredTask, type TaskEventType, type TaskStatus } from "../../tasks/types";
 import { TaskForm } from "./TaskForm";
+import { N8nStartForm } from "./N8nStartForm";
 import "../../styles/tasks.css";
 import { AgentIdentityLine } from "../../components/AgentIdentity";
 import { identityFor } from "../../registry/identity";
 import { statusFromTask } from "../../registry/agentStatus";
 
 const GITHUB_ACTOR: Actor = { kind: "github", id: "github-actions", name: "GitHub Actions" };
+const N8N_ACTOR: Actor = { kind: "n8n", id: "n8n", name: "n8n" };
 const STATUS_CLASS: Record<TaskStatus, string> = { queued: "idle", running: "active", blocked: "paused", awaiting_approval: "attention", completed: "done", failed: "failed", cancelled: "retired" };
 const EVENT_LABEL: Record<TaskEventType, string> = {
   created: "Created",
@@ -99,6 +104,26 @@ function useGithubWatcher(tasks: readonly StoredTask[]) {
   }, [key]);
 }
 
+/**
+ * Follows n8n executions Atlas started: each n8n run summary (read-only, every two minutes while
+ * something shows it) settles a live attempt once its own execution id finishes.
+ */
+function useN8nWatcher(tasks: readonly StoredTask[]) {
+  const n8n = useN8nRuns();
+  const live = tasks.some((t) => liveAttempt(t)?.executor === "n8n");
+  useEffect(() => {
+    const v = n8n.value;
+    if (!live || v?.state !== "ok") return;
+    const svc = taskService();
+    for (const t of svc.repo.list()) {
+      const a = liveAttempt(t);
+      if (!a || a.executor !== "n8n" || !t.workflow) continue;
+      const u = n8nRunUpdate(a, v.workflows.find((w) => w.id === t.workflow!.id)?.runs ?? []);
+      if (u) svc.apply(t.id, (x, _all, at) => updateAttempt(x, a.id, u, N8N_ACTOR, at));
+    }
+  }, [n8n.value, live]);
+}
+
 /** Automated intake: failed n8n runs and failed GitHub runs of catalog agents become tasks. Off by default. */
 function AutoIntake() {
   const n8n = useN8nRuns();
@@ -127,6 +152,7 @@ export function TaskCenterView() {
   const [autoIntake, setAutoIntake] = useState(() => load<boolean>("tasksAutoIntake", false));
   const [storageOk] = useState(storageWorks);
   useGithubWatcher(tasks);
+  useN8nWatcher(tasks);
 
   const setFilter = (f: Partial<TaskFilter>) => {
     setFilterState((x) => ({ ...x, ...f }));
@@ -287,6 +313,8 @@ export function TaskCenterView() {
         </div>
       )}
 
+      <DatabaseCard />
+
       {selected && tasks.some((t) => t.id === selected) && !form && <TaskDetail id={selected} ctx={ctx} onClose={() => setSelected(null)} onEdit={(task) => setForm({ task })} onOpen={setSelected} />}
       {form && (
         <TaskForm
@@ -326,13 +354,13 @@ function IntegrationStrip({ ctx, scope, storageOk, autoIntake, setAutoIntake }: 
   const github = ctx.desktop ? (ctx.agentsToken ? { tone: "good", text: "Can start allow-listed agents (Touch ID)" } : { tone: "warn", text: "Read-only: no Manage agents token" }) : { tone: "warn", text: "Read-only on the web" };
   const n8nLine =
     n8n.state === "ready" && n8n.value?.state === "ok"
-      ? { tone: "good", text: `Reading runs, read-only · ${n8n.value.workflows.length} workflows` }
+      ? { tone: "good", text: `Reading runs · ${n8n.value.workflows.length} workflows · can start ${STARTABLE.length} (signed)` }
       : n8n.state === "ready" && n8n.value?.state === "not-configured"
         ? { tone: "bad", text: `Not configured: ${n8n.value.need}` }
         : n8n.state === "error"
           ? { tone: "bad", text: `Disconnected: ${n8n.message}` }
           : n8n.state === "off"
-            ? { tone: "warn", text: "Read only by the Mac app and hosted site" }
+            ? { tone: "warn", text: "Read and started by the Mac app and hosted site" }
             : { tone: "", text: "Checking…" };
   return (
     <div className="task-strip" aria-label="Connections">
@@ -366,6 +394,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
   const { catalog, repos, select, setView } = useAtlas();
   const workspace = useWorkspace();
   const [busy, setBusy] = useState(false);
+  const [n8nForm, setN8nForm] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [failNote, setFailNote] = useState("");
   const [artLabel, setArtLabel] = useState("");
@@ -399,6 +428,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
     setMessage(null);
     if (unmetDependencies(task, all).length) return void run((t, everyone, at) => block(t, everyone, KHANEIL, at), "Blocked until its dependencies complete.");
     if (needsApproval(task) && approvalFor(task) !== "granted") return void run((t, _a, at) => requestApproval(t, KHANEIL, at), "Approval requested.");
+    if (avail.mode === "execute" && avail.executor === "n8n") return void setN8nForm(true);
     const executor = avail.mode === "execute" ? "github" : "manual";
     const r = run((t, everyone, at) => beginAttempt(t, everyone, executor, KHANEIL, at, problemForAgent));
     if (!r.ok || executor !== "github" || !task.agentId || !task.workflow) return;
@@ -413,6 +443,34 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
       if (outcome.stage !== "started") setMessage({ ok: false, text: outcome.message || "Not started." });
     } catch (e) {
       run((t, _a, at) => updateAttempt(t, attempt.id, { state: "unknown", error: `The Mac app didn't answer clearly: ${e instanceof Error ? e.message : String(e)}` }, GITHUB_ACTOR, at));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Sends one n8n start: checks the site is set up, records the attempt, then asks the site (Touch ID first on the Mac). */
+  const startInN8n = async (input: StartInput) => {
+    if (avail.mode !== "execute" || avail.executor !== "n8n") return;
+    setMessage(null);
+    setBusy(true);
+    try {
+      const ready = await startStatus().catch(() => false);
+      if (!ready) return void setMessage({ ok: false, text: "The site can't start n8n workflows yet: its signing secret N8N_START_SECRET isn't set. The steps are in docs/n8n-start.md." });
+      const r = run((t, everyone, at) => beginAttempt(t, everyone, "n8n", KHANEIL, at, problemForAgent));
+      if (!r.ok) return;
+      const attempt = liveAttempt(r.task)!;
+      try {
+        const answer = await startN8n({ workflow: avail.startable.key, input, idempotencyKey: attempt.idempotencyKey, taskId: task.id }, avail.startable.name);
+        const u = startAnswerToUpdate(answer);
+        run((t, _a, at) => updateAttempt(t, attempt.id, u, N8N_ACTOR, at), answer.state === "accepted" ? `Started in n8n${answer.executionId ? ` (execution ${answer.executionId})` : ""}. Atlas marks it done when n8n reports the run finished.` : undefined);
+        if (answer.state !== "accepted") setMessage({ ok: false, text: u.state === "failed" || u.state === "unknown" ? u.error : "Not started." });
+        else {
+          setN8nForm(false);
+          void refreshN8n();
+        }
+      } catch (e) {
+        run((t, _a, at) => updateAttempt(t, attempt.id, { state: "unknown", error: `No clear answer: ${e instanceof Error ? e.message : String(e)}. Check the workflow's executions in n8n before retrying.` }, N8N_ACTOR, at));
+      }
     } finally {
       setBusy(false);
     }
@@ -441,9 +499,9 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
         </div>
         <div className="panel-body selectable">
           <div className="task-actions">
-            {task.status === "queued" && (
+            {task.status === "queued" && !n8nForm && (
               <button className="btn primary" disabled={busy} onClick={() => void start()} title={startBlock ?? undefined}>
-                <Icon name="play" size={13} /> {busy ? "Waiting for approval on the Mac…" : unmetDependencies(task, all).length ? "Start (will wait)" : needsApproval(task) && approvalFor(task) !== "granted" ? "Request approval" : avail.mode === "execute" ? "Run on GitHub" : "Start (manual)"}
+                <Icon name="play" size={13} /> {busy ? "Waiting for approval on the Mac…" : unmetDependencies(task, all).length ? "Start (will wait)" : needsApproval(task) && approvalFor(task) !== "granted" ? "Request approval" : avail.mode === "execute" ? (avail.executor === "n8n" ? "Start in n8n" : "Run on GitHub") : "Start (manual)"}
               </button>
             )}
             {task.status === "awaiting_approval" && (
@@ -478,7 +536,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
               </button>
             )}
             {(task.status === "queued" || task.status === "blocked" || task.status === "awaiting_approval" || (task.status === "running" && !task.cancelRequestedAt)) && (
-              <button className="btn" onClick={() => run((t, _a, at) => cancel(t, KHANEIL, at), live && live.executor !== "manual" ? "Stop requested. It shows as cancelled once GitHub confirms." : "Cancelled.")}>
+              <button className="btn" onClick={() => run((t, _a, at) => cancel(t, KHANEIL, at), live && live.executor !== "manual" ? live.executor === "n8n" ? "Stop recorded. Atlas can't stop an n8n run; stop it in n8n and it shows as cancelled once n8n reports it." : "Stop requested. It shows as cancelled once GitHub confirms." : "Cancelled.")}>
                 {task.status === "running" && live && live.executor !== "manual" ? "Request stop" : "Cancel task"}
               </button>
             )}
@@ -486,7 +544,15 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
           {startBlock && task.status === "queued" && <p className="muted small task-note">{startBlock}</p>}
           {task.cancelRequestedAt && live?.externalUrl && (
             <p className="small task-note">
-              Atlas can't stop a GitHub run itself. <ExternalLink href={live.externalUrl}>Cancel it on GitHub</ExternalLink>; the task updates when GitHub reports it cancelled.
+              {live.executor === "n8n" ? (
+                <>
+                  Atlas can't stop an n8n run itself. <ExternalLink href={live.externalUrl}>Stop it in n8n</ExternalLink>; the task updates when n8n reports it cancelled.
+                </>
+              ) : (
+                <>
+                  Atlas can't stop a GitHub run itself. <ExternalLink href={live.externalUrl}>Cancel it on GitHub</ExternalLink>; the task updates when GitHub reports it cancelled.
+                </>
+              )}
             </p>
           )}
           {message && (
@@ -494,6 +560,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
               {message.text}
             </p>
           )}
+          {n8nForm && task.status === "queued" && avail.mode === "execute" && avail.executor === "n8n" && <N8nStartForm workflow={avail.startable} desktop={isTauri()} busy={busy} onStart={(input) => void startInN8n(input)} onCancel={() => setN8nForm(false)} />}
 
           {(task.description || task.objective) && (
             <section>
@@ -593,7 +660,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
                       </div>
                       {a.error && <div className="task-error small">{a.error}</div>}
                     </span>
-                    {a.externalUrl && <ExternalLink href={a.externalUrl}>Run {a.externalId} ↗</ExternalLink>}
+                    {a.externalUrl && <ExternalLink href={a.externalUrl}>{a.executor === "n8n" ? "Execution" : "Run"} {a.externalId} ↗</ExternalLink>}
                   </li>
                 ))}
               </ul>
