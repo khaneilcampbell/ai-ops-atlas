@@ -21,7 +21,8 @@
     "visual:compare": "node visual/compare.mjs",
     "measure:power": "POWER=1 playwright test -c visual power",
     "measure:perf": "PERF=1 playwright test -c visual perf",
-    "preview:properties": "vite --config visual/properties.preview.config.ts"
+    "preview:properties": "vite --config visual/properties.preview.config.ts",
+    "preview:library": "vite --config visual/library.preview.config.ts"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
