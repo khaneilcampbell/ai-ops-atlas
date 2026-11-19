@@ -44,7 +44,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 briefs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Merge Flow Coordinator
+      title: "GitHub · Pull Request Merge Lanes"
       category: engineering
       subcategory: Code review and release
       classification:
@@ -128,7 +128,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Opportunity Scout
+      title: "Development · Revenue Opportunity Scout"
       category: business
       subcategory: Opportunity research
       classification:
@@ -214,7 +214,7 @@ agents:
       - 'ANTHROPIC_API_KEY (optional): messages, capped at 4 runs a day and $1 a month'
       - 'ATLAS_FEED_TOKEN (optional): add-only reports to /api/hooks/agents'
     registry:
-      title: Design Consistency
+      title: "Development · Design Token Check"
       category: engineering
       subcategory: Design consistency
       automation_category: maintenance
@@ -409,7 +409,7 @@ agents:
       identity:
         display_name: Elijah Brooks
         accent: "#1E3A8A"
-        intro: "I run your cross-repository GitHub routines from the Development Hub: Design Consistency checks Atlas styles and names for drift and opens a fix pull request, and Opportunity Scout proposes up to 3 scored earning ideas when the registry changes. Everything still goes through pull requests you merge."
+        intro: "I run your cross-repository GitHub routines from the Development Hub: Development · Design Token Check looks for drift in Atlas styles and names and opens a fix pull request, and Development · Revenue Opportunity Scout proposes up to 3 scored earning ideas when the registry changes. Everything still goes through pull requests you merge."
         voice: "Concise proposals, each with a score and a one-line reason."
         appearance: "African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo"
         portrait:

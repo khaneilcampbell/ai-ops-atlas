@@ -1,7 +1,8 @@
 import {expect,it} from "vitest";
 import {catalog} from "./index";
 import {buildCatalog} from "./parse";
-import {projectOfficeAgents,workplaceAgent} from "./workplaces";
+import {officeAutomations,officeDeskAgents,projectOfficeAgents,workplaceAgent} from "./workplaces";
+import {isAiAgent} from "./roles";
 import {WORKSPACE} from "../modules/workspace";
 
 // Agents that operate a landmark building (workspace.yaml `agents`) are placed there, not at headquarters.
@@ -79,4 +80,15 @@ it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the inter
  expect(buildCatalog({"a.yaml":manifest('{building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}')}).issues).toEqual([]);
  for(const w of ['{building: Benjaire Marketing Agency, floor: 1, room: "101"}','{building: Benjaire Marketing Agency, floor: 2, room: "1-strategy"}','{building: Benjaire Marketing Agency, floor: 1, room: "1-lobby"}','{building: Model Lab, floor: 1, room: "1-strategy"}'])
   expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
+});
+
+it("gives desks to AI agents only; automations are counted but never take an agent's desk",()=>{
+  const hq=catalog.projects.find(p=>p.id==="ai-ops-atlas")!;
+  const desks=officeDeskAgents(catalog.agents,hq.id);
+  const autos=officeAutomations(catalog.agents,hq.id);
+  expect(desks.length).toBeGreaterThan(0);
+  expect(autos.length).toBeGreaterThan(0);
+  expect(desks.every(a=>isAiAgent(a))).toBe(true);
+  expect(autos.some(a=>isAiAgent(a))).toBe(false);
+  for(const p of catalog.projects)expect(officeDeskAgents(catalog.agents,p.id).filter(a=>!isAiAgent(a))).toEqual([]);
 });

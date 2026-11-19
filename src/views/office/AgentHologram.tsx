@@ -363,7 +363,7 @@ function signTexture(b: OrgBand) {
   ctx.fillText(fit(ctx, b.label, 460), 28, 66);
   ctx.fillStyle = SOFT;
   ctx.font = `500 28px ${FONT}`;
-  ctx.fillText(`${b.count} ${b.count === 1 ? "agent" : "agents"}`, 28, 112);
+  ctx.fillText(fit(ctx, b.residents, 460), 28, 112);
   ctx.fillStyle = b.activity ? "#ffe2a6" : SOFT;
   ctx.font = `500 26px ${FONT}`;
   ctx.fillText(fit(ctx, b.activity ?? "Nothing needs you", 460), 28, 158);

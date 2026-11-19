@@ -15,7 +15,7 @@ describe("flow lines", () => {
     const site = catalog.agents.find((a) => a.id === "benjaire-flow-missed-runs")!.projectId;
     const feed = lines.find((c) => c.id === `feed:${site}`)!;
     expect(feed.target).toEqual({ kind: "project", id: "ai-ops-atlas" });
-    expect(feed.agents).toContain("Flow Missed Run Check");
+    expect(feed.agents).toContain("Benjaire Ops · Missed Run Check");
     const n8n = lines.find((c) => c.id === `n8n:${site}`)!;
     expect(n8n.target).toMatchObject({ kind: "landmark", id: WORKFLOW_HUB });
     expect(n8n.workflows.length).toBeGreaterThan(0);
