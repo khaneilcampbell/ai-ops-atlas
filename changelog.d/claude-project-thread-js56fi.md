@@ -1,0 +1,1 @@
+- 2026-11-19 · Free time can now send agents by Atlas car (picked up at the kerb) or by train, or let Atlas choose (Auto) (#496)
