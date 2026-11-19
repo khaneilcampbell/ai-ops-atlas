@@ -9,6 +9,8 @@ import { openAtlas, settle, waitForScene } from "./atlas";
 // TRAVEL_SHOTS=<dir> npx playwright test -c visual/local-chromium.config.ts visual/agent-travel.visual.ts
 const out = process.env.TRAVEL_SHOTS ?? "";
 test.skip(!out, "Set TRAVEL_SHOTS to a folder to take these review shots");
+// The cars and the train only move with motion on.
+test.use({ reducedMotion: "no-preference" });
 
 const AT = Date.parse("2026-10-28T14:05:00Z"); // 10:05 in New York: most agents are in their free time
 
@@ -16,10 +18,12 @@ async function open(page: Page, width: number) {
   await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
   await openAtlas(page, { time: AT, storage: { mapInside: false } });
   await waitForScene(page);
+  // The train (and so the cars' shared clock) runs only in the window in front: headless never has focus by itself.
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await settle(page, 4);
 }
 
-for (const width of [1512, 390]) {
+for (const width of process.env.TRAVEL_WIDTH ? [Number(process.env.TRAVEL_WIDTH)] : [1512, 390]) {
   test(`Travel by car ${width}`, async ({ page }) => {
     test.setTimeout(900_000);
     mkdirSync(out, { recursive: true });
@@ -48,7 +52,7 @@ for (const width of [1512, 390]) {
 
     // Walking to the kerb, waiting there, then riding (the badge rides on the car).
     const seen = new Set<string>();
-    for (let i = 0; i < 40 && seen.size < 2; i++) {
+    for (let i = 0; i < Number(process.env.TRAVEL_STEPS ?? 40) && seen.size < 2; i++) {
       await page.clock.fastForward(5_000);
       await settle(page, 1);
       const text = (await panel.locator(".ca-detail").textContent()) ?? "";

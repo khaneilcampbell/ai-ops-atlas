@@ -3,7 +3,7 @@ import { LANE_OFF, ROAD_W, type Pt3 } from "./roads";
 import { PERIMETER_RAIL } from "./perimeterRailPlan";
 import { STREET_Y, trainClockAt, wallOfTrain, type CityRoutes, type CitySpot } from "./routinePlaces";
 import { drive, TRAVEL_CLOCK } from "./travelLoops";
-import { DETOURS, legsAt, vehicleAt, type Detour, type Leg, type VehiclePlan } from "./vehicles";
+import { CAR_POSES, DETOURS, legsAt, vehicleAt, type Detour, type Leg, type VehiclePlan } from "./vehicles";
 
 /**
  * Agents travelling by car or train (Khaneil, 2026-11-19: "I want to have agents get pick up by cars or take the train
@@ -79,7 +79,8 @@ export const CAR_BOOKINGS = new Map<string, CarBooking>();
 export function carRiderPoint(personaId: string, wall: number): Pt3 | null {
   const b = CAR_BOOKINGS.get(personaId);
   if (!b || wall < b.detour.wall0 || wall >= b.detour.wall1) return null;
-  const p = vehicleAt(b.car, trainClockAt(wall));
+  // Where the car is drawn (after car following), or where its timetable puts it when the map isn't drawing.
+  const p = CAR_POSES.get(b.car.id) ?? vehicleAt(b.car, trainClockAt(wall));
   return [p.x, STREET_Y + p.y + 0.2, p.z];
 }
 
@@ -142,6 +143,7 @@ export class CityRides {
   ) {
     // A new layout starts with no pickups booked.
     DETOURS.clear();
+    CAR_POSES.clear();
     CAR_BOOKINGS.clear();
   }
 

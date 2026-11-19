@@ -54,6 +54,8 @@ export const ATLAS_CARS = 4;
 export interface Detour { id: string; wall0: number; wall1: number; legs: Leg[] }
 /** Booked pickups by vehicle id. Shared by the agents' planner and the renderer, so both see the same drive. */
 export const DETOURS = new Map<string, Detour[]>();
+/** Where each Atlas car is drawn this frame (living.tsx Vehicles, after car following), so a rider's badge sits on it. */
+export const CAR_POSES = new Map<string, { x: number; y: number; z: number }>();
 /** Wall time (ms) of a train-clock time (s): travelLoops.ts sets it from the live train clock. */
 export const DETOUR_CLOCK = { wallOf: (t: number) => t * 1000 };
 

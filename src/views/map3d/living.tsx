@@ -15,7 +15,7 @@ import { planHarbourPlatform, harbourAccess, harbourParts, type HarbourPlan } fr
 import { walkPoint } from "./hillsCommunityPlan";
 import { trafficFlow } from "./trafficFlow";
 import { harbourLoop, yachtBerth } from "./yachtPlan";
-import { planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
+import { CAR_POSES, planVehicles, planDealershipTraffic, planHighwayTraffic, vehicleAt, vehicleVisible, VEHICLE_LIVERY, trafficJunctions, MAX_VEHICLES } from "./vehicles";
 import { travelPlan, TRAVEL_CLOCK } from "./travelLoops";
 import { FigureMeshes, useFigures } from "./CityFigures";
 
@@ -316,6 +316,7 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     };
     const pose = plans.map((v, i) => {
       const at = vehicleAt(v, flow.times[i]);
+      if (v.atlasCar) CAR_POSES.set(v.id, at);
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
