@@ -1,1 +1,1 @@
-- 2026-11-19 · GitHub Profile Manager's card now shows what is live in n8n: once a day at 9 AM on Claude Haiku 5.5, with its $5 a month and $0.40 per run caps (#PR)
+- 2026-11-19 · GitHub Profile Manager's card now shows what is live in n8n: once a day at 9 AM on Claude Haiku 5.5, with its $5 a month and $0.40 per run caps (#494)
