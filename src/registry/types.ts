@@ -141,7 +141,9 @@ export interface ExecutionRecord {
   url?: string;
   durationMs?: number | null;
   costUsd?: number | null;
-  source: "github" | "atlas-intel" | "agent-feed" | "production" | "manual";
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | "n8n" | "manual";
+  /** For an owning agent's rolled-up history: the automation that ran it. */
+  via?: string;
   /** A GitHub run on a branch other than the default one (a pull request, Dependabot). Kept in
    *  the history, but it doesn't decide the agent's status. */
   offMainline?: boolean;
@@ -149,8 +151,11 @@ export interface ExecutionRecord {
 
 /** Derived at runtime. Never stored in a manifest. */
 export interface Telemetry {
-  /** Where live execution data comes from, or null when nothing is connected. */
-  source: "github" | "atlas-intel" | "agent-feed" | "production" | null;
+  /** Where live execution data comes from, or null when nothing is connected. "automations" is an
+   *  owning agent with no source of its own: the runs of the automations it owns (owned_by). */
+  source: "github" | "atlas-intel" | "agent-feed" | "production" | "n8n" | "automations" | null;
+  /** For "automations": the owned automations that have a live source, by name. */
+  via?: string[];
   /** True when Atlas has looked at the source (the repository or the agent was loaded). */
   loaded: boolean;
   productionFresh?: boolean;

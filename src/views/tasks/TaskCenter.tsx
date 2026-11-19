@@ -1,3 +1,4 @@
+import { ownership } from "../../catalog/ownership";
 import { useEffect, useMemo, useState } from "react";
 import { TaskIntelligence } from "./TaskIntelligence";
 import { actionsApi } from "../../actions/api";
@@ -381,7 +382,7 @@ function TaskDetail({ id, ctx, onClose, onEdit, onOpen }: { id: string; ctx: Exe
 
   const svc = taskService();
   const catalogAgent = task.agentId ? catalog.agents.find((a) => a.id === task.agentId) : undefined;
-  const profile = catalogAgent ? agentProfile(catalogAgent, catalog.projects) : null;
+  const profile = catalogAgent ? agentProfile(catalogAgent, catalog.projects, ownership(catalog).owned.get(catalogAgent.id)) : null;
   // The registry (retired or removed agents) first, then the active workspace (agent turned off).
   const problemForAgent = task.agentId ? (agentProblem(catalogAgent) ?? taskAgentProblem(task.agentId, workspace, catalog)) : null;
   const avail = availability(task, ctx);

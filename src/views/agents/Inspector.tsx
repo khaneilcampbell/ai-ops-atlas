@@ -38,7 +38,7 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: "docs", label: "Documentation" },
 ];
 
-const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting" } as const;
+const SOURCE_LABEL = { github: "GitHub Actions", "atlas-intel": "Atlas run log", "agent-feed": "Pipeline run feed", production: "Production reporting", n8n: "n8n runs", automations: "Its automations" } as const;
 
 /** Agent Detail Inspector. Read-only: nothing here starts, stops or changes an agent. */
 export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { status: IdentityStatus; from: string | null } }) {
@@ -587,6 +587,10 @@ function OperationsTab({
                 ? "Runs appear here once the agent has run in this app."
                 : t.source === "agent-feed"
                   ? "Runs appear here once its pipeline reports a phase to Atlas (ATLAS_FEED_URL and ATLAS_FEED_TOKEN in the pipeline's .env)."
+                : t.source === "n8n"
+                  ? "None of its n8n workflows ran within the recent executions n8n returned."
+                : t.source === "automations"
+                  ? `None of the automations it owns (${(t.via ?? []).join(", ")}) has a recent run.`
                 : "Atlas has no live source for this agent, so it cannot confirm that it has ever run. A configuration is not evidence of a successful execution."}
           </span>
         </div>
