@@ -7,7 +7,7 @@ spends money, publishes products or sends customer messages. No model is called 
 
 ## How it works
 1. **Events** (`src/operations/derive.ts`) are built from data Atlas already has: n8n and GitHub
-   failures (intake), alert watches (Signal Watch), evaluations, Task Center tasks (failed, stalled
+   failures (intake), alert watches, evaluations, Task Center tasks (failed, stalled
    past their step timeout, over budget, invalid output), integration signal rows, and Executive goals
    (deadlines Khaneil set, blocked, stale, missing deliverables). No second event bus or scheduler:
    it runs every 5 minutes in the open app (`src/operations/app.ts`).

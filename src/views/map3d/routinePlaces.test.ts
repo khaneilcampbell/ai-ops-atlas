@@ -26,7 +26,8 @@ describe("city places for the routine", () => {
       expect(p.office.path.length, a.personaId).toBeGreaterThan(0);
       const job = jobs.find((j) => j.agentId === a.personaId)!;
       if (job.work.kind === "headquarters" && p.desk) {
-        const key = `${p.desk.x.toFixed(3)},${p.desk.z.toFixed(3)}`;
+        // Desks on different floors of one building stand over each other: a seat is its x, y and z.
+        const key = `${p.desk.x.toFixed(3)},${p.desk.y.toFixed(3)},${p.desk.z.toFixed(3)}`;
         expect(seats.has(key), `${a.personaId} shares a seat`).toBe(false);
         seats.add(key);
       }

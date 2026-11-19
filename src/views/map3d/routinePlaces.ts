@@ -1,12 +1,10 @@
 import type { AgentJob } from "../../catalog/agentJobs";
-import { projectOfficeAgents } from "../../catalog/workplaces";
 import type { Agent, Project } from "../../catalog/types";
 import type { Anchor, LeisureOption, RideTimes, RoutineEnv, SpotId } from "../../routine/routine";
 import { rand } from "../../routine/routine";
-import { planOffice } from "../office/model";
+import { buildingsOf, defaultFloor, floorOf, journeyTo } from "../../buildings/buildingDefinition";
 import { airportPoint, type AirportPlan } from "./airport";
 import { GOLD_JET_NAME, airportClockAt, goldJetLive, goldJetTrip, wallOfAirport } from "./goldJetPlan";
-import { officeScale } from "./inside";
 import { FLOOR_BASE } from "./models";
 import type { NamedAgent } from "./namedAgentPlan";
 import { PERIMETER_RAIL, loopPoint, type PerimeterRailPlan } from "./perimeterRailPlan";
@@ -60,8 +58,19 @@ export interface DeskSeat {
   /** Office units to world (the office's own scale), for sizing the seated figure. */
   k: number;
   towerKey: string;
-  /** The lobby point just inside the door, on the office floor. */
+  /** The lobby point just inside the door, on the ground floor. */
   lobby: [number, number, number];
+  /** Its floor in the building (buildings/buildingDefinition.ts). */
+  floor: number;
+  /** Street to lobby: sidewalk, door, lobby. */
+  entry: Pt3[];
+  /** Lobby to chair: lift on the ground floor, lift on its floor, the aisle, the chair. */
+  route: Pt3[];
+  /** On the facade at its floor: where its badge shows while its floor is closed. */
+  marker: Pt3;
+  /** The floor the Inside view opens in its building unless one is picked, and each floor's surface height. */
+  defaultFloor: number;
+  surfaces: Record<number, number>;
 }
 
 export interface AgentPlaces {
@@ -91,22 +100,33 @@ export interface CityPlaces {
 
 const street = (p: [number, number] | Pt3): Pt3 => (p.length === 2 ? [p[0], STREET_Y, p[1]] : [p[0], STREET_Y, p[2]]);
 
-/** The persona's desk in its headquarters' office, as the Inside view lays it out. */
+/**
+ * The persona's desk in its headquarters, from the building's shared definition
+ * (buildings/buildingDefinition.ts): the same floor, plate and chair the Inside view draws, and the
+ * walk in from the sidewalk through the door, the lobby and the lift.
+ */
 export function deskSeat(scene: Scene3D, projects: readonly Project[], agents: readonly Agent[], job: AgentJob, personaId: string): DeskSeat | null {
   if (job.work.kind !== "headquarters") return null;
   const t = scene.towers.find((x) => x.projectId === job.work.projectId);
-  const project = projects.find((p) => p.id === job.work.projectId);
-  if (!t || !project) return null;
-  const officeAgents = projectOfficeAgents(agents as Agent[], project.id);
-  const plan = planOffice(project, officeAgents);
-  const ws = plan.workstations.find((w) => w.agentId === personaId);
-  if (!ws) return null;
-  const k = officeScale(plan, t.size);
-  const cos = Math.cos(ws.ry), sin = Math.sin(ws.ry);
-  const at = (lx: number, lz: number): [number, number] => [t.x + (ws.x + lx * cos + lz * sin) * k, t.z + (ws.z - lx * sin + lz * cos) * k];
-  const [x, z] = at(0, 0.66);
-  const d = (plan.d + 0.32) * k;
-  return { x, y: OFFICE_FLOOR_Y, z, yaw: ws.ry + Math.PI, k, towerKey: t.key, lobby: [t.x, OFFICE_FLOOR_Y, t.z + d / 2 - 0.06] };
+  if (!t) return null;
+  const def = buildingsOf(scene.towers, projects, agents).get(t.key);
+  const desk = def?.desks.find((d) => d.agentId === personaId);
+  if (!def || !desk) return null;
+  const j = journeyTo(def, personaId);
+  const floor = floorOf(def, desk.floor)!;
+  return {
+    ...desk.seat,
+    k: def.k,
+    towerKey: t.key,
+    lobby: def.lobby,
+    floor: desk.floor,
+    entry: j.slice(0, 3).map((p) => p.p),
+    route: j.slice(2).map((p) => p.p),
+    // Just in front of the footprint's street face, which no storey above the lobby reaches past.
+    marker: [desk.seat.x, floor.y + def.exterior.storeyH * 0.55, def.exterior.z + def.exterior.size / 2 + 0.08],
+    defaultFloor: defaultFloor(def),
+    surfaces: Object.fromEntries(def.floors.map((f) => [f.index, f.surface])),
+  };
 }
 
 /** Build every place for a layout: homes, offices and desks for the named agents, and the shared outings. */
@@ -128,11 +148,14 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
     // The office: its front steps, then its own place in the row before the door.
     const door: Pt3 = job.work.kind === "headquarters" ? (() => {
       const t = scene.towers.find((x) => x.projectId === job.work.projectId);
-      return t ? [t.x, STREET_Y, t.z + t.size / 2 + ENTRANCE / 2] : [a.spot.x, STREET_Y, a.spot.z];
+      const def = t && buildingsOf(scene.towers, projects, agents).get(t.key);
+      return def ? def.entrance.outside : t ? [t.x, STREET_Y, t.z + t.size / 2 + ENTRANCE / 2] : [a.spot.x, STREET_Y, a.spot.z];
     })() : [a.spot.x, a.spot.y, a.spot.z];
     const office = add({ id: `office:${a.personaId}`, label: a.workLabel, path: [door, [a.spot.x, a.spot.y, a.spot.z]], yaw: a.spot.yaw, inside: false });
     const desk = deskSeat(scene, projects, agents, job, a.personaId);
-    out.agents.set(a.personaId, { personaId: a.personaId, home, office, desk, doorBadge: [a.spot.x, a.spot.y + 0.55, a.spot.z], homeLabel: job.home.label, officeLabel: a.workLabel });
+    // Inside with its floor closed, its badge shows on the facade at its own floor, so the building
+    // says where the work is happening; with no desk, above its place by the door.
+    out.agents.set(a.personaId, { personaId: a.personaId, home, office, desk, doorBadge: desk?.marker ?? [a.spot.x, a.spot.y + 0.55, a.spot.z], homeLabel: job.home.label, officeLabel: a.workLabel });
   }
 
   const opt = (o: LeisureOption, s: CitySpot, exit?: CitySpot) => {

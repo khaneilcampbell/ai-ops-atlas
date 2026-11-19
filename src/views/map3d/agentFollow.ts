@@ -37,7 +37,16 @@ export const VIEW_OFFICE_EVENT = "atlas:view-office";
 export interface ViewOfficeDetail {
   projectId: string | null;
   towerKey: string | null;
+  /** "Locate agent": open its floor and keep it in view (buildings/insideFloors.ts). */
+  personaId?: string;
+  floor?: number;
 }
 export function viewOffice(detail: ViewOfficeDetail) {
   window.dispatchEvent(new CustomEvent<ViewOfficeDetail>(VIEW_OFFICE_EVENT, { detail }));
+}
+
+/** Back to the city: the Inside view closes and every building shows its exterior again (Map.tsx listens). */
+export const LEAVE_INSIDE_EVENT = "atlas:leave-inside";
+export function leaveInside() {
+  window.dispatchEvent(new CustomEvent(LEAVE_INSIDE_EVENT));
 }

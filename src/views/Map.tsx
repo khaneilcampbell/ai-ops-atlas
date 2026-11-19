@@ -1,5 +1,7 @@
 import { catalog as fullCatalog } from "../catalog";
-import { VIEW_OFFICE_EVENT, type ViewOfficeDetail } from "./map3d/agentFollow";
+import { LEAVE_INSIDE_EVENT, VIEW_OFFICE_EVENT, agentPositions, setFollowedAgent, type ViewOfficeDetail } from "./map3d/agentFollow";
+import { mapBuildings, pickFloor, setInsideShown } from "../buildings/insideFloors";
+import { busiestOffice } from "../buildings/buildingDefinition";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
@@ -15,6 +17,11 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
+import { usePlazaEffects, usePlazaSnapshot } from "../plaza/usePlaza";
+import { plazaSummary, signText } from "../plaza/plazaState";
+import { n8nWorkflowIds } from "../n8n/runs";
+import { PLAZA_KEY } from "./map3d/plazaPlan";
+import type { PlazaProps } from "./map3d/Map3D";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { useRuntimes } from "./office/activity";
@@ -457,9 +464,28 @@ export function MapView({active=true}:{active?:boolean}) {
   const [traffic, setTrafficState] = useState(() => load<boolean>("mapTraffic", true));
   // Inside: nearby headquarters open as cutaways showing their offices, without entering.
   const [inside, setInsideState] = useState(loadInside);
+  // Panels outside the map (the building summary) show the floor picker and "Back to city" while it's on.
+  useEffect(() => {
+    setInsideShown(inside && active);
+    return () => setInsideShown(false);
+  }, [inside, active]);
   const setInside = (on: boolean) => {
     setInsideState(on);
     saveInside(on);
+  };
+  // The Inside button (house icon) with nothing selected goes to where agents are working now: the
+  // building and floor with the most agents at their desks (buildingDefinition.busiestOffice).
+  const toggleInside = () => {
+    if (inside) {
+      setInside(false);
+      return;
+    }
+    const busy = selection?.kind === "project" ? undefined : busiestOffice(mapBuildings(), agentPositions);
+    if (busy) {
+      pickFloor(busy.building.id, busy.floor);
+      select({ kind: "project", id: busy.building.projectId });
+    }
+    setInside(true);
   };
   // "View office" on an agent's card: switch on Inside and frame its headquarters, so its desk shows.
   useEffect(() => {
@@ -467,10 +493,26 @@ export function MapView({active=true}:{active?:boolean}) {
       const d = (e as CustomEvent<ViewOfficeDetail>).detail;
       setInsideState(true);
       saveInside(true);
+      if (d?.towerKey && d.floor !== undefined) pickFloor(d.towerKey, d.floor);
       if (d?.projectId) select({ kind: "project", id: d.projectId });
+      // "Locate agent": once the building is framed, move in close and keep the agent in view.
+      if (d?.personaId)
+        window.setTimeout(() => {
+          map3d.current?.zoom(1.25 ** 3);
+          setFollowedAgent(d.personaId!);
+        }, 700);
+    };
+    const off = () => {
+      setInsideState(false);
+      saveInside(false);
+      setFollowedAgent(null);
     };
     window.addEventListener(VIEW_OFFICE_EVENT, on);
-    return () => window.removeEventListener(VIEW_OFFICE_EVENT, on);
+    window.addEventListener(LEAVE_INSIDE_EVENT, off);
+    return () => {
+      window.removeEventListener(VIEW_OFFICE_EVENT, on);
+      window.removeEventListener(LEAVE_INSIDE_EVENT, off);
+    };
   }, [select]);
   const setTraffic = (on: boolean) => {
     setTrafficState(on);
@@ -505,6 +547,19 @@ export function MapView({active=true}:{active?:boolean}) {
   const runtimeMap = useRuntimes();
   const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
   const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Atlas Automation Plaza: the same runtimes, plus Task Center tasks and n8n runs (plaza/plazaState.ts).
+  const plazaSnap = usePlazaSnapshot(runtimes);
+  const plazaPathProjects = useMemo(() => new Set(catalog.agents.filter((a) => a.observe?.githubWorkflow || a.observe?.agentFeed || n8nWorkflowIds(a).length).map((a) => a.projectId)), [catalog]);
+  const plazaEffects = usePlazaEffects(plazaSnap, (key) => plazaPathProjects.has(key.replace(/^project:/, "")));
+  const plazaSign = useMemo(() => signText(plazaSnap), [plazaSnap]);
+  const plaza = useMemo<PlazaProps>(
+    () => ({
+      view: { connection: plazaSnap.connection, preview: plazaSnap.preview, running: plazaSnap.running.length, queued: plazaSnap.queued.length, attention: plazaSnap.attention.length, sign: plazaSign },
+      effects: plazaEffects,
+      automationProjects: plazaPathProjects,
+    }),
+    [plazaSnap, plazaSign, plazaEffects, plazaPathProjects],
+  );
   const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
@@ -970,7 +1025,7 @@ export function MapView({active=true}:{active?:boolean}) {
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
-    else if (is3d && e.key === "i") setInside(!inside);
+    else if (is3d && e.key === "i") toggleInside();
     else if (is3d && e.key === "?") setControlsHelp((o) => !o);
   };
 
@@ -1061,6 +1116,7 @@ export function MapView({active=true}:{active?:boolean}) {
               healthFor={healthFor}
               landmarkMarks={landmarkMarks}
               light={light}
+              plaza={plaza}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);
@@ -1216,6 +1272,13 @@ export function MapView({active=true}:{active?:boolean}) {
             </dl>
           </section>
 
+          {/* The plaza's text equivalent: one keyboard stop that announces its live status and opens its panel. */}
+          {is3d && (
+            <button type="button" className="plaza-a11y" onClick={() => select({ kind: "service", id: PLAZA_KEY.slice("service:".length) })} aria-describedby="plaza-a11y-status">
+              Atlas Automation Plaza: {plazaSign.status}
+              <span id="plaza-a11y-status" className="sr-only" aria-live="polite">{plazaSummary(plazaSnap)}</span>
+            </button>
+          )}
           {tip && (
             <div className="map-tip" style={{ left: tip.x, top: tip.y }}>
               <div className="t">{tip.title}</div>
@@ -1239,11 +1302,11 @@ export function MapView({active=true}:{active?:boolean}) {
             {is3d && (
               <button
                 className={`icon-btn ${inside ? "on" : ""}`}
-                onClick={() => setInside(!inside)}
+                onClick={toggleInside}
                 aria-pressed={inside}
                 aria-label="Inside"
                 aria-keyshortcuts="I"
-                title={inside ? "Close the buildings (I)" : "See inside the buildings near you (I). Select one and Enter it for the full office."}
+                title={inside ? "Back to the city (I)" : "See agents working inside the buildings (I). Opens the office where most agents are at their desks, or the building you selected."}
               >
                 <Icon name="cutaway" size={17} />
               </button>

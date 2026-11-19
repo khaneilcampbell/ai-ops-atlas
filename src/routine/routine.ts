@@ -566,6 +566,11 @@ export function runWorking(seg: Segment): boolean {
   return seg.kind === "inside" && seg.phase === "working" && seg.work.runs.some((r) => r.status === "running" || r.status === "queued");
 }
 
+/** Seated at its own desk (not walking in, up to it, or out): the office inside draws it in its chair. */
+export function seatedAtDesk(seg: Segment | null): boolean {
+  return !!seg && seg.kind === "inside" && seg.phase !== "entering" && seg.phase !== "to_desk" && seg.phase !== "leaving";
+}
+
 /** What the card says the agent is doing in the city: "Working" only while a run is really running. */
 export function activityText(seg: Segment): string {
   if (seg.kind === "inside" && seg.phase === "working" && !runWorking(seg)) return seg.work.runs.some((r) => r.status === "waiting_approval") ? "At desk, waiting for approval" : "At desk";

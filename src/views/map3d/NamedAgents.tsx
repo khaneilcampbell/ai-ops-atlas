@@ -13,7 +13,7 @@ import { useTasks } from "../../tasks/store";
 import type { StoredTask } from "../../tasks/types";
 import { activityText, planRoutine, segmentAt, type Routine, type RoutineEnv, type Segment } from "../../routine/routine";
 import type { OpRun } from "../../routine/operations";
-import { publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
+import { publishRoutines, publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
 import { figureParts, partMatrix, poseBones, FIGURE_SCALE, RIG, type FigurePart } from "./agentFigures";
 import { agentPositions, setFollowedAgent, useFollowedAgent, viewOffice } from "./agentFollow";
 import { AgentTaskCard } from "./AgentTaskCard";
@@ -203,6 +203,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   }, [ids, envs, ops.ops, ops.now, held]);
   const routinesRef = useRef(routines);
   routinesRef.current = routines;
+  useEffect(() => publishRoutines(routines), [routines]);
   const openRef = useRef(insideOpen);
   openRef.current = insideOpen;
   const opsRef = useRef(ops.ops);
@@ -479,7 +480,8 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
               onFollow={() => setFollowedAgent(followed === shown.personaId ? null : shown.personaId)}
               onViewOffice={() => {
                 const desk = places?.agents.get(shown.personaId)?.desk;
-                if (desk) viewOffice({ towerKey: desk.towerKey, projectId: desk.towerKey.replace(/^project:/, "") });
+                // Its own building and floor, following it so its desk (or wherever it is now) stays in view.
+                if (desk) viewOffice({ towerKey: desk.towerKey, projectId: desk.towerKey.replace(/^project:/, ""), personaId: shown.personaId, floor: desk.floor });
               }}
               onOpenRun={onOpenRun}
               onProfile={() => select({ kind: "agent", id: shown.personaId })}

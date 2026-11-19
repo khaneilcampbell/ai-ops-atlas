@@ -1,4 +1,15 @@
-import {projectOfficeAgents} from "../../catalog/workplaces";
+import { locateAgent } from "../../buildings/buildingDefinition";
+import { cityFigureFor } from "../../registry/cityFigures";
+import { seatedAtDesk, segmentAt } from "../../routine/routine";
+import { useRoutines } from "../../routine/useRoutineOps";
+import { mapBuildings } from "../../buildings/insideFloors";
+
+/** The desk floor of an agent, or of an automation's owner when the owner works in the same building. */
+function deskFloor(agentId: string, projectId: string) {
+  const at = locateAgent(mapBuildings(), agentId);
+  return at && at.building.projectId === projectId ? at.desk.floor : undefined;
+}
+import { officeAutomations, officeDeskAgents } from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -41,10 +52,20 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
-  // Every registered worker belongs at a desk inside its project building.
-  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  // Every AI agent of the project has a desk in its building. Automations are workflows, not staff,
+  // so they get no desk; the wall display still counts them.
+  const agents = useMemo(() => officeDeskAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  const automations = useMemo(() => officeAutomations(catalog.agents,projectId??"").length, [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
   const places = useMemo(() => agentPlaces(catalog), [catalog]);
+  // Named agents sit at their own desks only while their day (the same one the city walks) has them
+  // there; re-checked every 20 s so one who walks in shows up without leaving the building.
+  const routines = useRoutines();
+  const [tick, setTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setTick(Date.now()), 20_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const rows = useMemo(
     () => officeRows(catalog.projects, agents, repos, intel, { available: actions.available, status: actions.status, audit: actions.audit }, pending),
@@ -57,9 +78,16 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const r = rows.get(ws.agentId)!;
         const a = agents.find((x) => x.id === ws.agentId)!;
         const b = r.runtime.basis;
+        const figure = cityFigureFor(a.id);
+        const day = routines.get(a.id);
         return {
           ws,
-          floor: a.officeFloor ?? 4,
+          figure: figure ?? undefined,
+          // Only a named agent whose day has them at the desk right now sits there; every other chair is empty.
+          away: !(figure && day && seatedAtDesk(segmentAt(day, tick))),
+          // The same floor as the map's Inside view and the agent's walk in (buildings/buildingDefinition.ts):
+          // an AI agent's own desk floor, an automation on its owner's floor.
+          floor: deskFloor(a.id, a.projectId) ?? a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
           icon: toolIcon(a),
@@ -70,7 +98,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
-    [plan, rows, agents, pending, places],
+    [plan, rows, agents, pending, places, routines, tick],
   );
 
   // Escape closes the inspector, then leaves the building. Captured first so the map's own
@@ -100,6 +128,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           plan={plan}
           floor={floor}
           desks={desks}
+          automations={automations}
           wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
           light={light}
           reduced={reduced}
@@ -126,14 +155,14 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length === 0 && (
           <div className="office-empty">
-            <h3>No workers are registered here yet</h3>
-            <p>This project has no registered agents or automations, so the office has no desks.</p>
+            <h3>No AI agents work here yet</h3>
+            <p>{automations ? `This project runs ${automations === 1 ? "1 automation" : `${automations} automations`}. Automations are workflows, so they have no desks.` : "This project has no registered agents or automations, so the office has no desks."}</p>
           </div>
         )}
 
         {desks.length > 0 && topFloor && (
           <details className="office-roster" aria-label="Select an agent">
-            <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
+            <summary>AI agents <span>{visibleDesks.length}</span></summary>
             <div className="office-roster-list">
             {byTier(visibleDesks, (d) => d.ws.tier).map((g) => (
               <div key={g.tier} className="office-roster-group" role="group" aria-label={g.label}>

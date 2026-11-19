@@ -9,12 +9,13 @@ import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan"
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
 import { GALLERIA_KEY } from "../views/map3d/galleriaPlan";
 import { STADIUM_KEY } from "../views/map3d/stadiumPlan";
+import { PLAZA_KEY } from "../views/map3d/plazaPlan";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
 import { financialBuildingMatches, landmarkMatches } from "../lib/financialSearch";
 import { BUILDING_NAMES, buildingAliases, buildingDisplayName, buildingNameIssues, buildingOrganization, currentBuildingName, parseBuildingNames } from "./names";
 
 /** Every building id the map draws itself and can be renamed in catalog/workspace/buildings.yaml. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 describe("workspace building names", () => {
   it("loads without problems and only names buildings that exist on the map", () => {

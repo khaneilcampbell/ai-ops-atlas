@@ -7,6 +7,7 @@ import { useAtlas } from "../state";
 import { useTasks } from "../tasks/store";
 import { loadLedger, observe, saveLedger, type Ledger } from "./ledger";
 import { agentOps, sightingsOf, type AgentOps } from "./operations";
+import type { Routine } from "./routine";
 
 /**
  * Every named agent's operational state, from the shared n8n poll (one request for all agents,
@@ -134,4 +135,29 @@ export function useWhere(personaId: string): LiveWhere | null {
     () => whereVersion,
   );
   return where.get(personaId) ?? null;
+}
+
+// ------------------------------------------------------------------------------------- each agent's day
+
+/**
+ * Each named agent's planned day, as the map last worked it out (NamedAgents.tsx), so the office
+ * inside a building ("Enter building") seats the same agents the city shows at their desks, even
+ * while the map itself is paused behind it.
+ */
+let routinesNow: ReadonlyMap<string, Routine> = new Map();
+const routineWatchers = new Set<() => void>();
+export function publishRoutines(r: ReadonlyMap<string, Routine>) {
+  if (routinesNow === r) return;
+  routinesNow = r;
+  routineWatchers.forEach((f) => f());
+}
+export function useRoutines(): ReadonlyMap<string, Routine> {
+  return useSyncExternalStore(
+    (f) => {
+      routineWatchers.add(f);
+      return () => routineWatchers.delete(f);
+    },
+    () => routinesNow,
+    () => routinesNow,
+  );
 }

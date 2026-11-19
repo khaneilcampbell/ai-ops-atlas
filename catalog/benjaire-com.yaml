@@ -44,7 +44,7 @@ agents:
       - Turnstile secret key (TURNSTILE_SECRET_KEY)
       - Benjaire Flow intake key, sent as x-flow-key (FLOW_INTAKE_KEY)
     registry:
-      title: Inquiry Routing Coordinator
+      title: "Inquiries · Contact Form Check"
       category: business
       subcategory: Customer inquiry processing
       classification:
@@ -124,7 +124,7 @@ agents:
       - Anthropic, through the n8n credential on Classify with Claude
       - 'n8n data tables: reads flow_settings, writes flow_inquiries and flow_events'
     registry:
-      title: Client Intake Specialist
+      title: "Inquiries · Classify and Save Inquiry"
       category: business
       subcategory: Workflow automation
       classification:
@@ -211,7 +211,7 @@ agents:
       - 'Atlas AGENT_FEED_TOKEN, add-only: the Worker can store an inquiry but never read one back'
       - 'D1 table inquiries: kept 180 days, then deleted'
     registry:
-      title: Client Reply Assistant
+      title: "Inquiries · Draft Reply and Follow-ups"
       category: business
       subcategory: Customer inquiry processing
       classification:
@@ -285,7 +285,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Website Quality Engineer
+      title: "Benjaire Site · Build and Test"
       category: engineering
       subcategory: CI/CD
       classification:
@@ -336,7 +336,7 @@ agents:
 
   # Benjaire Product Lab: one first-class n8n Agent (id ruOvE7nfE713WDUL on khancam15.app.n8n.cloud),
   # read through the n8n MCP on 2026-11-04. Its five roles are skills inside the same agent run, listed
-  # here so each has a desk in the Benjaire Marketing Agency. Atlas has seen no run yet, and n8n Agent
+  # here so each has a desk in the Growth & Marketing Studio (map key "Benjaire Marketing Agency"). Atlas has seen no run yet, and n8n Agent
   # runs are not workflow executions, so there is no `observe` source until the agent posts reports.
   - id: benjaire-product-lab
     workplace: {building: Benjaire Marketing Agency, floor: 1, room: "1-strategy"}
@@ -349,6 +349,11 @@ agents:
     status: active
     trigger: 'Schedule: 09:00 ET on the 1st of each month (task "Monthly next-product report")'
     last_run: 2026-11-11T07:11:23Z
+    links:
+      # The agent's read_shop_sales and propose_shop_product tools run this workflow (agent config read
+      # 2026-11-18). It is a draft in n8n because only the agent calls it; it has no trigger of its own.
+      - label: 'n8n workflow: Commerce · Product Lab hand-off (draft, the agent''s shop tools)'
+        url: https://khancam15.app.n8n.cloud/workflow/ABtXhTwIRF9FkNGv
     permissions:
       - 'Gmail tool email_kc_report: sends only to benjaireco@gmail.com (n8n Gmail credential)'
       - 'Notion MCP server: creates or updates Product Lab pages (n8n Notion credential)'
@@ -804,7 +809,7 @@ agents:
       - 'Resend API: sends from contact@benjaire.com to the ops address only'
       - 'n8n data table flow_settings: reads ops_email'
     registry:
-      title: Flow Error Alerts
+      title: "Benjaire Ops · Workflow Failure Alerts"
       category: business
       subcategory: Workflow automation
       classification:
@@ -889,7 +894,7 @@ agents:
       - 'Resend API: welcome email to the client on a first win, sent from contact@benjaire.com'
       - 'n8n data tables: reads flow_settings, updates flow_inquiries status, writes flow_events'
     registry:
-      title: Flow Status Updates
+      title: "Inquiries · Client Status Updates"
       category: business
       subcategory: Workflow automation
       classification:
@@ -986,7 +991,7 @@ agents:
       - 'Resend API: reminder emails to the owner address only'
       - 'n8n data tables: reads flow_settings and flow_inquiries, marks reminded'
     registry:
-      title: Flow Reply Reminders
+      title: "Inquiries · Unanswered Reply Reminder"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1077,7 +1082,7 @@ agents:
       - 'Resend API: digest email to the owner address only'
       - 'n8n data tables: reads flow_settings and flow_inquiries'
     registry:
-      title: Flow Monday Digest
+      title: "Inquiries · Monday Digest Email"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1168,7 +1173,7 @@ agents:
       - 'n8n API key (read only): executions of the watched workflows'
       - 'Resend API: alert email to the ops address only'
     registry:
-      title: Flow Missed Run Check
+      title: "Benjaire Ops · Missed Run Check"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1255,7 +1260,7 @@ agents:
       - 'Resend API: buyer emails from benjaire.com'
       - 'n8n data tables: reads shop_settings, writes shop orders'
     registry:
-      title: Shop Starter Delivery
+      title: "Shop · Starter Kit Delivery"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1353,7 +1358,7 @@ agents:
       - 'Resend API: buyer follow-up emails from benjaire.com'
       - 'n8n data tables: reads shop orders and shop_settings, marks follow-ups sent'
     registry:
-      title: Shop Buyer Follow Ups
+      title: "Shop · Buyer Follow-up Emails"
       category: business
       subcategory: Workflow automation
       classification:
@@ -1616,7 +1621,7 @@ agents:
       identity:
         display_name: Andre Thompson
         accent: "#65A30D"
-        intro: "I keep the Benjaire site and its workflows working: Site CI tests every change, and I email ops when a Flow or Shop workflow fails or a scheduled one misses its run. I alert; I don't fix."
+        intro: "I keep the Benjaire site and its workflows working: Benjaire Site · Build and Test tests every change, and through Benjaire Ops · Workflow Failure Alerts and Benjaire Ops · Missed Run Check I email ops when a Flow or Shop workflow fails or a scheduled one misses its run. I alert; I don't fix."
         voice: "Alert first and terse: what broke, where, since when."
         appearance: "Jamaican man in his mid 40s, dark brown skin, shaved head, neat goatee with grey flecks, charcoal henley"
         portrait:

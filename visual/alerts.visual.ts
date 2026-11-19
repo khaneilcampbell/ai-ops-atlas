@@ -20,16 +20,16 @@ const reports = [
 test("a reported failure raises an alert until it is dismissed", async ({ page }) => {
   await openAtlas(page, { storage: { liveAgentRuns: reports, "mission-tab": "overview" } });
   const pill = page.locator(".alert-pill");
-  await expect(pill).toHaveText("Inquiry Routing Coordinator failed");
+  await expect(pill).toHaveText("Inquiries · Contact Form Check failed");
   await goTo(page, "Mission");
   const card = page.locator("#agent-alerts");
   await expect(card.locator(".watch.failing")).toContainText("Flow forward timed out after 3 tries");
   await expect(card.locator(".watch.not-running")).toHaveCount(0);
   // This browser isn't reading the live feed, so the intake's state is unknown, not healthy, and so is
-  // each building agent's (Marketplace Steward, Signal Watch, Dataset Census) and the two n8n commerce
+  // the building agent's (Dataset Census) and the two n8n commerce
   // agents' (Order Delivery, Approve and Publish), and the seven Flow, Shop and Commerce workflows
   // that report through Flow Error Alerts and the Missed Run Check.
-  await expect(card.locator(".watch.no-source")).toHaveCount(13);
+  await expect(card.locator(".watch.no-source")).toHaveCount(11);
   await shot(page, "1-mission");
   await card.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(pill).toHaveCount(0);

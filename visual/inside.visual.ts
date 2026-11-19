@@ -77,8 +77,6 @@ test.describe("phone", () => {
     await settle(page, 6);
     if (process.env.SHOTS) await page.screenshot({ path: "visual/out/inside-phone-before.png" });
     const toggle = page.getByRole("button", { name: "Inside", exact: true });
-    await toggle.tap();
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
     // One row, no wrapping, and the Inside button in full view beside 3D. (The toolbar already
     // scrolls sideways at 390 wide on main: Rotate, Fit and Names sit past the edge.)
     const rows = await page.locator(".map-controls > button:visible, .map-controls .map-menu-wrap > button:visible").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
@@ -88,7 +86,14 @@ test.describe("phone", () => {
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(390);
     expect(Math.round(box.y)).toBe(Math.round(threeD.y));
-    expect(box.x).toBeCloseTo(threeD.x + threeD.width, 0);
+    // Beside 3D, within a couple of pixels: since the single Map view menu (#470) the row no longer
+    // overflows and the buttons land on sub-pixel positions.
+    expect(Math.abs(box.x - (threeD.x + threeD.width))).toBeLessThan(2);
+    await toggle.tap();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // With nothing selected, the house button opens the office where agents are working
+    // (buildingDefinition.busiestOffice), so a building is selected now.
+    await expect(page.getByText("PROJECT BUILDING", { exact: false }).first()).toBeVisible();
     await settle(page, 6);
     await expect.poll(async () => (await insideAfter(page)).open, { timeout: 60_000 }).toBeGreaterThan(0);
     await check(page, "inside-phone");

@@ -49,7 +49,7 @@ agents:
       - 'Resend API: approval and failure emails to Khaneil only'
       - 'n8n data table commerce_products: reads ideas, writes drafts'
     registry:
-      title: Commerce Operations Coordinator
+      title: "Commerce · Draft Product and Designs"
       tier: coordinator
       category: business
       subcategory: Workflow orchestration
@@ -644,7 +644,7 @@ agents:
       - 'Stripe restricted key: write access to products, prices and payment links only'
       - 'n8n data tables: writes commerce_products and shop_settings'
     registry:
-      title: Product Publishing Coordinator
+      title: "Commerce · Approve and Publish Product"
       category: business
       subcategory: Workflow automation
       classification:
@@ -858,7 +858,7 @@ agents:
       - 'Resend API: buyer emails on benjaire.com'
       - 'n8n data tables: reads shop_settings, writes orders'
     registry:
-      title: Digital Fulfillment Coordinator
+      title: "Commerce · Deliver Buyer Template"
       category: business
       subcategory: Order fulfillment
       classification:
@@ -943,7 +943,7 @@ agents:
       - 'Resend API: weekly email to Khaneil only'
       - 'n8n data table commerce_products: reads live products'
     registry:
-      title: Sales Reporting Specialist
+      title: "Commerce · Shop Page and Weekly Sales"
       category: business
       subcategory: Sales reporting
       classification:
@@ -1022,7 +1022,7 @@ agents:
       - 'Stripe restricted key: reads checkout sessions, payment intents, charges and balance transactions'
       - 'n8n data table shop_orders: reads which product each checkout bought'
     registry:
-      title: Stripe Sales Feed
+      title: "Commerce · Stripe Sales Sync"
       category: business
       subcategory: Sales reporting
       classification:
@@ -1228,7 +1228,7 @@ agents:
       - 'GITHUB_TOKEN: contents read'
       - No repository secrets
     registry:
-      title: Commerce Quality Engineer
+      title: "Commerce · Pipeline Tests"
       category: engineering
       subcategory: CI/CD
       classification:
@@ -1296,7 +1296,7 @@ agents:
       identity:
         display_name: Sofia Mendes
         accent: "#EAB308"
-        intro: "I run the commerce pipeline end to end: Design Run drafts the next listing and design brief, Approve and Publish lists it after you approve, Order Delivery sends each buyer their template, and you get the Monday sales summary. Every new product needs your approval."
+        intro: "I run the commerce pipeline end to end: Commerce · Draft Product and Designs drafts the next listing and design brief, Commerce · Approve and Publish Product lists it after you approve, Commerce · Deliver Buyer Template sends each buyer their template, and Commerce · Shop Page and Weekly Sales sends you the Monday sales summary. Every new product needs your approval."
         voice: "Pipeline status by stage, money in dollars, approvals called out."
         appearance: "Brazilian woman in her mid 40s, tan skin, shoulder-length wavy brown hair with lighter highlights, small gold pendant, camel blazer over a white t-shirt"
         portrait:

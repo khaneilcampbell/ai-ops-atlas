@@ -67,12 +67,12 @@ The n8n agent "Atlas Release Coordinator" (chat only, no tools, claude-sonnet-5-
 
 ## Building operators
 
-Marketplace Steward, Signal Watch and Dataset Census are one script, `ops/building-agents/agents.py`, run by `.github/workflows/building-agents.yml` (hourly at :05, every 30 minutes at :15 and :45, every 3 hours at :10). No model calls.
+Dataset Census is `ops/building-agents/agents.py`, run by `.github/workflows/building-agents.yml` every 3 hours at :10. No model calls.
 
-- **Healthy:** the workflow's scheduled runs are green and the Product Marketplace, Observability Center and Data Intelligence Center show a recent report in Atlas.
-- **Run it:** Actions → Building agents → Run workflow, pick `marketplace`, `signals`, `census` or `all`.
+- **Healthy:** the workflow's scheduled runs are green and the Data Intelligence Center shows a recent report in Atlas.
+- **Run it:** Actions → Building agents → Run workflow, pick `census` or `all`.
 - **When it fails:** a `401` or `403` from the feed means the `ATLAS_FEED_TOKEN` or `ATLAS_FEED_URL` repository secret is wrong. GitHub's schedule can run late by up to an hour; that is not a failure.
-- **Stop it:** disable the workflow in Actions. The three buildings then show their last report as stale.
+- **Stop it:** disable the workflow in Actions. The Data Intelligence Center then shows their last report as stale.
 
 ## Atlas Data Inventory
 
@@ -84,8 +84,8 @@ Two parts: `.github/workflows/map-inventory.yml` writes `atlas-inventory.json` t
 
 ## Release Manager
 
-An owning agent with no model of its own. Its automations are Atlas CI, Re-run Failed Jobs, Merge Pull Request and Marketplace Steward (sections above). Merges and re-runs only happen when Khaneil presses the button in Atlas and approves.
+An owning agent with no model of its own. Its automations are Atlas CI, Re-run Failed Jobs and Merge Pull Request (sections above). Merges and re-runs only happen when Khaneil presses the button in Atlas and approves.
 
 ## Health Monitor
 
-An owning agent with no model of its own. Its automations are Signal Watch, Dataset Census ([Building operators](#building-operators)) and [Atlas Data Inventory](#atlas-data-inventory). Incident playbooks are off by default; see [docs/autonomous-operations.md](../autonomous-operations.md).
+An owning agent with no model of its own. Its automations are Dataset Census ([Building operators](#building-operators)) and [Atlas Data Inventory](#atlas-data-inventory). Incident playbooks are off by default; see [docs/autonomous-operations.md](../autonomous-operations.md).
