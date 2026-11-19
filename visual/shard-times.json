@@ -1,6 +1,7 @@
 {
   "activity-buildings.visual.ts": 45,
   "agent-commute.visual.ts": 8,
+  "agent-fit.visual.ts": 0,
   "agent-identities.visual.ts": 0,
   "agent-owners.visual.ts": 39,
   "agent-routine.visual.ts": 0,
