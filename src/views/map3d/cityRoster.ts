@@ -172,7 +172,7 @@ function activityOf(seg: Segment): string {
   if (seg.phase === "to_desk") return "Going to desk";
   if (seg.phase === "leaving") return "Leaving office";
   if (seg.phase === "completed") return "Task completed";
-  return seg.activity === "at_home" ? "At home" : seg.activity === "commuting" ? "Commuting" : seg.activity === "walking" ? "Walking" : seg.activity === "visiting" ? "Visiting" : "Relaxing";
+  return seg.activity === "at_home" ? "At home" : seg.activity === "commuting" ? "Commuting" : seg.activity === "walking" ? "Walking" : seg.activity === "visiting" ? "Visiting" : seg.activity === "waiting" ? "Waiting for a ride" : "Relaxing";
 }
 
 function leisureText(kind: string): string {
@@ -183,6 +183,8 @@ function leisureText(kind: string): string {
       return "Visiting another district";
     case "train":
       return "Riding the train";
+    case "car":
+      return "Riding in an Atlas car";
     case "flight":
       return "Aboard the Atlas Gold Jet";
     case "yacht":

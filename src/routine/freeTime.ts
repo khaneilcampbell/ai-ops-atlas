@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { load, save } from "../lib/storage";
-import type { LeisureKind, Segment } from "./routine";
+import type { LeisureKind, Segment, TravelMode } from "./routine";
 
 /**
  * "Free time" from Atlas: Khaneil sends an agent that has nothing to do off to something in the city
@@ -12,7 +12,15 @@ import type { LeisureKind, Segment } from "./routine";
  * schedule, a workflow or a permission: a run that comes due still calls the agent back to its desk,
  * straight off the ride or bench.
  */
-export type FreeTimeChoice = Exclude<LeisureKind, "office" | "home"> | "any";
+export type FreeTimeChoice = Exclude<LeisureKind, "office" | "home" | "car"> | "any";
+
+/** How it gets there (Khaneil picked "automatic, with override", 2026-11-19), in the order the picker shows them. */
+export const TRAVEL_CHOICES: { mode: TravelMode; label: string; hint: string }[] = [
+  { mode: "auto", label: "Auto", hint: "Walks short trips, takes the train or an Atlas car when that is quicker" },
+  { mode: "walk", label: "Walk", hint: "Walks all the way" },
+  { mode: "car", label: "Car", hint: "An Atlas car picks it up at the kerb and drops it off" },
+  { mode: "train", label: "Train", hint: "Walks to the nearest station and rides the train" },
+];
 
 /** In the order the picker shows them. */
 export const FREE_TIME_CHOICES: { kind: FreeTimeChoice; label: string; going: string }[] = [
@@ -30,13 +38,16 @@ export interface FreeTimeRequest {
   kind: FreeTimeChoice;
   /** When it was asked for (ms): the routine sends the agent off from this moment. */
   at: number;
+  /** How it travels there; missing on older requests (walk, as before). */
+  travel?: TravelMode;
 }
 
 /** A request older than this is history: the day has moved on. */
 export const FREE_TIME_KEEP_MS = 6 * 60 * 60_000;
 const KEY = "routine-free-time";
 
-const valid = (v: unknown): v is FreeTimeRequest => !!v && typeof v === "object" && Number.isFinite((v as FreeTimeRequest).at) && FREE_TIME_CHOICES.some((c) => c.kind === (v as FreeTimeRequest).kind);
+const valid = (v: unknown): v is FreeTimeRequest =>
+  !!v && typeof v === "object" && Number.isFinite((v as FreeTimeRequest).at) && FREE_TIME_CHOICES.some((c) => c.kind === (v as FreeTimeRequest).kind) && ((v as FreeTimeRequest).travel === undefined || TRAVEL_CHOICES.some((c) => c.mode === (v as FreeTimeRequest).travel));
 
 /** Drops requests the day has left behind. */
 export function freshRequests(all: Record<string, unknown>, now: number): Map<string, FreeTimeRequest> {
@@ -61,9 +72,9 @@ let requests = freshRequests(load<Record<string, unknown>>(KEY, {}), Date.now())
 const watchers = new Set<() => void>();
 
 /** Sends these agents off on free time from now. Replaces any earlier request for them. */
-export function requestFreeTime(personaIds: readonly string[], kind: FreeTimeChoice, now = Date.now()) {
+export function requestFreeTime(personaIds: readonly string[], kind: FreeTimeChoice, now = Date.now(), travel: TravelMode = "auto") {
   const next = freshRequests(Object.fromEntries(requests), now);
-  for (const id of personaIds) next.set(id, { kind, at: now });
+  for (const id of personaIds) next.set(id, { kind, at: now, travel });
   requests = next;
   save(KEY, Object.fromEntries(next));
   watchers.forEach((w) => w());

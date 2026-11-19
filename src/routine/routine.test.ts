@@ -332,4 +332,11 @@ describe("free time sent from Atlas", () => {
     const kept = freshRequests({ a: { kind: "wheel", at: now - MIN }, b: { kind: "wheel", at: now - FREE_TIME_KEEP_MS - 1 }, c: { kind: "rocket", at: now }, d: null }, now);
     expect([...kept.keys()]).toEqual(["a"]);
   });
+
+  it("keeps how the agent travels, and older requests without it", () => {
+    const now = now0;
+    const kept = freshRequests({ a: { kind: "wheel", at: now, travel: "car" }, b: { kind: "park", at: now }, c: { kind: "park", at: now, travel: "rocket" } }, now);
+    expect([...kept.keys()]).toEqual(["a", "b"]);
+    expect(kept.get("a")?.travel).toBe("car");
+  });
 });

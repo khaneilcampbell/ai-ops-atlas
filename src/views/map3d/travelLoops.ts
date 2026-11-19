@@ -2,7 +2,7 @@ import {along,commuterRoute,type CommuterRoute} from './railCommuters';
 import {PERIMETER_RAIL,type PerimeterRailPlan} from './perimeterRailPlan';
 import type {Point3} from './hillsCommunityPlan';
 import {buildStreetGraph,streetLines,streetRoute,type StreetGraph} from './streetGraph';
-import {drivingGraph,loopLegs,JUNCTION_STOP,type Leg,type VehicleKind,type VehiclePlan} from './vehicles';
+import {drivingGraph,loopLegs,JUNCTION_STOP,DETOUR_CLOCK,type Leg,type VehicleKind,type VehiclePlan} from './vehicles';
 import {marinaSite} from './marinaPlan';
 import {yachtBerth,boardingRoute,type YachtBerth} from './yachtPlan';
 import {planHarbourPlatform,harbourAccess,harbourAlight} from './harbourPlatform';
@@ -42,6 +42,8 @@ export type TravellerState={visible:false;riding?:Riding}|{visible:true;x:number
 
 /** Shared clock (seconds since the map's train started), set each frame by the train so cars and yacht keep its time. */
 export const TRAVEL_CLOCK:{t:number;live:boolean;/** Wall clock (ms) when t was last set, so the agents' rides can map wall time to train time. */wall?:number}={t:0,live:false};
+// The Atlas cars' pickups are booked in wall time (agentRides.ts); the cars themselves run on this clock.
+DETOUR_CLOCK.wallOf=t=>TRAVEL_CLOCK.live&&TRAVEL_CLOCK.wall?TRAVEL_CLOCK.wall+(t-TRAVEL_CLOCK.t)*1000:t*1000;
 
 const mod=(a:number,n:number)=>((a%n)+n)%n;
 const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a,lcm=(a:number,b:number)=>a/gcd(a,b)*b;
@@ -58,7 +60,7 @@ function streetWalk(g:StreetGraph,from:Point3,to:Point3):Point3[]|undefined{
  * Shortest drive from node a to node b on the directed street network, never turning back the way it came
  * (no U-turns), arriving from any node except `notFrom`. States are (previous node, node).
  */
-function drive(nodes:Pt3[],next:number[][],a:number,b:number,prev:number,notFrom:number):number[]|undefined{
+export function drive(nodes:Pt3[],next:number[][],a:number,b:number,prev:number,notFrom:number):number[]|undefined{
  const key=(p:number,c:number)=>p*nodes.length+c,cost=new Map<number,number>(),came=new Map<number,number>(),open:[number,number,number][]=[[0,prev,a]];
  cost.set(key(prev<0?nodes.length:prev,a),0);
  while(open.length){

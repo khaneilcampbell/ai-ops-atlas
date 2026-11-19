@@ -17,15 +17,38 @@ import type { AgentOps, OpRun, OwnedWorkflow } from "./operations";
  */
 
 /** Where the agent is, in the words the spec uses. */
-export type CityActivity = "walking" | "commuting" | "at_desk" | "relaxing" | "riding" | "visiting" | "at_home";
-export const ACTIVITY_LABEL: Record<CityActivity, string> = { walking: "Walking", commuting: "Commuting", at_desk: "At desk", relaxing: "Relaxing", riding: "Riding", visiting: "Visiting", at_home: "At home" };
+export type CityActivity = "walking" | "commuting" | "at_desk" | "relaxing" | "riding" | "visiting" | "at_home" | "waiting";
+export const ACTIVITY_LABEL: Record<CityActivity, string> = { walking: "Walking", commuting: "Commuting", at_desk: "At desk", relaxing: "Relaxing", riding: "Riding", visiting: "Visiting", at_home: "At home", waiting: "Waiting for a ride" };
 
 /** The visible workday, in order. */
 export type WorkPhase = "heading" | "entering" | "to_desk" | "working" | "completed" | "leaving";
 export const PHASE_LABEL: Record<WorkPhase, string> = { heading: "Heading to office", entering: "Entering building", to_desk: "Going to desk", working: "Working", completed: "Task completed", leaving: "Leaving office" };
 
-export type LeisureKind = "office" | "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
-export const LEISURE_LABEL: Record<LeisureKind, string> = { office: "Outside its own building", park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
+export type LeisureKind = "office" | "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home" | "car";
+export const LEISURE_LABEL: Record<LeisureKind, string> = { office: "Outside its own building", park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home", car: "Riding in an Atlas car" };
+
+/**
+ * How an agent gets somewhere (Khaneil, 2026-11-19: "agents get pick up by cars or take the train when they travel as a
+ * option"). "auto" walks short trips and takes the train or an Atlas car when that is quicker. City picture only: no
+ * booking, ticket or purchase exists, and a trip never stands for a run.
+ */
+export type TravelMode = "auto" | "walk" | "car" | "train";
+
+/** A trip by car or train the map can offer: walk to `option.spot`, wait, ride to `option.exit`, walk on. */
+export interface TripPlan {
+  /** kind "car" or "train"; `spot` is the kerb or platform it boards at, `exit` where it gets off. */
+  option: LeisureOption;
+  times: RideTimes;
+  /** On its way to the kerb or platform ("Walking to Atlas Central Station for the train"). */
+  walkNote: string;
+  /** While it waits at the kerb or on the platform ("Waiting at the kerb for an Atlas car"). */
+  waitNote: string;
+}
+/** The map's answer to a trip: a car or train plan, or walk (with why, when a car or train was asked for). */
+export interface TripChoice {
+  plan: TripPlan | null;
+  note?: string;
+}
 
 /** A place the agent can be: a door, a park bench, a platform. The map turns these into coordinates. */
 export type SpotId = string;
@@ -62,6 +85,8 @@ export interface RoutineEnv {
   ride(option: LeisureOption, arrive: number, personaId: string): RideTimes | null;
   /** The earliest moment after `at` someone aboard can safely get off (the ride's next stop or return). */
   rideExit(option: LeisureOption, times: RideTimes, at: number): number;
+  /** A trip from `from` to `to` setting off at `depart` by car or train (agentRides.ts); null plan to walk. */
+  trip?(from: Anchor, to: SpotId, depart: number, mode: TravelMode): TripChoice;
   home: SpotId;
   office: SpotId;
   leisure: readonly LeisureOption[];
@@ -154,8 +179,8 @@ export const rand = (seed: string) => hashOf(seed) / 4294967296;
 /** Each agent's liking for each kind of outing, 0.2 to 1.2, fixed per agent. */
 export function preferences(personaId: string): Record<LeisureKind, number> {
   const kinds: LeisureKind[] = ["park", "district", "train", "flight", "yacht", "wheel", "arena", "home"];
-  // "office" (outside its own building) is weighted in `free()` against the whole pool instead.
-  return { office: 0, ...Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) } as Record<LeisureKind, number>;
+  // "office" (outside its own building) is weighted in `free()` against the whole pool instead; "car" is only a way to travel.
+  return { office: 0, car: 0, ...Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) } as Record<LeisureKind, number>;
 }
 
 // ------------------------------------------------------------------------------------- episodes
@@ -291,7 +316,7 @@ export interface RoutineInput {
    * it drops what it's doing (getting safely off a ride first) and goes to this kind of outing.
    * "any" picks one it likes. Only the picture changes: work still calls it in as usual.
    */
-  outing?: { kind: LeisureKind | "any"; at: number } | null;
+  outing?: { kind: LeisureKind | "any"; at: number; /** How it travels there (default "auto"). */ travel?: TravelMode } | null;
 }
 
 /**
@@ -375,11 +400,31 @@ export function planRoutine(input: RoutineInput): Routine {
       cur.t = Math.max(cur.t, t1);
       return;
     }
-    doOuting(pick, seed, scheduled, "Off on free time from Atlas: walking to");
+    doOuting(pick, seed, scheduled, "Off on free time from Atlas: walking to", outing?.travel ?? "walk");
+  };
+  /**
+   * Get to a spot by car or train when the map offers a trip for the mode (walk to the kerb or platform, wait, ride,
+   * walk on), otherwise walk. Returns the note to add when it walks although a car or train was asked for.
+   */
+  const travelTo = (to: SpotId, mode: TravelMode, walkNote: string, option?: LeisureOption) => {
+    const choice = mode !== "walk" && env.trip && atSpot(cur.at) !== to ? env.trip(cur.at, to, cur.t, mode) : null;
+    const trip = choice?.plan;
+    if (!trip) {
+      walkTo(to, "walking", null, choice?.note ? `${walkNote} (${choice.note})` : walkNote, option);
+      return;
+    }
+    const o = trip.option;
+    walkTo(o.spot, "walking", null, trip.walkNote, option);
+    push({ kind: "stay", t0: cur.t, t1: trip.times.board, at: o.spot, activity: "waiting", phase: null, note: trip.waitNote });
+    cur.t = Math.max(cur.t, trip.times.board);
+    push({ kind: "ride", t0: cur.t, t1: trip.times.alight, at: o.spot, activity: "riding", phase: null, note: o.label, option: o, times: trip.times });
+    cur.t = Math.max(cur.t, trip.times.alight);
+    cur.at = { spot: o.exit };
+    walkTo(to, "walking", null, walkNote.replace(/^.*?walking to/i, "Walking on to"), option);
   };
   /** Walk to an outing and spend it: a ride (queue, ride, off at its exit) or a stay. */
-  const doOuting = (pick: LeisureOption, seed: string, scheduled: number | null, walking = "Walking to") => {
-    walkTo(pick.spot, "walking", null, `${walking} ${pick.label.toLowerCase()}`, pick);
+  const doOuting = (pick: LeisureOption, seed: string, scheduled: number | null, walking = "Walking to", travel: TravelMode = "walk") => {
+    travelTo(pick.spot, travel, `${walking} ${pick.label.toLowerCase()}`, pick);
     const room = scheduled !== null ? scheduled - cur.t - leadFrom({ spot: pick.exit }) : Infinity;
     if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "yacht" || pick.kind === "wheel") {
       const times = env.ride(pick, cur.t, personaId);
