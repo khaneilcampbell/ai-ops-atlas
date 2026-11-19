@@ -99,6 +99,7 @@ describe("automation categories", () => {
         "benjaire-shop-manager",
         "brand-strategist",
         "canva-mockups",
+        "career-execution",
         "commerce-loop",
         "commerce-operations-manager",
         "copy-strategist",

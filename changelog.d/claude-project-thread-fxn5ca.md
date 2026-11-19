@@ -1,0 +1,1 @@
+- 2026-11-18 · Groundwork for an Atlas database: a PostgreSQL schema for goals, projects, tasks, decisions, documents, agent runs and approvals, a safe data API for n8n and agents, and an "Atlas database" card at the bottom of the Task Center showing connection status, recent agent runs and approvals waiting for you. It stays off until a database is connected. (#465)

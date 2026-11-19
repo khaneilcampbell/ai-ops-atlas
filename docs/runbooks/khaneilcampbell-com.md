@@ -32,3 +32,11 @@ Claude Code sessions that open pull requests; there is no code to run.
 - **When it fails:** reproduce with `pip install ruff && ruff check --select F scripts && python scripts/site_audit.py .`.
 - **Site bundle:** run the workflow by hand with **bundle** ticked to download a zip of the site and `site-inventory.json`.
 - **Stop it:** disable the workflow in Actions.
+
+## Career Execution Agent
+
+n8n workflow [Zd379gPsiCcBQfwo](https://khancam15.app.n8n.cloud/workflow/Zd379gPsiCcBQfwo), a draft (unpublished). It drafts a resume summary, cover note and recruiter message from a job link and emails them to Khaneil; it never applies or messages anyone.
+
+- **Run it:** while it is a draft, use **Test workflow** in n8n with a job link on the form.
+- **When it fails:** n8n emails Khaneil; open the failed execution in n8n. A spend-cap stop means the $3 monthly cap was reached.
+- **Stop it:** unpublish (or never publish) the workflow in n8n.
