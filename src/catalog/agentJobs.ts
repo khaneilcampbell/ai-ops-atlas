@@ -13,7 +13,15 @@ import { financialBrand } from "../views/map3d/financialBrands";
 // and nothing here starts an agent: the workday on the map is a simulation of the job as written.
 
 /** Agents live in Ellipse Residences (stable id circa), the twin-tower residence in the Financial District (Khaneil, 2026-11-01). */
-export const AGENT_RESIDENCE = { id: "circa", name: "Ellipse Residences", towers: ["West", "East"], firstFloor: 12, floors: 20, unitsPerFloor: 4 } as const;
+export const AGENT_RESIDENCE = {
+  id: "circa",
+  name: "Ellipse Residences",
+  towers: ["West", "East"],
+  /** The apartment floors the building really has inside (Enter building, circaFloors.ts): Floors 3 to 6. */
+  floors: [3, 4, 5, 6],
+  /** Apartments per tower on each floor: West n01 to n03, East n04 to n06 (circaUnits). */
+  unitsPerTower: 3,
+} as const;
 
 /** A simulated day on the map, in seconds. Shift hours below are hours of this day. */
 export const SIM_DAY_SECONDS = 720;
@@ -82,37 +90,53 @@ function shiftOf(a: Agent): AgentJob["shift"] {
   return { ...inferred({ start: start + shift, end: end + shift }, reason), declared: schedule };
 }
 
+/** Where agents live once Team Residence Towers is full (Khaneil, 2026-11-19): Client Success Center's suites. */
+export const OVERFLOW_RESIDENCE = { id: "harbor-residence", name: "Camton Hotel", floors: [1, 2, 3, 4], suitesPerFloor: 4 } as const;
+
 /**
- * Apartment for each agent, in id order so the same catalog always gives the same homes:
- * West tower first, four units a floor from floor 12 up, then the East tower.
+ * Apartment for each agent, in id order so the same catalog always gives the same homes. These are the 24 apartments
+ * drawn inside Team Residence Towers (Ellipse Residences), so an agent is shown in the apartment its home card names:
+ * floor by floor from Floor 3, the West tower's n01 to n03, then the East tower's n04 to n06.
+ * The city's named agents (`first`, the ones with their own identity) move in first, then other working agents. Once
+ * the building is full, the next agents take Client Success Center's suites (101 to 404); past that, two share.
+ * Agents off duty (planned, paused or retired, `away`) hold no apartment, so working agents keep theirs.
  */
-export function apartments(ids: string[]): Map<string, AgentJob["home"]> {
-  const R = AGENT_RESIDENCE, perTower = R.floors * R.unitsPerFloor, out = new Map<string, AgentJob["home"]>();
-  [...ids].sort().forEach((id, i) => {
-    const tower = R.towers[Math.floor(i / perTower) % R.towers.length], k = i % perTower;
-    const unit = `${R.firstFloor + Math.floor(k / R.unitsPerFloor)}${"ABCD"[k % R.unitsPerFloor]}`;
-    out.set(id, { building: R.id, unit, label: `${buildingDisplayName("service:financial:circa", R.name)} ${tower}, apartment ${unit}` });
-  });
+export function apartments(ids: string[], away: ReadonlyMap<string, OffDuty> = new Map(), first: ReadonlySet<string> = new Set()): Map<string, AgentJob["home"]> {
+  const R = AGENT_RESIDENCE, O = OVERFLOW_RESIDENCE, out = new Map<string, AgentJob["home"]>(), residence = buildingDisplayName("service:financial:circa", R.name);
+  const overflow = buildingDisplayName(`service:financial:${O.id}`, O.name);
+  const units = [
+    ...R.floors.flatMap((floor) => R.towers.flatMap((tower, t) => Array.from({ length: R.unitsPerTower }, (_, u) => { const unit = `${floor}0${t * R.unitsPerTower + u + 1}`; return { building: R.id as string, unit, label: `${residence} ${tower}, apartment ${unit}` }; }))),
+    ...O.floors.flatMap((floor) => Array.from({ length: O.suitesPerFloor }, (_, u) => ({ building: O.id as string, unit: `${floor}0${u + 1}`, label: `${overflow}, suite ${floor}0${u + 1}` }))),
+  ];
+  const working = [...ids].sort().filter((id) => !away.has(id));
+  [...working.filter((id) => first.has(id)), ...working.filter((id) => !first.has(id))].forEach((id, i) => out.set(id, { ...units[i % units.length] }));
+  for (const [id, why] of away) if (ids.includes(id)) out.set(id, { building: R.id, unit: "", label: `${residence}, no apartment while ${why}` });
   return out;
+}
+
+/** Why an agent has no workday: planned (type F), retired or paused; null when it works. */
+function offDutyOf(a: Agent): OffDuty | null {
+  return a.registry?.classification?.type === "F" ? "planned" : a.status === "retired" ? "retired" : a.status === "paused" ? "paused" : null;
 }
 
 /** The job of every AI agent in the catalog (types A, B and F), in catalog order. Automations have no job card. */
 export function agentJobs(catalog: Catalog, assignments: Record<string, PresenceAssignment> = {}): AgentJob[] {
   const agents = catalog.agents.filter(isAiAgent);
-  const homes = apartments(agents.map((a) => a.id));
+  const homes = apartments(agents.map((a) => a.id), new Map(agents.flatMap((a) => { const o = offDutyOf(a); return o ? [[a.id, o] as const] : []; })), new Set(agents.filter((a) => a.registry?.identity).map((a) => a.id)));
   return agents.map((a) => {
     const job = baseJob(a);
     const p = assignments[a.id], at = p && catalog.projects.find((x) => x.id === p.work);
     if (!p || !at) return job;
-    return { ...job, presence: p, deskOnly: undefined, home: { building: p.home, unit: "", label: homeLabel(p.home) }, work: { kind: "headquarters", projectId: at.id, building: at.id, label: `${at.name} headquarters` } };
+    // A saved home in Ellipse Residences keeps the agent's own apartment.
+    const home = p.home === job.home.building ? job.home : { building: p.home, unit: "", label: homeLabel(p.home) };
+    return { ...job, presence: p, deskOnly: undefined, home, work: { kind: "headquarters", projectId: at.id, building: at.id, label: `${at.name} headquarters` } };
   });
   function baseJob(a: Agent): AgentJob {
     const project = catalog.projects.find((p) => p.id === a.projectId);
     const tier = tierOf(a, catalog);
     const budget = a.registry?.cost?.budget?.trim();
     const output = a.registry?.responsibilities?.outputs?.[0]?.trim();
-    const type = a.registry?.classification?.type;
-    const offDuty: OffDuty | null = type === "F" ? "planned" : a.status === "retired" ? "retired" : a.status === "paused" ? "paused" : null;
+    const offDuty = offDutyOf(a);
     return {
       agentId: a.id,
       title: a.name,
