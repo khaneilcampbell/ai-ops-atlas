@@ -2,7 +2,7 @@ import type { Agent, Project } from "../../catalog/types";
 import type { AuditRecord, ActionsStatus } from "../../actions/types";
 import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
-import { mainline } from "../../registry/telemetry";
+import { AUTOMATIONS_SOURCE, mainline, N8N_SOURCE } from "../../registry/telemetry";
 import { formatDateTime } from "../../lib/timezone";
 import { span } from "../../alerts/alerts";
 
@@ -26,7 +26,7 @@ export const RUNTIME_LABEL: Record<RuntimeState, string> = {
 };
 
 /** One clear next step for an agent Atlas can't hear from. */
-export const CONNECT_STEP = "Next step: set `observe.agent_feed: true` in its catalog entry and have it post each run result to /api/hooks/agents (docs/live-telemetry.md).";
+export const CONNECT_STEP = "Next step: link the n8n workflow it runs, give it automations that report (owned_by), or set `observe.agent_feed: true` and have it post each run result to /api/hooks/agents (docs/live-telemetry.md).";
 
 export interface Runtime {
   state: RuntimeState;
@@ -156,7 +156,7 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status"> & Partial<Pick<Ag
   // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
   let executions = mainline(t.executions);
   let loaded = t.loaded;
-  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : null;
+  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : t.source === "n8n" ? N8N_SOURCE : t.source === "automations" ? `${AUTOMATIONS_SOURCE} (${(t.via ?? []).join(", ")})` : null;
   const action = ACTION_AGENTS[agent.id];
   if (action && actions) {
     source = "Atlas action audit log";
@@ -168,7 +168,7 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status"> & Partial<Pick<Ag
   }
   if (!source) return { state: "unknown", reason: `No live telemetry source is declared for this agent. ${CONNECT_STEP}`, basis: null, source: null };
   if (!loaded) {
-    const step = t.source === "agent-feed" ? " Next step: open the Atlas website, or turn on Settings → Website sync in the Mac app." : t.source === "atlas-intel" ? "; it is only available in the desktop app." : ".";
+    const step = t.source === "agent-feed" || t.source === "n8n" || t.source === "automations" ? " Next step: open the Atlas website, or turn on Settings → Website sync in the Mac app." : t.source === "atlas-intel" ? "; it is only available in the desktop app." : ".";
     return { state: "unknown", reason: `${source} data has not loaded${step}`, basis: null, source };
   }
   const latest = executions[0];

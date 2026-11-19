@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { Agent } from "../catalog/types";
 import { isHostedWeb, isTauri } from "../lib/env";
+import { n8nWorkflowIds } from "./links";
 import { FAILED, type N8nSnapshot, type N8nWorkflowRuns } from "./types";
 
 // Recent n8n runs for the Workflow Automation Plant. The site reads n8n with Khaneil's read-only key
@@ -67,20 +68,7 @@ export function useN8nRuns(): N8nState {
   return useSyncExternalStore(subscribe, () => current, () => current);
 }
 
-/** Every n8n workflow id a catalog agent links to (links to …/workflow/<id> on its n8n instance), in link order. */
-export function n8nWorkflowIds(agent: Pick<Agent, "links">): string[] {
-  const out: string[] = [];
-  for (const l of agent.links ?? []) {
-    const m = /^https:\/\/[^/]+\/workflow\/([A-Za-z0-9]+)(?:[/?#]|$)/.exec(l.url);
-    if (m && /n8n/i.test(new URL(l.url).hostname + l.label) && !out.includes(m[1])) out.push(m[1]);
-  }
-  return out;
-}
-
-/** The agent's main n8n workflow: the first one it links to. Its runs set the agent's health. */
-export function n8nWorkflowId(agent: Pick<Agent, "links">): string | null {
-  return n8nWorkflowIds(agent)[0] ?? null;
-}
+export { n8nWorkflowId, n8nWorkflowIds } from "./links";
 
 /**
  * Which catalog agent each n8n workflow belongs to, by workflow id. A workflow that is switched on
