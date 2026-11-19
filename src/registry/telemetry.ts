@@ -3,6 +3,8 @@ import type { Agent } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
 import type { Run } from "../intel/types";
 import type { AgentRun } from "../live/apply";
+import { n8nWorkflowIds } from "../n8n/links";
+import type { N8nRun, N8nSnapshot } from "../n8n/types";
 import { runResult } from "../lib/activity";
 import type { ExecutionRecord, KpiMeasure, Kpi, Operational, Telemetry } from "./types";
 import type { AgentProfile } from "./profile";
@@ -21,13 +23,43 @@ function intelResult(r: Run): ExecutionRecord["result"] {
 
 const FEED_RESULT: Record<AgentRun["status"], ExecutionRecord["result"]> = { ok: "success", failed: "failure", skipped: "other", paused: "other" };
 
+/** How runtimeFor names these sources (office/model.ts); the plaza reads them to avoid double counting. */
+export const N8N_SOURCE = "n8n runs";
+export const AUTOMATIONS_SOURCE = "Its automations";
+
+const N8N_RESULT: Record<N8nRun["status"], ExecutionRecord["result"]> = { success: "success", error: "failure", crashed: "failure", canceled: "other", running: "running", waiting: "running", new: "running", unknown: "other" };
+
+/** The recent n8n runs of the workflows an agent links to, newest first. */
+export function n8nExecutions(agent: Pick<Agent, "links">, n8n: N8nSnapshot | null | undefined): ExecutionRecord[] {
+  if (n8n?.state !== "ok") return [];
+  const ids = n8nWorkflowIds(agent);
+  const out: ExecutionRecord[] = [];
+  for (const w of n8n.workflows) {
+    if (!ids.includes(w.id)) continue;
+    for (const r of w.runs) {
+      const at = r.startedAt ?? r.stoppedAt;
+      if (!at) continue;
+      const ms = r.startedAt && r.stoppedAt ? Date.parse(r.stoppedAt) - Date.parse(r.startedAt) : null;
+      out.push({
+        at,
+        result: N8N_RESULT[r.status] ?? "other",
+        label: `${w.name} · ${r.status}${r.mode ? ` · ${r.mode}` : ""}`,
+        url: /^https:\/\//.test(n8n.instance) ? `${n8n.instance}/workflow/${w.id}/executions/${r.id}` : undefined,
+        durationMs: ms != null && Number.isFinite(ms) && ms >= 0 ? ms : null,
+        source: "n8n",
+      });
+    }
+  }
+  return out;
+}
+
 /**
  * Execution telemetry for one agent, from the live sources its manifest declares: GitHub
  * workflow runs, the app's own run log for agents that run inside Atlas, or the phase results
  * a pipeline outside Atlas reports to the live feed. Manifest
  * `last_run` and `history` are hand-written records, not telemetry, and are not used here.
  */
-export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null, agentRuns: AgentRun[] | null = null, production: ProductionEvent[] = [], now = Date.now()): Telemetry {
+export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intelRuns: Run[] | null, intelSpend?: { month: number; budget: number } | null, agentRuns: AgentRun[] | null = null, production: ProductionEvent[] = [], now = Date.now(), n8n: N8nSnapshot | null = null): Telemetry {
   let executions: ExecutionRecord[] = [];
   let source: Telemetry["source"] = null;
   let loaded = false;
@@ -74,7 +106,16 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
       label: r.detail ? `${r.phase} · ${r.status} · ${r.detail}` : `${r.phase} · ${r.status}`,
       source: "agent-feed" as const,
     }));
+  } else if (n8nWorkflowIds(agent).length) {
+    // Its own n8n workflows (links labelled n8n), from the read-only run summary (src/n8n/runs.ts).
+    source = "n8n";
+    loaded = n8n?.state === "ok";
+    executions = n8nExecutions(agent, n8n);
   }
+  return summarize(source, loaded, executions, { productionFresh, productionSeenAt: latestReport?.at, spend: source === "atlas-intel" ? intelSpend ?? null : null });
+}
+
+function summarize(source: Telemetry["source"], loaded: boolean, executions: ExecutionRecord[], extra: { productionFresh?: boolean; productionSeenAt?: string; spend?: { month: number; budget: number } | null; via?: string[] } = {}): Telemetry {
   executions.sort((a, b) => b.at.localeCompare(a.at));
   const counted = mainline(executions);
   const completed = counted.filter((e) => e.result === "success" || e.result === "failure");
@@ -82,17 +123,32 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
   return {
     source,
     loaded,
-    productionFresh,
-    productionSeenAt: latestReport?.at,
+    productionFresh: extra.productionFresh ?? false,
+    productionSeenAt: extra.productionSeenAt,
+    ...(extra.via ? { via: extra.via } : {}),
     executions,
     lastVerifiedRun: counted.find((e) => e.result === "success") ?? null,
     lastAnyRun: counted[0] ?? null,
     successRate: completed.length ? completed.filter((e) => e.result === "success").length / completed.length : null,
     failures: counted.filter((e) => e.result === "failure").length,
     avgDurationMs: durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : null,
-    monthSpendUsd: source === "atlas-intel" && intelSpend ? intelSpend.month : null,
-    monthBudgetUsd: source === "atlas-intel" && intelSpend ? intelSpend.budget : null,
+    monthSpendUsd: extra.spend ? extra.spend.month : null,
+    monthBudgetUsd: extra.spend ? extra.spend.budget : null,
   };
+}
+
+/**
+ * An owning agent runs through the automations it owns (catalog owned_by). When it has no live
+ * source of its own, its telemetry is their runs together, each labelled with the automation that
+ * ran it. Loaded once any of them has loaded. Unchanged when it has its own source or owns nothing
+ * with a source, so it never borrows evidence it doesn't have.
+ */
+export function withOwnedRuns(own: Telemetry, owned: readonly { name: string; telemetry: Telemetry }[]): Telemetry {
+  if (own.source) return own;
+  const sourced = owned.filter((o) => o.telemetry.source);
+  if (!sourced.length) return own;
+  const executions = sourced.flatMap((o) => o.telemetry.executions.map((e) => ({ ...e, label: `${o.name} · ${e.label}`, via: o.name })));
+  return summarize("automations", sourced.some((o) => o.telemetry.loaded), executions, { via: sourced.map((o) => o.name) });
 }
 
 /** Configured is not the same as working: only an observed successful run counts as verified. */

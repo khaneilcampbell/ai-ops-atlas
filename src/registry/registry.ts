@@ -6,7 +6,10 @@ import type { AgentRun } from "../live/apply";
 import { repoData } from "../lib/derive";
 import { matches } from "../lib/search";
 import { documentationScore, toProfile, type AgentProfile } from "./profile";
-import { operationalState, telemetryFor } from "./telemetry";
+import type { N8nSnapshot } from "../n8n/types";
+import { ownership } from "../catalog/ownership";
+import type { Agent } from "../catalog/types";
+import { operationalState, telemetryFor, withOwnedRuns } from "./telemetry";
 import { CATEGORY_LABEL, CLASSIFICATION_INFO, type Classification, type Operational, type Telemetry } from "./types";
 
 /** One directory row: the hand-maintained profile plus what Atlas observed at runtime. */
@@ -22,13 +25,36 @@ export interface RegistryEntry {
 
 /** The app's own agent runs: the full status on the Mac, or only the runs the Mac reported on the
  *  website. `agentRuns` are the phase results outside pipelines sent to the live feed. */
-export type IntelSource = Pick<AgentStatus, "runs"> & Partial<Pick<AgentStatus, "month_spent_usd" | "config">> & { agentRuns?: AgentRun[] | null; production?: ProductionEvent[]; observedAt?: string | null };
+export type IntelSource = Pick<AgentStatus, "runs"> & Partial<Pick<AgentStatus, "month_spent_usd" | "config">> & { agentRuns?: AgentRun[] | null; production?: ProductionEvent[]; observedAt?: string | null; /** Recent n8n runs (src/n8n/runs.ts), read only. */ n8n?: N8nSnapshot | null };
+
+function ownTelemetry(a: Agent, repos: Record<string, RepoState>, intel: IntelSource | null): Telemetry {
+  const spend = intel?.config && intel.month_spent_usd != null ? { month: intel.month_spent_usd, budget: intel.config.monthly_budget_usd } : null;
+  return telemetryFor(a, repoData(repos[a.repository]), intel ? intel.runs : null, spend, intel?.agentRuns ?? null, intel?.production, intel?.observedAt ? Date.parse(intel.observedAt) : Date.now(), intel?.n8n ?? null);
+}
+
+/**
+ * Every agent's telemetry by id: its own live source, or for an owning agent with none, the runs of
+ * the automations it owns (owned_by). Use this, not telemetryFor, wherever an agent's state shows.
+ */
+export function telemetryById(catalog: Pick<Catalog, "agents">, repos: Record<string, RepoState>, intel: IntelSource | null): Map<string, Telemetry> {
+  const own = new Map(catalog.agents.map((a) => [a.id, ownTelemetry(a, repos, intel)]));
+  for (const [ownerId, automations] of ownership(catalog).owned) {
+    own.set(ownerId, withOwnedRuns(own.get(ownerId)!, automations.map((a) => ({ name: a.name, telemetry: own.get(a.id)! }))));
+  }
+  return own;
+}
+
+/** One agent's telemetry, including its owned automations' runs (see telemetryById). */
+export function agentTelemetry(catalog: Pick<Catalog, "agents">, agent: Agent, repos: Record<string, RepoState>, intel: IntelSource | null): Telemetry {
+  const owned = ownership(catalog).owned.get(agent.id) ?? [];
+  return withOwnedRuns(ownTelemetry(agent, repos, intel), owned.map((a) => ({ name: a.name, telemetry: ownTelemetry(a, repos, intel) })));
+}
 
 export function buildRegistry(catalog: Catalog, repos: Record<string, RepoState>, intel: IntelSource | null): RegistryEntry[] {
-  const spend = intel?.config && intel.month_spent_usd != null ? { month: intel.month_spent_usd, budget: intel.config.monthly_budget_usd } : null;
+  const telemetries = telemetryById(catalog, repos, intel);
   return catalog.agents.map((a) => {
     const profile = toProfile(a, catalog.projects.find((p) => p.id === a.projectId));
-    const telemetry = telemetryFor(a, repoData(repos[a.repository]), intel ? intel.runs : null, spend, intel?.agentRuns ?? null, intel?.production, intel?.observedAt ? Date.parse(intel.observedAt) : Date.now());
+    const telemetry = telemetries.get(a.id)!;
     if (telemetry.source === "production") profile.execution.liveSource = "Authenticated production reports";
     const operational = operationalState(profile, telemetry);
     const docs = documentationScore(profile);

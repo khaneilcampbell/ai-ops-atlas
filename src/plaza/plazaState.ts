@@ -1,5 +1,6 @@
 import type { N8nState } from "../n8n/runs";
 import { n8nHealth, n8nWorkflowIds } from "../n8n/runs";
+import { AUTOMATIONS_SOURCE, N8N_SOURCE } from "../registry/telemetry";
 import type { N8nRun } from "../n8n/types";
 import type { StoredTask } from "../tasks/types";
 import type { WorkflowRun } from "../workflows/types";
@@ -88,6 +89,8 @@ export interface AgentLike {
   name: string;
   projectId: string;
   links?: { label: string; url: string }[];
+  /** The AI agent that owns this automation (catalog owned_by): the plaza names it as the one doing the work. */
+  ownedBy?: string;
 }
 
 /** The parts of an agent runtime this needs (office/model.ts Runtime). */
@@ -139,6 +142,8 @@ function n8nSource(n8n: N8nState, now: number): PlazaSource {
 /** Builds what the plaza shows from Atlas's own automation data. */
 export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
   const agentById = new Map(i.agents.map((a) => [a.id, a]));
+  /** The agent the plaza names for a piece of work: an automation's owning agent, else itself. */
+  const lead = (a: AgentLike) => (a.ownedBy && agentById.get(a.ownedBy)) || a;
   const who = (agentId: string | undefined, fallbackName?: string, buildingId?: string) => {
     const a = agentId ? agentById.get(agentId) : undefined;
     const projectId = a?.projectId ?? (buildingId && i.projectNames.has(buildingId) ? buildingId : undefined);
@@ -215,12 +220,13 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
     if (t.status === "completed" || t.status === "failed" || t.status === "cancelled") finished.set(`task:${t.id}`, t.status);
   }
 
-  // 2. Agent runtimes: verified runs that no task already covers.
+  // 2. Agent runtimes: verified runs that no task already covers. n8n workflows come from their
+  // runs in step 3, and an owning agent's rolled-up runtime repeats its automations', so both skip.
   if (agents.state === "live") {
     for (const [agentId, r] of i.runtimes) {
       const a = agentById.get(agentId);
-      if (!a) continue;
-      const base = who(agentId);
+      if (!a || r.source === N8N_SOURCE || r.source?.startsWith(AUTOMATIONS_SOURCE)) continue;
+      const base = who(lead(a).id);
       const url = https(r.basis?.url);
       const link: PlazaLink[] = url ? [{ label: r.source === "github" ? "GitHub run" : "Run details", url }] : [];
       if (r.state === "working") {
@@ -249,7 +255,7 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
     for (const a of i.agents) for (const id of n8nWorkflowIds({ links: (a.links ?? []) as Parameters<typeof n8nWorkflowIds>[0]["links"] })) if (!owner.has(id)) owner.set(id, a);
     for (const w of i.n8n.value.workflows) {
       const a = owner.get(w.id);
-      const base = a ? who(a.id) : {};
+      const base = a ? who(lead(a).id) : {};
       const execUrl = (r: N8nRun) => https(`${instance}/workflow/${w.id}/executions/${r.id}`);
       for (const r of w.runs) {
         const id = `n8n:${r.id}`;
