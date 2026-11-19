@@ -1,1 +1,1 @@
-- 2026-11-19 · Task Center table fits the window again: Last run no longer gets cut off at the right edge, the agent's automation line wraps instead of stretching the table, and on iPhone each task card stays inside the screen (#PR)
+- 2026-11-19 · Task Center table fits the window again: Last run no longer gets cut off at the right edge, the agent's automation line wraps instead of stretching the table, and on iPhone each task card stays inside the screen (#488)
