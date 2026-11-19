@@ -10,6 +10,7 @@ import type { RepoSnapshot, RepoState } from "./github/types";
 import { load, save } from "./lib/storage";
 import { isTauri } from "./lib/env";
 import { applyGithubEvent } from "./live/apply";
+import { loadProfileEdits, useProfileEditsVersion } from "./catalog/profileEdits";
 import { liveFeedOn, onLiveEvents } from "./live/feed";
 
 export type View = "overview" | "workflows" | "tasks" | "business" | "agents" | "automations" | "repos" | "map" | "grid" | "activity" | "intel" | "usage" | "workspace" | "settings";
@@ -286,7 +287,14 @@ export function AtlasProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
-  const live = useMemo(() => liveCatalog(catalog, repos, deleted), [repos, deleted]);
+  // Profile text Khaneil edited in Atlas is laid onto the catalog's agents (web page only); a new
+  // catalog object on each change makes every tab that reads it show the new text.
+  const editsVersion = useProfileEditsVersion();
+  useEffect(() => void loadProfileEdits(catalog.agents), []);
+  const live = useMemo(() => {
+    const l = liveCatalog(catalog, repos, deleted);
+    return editsVersion ? { ...l, catalog: { ...l.catalog } } : l;
+  }, [repos, deleted, editsVersion]);
 
   const value = useMemo<AtlasState>(
     () => ({
