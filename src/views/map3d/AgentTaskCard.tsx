@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { AgentAvatar, AiAgentLabel } from "../../components/AgentIdentity";
 import type { IdentityStatus } from "../../registry/agentStatus";
 import type { ResolvedIdentity as AgentIdentity } from "../../registry/identity";
 import { DEFAULT_TIME_ZONE } from "../../routine/cron";
 import { OPERATIONAL_LABEL, RUN_LABEL, type AgentOps, type OpRun } from "../../routine/operations";
+import { freeTimeAvailability, freeTimeSentNote, requestFreeTime } from "../../routine/freeTime";
 import { activityText, clock, type Segment } from "../../routine/routine";
+import { FreeTimePicker } from "./FreeTimePicker";
 
 /**
  * The card that opens when you pick a named agent on the map: what it's doing in the city and,
@@ -11,6 +14,8 @@ import { activityText, clock, type Segment } from "../../routine/routine";
  * Center (routine/operations.ts); the walk to the desk never stands in for a result.
  */
 export interface AgentTaskCardProps {
+  /** The city figure's id: the key its routine and free-time request use. */
+  personaId: string;
   identity: AgentIdentity;
   status: IdentityStatus;
   workLabel: string;
@@ -22,6 +27,8 @@ export interface AgentTaskCardProps {
   fetchedAt: string | null;
   following: boolean;
   hasOffice: boolean;
+  /** Its city routine is paused in Atlas (Schedule): it can't be sent on free time. */
+  held: boolean;
   /** Shown in the map's corner rather than above the agent. */
   docked?: boolean;
   onClose(): void;
@@ -59,6 +66,9 @@ export function AgentTaskCard(p: AgentTaskCardProps) {
   const failed = ops?.state === "failed" ? ops.lastResult : null;
   const activity = seg ? activityText(seg) : "Not placed yet";
   const openable = current ?? failed ?? ops?.lastResult ?? null;
+  // Free time (routine/freeTime.ts): every agent has the button; the picker says why one can't go now.
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freeNote, setFreeNote] = useState<string | null>(null);
   return (
     <div className={`m3-agent-profile m3-agent-task${p.docked ? " docked" : ""}`} role="dialog" aria-label={`${p.identity.name}, ${p.identity.role}, AI agent`} onPointerDown={(e) => e.stopPropagation()}>
       <button type="button" className="x" aria-label="Close" onClick={p.onClose}>
@@ -133,6 +143,9 @@ export function AgentTaskCard(p: AgentTaskCardProps) {
             View office
           </button>
         )}
+        <button type="button" aria-expanded={freeOpen} onClick={() => setFreeOpen((o) => !o)}>
+          Free time
+        </button>
         {openable ? (
           <button type="button" onClick={() => p.onOpenRun(openable)}>
             {failed && openable === failed ? "Open error" : "Open task"}
@@ -142,6 +155,22 @@ export function AgentTaskCard(p: AgentTaskCardProps) {
           Full profile
         </button>
       </div>
+      {freeOpen && (
+        <FreeTimePicker
+          name={p.identity.name}
+          availability={freeTimeAvailability(seg, p.held)}
+          onPick={(kind) => {
+            requestFreeTime([p.personaId], kind);
+            setFreeOpen(false);
+            setFreeNote(freeTimeSentNote(p.identity.name, kind));
+          }}
+        />
+      )}
+      {freeNote && !freeOpen && (
+        <p className="free-note" role="status">
+          {freeNote}
+        </p>
+      )}
     </div>
   );
 }

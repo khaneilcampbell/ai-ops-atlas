@@ -69,6 +69,12 @@ export function requestFreeTime(personaIds: readonly string[], kind: FreeTimeCho
   watchers.forEach((w) => w());
 }
 
+/** What Atlas says after sending an agent off. */
+export function freeTimeSentNote(name: string, kind: FreeTimeChoice): string {
+  const going = FREE_TIME_CHOICES.find((c) => c.kind === kind)?.going ?? "free time";
+  return `${name} is off to ${going}. Only the map changes: runs, schedules and permissions stay as they are, and a run that comes due still calls ${name} back.`;
+}
+
 export function useFreeTimeRequests(): ReadonlyMap<string, FreeTimeRequest> {
   return useSyncExternalStore(
     (w) => {

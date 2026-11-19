@@ -1,1 +1,2 @@
 - 2026-11-19 · City agents panel: a Free time button sends an agent with nothing to do to the Ferris wheel, a yacht or train ride, a Gold Jet flight, a park bench, the arena or another district, and "Free time for idle agents" sends everyone who's free. Only the map changes: runs, schedules and permissions stay the same (#PR)
+- 2026-11-19 · Every agent's card on the map now has a Free time button, and agents you send off between 11 PM and 7 AM now actually go instead of carrying on home (#PR)

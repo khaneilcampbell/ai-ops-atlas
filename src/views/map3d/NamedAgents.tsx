@@ -484,6 +484,8 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
           // Docked in the map's top corner, not floating over the agent: it stays readable while the agent walks or the camera follows.
           <Html zIndexRange={[60, 50]} calculatePosition={() => [Math.max(8, size.width - 312), 12]}>
             <AgentTaskCard
+              key={shown.personaId}
+              personaId={shown.personaId}
               identity={shown.identity}
               status={work.get(shown.personaId)?.status ?? "unknown"}
               workLabel={shown.workLabel}
@@ -495,6 +497,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
               fetchedAt={ops.fetchedAt}
               following={followed === shown.personaId}
               hasOffice={!!places?.agents.get(shown.personaId)?.desk}
+              held={held.has(shown.personaId)}
               docked
               onClose={() => setOpen(null)}
               onFollow={() => setFollowedAgent(followed === shown.personaId ? null : shown.personaId)}

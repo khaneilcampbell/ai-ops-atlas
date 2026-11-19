@@ -40,8 +40,9 @@
   "financial-scale.visual.ts": 0,
   "financial-station.visual.ts": 0,
   "fix-with-claude.visual.ts": 60,
-  "github-tower.visual.ts": 0,
+  "free-time-card.visual.ts": 0,
   "free-time.visual.ts": 0,
+  "github-tower.visual.ts": 0,
   "gold-jet-agents.visual.ts": 0,
   "ground-crew.visual.ts": 162,
   "header.visual.ts": 182,
@@ -86,8 +87,8 @@
   "soc-lab.visual.ts": 0,
   "startup-profile.visual.ts": 0,
   "street-pavement.visual.ts": 95,
+  "task-table.visual.ts": 30,
   "trackpad.visual.ts": 108,
   "views.visual.ts": 573,
-  "zoom-haze.visual.ts": 258,
-  "task-table.visual.ts": 30
+  "zoom-haze.visual.ts": 258
 }

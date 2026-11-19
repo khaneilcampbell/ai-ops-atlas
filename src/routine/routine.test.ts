@@ -287,6 +287,15 @@ describe("free time sent from Atlas", () => {
     expect(plan(at + 5 * MIN, { kind: "wheel", at }).segments).toEqual(r.segments);
   });
 
+  it("is followed even when the map's clock is a few seconds behind the click", () => {
+    // The map re-plans every 20 s, so the request can be newer than the plan's "now".
+    const at = now0 + 15_000;
+    const r = plan(now0, { kind: "wheel", at });
+    const next = r.segments.find((s): s is Exclude<Segment, { kind: "inside" }> => s.t0 >= at && s.kind !== "inside")!;
+    expect(next.t0).toBe(at);
+    expect(next.option?.kind).toBe("wheel");
+  });
+
   it("gets off a ride safely before going", () => {
     let found: Segment | null = null;
     for (let h = 0; h < 48 && !found; h++) {
@@ -312,10 +321,31 @@ describe("free time sent from Atlas", () => {
     expect(r.segments.find((s) => s.phase === "to_desk")!.t1).toBeLessThanOrEqual(run);
   });
 
-  it("is ignored while the agent works or at night", () => {
+  it("is ignored once the agent is home for the night", () => {
     const night = Date.parse("2026-11-19T05:00:00Z"); // midnight New York
     const r = plan(night + MIN, { kind: "wheel", at: night });
     expect(segmentAt(r, night + MIN)).toMatchObject({ activity: "at_home" });
+  });
+
+  it("is followed at night while the agent is still out, like walking home at 6:30 AM", () => {
+    // Find a moment between 11 PM and 7 AM New York when the agent is walking home for the night.
+    let at: number | null = null;
+    for (let k = 0; k < 8 * 60 && at === null; k++) {
+      const t = Date.parse("2026-11-19T04:00:00Z") + k * MIN;
+      const s = segmentAt(plan(t, null), t);
+      if (s && s.kind === "walk" && s.note.includes("home for the night")) at = t;
+    }
+    expect(at).not.toBeNull();
+    const seg = segmentAt(plan(at!, null), at!)!;
+    // Atlas offers free time then, so the plan must follow it.
+    expect(freeTimeAvailability(seg, false)).toEqual({ ok: true });
+    const r = plan(at! + 1000, { kind: "park", at: at! });
+    // From that moment it goes to the park (walking there, or staying if it's already beside one),
+    // and only heads home for the night afterwards.
+    const next = r.segments.find((s): s is Exclude<Segment, { kind: "inside" }> => s.t0 >= at! && s.kind !== "inside")!;
+    expect(next.t0).toBe(at);
+    expect(next.option?.kind).toBe("park");
+    expect(next.note).not.toContain("home for the night");
   });
 
   it("only offers free time to an agent in its free time", () => {

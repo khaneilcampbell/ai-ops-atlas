@@ -7,7 +7,8 @@ import { ExternalLink } from "../../components/bits";
 import { Icon } from "../../components/Icon";
 import { mapBuildings, useInsideFloors } from "../../buildings/insideFloors";
 import { useN8nRuns } from "../../n8n/runs";
-import { FREE_TIME_CHOICES, freeTimeAvailability, requestFreeTime, type FreeTimeChoice } from "../../routine/freeTime";
+import { freeTimeAvailability, freeTimeSentNote, requestFreeTime, type FreeTimeChoice } from "../../routine/freeTime";
+import { FreeTimePicker } from "./FreeTimePicker";
 import { CONNECTION_LABEL, RUN_LABEL, type AgentOps, type OwnedWorkflow } from "../../routine/operations";
 import { clock, segmentAt } from "../../routine/routine";
 import { setRoutineHeld, useRoutineHeld, useRoutineOps, useRoutines, useWhereAll } from "../../routine/useRoutineOps";
@@ -116,8 +117,7 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
   const sendFree = (r: RosterRow, kind: FreeTimeChoice) => {
     requestFreeTime([r.personaId], kind);
     setFreeOpen(false);
-    const going = FREE_TIME_CHOICES.find((c) => c.kind === kind)?.going ?? "free time";
-    setFreeNote({ id: r.personaId, text: `${r.identity.name} is off to ${going}. Only the map changes: runs, schedules and permissions stay as they are, and a run that comes due still calls ${r.identity.name} back.` });
+    setFreeNote({ id: r.personaId, text: freeTimeSentNote(r.identity.name, kind) });
   };
   const sendAllFree = () => {
     if (!idle.length) return;
@@ -335,7 +335,7 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
             </p>
           )}
           {followed === current.personaId && <p className="ca-note">Following {current.identity.name}. Move the map yourself or press Stop following to let go.</p>}
-          {freeOpen && <FreeTime row={current} availability={freeTimeAvailability(segOf(current.personaId), held.has(current.personaId))} onPick={(k) => sendFree(current, k)} />}
+          {freeOpen && <FreeTimePicker name={current.identity.name} availability={freeTimeAvailability(segOf(current.personaId), held.has(current.personaId))} onPick={(k) => sendFree(current, k)} />}
           {freeNote?.id === current.personaId && !freeOpen && (
             <p className="ca-note" role="status">
               {freeNote.text}
@@ -402,29 +402,6 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
         />
       )}
     </aside>
-  );
-}
-
-/** What the agent can go and do, or why it can't go now. */
-function FreeTime({ row, availability, onPick }: { row: RosterRow; availability: ReturnType<typeof freeTimeAvailability>; onPick(kind: FreeTimeChoice): void }) {
-  return (
-    <div className="ca-freetime" role="group" aria-label={`Free time for ${row.identity.name}`}>
-      {availability.ok ? (
-        <>
-          <p className="sub">Where should {row.identity.name} go?</p>
-          <div className="ca-freechoices">
-            {FREE_TIME_CHOICES.map((c) => (
-              <button key={c.kind} type="button" onClick={() => onPick(c.kind)}>
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p className="sub">{availability.reason}</p>
-      )}
-      <p className="sub hint">Only changes the map picture. Runs, schedules, workflows and permissions stay as they are.</p>
-    </div>
   );
 }
 
