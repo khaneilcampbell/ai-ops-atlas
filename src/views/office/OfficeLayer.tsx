@@ -1,5 +1,4 @@
-import {projectOfficeAgents} from "../../catalog/workplaces";
-import { isAiAgent } from "../../catalog/roles";
+import { officeAutomations, officeDeskAgents } from "../../catalog/workplaces";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -42,8 +41,10 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
   const [picked, setPicked] = useState<string | null>(null);
   const api = useRef<OfficeApi | null>(null);
   const project = catalog.projects.find((p) => p.id === projectId);
-  // Every registered worker belongs at a desk inside its project building.
-  const agents = useMemo(() => projectOfficeAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  // Every AI agent of the project has a desk in its building. Automations are workflows, not staff,
+  // so they get no desk; the wall display still counts them.
+  const agents = useMemo(() => officeDeskAgents(catalog.agents,projectId??""), [catalog, projectId]);
+  const automations = useMemo(() => officeAutomations(catalog.agents,projectId??"").length, [catalog, projectId]);
   const plan = useMemo(() => (project ? planOffice(project, agents) : null), [project, agents]);
   const places = useMemo(() => agentPlaces(catalog), [catalog]);
 
@@ -58,10 +59,8 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const r = rows.get(ws.agentId)!;
         const a = agents.find((x) => x.id === ws.agentId)!;
         const b = r.runtime.basis;
-        const automation = !isAiAgent(a);
         return {
           ws,
-          automation,
           floor: a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
@@ -70,7 +69,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
-          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, automation, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
+          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
     [plan, rows, agents, pending, places],
@@ -103,6 +102,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           plan={plan}
           floor={floor}
           desks={desks}
+          automations={automations}
           wall={{ title: project.name, repo: project.repository, line: verifiedState(repos[project.repository]).label }}
           light={light}
           reduced={reduced}
@@ -129,14 +129,14 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
 
         {desks.length === 0 && (
           <div className="office-empty">
-            <h3>No workers are registered here yet</h3>
-            <p>This project has no registered agents or automations, so the office has no desks.</p>
+            <h3>No AI agents work here yet</h3>
+            <p>{automations ? `This project runs ${automations === 1 ? "1 automation" : `${automations} automations`}. Automations are workflows, so they have no desks.` : "This project has no registered agents or automations, so the office has no desks."}</p>
           </div>
         )}
 
         {desks.length > 0 && topFloor && (
           <details className="office-roster" aria-label="Select an agent">
-            <summary>Agents &amp; automations <span>{visibleDesks.length}</span></summary>
+            <summary>AI agents <span>{visibleDesks.length}</span></summary>
             <div className="office-roster-list">
             {byTier(visibleDesks, (d) => d.ws.tier).map((g) => (
               <div key={g.tier} className="office-roster-group" role="group" aria-label={g.label}>

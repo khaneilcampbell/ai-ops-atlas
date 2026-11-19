@@ -32,8 +32,8 @@ async function run(page: Page, tag: string) {
   for (let i = 0; i < 3; i++) await zoom.dispatchEvent("click");
   await settle(page, 6);
   await page.screenshot({ path: join(OUT, `office-holo-closeup-${tag}.png`) });
-  // An agent with GitHub Actions runs in the fixtures, so the run strip has real bars.
-  await page.locator(".office-roster-list button", { hasText: "Atlas · Test and Release Build" }).click();
+  // Another agent at its desk; automations have no desk, so the roster lists AI agents only.
+  await page.locator(".office-roster-list button", { hasText: "Atlas Health Monitor" }).click();
   await settle(page, 6);
   // Software WebGL can lag a frame behind the selection; let it catch up.
   await page.waitForTimeout(2000);

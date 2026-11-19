@@ -36,9 +36,6 @@ export interface DeskData {
   when: string | null;
   /** The glass data view shown over the desk on hover or selection, from verified data only. */
   holo?: HologramData;
-  /** An automation's desk: its monitor shows the runs, but no person sits there, because an
-   *  automation is a workflow, not an agent (Khaneil, 2026-11-18). */
-  automation?: boolean;
 }
 
 export interface OfficeApi {
@@ -51,6 +48,8 @@ interface Props {
   floor?:number;
   plan: OfficePlan;
   desks: DeskData[];
+  /** Automations this headquarters runs: counted on the wall display, never given a desk. */
+  automations?: number;
   wall: { title: string; repo: string; line: string };
   light: LightMode;
   reduced: boolean;
@@ -75,7 +74,7 @@ export default function OfficeScene(props: Props) {
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
-        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.filter(d=>!d.automation).length,desks.filter(d=>d.automation).length)} lighting={props.floor!==-1||level===4}/>
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
@@ -431,7 +430,7 @@ function AgentWorkstation({ d, reduced, night, selected, onSelect }: { d: DeskDa
       </mesh>
       <AgentStatusIndicator state={state} reduced={reduced} />
       <Chair />
-      {!d.automation && <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />}
+      <AgentCharacter seed={d.ws.agentId} accent={d.accent} state={state} reduced={reduced} />
       {(hover || selected) && d.holo && <AgentHologram data={d.holo} reduced={reduced} />}
     </group>
   );
