@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { TERRACE_H } from "./scene";
+import { wheelAngle } from "./routinePlaces";
 
 import { PLAZA_WHEEL, WHEEL, type StationPlaza } from "./stationPlazaPlan";
 
@@ -17,9 +18,10 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
   const rotor = useRef<THREE.Group>(null);
   const cabins = useRef<(THREE.Group | null)[]>([]);
   const angle = useRef(0);
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (reduced || !rotor.current) return;
-    angle.current = (angle.current + Math.min(delta, 0.05) * 0.045) % (Math.PI * 2);
+    // Turns by the wall clock, so agents riding a cabin (NamedAgents, routinePlaces.ts) sit in it exactly.
+    angle.current = wheelAngle(Date.now());
     rotor.current.rotation.z = angle.current;
     for (const cabin of cabins.current) if (cabin) cabin.rotation.z = -angle.current;
   });

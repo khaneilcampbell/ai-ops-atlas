@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_INSTANCE, instanceOf, n8nSnapshot, parseRun, readN8n, readN8nForApp, summarize } from "./n8n";
+import { DEFAULT_INSTANCE, instanceOf, intervalCron, n8nSnapshot, parseRun, readN8n, readN8nForApp, scheduleRules, summarize } from "./n8n";
 import type { CheckCache } from "./properties";
 
 const NOW = Date.parse("2026-11-10T17:00:00Z");
@@ -96,5 +96,32 @@ describe("n8n runs on the site", () => {
     const ok = await readN8nForApp(req(`Bearer ${SYNC}`), env, null, fakeFetch().f);
     expect(ok.status).toBe(200);
     expect(JSON.stringify(await ok.json())).not.toContain(KEY);
+  });
+});
+
+describe("n8n schedules for the agents' routine", () => {
+  it("reads Schedule Trigger intervals as cron", () => {
+    expect(intervalCron({ field: "hours", hoursInterval: 4, triggerAtMinute: 48 })).toEqual({ cron: "48 */4 * * *" });
+    expect(intervalCron({ triggerAtHour: 11 })).toEqual({ cron: "0 11 * * *" });
+    expect(intervalCron({ field: "weeks", triggerAtDay: [4, 1], triggerAtHour: 10 })).toEqual({ cron: "0 10 * * 1,4" });
+    expect(intervalCron({ field: "weeks", triggerAtDay: [0], triggerAtHour: 9, weeksInterval: 2 })).toEqual({ cron: "0 9 * * 0", everyWeeks: 2 });
+    expect(intervalCron({ field: "cronExpression", expression: "0 20 7 * * *" })).toEqual({ cron: "20 7 * * *" });
+    expect(intervalCron({ field: "cronExpression", expression: "={{ $json.cron }}" })).toBeNull();
+  });
+  it("lists every enabled schedule node and skips disabled ones", () => {
+    const nodes = [
+      { type: "n8n-nodes-base.scheduleTrigger", name: "Every 4 hours", parameters: { rule: { interval: [{ field: "hours", hoursInterval: 4, triggerAtMinute: 48 }] } } },
+      { type: "n8n-nodes-base.scheduleTrigger", name: "Off", disabled: true, parameters: { rule: { interval: [{ triggerAtHour: 3 }] } } },
+      { type: "n8n-nodes-base.cron", name: "Old cron", parameters: { triggerTimes: { item: [{ mode: "everyDay", hour: 7, minute: 20 }] } } },
+      { type: "n8n-nodes-base.webhook", name: "Webhook" },
+    ];
+    expect(scheduleRules(nodes)).toEqual([
+      { label: "Every 4 hours", cron: "48 */4 * * *" },
+      { label: "Old cron", cron: "20 7 * * *" },
+    ]);
+  });
+  it("carries the time zone and whether successful runs are kept", () => {
+    const [w] = summarize([{ id: "a", name: "Inventory", active: true, nodes: [{ type: "n8n-nodes-base.scheduleTrigger", name: "Daily", parameters: { rule: { interval: [{ triggerAtHour: 7, triggerAtMinute: 20 }] } } }], settings: { timezone: "America/New_York", saveDataSuccessExecution: "none" } }], [], Date.parse("2026-11-18T12:00:00Z"));
+    expect(w).toMatchObject({ schedules: [{ label: "Daily", cron: "20 7 * * *" }], timezone: "America/New_York", savesSuccess: false });
   });
 });
