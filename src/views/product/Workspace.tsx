@@ -19,7 +19,6 @@ import { platform, useIntegrationProbe } from "../../product/probe";
 import { checkImport, exportWorkspace, readiness } from "../../product/readiness";
 import { approvalsOf, compatibility, definitionOf, goalText, requiredAgents, simulateTemplate, TEMPLATES, versionOf, type WorkflowTemplate } from "../../product/templates";
 import { DEFAULT_AGENT_SETTINGS, ENVIRONMENT_LABEL, ENVIRONMENTS, OFFERED_PURPOSES, productStore, PURPOSE_LABEL, settingsFor, useProduct, useWorkspace, type AgentSettings, type Workspace, type WorkspaceInput } from "../../product/workspace";
-import { openOnboarding } from "./onboardingState";
 import { PortfolioCard } from "./Portfolio";
 import "../../styles/product.css";
 
@@ -148,20 +147,6 @@ function SetupTab({ w, probe, go }: { w: Workspace | null; probe: Probe; go: (t:
       </section>
       {w ? <WorkspaceDetails w={w} /> : <p className="muted">No workspace yet.</p>}
       <PortfolioCard w={w} />
-      <section className="card">
-        <div className="card-head">
-          <h2 className="grow">Guided setup</h2>
-        </div>
-        <div className="setting">
-          <div className="grow">
-            <div className="label">Run the personal setup again</div>
-            <div className="muted small">Add another workspace for one of your businesses or areas, or walk through tools, agents and workflows again. Your current workspace and completed setup stay as they are.</div>
-          </div>
-          <button className="btn" onClick={openOnboarding}>
-            Open guided setup
-          </button>
-        </div>
-      </section>
     </>
   );
 }
