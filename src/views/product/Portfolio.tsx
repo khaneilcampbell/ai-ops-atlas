@@ -1,3 +1,4 @@
+import { residentsLabel } from "../../catalog/roles";
 import { useMemo, useState } from "react";
 import { CATEGORY_INFO, portfolio, type PortfolioProject } from "../../product/commandCenter";
 import { CATEGORIES, productStore, type Category, type Workspace } from "../../product/workspace";
@@ -70,7 +71,7 @@ export function PortfolioCard({ w }: { w: Workspace | null }) {
 function ProjectRow({ r, canMove, onOpen, onMove }: { r: PortfolioProject; canMove: boolean; onOpen: () => void; onMove: (to: Category | "") => void }) {
   const facts = [
     `${r.repositories.length} repo${r.repositories.length === 1 ? "" : "s"}`,
-    `${r.agents.length} agent${r.agents.length === 1 ? "" : "s"}`,
+    residentsLabel(r.agents.filter((a) => !a.automation).length, r.agents.filter((a) => a.automation).length),
     r.workflows.length ? `${r.workflows.length} workflow${r.workflows.length === 1 ? "" : "s"}` : "",
     r.openTasks ? `${r.openTasks} open task${r.openTasks === 1 ? "" : "s"}` : "",
     r.artifacts ? `${r.artifacts} output${r.artifacts === 1 ? "" : "s"}` : "",

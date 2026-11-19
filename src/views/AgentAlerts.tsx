@@ -92,7 +92,7 @@ export function AlertPill({ open }: { open: Watch[] }) {
   const { setView } = useAtlas();
   if (!open.length) return null;
   const first = open[0];
-  const text = open.length === 1 ? `${first.agent.name} ${first.state === "failing" ? "failed" : "is silent"}` : `${open.length} agent alerts`;
+  const text = open.length === 1 ? `${first.agent.name} ${first.state === "failing" ? "failed" : "is silent"}` : `${open.length} alerts`;
   return (
     <button
       className="alert-pill"

@@ -17,11 +17,13 @@ import { publishRoutines, publishWhere, routineOverride, useRoutineHeld, useRout
 import { figureParts, partMatrix, poseBones, FIGURE_SCALE, RIG, type FigurePart } from "./agentFigures";
 import { agentPositions, setFollowedAgent, useFollowedAgent, viewOffice } from "./agentFollow";
 import { AgentTaskCard } from "./AgentTaskCard";
+import { selectCityAgent, useCityAgents } from "./cityAgentsStore";
 import { namedAgentAt, type NamedAgent, type NamedAgentPlan } from "./namedAgentPlan";
 import { routineEnv, type CityPlaces, type CityRoutes } from "./routinePlaces";
 import { routinePose } from "./routinePose";
 import { hideGait, newGait, stepGait, type Gait } from "./walkerFigure";
 import { yachtLivePose } from "./yachtRidePlan";
+import { wake } from "../../lib/power";
 
 /**
  * The 17 named agents as characters in the city, each built from its illustrated avatar
@@ -170,6 +172,7 @@ interface Props {
 /** Ring colours: working, waiting for approval, failed (needs attention). */
 const RING: Record<string, string> = { running: "#7ee0ff", queued: "#7ee0ff", waiting_approval: "#ffcf6e", failed: "#ff6b57" };
 const NO_OPEN: ReadonlySet<string> = new Set();
+const SELECTED_RING = "#d0ad69";
 
 function openUrl(href: string) {
   if ("__TAURI_INTERNALS__" in window) void import("@tauri-apps/plugin-opener").then((m) => m.openUrl(href));
@@ -188,7 +191,14 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   const boxes = useRef<THREE.InstancedMesh>(null), balls = useRef<THREE.InstancedMesh>(null), badges = useRef<THREE.InstancedMesh>(null), rings = useRef<THREE.InstancedMesh>(null);
   const card = useRef<THREE.Group>(null), chip = useRef<THREE.Group>(null);
   const [hover, setHover] = useState<number | null>(null);
-  const [open, setOpen] = useState<number | null>(null);
+  // The selected agent is shared with the City agents panel (cityAgentsStore.ts): a click here selects its row.
+  const { selected, panelOpen } = useCityAgents();
+  const open = selected && ids.includes(selected) ? ids.indexOf(selected) : null;
+  const setOpen = (i: number | null) => selectCityAgent(i === null ? null : (ids[i] ?? null));
+  const selectedRef = useRef(open);
+  selectedRef.current = open;
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
   const [, setCardTick] = useState(0);
 
   // Each agent's day, recomputed when its runs change or the clock ticks (useRoutineOps, every 20 s while visible).
@@ -321,6 +331,11 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         rings.current.setMatrixAt(ringN, L.m.compose(new THREE.Vector3(bx, by - BADGE.lift + 0.012, bz), new THREE.Quaternion(), new THREE.Vector3(0.06 * pulse, 0.06, 0.06 * pulse)));
         rings.current.setColorAt(ringN++, L.c.set(color));
       }
+      // The selected agent (map or City agents panel): a wider muted-gold ring around its feet.
+      if (selectedRef.current === i && rings.current) {
+        rings.current.setMatrixAt(ringN, L.m.compose(new THREE.Vector3(bx, by - BADGE.lift + 0.008, bz), new THREE.Quaternion(), new THREE.Vector3(0.095, 0.05, 0.095)));
+        rings.current.setColorAt(ringN++, L.c.set(SELECTED_RING));
+      }
     });
     if (rings.current) {
       rings.current.count = ringN;
@@ -404,7 +419,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       if (i === null) return;
       // The agent's card, not the building behind it.
       e.stopPropagation();
-      setOpen(i);
+      selectCityAgent(idsRef.current[i] ?? null);
       setHover(null);
     };
     el.addEventListener("pointerdown", onDown, true);
@@ -418,15 +433,18 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     };
   }, [gl, camera, mat]);
   useEffect(() => {
-    if (open === null) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(null);
+    // With the City agents panel open, Escape belongs to the panel.
+    if (open === null || panelOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && selectCityAgent(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, panelOpen]);
+  // A new selection redraws at once, so its gold ring shows even while the map is idle.
+  useEffect(() => wake(200), [open]);
   // A test hook for the review shots: open an agent's card by id (visual/agent-routine.visual.ts).
   useEffect(() => {
     const w = window as unknown as { __atlasOpenAgent?: (id: string) => void };
-    w.__atlasOpenAgent = (id: string) => setOpen(Math.max(-1, ids.indexOf(id)) < 0 ? null : ids.indexOf(id));
+    w.__atlasOpenAgent = (id: string) => selectCityAgent(ids.includes(id) ? id : null);
     return () => {
       delete w.__atlasOpenAgent;
     };
@@ -447,7 +465,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       <instancedMesh name="named-agent-boxes" ref={boxes} args={[geo.box, mat.body, boxCount]} frustumCulled={false} />
       <instancedMesh name="named-agent-balls" ref={balls} args={[geo.ball, mat.body, ballCount]} frustumCulled={false} />
       <instancedMesh name="named-agent-badges" ref={badges} args={[geo.badge, mat.badge, agents.length]} frustumCulled={false} renderOrder={2} />
-      <instancedMesh name="named-agent-activity" ref={rings} args={[geo.ring, mat.ring, agents.length]} frustumCulled={false} />
+      <instancedMesh name="named-agent-activity" ref={rings} args={[geo.ring, mat.ring, agents.length + 1]} frustumCulled={false} />
       <group ref={chip}>
         {hovered && (
           <Html zIndexRange={[40, 30]} style={{ pointerEvents: "none" }}>
@@ -460,7 +478,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         )}
       </group>
       <group ref={card}>
-        {shown && open !== null && (
+        {shown && open !== null && !panelOpen && (
           // Docked in the map's top corner, not floating over the agent: it stays readable while the agent walks or the camera follows.
           <Html zIndexRange={[60, 50]} calculatePosition={() => [Math.max(8, size.width - 312), 12]}>
             <AgentTaskCard

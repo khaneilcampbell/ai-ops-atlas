@@ -137,6 +137,19 @@ export function useWhere(personaId: string): LiveWhere | null {
   return where.get(personaId) ?? null;
 }
 
+/** Every agent's last drawn activity and place, for the City agents roster (one subscription for all rows). */
+export function useWhereAll(): { where: ReadonlyMap<string, LiveWhere>; version: number } {
+  const version = useSyncExternalStore(
+    (f) => {
+      whereWatchers.add(f);
+      return () => whereWatchers.delete(f);
+    },
+    () => whereVersion,
+    () => whereVersion,
+  );
+  return { where, version };
+}
+
 // ------------------------------------------------------------------------------------- each agent's day
 
 /**

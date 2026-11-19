@@ -23,14 +23,14 @@ describe("n8n runs in the page", () => {
 
 describe("n8n workflows the Atlas tabs list", () => {
   const agents = [
-    { name: "Agent Registry Clerk", links: [{ label: "n8n workflow", url: "https://x.app.n8n.cloud/workflow/AAA" }, { label: "Sheet", url: "https://docs.google.com/x" }, { label: "Business Structure workflow", url: "https://x.app.n8n.cloud/workflow/BBB" }] },
+    { name: "Agent Registry Sync", links: [{ label: "n8n workflow", url: "https://x.app.n8n.cloud/workflow/AAA" }, { label: "Sheet", url: "https://docs.google.com/x" }, { label: "Business Structure workflow", url: "https://x.app.n8n.cloud/workflow/BBB" }] },
     { name: "Website", links: [{ label: "Live site", url: "https://benjaire.com/workflow/CCC" }] },
   ];
 
   it("maps every n8n workflow an agent links to, keeping the first as its main one", () => {
     expect(n8nWorkflowIds(agents[0])).toEqual(["AAA", "BBB"]);
     expect(n8nWorkflowId(agents[0])).toBe("AAA");
-    expect([...workflowOwners(agents)]).toEqual([["AAA", "Agent Registry Clerk"], ["BBB", "Agent Registry Clerk"]]);
+    expect([...workflowOwners(agents)]).toEqual([["AAA", "Agent Registry Sync"], ["BBB", "Agent Registry Sync"]]);
   });
 
   it("flags only switched-on workflows that no agent links to", () => {
