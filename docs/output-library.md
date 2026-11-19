@@ -52,8 +52,8 @@ it can't list or read anything).
 
 **Automatic capture already wired:** every agent report stored through `/api/hooks/reports`
 (Opportunity Scout, Product Lab) is also archived as a JSON report version. Reports still held in D1
-(the newest 20 per agent) can be archived with `POST /api/outputs/reconcile` (signed-in page; safe to
-repeat). Reports already pruned are not claimed.
+(the newest 20 per agent) are archived automatically when the Library first opens with storage connected
+(`POST /api/outputs/reconcile`, signed-in page; safe to repeat). Reports already pruned are not claimed.
 
 ## Reading (signed-in page)
 
@@ -77,9 +77,10 @@ Done on 2026-11-19: R2 enabled on the Cloudflare account (free tier), private bu
 created, and bound to the Pages project's Production settings as `OUTPUTS`
 (https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/pages/view/ai-ops-atlas/settings/production).
 
-After the first deploy that includes the Library, press reconcile (or `POST /api/outputs/reconcile`)
-to archive the reports D1 still holds. Without the binding, outputs are recorded with storage
-`failed` and the reason "File storage isn't connected". Preview deployments don't have the binding,
+The first time the Library opens with storage connected, it archives the reports D1 still holds
+(`POST /api/outputs/reconcile`, once per page load; already-archived reports are skipped).
+
+Without the binding, outputs are recorded with storage `failed` and the reason "File storage isn't connected". Preview deployments don't have the binding,
 so they show that state.
 
 ## Local preview

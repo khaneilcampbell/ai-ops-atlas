@@ -34,6 +34,16 @@ export const fetchOutput = (id: string, signal?: AbortSignal) => getJson<OutputD
 
 export const retryOutput = (id: string, version: number) => getJson<{ storage?: string; message?: string }>(`/api/outputs/${encodeURIComponent(id)}/versions/${version}/retry`, { method: "POST" });
 
+/**
+ * Archive the agent reports the site still holds, once per page load and only once file storage is
+ * connected. The site skips reports it already archived, so a repeat is harmless.
+ */
+let reconciling: Promise<{ created: number } | null> | null = null;
+export function reconcileReportsOnce(): Promise<{ created: number } | null> {
+  reconciling ??= getJson<{ created: number }>("/api/outputs/reconcile", { method: "POST" }).catch(() => null);
+  return reconciling;
+}
+
 export function fileUrl(id: string, version: number, mode: "inline" | "preview" | "download"): string {
   const base = `/api/outputs/${encodeURIComponent(id)}/versions/${version}/file`;
   return mode === "download" ? `${base}?download=1` : mode === "preview" ? `${base}?preview=1` : base;

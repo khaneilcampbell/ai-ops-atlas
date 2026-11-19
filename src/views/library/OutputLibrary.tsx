@@ -8,7 +8,7 @@ import { focusTasks } from "../../tasks/focus";
 import { formatDateTime } from "../../lib/timezone";
 import { relative } from "../../lib/time";
 import { SafeMarkdown } from "../workflows/OutputRenderers";
-import { closeLibrary, fetchOutput, fetchOutputs, fetchTextPreview, fileUrl, libraryAvailability, retryOutput } from "../../library/client";
+import { closeLibrary, fetchOutput, fetchOutputs, fetchTextPreview, fileUrl, libraryAvailability, reconcileReportsOnce, retryOutput } from "../../library/client";
 import {
   APPROVAL_LABEL,
   FORMAT_LABEL,
@@ -103,6 +103,20 @@ export function OutputLibrary({ phone }: { phone: boolean }) {
       });
     return () => ac.abort();
   }, [availability.ok, query, format, agent, project, status, page, projectAgents, tick]);
+
+  // Reports stored before the Library existed (or while storage was off) are archived automatically
+  // the first time the Library opens with storage connected.
+  const storageReady = !!data?.configured && !!data.storageConnected && data.environment !== "development";
+  useEffect(() => {
+    if (!storageReady) return;
+    let live = true;
+    void reconcileReportsOnce().then((r) => {
+      if (live && r && r.created > 0) setTick((t) => t + 1);
+    });
+    return () => {
+      live = false;
+    };
+  }, [storageReady]);
 
   // Focus lands in the drawer on open; Escape closes from anywhere inside it.
   useEffect(() => {
