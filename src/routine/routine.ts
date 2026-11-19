@@ -24,8 +24,8 @@ export const ACTIVITY_LABEL: Record<CityActivity, string> = { walking: "Walking"
 export type WorkPhase = "heading" | "entering" | "to_desk" | "working" | "completed" | "leaving";
 export const PHASE_LABEL: Record<WorkPhase, string> = { heading: "Heading to office", entering: "Entering building", to_desk: "Going to desk", working: "Working", completed: "Task completed", leaving: "Leaving office" };
 
-export type LeisureKind = "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
-export const LEISURE_LABEL: Record<LeisureKind, string> = { park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
+export type LeisureKind = "office" | "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
+export const LEISURE_LABEL: Record<LeisureKind, string> = { office: "Outside its own building", park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
 
 /** A place the agent can be: a door, a park bench, a platform. The map turns these into coordinates. */
 export type SpotId = string;
@@ -132,6 +132,8 @@ export const ROUTINE = {
   dayStartHour: 3,
   /** How far ahead it is planned. */
   aheadMin: 90,
+  /** Share of free-time picks spent outside the agent's own building (the rest are outings). */
+  nearOffice: 0.65,
   /** Night at home, in the agent's time zone. */
   night: [23, 7] as [number, number],
 } as const;
@@ -152,7 +154,8 @@ export const rand = (seed: string) => hashOf(seed) / 4294967296;
 /** Each agent's liking for each kind of outing, 0.2 to 1.2, fixed per agent. */
 export function preferences(personaId: string): Record<LeisureKind, number> {
   const kinds: LeisureKind[] = ["park", "district", "train", "flight", "yacht", "wheel", "arena", "home"];
-  return Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) as Record<LeisureKind, number>;
+  // "office" (outside its own building) is weighted in `free()` against the whole pool instead.
+  return { office: 0, ...Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) } as Record<LeisureKind, number>;
 }
 
 // ------------------------------------------------------------------------------------- episodes
@@ -360,11 +363,16 @@ export function planRoutine(input: RoutineInput): Routine {
       const pool = fits.length ? fits : [];
       let pick: LeisureOption | null = null;
       if (pool.length) {
-        // Weighted by the agent's likes; the same seed always gives the same pick.
-        const total = pool.reduce((s, o) => s + likes[o.kind], 0);
+        // Weighted by the agent's likes; the same seed always gives the same pick. Most free time is
+        // spent outside its own building (ROUTINE.nearOffice of the picks), so a building's agents are
+        // found there or at their desks, with an outing now and then.
+        const others = pool.reduce((s, o) => s + (o.kind === "office" ? 0 : likes[o.kind]), 0);
+        const near = others > 0 ? (others * ROUTINE.nearOffice) / (1 - ROUTINE.nearOffice) : 1;
+        const weight = (o: LeisureOption) => (o.kind === "office" ? near : likes[o.kind]);
+        const total = pool.reduce((s, o) => s + weight(o), 0);
         let r = rand(seed) * total;
         for (const o of pool) {
-          r -= likes[o.kind];
+          r -= weight(o);
           if (r <= 0) {
             pick = o;
             break;
@@ -397,7 +405,7 @@ export function planRoutine(input: RoutineInput): Routine {
       }
       const lo = pick.stay[0], hi = pick.stay[1];
       const stay = Math.min((lo + rand(`${seed}:stay`) * (hi - lo)) * S, Math.max(room, 30 * S));
-      const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" ? "relaxing" : "visiting";
+      const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" || pick.kind === "office" ? "relaxing" : "visiting";
       push({ kind: "stay", t0: cur.t, t1: cur.t + stay, at: pick.spot, activity, phase: null, note: pick.label, option: pick });
       cur.t += stay;
       cur.at = { spot: pick.exit };
