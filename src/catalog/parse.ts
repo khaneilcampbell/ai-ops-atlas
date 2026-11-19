@@ -1,5 +1,5 @@
 import {WORKPLACE_BUILDINGS,validWorkplaceRoom} from "./workplaces";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { parseRegistry } from "../registry/manifest";
 import { isAiAgent } from "./roles";
 import { REPO_RE, Reader, type Raw } from "./reader";
@@ -12,7 +12,7 @@ export function parseManifest(file: string, text: string, issues: ManifestIssue[
   const r = new Reader(file, issues);
   let doc: unknown;
   try {
-    doc = yaml.load(text, { schema: yaml.DEFAULT_SCHEMA });
+    doc = yaml.load(text, { schema: yaml.CORE_SCHEMA });
   } catch (e) {
     r.fail("file", `invalid YAML (${(e as Error).message.split("\n")[0]})`);
     return { projects: [], agents: [] };

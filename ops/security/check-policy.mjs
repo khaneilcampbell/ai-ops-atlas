@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 for (const file of fs.readdirSync('.github/workflows').filter(name => /\.ya?ml$/.test(name))) {
   yaml.load(fs.readFileSync(`.github/workflows/${file}`, 'utf8'));
 }
