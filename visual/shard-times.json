@@ -1,6 +1,7 @@
 {
   "activity-buildings.visual.ts": 45,
   "agent-commute.visual.ts": 8,
+  "agent-fit.visual.ts": 0,
   "agent-identities.visual.ts": 0,
   "agent-owners.visual.ts": 39,
   "agent-routine.visual.ts": 0,
@@ -40,6 +41,7 @@
   "financial-station.visual.ts": 0,
   "fix-with-claude.visual.ts": 60,
   "github-tower.visual.ts": 0,
+  "free-time.visual.ts": 0,
   "gold-jet-agents.visual.ts": 0,
   "ground-crew.visual.ts": 162,
   "header.visual.ts": 182,

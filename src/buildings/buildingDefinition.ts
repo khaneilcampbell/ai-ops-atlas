@@ -3,6 +3,7 @@ import { isAiAgent } from "../catalog/roles";
 import { projectOfficeAgents } from "../catalog/workplaces";
 import { planOffice } from "../views/office/model";
 import { FIGURE_SCALE, RIG } from "../views/map3d/agentFigures";
+import { passWidth } from "../views/map3d/agentBody";
 import type { BuildingIdentity } from "../views/map3d/identity";
 import { FLOOR_BASE, towerTop } from "../views/map3d/models";
 import { ENTRANCE, type Pt3 } from "../views/map3d/roads";
@@ -26,20 +27,29 @@ import { SHELL, type Plate } from "./shellPlates";
  */
 
 /** World units per office unit inside a building: the seated person (head top 1.39 office units,
- *  InsideView deskParts) is drawn the same height as the agent's city character (RIG.top). */
+ *  InsideView deskParts) is drawn the same height as the agent's city character (RIG.top). The rig
+ *  sits with its hips on the seat and its legs level, so seated its head is at RIG.top too: one scale
+ *  fits the agent both standing and seated (agentBody.ts). */
 export const OFFICE_SEATED_TOP = 1.39;
 export const INTERIOR_K = (FIGURE_SCALE * RIG.top) / OFFICE_SEATED_TOP;
 /** Office floor surface above the storey's base. */
 export const FLOOR_SLAB = 0.03;
+/**
+ * The desk and chair (InsideView deskParts), office units from the desk's centre: the desk top is
+ * 0.76 deep, the chair's seat (its top is where a seated agent's hips rest) and its back toward +z.
+ */
+export const OFFICE_FURNITURE = { deskHalfD: 0.38, seatZ: 0.66, seatTop: 0.495, backZ: 0.935 } as const;
+/** The aisle behind a row of chairs: one agent's pass width (agentBody.ts), in office units. */
+const AISLE = passWidth / INTERIOR_K;
 /** A desk with its chair and the aisle behind it, in office units (desk 1.5 x 0.76, chair to 0.93). */
-export const DESK_CELL = { w: 1.9, d: 2.1 } as const;
+export const DESK_CELL = { w: 1.9, d: OFFICE_FURNITURE.backZ + AISLE + OFFICE_FURNITURE.deskHalfD } as const;
 /** Clear space kept between desks and the shell's glass, world units. */
 export const PLATE_MARGIN = 0.06;
 /** Floors that hold desks: the same floors the building interior shows (1 to 4; 0 is the lobby). */
 export const DESK_FLOORS = [4, 3, 2, 1] as const;
 export const LOBBY_FLOOR = 0;
 /** Where a desk's chair is, from the desk's centre (office units, toward the room's front). */
-const SEAT_Z = 0.66;
+const SEAT_Z = OFFICE_FURNITURE.seatZ;
 /** Sidewalk height (routinePlaces STREET_Y). */
 const STREET_Y = TERRACE_H + 0.105;
 
@@ -151,6 +161,28 @@ function cellCentre(plate: FloorPlate, i: number, used: number, k = INTERIOR_K) 
 }
 
 /**
+ * Where the lift core goes: its usual place (centred, toward the front), or the nearest spot along the
+ * floor, then at the back, where neither the lift doors nor the space an agent steps out into (one
+ * pass width, agentBody.ts) overlap a desk or its chair on any floor.
+ */
+function liftSpot(shaft: FloorPlate, desks: readonly DeskDefinition[], k: number): { x: number; z: number } {
+  const half = Math.max(0.9 * k, passWidth) / 2 + 0.03;
+  const clashes = (x: number, z: number) =>
+    desks.some((d) => Math.abs(d.x - x) < (DESK_CELL.w / 2) * k * 0.85 + half && z + passWidth > d.z - OFFICE_FURNITURE.deskHalfD * k && z - 0.03 < d.z + OFFICE_FURNITURE.backZ * k);
+  const mx = (shaft.x0 + shaft.x1) / 2;
+  const usual = Math.min(shaft.z1 - 0.05, (shaft.z0 + shaft.z1) / 2 + (shaft.z1 - shaft.z0) * 0.25);
+  // Its usual depth first, then the back, then every depth from the back forward.
+  const zs = [usual, shaft.z0 + 0.06, ...Array.from({ length: 9 }, (_, i) => shaft.z0 + 0.06 + ((shaft.z1 - passWidth - shaft.z0 - 0.06) * (i + 1)) / 10)];
+  const reach = Math.max(0, (shaft.x1 - shaft.x0) / 2 - half);
+  for (const z of zs)
+    for (let step = 0; step <= 40; step++) {
+      const dx = (Math.ceil(step / 2) * (step % 2 ? 1 : -1) * reach) / 20;
+      if (!clashes(mx + dx, z)) return { x: mx + dx, z };
+    }
+  return { x: mx, z: zs[0] };
+}
+
+/**
  * Which floor each agent's desk is on: its declared `office_floor` when that floor has room, then the
  * agents' floor (4) and down, never the lobby. Within a building, in the office's own order (tier,
  * then dependencies), so an agent keeps its desk between reloads.
@@ -180,7 +212,8 @@ export function defineBuilding(t: Tower, project: Project, agents: readonly Agen
   const plates = new Map<number, FloorPlate>([LOBBY_FLOOR, ...DESK_FLOORS].map((n) => [n, plateOf(t, shell?.plates[n])]));
   const capacity = new Map<number, number>(DESK_FLOORS.map((n) => {
     const g = deskGrid(plates.get(n)!, k);
-    return [n, g.cols * g.rows];
+    // One cell of every floor is the lift and the space in front of it (liftSpot).
+    return [n, Math.max(0, g.cols * g.rows - 1)];
   }));
 
   // Desks: the building's AI agents, in the office's own order.
@@ -202,7 +235,7 @@ export function defineBuilding(t: Tower, project: Project, agents: readonly Agen
   // The lift core: inside every plate from the lobby up to the highest desk floor.
   const used = [LOBBY_FLOOR, ...new Set(desks.map((d) => d.floor))];
   const shaft = used.map((n) => plates.get(n)!).reduce((a, b) => ({ x0: Math.max(a.x0, b.x0), x1: Math.min(a.x1, b.x1), z0: Math.max(a.z0, b.z0), z1: Math.min(a.z1, b.z1) }));
-  const core = { x: (shaft.x0 + shaft.x1) / 2, z: Math.min(shaft.z1 - 0.05, (shaft.z0 + shaft.z1) / 2 + (shaft.z1 - shaft.z0) * 0.25) };
+  const core = liftSpot(shaft, desks, k);
 
   const front = t.z + (shell?.front ?? 0.5) * t.size;
   const lobbyPlate = plates.get(LOBBY_FLOOR)!;
@@ -332,7 +365,8 @@ export function journeyTo(def: BuildingDefinition, agentId: string): JourneyPoin
   if (!desk) return [];
   const f = floorOf(def, desk.floor)!;
   const ground = def.lobby[1];
-  const aisle = Math.min(f.plate.z1 - 0.02, desk.seat.z + DESK_CELL.d * def.k * 0.3);
+  // Down the middle of the aisle behind the chairs: clear of the chair backs and the next row's desks.
+  const aisle = Math.min(f.plate.z1 - 0.02, desk.seat.z + (OFFICE_FURNITURE.backZ - SEAT_Z + AISLE / 2) * def.k);
   return [
     { stop: "sidewalk", p: def.entrance.outside, floor: LOBBY_FLOOR },
     { stop: "door", p: def.entrance.door, floor: LOBBY_FLOOR },

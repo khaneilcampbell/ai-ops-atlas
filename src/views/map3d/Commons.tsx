@@ -1,6 +1,6 @@
 import {useEffect,useMemo} from 'react';
 import * as THREE from 'three';
-import {COMMONS,type CommonsPlan} from './commonsPlan';
+import {COMMONS,COMMONS_BENCH,type CommonsPlan} from './commonsPlan';
 import {TERRACE_H} from './scene';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Pt} from './roads';
@@ -42,7 +42,7 @@ export default function Commons({plan:p,g,m,pick,night}:{plan?:CommonsPlan;g:Ret
   }
   for(const [i,[x,z]]of p.benches.entries()){
    const r=p.benchRotations[i],part=(dx:number,y:number,dz:number,w:number,h:number,d:number,c:string)=>({...box(x+dx*Math.cos(r)+dz*Math.sin(r),y,z-dx*Math.sin(r)+dz*Math.cos(r),w,h,d,c),r});
-   solid.push(part(0,.2,0,.65,.06,.25,'#b68c60'),part(0,.26,.1,.65,.25,.04,'#b68c60'));
+   solid.push(part(0,COMMONS_BENCH.seat-.03,0,COMMONS_BENCH.length,.06,.25,'#b68c60'),part(0,.26,.1,.65,.25,.04,'#b68c60'));
    for(const side of [-1,1])solid.push(part(side*.23,.05,0,.05,.15,.2,'#294237'));
   }
   for(const [x,z]of p.lights){solid.push(box(x,.04,z,.045,.35,.045,'#294237'));lamps.push(box(x,.39,z,.09,.045,.09,'#fff2d1'));}

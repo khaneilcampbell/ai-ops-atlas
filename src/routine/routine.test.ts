@@ -5,7 +5,8 @@ import type { StoredTask } from "../tasks/types";
 import { fromZoned, nextCron, parseCron, previousCron, zoned } from "./cron";
 import { HISTORY_MS, observe, type Ledger } from "./ledger";
 import { agentOps, ownedEntries, sightingsOf, type AgentOps, type OpsInput } from "./operations";
-import { planRoutine, segmentAt, type Anchor, type LeisureOption, type RoutineEnv, type Segment } from "./routine";
+import { FREE_TIME_KEEP_MS, freeTimeAvailability, freshRequests } from "./freeTime";
+import { planRoutine, segmentAt, type Anchor, type LeisureKind, type LeisureOption, type RoutineEnv, type Segment } from "./routine";
 
 const NY = "America/New_York";
 const MIN = 60_000;
@@ -263,5 +264,72 @@ describe("unexpected work, short work and rides", () => {
     const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, [], new Map(), []), env: env(), now: now0, held: true });
     expect(segmentAt(r, now0)).toMatchObject({ activity: "at_home" });
     expect(segmentAt(r, now0)!.note).toContain("unaffected");
+  });
+});
+
+describe("free time sent from Atlas", () => {
+  const now0 = Date.parse("2026-11-18T19:00:00Z"); // 2pm New York, no schedule
+  const plan = (now: number, outing: { kind: LeisureKind | "any"; at: number } | null, schedules: { label: string; cron: string }[] = []) =>
+    planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, [], new Map(), schedules), env: env(), now, outing });
+
+  it("sends a free agent to the chosen outing from that moment, leaving the day before it unchanged", () => {
+    const at = now0;
+    const without = plan(at + 5 * MIN, null);
+    const r = plan(at + 5 * MIN, { kind: "wheel", at });
+    // Before the request the day is exactly as it was.
+    expect(r.segments.filter((s) => s.t1 < at)).toEqual(without.segments.filter((s) => s.t1 < at));
+    const walk = r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= at && s.kind === "walk")!;
+    expect(walk.t0).toBe(at);
+    expect(walk.note).toContain("free time from Atlas");
+    expect(walk.option?.kind).toBe("wheel");
+    expect(r.segments.some((s) => s.kind === "ride" && s.t0 > at)).toBe(true);
+    // Reload-safe: the same inputs give the same day.
+    expect(plan(at + 5 * MIN, { kind: "wheel", at }).segments).toEqual(r.segments);
+  });
+
+  it("gets off a ride safely before going", () => {
+    let found: Segment | null = null;
+    for (let h = 0; h < 48 && !found; h++) {
+      const now = now0 - 6 * 3_600_000 + h * 15 * MIN;
+      found = plan(now, null).segments.find((s) => s.kind === "ride" && s.t0 < now && s.t1 > now) ?? null;
+    }
+    expect(found).not.toBeNull();
+    const at = found!.t0 + 10_000;
+    const r = plan(at + 1000, { kind: "park", at });
+    const cut = r.segments.find((s) => s.kind === "ride" && s.t0 === found!.t0)!;
+    expect(cut.t1).toBe(at + 30_000);
+    expect(r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= cut.t1 && s.kind === "walk")!.option?.kind).toBe("park");
+  });
+
+  it("never touches work: a scheduled run still calls the agent in, and a too-close run means a short break", () => {
+    // Daily 3pm New York = 20:00 UTC; asked at 2:57pm, there is no time for an outing.
+    const run = Date.parse("2026-11-18T20:00:00Z");
+    const at = run - 3 * MIN;
+    const r = plan(at + 1000, { kind: "wheel", at }, [{ label: "Daily 3pm", cron: "0 15 * * *" }]);
+    expect(r.segments.some((s) => s.kind === "ride" && s.t0 >= at && s.t0 < run)).toBe(false);
+    expect(r.segments.find((s) => s.t0 >= at && s.phase === null)!.note).toContain("too close");
+    expect(r.segments.find((s) => s.phase === "heading")!.t0).toBeLessThan(run);
+    expect(r.segments.find((s) => s.phase === "to_desk")!.t1).toBeLessThanOrEqual(run);
+  });
+
+  it("is ignored while the agent works or at night", () => {
+    const night = Date.parse("2026-11-19T05:00:00Z"); // midnight New York
+    const r = plan(night + MIN, { kind: "wheel", at: night });
+    expect(segmentAt(r, night + MIN)).toMatchObject({ activity: "at_home" });
+  });
+
+  it("only offers free time to an agent in its free time", () => {
+    const free = plan(now0, null);
+    expect(freeTimeAvailability(segmentAt(free, now0), false)).toEqual({ ok: true });
+    expect(freeTimeAvailability(segmentAt(free, now0), true).ok).toBe(false);
+    expect(freeTimeAvailability(null, false).ok).toBe(false);
+    const work = { kind: "inside", t0: 0, t1: 1, at: "office", activity: "at_desk", phase: "working", note: "", work: { label: "", runs: [], scheduledAt: null, alreadyStarted: false, outcome: null } } as Segment;
+    expect(freeTimeAvailability(work, false)).toMatchObject({ ok: false, reason: expect.stringContaining("Busy") });
+  });
+
+  it("keeps only today's valid requests", () => {
+    const now = now0;
+    const kept = freshRequests({ a: { kind: "wheel", at: now - MIN }, b: { kind: "wheel", at: now - FREE_TIME_KEEP_MS - 1 }, c: { kind: "rocket", at: now }, d: null }, now);
+    expect([...kept.keys()]).toEqual(["a"]);
   });
 });
