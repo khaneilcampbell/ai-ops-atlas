@@ -124,6 +124,8 @@ export interface Map3DApi {
   reveal: (gx: number, gz: number, closer?: boolean) => void;
   /** Turn the view around its center by this many degrees, counterclockwise seen from above. */
   rotate: (deg: number) => void;
+  /** Glide to a world point at street distance (City agents "Locate"); instant with reduced motion. */
+  locate: (x: number, y: number, z: number) => void;
 }
 
 type Sel = { kind: "repo" | "agent" | "project" | "service"; id: string };
@@ -284,6 +286,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     fit: () => api.current?.fit(),
     reveal: (x, z, c) => api.current?.reveal(x, z, c),
     rotate: (deg) => api.current?.rotate(deg),
+    locate: (x, y, z) => api.current?.locate(x, y, z),
   }));
 
   const select = (key: string) => {
@@ -1047,6 +1050,12 @@ function World({
       touched.current = true;
       const d = camera.position.distanceTo(controls.target);
       goto(new THREE.Vector3(x, TERRACE_H, z), closer ? Math.min(d, fitDist.current * 0.5) : d);
+    },
+    locate: (x, y, z) => {
+      touched.current = true;
+      framing.current = null;
+      const d = camera.position.distanceTo(controls.target);
+      goto(new THREE.Vector3(x, y, z), THREE.MathUtils.clamp(Math.min(d, FOLLOW_DIST * 1.2), controls.minDistance, controls.maxDistance), false, 900);
     },
   };
 

@@ -71,6 +71,36 @@ Rides are city simulation only. No booking, ticket, purchase or external action 
 - The ring over an agent: cyan running, amber waiting for approval, red failed.
 - Agents waiting at the same place stand in rows, never on one point.
 
+### City agents panel
+
+The **Agents** button in the map toolbar shows the number of active agents (one per identity: no
+automations, n8n workflows, Product Lab skills, pedestrians or retired agents) and opens the
+**City agents** panel beside the map (`src/views/map3d/CityAgentsPanel.tsx`, rules in
+`cityRoster.ts`). The map stays visible and usable, and the camera doesn't move when it opens or closes.
+
+- Search by name, role or assigned building; filters All, Working (a run is really running or
+  queued), Free time (out between work, not at home), Attention (failed or waiting for approval);
+  a district menu. Search, filters and the list's scroll stay put while you open agents.
+- Picking a row selects the same agent on the map (a gold ring at its feet) without moving the
+  camera; picking a character on the map selects its row. While the panel is open it is the agent's
+  only profile on the map: the floating card stays closed.
+- Each agent shows its city activity and place, its district, office, floor and desk, its work
+  status and current task, its next run with the time zone, and how fresh the run data is. Without
+  live n8n the work says "Status unavailable" and the schedule "Schedule unavailable", never idle.
+- **Locate** glides to the agent (instant with reduced motion). Inside a building it names the
+  building and floor and offers the interior; on the gold jet, yacht or train it finds the vehicle;
+  at home or in the terminal it says why it can't be seen. **Follow** keeps it in view until you
+  move the map or close the panel. **View office** opens its building and floor in the Inside view.
+  **Assign task** opens the Task Center's own form with the agent chosen. **Full profile** opens it
+  in the Agents tab.
+- **Schedule** is read-only: Atlas's n8n key can only read, so each workflow links to the n8n
+  editor ("Edit schedule in n8n"), where time zone, recurrence, approval and the single trigger are
+  enforced. It explains that pausing a schedule (switching the workflow off) is not cancelling a
+  running task (open the run or the Task Center), and keeps the city routine switch, which only
+  changes the map.
+- Escape closes it and gives focus back to the Agents button; arrow keys move through the list.
+  On a phone it is a bottom sheet over the lower map.
+
 Settings for each agent are in Agents → the agent → **Workday** (and the map's agent sheet):
 residence, office, desk, every owned workflow with its connection, schedule, time zone and next run,
 approvals, missing setup, and a switch that pauses the city routine in Atlas. That switch only
