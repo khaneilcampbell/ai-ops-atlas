@@ -3,6 +3,8 @@ import type {Pt} from './roads';
 export const COMMONS_KEY='service:atlas-commons';
 export const COMMONS_NAME='Atlas Commons';
 export const COMMONS={pathWidth:.48,bridgeWidth:.55,edgeClearance:.6,pavilionRadius:1.05} as const;
+/** A Commons bench (Commons.tsx): seat top above the terrace, and its length. Agents sit on it (routinePlaces). */
+export const COMMONS_BENCH={seat:.23,length:.65} as const;
 export interface CommonsPlan {rect:Rect;pond:Pt[];loop:Pt[];paths:Pt[][];bridges:[Pt,Pt][];pavilion:Pt;amphitheater:Pt;trees:Pt[];benches:Pt[];benchRotations:number[];lights:Pt[];access:{service:Pt;marketplace:Pt}}
 /** One bounded park in the existing meadow; no headquarters or transport coordinates move. */
 export function planCommons(s:Pick<Scene3D,'mall'|'towers'|'paving'|'transportConnections'>&{parks?:Pick<Scene3D,'parks'>['parks']}):CommonsPlan|undefined{

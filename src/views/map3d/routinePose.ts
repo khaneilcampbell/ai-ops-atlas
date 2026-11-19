@@ -2,11 +2,14 @@ import { runWorking, walkShare, type Segment } from "../../routine/routine";
 import { RIG } from "./agentFigures";
 import { along } from "./railCommuters";
 import { openFloor } from "../../buildings/insideFloors";
+import { OFFICE_FURNITURE } from "../../buildings/buildingDefinition";
 import type { Pt3 } from "./roads";
 import { goldJetRide } from "./goldJetIds";
 import { GOLD_JET_NAME, airportClockAt, goldJetLive, goldJetMapPose, goldJetState } from "./goldJetPlan";
 import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
 import { TERRACE_H } from "./scene";
+import { AGENT_BODY, passWidth, seatedOrigin } from "./agentBody";
+import { YACHT_SCALE } from "./yachtPlan";
 
 /**
  * Where and how one agent is drawn at a moment, from its routine segment (routine/routine.ts).
@@ -55,8 +58,18 @@ export interface PoseContext {
 }
 
 const BADGE_LIFT = 0.075;
-/** Office units: the seated person's thigh height in the Inside view (InsideView deskParts). */
-const OFFICE_SEAT = 0.58;
+
+/**
+ * Places aboard the yacht, in her own units (yachtGeometry.ts): three on the aft deck sofa (seat top
+ * 0.075 above the deck, facing the table and the bow), then three standing behind it at the stern
+ * rail. All are aft of the bridge deck's overhang, which leaves too little headroom to stand under
+ * (agentBody.ts standingClearHeight), and clear of the stairs up each side.
+ */
+const YACHT_SOFA = { x: -2.75, seat: 0.075 } as const;
+const YACHT_PLACES: { x: number; z: number; sit: boolean }[] = [
+  ...[-0.16, 0, 0.16].map((z) => ({ x: YACHT_SOFA.x, z, sit: true })),
+  ...[-0.19, 0, 0.19].map((z) => ({ x: -2.92, z, sit: false })),
+];
 
 /** Column (-2..2) and row (0..) of a team member's place at a shared spot: no two share one. */
 const place5 = (slot: number) => ({ col: (slot % 5) - 2, row: Math.floor(slot / 5) });
@@ -136,8 +149,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
         return walk([...inAndUp].reverse(), f);
       default: {
         if (desk.floor !== open) return hidden();
-        // Seated: hips on the chair, facing the monitor.
-        const y = desk.y + OFFICE_SEAT * desk.k - RIG.leg.h * k;
+        // Seated: hips on the chair's seat (not floating above it), facing the monitor.
+        const y = seatedOrigin(desk.y + OFFICE_FURNITURE.seatTop * desk.k, k);
         return at(desk.x, y, desk.z, desk.yaw, { sit: 1, typing: runWorking(seg), officeScale: k, place: `At its desk in ${mine.officeLabel}` });
       }
     }
@@ -163,12 +176,16 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     }
     const p = riderPoint(c.places, kind, c.personaId, c.wall, c.yacht);
     if (!p) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
-    if (kind === "wheel") return at(p[0], p[1], p[2], 0, { sit: 1, place: `${spot.label}, ${seg.times.seat ?? "a cabin"}` });
+    // Seated in its cabin: hips on the bench (p is the seat surface), facing out of the wheel.
+    if (kind === "wheel") return at(p[0], seatedOrigin(p[1], c.scale), p[2], 0, { sit: 1, place: `${spot.label}, ${seg.times.seat ?? "a cabin"}` });
     if (kind === "train") return { x: p[0], y: p[1], z: p[2], yaw: 0, figure: false, badge: [p[0], p[1] + 0.35, p[2]], sit: 1, typing: false, walking: false, officeScale: null, place: `On the train, ${seg.times.seat ?? "a carriage"}` };
-    // The yacht: on her aft deck wherever she is (never on the water).
-    const yaw = c.yacht?.yaw ?? spot.yaw;
-    const back = place5(c.slot).col * 0.08;
-    return at(p[0] - Math.cos(yaw) * (0.35 + back), p[1], p[2] + Math.sin(yaw) * (0.35 + back), yaw, { place: "Aboard the Atlas yacht" });
+    // The yacht: on her aft deck wherever she is (never on the water), on the sofa or at the stern rail.
+    const yaw = c.yacht?.yaw ?? spot.yaw, cos = Math.cos(yaw), sin = Math.sin(yaw);
+    const seat = YACHT_PLACES[c.slot % YACHT_PLACES.length], lx = seat.x * YACHT_SCALE, lz = seat.z * YACHT_SCALE;
+    const deck = p[1] - 0.01;
+    const y = seat.sit ? seatedOrigin(deck + YACHT_SOFA.seat * YACHT_SCALE, c.scale) : deck;
+    // Her local +x (the bow) is world (cos, -sin): facing it is yaw + pi/2 for a figure facing +z.
+    return at(p[0] + lx * cos + lz * sin, y, p[2] - lx * sin + lz * cos, yaw + Math.PI / 2, { sit: seat.sit ? 1 : 0, place: "Aboard the Atlas yacht" });
   }
 
   // Standing or sitting at a spot.
@@ -178,10 +195,16 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
   }
   // Its own place in the row outside its office is already its own: no shuffle, or neighbours land on each other.
   if (seg.at === mine.office.id) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
-  const { col, row } = place5(c.slot), gap = spot.spread ?? 0.14;
+  // Never closer than one agent's width plus clearance (agentBody.ts), so neighbours' arms don't overlap.
+  const { col, row } = place5(c.slot), gap = Math.max(spot.spread ?? 0, passWidth - AGENT_BODY.clearance);
+  // On a bench, the front row's middle three sit along it, hips on its seat; everyone else stands
+  // beside or behind it. In a park with no bench, the front row sits on the grass.
+  const onBench = !!spot.bench && row === 0 && Math.abs(col) <= 1;
+  const across = onBench ? (col * spot.bench!.length) / 3 : col * gap;
+  const back = spot.bench && !onBench && row === 0 ? 0 : row * gap + (spot.bench && row > 0 ? 0.2 : 0);
   // Side by side across the way it faces, further rows behind.
-  const x = stand[0] + Math.cos(spot.yaw) * gap * col - Math.sin(spot.yaw) * gap * row, z = stand[2] - Math.sin(spot.yaw) * gap * col - Math.cos(spot.yaw) * gap * row;
-  // On the bench in a park (the front row); anyone further back stands behind it.
-  const sit = seg.option?.kind === "park" && row === 0 ? 1 : 0;
+  const x = stand[0] + Math.cos(spot.yaw) * across - Math.sin(spot.yaw) * back, z = stand[2] - Math.sin(spot.yaw) * across - Math.cos(spot.yaw) * back;
+  if (onBench) return at(x, seatedOrigin(spot.bench!.y, c.scale), z, spot.yaw, { sit: 1, place: spot.label });
+  const sit = seg.option?.kind === "park" && !spot.bench && row === 0 ? 1 : 0;
   return at(x, stand[1] - sit * RIG.leg.h * c.scale * 0.55, z, spot.yaw, { sit, place: spot.label });
 }
