@@ -18,6 +18,7 @@ import { TRAVEL, TRAVEL_CLOCK, travelPlan } from "./travelLoops";
 import { marinaSite } from "./marinaPlan";
 import { COMMONS_BENCH } from "./commonsPlan";
 import { boardingRoute } from "./yachtPlan";
+import { CAFE_NAME, type CafePlan } from "./cafePlan";
 
 /**
  * The city's side of the agents' routine (routine/routine.ts): every place an agent can go, as a
@@ -99,6 +100,8 @@ export interface CityPlaces {
   yacht?: { depart: number; period: number; aboard: Pt3 };
   /** The airport the Atlas Gold Jet flies from, for putting its passengers aboard. */
   jet?: Pick<AirportPlan, "x" | "z" | "west">;
+  /** Community Pavilion & Café: its counter, seats and the walk in (cafePlan.ts; seats handed out in cafeVisits.ts). */
+  cafe?: CafePlan;
 }
 
 const street = (p: [number, number] | Pt3): Pt3 => (p.length === 2 ? [p[0], STREET_Y, p[1]] : [p[0], STREET_Y, p[2]]);
@@ -185,6 +188,14 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
     const id = `district:${t.projectId}`;
     const door: Pt3 = [t.x, STREET_Y, t.z + t.size / 2 + ENTRANCE / 2 + 0.7];
     opt({ id, kind: "district", label: `Visiting ${t.name}`, spot: id, exit: id, stay: [180, 480] }, { id, label: t.name, path: [door], yaw: Math.PI, inside: false, spread: 0.32 });
+  }
+
+  // Community Pavilion & Café (Khaneil, 2026-11-19): in from the crossing on the operations street, through
+  // its west door; inside, the counter and a seat (cafeVisits.ts). A visit cut short by work gets back out first.
+  const cafe = scene.cafe;
+  if (cafe) {
+    out.cafe = cafe;
+    opt({ id: "cafe", kind: "cafe", label: `At the ${CAFE_NAME}`, spot: "cafe", exit: "cafe", stay: [480, 1500], leave: cafe.leaveSecs }, { id: "cafe", label: CAFE_NAME, path: cafe.entry, yaw: Math.PI / 2, inside: false });
   }
 
   // The Ferris wheel by the station: queue in front, board a cabin at the bottom, off after one turn.

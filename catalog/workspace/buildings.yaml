@@ -86,6 +86,10 @@ buildings:
   "service:automation-plaza":
     display_name: Atlas Automation Plaza
     organization: Atlas
+  # Nov 19: café pavilion on the square east of the plaza; agents visit it in their free time (simulated).
+  "service:community-cafe":
+    display_name: Community Pavilion & Café
+    organization: Atlas
   "service:stadium-station":
     display_name: Events Arena Station
     organization: Atlas
